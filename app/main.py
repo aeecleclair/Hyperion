@@ -8,9 +8,7 @@ async def root():
     return {"message": "Hello World"}
 
 
-j = [1, 2, 3]
+@app.get("/users")
+async def users():
 
-maVariable = 4
-
-if 1:
-    print(1)
+    return {"users": ["K2", "Tyshaud"]}
