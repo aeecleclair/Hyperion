@@ -1,5 +1,6 @@
 anyio==3.5.0
 asgiref==3.5.0
+attrs==21.4.0
 black==22.1.0
 click==8.0.4
 fastapi==0.75.0
@@ -7,13 +8,19 @@ flake8==4.0.1
 h11==0.13.0
 httptools==0.3.0
 idna==3.3
+iniconfig==1.1.1
 mccabe==0.6.1
 mypy-extensions==0.4.3
+packaging==21.3
 pathspec==0.9.0
 platformdirs==2.5.1
+pluggy==1.0.0
+py==1.11.0
 pycodestyle==2.8.0
 pydantic==1.9.0
 pyflakes==2.4.0
+pyparsing==3.0.7
+pytest==7.1.0
 python-dotenv==0.19.2
 PyYAML==6.0
 sniffio==1.2.0
