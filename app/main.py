@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from endpoints import amap, associations, bdebooking, bdecalendar, users
+from routers import amap, associations, bdebooking, bdecalendar, users
 
 
 app = FastAPI()
