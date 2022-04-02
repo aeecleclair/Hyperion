@@ -1,34 +1,39 @@
-@app.get("/bookings")
+from fastapi import APIRouter
+
+router = APIRouter()
+
+
+@router.get("/bookings")
 async def get_bookings():
 
     return ""
 
 
-@app.get("/bookings/unconfirmed")
+@router.get("/bookings/unconfirmed")
 async def get_bookings_unconfirmed():
 
     return ""
 
 
-@app.post("/bookings")
+@router.post("/bookings")
 async def create_bookings():
 
     return ""
 
 
-@app.put("/bookings/{bookings_id}")
+@router.put("/bookings/{bookings_id}")
 async def edit_bookings_id(bookings_id):
 
     return ""
 
 
-@app.put("/bookings/{bookings_id}/confirm")
+@router.put("/bookings/{bookings_id}/confirm")
 async def edit_bookings_id_confirm(bookings_id):
 
     return ""
 
 
-@app.delete("/bookings/{bookings_id}")
+@router.delete("/bookings/{bookings_id}")
 async def delete_bookings_id(bookings_id):
 
     return ""

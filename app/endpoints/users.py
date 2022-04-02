@@ -1,28 +1,33 @@
-@app.get("/users")
+from fastapi import APIRouter
+
+router = APIRouter()
+
+
+@router.get("/users")
 async def get_users():
 
     return {"users": ["K2", "Tyshaud"]}
 
 
-@app.post("/users")
+@router.post("/users")
 async def create_user():
 
     return ""
 
 
-@app.get("/users/{user_id}")
+@router.get("/users/{user_id}")
 async def get_user(user_id):
 
     return ""
 
 
-@app.put("/users/{user_id}")
+@router.put("/users/{user_id}")
 async def edit_user(user_id):
 
     return ""
 
 
-@app.delete("/users/{user_id}")
+@router.delete("/users/{user_id}")
 async def delete_user(user_id):
 
     return ""
