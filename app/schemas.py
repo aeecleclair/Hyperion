@@ -5,14 +5,6 @@ class CoreGroupBase(BaseModel):
     nom: str
     description: str | None = None
 
-
-class CoreGroupBase(CoreGroupBase):
-    pass
-
-
-class CoreGroup(CoreGroupBase):
-    id: int
-
     class Config:
         orm_mode = True
 
@@ -28,6 +20,21 @@ class CoreUserBase(BaseModel):
     email: str
     created_on: str
 
+    class Config:
+        orm_mode = True
+
+
+class CoreGroupCreate(CoreGroupBase):
+    pass
+
+
+class CoreGroup(CoreGroupBase):
+    id: int
+    members: list[CoreUserBase] = []
+
+    class Config:
+        orm_mode = True
+
 
 class CoreUserCreate(CoreUserBase):
     password: str
@@ -35,7 +42,7 @@ class CoreUserCreate(CoreUserBase):
 
 class CoreUser(CoreUserBase):
     id: int
-    groups: list[CoreGroup] = []
+    groups: list[CoreGroupBase] = []
 
     class Config:
         orm_mode = True
