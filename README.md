@@ -31,6 +31,7 @@ pip install black
 pip install flake8
 pip install fastapi[all]
 pip install pytest
+pip install isort
 ```
 
 Pour la prod
