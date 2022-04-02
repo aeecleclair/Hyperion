@@ -7,12 +7,11 @@ from sqlalchemy.orm import relationship
 from .database import Base
 
 
-CoreMembership = Table(
-    "core_membership",
-    Base.metadata,
-    Column("user_id", ForeignKey("core_user.id"), primary_key=True),
-    Column("group_id", ForeignKey("core_group.id"), primary_key=True),
-)
+class CoreMembership(Base):
+    __tablename__ = "core_membership"
+
+    user_id = Column(ForeignKey("core_user.id"), primary_key=True)
+    group_id = Column(ForeignKey("core_group.id"), primary_key=True)
 
 
 class CoreUser(Base):
@@ -31,7 +30,7 @@ class CoreUser(Base):
     created_on = Column(String)
 
     groups = relationship(
-        "CoreGroup", secondary=CoreMembership, back_populates="members"
+        "CoreGroup", secondary="core_membership", back_populates="members"
     )
 
 
@@ -43,7 +42,7 @@ class CoreGroup(Base):
     description = Column(String)
 
     members = relationship(
-        "CoreUser", secondary=CoreMembership, back_populates="groups"
+        "CoreUser", secondary="core_membership", back_populates="groups"
     )
 
 
