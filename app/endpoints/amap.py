@@ -3,6 +3,7 @@ from fastapi import APIRouter
 router = APIRouter()
 
 
+# Prefix "/amap" added in api.py
 @router.get("/products")
 async def get_products():
 

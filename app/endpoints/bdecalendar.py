@@ -3,6 +3,7 @@ from fastapi import APIRouter
 router = APIRouter()
 
 
+# Prefix "/bdecalendar" added in api.py
 @router.get("/events")
 async def get_events():
 

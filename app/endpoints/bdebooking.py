@@ -3,6 +3,7 @@ from fastapi import APIRouter
 router = APIRouter()
 
 
+# Prefix "/bdebooking" added in api.py
 @router.get("/bookings")
 async def get_bookings():
 
