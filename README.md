@@ -1,3 +1,12 @@
+# Hyperion
+
+## Creating the environment
+
+### Windows
+
+`py -3.10 -m venv .venv`
+`.\.venv\Scripts\activate`
+
 In the root folder
 
 ```bash
