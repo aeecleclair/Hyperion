@@ -57,3 +57,17 @@ Supprimer tous les packages
 ```bash
 pip freeze | xargs pip uninstall -y
 ```
+
+Structure :
+
+``` 
+└── app
+    ├── main.py
+    ├── __init__.py
+    ├── crud
+    ├── database.py
+    ├── models
+        └──
+    └── schemas
+        └──
+```
