@@ -1,6 +1,3 @@
-from ..main import app
-
-
 @app.get("/events")
 async def get_events():
 

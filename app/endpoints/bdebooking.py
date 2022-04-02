@@ -1,6 +1,3 @@
-from ..main import app
-
-
 @app.get("/bookings")
 async def get_bookings():
 

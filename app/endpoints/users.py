@@ -1,6 +1,3 @@
-from ..main import app
-
-
 @app.get("/users")
 async def get_users():
 
