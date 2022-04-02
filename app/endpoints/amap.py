@@ -1,3 +1,6 @@
+from ..main import app
+
+
 @app.get("/products")
 async def get_products():
 
