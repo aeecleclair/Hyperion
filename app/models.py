@@ -1,17 +1,24 @@
-from click import password_option
-from platformdirs import user_log_dir
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
+from sqlalchemy import Table, Column, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.postgresql import UUID
-import uuid
+
+# from sqlalchemy.dialects.postgresql import UUID
+# import uuid
 
 from .database import Base
 
 
-class Core_users(Base):
-    __tablename__ = "core_users"
+association_table = Table(
+    "core_membership",
+    Base.metadata,
+    Column("user_id", ForeignKey("core_user.id"), primary_key=True),
+    Column("group_id", ForeignKey("core_group.id"), primary_key=True),
+)
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+
+class Core_user(Base):
+    __tablename__ = "core_user"
+
+    id = Column(Integer, primary_key=True, index=True)  # Use UID later
     login = Column(String)
     password = Column(String)  # the password is hashed
     name = Column(String)
@@ -27,37 +34,37 @@ class Core_users(Base):
     id_member = relationship("Core_membership", back_populates="id_gene")
     id_asso_admin = relationship("Core_asso_admin", back_populates="id_gene")
 
-
-class Core_administrators(Base):
-    __tablename__ = "core_administrators"
-   
-    user_id =
-    id_gene = relationship("core_users", back_populates="id_admin")
-
-class Core_membership(Base):
-    __tablename__ = "core_membership"
-   
-    id =
-    user_id = 
-    asso_id =
-    
-    id_gene = relationship("core_users", back_populates="id_member")
+    groups = relationship(
+        "core_group", secondary=association_table, back_populates="members"
+    )
 
 
-class Core_associations(Base):
-    __tablename__ = "core_associations"
-    
-    id =
-    type =
+class Core_group(Base):
+    __tablename__ = "core_group"
 
-class Core_asso_admin(Base):
-    __tablename__ = "core_asso_admin"
-    
-    id =
-    user_id =
-    asso_id =
+    id = Column(Integer, primary_key=True, index=True)
+    nom = Column(String)
+    description = Column(String)
 
-    id_gene = relationship("core_users", back_populates="id_asso_admin")
+    members = relationship(
+        "core_user", secondary=association_table, back_populates="groups"
+    )
+
+
+# class Core_associations(Base):
+#     __tablename__ = "core_associations"
+
+#     id =
+#     type =
+
+# class Core_groups(Base):
+#     __tablename__ = "core_asso_admin"
+
+#     id =
+#     user_id =
+#     asso_id =
+
+#     id_gene = relationship("core_users", back_populates="id_asso_admin")
 
 
 # class Item(Base):
