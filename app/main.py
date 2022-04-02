@@ -1,4 +1,6 @@
 from fastapi import FastAPI
+from app import api
+
 
 app = FastAPI()
 
@@ -8,7 +10,4 @@ async def root():
     return {"message": "Hello World"}
 
 
-@app.get("/users")
-async def users():
-
-    return {"users": ["K2", "Tyshaud"]}
+app.include_router(api.api_router)
