@@ -1,3 +1,6 @@
+from ..main import app
+
+
 @app.get("/associations")
 async def get_associations():
 
