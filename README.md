@@ -31,7 +31,7 @@ pip install black
 pip install flake8
 pip install fastapi[all]
 pip install pytest
-pip install isort
+pip install sqlalchemy
 pip install "isort[requirements_deprecated_finder]"
 ```
 
