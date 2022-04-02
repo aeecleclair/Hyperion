@@ -31,7 +31,7 @@ class Core_user(Base):
     created_on = Column(String)
 
     groups = relationship(
-        "core_group", secondary=Core_membership, back_populates="members"
+        "Core_group", secondary=Core_membership, back_populates="members"
     )
 
 
@@ -43,7 +43,7 @@ class Core_group(Base):
     description = Column(String)
 
     members = relationship(
-        "core_user", secondary=Core_membership, back_populates="groups"
+        "Core_user", secondary=Core_membership, back_populates="groups"
     )
 
 

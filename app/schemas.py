@@ -1,7 +1,5 @@
 from pydantic import BaseModel
 
-from app.models import Core_user
-
 
 class Core_groupBase(BaseModel):
     nom: str
@@ -14,7 +12,6 @@ class Core_groupBase(Core_groupBase):
 
 class Core_group(Core_groupBase):
     id: int
-    members: list[Core_user] = []
 
     class Config:
         orm_mode = True
