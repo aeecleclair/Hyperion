@@ -24,16 +24,30 @@ Use a spell checker
 
 ### Pip
 
+Pour le dev
+
 ```bash
-...
+pip install black
+pip install flake8
+pip install fastapi[all]
+pip install pytest
+```
+
+Pour la prod
+
+```bash
 pip install black
 pip install flake8
 pip install fastapi
 pip install "uvicorn[standard]"
 pip install pytest
+```
+
+Utiliser une fichier
+
+```bash
 pip freeze > requirements.txt
 pip install -r requirements.txt
-
 ```
 
 Supprimer tous les packages
