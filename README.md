@@ -17,6 +17,10 @@ Use a spell checker
 
 ```bash
 ...
+pip install black
+pip install flake8
+pip install fastapi
+pip install "uvicorn[standard]"
 pip install pytest
 pip freeze > requirements.txt
 pip install -r requirements.txt
