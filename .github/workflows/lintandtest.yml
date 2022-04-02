@@ -27,6 +27,9 @@ jobs:
           pip install -r requirements.txt
           pip install "fastapi[all]"
 
+      - name: Lint with flake8
+        run: python -m flake8
+
       - name: Format with black
         uses: psf/black@stable
 
