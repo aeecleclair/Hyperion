@@ -1,4 +1,5 @@
-name: Test
+name: Lint and Test
+# https://docs.github.com/actions/automating-builds-and-tests/building-and-testing-nodejs-or-python?langId=py#requirements-file
 
 on:
   pull_request:
@@ -25,6 +26,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -e .
+
+      - name: Format with black
+        uses: psf/black@stable
+
+      - name: Sort imports with isort
+        uses: jamescurtin/isort-action@master
+        with:
+          requirementsFiles: "requirements.txt"
 
       - name: Run unit tests
         run: python -m pytest
