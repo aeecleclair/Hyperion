@@ -1,35 +1,44 @@
 from pydantic import BaseModel
 
+from app.models import Core_user
 
-class ItemBase(BaseModel):
-    title: str
+
+class Core_groupBase(BaseModel):
+    nom: str
     description: str | None = None
 
 
-class ItemCreate(ItemBase):
+class Core_groupBase(Core_groupBase):
     pass
 
 
-class Item(ItemBase):
+class Core_group(Core_groupBase):
     id: int
-    owner_id: int
+    members: list[Core_user] = []
 
     class Config:
         orm_mode = True
 
 
-class UserBase(BaseModel):
+class Core_userBase(BaseModel):
+    login: str
+    name: str
+    firstname: str
+    nick: str
+    birth: str
+    promo: str
+    floor: str
     email: str
+    created_on: str
 
 
-class UserCreate(UserBase):
+class Core_userCreate(Core_userBase):
     password: str
 
 
-class User(UserBase):
+class Core_user(Core_userBase):
     id: int
-    is_active: bool
-    items: list[Item] = []
+    groups: list[Core_group] = []
 
     class Config:
         orm_mode = True
