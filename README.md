@@ -4,7 +4,7 @@
 
 ### Windows
 
-`py -3.10 -m .venv Hyperion`
+`py -3.10 -m venv .venv`
 `.\.venv\Scripts\activate`
 
 In the root folder
