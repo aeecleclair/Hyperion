@@ -42,7 +42,7 @@ pip install black
 pip install flake8
 pip install fastapi
 pip install "uvicorn[standard]"
-pip install pytest
+pip install sqlalchemy
 ```
 
 Utiliser une fichier
