@@ -4,15 +4,15 @@ from . import models, schemas
 
 
 def get_users(db: Session):
-    return db.query(models.Core_user).all()
+    return db.query(models.CoreUser).all()
 
 
 def get_user_by_id(db: Session, user_id: int):
-    return db.query(models.Core_user).filter(models.Core_user.id == user_id).first()
+    return db.query(models.CoreUser).filter(models.Core_user.id == user_id).first()
 
 
 def get_group(db: Session):
-    return db.query(models.Core_group).all()
+    return db.query(models.CoreGroup).all()
 
 
 # def get_user_by_email(db: Session, email: str):
