@@ -97,3 +97,17 @@ uvicorn app.main:app --reload
     └── schemas
         └──
 ```
+
+Structure :
+
+``` 
+└── app
+    ├── main.py
+    ├── __init__.py
+    ├── crud
+    ├── database.py
+    ├── models
+        └──
+    └── schemas
+        └──
+```
