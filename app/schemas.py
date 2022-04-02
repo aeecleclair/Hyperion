@@ -1,23 +1,23 @@
 from pydantic import BaseModel
 
 
-class Core_groupBase(BaseModel):
+class CoreGroupBase(BaseModel):
     nom: str
     description: str | None = None
 
 
-class Core_groupBase(Core_groupBase):
+class CoreGroupBase(CoreGroupBase):
     pass
 
 
-class Core_group(Core_groupBase):
+class CoreGroup(CoreGroupBase):
     id: int
 
     class Config:
         orm_mode = True
 
 
-class Core_userBase(BaseModel):
+class CoreUserBase(BaseModel):
     login: str
     name: str
     firstname: str
@@ -29,13 +29,13 @@ class Core_userBase(BaseModel):
     created_on: str
 
 
-class Core_userCreate(Core_userBase):
+class CoreUserCreate(CoreUserBase):
     password: str
 
 
-class Core_user(Core_userBase):
+class CoreUser(CoreUserBase):
     id: int
-    groups: list[Core_group] = []
+    groups: list[CoreGroup] = []
 
     class Config:
         orm_mode = True
