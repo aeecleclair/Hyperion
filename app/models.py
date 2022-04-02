@@ -7,7 +7,7 @@ from sqlalchemy.orm import relationship
 from .database import Base
 
 
-association_table = Table(
+Core_membership = Table(
     "core_membership",
     Base.metadata,
     Column("user_id", ForeignKey("core_user.id"), primary_key=True),
@@ -30,12 +30,8 @@ class Core_user(Base):
     email = Column(String, unique=True, index=True)
     created_on = Column(String)
 
-    id_admin = relationship("Core_administrators", back_populates="id_gene")
-    id_member = relationship("Core_membership", back_populates="id_gene")
-    id_asso_admin = relationship("Core_asso_admin", back_populates="id_gene")
-
     groups = relationship(
-        "core_group", secondary=association_table, back_populates="members"
+        "core_group", secondary=Core_membership, back_populates="members"
     )
 
 
@@ -47,7 +43,7 @@ class Core_group(Base):
     description = Column(String)
 
     members = relationship(
-        "core_user", secondary=association_table, back_populates="groups"
+        "core_user", secondary=Core_membership, back_populates="groups"
     )
 
 
