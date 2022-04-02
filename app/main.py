@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.endpoints import amap, associations, bdebooking, bdecalendar, users
+from app import api
 
 
 app = FastAPI()
@@ -8,3 +8,6 @@ app = FastAPI()
 @app.get("/")
 async def root():
     return {"message": "Hello World"}
+
+
+app.include_router(api.api_router)
