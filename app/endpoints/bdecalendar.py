@@ -23,7 +23,7 @@ async def edit_events_id(events_id):
 
 
 @app.put("/events/{events_id}/confirm")
-async def edit_events_id_confirmation(events_id):
+async def edit_events_id_confirm(events_id):
 
     return ""
 
