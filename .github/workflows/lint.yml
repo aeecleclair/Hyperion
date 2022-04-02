@@ -9,4 +9,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: psf/black@stable
+
+      - name: black
+        uses: psf/black@stable
+
+      - name: isort
+        uses: jamescurtin/isort-action@master
+        with:
+          requirementsFiles: "requirements.txt"
