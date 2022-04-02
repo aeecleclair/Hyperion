@@ -29,10 +29,5 @@ jobs:
       - name: Format with black
         uses: psf/black@stable
 
-      - name: Sort imports with isort
-        uses: jamescurtin/isort-action@master
-        with:
-          requirementsFiles: "requirements.txt"
-
       - name: Run unit tests
         run: python -m pytest
