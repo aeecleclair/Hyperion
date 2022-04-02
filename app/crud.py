@@ -15,6 +15,10 @@ def get_group(db: Session):
     return db.query(models.CoreGroup).all()
 
 
+def delete_user(db: Session, user_id: int):
+    return db.query(models.CoreUser).delete().where(models.Core_user.id == user_id)
+
+
 def create_user(db: Session, user: schemas.CoreUserCreate):
     fakePassword = user.password + "notreallyhashed"
     db_user = models.CoreUser(
