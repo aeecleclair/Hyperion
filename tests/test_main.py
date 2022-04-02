@@ -14,4 +14,3 @@ def test_read_main():
 def test_read_users():
     response = client.get("/users")
     assert response.status_code == 200
-    assert response.json() == {"users": ["K2", "Tyshaud"]}
