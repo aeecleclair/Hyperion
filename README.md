@@ -32,6 +32,7 @@ pip install flake8
 pip install fastapi[all]
 pip install pytest
 pip install isort
+pip install "isort[requirements_deprecated_finder]"
 ```
 
 Pour la prod
