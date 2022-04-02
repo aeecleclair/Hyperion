@@ -31,6 +31,8 @@ pip install black
 pip install flake8
 pip install fastapi[all]
 pip install pytest
+pip install sqlalchemy
+pip install "isort[requirements_deprecated_finder]"
 ```
 
 Pour la prod
@@ -40,7 +42,7 @@ pip install black
 pip install flake8
 pip install fastapi
 pip install "uvicorn[standard]"
-pip install pytest
+pip install sqlalchemy
 ```
 
 Utiliser une fichier
