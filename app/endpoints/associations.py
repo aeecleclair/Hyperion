@@ -10,6 +10,12 @@ async def get_association(association_id):
     return ""
 
 
+@app.put("/associations")
+async def edit_association():
+
+    return ""
+
+
 @app.post("/associations")
 async def create_association():
 
