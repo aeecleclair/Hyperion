@@ -1,24 +1,34 @@
-from fastapi import APIRouter
+from http.client import HTTPException
+from fastapi import APIRouter, Depends
+
+from app.database import SessionLocal
+from app.dependencies import get_db
+from app import crud, schemas
+from sqlalchemy.orm import Session
 
 router = APIRouter()
 
 
-@router.get("/users")
-async def get_users():
-
-    return {"users": ["K2", "Tyshaud"]}
-
-
-@router.post("/users")
-async def create_user():
-
-    return ""
+@router.post("/users/", response_model=schemas.CoreUser)
+def create_user(user: schemas.CoreUserCreate, db: Session = Depends(get_db)):
+    # db_user = crud.get_user_by_email(db, email=user.email)
+    # if db_user:
+    #     raise HTTPException(status_code=400, detail="Email already registered")
+    return crud.create_user(db=db, user=user)
 
 
-@router.get("/users/{user_id}")
-async def get_user(user_id):
+@router.get("/users/", response_model=list[schemas.CoreUser])
+def read_users(db: SessionLocal = Depends(get_db)):
+    users = crud.get_users(db)
+    return users
 
-    return ""
+
+@router.get("/users/{user_id}", response_model=schemas.CoreUser)
+def read_user(user_id: int, db: Session = Depends(get_db)):
+    db_user = crud.get_user_by_id(db, user_id=user_id)
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return db_user
 
 
 @router.put("/users/{user_id}")
