@@ -38,6 +38,5 @@ async def edit_user(user_id):
 
 
 @router.delete("/users/{user_id}")
-async def delete_user(user_id):
-
-    return ""
+async def delete_user(user_id: int, db: Session = Depends(get_db)):
+    crud.delete_user(db, user_id=user_id)

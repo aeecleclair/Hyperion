@@ -8,7 +8,7 @@ def get_users(db: Session):
 
 
 def get_user_by_id(db: Session, user_id: int):
-    return db.query(models.CoreUser).filter(models.Core_user.id == user_id).first()
+    return db.query(models.CoreUser).filter(models.CoreUser.id == user_id).first()
 
 
 def get_group(db: Session):
@@ -16,7 +16,8 @@ def get_group(db: Session):
 
 
 def delete_user(db: Session, user_id: int):
-    return db.query(models.CoreUser).delete().where(models.Core_user.id == user_id)
+    db.query(models.CoreUser).filter(models.CoreUser.id == user_id).delete()
+    db.commit()
 
 
 def create_user(db: Session, user: schemas.CoreUserCreate):

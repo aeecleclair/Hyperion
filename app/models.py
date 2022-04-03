@@ -26,7 +26,7 @@ class CoreUser(Base):
     birth = Column(String)
     promo = Column(String)
     floor = Column(String, default=None)
-    email = Column(String, unique=True, index=True)
+    email = Column(String, index=True)  # set unique=True later
     created_on = Column(String)
 
     groups = relationship(
