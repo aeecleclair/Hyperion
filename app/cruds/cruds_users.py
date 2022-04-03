@@ -1,28 +1,33 @@
 from sqlalchemy.orm import Session
 
-from . import models, schemas
+from ..models import models_users
+from ..schemas import schemas_users
 
 
 def get_users(db: Session):
-    return db.query(models.CoreUser).all()
+    return db.query(models_users.CoreUser).all()
 
 
 def get_user_by_id(db: Session, user_id: int):
-    return db.query(models.CoreUser).filter(models.CoreUser.id == user_id).first()
+    return (
+        db.query(models_users.CoreUser)
+        .filter(models_users.CoreUser.id == user_id)
+        .first()
+    )
 
 
 def get_group(db: Session):
-    return db.query(models.CoreGroup).all()
+    return db.query(models_users.CoreGroup).all()
 
 
 def delete_user(db: Session, user_id: int):
-    db.query(models.CoreUser).filter(models.CoreUser.id == user_id).delete()
+    db.query(models_users.CoreUser).filter(models_users.CoreUser.id == user_id).delete()
     db.commit()
 
 
-def create_user(db: Session, user: schemas.CoreUserCreate):
+def create_user(db: Session, user: schemas_users.CoreUserCreate):
     fakePassword = user.password + "notreallyhashed"
-    db_user = models.CoreUser(
+    db_user = models_users.CoreUser(
         login=user.login,
         password=fakePassword,
         name=user.name,
@@ -41,19 +46,19 @@ def create_user(db: Session, user: schemas.CoreUserCreate):
 
 
 # def get_user_by_email(db: Session, email: str):
-#     return db.query(models.User).filter(models.User.email == email).first()
+#     return db.query(models_users.User).filter(models_users.User.email == email).first()
 
 
 # def get_users(db: Session, skip: int = 0, limit: int = 100):
-#     return db.query(models.User).offset(skip).limit(limit).all()
+#     return db.query(models_users.User).offset(skip).limit(limit).all()
 
 
 # def get_items(db: Session, skip: int = 0, limit: int = 100):
-#     return db.query(models.Item).offset(skip).limit(limit).all()
+#     return db.query(models_users.Item).offset(skip).limit(limit).all()
 
 
 # def create_user_item(db: Session, item: schemas.ItemCreate, user_id: int):
-#     db_item = models.Item(**item.dict(), owner_id=user_id)
+#     db_item = models_users.Item(**item.dict(), owner_id=user_id)
 #     db.add(db_item)
 #     db.commit()
 #     db.refresh(db_item)
