@@ -1,9 +1,6 @@
 from sqlalchemy import Column, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
-# from sqlalchemy.dialects.postgresql import UUID
-# import uuid
-
 from ..database import Base
 
 
@@ -44,30 +41,3 @@ class CoreGroup(Base):
     members = relationship(
         "CoreUser", secondary="core_membership", back_populates="groups"
     )
-
-
-# class Core_associations(Base):
-#     __tablename__ = "core_associations"
-
-#     id =
-#     type =
-
-# class Core_groups(Base):
-#     __tablename__ = "core_asso_admin"
-
-#     id =
-#     user_id =
-#     asso_id =
-
-#     id_gene = relationship("core_users", back_populates="id_asso_admin")
-
-
-# class Item(Base):
-#     __tablename__ = "items"
-
-#     id = Column(Integer, primary_key=True, index=True)
-#     title = Column(String, index=True)
-#     description = Column(String, index=True)
-#     owner_id = Column(Integer, ForeignKey("users.id"))
-
-#     owner = relationship("User", back_populates="items")
