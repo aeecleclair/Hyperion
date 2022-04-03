@@ -4,28 +4,35 @@ from ..models import models_users
 from ..schemas import schemas_users
 
 
-def get_users(db: Session):
-    return db.query(models_users.CoreUser).all()
+# async def get_users(db: Session):
+#     return (await db.query(models_users.CoreUser)).all()
 
 
-def get_user_by_id(db: Session, user_id: int):
-    return (
+async def get_users(db: Session):
+    query = models_users.CoreUser.select()
+    return await db.fetch_all(query)
+
+
+async def get_user_by_id(db: Session, user_id: int):
+    return await (
         db.query(models_users.CoreUser)
         .filter(models_users.CoreUser.id == user_id)
         .first()
     )
 
 
-def get_group(db: Session):
-    return db.query(models_users.CoreGroup).all()
+async def get_group(db: Session):
+    return await db.query(models_users.CoreGroup).all()
 
 
-def delete_user(db: Session, user_id: int):
-    db.query(models_users.CoreUser).filter(models_users.CoreUser.id == user_id).delete()
-    db.commit()
+async def delete_user(db: Session, user_id: int):
+    await db.query(models_users.CoreUser).filter(
+        models_users.CoreUser.id == user_id
+    ).delete()
+    await db.commit()
 
 
-def create_user(db: Session, user: schemas_users.CoreUserCreate):
+async def create_user(db: Session, user: schemas_users.CoreUserCreate):
     fakePassword = user.password + "notreallyhashed"
     db_user = models_users.CoreUser(
         login=user.login,
@@ -40,7 +47,7 @@ def create_user(db: Session, user: schemas_users.CoreUserCreate):
         email=user.email,
     )
     db.add(db_user)
-    db.commit()
+    await db.commit()
     db.refresh(db_user)
     return db_user
 
