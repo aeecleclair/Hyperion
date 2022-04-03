@@ -22,6 +22,38 @@ uvicorn main:app --reload
 Code, commits, and comments in English
 Use a spell checker
 
+### Mac
+
+Install pyenv
+
+```bash
+brew install pyenv-virtualenv
+```
+
+Edit .zhsrc and add at the end of the file :
+
+```bash
+eval "$(pyenv init -)"
+eval "$(pyenv virtualenv-init -)"
+```
+
+Create the virtual environment
+
+```bash
+pyenv virtualenv 3.10.3 hyperion
+```
+
+Activate it 
+
+```bash
+pyenv activate hyperion
+```
+In the app folder
+
+```bash
+uvicorn main:app --reload
+```
+
 ### Pip
 
 Pour le dev
@@ -56,4 +88,18 @@ Supprimer tous les packages
 
 ```bash
 pip freeze | xargs pip uninstall -y
+```
+
+Structure :
+
+``` 
+└── app
+    ├── main.py
+    ├── __init__.py
+    ├── crud
+    ├── database.py
+    ├── models
+        └──
+    └── schemas
+        └──
 ```

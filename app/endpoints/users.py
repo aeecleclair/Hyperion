@@ -1,24 +1,35 @@
-from fastapi import APIRouter
+from http.client import HTTPException
 
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+
+from app.cruds import cruds_users
+from app.database import SessionLocal, engine
+from app.dependencies import get_db
+from app.models import models_users
+from app.schemas import schemas_users
+
+models_users.Base.metadata.create_all(bind=engine)
 router = APIRouter()
 
 
-@router.get("/users")
-async def get_users():
-
-    return {"users": ["K2", "Tyshaud"]}
-
-
-@router.post("/users")
-async def create_user():
-
-    return ""
+@router.post("/users/", response_model=schemas_users.CoreUser)
+def create_user(user: schemas_users.CoreUserCreate, db: Session = Depends(get_db)):
+    return cruds_users.create_user(db=db, user=user)
 
 
-@router.get("/users/{user_id}")
-async def get_user(user_id):
+@router.get("/users/", response_model=list[schemas_users.CoreUser])
+def read_users(db: SessionLocal = Depends(get_db)):
+    users = cruds_users.get_users(db)
+    return users
 
-    return ""
+
+@router.get("/users/{user_id}", response_model=schemas_users.CoreUser)
+def read_user(user_id: int, db: Session = Depends(get_db)):
+    db_user = cruds_users.get_user_by_id(db, user_id=user_id)
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return db_user
 
 
 @router.put("/users/{user_id}")
@@ -28,6 +39,6 @@ async def edit_user(user_id):
 
 
 @router.delete("/users/{user_id}")
-async def delete_user(user_id):
-
-    return ""
+async def delete_user(user_id: int, db: Session = Depends(get_db)):
+    cruds_users.delete_user(db, user_id=user_id)
+    return f"Utilisateur {user_id} supprimé !"

@@ -1,4 +1,7 @@
 .DS_Store
-.venv
 __pycache__
 .pytest_cache
+.venv
+sql_app.db
+test.db
+
