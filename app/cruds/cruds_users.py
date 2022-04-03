@@ -3,9 +3,27 @@ from sqlalchemy.orm import Session
 from ..models import models_users
 from ..schemas import schemas_users
 
+from app.core import security
+
 
 def get_users(db: Session):
     return db.query(models_users.CoreUser).all()
+
+
+def get_user_token_by_login(db: Session, login: str):
+    return (
+        db.query(models_users.CoreUser)
+        .filter(models_users.CoreUser.login == login)
+        .first()
+    )
+
+
+def get_user_token_by_username(db: Session, username: str):
+    return (
+        db.query(models_users.CoreUser)
+        .filter(models_users.CoreUser.firstname == username)
+        .first()
+    )
 
 
 def get_user_by_id(db: Session, user_id: int):
@@ -26,10 +44,10 @@ def delete_user(db: Session, user_id: int):
 
 
 def create_user(db: Session, user: schemas_users.CoreUserCreate):
-    fakePassword = user.password + "notreallyhashed"
+    passwordhash = security.get_password_hash(user.password)
     db_user = models_users.CoreUser(
         login=user.login,
-        password=fakePassword,
+        password=passwordhash,
         name=user.name,
         firstname=user.firstname,
         nick=user.nick,

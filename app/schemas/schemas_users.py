@@ -40,9 +40,20 @@ class CoreUserCreate(CoreUserBase):
     password: str
 
 
+class CoreUserInDB(CoreUserBase):
+    passwordhash: str
+
+
 class CoreUser(CoreUserBase):
     id: int
     groups: list[CoreGroupBase] = []
+
+    class Config:
+        orm_mode = True
+
+
+class CoreUserToken(CoreUserBase):
+    password: str
 
     class Config:
         orm_mode = True

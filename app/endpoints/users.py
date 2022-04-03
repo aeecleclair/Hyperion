@@ -7,8 +7,11 @@ from app.cruds import cruds_users
 from app.database import SessionLocal, engine
 from app.dependencies import get_db
 from app.models import models_users
+from app.dependencies import get_db, get_current_user
+from app.cruds import cruds_users
 from app.schemas import schemas_users
 
+from app.models import models_users
 models_users.Base.metadata.create_all(bind=engine)
 router = APIRouter()
 
@@ -19,7 +22,10 @@ def create_user(user: schemas_users.CoreUserCreate, db: Session = Depends(get_db
 
 
 @router.get("/users/", response_model=list[schemas_users.CoreUser])
-def read_users(db: SessionLocal = Depends(get_db)):
+def read_users(
+    db: SessionLocal = Depends(get_db),
+    current_user: models_users.CoreUser = Depends(get_current_user),
+):
     users = cruds_users.get_users(db)
     return users
 
