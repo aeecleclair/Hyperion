@@ -2,15 +2,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..models import models_users
 from ..schemas import schemas_users
 from sqlalchemy import select, delete
-from sqlalchemy.orm import selectinload
 
 
 async def get_users(db: AsyncSession) -> list[models_users.CoreUser]:
-    result = await db.execute(
-        select(models_users.CoreUser).options(
-            selectinload(models_users.CoreUser.groups)
-        )
-    )
+    result = await db.execute(select(models_users.CoreUser))
     return result.scalars().all()
 
 
@@ -36,16 +31,12 @@ def create_user(user: schemas_users.CoreUserCreate, db: AsyncSession):
         email=user.email,
     )
     db.add(db_user)
-    print(db_user.id)
+    # print(db_user.id)
     return db_user
 
 
 async def get_groups(db: AsyncSession):
-    result = await db.execute(
-        select(models_users.CoreGroup).options(
-            selectinload(models_users.CoreGroup.members)
-        )
-    )
+    result = await db.execute(select(models_users.CoreGroup))
     return result.scalars().all()
 
 
