@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.dependencies import get_db
 from app.cruds import cruds_users
@@ -23,7 +22,7 @@ async def create_user(
     try:
         return await cruds_users.create_user(user=user, db=db)
     except ValueError as error:
-        raise HTTPException(status_code=422, detail=error)
+        raise HTTPException(status_code=422, detail=str(error))
 
 
 @router.get("/users/{user_id}", response_model=schemas_users.CoreUser)
@@ -41,6 +40,7 @@ async def delete_user(user_id: int, db: AsyncSession = Depends(get_db)):
 
 
 """ Requêtes foireuses """
+
 
 # Changer l'endpoint car il pense que le /group est un user_id
 @router.get("/users/groups", response_model=list[schemas_users.CoreGroupBase])

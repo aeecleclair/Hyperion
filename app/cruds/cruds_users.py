@@ -1,4 +1,4 @@
-from sqlite3 import IntegrityError
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from ..models import models_users
 from ..schemas import schemas_users
