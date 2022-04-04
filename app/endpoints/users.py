@@ -20,13 +20,10 @@ async def get_users(db: AsyncSession = Depends(get_db)):
 async def create_user(
     user: schemas_users.CoreUserCreate, db: AsyncSession = Depends(get_db)
 ):
-    user_db = cruds_users.create_user(user=user, db=db)
     try:
-        await db.commit()
-        return user_db
-    except IntegrityError:
-        await db.rollback()
-        raise HTTPException(status_code=422, detail="Email already registered")
+        return await cruds_users.create_user(user=user, db=db)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=error)
 
 
 @router.get("/users/{user_id}", response_model=schemas_users.CoreUser)

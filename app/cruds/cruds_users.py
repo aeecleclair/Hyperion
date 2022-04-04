@@ -1,3 +1,4 @@
+from sqlite3 import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from ..models import models_users
 from ..schemas import schemas_users
@@ -16,7 +17,7 @@ async def get_user_by_id(db: AsyncSession, user_id: int):
     return result.scalars().first()
 
 
-def create_user(user: schemas_users.CoreUserCreate, db: AsyncSession):
+async def create_user(user: schemas_users.CoreUserCreate, db: AsyncSession):
     fakePassword = user.password + "notreallyhashed"
     db_user = models_users.CoreUser(
         login=user.login,
@@ -31,8 +32,12 @@ def create_user(user: schemas_users.CoreUserCreate, db: AsyncSession):
         created_on=user.created_on,
     )
     db.add(db_user)
-    # print(db_user.id)
-    return db_user
+    try:
+        await db.commit()
+        return db_user
+    except IntegrityError:
+        await db.rollback()
+        raise ValueError("Email already registered")
 
 
 async def get_groups(db: AsyncSession):
