@@ -2,6 +2,7 @@ from pydantic import BaseModel
 
 
 class CoreGroupBase(BaseModel):
+    id: int = None
     nom: str
     description: str | None = None
 
@@ -10,6 +11,7 @@ class CoreGroupBase(BaseModel):
 
 
 class CoreUserBase(BaseModel):
+    id: int = None
     login: str
     name: str
     firstname: str
@@ -29,7 +31,6 @@ class CoreGroupCreate(CoreGroupBase):
 
 
 class CoreGroup(CoreGroupBase):
-    id: int
     members: list[CoreUserBase] = []
 
     class Config:
@@ -41,7 +42,6 @@ class CoreUserCreate(CoreUserBase):
 
 
 class CoreUser(CoreUserBase):
-    id: int
     groups: list[CoreGroupBase] = []
 
     class Config:

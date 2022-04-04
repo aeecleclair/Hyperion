@@ -1,38 +1,27 @@
-from sqlalchemy.orm import Session
-
+from sqlalchemy.ext.asyncio import AsyncSession
 from ..models import models_users
 from ..schemas import schemas_users
+from sqlalchemy import select, delete
+from sqlalchemy.orm import selectinload
 
 
-# async def get_users(db: Session):
-#     return (await db.query(models_users.CoreUser)).all()
-
-
-async def get_users(db: Session):
-    query = models_users.CoreUser.select()
-    return await db.fetch_all(query)
-
-
-async def get_user_by_id(db: Session, user_id: int):
-    return await (
-        db.query(models_users.CoreUser)
-        .filter(models_users.CoreUser.id == user_id)
-        .first()
+async def get_users(db: AsyncSession) -> list[models_users.CoreUser]:
+    result = await db.execute(
+        select(models_users.CoreUser).options(
+            selectinload(models_users.CoreUser.groups)
+        )
     )
+    return result.scalars().all()
 
 
-async def get_group(db: Session):
-    return await db.query(models_users.CoreGroup).all()
+async def get_user_by_id(db: AsyncSession, user_id: int):
+    result = await db.execute(
+        select(models_users.CoreUser).where(models_users.CoreUser.id == user_id)
+    )
+    return result.scalars().first()
 
 
-async def delete_user(db: Session, user_id: int):
-    await db.query(models_users.CoreUser).filter(
-        models_users.CoreUser.id == user_id
-    ).delete()
-    await db.commit()
-
-
-async def create_user(db: Session, user: schemas_users.CoreUserCreate):
+def create_user(user: schemas_users.CoreUserCreate, db: AsyncSession):
     fakePassword = user.password + "notreallyhashed"
     db_user = models_users.CoreUser(
         login=user.login,
@@ -47,26 +36,25 @@ async def create_user(db: Session, user: schemas_users.CoreUserCreate):
         email=user.email,
     )
     db.add(db_user)
-    await db.commit()
-    db.refresh(db_user)
+    print(db_user.id)
     return db_user
 
 
-# def get_user_by_email(db: Session, email: str):
+async def get_groups(db: AsyncSession):
+    result = await db.execute(
+        select(models_users.CoreGroup).options(
+            selectinload(models_users.CoreGroup.members)
+        )
+    )
+    return result.scalars().all()
+
+
+async def delete_user(db: AsyncSession, user_id: int):
+    await db.execute(
+        delete(models_users.CoreUser).where(models_users.CoreUser.id == user_id)
+    )
+    await db.commit()
+
+
+# def get_user_by_email(db: AsyncSession, email: str):
 #     return db.query(models_users.User).filter(models_users.User.email == email).first()
-
-
-# def get_users(db: Session, skip: int = 0, limit: int = 100):
-#     return db.query(models_users.User).offset(skip).limit(limit).all()
-
-
-# def get_items(db: Session, skip: int = 0, limit: int = 100):
-#     return db.query(models_users.Item).offset(skip).limit(limit).all()
-
-
-# def create_user_item(db: Session, item: schemas.ItemCreate, user_id: int):
-#     db_item = models_users.Item(**item.dict(), owner_id=user_id)
-#     db.add(db_item)
-#     db.commit()
-#     db.refresh(db_item)
-#     return db_item

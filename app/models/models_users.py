@@ -30,7 +30,10 @@ class CoreUser(Base):
     created_on = Column(String)
 
     groups = relationship(
-        "CoreGroup", secondary="core_membership", back_populates="members"
+        "CoreGroup",
+        secondary="core_membership",
+        back_populates="members",
+        lazy="selectin",  # So that we don't have problems of implicite query that cause async issue
     )
 
 
@@ -42,32 +45,8 @@ class CoreGroup(Base):
     description = Column(String)
 
     members = relationship(
-        "CoreUser", secondary="core_membership", back_populates="groups"
+        "CoreUser",
+        secondary="core_membership",
+        back_populates="groups",
+        lazy="selectin",  # So that we don't have problems of implicite query that cause async issue
     )
-
-
-# class Core_associations(Base):
-#     __tablename__ = "core_associations"
-
-#     id =
-#     type =
-
-# class Core_groups(Base):
-#     __tablename__ = "core_asso_admin"
-
-#     id =
-#     user_id =
-#     asso_id =
-
-#     id_gene = relationship("core_users", back_populates="id_asso_admin")
-
-
-# class Item(Base):
-#     __tablename__ = "items"
-
-#     id = Column(Integer, primary_key=True, index=True)
-#     title = Column(String, index=True)
-#     description = Column(String, index=True)
-#     owner_id = Column(Integer, ForeignKey("users.id"))
-
-#     owner = relationship("User", back_populates="items")
