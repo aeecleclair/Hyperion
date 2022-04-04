@@ -41,7 +41,7 @@ class CoreGroup(Base):
     __tablename__ = "core_group"
 
     id = Column(Integer, primary_key=True, index=True)
-    nom = Column(String)
+    name = Column(String)
     description = Column(String)
 
     members = relationship(

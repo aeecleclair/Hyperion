@@ -24,13 +24,13 @@ async def create_user(
         raise HTTPException(status_code=422, detail="Email already registered")
 
 
-@router.get("/users/", response_model=list[schemas_users.CoreUser])
+@router.get("/users/", response_model=list[schemas_users.CoreUserBase])
 async def get_users(db: AsyncSession = Depends(get_db)):
     users = await cruds_users.get_users(db)
     return users
 
 
-@router.get("/users/groups", response_model=list[schemas_users.CoreGroup])
+@router.get("/users/groups", response_model=list[schemas_users.CoreGroupBase])
 async def get_groups(db: AsyncSession = Depends(get_db)):
     groups = await cruds_users.get_groups(db)
     return groups

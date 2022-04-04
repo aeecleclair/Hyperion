@@ -8,4 +8,4 @@ async def get_db() -> AsyncSession:
         try:
             yield db
         finally:
-            db.close()
+            await db.close()
