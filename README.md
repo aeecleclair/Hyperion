@@ -1,36 +1,31 @@
 # Hyperion
 
-## Creating the environment
+## Creating a virtual environment for Python 3.10.x
 
 ### Windows
 
-`py -3.10 -m venv .venv`
-`.\.venv\Scripts\activate`
-
-In the root folder
+Create the virtual environment
 
 ```bash
-uvicorn app.main:app --reload
+py -3.10 -m venv .venv
 ```
 
-In the app folder
+Activate it
 
 ```bash
-uvicorn main:app --reload
+.\.venv\Scripts\activate
 ```
 
-Code, commits, and comments in English
-Use a spell checker
+### macOS (using Pyenv)
 
-### Mac
-
-Install pyenv
+Install Pyenv
 
 ```bash
+brew install
 brew install pyenv-virtualenv
 ```
 
-Edit .zhsrc and add at the end of the file :
+Edit `.zhsrc` and add at the end of the file :
 
 ```bash
 eval "$(pyenv init -)"
@@ -43,56 +38,53 @@ Create the virtual environment
 pyenv virtualenv 3.10.3 hyperion
 ```
 
-Activate it 
+Activate it
 
 ```bash
 pyenv activate hyperion
 ```
-In the app folder
+
+## Install dependencies
+
+### Development requirements
 
 ```bash
-uvicorn main:app --reload
+pip install -r requirement_dev.txt
 ```
 
-### Pip
-
-Pour le dev
+### Production requirements
 
 ```bash
-pip install black
-pip install flake8
-pip install fastapi[all]
-pip install pytest
-pip install sqlalchemy
-pip install "isort[requirements_deprecated_finder]"
+pip install -r requirement.txt
 ```
 
-Pour la prod
+> We need to add
+> pep8-naming
+> Security requirements
+> Use a spell checker
+
+> Pip freeze
+>
+> ```bash
+> pip freeze > requirements.txt
+> pip install -r requirements.txt
+> ```
+
+> Remove all modules
+>
+> ```bash
+> pip freeze | xargs pip uninstall -y
+> ```
+
+## Launch the API
 
 ```bash
-pip install black
-pip install flake8
-pip install fastapi
-pip install "uvicorn[standard]"
-pip install sqlalchemy
+uvicorn app.main:app --reload
 ```
 
-Utiliser une fichier
+## Hyperion structure
 
-```bash
-pip freeze > requirements.txt
-pip install -r requirements.txt
 ```
-
-Supprimer tous les packages
-
-```bash
-pip freeze | xargs pip uninstall -y
-```
-
-Structure :
-
-``` 
 └── app
     ├── main.py
     ├── __init__.py
