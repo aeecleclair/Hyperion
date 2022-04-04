@@ -20,10 +20,6 @@ class CoreGroupBase(BaseModel):
         orm_mode = True
 
 
-class CoreUserCreate(CoreUserBase):
-    password: str
-
-
 class CoreUser(CoreUserBase):
     nick: str
     birth: str
@@ -35,6 +31,16 @@ class CoreUser(CoreUserBase):
 
     class Config:
         orm_mode = True
+
+
+class CoreUserCreate(CoreUserBase):
+    password: str
+    nick: str
+    birth: str
+    promo: str
+    floor: str
+    email: str
+    created_on: str
 
 
 class CoreGroup(CoreGroupBase):

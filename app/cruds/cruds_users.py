@@ -27,8 +27,8 @@ def create_user(user: schemas_users.CoreUserCreate, db: AsyncSession):
         birth=user.birth,
         promo=user.promo,
         floor=user.floor,
-        created_on=user.created_on,
         email=user.email,
+        created_on=user.created_on,
     )
     db.add(db_user)
     # print(db_user.id)
