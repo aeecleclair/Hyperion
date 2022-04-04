@@ -1,3 +1,5 @@
+"""Commun model files for all core in order to avoid circular import due to bidirectional relationship"""
+
 from sqlalchemy import Column, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 

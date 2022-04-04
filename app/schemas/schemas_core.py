@@ -1,3 +1,5 @@
+"""Commun schemas file for endpoint /users et /groups because it would cause circular import"""
+
 from pydantic import BaseModel
 
 
