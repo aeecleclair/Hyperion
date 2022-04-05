@@ -20,7 +20,6 @@ class CoreUser(Base):
     __tablename__ = "core_user"
 
     id = Column(Integer, primary_key=True, index=True)  # Use UID later
-    login = Column(String)
     password = Column(String)  # the password is hashed
     name = Column(String)
     firstname = Column(String)
@@ -43,7 +42,7 @@ class CoreGroup(Base):
     __tablename__ = "core_group"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String)
+    name = Column(String, index=True)
     description = Column(String)
 
     members = relationship(

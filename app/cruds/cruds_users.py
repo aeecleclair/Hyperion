@@ -1,6 +1,6 @@
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from ..models import models_core
+from app.models import models_core
 from ..schemas import schemas_core
 from sqlalchemy import select, delete
 
