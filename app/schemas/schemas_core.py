@@ -3,20 +3,20 @@
 from pydantic import BaseModel
 
 
-class CoreUserBase(BaseModel):
+class CoreGroupBase(BaseModel):
     id: int = None
-    login: str
     name: str
-    firstname: str
+    description: str | None = None
 
     class Config:
         orm_mode = True
 
 
-class CoreGroupBase(BaseModel):
+class CoreUserBase(BaseModel):
     id: int = None
+    login: str
     name: str
-    description: str | None = None
+    firstname: str
 
     class Config:
         orm_mode = True
@@ -53,4 +53,6 @@ class CoreGroup(CoreGroupBase):
 
 
 class CoreGroupCreate(CoreGroupBase):
-    pass
+    id: int = None
+    name: str
+    description: str
