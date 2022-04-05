@@ -9,7 +9,7 @@ from app import api
 
 app = FastAPI()
 
-
+# Décommenter cette partie en dev pour créer la base de donnée la première fois
 # @app.on_event("startup")
 # async def startup():
 #     # create db tables

@@ -20,12 +20,11 @@ async def get_user_by_id(db: AsyncSession, user_id: int):
 async def create_user(user: schemas_core.CoreUserCreate, db: AsyncSession):
     fakePassword = user.password + "notreallyhashed"
     db_user = models_core.CoreUser(
-        login=user.login,
         password=fakePassword,
         name=user.name,
         firstname=user.firstname,
-        nick=user.nick,
-        birth=user.birth,
+        nickname=user.nickname,
+        birthday=user.birthday,
         promo=user.promo,
         floor=user.floor,
         email=user.email,

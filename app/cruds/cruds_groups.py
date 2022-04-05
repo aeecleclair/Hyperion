@@ -28,7 +28,7 @@ async def create_group(group: schemas_core.CoreGroupCreate, db: AsyncSession):
         return db_group
     except IntegrityError:
         await db.rollback()
-        raise ValueError("Email already registered")
+        raise ValueError("This name is already used")
 
 
 async def delete_group(db: AsyncSession, group_id: int):

@@ -9,13 +9,13 @@ router = APIRouter()
 """ Requêtes fonctionnelles """
 
 
-@router.get("/users/", response_model=list[schemas_core.CoreUserBase])
+@router.get("/users/", response_model=list[schemas_core.CoreUserSimple])
 async def get_users(db: AsyncSession = Depends(get_db)):
     users = await cruds_users.get_users(db)
     return users
 
 
-@router.post("/users/", response_model=schemas_core.CoreUserBase)
+@router.post("/users/", response_model=schemas_core.CoreUserSimple)
 async def create_user(
     user: schemas_core.CoreUserCreate, db: AsyncSession = Depends(get_db)
 ):

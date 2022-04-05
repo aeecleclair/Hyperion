@@ -9,7 +9,7 @@ router = APIRouter()
 """ Working """
 
 
-@router.get("/groups", response_model=list[schemas_core.CoreGroupBase])
+@router.get("/groups", response_model=list[schemas_core.CoreGroupSimple])
 async def get_groups(db: AsyncSession = Depends(get_db)):
     groups = await cruds_groups.get_groups(db)
     return groups
@@ -23,7 +23,7 @@ async def read_group(group_id: int, db: AsyncSession = Depends(get_db)):
     return db_group
 
 
-@router.post("/groups", response_model=schemas_core.CoreGroupBase)
+@router.post("/groups", response_model=schemas_core.CoreGroupSimple)
 async def create_group(
     group: schemas_core.CoreGroupCreate, db: AsyncSession = Depends(get_db)
 ):
