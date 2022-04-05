@@ -39,9 +39,6 @@ async def delete_user(user_id: int, db: AsyncSession = Depends(get_db)):
     return f"Utilisateur {user_id} supprimé !"
 
 
-""" Requêtes foireuses """
-
-
 # @router.put("/users/{user_id}")
 # async def edit_user(user_id):
 

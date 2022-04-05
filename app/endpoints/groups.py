@@ -15,6 +15,14 @@ async def get_groups(db: AsyncSession = Depends(get_db)):
     return groups
 
 
+@router.get("/groups/{group_id}", response_model=schemas_core.CoreGroup)
+async def read_group(group_id: int, db: AsyncSession = Depends(get_db)):
+    db_group = await cruds_groups.get_group_by_id(db=db, group_id=group_id)
+    if db_group is None:
+        raise HTTPException(status_code=404, detail="Group not found")
+    return db_group
+
+
 @router.post("/groups", response_model=schemas_core.CoreGroupBase)
 async def create_group(
     group: schemas_core.CoreGroupCreate, db: AsyncSession = Depends(get_db)
@@ -23,6 +31,12 @@ async def create_group(
         return await cruds_groups.create_group(group=group, db=db)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
+
+
+@router.delete("/groups/{group_id}")
+async def delete_group(group_id: int, db: AsyncSession = Depends(get_db)):
+    await cruds_groups.delete_group(db=db, group_id=group_id)
+    return f"Groupe {group_id} supprimé !"
 
 
 # schemas_core.CoreUserBase)
