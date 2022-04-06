@@ -12,25 +12,25 @@ router = APIRouter()
 # Prefix "/bdebooking" added in api.py
 
 
-@router.get("/bookings/")
+@router.get("/bookings/")  # list[schemas_bdebooking.Booking] provoque un bug
 async def get_users(db: AsyncSession = Depends(get_db)):
     bookings = await cruds_bdebooking.get_booking(db)
     return bookings
 
 
-@router.get("/bookings/unconfirmed", response_model=list[schemas_bdebooking.Booking])
+@router.get("/bookings/unconfirmed")  # response_model=list[schemas_bdebooking.Booking]
 async def get_booking_unconfirmed(db: AsyncSession = Depends(get_db)):
     bookings = await cruds_bdebooking.get_booking_unconfirmed(db)
     return bookings
 
 
-@router.get("/bookings/confirmed", response_model=list[schemas_bdebooking.Booking])
+@router.get("/bookings/confirmed")  # response_model=list[schemas_bdebooking.Booking]
 async def get_booking_confirmed(db: AsyncSession = Depends(get_db)):
-    bookings = await cruds_bdebooking.get_booking_unconfirmed(db)
+    bookings = await cruds_bdebooking.get_booking_confirmed(db)
     return bookings
 
 
-@router.post("/bookings/", response_model=schemas_bdebooking.Booking)
+@router.post("/bookings/")  # response_model=schemas_bdebooking.Booking
 async def create_bookings(
     booking: schemas_bdebooking.Booking, db: AsyncSession = Depends(get_db)
 ):
@@ -40,19 +40,31 @@ async def create_bookings(
         raise HTTPException(status_code=422, detail=str(error))
 
 
-@router.put("/bookings/{bookings_id}")
-async def edit_bookings_id(bookings_id):
+@router.put("/bookings/{booking_id}")
+async def edit_booking(
+    booking_modifiy: schemas_bdebooking.Booking,
+    booking_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        return await cruds_bdebooking.modify_booking(
+            booking_modify=booking_modifiy, db=db, booking_id=booking_id
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))
+    return f"The booking {booking_id} is modified !"
 
-    return ""
+
+@router.put("/bookings/{booking_id}/confirm")
+async def booking_confirm(booking_id: int, db: AsyncSession = Depends(get_db)):
+    try:
+        return await cruds_bdebooking.confirm_booking(db=db, booking_id=booking_id)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))
+    return f"The booking {booking_id} is confirmed !"
 
 
-@router.put("/bookings/{bookings_id}/confirm")
-async def edit_bookings_id_confirm(bookings_id):
-
-    return ""
-
-
-@router.delete("/bookings/{bookings_id}")
-async def delete_bookings_id(bookings_id):
-
-    return ""
+@router.delete("/bookings/{booking_id}")
+async def delete_booking(booking_id: int, db: AsyncSession = Depends(get_db)):
+    await cruds_bdebooking.delete_booking(db=db, booking_id=booking_id)
+    return f"The booking {booking_id} is deleted !"
