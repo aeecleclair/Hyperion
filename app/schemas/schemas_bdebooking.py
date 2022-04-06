@@ -1,25 +1,19 @@
-"""Schemas file for endpoint /bdebooking"""
-
 from datetime import datetime
-
 from pydantic import BaseModel
 
 
-class BookingBase(BaseModel):
-    url: str
-    reason: str
+class Booking(BaseModel):  #
+
+    booker: str
+    room: str
     start: datetime
     end: datetime
-    note: str
-    room: str
+    reason: str = None
+    notes: str = None
     key: bool
-    multipleDay: bool
+    pending: bool
+    multiple_days: bool
     recurring: bool
-
-
-class BookingComplete(BookingBase):
-    id: str
-    confirmed: bool
 
     class Config:
         orm_mode = True
