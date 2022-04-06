@@ -47,7 +47,6 @@ async def create_booking(booking: schemas_bdebooking.Booking, db: AsyncSession):
         reason=booking.reason,
         notes=booking.notes,
         key=booking.key,
-        pending=booking.pending,
         multiple_days=booking.multiple_days,
         recurring=booking.recurring,
     )
