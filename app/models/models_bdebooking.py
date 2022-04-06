@@ -1,21 +1,21 @@
-"""model file for bdebooking"""
-from datetime import datetime
-
-from sqlalchemy import Boolean, Column, DateTime, String
-
-from app.database import Base
+from sqlalchemy import Column, Integer, Boolean, DateTime, VARCHAR, TEXT, ForeignKey
+from ..database import Base
 
 
-class Booking(Base):
-    __tablename__ = "bde_booking"
-    url: str = Column(String, nullable=False)
-    id: str = Column(String, primary_key=True, index=True)
-    reason: str = Column(String, nullable=False)
-    start: datetime = Column(DateTime, nullable=False)
-    end: datetime = Column(DateTime, nullable=False)
-    note: str = Column(String, nullable=True)
-    room: str = Column(String, nullable=False, index=True)
-    key: bool = Column(Boolean, nullable=False)
-    confirmed: bool = Column(Boolean, nullable=False)
-    multipleDay: bool = Column(Boolean, nullable=False)
-    recurring: bool = Column(Boolean, nullable=False)
+class RoomBooking(Base):
+    __tablename__ = "room_booking"
+
+    id = Column(Integer, primary_key=True, index=True)  # Use UUID later
+    booker = Column(VARCHAR)
+    room = Column(VARCHAR)
+    start = Column(DateTime)
+    end = Column(DateTime)
+    reason = Column(TEXT)
+    notes = Column(TEXT)
+    key = Column(Boolean)
+    pending = Column(Boolean)
+    multiple_days = Column(Boolean)
+    recurring = Column(Boolean)
+
+    # link the table RoomBooking to the table CoreUser with a one to many relationship on the id_user
+    booker_id = Column(Integer, ForeignKey("core_user.id"))
