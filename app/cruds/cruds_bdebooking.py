@@ -1,9 +1,8 @@
-from turtle import update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from ..models import models_bdebooking
 from ..schemas import schemas_bdebooking
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, update
 
 
 async def get_booking(db: AsyncSession):
@@ -18,8 +17,8 @@ async def get_booking_confirmed(db: AsyncSession):
 
     result = await db.execute(
         select(models_bdebooking.RoomBooking).where(
-            not models_bdebooking.RoomBooking.pending
-        )
+            models_bdebooking.RoomBooking.pending == False
+        )  # flake8 don't like the == but it doesn't work with a "not
     )
     return result.scalars().all()
 
@@ -90,11 +89,11 @@ async def delete_booking(db: AsyncSession, booking_id: int):
 
 async def confirm_booking(db: AsyncSession, booking_id: int):
     """Modify the field pending of a booking in the database from the schema schema_bdebooking.Booking"""
-    # Modify the field pending of a booking in the database from the schema schema_bdebooking.Booking
+
     await db.execute(
-        update(models_bdebooking.Booking)
+        update(models_bdebooking.RoomBooking)
         .values(pending=False)
-        .where(models_bdebooking.Booking.id == booking_id)
+        .where(models_bdebooking.RoomBooking.id == booking_id)
     )
     await db.commit()
 
@@ -105,8 +104,8 @@ async def modify_booking(
     """Modify the booking in the database from the schema schema_bdebooking.Booking"""
 
     await db.execute(
-        update(models_bdebooking.Booking)
-        .where(models_bdebooking.Booking.id == booking_id)
+        update(models_bdebooking.RoomBooking)
+        .where(models_bdebooking.RoomBooking.id == booking_id)
         .values(
             booker=booking_modify.booker,
             room=booking_modify.room,
