@@ -1,25 +1,25 @@
-"""Schemas file for endpoint /bdebooking"""
-
 from datetime import datetime
-
 from pydantic import BaseModel
 
 
-class BookingBase(BaseModel):
-    url: str
-    reason: str
+class Booking(BaseModel):
+    """The booking schema is a request on the client side"""
+
+    booker: str
+    room: str
     start: datetime
     end: datetime
-    note: str
-    room: str
+    reason: str = None
+    notes: str = None
     key: bool
-    multipleDay: bool
+    multiple_days: bool
     recurring: bool
 
 
-class BookingComplete(BookingBase):
-    id: str
-    confirmed: bool
+class BookingRequest(Booking):
+    """The BookingRequest schema is a request on the server side"""
+
+    pending: bool = True
 
     class Config:
         orm_mode = True

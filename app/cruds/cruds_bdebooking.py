@@ -1,56 +1,87 @@
-from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from ..models import models_bdebooking
+from ..schemas import schemas_bdebooking
+from sqlalchemy import select, delete
 
-from app.models import models_bdebooking
-from app.schemas import schemas_bdebooking
+
+async def get_booking(db: AsyncSession):
+    result = await db.execute(select(models_bdebooking.RoomBooking))
+    return result.scalars().all()
 
 
-async def get_bookings(
-    db: AsyncSession, confirmed: bool
-) -> list[models_bdebooking.Booking]:
+async def get_booking_confirmed(db: AsyncSession):
     result = await db.execute(
-        select(models_bdebooking.Booking).where(
-            models_bdebooking.Booking.confirmed is confirmed
+        select(models_bdebooking.RoomBooking).where(
+            not models_bdebooking.RoomBooking.pending
         )
     )
     return result.scalars().all()
 
 
-async def create_booking(db: AsyncSession, booking: schemas_bdebooking.BookingComplete):
-    db_booking = models_bdebooking.Booking(**booking.dict())
+async def get_booking_unconfirmed(db: AsyncSession):
+    result = await db.execute(
+        select(models_bdebooking.RoomBooking).where(
+            models_bdebooking.RoomBooking.pending
+        )
+    )
+    return result.scalars().all()
+
+
+async def get_booking_by_id(db: AsyncSession, booking_id: int):
+    result = await db.execute(
+        select(models_bdebooking.RoomBooking).where(
+            models_bdebooking.RoomBooking.id == booking_id
+        )
+    )
+    return result.scalars().first()
+
+
+async def create_booking(booking: schemas_bdebooking.Booking, db: AsyncSession):
+    # create a booking in the database from the schema schema_bdebooking.Booking
+    db_booking = models_bdebooking.RoomBooking(
+        booker=booking.booker,
+        room=booking.room,
+        start=booking.start,
+        end=booking.end,
+        reason=booking.reason,
+        notes=booking.notes,
+        key=booking.key,
+        pending=booking.pending,
+        multiple_days=booking.multiple_days,
+        recurring=booking.recurring,
+    )
     db.add(db_booking)
     try:
         await db.commit()
+        return db_booking
     except IntegrityError:
         await db.rollback()
-        raise ValueError()
+        raise ValueError("This booking request is already done")
 
 
-async def edit_booking(
-    db: AsyncSession, booking_id: str, booking: schemas_bdebooking.BookingComplete
-):
+async def delete_booking(db: AsyncSession, booking_id: int):
     await db.execute(
-        update(models_bdebooking.Booking)
-        .where(models_bdebooking.Booking.id == booking_id)
-        .values(**booking.dict(exclude_none=True))
+        delete(models_bdebooking.RoomBooking).where(
+            models_bdebooking.RoomBooking.id == booking_id
+        )
     )
     await db.commit()
 
 
-async def confirm_booking(db: AsyncSession, booking_id: str):
+async def confirm_booking(db: AsyncSession, booking_id: int):
     await db.execute(
-        update(models_bdebooking.Booking)
-        .where(models_bdebooking.Booking.id == booking_id)
-        .values(confirmed=True)
+        delete(models_bdebooking.RoomBooking).where(
+            models_bdebooking.RoomBooking.id == booking_id
+        )
     )
     await db.commit()
 
 
-async def delete_booking(db: AsyncSession, booking_id: str):
+async def modify_booking(db: AsyncSession, booking_id: int):
     await db.execute(
-        delete(models_bdebooking.Booking).where(
-            models_bdebooking.Booking.id == booking_id
+        delete(models_bdebooking.RoomBooking).where(
+            models_bdebooking.RoomBooking.id == booking_id
         )
     )
     await db.commit()
