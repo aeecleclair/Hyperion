@@ -1,25 +1,43 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.dependencies import get_db
+from app.cruds import cruds_bdebooking
+from app.schemas import schemas_bdebooking
+
+
+# Is it possible to avoid alle these import in each files
 
 router = APIRouter()
 
-
 # Prefix "/bdebooking" added in api.py
-@router.get("/bookings")
-async def get_bookings():
-
-    return ""
 
 
-@router.get("/bookings/unconfirmed")
-async def get_bookings_unconfirmed():
+@router.get("/bookings/")
+async def get_users(db: AsyncSession = Depends(get_db)):
+    bookings = await cruds_bdebooking.get_booking(db)
+    return bookings
 
-    return ""
+
+@router.get("/bookings/unconfirmed", response_model=list[schemas_bdebooking.Booking])
+async def get_booking_unconfirmed(db: AsyncSession = Depends(get_db)):
+    bookings = await cruds_bdebooking.get_booking_unconfirmed(db)
+    return bookings
 
 
-@router.post("/bookings")
-async def create_bookings():
+@router.get("/bookings/confirmed", response_model=list[schemas_bdebooking.Booking])
+async def get_booking_confirmed(db: AsyncSession = Depends(get_db)):
+    bookings = await cruds_bdebooking.get_booking_unconfirmed(db)
+    return bookings
 
-    return ""
+
+@router.post("/bookings/", response_model=schemas_bdebooking.Booking)
+async def create_bookings(
+    booking: schemas_bdebooking.Booking, db: AsyncSession = Depends(get_db)
+):
+    try:
+        return await cruds_bdebooking.create_booking(booking=booking, db=db)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))
 
 
 @router.put("/bookings/{bookings_id}")
