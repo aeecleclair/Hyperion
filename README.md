@@ -49,13 +49,13 @@ pyenv activate hyperion
 ### Development requirements
 
 ```bash
-pip install -r requirement_dev.txt
+pip install -r requirements_dev.txt
 ```
 
 ### Production requirements
 
 ```bash
-pip install -r requirement.txt
+pip install -r requirements.txt
 ```
 
 > We need to add
@@ -85,20 +85,6 @@ uvicorn app.main:app --reload
 ## Hyperion structure
 
 ```
-└── app
-    ├── main.py
-    ├── __init__.py
-    ├── crud
-    ├── database.py
-    ├── models
-        └──
-    └── schemas
-        └──
-```
-
-Structure :
-
-``` 
 └── app
     ├── main.py
     ├── __init__.py

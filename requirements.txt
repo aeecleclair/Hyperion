@@ -1,3 +1,4 @@
 fastapi==0.75.1
 SQLAlchemy==1.4.34
 uvicorn[standard]==0.17.6
+alembic==1.7.7
