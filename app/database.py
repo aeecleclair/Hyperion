@@ -11,8 +11,10 @@ engine = create_async_engine(SQLALCHEMY_DATABASE_URL, echo=True)
 # future=True,
 
 
-Base = declarative_base()
+Base = declarative_base()  # Create a base class for all classes that inherit from it
 
-SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+SessionLocal = sessionmaker(
+    engine, class_=AsyncSession, expire_on_commit=False
+)  # Create a session factory for the engine
 # autocommit=False,
 # autoflush=False,
