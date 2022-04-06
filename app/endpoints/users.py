@@ -36,7 +36,7 @@ async def read_user(user_id: int, db: AsyncSession = Depends(get_db)):
 @router.delete("/users/{user_id}")
 async def delete_user(user_id: int, db: AsyncSession = Depends(get_db)):
     await cruds_users.delete_user(db=db, user_id=user_id)
-    return f"Utilisateur {user_id} supprimé !"
+    return f"The user {user_id} is deleted !"
 
 
 # @router.put("/users/{user_id}")
