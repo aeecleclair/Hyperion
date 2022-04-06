@@ -1,82 +1,58 @@
-import uuid
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.cruds import cruds_bdebooking
 from app.dependencies import get_db
+from app.cruds import cruds_bdebooking
 from app.schemas import schemas_bdebooking
-from app.utils.types.tags import Tags
+
+
+# Is it possible to avoid alle these import in each files
 
 router = APIRouter()
 
-
 # Prefix "/bdebooking" added in api.py
-@router.get(
-    "/bdebooking/bookings",
-    response_model=list[schemas_bdebooking.BookingComplete],
-    status_code=200,
-    tags=[Tags.bdebooking],
-)
-async def get_confirmed_bookings(db: AsyncSession = Depends(get_db)):
-    bookings = cruds_bdebooking.get_bookings(db=db, confirmed=True)
+
+
+@router.get("/bookings/")
+async def get_users(db: AsyncSession = Depends(get_db)):
+    bookings = await cruds_bdebooking.get_booking(db)
     return bookings
 
 
-@router.get(
-    "/bdebooking/bookings/unconfirmed",
-    response_model=list[schemas_bdebooking.BookingComplete],
-    status_code=200,
-    tags=[Tags.bdebooking],
-)
-async def get_unconfirmed_bookings(db: AsyncSession = Depends(get_db)):
-    bookings = cruds_bdebooking.get_bookings(db=db, confirmed=False)
+@router.get("/bookings/unconfirmed", response_model=list[schemas_bdebooking.Booking])
+async def get_booking_unconfirmed(db: AsyncSession = Depends(get_db)):
+    bookings = await cruds_bdebooking.get_booking_unconfirmed(db)
     return bookings
 
 
-@router.post("/bdebooking/bookings", status_code=201, tags=[Tags.bdebooking])
+@router.get("/bookings/confirmed", response_model=list[schemas_bdebooking.Booking])
+async def get_booking_confirmed(db: AsyncSession = Depends(get_db)):
+    bookings = await cruds_bdebooking.get_booking_unconfirmed(db)
+    return bookings
+
+
+@router.post("/bookings/", response_model=schemas_bdebooking.Booking)
 async def create_bookings(
-    booking: schemas_bdebooking.BookingBase, db: AsyncSession = Depends(get_db)
+    booking: schemas_bdebooking.Booking, db: AsyncSession = Depends(get_db)
 ):
-    db_booking = schemas_bdebooking.BookingComplete(
-        id=str(uuid.uuid4()), confirmed=False, **booking.dict()
-    )
     try:
-        await cruds_bdebooking.create_booking(booking=db_booking, db=db)
+        return await cruds_bdebooking.create_booking(booking=booking, db=db)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
 
-@router.patch(
-    "/bdebooking/bookings/{booking_id}", status_code=200, tags=[Tags.bdebooking]
-)
-async def edit_bookings_id(
-    booking_id: str,
-    booking: schemas_bdebooking.BookingBase,
-    db: AsyncSession = Depends(get_db),
-):
-    db_booking = schemas_bdebooking.BookingComplete(
-        id=booking_id, confirmed=False, **booking.dict()
-    )
-    try:
-        await cruds_bdebooking.edit_booking(
-            booking_id=booking_id, booking=db_booking, db=db
-        )
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+@router.put("/bookings/{bookings_id}")
+async def edit_bookings_id(bookings_id):
+
+    return ""
 
 
-@router.patch(
-    "/bdebooking/bookings/{booking_id}/confirm",
-    status_code=200,
-    tags=[Tags.bdebooking],
-)
-async def confirm_booking(booking_id: str, db: AsyncSession = Depends(get_db)):
-    await cruds_bdebooking.confirm_booking(booking_id=booking_id, db=db)
+@router.put("/bookings/{bookings_id}/confirm")
+async def edit_bookings_id_confirm(bookings_id):
+
+    return ""
 
 
-@router.delete(
-    "/bdebooking/bookings/{booking_id}", status_code=204, tags=[Tags.bdebooking]
-)
-async def delete_bookings_id(booking_id, db: AsyncSession = Depends(get_db)):
-    await cruds_bdebooking.delete_booking(booking_id=booking_id, db=db)
+@router.delete("/bookings/{bookings_id}")
+async def delete_bookings_id(bookings_id):
+
+    return ""
