@@ -47,24 +47,28 @@ async def edit_booking(
     db: AsyncSession = Depends(get_db),
 ):
     try:
-        return await cruds_bdebooking.modify_booking(
+        await cruds_bdebooking.modify_booking(
             booking_modify=booking_modifiy, db=db, booking_id=booking_id
         )
+        return f"The booking {booking_id} is modified !"
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
-    return f"The booking {booking_id} is modified !"
 
 
 @router.put("/bookings/{booking_id}/confirm")
 async def booking_confirm(booking_id: int, db: AsyncSession = Depends(get_db)):
     try:
-        return await cruds_bdebooking.confirm_booking(db=db, booking_id=booking_id)
+        await cruds_bdebooking.confirm_booking(db=db, booking_id=booking_id)
+        return f"The booking {booking_id} is confirmed !"
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
-    return f"The booking {booking_id} is confirmed !"
 
 
 @router.delete("/bookings/{booking_id}")
 async def delete_booking(booking_id: int, db: AsyncSession = Depends(get_db)):
-    await cruds_bdebooking.delete_booking(db=db, booking_id=booking_id)
-    return f"The booking {booking_id} is deleted !"
+    booking = cruds_bdebooking.get_booking_by_id(db=db, booking_id=booking_id)
+    if booking.pending:
+        return f"The booking {booking_id} is confirmed you can't modify it !"
+    else:
+        await cruds_bdebooking.delete_booking(db=db, booking_id=booking_id)
+        return f"The booking {booking_id} is deleted !"
