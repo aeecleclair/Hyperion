@@ -52,12 +52,7 @@ async def create_group(
         raise HTTPException(status_code=422, detail=str(error))
 
 
-@router.delete(
-    "/groups/{group_id}",
-    status_code=204,
-    status_code=204,
-    tags=[Tags.groups],
-)
+@router.delete("/groups/{group_id}", status_code=204, tags=[Tags.groups])
 async def delete_group(group_id: int, db: AsyncSession = Depends(get_db)):
     """Delete group from database by id"""
 
