@@ -64,6 +64,15 @@ async def booking_confirm(booking_id: int, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=422, detail=str(error))
 
 
+@router.put("/bookings/{booking_id}/unconfirm")
+async def booking_unconfirm(booking_id: int, db: AsyncSession = Depends(get_db)):
+    try:
+        await cruds_bdebooking.unconfirm_booking(db=db, booking_id=booking_id)
+        return f"The booking {booking_id} is waiting for confirmation"
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))
+
+
 @router.delete("/bookings/{booking_id}")
 async def delete_booking(booking_id: int, db: AsyncSession = Depends(get_db)):
     booking = cruds_bdebooking.get_booking_by_id(db=db, booking_id=booking_id)
