@@ -9,7 +9,7 @@ class RoomBooking(Base):
     booker = Column(
         VARCHAR, nullable=False
     )  # the id of the user in the table CoreUser (require authentification)
-    room = Column(VARCHAR, nullable=False, unique=True)
+    room = Column(VARCHAR, nullable=False)
     start = Column(DateTime, nullable=False)
     end = Column(DateTime, nullable=False)
     reason = Column(TEXT)  # Reason of the booking
