@@ -3,11 +3,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.dependencies import get_db
 from app.cruds import cruds_users
 from app.schemas import schemas_core
+from app.core.tags import Tags
 
 router = APIRouter()
 
 
-@router.get("/users/", response_model=list[schemas_core.CoreUserSimple])
+@router.get(
+    "/users/",
+    response_model=list[schemas_core.CoreUserSimple],
+    status_code=200,
+    tags=[Tags.users],
+)
 async def get_users(db: AsyncSession = Depends(get_db)):
     """Return all users from database as a list of dictionaries"""
 
@@ -15,7 +21,12 @@ async def get_users(db: AsyncSession = Depends(get_db)):
     return users
 
 
-@router.post("/users/", response_model=schemas_core.CoreUserSimple)
+@router.post(
+    "/users/",
+    response_model=schemas_core.CoreUserSimple,
+    status_code=201,
+    tags=[Tags.users],
+)
 async def create_user(
     user: schemas_core.CoreUserCreate, db: AsyncSession = Depends(get_db)
 ):
@@ -26,7 +37,12 @@ async def create_user(
         raise HTTPException(status_code=422, detail=str(error))
 
 
-@router.get("/users/{user_id}", response_model=schemas_core.CoreUser)
+@router.get(
+    "/users/{user_id}",
+    response_model=schemas_core.CoreUser,
+    status_code=200,
+    tags=[Tags.users],
+)
 async def read_user(user_id: int, db: AsyncSession = Depends(get_db)):
     """Return user with id from database as a dictionary"""
 
@@ -36,7 +52,11 @@ async def read_user(user_id: int, db: AsyncSession = Depends(get_db)):
     return db_user
 
 
-@router.delete("/users/{user_id}")
+@router.delete(
+    "/users/{user_id}",
+    status_code=204,
+    tags=[Tags.users],
+)
 async def delete_user(user_id: int, db: AsyncSession = Depends(get_db)):
     """Delete user from database by id"""
     
