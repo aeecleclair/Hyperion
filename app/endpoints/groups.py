@@ -7,6 +7,7 @@ from app.core.tags import Tags
 from app.cruds import cruds_groups
 from app.dependencies import get_db
 from app.schemas import schemas_core
+from app.core.tags import Tags
 
 router = APIRouter()
 
