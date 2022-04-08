@@ -6,11 +6,11 @@ from app.schemas import schemas_core
 
 router = APIRouter()
 
-""" Requêtes fonctionnelles """
-
 
 @router.get("/users/", response_model=list[schemas_core.CoreUserSimple])
 async def get_users(db: AsyncSession = Depends(get_db)):
+    """Return all users from database as a list of dictionaries"""
+
     users = await cruds_users.get_users(db)
     return users
 
@@ -19,6 +19,7 @@ async def get_users(db: AsyncSession = Depends(get_db)):
 async def create_user(
     user: schemas_core.CoreUserCreate, db: AsyncSession = Depends(get_db)
 ):
+    """Create a new user in database and return it as a dictionary"""
     try:
         return await cruds_users.create_user(user=user, db=db)
     except ValueError as error:
@@ -27,6 +28,8 @@ async def create_user(
 
 @router.get("/users/{user_id}", response_model=schemas_core.CoreUser)
 async def read_user(user_id: int, db: AsyncSession = Depends(get_db)):
+    """Return user with id from database as a dictionary"""
+
     db_user = await cruds_users.get_user_by_id(db=db, user_id=user_id)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -35,11 +38,6 @@ async def read_user(user_id: int, db: AsyncSession = Depends(get_db)):
 
 @router.delete("/users/{user_id}")
 async def delete_user(user_id: int, db: AsyncSession = Depends(get_db)):
-    await cruds_users.delete_user(db=db, user_id=user_id)
-    return f"Utilisateur {user_id} supprimé !"
-
-
-# @router.put("/users/{user_id}")
-# async def edit_user(user_id):
-
-#     return ""
+    """Delete user from database by id"""
+    
+    return await cruds_users.delete_user(db=db, user_id=user_id)
