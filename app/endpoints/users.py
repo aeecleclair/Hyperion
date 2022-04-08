@@ -59,5 +59,5 @@ async def read_user(user_id: int, db: AsyncSession = Depends(get_db)):
 )
 async def delete_user(user_id: int, db: AsyncSession = Depends(get_db)):
     """Delete user from database by id"""
-    
-    return await cruds_users.delete_user(db=db, user_id=user_id)
+
+    await cruds_users.delete_user(db=db, user_id=user_id)

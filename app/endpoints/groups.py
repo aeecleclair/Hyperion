@@ -61,4 +61,4 @@ async def create_group(
 async def delete_group(group_id: int, db: AsyncSession = Depends(get_db)):
     """Delete group from database by id"""
 
-    return await cruds_groups.delete_group(db=db, group_id=group_id)
+    await cruds_groups.delete_group(db=db, group_id=group_id)
