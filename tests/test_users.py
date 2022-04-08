@@ -8,17 +8,22 @@ from app.main import app
 from app.dependencies import get_db
 
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
+SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"  # Connect to the database
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
 )
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+TestingSessionLocal = sessionmaker(
+    autocommit=False, autoflush=False, bind=engine
+)  # Create a session for testing purposes and create a test client
 
-Base.metadata.create_all(bind=engine)
+Base.metadata.create_all(
+    bind=engine
+)  # Run the tests with the test client and override the get_db function to use the testing session
 
 
 def override_get_db():
+    """Override the get_db function to use the testing session"""
     try:
         db = TestingSessionLocal()
         yield db
@@ -28,22 +33,21 @@ def override_get_db():
 
 app.dependency_overrides[get_db] = override_get_db
 
-client = TestClient(app)
+client = TestClient(app)  # Run the tests
 
 
 def test_create_user():
     response = client.post(
         "/users/",
         json={
-            "login": "login",
             "password": "password",
             "name": "UserName",
             "firstname": "UserFirstName",
-            "nick": "Nickname",
+            "nickname": "Nickname",
             "birth": "01012000",
-            "promo": "E21",
+            "promo": "2021",
             "floor": "Adoma",
-            "email": "eclair@myecl.fr",
+            "email": "eclair2@myecl.fr",
             "created_on": 1,
         },
     )
@@ -54,11 +58,6 @@ def test_create_user():
 
 
 def test_read_users():
-    # TODO
-    pass
-
-
-def test_read_user():
     # TODO
     pass
 

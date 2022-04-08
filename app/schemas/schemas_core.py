@@ -5,17 +5,23 @@ from pydantic import BaseModel
 
 
 class CoreUserBase(BaseModel):
+    """Base model for user schema"""
+
     name: str
     firstname: str
     nickname: str = None
 
 
 class CoreGroupBase(BaseModel):
+    """Base model for group schema"""
+
     name: str
     description: str | None = None
 
 
 class CoreUserSimple(CoreUserBase):
+    """Simplified model for user schema use for getting all users"""
+
     id: int
 
     class Config:
@@ -23,6 +29,8 @@ class CoreUserSimple(CoreUserBase):
 
 
 class CoreGroupSimple(CoreGroupBase):
+    """Simplified model for group schema use for getting all groups"""
+
     id: int
 
     class Config:
@@ -30,6 +38,8 @@ class CoreGroupSimple(CoreGroupBase):
 
 
 class CoreUser(CoreUserSimple):
+    """Model for user schema similar to CoreUser table in database"""
+
     email: str
     birthday: date = None
     promo: int = None
@@ -42,6 +52,8 @@ class CoreUser(CoreUserSimple):
 
 
 class CoreUserCreate(CoreUserBase):
+    """Model for user creation schema"""
+
     email: str
     password: str
     birthday: date = None
@@ -51,6 +63,8 @@ class CoreUserCreate(CoreUserBase):
 
 
 class CoreGroup(CoreGroupSimple):
+    """Model for group schema similar to CoreGroup table in database"""
+
     members: list[CoreUserSimple] = []
 
     class Config:
@@ -58,4 +72,6 @@ class CoreGroup(CoreGroupSimple):
 
 
 class CoreGroupCreate(CoreGroupBase):
+    """Model for group creation schema"""
+
     pass

@@ -6,18 +6,26 @@ from sqlalchemy import select, delete
 
 
 async def get_users(db: AsyncSession) -> list[models_core.CoreUser]:
+    """Return all users from database as a list of dictionaries"""
+
     result = await db.execute(select(models_core.CoreUser))
     return result.scalars().all()
 
 
-async def get_user_by_id(db: AsyncSession, user_id: int):
+async def get_user_by_id(db: AsyncSession, user_id: int) -> models_core.CoreUser:
+    """Return user with id from database as a dictionary"""
+
     result = await db.execute(
         select(models_core.CoreUser).where(models_core.CoreUser.id == user_id)
     )
     return result.scalars().first()
 
 
-async def create_user(user: schemas_core.CoreUserCreate, db: AsyncSession):
+async def create_user(
+    user: schemas_core.CoreUserCreate, db: AsyncSession
+) -> models_core.CoreUser:
+    """Create a new user in database and return it as a dictionary"""
+
     fakePassword = user.password + "notreallyhashed"
     db_user = models_core.CoreUser(
         password=fakePassword,
@@ -40,11 +48,9 @@ async def create_user(user: schemas_core.CoreUserCreate, db: AsyncSession):
 
 
 async def delete_user(db: AsyncSession, user_id: int):
+    """Delete a user from database by id"""
+
     await db.execute(
         delete(models_core.CoreUser).where(models_core.CoreUser.id == user_id)
     )
     await db.commit()
-
-
-# def get_user_by_email(db: AsyncSession, email: str):
-#     return db.query(models_users.User).filter(models_users.User.email == email).first()

@@ -6,8 +6,6 @@ from app.schemas import schemas_core
 
 router = APIRouter()
 
-""" Requêtes fonctionnelles """
-
 
 @router.get("/users/", response_model=list[schemas_core.CoreUserSimple])
 async def get_users(db: AsyncSession = Depends(get_db)):
@@ -35,11 +33,4 @@ async def read_user(user_id: int, db: AsyncSession = Depends(get_db)):
 
 @router.delete("/users/{user_id}")
 async def delete_user(user_id: int, db: AsyncSession = Depends(get_db)):
-    await cruds_users.delete_user(db=db, user_id=user_id)
-    return f"Utilisateur {user_id} supprimé !"
-
-
-# @router.put("/users/{user_id}")
-# async def edit_user(user_id):
-
-#     return ""
+    return await cruds_users.delete_user(db=db, user_id=user_id)
