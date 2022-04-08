@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..models import models_core
 from ..schemas import schemas_core
 from sqlalchemy import select, delete
+from sqlalchemy.orm import selectinload
 
 
 async def get_groups(db: AsyncSession) -> list[models_core.CoreGroup]:
@@ -15,7 +16,11 @@ async def get_groups(db: AsyncSession) -> list[models_core.CoreGroup]:
 async def get_group_by_id(db: AsyncSession, group_id: int) -> models_core.CoreGroup:
     """Return group with id from database as a dictionary with id and name fields"""
     result = await db.execute(
-        select(models_core.CoreGroup).where(models_core.CoreGroup.id == group_id)
+        select(models_core.CoreGroup)
+        .where(models_core.CoreGroup.id == group_id)
+        .options(
+            selectinload(models_core.CoreGroup.members)
+        )  # needed to load the members from the relationship
     )
     return result.scalars().first()
 

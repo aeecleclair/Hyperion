@@ -3,10 +3,7 @@
 from sqlalchemy import Column, ForeignKey, Integer, String, Date, DateTime
 from sqlalchemy.orm import relationship
 
-# from sqlalchemy.dialects.postgresql import UUID
-# import uuid
-
-from ..database import Base
+from app.database import Base
 
 
 class CoreMembership(Base):
@@ -35,7 +32,6 @@ class CoreUser(Base):
         "CoreGroup",
         secondary="core_membership",
         back_populates="members",
-        lazy="selectin",  # So that we don't have problems of implicite query that cause async issue
     )
 
 
@@ -50,5 +46,4 @@ class CoreGroup(Base):
         "CoreUser",
         secondary="core_membership",
         back_populates="groups",
-        lazy="selectin",  # So that we don't have problems of implicite query that cause async issue
     )

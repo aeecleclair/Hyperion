@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 
 class CoreUserBase(BaseModel):
-    """Base model for user schema"""
+    """Base schema for user's model"""
 
     name: str
     firstname: str
@@ -13,14 +13,14 @@ class CoreUserBase(BaseModel):
 
 
 class CoreGroupBase(BaseModel):
-    """Base model for group schema"""
+    """Base shema for group's model"""
 
     name: str
     description: str | None = None
 
 
 class CoreUserSimple(CoreUserBase):
-    """Simplified model for user schema use for getting all users"""
+    """Simplified schema for user's model, used when getting all users"""
 
     id: int
 
@@ -29,7 +29,7 @@ class CoreUserSimple(CoreUserBase):
 
 
 class CoreGroupSimple(CoreGroupBase):
-    """Simplified model for group schema use for getting all groups"""
+    """Simplified schema for group's model, used when getting all groups"""
 
     id: int
 
@@ -38,7 +38,7 @@ class CoreGroupSimple(CoreGroupBase):
 
 
 class CoreUser(CoreUserSimple):
-    """Model for user schema similar to CoreUser table in database"""
+    """Schema for user's model similar to core_user table in database"""
 
     email: str
     birthday: date = None
@@ -52,7 +52,7 @@ class CoreUser(CoreUserSimple):
 
 
 class CoreUserCreate(CoreUserBase):
-    """Model for user creation schema"""
+    """Schema for user creation"""
 
     email: str
     password: str
@@ -63,7 +63,7 @@ class CoreUserCreate(CoreUserBase):
 
 
 class CoreGroup(CoreGroupSimple):
-    """Model for group schema similar to CoreGroup table in database"""
+    """Schema for group's model similar to core_group table in database"""
 
     members: list[CoreUserSimple] = []
 

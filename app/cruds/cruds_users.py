@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import models_core
 from ..schemas import schemas_core
 from sqlalchemy import select, delete
+from sqlalchemy.orm import selectinload
 
 
 async def get_users(db: AsyncSession) -> list[models_core.CoreUser]:
@@ -16,7 +17,11 @@ async def get_user_by_id(db: AsyncSession, user_id: int) -> models_core.CoreUser
     """Return user with id from database as a dictionary"""
 
     result = await db.execute(
-        select(models_core.CoreUser).where(models_core.CoreUser.id == user_id)
+        select(models_core.CoreUser)
+        .where(models_core.CoreUser.id == user_id)
+        .options(
+            selectinload(models_core.CoreUser.groups)
+        )  # needed to load the members from the relationship
     )
     return result.scalars().first()
 
