@@ -18,7 +18,7 @@ async def get_booking_confirmed(db: AsyncSession):
     result = await db.execute(
         select(models_bdebooking.RoomBooking).where(
             models_bdebooking.RoomBooking.pending == False
-        )  # flake8 don't like the == but it doesn't work with a "not
+        )  # flake8 don't like the == but it doesn't work with a "not"
     )
     return result.scalars().all()
 
@@ -71,7 +71,8 @@ async def create_booking(booking: schemas_bdebooking.Booking, db: AsyncSession):
     try:
         await db.commit()
         return db_booking
-    except IntegrityError:
+    except IntegrityError:  # In case of a duplicate key error
+        # TODO : raise the error only if pending is false (the booking is confirmed)
         await db.rollback()
         raise ValueError("This booking request is already done")
 
@@ -88,11 +89,22 @@ async def delete_booking(db: AsyncSession, booking_id: int):
 
 
 async def confirm_booking(db: AsyncSession, booking_id: int):
-    """Modify the field pending of a booking in the database from the schema schema_bdebooking.Booking"""
+    """Modify the field pending of a booking in the database from the schema schema_bdebooking.Booking for confirmation"""
 
     await db.execute(
         update(models_bdebooking.RoomBooking)
         .values(pending=False)
+        .where(models_bdebooking.RoomBooking.id == booking_id)
+    )
+    await db.commit()
+
+
+async def unconfirm_booking(db: AsyncSession, booking_id: int):
+    """Modify the field pending of a booking in the database from the schema schema_bdebooking.Booking for unconfirmation"""
+
+    await db.execute(
+        update(models_bdebooking.RoomBooking)
+        .values(pending=True)
         .where(models_bdebooking.RoomBooking.id == booking_id)
     )
     await db.commit()
