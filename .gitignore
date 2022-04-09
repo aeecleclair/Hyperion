@@ -4,3 +4,4 @@ __pycache__
 .venv
 sql_app.db
 test.db
+.env
