@@ -1,58 +1,29 @@
-"""An utility file provinding method to create and send email"""
-
-# import os
-from fastapi import BackgroundTasks
-from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
-from dotenv import load_dotenv
-
-load_dotenv(".env")
+from email.message import EmailMessage
+import smtplib
+import ssl
+from app.core.settings import settings
 
 
-class Envs:
-    # MAIL_USERNAME = os.getenv("MAIL_USERNAME")
-    # MAIL_PASSWORD = os.getenv("MAIL_PASSWORD")
-    # MAIL_FROM = os.getenv("MAIL_FROM")
-    # MAIL_PORT = int(os.getenv("MAIL_PORT"))
-    # MAIL_SERVER = os.getenv("MAIL_SERVER")
-    # MAIL_FROM_NAME = os.getenv("MAIL_FROM_NAME")
+def send_email(recipient: str, subject: str, content: str):
+    """
+    Send a plain text email using **starttls**.
+    Use the SMTP settings defined in environments variables or the dotenv file.
+    See [Settings class](app/core/settings.py) for more informations
+    """
+    # Send email using
+    # https://realpython.com/python-send-email/#option-1-setting-up-a-gmail-account-for-development
+    # Prevent send email from going to spam
+    # https://errorsfixing.com/why-do-some-python-smtplib-messages-deliver-to-gmail-spam-folder/
 
+    context = ssl.create_default_context()
 
-conf = ConnectionConfig(
-    MAIL_USERNAME=Envs.MAIL_USERNAME,
-    MAIL_PASSWORD=Envs.MAIL_PASSWORD,
-    MAIL_FROM=Envs.MAIL_FROM,
-    MAIL_PORT=Envs.MAIL_PORT,
-    MAIL_SERVER=Envs.MAIL_SERVER,
-    MAIL_FROM_NAME=Envs.MAIL_FROM_NAME,
-    MAIL_TLS=True,
-    MAIL_SSL=False,
-    USE_CREDENTIALS=True,
-    TEMPLATE_FOLDER="./app/utils/mail/templates",
-)
+    msg = EmailMessage()
+    msg.set_content(content, subtype="plain", charset="us-ascii")
+    msg["From"] = settings.SMTP_EMAIL
+    msg["To"] = recipient
+    msg["Subject"] = subject
 
-
-async def send_email_async(subject: str, email_to: str, body: dict):
-    message = MessageSchema(
-        subject=subject,
-        recipients=[email_to],
-        body=body,
-        subtype="html",
-    )
-
-    fm = FastMail(conf)
-    await fm.send_message(message, template_name="verification.html")
-
-
-def send_email_background(
-    background_tasks: BackgroundTasks, subject: str, email_to: str, body: dict
-):
-    message = MessageSchema(
-        subject=subject,
-        recipients=[email_to],
-        body=body,
-        subtype="html",
-    )
-    fm = FastMail(conf)
-    background_tasks.add_task(
-        fm.send_message, message, template_name="verification.html"
-    )
+    with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT) as server:
+        server.starttls(context=context)
+        server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
+        server.send_message(msg)
