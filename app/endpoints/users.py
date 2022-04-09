@@ -1,5 +1,5 @@
 import datetime
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import get_password_hash
 from app.dependencies import get_db
@@ -9,7 +9,8 @@ from app.schemas import schemas_core
 from app.utils.types.tags import Tags
 from app.utils.types.account_type import AccountType
 from app.utils.types import standard_responses
-from app.utils.mailworker import send_email
+from app.utils.mail.mailworker import send_email_background, send_email_async
+from starlette.responses import JSONResponse
 
 
 router = APIRouter()
@@ -76,7 +77,7 @@ async def delete_user(user_id: int, db: AsyncSession = Depends(get_db)):
     "/users/create",
     response_model=standard_responses.Result,
     status_code=201,
-    tags=[Tags.users, "user creation"],
+    tags=[Tags.users, "User creation"],
 )
 async def create_user(
     user: schemas_core.CoreUserCreate, db: AsyncSession = Depends(get_db)
@@ -113,7 +114,16 @@ async def create_user(
     else:
         # After adding the unconfirmed user to the database, we got an activation token that need to be send by email,
         # in order to make sure the email address is valid
-        send_email(to=user_unconfirmed.email)  # TODO: catch errors
+
+        # send_email(to=user_unconfirmed.email)  # TODO: catch errors
+        await send_email_async(
+            "Vérifier votre email",
+            user_unconfirmed.email,
+            {
+                "title": "MyECL",
+                "name": str(user_unconfirmed.first_name) + str(user_unconfirmed.name),
+            },
+        )
         print(user_unconfirmed.activation_token)
 
         # Warning: the validation token (and thus user_unconfirmed object) should **never** be returned by the request
@@ -127,7 +137,7 @@ async def create_user(
     "/users/activate",
     response_model=standard_responses.Result,
     status_code=201,
-    tags=[Tags.users, "user creation"],
+    tags=[Tags.users, "User creation"],
 )
 async def activate_user(
     user: schemas_core.CoreUserActivate, db: AsyncSession = Depends(get_db)
@@ -182,3 +192,25 @@ async def activate_user(
     )
 
     return standard_responses.Result()
+
+
+@router.get("/sendemail/asynchronous")
+async def send_email_asynchronous():
+    await send_email_async(
+        "Verifier votre email",
+        "victor.angot@gmail.com",
+        {"title": "Hello World", "name": "John Doe"},
+    )
+    return JSONResponse(status_code=200, content={"message": "email has been sent"})
+
+
+@router.get("/send-email/backgroundtasks")
+def send_email_backgroundtasks(background_tasks: BackgroundTasks):
+    """Send an email asynchronously using background tasks. Use this mail sender for notifications for instance"""
+    send_email_background(
+        background_tasks,
+        "Hello World",
+        "someemail@gmail.com",
+        {"title": "Hello World", "name": "John Doe"},
+    )
+    return JSONResponse(status_code=200, content={"message": "email has been sent"})
