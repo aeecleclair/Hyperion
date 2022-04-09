@@ -1,3 +1,5 @@
+"""Basic function creating the database tables and calling the router"""
+
 from fastapi import FastAPI
 from app import api
 

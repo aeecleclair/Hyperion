@@ -1,3 +1,5 @@
+"""File connecting to the database session (allows to change it only while the session exists)"""
+
 from app.database import SessionLocal
 from sqlalchemy.ext.asyncio import AsyncSession
 

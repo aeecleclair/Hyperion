@@ -1,3 +1,5 @@
+"""File defining the functions called by the endpoints, making queries to the table using the models"""
+
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import models_core

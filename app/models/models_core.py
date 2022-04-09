@@ -1,4 +1,7 @@
-"""Commun model files for all core in order to avoid circular import due to bidirectional relationship"""
+"""
+Commun model files for all core in order to avoid circular import due to bidirectional relationship,
+used by sqlalchemy to make queries to the database
+"""
 
 from sqlalchemy import Column, ForeignKey, Integer, String, Date, DateTime
 from sqlalchemy.orm import relationship

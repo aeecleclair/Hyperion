@@ -1,3 +1,5 @@
+"""File defining the API itself, using fastAPI and schemas, and calling the cruds functions"""
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.dependencies import get_db

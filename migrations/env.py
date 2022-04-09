@@ -1,3 +1,5 @@
+"""Environment file defining the required functions for the alembic migration to work"""
+
 import asyncio
 from logging.config import fileConfig
 
@@ -8,7 +10,7 @@ from app.database import Base
 
 from alembic import context
 
-from app.models import models_core
+# from app.models import models_core
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

@@ -1,3 +1,5 @@
+"""File importing alembic and defining the migration files (upgrades and downgrades)"""
+
 """${message}
 
 Revision ID: ${up_revision}
