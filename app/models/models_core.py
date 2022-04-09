@@ -1,10 +1,9 @@
-"""
-Commun model files for all core in order to avoid circular import due to bidirectional relationship,
-used by sqlalchemy to make queries to the database
-"""
+"""Common model files for all core in order to avoid circular import due to bidirectional relationship"""
 
-from sqlalchemy import Column, Date, DateTime, ForeignKey, Integer, String
+from sqlalchemy import Column, ForeignKey, Integer, String, Date, DateTime, Enum
 from sqlalchemy.orm import relationship
+from app.utils.types.account_type import AccountType
+
 
 from app.database import Base
 
@@ -19,8 +18,9 @@ class CoreMembership(Base):
 class CoreUser(Base):
     __tablename__ = "core_user"
 
-    id = Column(Integer, primary_key=True, index=True)  # Use UID later
+    id = Column(String, primary_key=True, index=True)  # Use UUID later
     email = Column(String, unique=True, index=True, nullable=False)
+    password_hash = Column(String, nullable=False)
     name = Column(String, nullable=False)
     firstname = Column(String, nullable=False)
     nickname = Column(String)
@@ -29,7 +29,7 @@ class CoreUser(Base):
     phone = Column(Integer)
     floor = Column(String, nullable=False)
     created_on = Column(DateTime)
-    password = Column(String, nullable=False)  # the password is hashed
+    account_type = Column(Enum(AccountType), nullable=False)
 
     groups = relationship(
         "CoreGroup",
@@ -38,10 +38,22 @@ class CoreUser(Base):
     )
 
 
+class CoreUserUnconfirmed(Base):
+    __tablename__ = "core_user_unconfirmed"
+
+    id = Column(String, primary_key=True)  # UUID
+    email = Column(String, index=True, nullable=False)  # The email is not unique
+    password_hash = Column(String)
+    account_type = Column(String, nullable=False)
+    activation_token = Column(String, nullable=False)
+    created_on = Column(DateTime, nullable=False)
+    expire_on = Column(DateTime, nullable=False)
+
+
 class CoreGroup(Base):
     __tablename__ = "core_group"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(String, primary_key=True, index=True)
     name = Column(String, index=True, nullable=False, unique=True)
     description = Column(String)
 
