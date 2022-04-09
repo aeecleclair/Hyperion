@@ -9,8 +9,9 @@ from app.schemas import schemas_core
 from app.utils.types.tags import Tags
 from app.utils.types.account_type import AccountType
 from app.utils.types import standard_responses
-from app.utils.mail.mailworker import send_email_background, send_email_async
+from app.utils.mail.mailworker import send_email
 from starlette.responses import JSONResponse
+from app.core.settings import settings
 
 
 router = APIRouter()
@@ -192,25 +193,3 @@ async def activate_user(
     )
 
     return standard_responses.Result()
-
-
-@router.get("/sendemail/asynchronous")
-async def send_email_asynchronous():
-    await send_email_async(
-        "Verifier votre email",
-        "victor.angot@gmail.com",
-        {"title": "Hello World", "name": "John Doe"},
-    )
-    return JSONResponse(status_code=200, content={"message": "email has been sent"})
-
-
-@router.get("/send-email/backgroundtasks")
-def send_email_backgroundtasks(background_tasks: BackgroundTasks):
-    """Send an email asynchronously using background tasks. Use this mail sender for notifications for instance"""
-    send_email_background(
-        background_tasks,
-        "Hello World",
-        "someemail@gmail.com",
-        {"title": "Hello World", "name": "John Doe"},
-    )
-    return JSONResponse(status_code=200, content={"message": "email has been sent"})
