@@ -10,14 +10,14 @@ from app.schemas import schemas_core
 
 
 async def get_groups(db: AsyncSession) -> list[models_core.CoreGroup]:
-    """Return all groups from database as a list of dictionaries with id and name fields"""
+    """Return all groups from database"""
 
     result = await db.execute(select(models_core.CoreGroup))
     return result.scalars().all()
 
 
 async def get_group_by_id(db: AsyncSession, group_id: int) -> models_core.CoreGroup:
-    """Return group with id from database as a dictionary with id and name fields"""
+    """Return group with id from database"""
     result = await db.execute(
         select(models_core.CoreGroup)
         .where(models_core.CoreGroup.id == group_id)
@@ -31,7 +31,7 @@ async def get_group_by_id(db: AsyncSession, group_id: int) -> models_core.CoreGr
 async def create_group(
     group: schemas_core.CoreGroupCreate, db: AsyncSession
 ) -> models_core.CoreGroup:
-    """Create a new group in database and return it as a dictionary with id and name fields"""
+    """Create a new group in database and return it"""
 
     db_group = models_core.CoreGroup(
         name=group.name,

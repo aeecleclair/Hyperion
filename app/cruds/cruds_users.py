@@ -10,14 +10,14 @@ from app.schemas import schemas_core
 
 
 async def get_users(db: AsyncSession) -> list[models_core.CoreUser]:
-    """Return all users from database as a list of dictionaries"""
+    """Return all users from database"""
 
     result = await db.execute(select(models_core.CoreUser))
     return result.scalars().all()
 
 
 async def get_user_by_id(db: AsyncSession, user_id: int) -> models_core.CoreUser:
-    """Return user with id from database as a dictionary"""
+    """Return user with id"""
 
     result = await db.execute(
         select(models_core.CoreUser)
@@ -32,7 +32,7 @@ async def get_user_by_id(db: AsyncSession, user_id: int) -> models_core.CoreUser
 async def create_user(
     user: schemas_core.CoreUserCreate, db: AsyncSession
 ) -> models_core.CoreUser:
-    """Create a new user in database and return it as a dictionary"""
+    """Create a new user in database and return it"""
 
     fakePassword = user.password + "notreallyhashed"
     db_user = models_core.CoreUser(
