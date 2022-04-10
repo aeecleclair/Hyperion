@@ -1,5 +1,7 @@
 import datetime
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+import secrets
+import uuid
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import get_password_hash
 from app.dependencies import get_db
@@ -12,6 +14,8 @@ from app.utils.types import standard_responses
 from app.utils.mail.mailworker import send_email
 from starlette.responses import JSONResponse
 from app.core.settings import settings
+from app.models import models_core
+from app.core.security import get_password_hash
 
 
 router = APIRouter()
@@ -81,35 +85,57 @@ async def delete_user(user_id: int, db: AsyncSession = Depends(get_db)):
     tags=[Tags.users, "User creation"],
 )
 async def create_user(
-    user: schemas_core.CoreUserCreate, db: AsyncSession = Depends(get_db)
+    user_create: schemas_core.CoreUserCreateRequest, db: AsyncSession = Depends(get_db)
 ):
     """
     Start the user account creation process. The user will be sent an email with a link to activate his account.
-    The received token need to be send to `/users/activate` endpoint to activate the account.
+    > The received token needs to be send to `/users/activate` endpoint to activate the account.
+
+    If the **password** is not provided, it will be required during the activation process. Don't submit a password if you are creating an account for someone else.
+
+    When creating **student** or **personnel** account a valid ECL email is required.
+    Only admin users can create other **account types**, contact ÉCLAIR for more informations.
     """
     # Check the account type
     if (
-        user.account_type == AccountType.eleve
-        or user.account_type == AccountType.personnel
+        user_create.account_type == AccountType.eleve
+        or user_create.account_type == AccountType.personnel
     ):
         # Students and personnels account should only be created with valid ECL address.
         # We compare to ".ec-lyon.fr" with a first dot to prevent someone from using a false domain (ex: pirate@other-ec-lyon.fr)
-        if not user.email[-11:] == ".ec-lyon.fr":
+        if not user_create.email[-11:] == ".ec-lyon.fr":
             raise HTTPException(status_code=400, detail="Invalid ECL email address")
     else:
         # TODO: check if the user is admin
         raise HTTPException(
-            status_code=403, detail=f"Unauthorized create a {user.type} account"
+            status_code=403, detail=f"Unauthorized create a {user_create.type} account"
         )
 
     # Make sure a confirmed account does not already exist
-    db_user = await cruds_users.get_user_by_email(db=db, email=user.email)
+    db_user = await cruds_users.get_user_by_email(db=db, email=user_create.email)
     if db_user is not None:
+        # Fail silently
         raise HTTPException(status_code=422, detail="User already exist")
+
+    password_hash = get_password_hash(user_create.password)
+    # We use https://docs.python.org/3/library/secrets.html#secrets.token_urlsafe to generate the activation secret token
+    activation_token = secrets.token_urlsafe(32)
 
     # Add the unconfirmed user to the unconfirmed_user table
     try:
-        user_unconfirmed = await cruds_users.create_unconfirmed_user(user=user, db=db)
+        user_unconfirmed = schemas_core.CoreUserUnconfirmedInDB(
+            id=str(uuid.uuid4()),  # Use UUID later
+            email=user_create.email,
+            password_hash=password_hash,
+            activation_token=activation_token,
+            created_on=datetime.datetime.now(),
+            expire_on=datetime.datetime.now() + datetime.timedelta(days=1),
+            account_type=user_create.account_type,
+        )
+
+        await cruds_users.create_unconfirmed_user(
+            user_unconfirmed=user_unconfirmed, db=db
+        )
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
     else:
@@ -130,9 +156,6 @@ async def create_user(
         # Warning: the validation token (and thus user_unconfirmed object) should **never** be returned by the request
         return standard_responses.Result(success=True)
 
-        # Make sure the token is only used once
-        # Make sur we can not create a token for an unexisting account
-
 
 @router.post(
     "/users/activate",
@@ -141,18 +164,19 @@ async def create_user(
     tags=[Tags.users, "User creation"],
 )
 async def activate_user(
-    user: schemas_core.CoreUserActivate, db: AsyncSession = Depends(get_db)
+    user: schemas_core.CoreUserActivateRequest, db: AsyncSession = Depends(get_db)
 ):
+    """
+    Activate the previously created account.
+    **token**: the activation token send by email to the user
+    **password**: user password, required if it was not provided previously
+    """
     # We need to find the corresponding user_unconfirmed
     unconfirmed_user = await cruds_users.get_unconfirmed_user_by_activation_token(
         activation_token=user.activation_token, db=db
     )
-    print(unconfirmed_user)
     if unconfirmed_user is None:
         raise HTTPException(status_code=422, detail="Invalid user or activation token")
-
-    print("Time", unconfirmed_user.expire_on)
-    print(datetime.datetime.now())
 
     # We need to make sure the unconfirmed user is still valid
     if unconfirmed_user.expire_on < datetime.datetime.now():
@@ -171,17 +195,10 @@ async def activate_user(
     print(unconfirmed_user.account_type)
 
     confirmed_user = schemas_core.CoreUserInDB(
-        name=user.name,
-        firstname=user.firstname,
-        nickname=user.nickname,
+        **user.dict(),
         email=unconfirmed_user.email,
-        birthday=user.birthday,
-        phone=user.phone,
-        promo=user.promo,
-        floor=user.floor,
         id=unconfirmed_user.id,
         password_hash=password_hash,
-        account_type=unconfirmed_user.account_type,
         created_on=datetime.datetime.now(),
     )
     # We add the new user to the database
