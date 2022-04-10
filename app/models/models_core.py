@@ -3,7 +3,7 @@ Commun model files for all core in order to avoid circular import due to bidirec
 used by sqlalchemy to make queries to the database
 """
 
-from sqlalchemy import Column, ForeignKey, Integer, String, Date, DateTime
+from sqlalchemy import Column, Date, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
 from app.database import Base

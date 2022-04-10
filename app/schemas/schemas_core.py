@@ -4,6 +4,7 @@ used by fastAPI in the endpoints file
 """
 
 from datetime import date, datetime
+
 from pydantic import BaseModel
 
 

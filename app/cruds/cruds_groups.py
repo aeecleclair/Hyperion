@@ -1,11 +1,12 @@
 """File defining the functions called by the endpoints, making queries to the table using the models"""
 
+from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from ..models import models_core
-from ..schemas import schemas_core
-from sqlalchemy import select, delete
 from sqlalchemy.orm import selectinload
+
+from app.models import models_core
+from app.schemas import schemas_core
 
 
 async def get_groups(db: AsyncSession) -> list[models_core.CoreGroup]:

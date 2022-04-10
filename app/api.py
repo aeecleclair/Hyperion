@@ -1,8 +1,8 @@
 """File defining all the routes for the module, to configure the router"""
 
 from fastapi import APIRouter
-from app.endpoints import amap, associations, bdebooking, bdecalendar, groups, users
 
+from app.endpoints import amap, associations, bdebooking, bdecalendar, groups, users
 
 api_router = APIRouter()
 api_router.include_router(amap.router)
