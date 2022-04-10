@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     """
 
     # SMTP configuration using starttls
+    SMTP_ACTIVE: bool
     SMTP_PORT: int
     SMTP_SERVER: str
     SMTP_USERNAME: str
