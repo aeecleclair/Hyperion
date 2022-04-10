@@ -1,5 +1,5 @@
 """
-Commun schemas file for endpoint /users et /groups because it would cause circular import, 
+Commun schemas file for endpoint /users et /groups because it would cause circular import,
 used by fastAPI in the endpoints file
 """
 
