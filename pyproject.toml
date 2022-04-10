@@ -3,11 +3,11 @@ line-length = 88
 target-version = ['py310']
 extend-exclude = '''
 /(
-    \.git
-  | \__pycache__
-  | \.pytest_cache
-  | \.venv
-  | \migrations
+    .git
+  | __pycache__
+  | .pytest_cache
+  | .venv
+  | migrations
 )/
 '''
 
