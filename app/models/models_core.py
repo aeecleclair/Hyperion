@@ -1,9 +1,7 @@
 """Common model files for all core in order to avoid circular import due to bidirectional relationship"""
 
-from sqlalchemy import Column, ForeignKey, Integer, String, Date, DateTime, Enum
+from sqlalchemy import Column, ForeignKey, Integer, String, Date, DateTime
 from sqlalchemy.orm import relationship
-from app.utils.types.account_type import AccountType
-
 
 from app.database import Base
 
@@ -29,7 +27,6 @@ class CoreUser(Base):
     phone = Column(Integer)
     floor = Column(String, nullable=False)
     created_on = Column(DateTime)
-    account_type = Column(Enum(AccountType), nullable=False)
 
     groups = relationship(
         "CoreGroup",
@@ -41,7 +38,11 @@ class CoreUser(Base):
 class CoreUserUnconfirmed(Base):
     __tablename__ = "core_user_unconfirmed"
 
-    id = Column(String, primary_key=True)  # UUID
+    id = Column(String, primary_key=True)
+    # The email column should not be unique.
+    # Someone can indeed create more than one user creation request,
+    # for example after loosing the previously received confirmation email.
+    # Each user creation request, a row will be added in this table with a new token
     email = Column(String, index=True, nullable=False)  # The email is not unique
     password_hash = Column(String)
     account_type = Column(String, nullable=False)

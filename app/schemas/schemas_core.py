@@ -1,10 +1,7 @@
-"""
-Commun schemas file for endpoint /users et /groups because it would cause circular import,
-used by fastAPI in the endpoints file
-"""
+"""Commun schemas file for endpoint /users et /groups because it would cause circular import"""
 
 from datetime import date, datetime
-
+from xmlrpc.client import DateTime
 from pydantic import BaseModel
 from app.utils.types.account_type import AccountType
 
@@ -56,8 +53,11 @@ class CoreUser(CoreUserSimple):
         orm_mode = True
 
 
-class CoreUserCreate(BaseModel):
-    """Schema for user's credentials"""
+class CoreUserCreateRequest(BaseModel):
+    """
+    The schema is used to send an account creation request
+    **password** is optional as it can either be provided during the creation or the activation
+    """
 
     email: str
     password: str = None
@@ -67,8 +67,10 @@ class CoreUserCreate(BaseModel):
         orm_mode = True
 
 
-class CoreUserActivate(CoreUserBase):
-    """Schema for user activation"""
+class CoreUserActivateRequest(CoreUserBase):
+    """
+    The
+    """
 
     activation_token: str
     password: str = None
@@ -76,6 +78,19 @@ class CoreUserActivate(CoreUserBase):
     phone: str = None
     promo: int = None
     floor: str
+
+    class Config:
+        orm_mode = True
+
+
+class CoreUserUnconfirmedInDB(BaseModel):
+    id: str
+    email: str
+    password_hash: str = None
+    account_type: AccountType
+    activation_token: str
+    created_on: datetime
+    expire_on: datetime
 
     class Config:
         orm_mode = True
@@ -92,7 +107,9 @@ class CoreUserInDB(CoreUserBase):
     phone: str = None
     floor: str
     created_on: date
-    account_type: AccountType
+
+    class Config:
+        orm_mode = True
 
 
 class CoreGroup(CoreGroupSimple):
