@@ -43,10 +43,22 @@ class CoreUserUnconfirmed(Base):
     # Someone can indeed create more than one user creation request,
     # for example after loosing the previously received confirmation email.
     # Each user creation request, a row will be added in this table with a new token
-    email = Column(String, index=True, nullable=False)  # The email is not unique
+    email = Column(String, nullable=False)  # The email is not unique
     password_hash = Column(String)
     account_type = Column(String, nullable=False)
     activation_token = Column(String, nullable=False)
+    created_on = Column(DateTime, nullable=False)
+    expire_on = Column(DateTime, nullable=False)
+
+
+class CoreUserRecoverRequest(Base):
+    __tablename__ = "core_user_recover_request"
+
+    # The email column should not be unique.
+    # Someone can indeed create more than one password reset request,
+    email = Column(String, nullable=False)
+    user_id = Column(String, nullable=False)
+    reset_token = Column(String, nullable=False, primary_key=True)
     created_on = Column(DateTime, nullable=False)
     expire_on = Column(DateTime, nullable=False)
 

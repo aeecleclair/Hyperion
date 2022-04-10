@@ -129,7 +129,8 @@ async def create_user(
             password_hash=password_hash,
             activation_token=activation_token,
             created_on=datetime.datetime.now(),
-            expire_on=datetime.datetime.now() + datetime.timedelta(days=1),
+            expire_on=datetime.datetime.now()
+            + datetime.timedelta(hours=settings.USER_ACTIVATION_TOKEN_EXPIRES_HOURS),
             account_type=user_create.account_type,
         )
 
@@ -176,7 +177,7 @@ async def activate_user(
         activation_token=user.activation_token, db=db
     )
     if unconfirmed_user is None:
-        raise HTTPException(status_code=422, detail="Invalid user or activation token")
+        raise HTTPException(status_code=422, detail="Invalid activation token")
 
     # We need to make sure the unconfirmed user is still valid
     if unconfirmed_user.expire_on < datetime.datetime.now():
@@ -208,5 +209,79 @@ async def activate_user(
     await cruds_users.delete_unconfirmed_user_by_email(
         db=db, email=unconfirmed_user.email
     )
+
+    return standard_responses.Result()
+
+
+@router.post(
+    "/users/recover",
+    response_model=standard_responses.Result,
+    status_code=201,
+    tags=[Tags.users, "User creation"],
+)
+async def recover_user(email: str, db: AsyncSession = Depends(get_db)):
+    """
+    Allow an user to start a password reset process.
+
+    If the provided **email** correspond to an existing account, a password reset token will be send.
+    Using this token, the password can be changed with `/users/reset-password` endpoint
+
+    """
+    db_user = await cruds_users.get_user_by_email(db=db, email=email)
+    if db_user is not None:
+        # The user exist, we can send a password reset invitation
+        reset_token = secrets.token_urlsafe(32)
+
+        recover_request = schemas_core.CoreUserRecoverRequest(
+            email=email,
+            user_id=db_user.id,
+            reset_token=reset_token,
+            created_on=datetime.datetime.now(),
+            expire_on=datetime.datetime.now()
+            + datetime.timedelta(hours=settings.PASSWORD_RESET_TOKEN_EXPIRES_HOURS),
+        )
+
+        cruds_users.create_user_recover_request(db=db, recover_user=recover_request)
+
+        if settings.SMTP_ACTIVE:
+            send_email(
+                recipient=db_user.email,
+                subject="MyECL - reset your password",
+                content=f"You can reset your password with the token {reset_token}",
+            )
+        print(reset_token)
+
+    return standard_responses.Result()
+
+
+@router.post(
+    "/users/reset-password",
+    response_model=standard_responses.Result,
+    status_code=201,
+    tags=[Tags.users, "User creation"],
+)
+async def reset_password_user(
+    reset_token: str, new_password: str, db: AsyncSession = Depends(get_db)
+):
+    """
+    Reset the user password, using a **reset_token** provided by `/users/recover` endpoint.
+    """
+    recover_request = await cruds_users.get_recover_request_by_reset_token(
+        reset_token == reset_token, db=db
+    )
+    if recover_request is None:
+        raise HTTPException(status_code=422, detail="Invalid reset token")
+
+    # We need to make sure the unconfirmed user is still valid
+    if recover_request.expire_on < datetime.datetime.now():
+        raise HTTPException(status_code=422, detail="Expired reset token")
+
+    new_password_hash = get_password_hash(new_password)
+    cruds_users.update_user_password_by_id(
+        db=db, id=recover_request.user_id, new_password_hash=new_password_hash
+    )
+
+    # As the user has reset its password, all other recovery request can be deleted from the table
+    cruds_users.delete_recover_request_by_email(db=db, email=recover_request.email)
 
     return standard_responses.Result()

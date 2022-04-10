@@ -1,7 +1,6 @@
 """Commun schemas file for endpoint /users et /groups because it would cause circular import"""
 
 from datetime import date, datetime
-from xmlrpc.client import DateTime
 from pydantic import BaseModel
 from app.utils.types.account_type import AccountType
 
@@ -125,3 +124,14 @@ class CoreGroupCreate(CoreGroupBase):
     """Model for group creation schema"""
 
     pass
+
+
+class CoreUserRecoverRequest(BaseModel):
+    email: str
+    user_id: str
+    reset_token: str
+    created_on: datetime
+    expire_on: datetime
+
+    class Config:
+        orm_mode = True
