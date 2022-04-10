@@ -116,16 +116,16 @@ async def create_user(
         # After adding the unconfirmed user to the database, we got an activation token that need to be send by email,
         # in order to make sure the email address is valid
 
-        # send_email(to=user_unconfirmed.email)  # TODO: catch errors
-        await send_email_async(
-            "Vérifier votre email",
-            user_unconfirmed.email,
-            {
-                "title": "MyECL",
-                "name": str(user_unconfirmed.first_name) + str(user_unconfirmed.name),
-            },
-        )
-        print(user_unconfirmed.activation_token)
+        # TODO
+        # Send email in an other thread
+        # Catch errors
+        if settings.SMTP_ACTIVE:
+            send_email(
+                recipient=user_create.email,
+                subject="MyECL - confirm your email",
+                content=f"Please confirm your MyECL account with the token {activation_token}",
+            )
+        print(activation_token)
 
         # Warning: the validation token (and thus user_unconfirmed object) should **never** be returned by the request
         return standard_responses.Result(success=True)
