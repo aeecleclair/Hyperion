@@ -1,4 +1,4 @@
 fastapi==0.75.1
-SQLAlchemy==1.4.34
+SQLAlchemy[asyncio]==1.4.34 # [asyncio] allows greenlet to be installed on Apple M1 devices
 uvicorn[standard]==0.17.6
 alembic==1.7.7
