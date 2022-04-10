@@ -11,6 +11,10 @@ class Settings(BaseSettings):
     See [Pydantic Settings documentation](https://pydantic-docs.helpmanual.io/usage/settings/#dotenv-env-support) for more informations
     """
 
+    # Token validity
+    USER_ACTIVATION_TOKEN_EXPIRES_HOURS = 24
+    PASSWORD_RESET_TOKEN_EXPIRES_HOURS = 12
+
     # SMTP configuration using starttls
     SMTP_ACTIVE: bool
     SMTP_PORT: int

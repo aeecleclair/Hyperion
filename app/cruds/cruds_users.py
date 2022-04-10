@@ -103,3 +103,45 @@ async def delete_user(db: AsyncSession, user_id: int):
         delete(models_core.CoreUser).where(models_core.CoreUser.id == user_id)
     )
     await db.commit()
+
+
+async def create_user_recover_request(
+    db: AsyncSession, recover_request: schemas_core.CoreUserRecoverRequest
+) -> models_core.CoreUserRecoverRequest:
+
+    db_user = models_core.CoreUserRecoverRequest(**recover_request.dict())
+
+    db.add(db_user)
+    try:
+        await db.commit()
+        return db_user
+    except:
+        await db.rollback()
+        raise
+
+
+async def get_recover_request_by_reset_token(
+    db: AsyncSession, reset_token: str
+) -> models_core.CoreUserRecoverRequest:
+
+    result = await db.execute(
+        select(models_core.CoreUserRecoverRequest).where(
+            models_core.CoreUserRecoverRequest.reset_token == reset_token
+        )
+    )
+    return result.scalars().first()
+
+
+async def delete_recover_request_by_email(db: AsyncSession, email: str):
+    """Delete a user from database by id"""
+
+    await db.execute(
+        delete(models_core.CoreUserRecoverRequest).where(
+            models_core.CoreUserRecoverRequest.email == email
+        )
+    )
+    await db.commit()
+
+
+async def update_user_password_by_id(db: AsyncSession, id: str, new_password_hash: str):
+    pass
