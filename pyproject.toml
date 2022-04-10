@@ -7,9 +7,11 @@ extend-exclude = '''
   | \__pycache__
   | \.pytest_cache
   | \.venv
+  | \migrations
 )/
 '''
 
 [tool.isort]
 profile = "black"
 py_version=310
+skip_glob = ["migrations/*"]
