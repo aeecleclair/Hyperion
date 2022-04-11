@@ -1,7 +1,7 @@
 from fastapi import APIRouter
-from app.utils.mail.mailworker import send_email
 from starlette.responses import JSONResponse
 
+from app.utils.mail.mailworker import send_email
 
 router = APIRouter()
 

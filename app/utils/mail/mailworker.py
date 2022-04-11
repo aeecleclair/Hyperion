@@ -1,6 +1,7 @@
-from email.message import EmailMessage
 import smtplib
 import ssl
+from email.message import EmailMessage
+
 from app.core.settings import settings
 
 

@@ -1,7 +1,9 @@
 """Commun schemas file for endpoint /users et /groups because it would cause circular import"""
 
 from datetime import date, datetime
+
 from pydantic import BaseModel
+
 from app.utils.types.account_type import AccountType
 
 
