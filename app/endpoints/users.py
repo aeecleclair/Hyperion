@@ -6,17 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import get_password_hash
 from app.dependencies import get_db
 from app.cruds import cruds_users
-from app.dependencies import get_db
 from app.schemas import schemas_core
 from app.utils.types.tags import Tags
 from app.utils.types.account_type import AccountType
 from app.utils.types import standard_responses
 from app.utils.mail.mailworker import send_email
-from starlette.responses import JSONResponse
 from app.core.settings import settings
-from app.models import models_core
-from app.core.security import get_password_hash
-
 
 router = APIRouter()
 
@@ -32,24 +27,6 @@ async def get_users(db: AsyncSession = Depends(get_db)):
 
     users = await cruds_users.get_users(db)
     return users
-
-
-"""
-@router.post(
-    "/users/",
-    response_model=schemas_core.CoreUserSimple,
-    status_code=201,
-    tags=[Tags.users],
-)
-async def create_user(
-    user: schemas_core.CoreUserCreate, db: AsyncSession = Depends(get_db)
-):
-    \"""Create a new user in database and return it as a CoreUserSimple\"""
-    try:
-        return await cruds_users.create_user(user=user, db=db)
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
-"""
 
 
 @router.get(
