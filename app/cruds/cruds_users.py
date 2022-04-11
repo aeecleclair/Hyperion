@@ -4,8 +4,8 @@ from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from app.core.security import get_password_hash
-import secrets
+from app.models import models_core
+from app.schemas import schemas_core
 
 
 async def get_users(db: AsyncSession) -> list[models_core.CoreUser]:
