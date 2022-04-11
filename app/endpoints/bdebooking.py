@@ -4,37 +4,37 @@ router = APIRouter()
 
 
 # Prefix "/bdebooking" added in api.py
-@router.get("/bookings")
+@router.get("/bdebooking/bookings")
 async def get_bookings():
 
     return ""
 
 
-@router.get("/bookings/unconfirmed")
+@router.get("/bdebooking/bookings/unconfirmed")
 async def get_bookings_unconfirmed():
 
     return ""
 
 
-@router.post("/bookings")
+@router.post("/bdebooking/bookings")
 async def create_bookings():
 
     return ""
 
 
-@router.put("/bookings/{bookings_id}")
+@router.put("/bdebooking/bookings/{bookings_id}")
 async def edit_bookings_id(bookings_id):
 
     return ""
 
 
-@router.put("/bookings/{bookings_id}/confirm")
+@router.put("/bdebooking/bookings/{bookings_id}/confirm")
 async def edit_bookings_id_confirm(bookings_id):
 
     return ""
 
 
-@router.delete("/bookings/{bookings_id}")
+@router.delete("/bdebooking/bookings/{bookings_id}")
 async def delete_bookings_id(bookings_id):
 
     return ""

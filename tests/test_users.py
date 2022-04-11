@@ -1,64 +1,73 @@
 from fastapi.testclient import TestClient
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from sqlalchemy import create_engine
-
 from app.database import Base
-from app.main import app
 from app.dependencies import get_db
+from app.main import app
 
-
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
-
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+SQLALCHEMY_DATABASE_URL = (
+    "sqlite+aiosqlite:///./test.db"  # Connect to the test's database
 )
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-Base.metadata.create_all(bind=engine)
+engine = create_async_engine(SQLALCHEMY_DATABASE_URL, echo=True)
+
+TestingSessionLocal = sessionmaker(
+    engine, class_=AsyncSession, expire_on_commit=False
+)  # Create a session for testing purposes
 
 
-def override_get_db():
-    try:
-        db = TestingSessionLocal()
-        yield db
-    finally:
-        db.close()
+@app.on_event("startup")
+async def startuptest():
+    # create db tables in test.db
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.create_all)
+
+
+async def override_get_db() -> AsyncSession:
+    """Override the get_db function to use the testing session"""
+
+    async with TestingSessionLocal() as db:
+        try:
+            yield db
+        finally:
+            await db.close()
 
 
 app.dependency_overrides[get_db] = override_get_db
 
-client = TestClient(app)
+
+def test_create_db():  # A first test is needed to run startuptest once
+    with TestClient(app):
+        pass
+
+
+client = TestClient(app)  # Create a client to execute tests
 
 
 def test_create_user():
     response = client.post(
         "/users/",
         json={
-            "login": "login",
-            "password": "password",
-            "name": "UserName",
-            "firstname": "UserFirstName",
-            "nick": "Nickname",
-            "birth": "01012000",
-            "promo": "E21",
-            "floor": "Adoma",
+            "name": "Backend",
+            "firstname": "MyEcl",
+            "nickname": "Hyperion",
             "email": "eclair@myecl.fr",
-            "created_on": 1,
+            "password": "password",
+            "birthday": "2022-04-08",
+            "promo": 2022,
+            "floor": "Adoma",
+            "created_on": "2022-04-08T12:12:39.099Z",
         },
     )
-    assert response.status_code == 200, response.text
+    assert response.status_code == 201, response.text
     data = response.json()
-    assert data["email"] == "eclair@myecl.fr"
+    assert data["nickname"] == "Hyperion"
     assert "id" in data
 
 
 def test_read_users():
-    # TODO
-    pass
-
-
-def test_read_user():
     # TODO
     pass
 

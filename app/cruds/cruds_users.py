@@ -1,65 +1,64 @@
-from sqlalchemy.orm import Session
+"""File defining the functions called by the endpoints, making queries to the table using the models"""
 
-from ..models import models_users
-from ..schemas import schemas_users
+from sqlalchemy import delete, select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+from app.models import models_core
+from app.schemas import schemas_core
 
 
-def get_users(db: Session):
-    return db.query(models_users.CoreUser).all()
+async def get_users(db: AsyncSession) -> list[models_core.CoreUser]:
+    """Return all users from database"""
+
+    result = await db.execute(select(models_core.CoreUser))
+    return result.scalars().all()
 
 
-def get_user_by_id(db: Session, user_id: int):
-    return (
-        db.query(models_users.CoreUser)
-        .filter(models_users.CoreUser.id == user_id)
-        .first()
+async def get_user_by_id(db: AsyncSession, user_id: int) -> models_core.CoreUser:
+    """Return user with id"""
+
+    result = await db.execute(
+        select(models_core.CoreUser)
+        .where(models_core.CoreUser.id == user_id)
+        .options(
+            selectinload(models_core.CoreUser.groups)
+        )  # needed to load the members from the relationship
     )
+    return result.scalars().first()
 
 
-def get_group(db: Session):
-    return db.query(models_users.CoreGroup).all()
+async def create_user(
+    user: schemas_core.CoreUserCreate, db: AsyncSession
+) -> models_core.CoreUser:
+    """Create a new user in database and return it"""
 
-
-def delete_user(db: Session, user_id: int):
-    db.query(models_users.CoreUser).filter(models_users.CoreUser.id == user_id).delete()
-    db.commit()
-
-
-def create_user(db: Session, user: schemas_users.CoreUserCreate):
     fakePassword = user.password + "notreallyhashed"
-    db_user = models_users.CoreUser(
-        login=user.login,
+    db_user = models_core.CoreUser(
         password=fakePassword,
         name=user.name,
         firstname=user.firstname,
-        nick=user.nick,
-        birth=user.birth,
+        nickname=user.nickname,
+        birthday=user.birthday,
         promo=user.promo,
         floor=user.floor,
-        created_on=user.created_on,
         email=user.email,
+        created_on=user.created_on,
     )
     db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    return db_user
+    try:
+        await db.commit()
+        return db_user
+    except IntegrityError:
+        await db.rollback()
+        raise ValueError("Email already registered")
 
 
-# def get_user_by_email(db: Session, email: str):
-#     return db.query(models_users.User).filter(models_users.User.email == email).first()
+async def delete_user(db: AsyncSession, user_id: int):
+    """Delete a user from database by id"""
 
-
-# def get_users(db: Session, skip: int = 0, limit: int = 100):
-#     return db.query(models_users.User).offset(skip).limit(limit).all()
-
-
-# def get_items(db: Session, skip: int = 0, limit: int = 100):
-#     return db.query(models_users.Item).offset(skip).limit(limit).all()
-
-
-# def create_user_item(db: Session, item: schemas.ItemCreate, user_id: int):
-#     db_item = models_users.Item(**item.dict(), owner_id=user_id)
-#     db.add(db_item)
-#     db.commit()
-#     db.refresh(db_item)
-#     return db_item
+    await db.execute(
+        delete(models_core.CoreUser).where(models_core.CoreUser.id == user_id)
+    )
+    await db.commit()

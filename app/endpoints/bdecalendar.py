@@ -4,19 +4,19 @@ router = APIRouter()
 
 
 # Prefix "/bdecalendar" added in api.py
-@router.get("/events")
+@router.get("/bdecalendar/events")
 async def get_events():
 
     return ""
 
 
-@router.get("/events/unconfirmed")
+@router.get("/bdecalendar/events/unconfirmed")
 async def get_events_unconfirmed():
 
     return ""
 
 
-@router.post("/events")
+@router.post("/bdecalendar/events")
 async def create_events():
 
     return ""
@@ -28,13 +28,13 @@ async def edit_events_id(events_id):
     return ""
 
 
-@router.put("/events/{events_id}/confirm")
+@router.put("/bdecalendar/events/{events_id}/confirm")
 async def edit_events_id_confirm(events_id):
 
     return ""
 
 
-@router.delete("/events/{events_id}")
+@router.delete("/bdecalendar/events/{events_id}")
 async def delete_events_id(events_id):
 
     return ""

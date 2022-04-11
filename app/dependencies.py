@@ -1,10 +1,15 @@
-# Dependency
+"""File connecting to the database session (allows to change it only while the session exists)"""
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.database import SessionLocal
 
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+async def get_db() -> AsyncSession:
+    """Return database session"""
+
+    async with SessionLocal() as db:
+        try:
+            yield db
+        finally:
+            await db.close()
