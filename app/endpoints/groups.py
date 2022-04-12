@@ -1,5 +1,6 @@
 """File defining the API itself, using fastAPI and schemas, and calling the cruds functions"""
 
+import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -49,8 +50,9 @@ async def create_group(
     group: schemas_core.CoreGroupCreate, db: AsyncSession = Depends(get_db)
 ):
     """Create a new group in database and return it as a dictionary"""
+    db_group = schemas_core.CoreGroupInDB(id=str(uuid.uuid4()), **group.dict())
     try:
-        return await cruds_groups.create_group(group=group, db=db)
+        return await cruds_groups.create_group(group=db_group, db=db)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
 

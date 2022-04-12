@@ -29,14 +29,11 @@ async def get_group_by_id(db: AsyncSession, group_id: int) -> models_core.CoreGr
 
 
 async def create_group(
-    group: schemas_core.CoreGroupCreate, db: AsyncSession
+    group: schemas_core.CoreGroupInDB, db: AsyncSession
 ) -> models_core.CoreGroup:
     """Create a new group in database and return it"""
 
-    db_group = models_core.CoreGroup(
-        name=group.name,
-        description=group.description,
-    )
+    db_group = models_core.CoreGroup(**group.dict())
     db.add(db_group)
     try:
         await db.commit()
