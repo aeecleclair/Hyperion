@@ -2,9 +2,10 @@
 
 from datetime import date, datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 
 from app.utils.types.account_type import AccountType
+from app.core import security
 
 
 class CoreUserBase(BaseModel):
@@ -64,6 +65,12 @@ class CoreUserCreateRequest(BaseModel):
     password: str = None
     account_type: AccountType
 
+    # Password validator
+    # https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
+    _normalize_password = validator("password", allow_reuse=True)(
+        security.password_validator
+    )
+
     class Config:
         orm_mode = True
 
@@ -75,6 +82,12 @@ class CoreUserActivateRequest(CoreUserBase):
     phone: str = None
     promo: int = None
     floor: str
+
+    # Password validator
+    # https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
+    _normalize_password = validator("password", allow_reuse=True)(
+        security.password_validator
+    )
 
     class Config:
         orm_mode = True
