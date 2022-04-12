@@ -262,3 +262,28 @@ async def reset_password_user(
     cruds_users.delete_recover_request_by_email(db=db, email=recover_request.email)
 
     return standard_responses.Result()
+
+
+@router.post(
+    "/users/change-password",
+    response_model=standard_responses.Result,
+    status_code=201,
+    tags=[Tags.users, "User creation"],
+)
+async def change_password_user(
+    user_id: str = Body(...),
+    old_password: str = Body(...),
+    new_password: str = Body(...),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Change a user password.
+    """
+    # TODO: check the old_password
+    # TODO: check new_password strength
+    new_password_hash = security.get_password_hash(new_password)
+    await cruds_users.update_user_password_by_id(
+        db=db, user_id=user_id, new_password_hash=new_password_hash
+    )
+
+    return standard_responses.Result()
