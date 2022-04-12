@@ -1,11 +1,9 @@
 import datetime
-import secrets
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import get_password_hash
 from app.core.settings import settings
 from app.cruds import cruds_users
 from app.dependencies import get_db
@@ -14,6 +12,7 @@ from app.utils.mail.mailworker import send_email
 from app.utils.types import standard_responses
 from app.utils.types.account_type import AccountType
 from app.utils.types.tags import Tags
+from app.core import security
 
 router = APIRouter()
 
@@ -96,9 +95,8 @@ async def create_user(
         # Fail silently
         raise HTTPException(status_code=422, detail="User already exist")
 
-    password_hash = get_password_hash(user_create.password)
-    # We use https://docs.python.org/3/library/secrets.html#secrets.token_urlsafe to generate the activation secret token
-    activation_token = secrets.token_urlsafe(32)
+    password_hash = security.get_password_hash(user_create.password)
+    activation_token = security.generate_token()
 
     # Add the unconfirmed user to the unconfirmed_user table
     try:
@@ -168,7 +166,7 @@ async def activate_user(
 
     # If a password was provided in this request, we will use this one as it is more recent
     if user.password is not None:
-        password_hash = get_password_hash(user.password)
+        password_hash = security.get_password_hash(user.password)
     else:
         password_hash = unconfirmed_user.password_hash
 
@@ -209,7 +207,7 @@ async def recover_user(email: str, db: AsyncSession = Depends(get_db)):
     db_user = await cruds_users.get_user_by_email(db=db, email=email)
     if db_user is not None:
         # The user exist, we can send a password reset invitation
-        reset_token = secrets.token_urlsafe(32)
+        reset_token = security.generate_token()
 
         recover_request = schemas_core.CoreUserRecoverRequest(
             email=email,
