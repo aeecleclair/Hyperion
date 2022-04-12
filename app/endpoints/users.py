@@ -13,6 +13,7 @@ from app.utils.types import standard_responses
 from app.utils.types.account_type import AccountType
 from app.utils.types.tags import Tags
 from app.core import security
+from app.models import models_core
 
 router = APIRouter()
 
@@ -101,15 +102,15 @@ async def create_user(
 
     # Add the unconfirmed user to the unconfirmed_user table
     try:
-        user_unconfirmed = schemas_core.CoreUserUnconfirmedInDB(
-            id=str(uuid.uuid4()),  # Use UUID later
+        user_unconfirmed = models_core.CoreUserUnconfirmed(
+            id=str(uuid.uuid4()),
             email=user_create.email,
             password_hash=password_hash,
+            account_type=user_create.account_type,
             activation_token=activation_token,
             created_on=datetime.datetime.now(),
             expire_on=datetime.datetime.now()
             + datetime.timedelta(hours=settings.USER_ACTIVATION_TOKEN_EXPIRES_HOURS),
-            account_type=user_create.account_type,
         )
 
         await cruds_users.create_unconfirmed_user(
@@ -152,7 +153,7 @@ async def activate_user(
     """
     # We need to find the corresponding user_unconfirmed
     unconfirmed_user = await cruds_users.get_unconfirmed_user_by_activation_token(
-        activation_token=user.activation_token, db=db
+        db=db, activation_token=user.activation_token
     )
     if unconfirmed_user is None:
         raise HTTPException(status_code=422, detail="Invalid activation token")
@@ -173,11 +174,17 @@ async def activate_user(
 
     print(unconfirmed_user.account_type)
 
-    confirmed_user = schemas_core.CoreUserInDB(
-        **user.dict(),
-        email=unconfirmed_user.email,
+    confirmed_user = models_core.CoreUser(
         id=unconfirmed_user.id,
+        email=unconfirmed_user.email,
         password_hash=password_hash,
+        name=user.name,
+        firstname=user.firstname,
+        nickname=user.nickname,
+        birthday=user.birthday,
+        promo=user.promo,
+        phone=user.phone,
+        floor=user.floor,
         created_on=datetime.datetime.now(),
     )
     # We add the new user to the database
@@ -211,7 +218,7 @@ async def recover_user(email: str = Body(...), db: AsyncSession = Depends(get_db
         # The user exist, we can send a password reset invitation
         reset_token = security.generate_token()
 
-        recover_request = schemas_core.CoreUserRecoverRequest(
+        recover_request = models_core.CoreUserRecoverRequest(
             email=email,
             user_id=db_user.id,
             reset_token=reset_token,

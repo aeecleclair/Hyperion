@@ -6,7 +6,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models import models_core
-from app.schemas import schemas_core
 
 
 async def get_users(db: AsyncSession) -> list[models_core.CoreUser]:
@@ -42,18 +41,16 @@ async def get_user_by_email(
 
 
 async def create_unconfirmed_user(
-    db: AsyncSession, user_unconfirmed: schemas_core.CoreUserUnconfirmedInDB
+    db: AsyncSession, user_unconfirmed: models_core.CoreUserUnconfirmed
 ) -> models_core.CoreUserUnconfirmed:
     """
     Create a new user in the unconfirmed database
     """
 
-    db_user_unconfirmed = models_core.CoreUserUnconfirmed(**user_unconfirmed.dict())
-
-    db.add(db_user_unconfirmed)
+    db.add(user_unconfirmed)
     try:
         await db.commit()
-        return db_user_unconfirmed
+        return user_unconfirmed  # TODO Is this useful ?
     except IntegrityError as error:
         await db.rollback()
         raise ValueError(error)
@@ -83,15 +80,13 @@ async def delete_unconfirmed_user_by_email(db: AsyncSession, email: str):
 
 
 async def create_user(
-    db: AsyncSession, user: schemas_core.CoreUserInDB
+    db: AsyncSession, user: models_core.CoreUser
 ) -> models_core.CoreUser:
 
-    db_user = models_core.CoreUser(**user.dict())
-
-    db.add(db_user)
+    db.add(user)
     try:
         await db.commit()
-        return db_user
+        return user
     except:
         await db.rollback()
         raise
@@ -107,15 +102,13 @@ async def delete_user(db: AsyncSession, user_id: int):
 
 
 async def create_user_recover_request(
-    db: AsyncSession, recover_request: schemas_core.CoreUserRecoverRequest
+    db: AsyncSession, recover_request: models_core.CoreUserRecoverRequest
 ) -> models_core.CoreUserRecoverRequest:
 
-    db_user = models_core.CoreUserRecoverRequest(**recover_request.dict())
-
-    db.add(db_user)
+    db.add(recover_request)
     try:
         await db.commit()
-        return db_user
+        return recover_request
     except:
         await db.rollback()
         raise
