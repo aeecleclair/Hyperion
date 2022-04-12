@@ -1,7 +1,7 @@
 import datetime
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.settings import settings
@@ -52,6 +52,7 @@ async def read_user(user_id: int, db: AsyncSession = Depends(get_db)):
 )
 async def delete_user(user_id: int, db: AsyncSession = Depends(get_db)):
     """Delete user from database by id"""
+    # TODO: WARNING - deleting an user without removing its relations ship in other tables will have unexpected consequences
 
     await cruds_users.delete_user(db=db, user_id=user_id)
 
@@ -182,6 +183,8 @@ async def activate_user(
     # We add the new user to the database
     await cruds_users.create_user(db=db, user=confirmed_user)
 
+    # TODO: add groups membership
+
     # We remove all unconfirmed users with the same email address
     await cruds_users.delete_unconfirmed_user_by_email(
         db=db, email=unconfirmed_user.email
@@ -196,13 +199,12 @@ async def activate_user(
     status_code=201,
     tags=[Tags.users, "User creation"],
 )
-async def recover_user(email: str, db: AsyncSession = Depends(get_db)):
+async def recover_user(email: str = Body(...), db: AsyncSession = Depends(get_db)):
     """
     Allow an user to start a password reset process.
 
     If the provided **email** correspond to an existing account, a password reset token will be send.
     Using this token, the password can be changed with `/users/reset-password` endpoint
-
     """
     db_user = await cruds_users.get_user_by_email(db=db, email=email)
     if db_user is not None:
@@ -238,7 +240,9 @@ async def recover_user(email: str, db: AsyncSession = Depends(get_db)):
     tags=[Tags.users, "User creation"],
 )
 async def reset_password_user(
-    reset_token: str, new_password: str, db: AsyncSession = Depends(get_db)
+    reset_token: str = Body(...),
+    new_password: str = Body(...),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Reset the user password, using a **reset_token** provided by `/users/recover` endpoint.
