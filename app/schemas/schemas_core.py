@@ -151,5 +151,5 @@ class CoreUserRecoverRequest(BaseModel):
 class CoreMembership(BaseModel):
     """Schema for membership creation (allows to add a user to a group)"""
 
-    id_user: int
-    id_group: int
+    id_user: str
+    id_group: str

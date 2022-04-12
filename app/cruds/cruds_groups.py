@@ -16,7 +16,7 @@ async def get_groups(db: AsyncSession) -> list[models_core.CoreGroup]:
     return result.scalars().all()
 
 
-async def get_group_by_id(db: AsyncSession, group_id: int) -> models_core.CoreGroup:
+async def get_group_by_id(db: AsyncSession, group_id: str) -> models_core.CoreGroup:
     """Return group with id from database"""
     result = await db.execute(
         select(models_core.CoreGroup)
@@ -52,21 +52,14 @@ async def delete_group(db: AsyncSession, group_id: int):
     await db.commit()
 
 
-async def create_membership(
-    db: AsyncSession,
-    id_group: int,
-    id_user: int,
-):
+async def create_membership(db: AsyncSession, membership: schemas_core.CoreMembership):
     """Add a user to a group"""
 
-    db_membership = models_core.CoreMembership(
-        id_user=id_user,
-        id_group=id_group,
-    )
+    db_membership = models_core.CoreMembership(**membership.dict())
     db.add(db_membership)
     try:
         await db.commit()
-        return get_group_by_id(db, id_group)
+        return get_group_by_id(db, db_membership.id_group)
     except IntegrityError:
         await db.rollback()
         raise ValueError("This user is already in this group")
