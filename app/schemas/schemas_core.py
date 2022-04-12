@@ -128,6 +128,15 @@ class CoreGroupCreate(CoreGroupBase):
     pass
 
 
+class CoreGroupInDB(CoreGroupBase):
+    """Schema for user activation"""
+
+    id: str
+
+    class Config:
+        orm_mode = True
+
+
 class CoreUserRecoverRequest(BaseModel):
     email: str
     user_id: str
