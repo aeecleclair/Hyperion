@@ -15,7 +15,7 @@ async def get_users(db: AsyncSession) -> list[models_core.CoreUser]:
     return result.scalars().all()
 
 
-async def get_user_by_id(db: AsyncSession, user_id: int) -> models_core.CoreUser | None:
+async def get_user_by_id(db: AsyncSession, user_id: str) -> models_core.CoreUser | None:
     """Return user with id from database as a dictionary"""
 
     result = await db.execute(
@@ -87,12 +87,12 @@ async def create_user(
     try:
         await db.commit()
         return user
-    except:
+    except IntegrityError:
         await db.rollback()
         raise
 
 
-async def delete_user(db: AsyncSession, user_id: int):
+async def delete_user(db: AsyncSession, user_id: str):
     """Delete a user from database by id"""
 
     await db.execute(
@@ -109,7 +109,7 @@ async def create_user_recover_request(
     try:
         await db.commit()
         return recover_request
-    except:
+    except IntegrityError:
         await db.rollback()
         raise
 
