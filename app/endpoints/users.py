@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.settings import settings
 from app.cruds import cruds_users
+from app.cruds import cruds_groups
 from app.dependencies import get_db
 from app.schemas import schemas_core
 from app.utils.mail.mailworker import send_email
@@ -37,7 +38,7 @@ async def get_users(db: AsyncSession = Depends(get_db)):
     status_code=200,
     tags=[Tags.users],
 )
-async def read_user(user_id: int, db: AsyncSession = Depends(get_db)):
+async def read_user(user_id: str, db: AsyncSession = Depends(get_db)):
     """Return user with id from database as a dictionary"""
 
     db_user = await cruds_users.get_user_by_id(db=db, user_id=user_id)
@@ -51,7 +52,7 @@ async def read_user(user_id: int, db: AsyncSession = Depends(get_db)):
     status_code=204,
     tags=[Tags.users],
 )
-async def delete_user(user_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_user(user_id: str, db: AsyncSession = Depends(get_db)):
     """Delete user from database by id"""
     # TODO: WARNING - deleting an user without removing its relations ship in other tables will have unexpected consequences
 
@@ -73,15 +74,15 @@ async def create_user(
 
     If the **password** is not provided, it will be required during the activation process. Don't submit a password if you are creating an account for someone else.
 
-    When creating **student** or **personnel** account a valid ECL email is required.
+    When creating **student** or **staff** account a valid ECL email is required.
     Only admin users can create other **account types**, contact ÉCLAIR for more informations.
     """
     # Check the account type
     if (
-        user_create.account_type == AccountType.eleve
-        or user_create.account_type == AccountType.personnel
+        user_create.account_type == AccountType.student
+        or user_create.account_type == AccountType.staff
     ):
-        # Students and personnels account should only be created with valid ECL address.
+        # Students and staffs account should only be created with valid ECL address.
         # We compare to ".ec-lyon.fr" with a first dot to prevent someone from using a false domain (ex: pirate@other-ec-lyon.fr)
         if not user_create.email[-11:] == ".ec-lyon.fr":
             raise HTTPException(status_code=400, detail="Invalid ECL email address")
@@ -188,14 +189,32 @@ async def activate_user(
         created_on=datetime.datetime.now(),
     )
     # We add the new user to the database
-    await cruds_users.create_user(db=db, user=confirmed_user)
+    try:
+        id_group = (
+            await cruds_groups.get_group_by_name(
+                db=db, group_name=unconfirmed_user.account_type
+            )
+        ).id
+        if not id_group:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Group {unconfirmed_user.account_type} doesn't exist",
+            )
 
-    # TODO: add groups membership
+        await cruds_users.create_user(db=db, user=confirmed_user)
+        await cruds_groups.create_membership(
+            db=db,
+            membership=schemas_core.CoreMembership(
+                id_group=id_group, id_user=confirmed_user.id
+            ),
+        )
 
-    # We remove all unconfirmed users with the same email address
-    await cruds_users.delete_unconfirmed_user_by_email(
-        db=db, email=unconfirmed_user.email
-    )
+        # We remove all unconfirmed users with the same email address
+        await cruds_users.delete_unconfirmed_user_by_email(
+            db=db, email=unconfirmed_user.email
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))
 
     return standard_responses.Result()
 

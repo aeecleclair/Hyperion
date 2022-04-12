@@ -28,6 +28,18 @@ async def get_group_by_id(db: AsyncSession, group_id: str) -> models_core.CoreGr
     return result.scalars().first()
 
 
+async def get_group_by_name(db: AsyncSession, group_name: str) -> models_core.CoreGroup:
+    """Return group with name from database"""
+    result = await db.execute(
+        select(models_core.CoreGroup)
+        .where(models_core.CoreGroup.name == group_name)
+        .options(
+            selectinload(models_core.CoreGroup.members)
+        )  # needed to load the members from the relationship
+    )
+    return result.scalars().first()
+
+
 async def create_group(
     group: schemas_core.CoreGroupInDB, db: AsyncSession
 ) -> models_core.CoreGroup:
@@ -43,7 +55,7 @@ async def create_group(
         raise ValueError("This name is already used")
 
 
-async def delete_group(db: AsyncSession, group_id: int):
+async def delete_group(db: AsyncSession, group_id: str):
     """Delete a group from database by id"""
 
     await db.execute(
