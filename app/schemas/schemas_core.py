@@ -69,10 +69,6 @@ class CoreUserCreateRequest(BaseModel):
 
 
 class CoreUserActivateRequest(CoreUserBase):
-    """
-    The
-    """
-
     activation_token: str
     password: str = None
     birthday: date = None
