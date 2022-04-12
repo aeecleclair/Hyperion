@@ -58,7 +58,7 @@ async def create_group(
 
 
 @router.delete("/groups/{group_id}", status_code=204, tags=[Tags.groups])
-async def delete_group(group_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_group(group_id: str, db: AsyncSession = Depends(get_db)):
     """Delete group from database by id"""
 
     await cruds_groups.delete_group(db=db, group_id=group_id)
