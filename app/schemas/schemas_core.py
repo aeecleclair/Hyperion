@@ -137,3 +137,10 @@ class CoreUserRecoverRequest(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class CoreMembership(BaseModel):
+    """Schema for membership creation (allows to add a user to a group)"""
+
+    id_user: int
+    id_group: int
