@@ -253,7 +253,7 @@ async def reset_password_user(
     if recover_request.expire_on < datetime.datetime.now():
         raise HTTPException(status_code=422, detail="Expired reset token")
 
-    new_password_hash = get_password_hash(new_password)
+    new_password_hash = security.get_password_hash(new_password)
     cruds_users.update_user_password_by_id(
         db=db, id=recover_request.user_id, new_password_hash=new_password_hash
     )
