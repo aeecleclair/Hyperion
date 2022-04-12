@@ -60,3 +60,24 @@ async def delete_group(group_id: int, db: AsyncSession = Depends(get_db)):
     """Delete group from database by id"""
 
     await cruds_groups.delete_group(db=db, group_id=group_id)
+
+
+@router.post(
+    "/groups/membership/{id_group}/{id_user}",
+    response_model=schemas_core.CoreGroupSimple,
+    status_code=201,
+    tags=[Tags.groups],
+)
+async def create_membership(
+    group: schemas_core.CoreGroup,
+    id_group: int,
+    id_user: int,
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a new membership in database and return the group as a dictionary"""
+    try:
+        return await cruds_groups.create_membership(
+            db=db, id_group=id_group, id_user=id_user
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))

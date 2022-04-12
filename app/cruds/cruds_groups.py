@@ -53,3 +53,23 @@ async def delete_group(db: AsyncSession, group_id: int):
         delete(models_core.CoreGroup).where(models_core.CoreGroup.id == group_id)
     )
     await db.commit()
+
+
+async def create_membership(
+    db: AsyncSession,
+    id_group: int,
+    id_user: int,
+):
+    """Add a user to a group"""
+
+    db_membership = models_core.CoreMembership(
+        id_user=id_user,
+        id_group=id_group,
+    )
+    db.add(db_membership)
+    try:
+        await db.commit()
+        return get_group_by_id(db, id_group)
+    except IntegrityError:
+        await db.rollback()
+        raise ValueError("This user is already in this group")
