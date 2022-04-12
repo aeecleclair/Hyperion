@@ -59,7 +59,7 @@ async def create_membership(db: AsyncSession, membership: schemas_core.CoreMembe
     db.add(db_membership)
     try:
         await db.commit()
-        return get_group_by_id(db, db_membership.id_group)
+        return await get_group_by_id(db, db_membership.id_group)
     except IntegrityError:
         await db.rollback()
         raise ValueError("This user is already in this group")

@@ -66,7 +66,7 @@ async def delete_group(group_id: int, db: AsyncSession = Depends(get_db)):
 
 @router.post(
     "/groups/membership",
-    response_model=schemas_core.CoreGroupSimple,
+    response_model=schemas_core.CoreGroup,
     status_code=201,
     tags=[Tags.groups],
 )
