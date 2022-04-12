@@ -31,7 +31,7 @@ async def get_groups(db: AsyncSession = Depends(get_db)):
     status_code=200,
     tags=[Tags.groups],
 )
-async def read_group(group_id: int, db: AsyncSession = Depends(get_db)):
+async def read_group(group_id: str, db: AsyncSession = Depends(get_db)):
     """Return group with id from database as a dictionary"""
 
     db_group = await cruds_groups.get_group_by_id(db=db, group_id=group_id)
@@ -65,21 +65,17 @@ async def delete_group(group_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.post(
-    "/groups/membership/{id_group}/{id_user}",
+    "/groups/membership",
     response_model=schemas_core.CoreGroupSimple,
     status_code=201,
     tags=[Tags.groups],
 )
 async def create_membership(
-    group: schemas_core.CoreGroup,
-    id_group: int,
-    id_user: int,
+    membership: schemas_core.CoreMembership,
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new membership in database and return the group as a dictionary"""
     try:
-        return await cruds_groups.create_membership(
-            db=db, id_group=id_group, id_user=id_user
-        )
+        return await cruds_groups.create_membership(db=db, membership=membership)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
