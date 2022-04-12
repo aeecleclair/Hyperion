@@ -1,6 +1,6 @@
 """File defining the functions called by the endpoints, making queries to the table using the models"""
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -144,5 +144,12 @@ async def delete_recover_request_by_email(db: AsyncSession, email: str):
     await db.commit()
 
 
-async def update_user_password_by_id(db: AsyncSession, id: str, new_password_hash: str):
-    pass
+async def update_user_password_by_id(
+    db: AsyncSession, user_id: str, new_password_hash: str
+):
+    await db.execute(
+        update(models_core.CoreUser)
+        .where(models_core.CoreUser.id == user_id)
+        .values(password_hash=new_password_hash)
+    )
+    await db.commit()
