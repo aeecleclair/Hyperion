@@ -20,7 +20,7 @@ class CoreGroupBase(BaseModel):
     """Base schema for group's model"""
 
     name: str
-    description: str | None = None
+    description: str = None
 
 
 class CoreUserSimple(CoreUserBase):
@@ -144,6 +144,13 @@ class CoreGroupInDB(CoreGroupBase):
 
     class Config:
         orm_mode = True
+
+
+class CoreGroupUpdate(BaseModel):
+    """Schema for group update"""
+
+    name: str = None
+    description: str = None
 
 
 class CoreUserRecoverRequest(BaseModel):
