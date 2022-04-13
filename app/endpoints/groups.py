@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.cruds import cruds_groups
 from app.dependencies import get_db
 from app.schemas import schemas_core
+from app.utils.types.account_type import AccountType
 from app.utils.types.tags import Tags
 
 router = APIRouter()
@@ -55,6 +56,30 @@ async def create_group(
         return await cruds_groups.create_group(group=db_group, db=db)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
+
+
+@router.patch(
+    "/groups/{group_id}",
+    response_model=schemas_core.CoreGroup,
+    tags=[Tags.groups],
+)
+async def update_group(
+    group_id: str,
+    group_update: schemas_core.CoreGroupUpdate,
+    db: AsyncSession = Depends(get_db),
+):
+    """Update the name or the description of a group"""
+    group = await cruds_groups.get_group_by_id(db=db, group_id=group_id)
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+    if group.description == "Account type" and group_update.name not in AccountType:
+        # TODO : Ensure that if the name of an account type is modified it doesn't cause any bug
+        #  when creating a user or when creating the accounts type on startup
+        pass
+
+    await cruds_groups.update_group(db=db, group_id=group_id, group_update=group_update)
+
+    return group
 
 
 @router.delete("/groups/{group_id}", status_code=204, tags=[Tags.groups])

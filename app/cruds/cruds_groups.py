@@ -1,6 +1,6 @@
 """File defining the functions called by the endpoints, making queries to the table using the models"""
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -75,3 +75,14 @@ async def create_membership(db: AsyncSession, membership: schemas_core.CoreMembe
     except IntegrityError:
         await db.rollback()
         raise ValueError("This user is already in this group")
+
+
+async def update_group(
+    db: AsyncSession, group_id: str, group_update: schemas_core.CoreGroupUpdate
+):
+    await db.execute(
+        update(models_core.CoreGroup)
+        .where(models_core.CoreGroup.id == group_id)
+        .values(**group_update.dict(exclude_none=True))
+    )
+    await db.commit()
