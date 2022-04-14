@@ -72,10 +72,6 @@ async def update_group(
     group = await cruds_groups.get_group_by_id(db=db, group_id=group_id)
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
-    if group.description == "Account type" and group_update.name not in AccountType:
-        # TODO : Ensure that if the name of an account type is modified it doesn't cause any bug
-        #  when creating a user or when creating the accounts type on startup
-        pass
 
     await cruds_groups.update_group(db=db, group_id=group_id, group_update=group_update)
 
@@ -85,6 +81,10 @@ async def update_group(
 @router.delete("/groups/{group_id}", status_code=204, tags=[Tags.groups])
 async def delete_group(group_id: str, db: AsyncSession = Depends(get_db)):
     """Delete group from database by id"""
+
+    # TODO check if the client is admin
+    if group_id in [id for id in AccountType]:
+        raise HTTPException(status_code=422, detail="Account types can't be deleted")
 
     await cruds_groups.delete_group(db=db, group_id=group_id)
 
