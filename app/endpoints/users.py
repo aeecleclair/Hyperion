@@ -89,7 +89,8 @@ async def create_user(
     else:
         # TODO: check if the user is admin
         raise HTTPException(
-            status_code=403, detail=f"Unauthorized create a {user_create.type} account"
+            status_code=403,
+            detail=f"Unauthorized create a {user_create.account_type} account",
         )
 
     # Make sure a confirmed account does not already exist
@@ -98,7 +99,10 @@ async def create_user(
         # Fail silently
         raise HTTPException(status_code=422, detail="User already exist")
 
-    password_hash = security.get_password_hash(user_create.password)
+    if user_create.password is not None:
+        password_hash = security.get_password_hash(user_create.password)
+    else:
+        password_hash = None
     activation_token = security.generate_token()
 
     # Add the unconfirmed user to the unconfirmed_user table
@@ -195,13 +199,14 @@ async def activate_user(
         await cruds_groups.create_membership(
             db=db,
             membership=schemas_core.CoreMembership(
-                group_id=unconfirmed_user.account_type, user_id=confirmed_user.id
+                group_id=str(unconfirmed_user.account_type),
+                user_id=unconfirmed_user.id,
             ),
         )
 
         # We remove all unconfirmed users with the same email address
         await cruds_users.delete_unconfirmed_user_by_email(
-            db=db, email=unconfirmed_user.email
+            db=db, email=str(unconfirmed_user.email)
         )
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
@@ -236,7 +241,7 @@ async def recover_user(email: str = Body(...), db: AsyncSession = Depends(get_db
             + datetime.timedelta(hours=settings.PASSWORD_RESET_TOKEN_EXPIRES_HOURS),
         )
 
-        cruds_users.create_user_recover_request(db=db, recover_user=recover_request)
+        await cruds_users.create_user_recover_request(db=db, recover_request=recover_request)
 
         if settings.SMTP_ACTIVE:
             send_email(
@@ -264,7 +269,7 @@ async def reset_password_user(
     Reset the user password, using a **reset_token** provided by `/users/recover` endpoint.
     """
     recover_request = await cruds_users.get_recover_request_by_reset_token(
-        reset_token == reset_token, db=db
+        db=db, reset_token=reset_token
     )
     if recover_request is None:
         raise HTTPException(status_code=422, detail="Invalid reset token")
@@ -274,12 +279,12 @@ async def reset_password_user(
         raise HTTPException(status_code=422, detail="Expired reset token")
 
     new_password_hash = security.get_password_hash(new_password)
-    cruds_users.update_user_password_by_id(
-        db=db, id=recover_request.user_id, new_password_hash=new_password_hash
+    await cruds_users.update_user_password_by_id(
+        db=db, user_id=recover_request.user_id, new_password_hash=new_password_hash
     )
 
     # As the user has reset its password, all other recovery request can be deleted from the table
-    cruds_users.delete_recover_request_by_email(db=db, email=recover_request.email)
+    await cruds_users.delete_recover_request_by_email(db=db, email=recover_request.email)
 
     return standard_responses.Result()
 
@@ -298,6 +303,7 @@ async def change_password_user(
 ):
     """
     Change a user password.
+    This endpoint will check the **old_password**, see also `/users/reset-password` endpoint.
     """
     # TODO: check the old_password
     # TODO: check new_password strength
