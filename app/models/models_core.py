@@ -9,8 +9,8 @@ from app.database import Base
 class CoreMembership(Base):
     __tablename__ = "core_membership"
 
-    id_user = Column(ForeignKey("core_user.id"), primary_key=True)
-    id_group = Column(ForeignKey("core_group.id"), primary_key=True)
+    user_id = Column(ForeignKey("core_user.id"), primary_key=True)
+    group_id = Column(ForeignKey("core_group.id"), primary_key=True)
 
 
 class CoreUser(Base):
