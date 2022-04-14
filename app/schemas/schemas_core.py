@@ -13,14 +13,14 @@ class CoreUserBase(BaseModel):
 
     name: str
     firstname: str
-    nickname: str = None
+    nickname: str | None = None
 
 
 class CoreGroupBase(BaseModel):
     """Base schema for group's model"""
 
     name: str
-    description: str = None
+    description: str | None = None
 
 
 class CoreUserSimple(CoreUserBase):
@@ -45,14 +45,11 @@ class CoreUser(CoreUserSimple):
     """Schema for user's model similar to core_user table in database"""
 
     email: str
-    birthday: date = None
-    promo: int = None
+    birthday: date | None = None
+    promo: int | None = None
     floor: str
-    created_on: datetime = None
+    created_on: datetime | None = None
     groups: list[CoreGroupSimple] = []
-
-    class Config:
-        orm_mode = True
 
 
 class CoreUserCreateRequest(BaseModel):
@@ -62,7 +59,7 @@ class CoreUserCreateRequest(BaseModel):
     """
 
     email: str
-    password: str = None
+    password: str | None = None
     account_type: AccountType
 
     # Password validator
@@ -77,10 +74,10 @@ class CoreUserCreateRequest(BaseModel):
 
 class CoreUserActivateRequest(CoreUserBase):
     activation_token: str
-    password: str = None
-    birthday: date = None
-    phone: str = None
-    promo: int = None
+    password: str | None = None
+    birthday: date | None = None
+    phone: str | None = None
+    promo: int | None = None
     floor: str
 
     # Password validator
@@ -96,7 +93,7 @@ class CoreUserActivateRequest(CoreUserBase):
 class CoreUserUnconfirmedInDB(BaseModel):
     id: str
     email: str
-    password_hash: str = None
+    password_hash: str | None = None
     account_type: AccountType
     activation_token: str
     created_on: datetime
@@ -112,9 +109,9 @@ class CoreUserInDB(CoreUserBase):
     id: str
     email: str
     password_hash: str
-    birthday: date = None
-    promo: int = None
-    phone: str = None
+    birthday: date | None = None
+    promo: int | None = None
+    phone: str | None = None
     floor: str
     created_on: date
 
@@ -126,9 +123,6 @@ class CoreGroup(CoreGroupSimple):
     """Schema for group's model similar to core_group table in database"""
 
     members: list[CoreUserSimple] = []
-
-    class Config:
-        orm_mode = True
 
 
 class CoreGroupCreate(CoreGroupBase):
@@ -149,8 +143,8 @@ class CoreGroupInDB(CoreGroupBase):
 class CoreGroupUpdate(BaseModel):
     """Schema for group update"""
 
-    name: str = None
-    description: str = None
+    name: str | None = None
+    description: str | None = None
 
 
 class CoreUserRecoverRequest(BaseModel):
