@@ -3,8 +3,6 @@
 from fastapi import FastAPI
 from sqlalchemy.exc import IntegrityError
 
-import uuid
-
 from app.database import SessionLocal
 
 from app import api
@@ -26,8 +24,8 @@ async def startup():
     # Add the necessary groups for account types
     description = "Account type"
     account_types = [
-        models_core.CoreGroup(id=str(uuid.uuid4()), name=name, description=description)
-        for name in AccountType
+        models_core.CoreGroup(id=id, name=id.name, description=description)
+        for id in AccountType
     ]
     async with SessionLocal() as db:
         try:

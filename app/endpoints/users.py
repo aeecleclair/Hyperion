@@ -190,22 +190,12 @@ async def activate_user(
     )
     # We add the new user to the database
     try:
-        id_group = (
-            await cruds_groups.get_group_by_name(
-                db=db, group_name=unconfirmed_user.account_type
-            )
-        ).id
-        if not id_group:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Group {unconfirmed_user.account_type} doesn't exist",
-            )
 
         await cruds_users.create_user(db=db, user=confirmed_user)
         await cruds_groups.create_membership(
             db=db,
             membership=schemas_core.CoreMembership(
-                id_group=id_group, id_user=confirmed_user.id
+                group_id=unconfirmed_user.account_type, user_id=confirmed_user.id
             ),
         )
 
