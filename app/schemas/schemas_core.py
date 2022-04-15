@@ -90,34 +90,6 @@ class CoreUserActivateRequest(CoreUserBase):
         orm_mode = True
 
 
-class CoreUserUnconfirmedInDB(BaseModel):
-    id: str
-    email: str
-    password_hash: str | None = None
-    account_type: AccountType
-    activation_token: str
-    created_on: datetime
-    expire_on: datetime
-
-    class Config:
-        orm_mode = True
-
-
-class CoreUserInDB(CoreUserBase):
-    """Schema for user activation"""
-
-    id: str
-    email: str
-    password_hash: str
-    birthday: date | None = None
-    promo: int | None = None
-    phone: str | None = None
-    floor: str
-    created_on: date
-
-    class Config:
-        orm_mode = True
-
 
 class CoreGroup(CoreGroupSimple):
     """Schema for group's model similar to core_group table in database"""
