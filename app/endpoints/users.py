@@ -261,15 +261,14 @@ async def recover_user(email: str = Body(...), db: AsyncSession = Depends(get_db
     tags=[Tags.users, "User creation"],
 )
 async def reset_password_user(
-    reset_token: str = Body(...),
-    new_password: str = Body(...),
+    reset_password_request: schemas_core.ResetPasswordRequest,
     db: AsyncSession = Depends(get_db),
 ):
     """
     Reset the user password, using a **reset_token** provided by `/users/recover` endpoint.
     """
     recover_request = await cruds_users.get_recover_request_by_reset_token(
-        db=db, reset_token=reset_token
+        db=db, reset_token=reset_password_request.reset_token
     )
     if recover_request is None:
         raise HTTPException(status_code=422, detail="Invalid reset token")
@@ -278,13 +277,15 @@ async def reset_password_user(
     if recover_request.expire_on < datetime.datetime.now():
         raise HTTPException(status_code=422, detail="Expired reset token")
 
-    new_password_hash = security.get_password_hash(new_password)
+    new_password_hash = security.get_password_hash(reset_password_request.new_password)
     await cruds_users.update_user_password_by_id(
         db=db, user_id=recover_request.user_id, new_password_hash=new_password_hash
     )
 
     # As the user has reset its password, all other recovery request can be deleted from the table
-    await cruds_users.delete_recover_request_by_email(db=db, email=recover_request.email)
+    await cruds_users.delete_recover_request_by_email(
+        db=db, email=recover_request.email
+    )
 
     return standard_responses.Result()
 
