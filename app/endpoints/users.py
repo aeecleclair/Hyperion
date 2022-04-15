@@ -63,7 +63,7 @@ async def delete_user(user_id: str, db: AsyncSession = Depends(get_db)):
     "/users/create",
     response_model=standard_responses.Result,
     status_code=201,
-    tags=[Tags.users, "User creation"],
+    tags=[Tags.users],
 )
 async def create_user(
     user_create: schemas_core.CoreUserCreateRequest, db: AsyncSession = Depends(get_db)
@@ -146,14 +146,16 @@ async def create_user(
     "/users/activate",
     response_model=standard_responses.Result,
     status_code=201,
-    tags=[Tags.users, "User creation"],
+    tags=[Tags.users],
 )
 async def activate_user(
     user: schemas_core.CoreUserActivateRequest, db: AsyncSession = Depends(get_db)
 ):
     """
     Activate the previously created account.
+
     **token**: the activation token send by email to the user
+
     **password**: user password, required if it was not provided previously
     """
     # We need to find the corresponding user_unconfirmed
@@ -194,19 +196,18 @@ async def activate_user(
     )
     # We add the new user to the database
     try:
-
         await cruds_users.create_user(db=db, user=confirmed_user)
         await cruds_groups.create_membership(
             db=db,
             membership=schemas_core.CoreMembership(
-                group_id=str(unconfirmed_user.account_type),
+                group_id=unconfirmed_user.account_type,
                 user_id=unconfirmed_user.id,
             ),
         )
 
         # We remove all unconfirmed users with the same email address
         await cruds_users.delete_unconfirmed_user_by_email(
-            db=db, email=str(unconfirmed_user.email)
+            db=db, email=unconfirmed_user.email
         )
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
@@ -218,7 +219,7 @@ async def activate_user(
     "/users/recover",
     response_model=standard_responses.Result,
     status_code=201,
-    tags=[Tags.users, "User creation"],
+    tags=[Tags.users],
 )
 async def recover_user(email: str = Body(...), db: AsyncSession = Depends(get_db)):
     """
@@ -241,7 +242,9 @@ async def recover_user(email: str = Body(...), db: AsyncSession = Depends(get_db
             + datetime.timedelta(hours=settings.PASSWORD_RESET_TOKEN_EXPIRES_HOURS),
         )
 
-        await cruds_users.create_user_recover_request(db=db, recover_request=recover_request)
+        await cruds_users.create_user_recover_request(
+            db=db, recover_request=recover_request
+        )
 
         if settings.SMTP_ACTIVE:
             send_email(
@@ -258,9 +261,9 @@ async def recover_user(email: str = Body(...), db: AsyncSession = Depends(get_db
     "/users/reset-password",
     response_model=standard_responses.Result,
     status_code=201,
-    tags=[Tags.users, "User creation"],
+    tags=[Tags.users],
 )
-async def reset_password_user(
+async def reset_password(
     reset_password_request: schemas_core.ResetPasswordRequest,
     db: AsyncSession = Depends(get_db),
 ):
@@ -294,21 +297,23 @@ async def reset_password_user(
     "/users/change-password",
     response_model=standard_responses.Result,
     status_code=201,
-    tags=[Tags.users, "User creation"],
+    tags=[Tags.users],
 )
-async def change_password_user(
+async def change_password(
     change_password_request: schemas_core.ChangePasswordRequest,
     db: AsyncSession = Depends(get_db),
 ):
     """
     Change a user password.
-    This endpoint will check the **old_password**, see also `/users/reset-password` endpoint.
+
+    This endpoint will check the **old_password**, see also `/users/reset-password` endpoint if the user forgot its password.
     """
     # TODO: check the old_password
-    # TODO: check new_password strength
     new_password_hash = security.get_password_hash(change_password_request.new_password)
     await cruds_users.update_user_password_by_id(
-        db=db, user_id=change_password_request.user_id, new_password_hash=new_password_hash
+        db=db,
+        user_id=change_password_request.user_id,
+        new_password_hash=new_password_hash,
     )
 
     return standard_responses.Result()
