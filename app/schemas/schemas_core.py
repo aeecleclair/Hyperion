@@ -158,6 +158,18 @@ class CoreUserRecoverRequest(BaseModel):
         orm_mode = True
 
 
+class ChangePasswordRequest(BaseModel):
+    user_id: str
+    old_password: str
+    new_password: str
+
+    # Password validator
+    # https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
+    _normalize_password = validator("new_password", allow_reuse=True)(
+        security.password_validator
+    )
+
+
 class CoreMembership(BaseModel):
     """Schema for membership creation (allows to add a user to a group)"""
 
