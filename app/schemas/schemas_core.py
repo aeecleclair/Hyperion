@@ -4,8 +4,8 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, validator
 
-from app.utils.types.account_type import AccountType
 from app.core import security
+from app.utils.types.account_type import AccountType
 
 
 class CoreUserBase(BaseModel):
