@@ -1,20 +1,19 @@
 import datetime
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Body
+from fastapi import APIRouter, Body, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import security
 from app.core.settings import settings
-from app.cruds import cruds_users
-from app.cruds import cruds_groups
+from app.cruds import cruds_groups, cruds_users
 from app.dependencies import get_db
+from app.models import models_core
 from app.schemas import schemas_core
 from app.utils.mail.mailworker import send_email
 from app.utils.types import standard_responses
 from app.utils.types.account_type import AccountType
 from app.utils.types.tags import Tags
-from app.core import security
-from app.models import models_core
 
 router = APIRouter()
 

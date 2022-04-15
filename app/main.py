@@ -3,13 +3,10 @@
 from fastapi import FastAPI
 from sqlalchemy.exc import IntegrityError
 
-from app.database import SessionLocal
-
 from app import api
-from app.database import Base, engine
-from app.utils.types.account_type import AccountType
+from app.database import Base, SessionLocal, engine
 from app.models import models_core
-
+from app.utils.types.account_type import AccountType
 
 app = FastAPI()
 
