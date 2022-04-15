@@ -296,9 +296,7 @@ async def reset_password_user(
     tags=[Tags.users, "User creation"],
 )
 async def change_password_user(
-    user_id: str = Body(...),
-    old_password: str = Body(...),
-    new_password: str = Body(...),
+    change_password_request: schemas_core.ChangePasswordRequest,
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -307,9 +305,9 @@ async def change_password_user(
     """
     # TODO: check the old_password
     # TODO: check new_password strength
-    new_password_hash = security.get_password_hash(new_password)
+    new_password_hash = security.get_password_hash(change_password_request.new_password)
     await cruds_users.update_user_password_by_id(
-        db=db, user_id=user_id, new_password_hash=new_password_hash
+        db=db, user_id=change_password_request.user_id, new_password_hash=new_password_hash
     )
 
     return standard_responses.Result()
