@@ -44,39 +44,3 @@ def test_create_db():  # A first test is needed to run startuptest once
 
 
 client = TestClient(app)  # Create a client to execute tests
-
-
-def test_create_user():
-    response = client.post(
-        "/users/",
-        json={
-            "name": "Backend",
-            "firstname": "MyEcl",
-            "nickname": "Hyperion",
-            "email": "eclair@myecl.fr",
-            "password": "password",
-            "birthday": "2022-04-08",
-            "promo": 2022,
-            "floor": "Adoma",
-            "created_on": "2022-04-08T12:12:39.099Z",
-        },
-    )
-    assert response.status_code == 201, response.text
-    data = response.json()
-    assert data["nickname"] == "Hyperion"
-    assert "id" in data
-
-
-def test_read_users():
-    # TODO
-    pass
-
-
-def test_edit_user():
-    # TODO
-    pass
-
-
-def test_delete_user():
-    # TODO
-    pass
