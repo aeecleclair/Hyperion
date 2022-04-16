@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.cruds import cruds_groups
 from app.dependencies import get_db
 from app.schemas import schemas_core
-from app.utils.types.account_type import AccountType
+from app.utils.types.groups_type import AccountType, GroupType
 from app.utils.types.tags import Tags
 
 router = APIRouter()

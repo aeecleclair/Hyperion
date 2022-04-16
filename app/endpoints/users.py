@@ -12,7 +12,7 @@ from app.models import models_core
 from app.schemas import schemas_core
 from app.utils.mail.mailworker import send_email
 from app.utils.types import standard_responses
-from app.utils.types.account_type import AccountType
+from app.utils.types.groups_type import AccountType
 from app.utils.types.tags import Tags
 
 router = APIRouter()

@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from app import api
 from app.database import Base, SessionLocal, engine
 from app.models import models_core
-from app.utils.types.account_type import AccountType
+from app.utils.types.groups_type import AccountType
 
 app = FastAPI()
 

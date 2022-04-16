@@ -6,7 +6,7 @@ from pydantic import BaseModel, validator
 
 from app.core import security
 from app.utils.examples import examples_core
-from app.utils.types.account_type import AccountType
+from app.utils.types.groups_type import AccountType
 
 
 class CoreUserBase(BaseModel):

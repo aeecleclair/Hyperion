@@ -6,7 +6,7 @@ from app.database import Base
 from app.dependencies import get_db
 from app.main import app
 from app.models import models_core
-from app.utils.types.account_type import AccountType
+from app.utils.types.groups_type import AccountType
 
 SQLALCHEMY_DATABASE_URL = (
     "sqlite+aiosqlite:///./test.db"  # Connect to the test's database
