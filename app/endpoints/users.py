@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, timedelta
 import uuid
 
 from fastapi import APIRouter, Body, Depends, HTTPException
@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import security
 from app.core.settings import settings
 from app.cruds import cruds_groups, cruds_users
-from app.dependencies import get_db
+from app.dependencies import get_db, get_current_user
 from app.models import models_core
 from app.schemas import schemas_core
 from app.utils.mail.mailworker import send_email
@@ -24,7 +24,10 @@ router = APIRouter()
     status_code=200,
     tags=[Tags.users],
 )
-async def get_users(db: AsyncSession = Depends(get_db)):
+async def get_users(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(get_current_user),
+):
     """Return all users from database as a list of CoreUserSimple"""
 
     users = await cruds_users.get_users(db)
@@ -112,9 +115,9 @@ async def create_user(
             password_hash=password_hash,
             account_type=user_create.account_type,
             activation_token=activation_token,
-            created_on=datetime.datetime.now(),
-            expire_on=datetime.datetime.now()
-            + datetime.timedelta(hours=settings.USER_ACTIVATION_TOKEN_EXPIRES_HOURS),
+            created_on=datetime.now(),
+            expire_on=datetime.now()
+            + timedelta(hours=settings.USER_ACTIVATION_TOKEN_EXPIRES_HOURS),
         )
 
         await cruds_users.create_unconfirmed_user(
@@ -165,7 +168,7 @@ async def activate_user(
         raise HTTPException(status_code=422, detail="Invalid activation token")
 
     # We need to make sure the unconfirmed user is still valid
-    if unconfirmed_user.expire_on < datetime.datetime.now():
+    if unconfirmed_user.expire_on < datetime.now():
         raise HTTPException(status_code=422, detail="Expired activation token")
 
     # We need to make sure the password was provided at least once during the account creation process
@@ -191,7 +194,7 @@ async def activate_user(
         promo=user.promo,
         phone=user.phone,
         floor=user.floor,
-        created_on=datetime.datetime.now(),
+        created_on=datetime.now(),
     )
     # We add the new user to the database
     try:
@@ -236,9 +239,9 @@ async def recover_user(email: str = Body(...), db: AsyncSession = Depends(get_db
             email=email,
             user_id=db_user.id,
             reset_token=reset_token,
-            created_on=datetime.datetime.now(),
-            expire_on=datetime.datetime.now()
-            + datetime.timedelta(hours=settings.PASSWORD_RESET_TOKEN_EXPIRES_HOURS),
+            created_on=datetime.now(),
+            expire_on=datetime.now()
+            + timedelta(hours=settings.PASSWORD_RESET_TOKEN_EXPIRES_HOURS),
         )
 
         await cruds_users.create_user_recover_request(
@@ -276,7 +279,7 @@ async def reset_password(
         raise HTTPException(status_code=422, detail="Invalid reset token")
 
     # We need to make sure the unconfirmed user is still valid
-    if recover_request.expire_on < datetime.datetime.now():
+    if recover_request.expire_on < datetime.now():
         raise HTTPException(status_code=422, detail="Expired reset token")
 
     new_password_hash = security.get_password_hash(reset_password_request.new_password)

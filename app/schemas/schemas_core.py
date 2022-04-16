@@ -162,3 +162,12 @@ class CoreMembership(BaseModel):
 
     user_id: str
     group_id: str
+
+
+class AccessToken(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class TokenData(BaseModel):
+    sub: str  # Subject: the user id
