@@ -5,6 +5,7 @@ from datetime import date, datetime
 from pydantic import BaseModel, validator
 
 from app.core import security
+from app.utils.examples import examples_core
 from app.utils.types.account_type import AccountType
 
 
@@ -71,12 +72,7 @@ class CoreUserCreateRequest(BaseModel):
     class Config:
         orm_mode = True
 
-        schema_extra = {
-            "example": {
-                "email": "user@example.fr",
-                "account_type": "39691052-2ae5-4e12-99d0-7a9f5f2b0136",
-            }
-        }
+        schema_extra = examples_core.example_CoreUserCreateRequest
 
 
 class CoreUserActivateRequest(CoreUserBase):
@@ -96,16 +92,7 @@ class CoreUserActivateRequest(CoreUserBase):
     class Config:
         orm_mode = True
 
-        schema_extra = {
-            "example": {
-                "name": "Name",
-                "firstname": "Firstname",
-                "nickname": "Antoine",
-                "activation_token": "62D-QJI5IYrjuywH8IWnuBo0xHrbTCfw_18HP4mdRrA",
-                "password": "areallycomplexpassword",
-                "floor": "A",
-            }
-        }
+        schema_extra = examples_core.example_CoreUserActivateRequest
 
 
 class CoreGroup(CoreGroupSimple):
