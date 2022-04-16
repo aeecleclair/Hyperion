@@ -1,5 +1,6 @@
 alembic==1.7.7
 fastapi==0.75.1
 python-dotenv==0.20.0
-SQLAlchemy[asyncio]==1.4.34 # [asyncio] allows greenlet to be installed on Apple M1 devices
+passlib[bcrypt]==1.7.4              # password hashing using bcrypt
+SQLAlchemy[asyncio]==1.4.34         # [asyncio] allows greenlet to be installed on Apple M1 devices
 uvicorn[standard]==0.17.6
