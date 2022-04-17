@@ -28,3 +28,33 @@ def test_get_group_by_id():
     assert response.status_code == 200
     data = response.json()
     assert data["name"] == "eclair"
+
+
+def test_post_group():
+    response = client.post(
+        "/groups/",
+        json={
+            "name": "bde",
+            "description": "head of students associations",
+        },
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["name"] == "bde"
+    assert data["description"] == "head of students associations"
+
+
+def test_patch_group():
+    response = client.patch(
+        "/groups/{id_eclair}".format(id_eclair=id_eclair),
+        json={"description": "The best"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["name"] == "eclair"
+    assert data["description"] == "The best"
+
+
+def test_delete_group():
+    response = client.delete(f"/groups/{id_eclair}")
+    assert response.status_code == 204
