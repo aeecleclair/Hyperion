@@ -14,7 +14,8 @@ def test_create_rows():  # A first test is needed to run startuptest once and cr
         pass
 
 
-def test_create_user():
+@pytest.mark.asyncio
+async def test_create_user():
     """Test the /users/create endpoint"""
 
     # First test with invalid email address
@@ -37,16 +38,8 @@ def test_create_user():
     )
     assert response.status_code == 201
 
-    # TODO: Make another request to see if it detects when a user already exists
-
-    # TODO: Think about how to check that emails are sent correctly
-
-    # TODO: make the test for the 403 error when trying to create another type of account being admin (wait for this to be done in user.py)
-
-
-@pytest.mark.asyncio
-async def test_activate_user():
     """Test the /users/activate endpoint"""
+    # We first test if the activation works by itself
     token = (
         await TestingSessionLocal().execute(
             select(models_core.CoreUserUnconfirmed.activation_token).where(
@@ -69,6 +62,52 @@ async def test_activate_user():
         },
     )
     assert response.status_code == 201
+
+    """Check what happens if you try to create or activate an already existing user"""
+    # What happend when you try to create an already activate user
+    response = client.post(
+        "/users/create",
+        json={
+            "email": "user@ecl21.ec-lyon.fr",
+            "account_type": "703056c4-be9d-475c-aa51-b7fc62a96aaa",
+        },
+    )
+    assert response.status_code == 422
+
+    # Then we check that we can't activate the user twice (ie. the activation token is deleted affter creation)
+    response = client.post(
+        "/users/activate",
+        json={
+            "activation_token": token,
+            "name": "Debouck",
+            "firstname": "Frank",
+            "nickname": "Le Boss",
+            "password": "MyPassword",
+            "birthday": "2022-04-18",
+            "phone": "0612345678",
+            "floor": "Adomaxistr",
+        },
+    )
+    assert response.status_code == 422
+
+    # TODO: Think about how to check that emails are sent correctly
+    # TODO: make the test for the 403 error when trying to create another type of account being admin (wait for this to be done in user.py)
+
+    # Then we check that we can't activate the user twice (ie. the activation token is deleted after activation)
+    response = client.post(
+        "/users/activate",
+        json={
+            "activation_token": token,
+            "name": "Debouck",
+            "firstname": "Frank",
+            "nickname": "Le Boss",
+            "password": "MyPassword",
+            "birthday": "2022-04-18",
+            "phone": "0612345678",
+            "floor": "Adomaxistr",
+        },
+    )
+    assert response.status_code == 422
 
 
 @pytest.mark.asyncio
