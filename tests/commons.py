@@ -1,3 +1,4 @@
+import datetime
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
@@ -32,6 +33,10 @@ async def override_get_db() -> AsyncSession:
 app.dependency_overrides[get_db] = override_get_db
 
 
+id_eclair = "8aab79e7-1e15-456d-b6e2-11e4e9f77e4f"
+id_sthock = "8aab79e7-1e15-456d-b6e2-11e4e9f77e5f"
+
+
 @app.on_event("startup")
 async def startuptest():
     # create db tables in test.db
@@ -47,6 +52,34 @@ async def startuptest():
     ]
     async with TestingSessionLocal() as db:
         db.add_all(account_types)
+        await db.commit()
+
+    # For group tests
+    async with TestingSessionLocal() as db:
+        eclair = models_core.CoreGroup(
+            id="8aab79e7-1e15-456d-b6e2-11e4e9f77e4f",
+            name="eclair",
+            description="Les meilleurs",
+        )
+        db.add(eclair)
+        await db.commit()
+
+    # For user tests
+    async with TestingSessionLocal() as db:
+        user = models_core.CoreUser(
+            id=id_sthock,
+            email="sthock@ecl21.ec-lyon.fr",
+            name="Name",
+            password_hash="HAAAAASSSHHHH",
+            firstname="Firstname",
+            nickname="Antoine",
+            birthday=datetime.datetime.now(),
+            promo="21",
+            phone="0612345678",
+            floor="A",
+            created_on=datetime.datetime.now(),
+        )
+        db.add(user)
         await db.commit()
 
 

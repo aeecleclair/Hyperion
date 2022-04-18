@@ -1,21 +1,4 @@
-from tests.commons import client
-from app.main import app
-from app.models import models_core
-from tests.commons import TestingSessionLocal
-
-id_eclair = "8aab79e7-1e15-456d-b6e2-11e4e9f77e4f"
-
-
-@app.on_event("startup")  # create the datas needed in the tests
-async def startuptest():
-    async with TestingSessionLocal() as db:
-        eclair = models_core.CoreGroup(
-            id=id_eclair,
-            name="eclair",
-            description="Les meilleurs",
-        )
-        db.add(eclair)
-        await db.commit()
+from tests.commons import client, id_eclair
 
 
 def test_create_rows():  # A first test is needed to run startuptest once and create the datas needed for the actual tests
