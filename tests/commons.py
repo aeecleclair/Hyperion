@@ -37,6 +37,7 @@ app.dependency_overrides[get_db] = override_get_db
 id_eclair = "8aab79e7-1e15-456d-b6e2-11e4e9f77e4f"
 id_sthock = "8aab79e7-1e15-456d-b6e2-11e4e9f77e5f"
 password_sthock = "BigSecret"
+date = datetime.datetime.now()
 
 
 @app.on_event("startup")
@@ -75,11 +76,11 @@ async def startuptest():
             password_hash=security.get_password_hash(password_sthock),
             firstname="Firstname",
             nickname="Antoine",
-            birthday=datetime.datetime.now(),
+            birthday=date,
             promo="21",
             phone="0612345678",
             floor="A",
-            created_on=datetime.datetime.now(),
+            created_on=date,
         )
         db.add(user)
         await db.commit()

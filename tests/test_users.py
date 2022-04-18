@@ -37,14 +37,38 @@ def test_create_user():
     )
     assert response.status_code == 201
 
+    # TODO: Make another request to see if it detects when a user already exists
+
+    # TODO: Think about how to check that emails are sent correctly
+
     # TODO: make the test for the 403 error when trying to create another type of account being admin (wait for this to be done in user.py)
 
-    # TODO: Think about how to get the activation token to then activate the account
 
-
-def test_activate_user():
+@pytest.mark.asyncio
+async def test_activate_user():
     """Test the /users/activate endpoint"""
-    assert 1 == 1
+    token = (
+        await TestingSessionLocal().execute(
+            select(models_core.CoreUserUnconfirmed.activation_token).where(
+                models_core.CoreUserUnconfirmed.email == "user@ecl21.ec-lyon.fr"
+            )
+        )
+    ).fetchone()[0]
+
+    response = client.post(
+        "/users/activate",
+        json={
+            "activation_token": token,
+            "name": "Debouck",
+            "firstname": "Frank",
+            "nickname": "Le Boss",
+            "password": "MyPassword",
+            "birthday": "2022-04-18",
+            "phone": "0612345678",
+            "floor": "Adomaxistr",
+        },
+    )
+    assert response.status_code == 201
 
 
 @pytest.mark.asyncio
