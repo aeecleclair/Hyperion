@@ -1,5 +1,12 @@
 # from re import S
+import pytest
+from sqlalchemy import select
+from app.models import models_core
+from app.core import security
+
+from tests.commons import TestingSessionLocal
 from tests.commons import client
+from tests.commons import id_sthock, password_sthock
 
 
 def test_create_rows():  # A first test is needed to run startuptest once and create the datas needed for the actual tests
@@ -8,6 +15,8 @@ def test_create_rows():  # A first test is needed to run startuptest once and cr
 
 
 def test_create_user():
+    """Test the /users/create endpoint"""
+
     # First test with invalid email address
     response = client.post(
         "/users/create",
@@ -28,12 +37,39 @@ def test_create_user():
     )
     assert response.status_code == 201
 
-    # TODO: make the test for the 403 error when trying to create another type of account being admin
+    # TODO: make the test for the 403 error when trying to create another type of account being admin (wait for this to be done in user.py)
 
-    # TODO: add the function creating a user entirely on top of this file, so that we can be sure it is impossible
-    # to create 2 users with the same address
-    # Think about how to get the activation token to then activate the account
+    # TODO: Think about how to get the activation token to then activate the account
 
 
 def test_activate_user():
+    """Test the /users/activate endpoint"""
     assert 1 == 1
+
+
+@pytest.mark.asyncio
+async def test_change_password():
+    """Test the /users/change-password endpoint"""
+    new_password = "NewBigSecret"
+    response = client.post(
+        "/users/change-password",
+        json={
+            "user_id": id_sthock,
+            "old_password": password_sthock,
+            "new_password": new_password,
+        },
+    )
+    new_hash_from_db = (
+        await TestingSessionLocal().execute(
+            select(models_core.CoreUser.password_hash).where(
+                models_core.CoreUser.name == "Name"
+            )
+        )
+    ).fetchone()[0]
+    assert response.status_code == 201
+    assert new_hash_from_db == security.get_password_hash(new_password)
+
+
+def test_reset_password():
+    """Test the procedure to reset a password"""
+    pass

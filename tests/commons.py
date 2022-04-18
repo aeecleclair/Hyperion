@@ -8,6 +8,7 @@ from app.dependencies import get_db
 from app.main import app
 from app.models import models_core
 from app.utils.types.account_type import AccountType
+from app.core import security
 
 SQLALCHEMY_DATABASE_URL = (
     "sqlite+aiosqlite:///./test.db"  # Connect to the test's database
@@ -20,7 +21,7 @@ TestingSessionLocal = sessionmaker(
 )  # Create a session for testing purposes
 
 
-async def override_get_db() -> AsyncSession:
+async def override_get_db():
     """Override the get_db function to use the testing session"""
 
     async with TestingSessionLocal() as db:
@@ -35,6 +36,7 @@ app.dependency_overrides[get_db] = override_get_db
 
 id_eclair = "8aab79e7-1e15-456d-b6e2-11e4e9f77e4f"
 id_sthock = "8aab79e7-1e15-456d-b6e2-11e4e9f77e5f"
+password_sthock = "BigSecret"
 
 
 @app.on_event("startup")
@@ -70,7 +72,7 @@ async def startuptest():
             id=id_sthock,
             email="sthock@ecl21.ec-lyon.fr",
             name="Name",
-            password_hash="HAAAAASSSHHHH",
+            password_hash=security.get_password_hash(password_sthock),
             firstname="Firstname",
             nickname="Antoine",
             birthday=datetime.datetime.now(),
