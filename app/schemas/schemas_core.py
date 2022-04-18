@@ -51,6 +51,7 @@ class CoreUser(CoreUserSimple):
     floor: str
     created_on: datetime | None = None
     groups: list[CoreGroupSimple] = []
+    phone: str | None = None
 
 
 class CoreUserCreateRequest(BaseModel):
