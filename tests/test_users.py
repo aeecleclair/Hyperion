@@ -14,6 +14,26 @@ def test_create_rows():  # A first test is needed to run startuptest once and cr
         pass
 
 
+def test_get_user_by_id():
+    """Test the procedure to get a user by id"""
+    response = client.get(f"/users/{id_sthock}")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["nickname"] == "Antoine"
+    assert "floor" in data
+    assert "promo" in data
+    assert "phone" in data
+    assert "birthday" in data
+    assert "groups" in data
+    assert "created_on" in data
+    assert "email" in data
+    assert "password" not in data
+    assert "id" in data
+    assert "name" in data
+    assert "firstname" in data
+    assert "account_type" not in data
+
+
 @pytest.mark.asyncio
 async def test_create_user():
     """Test the /users/create endpoint"""
@@ -113,6 +133,7 @@ async def test_create_user():
 @pytest.mark.asyncio
 async def test_change_password():
     """Test the /users/change-password endpoint"""
+
     new_password = "NewBigSecret"
     response = client.post(
         "/users/change-password",
@@ -129,6 +150,7 @@ async def test_change_password():
             )
         )
     ).fetchone()[0]
+    await TestingSessionLocal().rollback()
     assert response.status_code == 201
     assert new_hash_from_db == security.get_password_hash(new_password)
 
