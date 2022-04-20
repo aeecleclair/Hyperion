@@ -6,6 +6,13 @@ def test_create_rows():  # A first test is needed to run startuptest once and cr
         pass
 
 
+def test_get_groups():
+    response = client.get(f"/groups")
+    assert response.status_code == 200
+    data = response.json()
+    assert data[3]["name"] == "eclair"
+
+
 def test_get_group_by_id():
     response = client.get(f"/groups/{id_eclair}")
     assert response.status_code == 200
@@ -38,6 +45,17 @@ def test_patch_group():
     assert data["description"] == "The best"
 
 
+def test_create_membership():
+    """Test for the creation of a membership"""
+    pass
+
+
 def test_delete_group():
+    """Test deletion of a group"""
+    # Test the status code
     response = client.delete(f"/groups/{id_eclair}")
     assert response.status_code == 204
+
+    # Test that the group has really been deleted
+    response = client.get(f"/groups/{id_eclair}")
+    assert response.status_code == 404
