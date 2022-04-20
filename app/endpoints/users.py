@@ -223,13 +223,16 @@ async def activate_user(
     status_code=201,
     tags=[Tags.users],
 )
-async def recover_user(email: str = Body(...), db: AsyncSession = Depends(get_db)):
+async def recover_user(
+    email: str = Body(..., embed=True), db: AsyncSession = Depends(get_db)
+):
     """
     Allow an user to start a password reset process.
 
     If the provided **email** correspond to an existing account, a password reset token will be send.
     Using this token, the password can be changed with `/users/reset-password` endpoint
     """
+    # We use embed for email parameter : https://fastapi.tiangolo.com/tutorial/body-multiple-params/#embed-a-single-body-parameter
     db_user = await cruds_users.get_user_by_email(db=db, email=email)
     if db_user is not None:
         # The user exist, we can send a password reset invitation
