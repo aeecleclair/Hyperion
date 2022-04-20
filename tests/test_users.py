@@ -165,22 +165,54 @@ async def test_change_password():
     assert new_hash_from_db == security.get_password_hash(new_password)
 
 
-def test_reset_password():
-    """Test the procedure to reset a password (recover and reset-password endpoints)"""
-    pass
-
-
 @pytest.mark.asyncio
-async def test_delete_user():
-    """Test the deletion of a user"""
-    user_id = await TestingSessionLocal().execute(
-        select(models_core.CoreUser.id).where(models_core.CoreUser.name == "Debouck")
-    )
-    response = client.delete(f"/users/{user_id}")
+async def test_reset_password():
+    """Test the procedure to reset a password (recover and reset-password endpoints)"""
+    response = client.post("/users/recover", json="user@ecl21.ec-lyon.fr")
+    assert response.status_code == 201
 
+    token = (
+        await TestingSessionLocal().execute(
+            select(models_core.CoreUserRecoverRequest.reset_token).where(
+                models_core.CoreUserRecoverRequest.email == "user@ecl21.ec-lyon.fr"
+            )
+        )
+    ).fetchone()[0]
+
+    new_password = "MyNewPassword"
+    response = client.post(
+        "/users/reset-password",
+        json={"reset_token": token, "new_password": new_password},
+    )
+    assert response.status_code == 201
+
+    new_hash_from_db = (
+        await TestingSessionLocal().execute(
+            select(models_core.CoreUser.password_hash).where(
+                models_core.CoreUser.email == "user@ecl21.ec-lyon.fr"
+            )
+        )
+    ).fetchone()[0]
+    await TestingSessionLocal().rollback()
+    assert response.status_code == 201
+    assert new_hash_from_db == security.get_password_hash(new_password)
+
+
+def test_delete_user():
+    """Test the deletion of a user"""
+    # Check if the deletion gets the right response
+    user_id = client.get("/users").json()[1]["id"]
+    response = client.delete(f"/users/{user_id}")
     assert response.status_code == 204
 
-    # TODO : complete this request
+    # Check that the response is the same when we try to delete an unexisting user
+    response = client.delete(f"/users/{user_id}")
+    assert response.status_code == 204
+
+    # Check if it has deleted correctly
+    response = client.get(f"/users/{user_id}")
+    assert response.status_code == 404
 
 
-# Please let the test_delete_user as the last function of the file, to conclude the file
+# Please let the test_delete_user as the last function of the file, to conclude the file by deleting
+# the Frank Debouck user that we have been working on
