@@ -14,6 +14,16 @@ def test_create_rows():  # A first test is needed to run startuptest once and cr
         pass
 
 
+def test_get_users():
+    """Test the request to get every users"""
+    response = client.get("/users")
+    data = response.json()
+    print(data)
+
+    assert response.status_code == 200
+    assert data[0]["name"] == "Name"
+
+
 def test_get_user_by_id():
     """Test the procedure to get a user by id"""
     response = client.get(f"/users/{id_sthock}")
@@ -156,5 +166,21 @@ async def test_change_password():
 
 
 def test_reset_password():
-    """Test the procedure to reset a password"""
+    """Test the procedure to reset a password (recover and reset-password endpoints)"""
     pass
+
+
+@pytest.mark.asyncio
+async def test_delete_user():
+    """Test the deletion of a user"""
+    user_id = await TestingSessionLocal().execute(
+        select(models_core.CoreUser.id).where(models_core.CoreUser.name == "Debouck")
+    )
+    response = client.delete(f"/users/{user_id}")
+
+    assert response.status_code == 204
+
+    # TODO : complete this request
+
+
+# Please let the test_delete_user as the last function of the file, to conclude the file
