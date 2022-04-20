@@ -1,4 +1,4 @@
-from tests.commons import client, id_eclair
+from tests.commons import client, id_eclair, id_sthock
 
 
 def test_create_rows():  # A first test is needed to run startuptest once and create the datas needed for the actual tests
@@ -47,7 +47,15 @@ def test_patch_group():
 
 def test_create_membership():
     """Test for the creation of a membership"""
-    pass
+    # Check the status code
+    response = client.post(
+        "/groups/membership", json={"user_id": id_sthock, "group_id": id_eclair}
+    )
+    assert response.status_code == 201
+
+    # Check that the membership was added correctly
+    response = client.get(f"/users/{id_sthock}")
+    assert response.json()["groups"][0]["name"] == "eclair"
 
 
 def test_delete_group():
