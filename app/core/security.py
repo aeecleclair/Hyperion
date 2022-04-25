@@ -53,7 +53,7 @@ def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 
-def verify_password(plain_password, hashed_password) -> bool:
+def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
     Compare `plain_password` against its salted hash representation `hashed_password`. The function use a bcrypt based *passlib* CryptContext.
     """

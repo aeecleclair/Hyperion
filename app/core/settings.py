@@ -34,4 +34,4 @@ class Settings(BaseSettings):
 
 # Type error is inevitable
 # See https://github.com/samuelcolvin/pydantic/issues/3753
-settings = Settings()
+settings = Settings()  # type: ignore
