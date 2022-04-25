@@ -3,6 +3,7 @@
 from enum import Enum
 
 
-class Tags(Enum):
+class Tags(str, Enum):
     users = "Users"
     groups = "Groups"
+    auth = "Auth"

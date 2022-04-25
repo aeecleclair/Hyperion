@@ -1,11 +1,12 @@
-"""
-Commun schemas file for endpoint /users et /groups because it would cause circular import,
-used by fastAPI in the endpoints file
-"""
+"""Commun schemas file for endpoint /users et /groups because it would cause circular import"""
 
 from datetime import date, datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
+
+from app.core import security
+from app.utils.examples import examples_core
+from app.utils.types.groups_type import AccountType
 
 
 class CoreUserBase(BaseModel):
@@ -13,11 +14,11 @@ class CoreUserBase(BaseModel):
 
     name: str
     firstname: str
-    nickname: str = None
+    nickname: str | None = None
 
 
 class CoreGroupBase(BaseModel):
-    """Base shema for group's model"""
+    """Base schema for group's model"""
 
     name: str
     description: str | None = None
@@ -26,7 +27,7 @@ class CoreGroupBase(BaseModel):
 class CoreUserSimple(CoreUserBase):
     """Simplified schema for user's model, used when getting all users"""
 
-    id: int
+    id: str
 
     class Config:
         orm_mode = True
@@ -35,7 +36,7 @@ class CoreUserSimple(CoreUserBase):
 class CoreGroupSimple(CoreGroupBase):
     """Simplified schema for group's model, used when getting all groups"""
 
-    id: int
+    id: str
 
     class Config:
         orm_mode = True
@@ -45,25 +46,53 @@ class CoreUser(CoreUserSimple):
     """Schema for user's model similar to core_user table in database"""
 
     email: str
-    birthday: date = None
-    promo: int = None
+    birthday: date | None = None
+    promo: int | None = None
     floor: str
-    created_on: datetime = None
+    created_on: datetime | None = None
     groups: list[CoreGroupSimple] = []
+
+
+class CoreUserCreateRequest(BaseModel):
+    """
+    The schema is used to send an account creation request
+    **password** is optional as it can either be provided during the creation or the activation
+    """
+
+    email: str
+    password: str | None = None
+    account_type: AccountType
+
+    # Password validator
+    # https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
+    _normalize_password = validator("password", allow_reuse=True)(
+        security.password_validator
+    )
 
     class Config:
         orm_mode = True
 
+        schema_extra = examples_core.example_CoreUserCreateRequest
 
-class CoreUserCreate(CoreUserBase):
-    """Schema for user creation"""
 
-    email: str
-    password: str
-    birthday: date = None
-    promo: int = None
+class CoreUserActivateRequest(CoreUserBase):
+    activation_token: str
+    password: str | None = None
+    birthday: date | None = None
+    phone: str | None = None
+    promo: int | None = None
     floor: str
-    created_on: datetime = None
+
+    # Password validator
+    # https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
+    _normalize_password = validator("password", allow_reuse=True)(
+        security.password_validator
+    )
+
+    class Config:
+        orm_mode = True
+
+        schema_extra = examples_core.example_CoreUserActivateRequest
 
 
 class CoreGroup(CoreGroupSimple):
@@ -71,11 +100,74 @@ class CoreGroup(CoreGroupSimple):
 
     members: list[CoreUserSimple] = []
 
-    class Config:
-        orm_mode = True
-
 
 class CoreGroupCreate(CoreGroupBase):
     """Model for group creation schema"""
 
     pass
+
+
+class CoreGroupInDB(CoreGroupBase):
+    """Schema for user activation"""
+
+    id: str
+
+    class Config:
+        orm_mode = True
+
+
+class CoreGroupUpdate(BaseModel):
+    """Schema for group update"""
+
+    name: str | None = None
+    description: str | None = None
+
+
+class CoreUserRecoverRequest(BaseModel):
+    email: str
+    user_id: str
+    reset_token: str
+    created_on: datetime
+    expire_on: datetime
+
+    class Config:
+        orm_mode = True
+
+
+class ChangePasswordRequest(BaseModel):
+    user_id: str
+    old_password: str
+    new_password: str
+
+    # Password validator
+    # https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
+    _normalize_password = validator("new_password", allow_reuse=True)(
+        security.password_validator
+    )
+
+
+class ResetPasswordRequest(BaseModel):
+    reset_token: str
+    new_password: str
+
+    # Password validator
+    # https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
+    _normalize_password = validator("new_password", allow_reuse=True)(
+        security.password_validator
+    )
+
+
+class CoreMembership(BaseModel):
+    """Schema for membership creation (allows to add a user to a group)"""
+
+    user_id: str
+    group_id: str
+
+
+class AccessToken(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class TokenData(BaseModel):
+    sub: str  # Subject: the user id
