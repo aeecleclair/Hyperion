@@ -4,5 +4,5 @@ passlib[bcrypt]==1.7.4              # password hashing using bcrypt
 python-dotenv==0.20.0               # load environment variables from .env file
 python-jose[cryptography]==3.3.0    # generate and verify the JWT tokens
 python-multipart==0.0.5             # a form data parser, as oauth flow requires form-data parameters
-SQLAlchemy[asyncio]==1.4.34         # [asyncio] allows greenlet to be installed on Apple M1 devices
+SQLAlchemy[asyncio]==1.4.35         # [asyncio] allows greenlet to be installed on Apple M1 devices
 uvicorn[standard]==0.17.6
