@@ -37,4 +37,4 @@ jobs:
         uses: isort/isort-action@master
         with:
           requirementsFiles: "requirements_dev.txt"
-          configuration: ""
+          configuration: "--check-only --diff"
