@@ -1,7 +1,6 @@
-from tests.commons import client
 from app.main import app
 from app.models import models_core
-from tests.commons import TestingSessionLocal
+from tests.commons import TestingSessionLocal, client
 
 id_eclair = "8aab79e7-1e15-456d-b6e2-11e4e9f77e4f"
 
