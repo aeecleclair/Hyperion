@@ -49,7 +49,7 @@ pyenv activate hyperion
 ### Development requirements
 
 ```bash
-pip install -r requirements_dev.txt
+pip install -r requirements-dev.txt
 ```
 
 ### Production requirements
