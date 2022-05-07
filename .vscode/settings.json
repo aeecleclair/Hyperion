@@ -5,8 +5,9 @@
   "editor.tabSize": 4,
   "editor.insertSpaces": true,
   "editor.detectIndentation": false,
-  "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.typeCheckingMode": "off",
   "editor.codeActionsOnSave": {
     "source.organizeImports": true
-  }
+  },
+  "python.linting.mypyEnabled": true
 }
