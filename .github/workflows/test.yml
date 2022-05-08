@@ -27,5 +27,12 @@ jobs:
           pip install -r requirements-dev.txt
           pip install "fastapi[all]"
 
+      - name: Cache .pytest_cache folder
+        id: pytest_cache
+        uses: actions/cache@v3
+        with:
+          path: .pytest_cache
+          key: pytest_cache-${{ github.head_ref }}
+
       - name: Run unit tests
         run: python -m pytest
