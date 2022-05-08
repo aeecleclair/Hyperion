@@ -32,11 +32,12 @@ jobs:
 
       - name: Format with black
         uses: psf/black@stable
+        with:
+          options: "--check --diff"
 
       - name: Sort imports with isort
         uses: isort/isort-action@master
         with:
-          requirementsFiles: "requirements-dev.txt"
           configuration: "--check-only --diff"
 
       - name: Cache .mypy_cache folder
