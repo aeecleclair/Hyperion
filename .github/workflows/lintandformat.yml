@@ -36,9 +36,7 @@ jobs:
           options: "--check --diff"
 
       - name: Sort imports with isort
-        uses: isort/isort-action@master
-        with:
-          configuration: "--check-only --diff"
+        run: "isort . --check-only --diff"
 
       - name: Cache .mypy_cache folder
         id: mypy_cache
