@@ -171,15 +171,15 @@ async def activate_user(
     if unconfirmed_user.expire_on < datetime.now():
         raise HTTPException(status_code=422, detail="Expired activation token")
 
-    # We need to make sure the password was provided at least once during the account creation process
-    if unconfirmed_user.password_hash is None and user.password is None:
-        raise HTTPException(status_code=422, detail="A password was never provided")
-
     # If a password was provided in this request, we will use this one as it is more recent
     if user.password is not None:
         password_hash = security.get_password_hash(user.password)
     else:
-        password_hash = unconfirmed_user.password_hash
+        # No new password were provided, we need to make sure one was previously provided during the account creation process
+        if unconfirmed_user.password_hash is not None:
+            password_hash = unconfirmed_user.password_hash
+        else:
+            raise HTTPException(status_code=422, detail="A password was never provided")
 
     print(unconfirmed_user.account_type)
 

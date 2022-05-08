@@ -32,6 +32,4 @@ class Settings(BaseSettings):
         env_file_encoding = "utf-8"
 
 
-# Type error is inevitable
-# See https://github.com/samuelcolvin/pydantic/issues/3753
-settings = Settings()  # type: ignore
+settings = Settings()
