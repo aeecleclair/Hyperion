@@ -1,5 +1,5 @@
 alembic==1.7.7                      # database migrations
-fastapi==0.75.1
+fastapi==0.76.0
 passlib[bcrypt]==1.7.4              # password hashing using bcrypt
 python-dotenv==0.20.0               # load environment variables from .env file
 python-jose[cryptography]==3.3.0    # generate and verify the JWT tokens
