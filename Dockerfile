@@ -3,9 +3,11 @@ FROM python:3.10-bullseye
 
 WORKDIR /code
 
+COPY ./requirements_dev.txt /code/requirements_dev.txt
 COPY ./requirements.txt /code/requirements.txt
+COPY ./.env /code/.env
 
-RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
+RUN pip install --upgrade -r /code/requirements_dev.txt
 
 COPY ./app /code/app
 

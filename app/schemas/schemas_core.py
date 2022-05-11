@@ -9,6 +9,15 @@ from app.utils.examples import examples_core
 from app.utils.types.groups_type import AccountType
 
 
+class TokenReq(BaseModel):
+    code: str | None = None
+    grant_type: str | None = None
+    redirect_uri: str | None = None
+    client_id: str | None = None
+    client_secret: str | None = None
+    code_verifier: str | None = None
+
+
 class CoreUserBase(BaseModel):
     """Base schema for user's model"""
 

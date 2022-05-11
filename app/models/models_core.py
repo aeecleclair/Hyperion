@@ -8,6 +8,13 @@ from sqlalchemy.orm import relationship
 from app.database import Base
 
 
+class AuthorizationCode(Base):
+    __tablename__ = "authorization_code"
+
+    code = Column(String, primary_key=True, index=True)
+    expire_on = Column(DateTime, nullable=False)
+
+
 class CoreMembership(Base):
     __tablename__ = "core_membership"
 
