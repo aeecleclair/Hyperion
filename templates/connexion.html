@@ -151,7 +151,7 @@
         <div class="shape"></div>
         <div class="shape"></div>
     </div>
-    <form action="/auth/authorization-flow/authorize" method="GET">
+    <form action="/auth/authorization-flow/authorize-validation" method="POST">
         <h3>MyECL</h3>
 
         <label for="username">Email</label>
@@ -165,6 +165,7 @@
         <input type="hidden" name="redirect_uri" value="{{ redirect_uri }}">
         <input type="hidden" name="scope" value="{{ scope }}">
         <input type="hidden" name="state" value="{{ state }}">
+        <input type="hidden" name="nonce" value="{{ nonce }}">
 
         <button type="submit">Log In</button>
 

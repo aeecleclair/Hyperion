@@ -31,3 +31,16 @@ async def create_authorization_token(
     except IntegrityError:
         await db.rollback()
         raise ValueError()
+
+
+async def delete_authorization_token_by_token(
+    db: AsyncSession, code: str
+) -> models_core.AuthorizationCode | None:
+    """Delete a token from database"""
+
+    await db.execute(
+        delete(models_core.AuthorizationCode).where(
+            models_core.AuthorizationCode.code == code
+        )
+    )
+    await db.commit()
