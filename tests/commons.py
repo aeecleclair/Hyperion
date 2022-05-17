@@ -1,3 +1,5 @@
+from typing import AsyncGenerator
+
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
@@ -19,7 +21,7 @@ TestingSessionLocal = sessionmaker(
 )  # Create a session for testing purposes
 
 
-async def override_get_db() -> AsyncSession:
+async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
     """Override the get_db function to use the testing session"""
 
     async with TestingSessionLocal() as db:

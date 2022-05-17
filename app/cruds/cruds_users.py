@@ -69,7 +69,7 @@ async def create_unconfirmed_user(
 
 async def get_unconfirmed_user_by_activation_token(
     db: AsyncSession, activation_token: str
-) -> models_core.CoreUserUnconfirmed:
+) -> models_core.CoreUserUnconfirmed | None:
 
     result = await db.execute(
         select(models_core.CoreUserUnconfirmed).where(
@@ -127,7 +127,7 @@ async def create_user_recover_request(
 
 async def get_recover_request_by_reset_token(
     db: AsyncSession, reset_token: str
-) -> models_core.CoreUserRecoverRequest:
+) -> models_core.CoreUserRecoverRequest | None:
 
     result = await db.execute(
         select(models_core.CoreUserRecoverRequest).where(

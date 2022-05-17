@@ -1,12 +1,10 @@
 [tool.black]
 line-length = 88
 target-version = ['py310']
+# "Black will automatically ignore files and directories in .gitignore file"
 extend-exclude = '''
 /(
     .git
-  | __pycache__
-  | .pytest_cache
-  | .venv
   | migrations
 )/
 '''
@@ -14,4 +12,18 @@ extend-exclude = '''
 [tool.isort]
 profile = "black"
 py_version=310
-skip_glob = ["migrations/*"]
+skip_gitignore = true
+skip_glob = [".git", "migrations/*"]
+
+[tool.mypy]
+python_version = "3.10"
+plugins = "sqlalchemy.ext.mypy.plugin"
+ignore_missing_imports = true
+exclude = '''(?x)(
+      .git
+    | __pycache__
+    | .pytest_cache
+    | .venv
+    | migration
+)'''
+warn_unreachable = true

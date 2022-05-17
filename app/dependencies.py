@@ -8,17 +8,16 @@ async def get_users(db: AsyncSession = Depends(get_db)):
 """
 
 from typing import AsyncGenerator
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.database import SessionLocal
 
 from fastapi import Depends, HTTPException, status
 from jose import jwt
 from pydantic import ValidationError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import security
 from app.core.settings import settings
 from app.cruds import cruds_users
+from app.database import SessionLocal
 from app.models import models_core
 from app.schemas import schemas_core
 from app.utils.types.groups_type import GroupType

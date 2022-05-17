@@ -1,16 +1,14 @@
 import secrets
-
 from datetime import datetime, timedelta
-from passlib.context import CryptContext
-from jose import jwt
-from fastapi.security import OAuth2PasswordBearer
-from app.cruds import cruds_users
-from sqlalchemy.ext.asyncio import AsyncSession
-from app.models import models_core
 
+from fastapi.security import OAuth2PasswordBearer
+from jose import jwt
+from passlib.context import CryptContext
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.settings import settings
-
+from app.cruds import cruds_users
+from app.models import models_core
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=13)
 """

@@ -1,7 +1,17 @@
-.DS_Store
+# Cache folders
 __pycache__
+.mypy_cache
 .pytest_cache
-.venv
+
+# Databases
 sql_app.db
 test.db
+
+# Dotenv file
 .env
+
+# macOS
+.DS_Store
+
+# Virtual environment
+.venv

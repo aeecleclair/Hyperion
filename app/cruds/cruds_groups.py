@@ -16,7 +16,9 @@ async def get_groups(db: AsyncSession) -> list[models_core.CoreGroup]:
     return result.scalars().all()
 
 
-async def get_group_by_id(db: AsyncSession, group_id: str) -> models_core.CoreGroup:
+async def get_group_by_id(
+    db: AsyncSession, group_id: str
+) -> models_core.CoreGroup | None:
     """Return group with id from database"""
     result = await db.execute(
         select(models_core.CoreGroup)
@@ -28,7 +30,9 @@ async def get_group_by_id(db: AsyncSession, group_id: str) -> models_core.CoreGr
     return result.scalars().first()
 
 
-async def get_group_by_name(db: AsyncSession, group_name: str) -> models_core.CoreGroup:
+async def get_group_by_name(
+    db: AsyncSession, group_name: str
+) -> models_core.CoreGroup | None:
     """Return group with name from database"""
     result = await db.execute(
         select(models_core.CoreGroup)
