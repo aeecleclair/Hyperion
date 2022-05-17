@@ -13,6 +13,10 @@ class AuthorizationCode(Base):
 
     code = Column(String, primary_key=True, index=True)
     expire_on = Column(DateTime, nullable=False)
+    scope = Column(String)
+    redirect_uri = Column(String)
+    user_id = Column(String)
+    nonce = Column(String)
 
 
 class CoreMembership(Base):
