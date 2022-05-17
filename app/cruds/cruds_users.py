@@ -7,6 +7,8 @@ from sqlalchemy.orm import selectinload
 
 from app.models import models_core
 
+# from app.schemas.schemas_core import CoreUserUpdate
+
 
 async def get_users(db: AsyncSession) -> list[models_core.CoreUser]:
     """Return all users from database"""
@@ -38,6 +40,15 @@ async def get_user_by_email(
         select(models_core.CoreUser).where(models_core.CoreUser.email == email)
     )
     return result.scalars().first()
+
+
+async def update_user(db: AsyncSession, user_id: str, user_update):
+    await db.execute(
+        update(models_core.CoreUser)
+        .where(models_core.CoreUser.id == user_id)
+        .values(**user_update.dict(exclude_none=True))
+    )
+    await db.commit()
 
 
 async def create_unconfirmed_user(
