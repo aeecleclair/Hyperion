@@ -61,6 +61,26 @@ async def delete_user(user_id: str, db: AsyncSession = Depends(get_db)):
     await cruds_users.delete_user(db=db, user_id=user_id)
 
 
+@router.patch(
+    "/users/{user_id}",
+    response_model=schemas_core.CoreUser,
+    tags=[Tags.users],
+)
+async def update_user(
+    user_id: str,
+    user_update: schemas_core.CoreUserUpdate,
+    db: AsyncSession = Depends(get_db),
+):
+    """Update a user, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value"""
+    user = await cruds_users.get_user_by_id(db=db, user_id=user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    await cruds_users.update_user(db=db, user_id=user_id, user_update=user_update)
+
+    return user
+
+
 @router.post(
     "/users/create",
     response_model=standard_responses.Result,

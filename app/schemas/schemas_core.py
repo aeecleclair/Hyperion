@@ -53,6 +53,20 @@ class CoreUser(CoreUserSimple):
     groups: list[CoreGroupSimple] = []
 
 
+class CoreUserUpdate(BaseModel):
+    """Schema for user update"""
+
+    name: str | None = None
+    firstname: str | None = None
+    nickname: str | None = None
+    birthday: date | None = None
+    promo: int | None = None
+    floor: str | None = None
+
+    class Config:
+        schema_extra = examples_core.example_CoreUserUpdate
+
+
 class CoreUserCreateRequest(BaseModel):
     """
     The schema is used to send an account creation request

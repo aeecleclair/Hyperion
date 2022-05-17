@@ -1,3 +1,14 @@
+example_CoreUserUpdate = {
+    "example": {
+        "name": "Backend",
+        "firstname": "MyECL",
+        "nickname": "Hyperion",
+        "birthday": "2022-05-04",
+        "promo": 2021,
+        "floor": "Adoma",
+    }
+}
+
 example_CoreUserCreateRequest = {
     "example": {
         "email": "user@example.fr",
