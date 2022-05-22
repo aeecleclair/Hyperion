@@ -1,32 +1,35 @@
 import base64
+import hashlib
+from datetime import datetime, timedelta
+
 from fastapi import (
     APIRouter,
-    Depends,
-    status,
-    HTTPException,
-    Request,
     Body,
+    Depends,
     Form,
     Header,
+    HTTPException,
+    Request,
     Response,
+    status,
 )
 from fastapi.responses import RedirectResponse
-from app.core.security import create_access_token
-
-from app.core.security import authenticate_user, create_access_token
-from app.dependencies import get_db, get_settings
-from app.schemas import schemas_core
 from fastapi.security import OAuth2PasswordRequestForm
-from app.core.security import authenticate_user, create_access_token_RS256
-from sqlalchemy.ext.asyncio import AsyncSession
-from app.utils.types.tags import Tags
-from app.core.security import generate_token
 from fastapi.templating import Jinja2Templates
-from app.cruds import cruds_auth
-from app.models import models_core
-from datetime import datetime, timedelta
 from jose import jwt
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.security import (
+    authenticate_user,
+    create_access_token,
+    create_access_token_RS256,
+    generate_token,
+)
+from app.cruds import cruds_auth
+from app.dependencies import get_db
+from app.models import models_core
+from app.schemas import schemas_core
+from app.utils.types.tags import Tags
 
 router = APIRouter()
 
@@ -91,11 +94,14 @@ known_clients = {"application": "secret"}
 async def authorize_page(
     request: Request,
     response_type: str,
-    redirect_uri: str,
     client_id: str,
-    scope: str,
-    state: str = "",
-    nonce: str = "",
+    redirect_uri: str,
+    scope: str | None = None,  # Optional for OAuth but must contain "openid" for oidc
+    state: str | None = None,  # RECOMMENDED
+    nonce: str | None = None,  # oidc only
+    code_challenge: str | None = None,  # PKCE only
+    code_challenge_method: str | None = None,  # PKCE only
+    db: AsyncSession = Depends(get_db),
 ):
     """
     This endpoint is the one the user is redirected to when beginning the authorization process.
@@ -134,6 +140,8 @@ async def authorize_page(
             "scope": scope,
             "state": state,
             "nonce": nonce,
+            "code_challenge": code_challenge,
+            "code_challenge_method": code_challenge_method,
         },
     )
 
@@ -147,12 +155,15 @@ async def authorize_validation(
         ...
     ),  # We use Form as parameters must be `application/x-www-form-urlencoded`
     password: str = Form(...),
-    response_type: str = Form(...),
-    redirect_uri: str = Form(...),  # May be optional for OAuth ?
+    response_type: str = Form(...),  # We only support authorization `code` flow
     client_id: str = Form(...),
-    scope: str = Form(...),
-    state: str = Form(""),
-    nonce: str = Form(""),
+    redirect_uri: str | None = Form(None),  # Optional for OAuth but required for oidc ?
+    scope: str
+    | None = Form(None),  # Optional for OAuth, must contain "openid" for oidc
+    state: str | None = Form(None),  # RECOMMENDED
+    nonce: str | None = Form(None),  # oidc only
+    code_challenge: str | None = Form(None),  # PKCE only
+    code_challenge_method: str | None = Form(None),  # PKCE only
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -231,6 +242,8 @@ async def authorize_validation(
         redirect_uri=redirect_uri,
         user_id=user.id,
         nonce=nonce,
+        code_challenge=code_challenge,
+        code_challenge_method=code_challenge_method,
     )
     await cruds_auth.create_authorization_token(
         db=db, db_authorization_code=db_authorization_code
@@ -240,6 +253,15 @@ async def authorize_validation(
     # Lack of a redirection URI registration requirement can enable an
     # attacker to use the authorization endpoint as an open redirector as
     # described in Section 10.15.
+
+    # TODO: scope must contain openid for oidc
+
+    # TODO make optionnal
+    if redirect_uri is None:
+        raise HTTPException(
+            status_code=422,
+            detail="Redirect URI should be passed for the moment",
+        )
 
     # We need to redirect to the `redirect_uri` provided by the *client* providing the new authorization_code.
     # For security reason, we need to provide the same `state` that was send by the client in the first request
@@ -262,10 +284,11 @@ async def token(
     response: Response,
     grant_type: str = Form(...),
     code: str = Form(...),
-    redirect_uri=Form(...),
+    redirect_uri: str | None = Form(None),
     authorization: str | None = Header(default=None),
-    client_id: str | None = Form(None),
-    client_secret: str = Form(None),
+    client_id: str = Form(...),
+    client_secret: str | None = Form(None),
+    code_verifier: str | None = Form(None),  # For PKCE
     db: AsyncSession = Depends(get_db),
 ):  # productId: int = Body(...)):  # , request: Request):
     """
@@ -277,10 +300,20 @@ async def token(
 
     # TODO: error handling
 
+    db_authorization_code = await cruds_auth.get_authorization_token_by_token(
+        db=db, code=code
+    )
+    if db_authorization_code is None:
+        raise HTTPException(
+            status_code=422,
+            detail="Invalid authorization code",
+        )
+
     # We need to check client id and secret
     if authorization is not None:
         # client_id and client_secret are base64 encoded in the authorization header
         # TODO: use a function
+        # TODO is "Bearer" missing
         client_id, client_secret = (
             base64.b64decode(authorization).decode("utf-8").split(":")
         )
@@ -291,6 +324,18 @@ async def token(
                 status_code=403,
                 detail="Invalid client_id or client_secret",
             )
+    elif db_authorization_code.code_challenge is not None and code_verifier is not None:
+        # We need to verify the hash correspond
+        if (
+            db_authorization_code.code_challenge
+            != hashlib.sha256(code_verifier.encode()).hexdigest()
+            # We need to pass the code_verifier as a b-string, we use `code_verifier.encode()` for that
+            # TODO: Make sure that `.hexdigest()` is applied by the client to code_challenge
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="Invalid code_verifier",
+            )
     else:
         raise HTTPException(
             status_code=401,
@@ -298,14 +343,6 @@ async def token(
         )
 
     # We can check the authorization code
-    db_authorization_code = await cruds_auth.get_authorization_token_by_token(
-        db=db, code=code
-    )
-    if db_authorization_code is None:
-        raise HTTPException(
-            status_code=422,
-            detail="Invalid authorization code",
-        )
     if db_authorization_code.expire_on > datetime.now():
         raise HTTPException(
             status_code=422,
@@ -330,11 +367,14 @@ async def token(
         "access_token": access_token,
         "token_type": "Bearer",
         "expires_in": 3600,
-        "refresh_token": "tGzv3JOkF0XG5Qx2TlKWIA",  # What type, JWT ?
+        "refresh_token": "tGzv3JOkF0XG5Qx2TlKWIA",  # What type, JWT ? No, we should be able to invalidate
         "example_parameter": "example_value",  # ???
     }
 
-    if "openid" in db_authorization_code.scope:
+    if (
+        db_authorization_code.scope is not None
+        and "openid" in db_authorization_code.scope
+    ):
         # It's an openid connect request, we need to return an `id_token`
 
         # Required :
@@ -364,7 +404,7 @@ async def token(
     return response_body
 
 
-@router.get("/auth/userinfo")
+@router.get("/auth/userinfo", de)
 async def auth_get_userinfo(
     request: Request,
     authorization: str = Header(default=None),
