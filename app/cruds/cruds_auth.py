@@ -1,6 +1,6 @@
 """File defining the functions called by the endpoints, making queries to the table using the models"""
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,7 +21,7 @@ async def get_authorization_token_by_token(
 
 async def create_authorization_token(
     db_authorization_code: models_core.AuthorizationCode, db: AsyncSession
-) -> models_core.CoreGroup:
+) -> models_core.AuthorizationCode:
     """Create a new group in database and return it"""
 
     db.add(db_authorization_code)
@@ -44,3 +44,4 @@ async def delete_authorization_token_by_token(
         )
     )
     await db.commit()
+    return None

@@ -36,35 +36,34 @@ router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
 
-@router.post(
-    "/auth/token",
-    response_model=schemas_core.AccessToken,
-    status_code=200,
-    tags=[Tags.auth],
-)
-async def login_for_access_token(
-    form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)
-):
-    """
-    Ask for a JWT access token using oauth password flow.
+# @router.post(
+#     "/auth/token",
+#     response_model=schemas_core.AccessToken,
+#     status_code=200,
+#     tags=[Tags.auth],
+# )
+# async def login_for_access_token(
+#     form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)
+# ):
+#     """
+#     Ask for a JWT access token using oauth password flow.
 
-    *username* and *password* must be provided
+#     *username* and *password* must be provided
 
-    Note: the request body needs to use **form-data** and not json.
-    """
-    user = await authenticate_user(db, form_data.username, form_data.password)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect login or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    # We put the user id in the subject field of the token.
-    # The subject `sub` is a JWT registered claim name, see https://datatracker.ietf.org/doc/html/rfc7519#section-4.1
-    access_token = create_access_token(
-        data={"sub": user.id}, settings=Depends(get_settings)
-    )
-    return {"access_token": access_token, "token_type": "bearer"}
+#     Note: the request body needs to use **form-data** and not json.
+#     """
+#     user = await authenticate_user(db, form_data.username, form_data.password)
+#     if not user:
+#         raise HTTPException(
+#             status_code=status.HTTP_401_UNAUTHORIZED,
+#             detail="Incorrect login or password",
+#             headers={"WWW-Authenticate": "Bearer"},
+#         )
+#     # We put the user id in the subject field of the token.
+#     # The subject `sub` is a JWT registered claim name, see https://datatracker.ietf.org/doc/html/rfc7519#section-4.1
+#     access_token = create_access_token(data={"sub": user.id})
+#     return {"access_token": access_token, "token_type": "bearer"}
+
 
 
 # Authorization Code Grant #
@@ -299,109 +298,131 @@ async def token(
     """
 
     # TODO: error handling
-
-    db_authorization_code = await cruds_auth.get_authorization_token_by_token(
-        db=db, code=code
-    )
-    if db_authorization_code is None:
-        raise HTTPException(
-            status_code=422,
-            detail="Invalid authorization code",
-        )
-
-    # We need to check client id and secret
-    if authorization is not None:
-        # client_id and client_secret are base64 encoded in the authorization header
-        # TODO: use a function
-        # TODO is "Bearer" missing
-        client_id, client_secret = (
-            base64.b64decode(authorization).decode("utf-8").split(":")
-        )
-
-    if client_id is not None and client_secret is not None:
-        if client_id not in known_clients and known_clients[client_id] != client_secret:
-            raise HTTPException(
-                status_code=403,
-                detail="Invalid client_id or client_secret",
+    if client_id is not None:
+        if grant_type == "authorization_code":
+            db_authorization_code = await cruds_auth.get_authorization_token_by_token(
+                db=db, code=code
             )
-    elif db_authorization_code.code_challenge is not None and code_verifier is not None:
-        # We need to verify the hash correspond
-        if (
-            db_authorization_code.code_challenge
-            != hashlib.sha256(code_verifier.encode()).hexdigest()
-            # We need to pass the code_verifier as a b-string, we use `code_verifier.encode()` for that
-            # TODO: Make sure that `.hexdigest()` is applied by the client to code_challenge
-        ):
+            if db_authorization_code is None:
+                raise HTTPException(
+                    status_code=422,
+                    detail="Invalid authorization code",
+                )
+
+            # We need to check client id and secret
+            if authorization is not None:
+                # client_id and client_secret are base64 encoded in the authorization header
+                # TODO: use a function
+                # TODO is "Bearer" missing
+                client_id, client_secret = (
+                    base64.b64decode(authorization).decode("utf-8").split(":")
+                )
+
+            if client_secret is not None:
+                if (
+                    client_id not in known_clients
+                    or known_clients[client_id] != client_secret
+                ):
+                    raise HTTPException(
+                        status_code=403,
+                        detail="Invalid client_id or client_secret",
+                    )
+            elif (
+                db_authorization_code.code_challenge is not None
+                and code_verifier is not None
+            ):
+                # We need to verify the hash correspond
+                if (
+                    db_authorization_code.code_challenge
+                    != hashlib.sha256(code_verifier.encode()).hexdigest()
+                    # We need to pass the code_verifier as a b-string, we use `code_verifier.encode()` for that
+                    # TODO: Make sure that `.hexdigest()` is applied by the client to code_challenge
+                ):
+                    raise HTTPException(
+                        status_code=403,
+                        detail="Invalid code_verifier",
+                    )
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Client must provide a client_secret or a code_verifier",
+                )
+
+                # We can check the authorization code
+            if db_authorization_code.expire_on < datetime.now():
+                raise HTTPException(
+                    status_code=422,
+                    detail="Expired authorization code",
+                )
+            await cruds_auth.delete_authorization_token_by_token(db=db, code=code)
+
+            # Ensure that the redirect_uri parameter value is identical to the redirect_uri parameter value that was included in the initial Authorization Request. If the redirect_uri parameter value is not present when there is only one registered redirect_uri value, the Authorization Server MAY return an error (since the Client should have included the parameter) or MAY proceed without an error (since OAuth 2.0 permits the parameter to be omitted in this case).
+            if redirect_uri != db_authorization_code.redirect_uri:
+                raise HTTPException(
+                    status_code=422,
+                    detail="redirect_uri should remain identical",
+                )
+
+            access_token_data = {
+                "sub": db_authorization_code.user_id
+            }  # + exp included by the function
+            access_token = create_access_token(data=access_token_data)
+
+            # We will create an OAuth response, then add oidc specific elements if required
+            response_body = {
+                "access_token": access_token,
+                "token_type": "Bearer",
+                "expires_in": 3600,
+                "refresh_token": "tGzv3JOkF0XG5Qx2TlKWIA",  # What type, JWT ? No, we should be able to invalidate
+                "example_parameter": "example_value",  # ???
+            }
+
+            if (
+                db_authorization_code.scope is not None
+                and "openid" in db_authorization_code.scope
+            ):
+                # It's an openid connect request, we need to return an `id_token`
+
+                # Required :
+                # aud existence
+                # iss existence and value : the issuer value form .well-known (corresponding code : https://github.com/pulsejet/nextcloud-oidc-login/blob/0c072ecaa02579384bb5e10fbb9d219bbd96cfb8/3rdparty/jumbojett/openid-connect-php/src/OpenIDConnectClient.php#L1255)
+                # https://github.com/pulsejet/nextcloud-oidc-login/blob/0c072ecaa02579384bb5e10fbb9d219bbd96cfb8/3rdparty/jumbojett/openid-connect-php/src/OpenIDConnectClient.php#L1016
+
+                id_token_data = {
+                    "iss": "http://127.0.0.1:8000/",
+                    "sub": db_authorization_code.user_id,
+                    "aud": client_id,
+                    # "exp": 0,      # Included by the function
+                    # "auth_time": "" # not sure
+                    "iat": 0,  # Required for oidc
+                    "nonce": db_authorization_code.nonce,  # oidc only, required if provided by the client
+                }
+
+                id_token = create_access_token_RS256(id_token_data)
+
+                response_body["id_token"] = (id_token,)
+
+            print("Response body", response_body)
+
+            # Required headers by Oauth and oidc
+            response.headers["Cache-Control"] = "no-store"
+            response.headers["Pragma"] = "no-cache"
+            return response_body
+
+        elif grant_type == "refresh_token":
+            #Why doesn't this step use PKCE: https://security.stackexchange.com/questions/199000/oauth2-pkce-can-the-refresh-token-be-trusted
+            
+
+        else:
             raise HTTPException(
-                status_code=403,
-                detail="Invalid code_verifier",
+                status_code=401,
+                detail="invalid_grant",
             )
     else:
         raise HTTPException(
             status_code=401,
-            detail="Client must provide a client_id and client_secret",
+            detail="Client must provide a client_id",
         )
-
-    # We can check the authorization code
-    if db_authorization_code.expire_on > datetime.now():
-        raise HTTPException(
-            status_code=422,
-            detail="Expired authorization code",
-        )
-    await cruds_auth.delete_authorization_token_by_token(db=db, code=code)
-
-    # Ensure that the redirect_uri parameter value is identical to the redirect_uri parameter value that was included in the initial Authorization Request. If the redirect_uri parameter value is not present when there is only one registered redirect_uri value, the Authorization Server MAY return an error (since the Client should have included the parameter) or MAY proceed without an error (since OAuth 2.0 permits the parameter to be omitted in this case).
-    if redirect_uri != db_authorization_code.redirect_uri:
-        raise HTTPException(
-            status_code=422,
-            detail="redirect_uri should remain identical",
-        )
-
-    access_token_data = {
-        "sub": db_authorization_code.user_id
-    }  # + exp included by the function
-    access_token = create_access_token(data=access_token_data)
-
-    # We will create an OAuth response, then add oidc specific elements if required
-    response_body = {
-        "access_token": access_token,
-        "token_type": "Bearer",
-        "expires_in": 3600,
-        "refresh_token": "tGzv3JOkF0XG5Qx2TlKWIA",  # What type, JWT ? No, we should be able to invalidate
-        "example_parameter": "example_value",  # ???
-    }
-
-    if (
-        db_authorization_code.scope is not None
-        and "openid" in db_authorization_code.scope
-    ):
-        # It's an openid connect request, we need to return an `id_token`
-
-        # Required :
-        # aud existence
-        # iss existence and value : the issuer value form .well-known (corresponding code : https://github.com/pulsejet/nextcloud-oidc-login/blob/0c072ecaa02579384bb5e10fbb9d219bbd96cfb8/3rdparty/jumbojett/openid-connect-php/src/OpenIDConnectClient.php#L1255)
-        # https://github.com/pulsejet/nextcloud-oidc-login/blob/0c072ecaa02579384bb5e10fbb9d219bbd96cfb8/3rdparty/jumbojett/openid-connect-php/src/OpenIDConnectClient.php#L1016
-
-        id_token_data = {
-            "iss": "http://127.0.0.1:8000/",
-            "sub": db_authorization_code.user_id,
-            "aud": client_id,
-            # "exp": 0,      # Included by the function
-            # "auth_time": "" # not sure
-            "iat": 0,  # Required for oidc
-            "nonce": db_authorization_code.nonce,  # oidc only, required if provided by the client
-        }
-
-        id_token = create_access_token_RS256(id_token_data)
-
-        response_body["id_token"] = (id_token,)
-
-    print("Response body", response_body)
-
-    # Required headers by Oauth and oidc
-    response.headers["Cache-Control"] = "no-store"
-    response.headers["Pragma"] = "no-cache"
-    return response_body
 
 
 @router.get("/auth/userinfo", de)
