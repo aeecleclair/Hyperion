@@ -2,118 +2,53 @@
 
 from datetime import date, datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 
-from app.schemas.schemas_core import CoreUserSimple
 from app.utils.types.groups_type import AmapSlotType
 
 
 class ProductBase(BaseModel):
     """Base schema for AMAP products"""
 
+    id: str
     name: str
     price: float
-
-
-class ProductSimple(ProductBase):
     category: str
 
 
-class ProductComplete(ProductSimple):
-    id: str
+class ProductSimple(ProductBase):
+    name: str
+    price: float
 
     class Config:
         orm_mode = True
 
-class ProductQuantity(ProductSimple):
-    quantity: int
-    id: str
+
+class ProductCreate(ProductBase):
+    name: str
+    price: float
+    category: str
 
     class Config:
         orm_mode = True
+
+
+class ProductEdit(ProductBase):
+    name: str
+    price: float
+
+    class Config:
+        orm_mode = True
+
 
 class DeliveryBase(BaseModel):
     """Base schema for AMAP deliveries"""
 
-    delivery_date: date
-    products_ids: list[str] = []
-    locked: bool = False
-
-
-class DeliveryComplete(DeliveryBase):
     id: str
-
-    class Config:
-        orm_mode = True
-
-
-class DeliveryReturn(BaseModel):
-    delivery_date: date
-    products: list[ProductComplete] = []
-    id: str
-    locked: bool
-
-    class Config:
-        orm_mode = True
+    deliveryDate: date
+    products: list[ProductBase] = []
 
 
-class OrderBase(BaseModel):
-    user_id: str
-    delivery_id: str
-    products_ids: list[str]
-    collection_slot: AmapSlotType
-    delivery_date: date
-    products_quantity: list[int]
-
-
-class OrderComplete(OrderBase):
-    order_id: str
-    amount: float
-    ordering_date: datetime
-
-    class Config:
-        orm_mode = True
-
-
-class OrderReturn(BaseModel):
-    user_id: str
-    delivery_id: str
-    products: list[ProductQuantity]
-    collection_slot: AmapSlotType
-    delivery_date: date
-    order_id: str
-    amount: float
-    ordering_date: datetime
-
-    class Config:
-        orm_mode = True
-
-
-class OrderEdit(OrderBase):
-    order_id: str
-
-    class Config:
-        orm_mode = True
-
-
-class AddProductDelivery(BaseModel):
-    product_id: str
-    delivery_id: str
-
-
-class CashBase(BaseModel):
-    balance: float
-
-
-class CashComplete(CashBase):
-    user: CoreUserSimple
-
-    class Config:
-        orm_mode = True
-
-
-class CashDB(CashBase):
-    user_id: str
-
-    class Config:
-        orm_mode = True
+class DeliveryCreate(BaseModel):
+    deliveryDate: date
+    products: list[ProductBase] = []
