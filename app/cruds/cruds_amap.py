@@ -1,5 +1,6 @@
 """File defining the functions called by the endpoints, making queries to the table using the models"""
 
+
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -59,7 +60,7 @@ async def delete_product(db: AsyncSession, product_id: str):
     await db.commit()
 
 
-async def get_delivery(db: AsyncSession) -> list[models_amap.Delivery]:
+async def get_deliveries(db: AsyncSession) -> list[models_amap.Delivery]:
     """Return all deliveries from database"""
 
     result = await db.execute(select(models_amap.Delivery))
@@ -71,7 +72,7 @@ async def create_delivery(
 ) -> models_amap.Delivery:
     """Create a new delivery in database and return it"""
 
-    db_delivery = models_amap.Product(**delivery.dict())
+    db_delivery = models_amap.Delivery(**delivery.dict())
     db.add(db_delivery)
     try:
         await db.commit()
@@ -88,5 +89,119 @@ async def delete_delivery(db: AsyncSession, delivery_id: str):
 
     await db.execute(
         delete(models_amap.Delivery).where(models_amap.Delivery.id == delivery_id)
+    )
+    await db.commit()
+
+
+async def get_products_from_delivery(
+    db: AsyncSession, delivery_id: str
+) -> list[models_amap.Product] | None:
+    result = await db.execute(
+        select(models_amap.Delivery).where(models_amap.Delivery.id == delivery_id)
+    )
+    return result.scalars().first()
+
+
+async def add_product_to_delivery(
+    db: AsyncSession, link: schemas_amap.AddProductDelivery
+):
+    """Add a product to a delivery products list"""
+    db_add = models_amap.AmapDeliveryContent(**link.dict())
+    db.add(db_add)
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise ValueError("This product is already in this delivery")
+
+
+async def remove_product_from_delivery(
+    db: AsyncSession, product_id: str, delivery_id: str
+):
+    """Remove a product from a delivery products list"""
+
+    await db.execute(
+        delete(models_amap.AmapDeliveryContent).where(
+            models_amap.AmapDeliveryContent.product_id == product_id
+            and models_amap.AmapDeliveryContent.delivery_id == delivery_id
+        )
+    )
+    await db.commit()
+
+
+async def get_orders_from_delivery(
+    db: AsyncSession, delivery_id: str
+) -> list[schemas_amap.OrderBase]:
+    result = await db.execute(
+        select(models_amap.Order).where(models_amap.Order.delivery_id == delivery_id)
+    )
+    return result.scalars().all()
+
+
+async def get_order_by_id(
+    db: AsyncSession, order_id: str
+) -> schemas_amap.OrderBase | None:
+    result = await db.execute(
+        select(models_amap.Order).where(models_amap.Order.order_id == order_id)
+    )
+    return result.scalars().first()
+
+
+async def add_order_to_delivery(
+    db: AsyncSession,
+    order: schemas_amap.OrderBase,
+) -> models_amap.Order:
+    db_add = models_amap.Order(**order.dict())
+
+    db.add(db_add)
+    try:
+        await db.commit()
+        return db_add
+    except IntegrityError:
+        await db.rollback()
+        raise ValueError("This product is already in this delivery")
+
+
+async def edit_order(db: AsyncSession, order: schemas_amap.OrderBase):
+    await db.execute(
+        update(models_amap.Order)
+        .where(models_amap.Order.order_id == order.order_id)
+        .values(**order.dict(exclude_none=True))
+    )
+    await db.commit()
+
+
+async def get_users_cash(db: AsyncSession) -> list[models_amap.Cash]:
+    result = await db.execute(select(models_amap.Cash))
+    return result.scalars().all()
+
+
+async def get_cash_by_id(db: AsyncSession, user_id: str) -> models_amap.Cash | None:
+    result = await db.execute(
+        select(models_amap.Cash).where(models_amap.Cash.user_id == user_id)
+    )
+    return result.scalars().first()
+
+
+async def create_cash_of_user(
+    db: AsyncSession, cash: schemas_amap.CashBase
+) -> models_amap.Cash:
+    db_add = models_amap.Cash(**cash.dict(exclude_none=True))
+    db.add(db_add)
+    try:
+        await db.commit()
+        return db_add
+    except IntegrityError:
+        await db.rollback()
+        raise ValueError("This user already has a balance")
+
+
+async def edit_cash_by_id(
+    db: AsyncSession, user_id: str, balance: schemas_amap.CashUpdate
+):
+    await db.execute(
+        update(models_amap.Cash)
+        .where(models_amap.Cash.user_id == user_id)
+        .values(**balance.dict())
     )
     await db.commit()
