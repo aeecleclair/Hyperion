@@ -1,0 +1,92 @@
+"""File defining the functions called by the endpoints, making queries to the table using the models"""
+
+from sqlalchemy import delete, select, update
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models import models_amap
+from app.schemas import schemas_amap
+
+
+async def get_products(db: AsyncSession) -> list[models_amap.Product]:
+    """Return all product from database"""
+
+    result = await db.execute(select(models_amap.Product))
+    return result.scalars().all()
+
+
+async def create_product(
+    product: schemas_amap.ProductBase, db: AsyncSession
+) -> models_amap.Product:
+    """Create a new product in database and return it"""
+
+    db_product = models_amap.Product(**product.dict())
+    db.add(db_product)
+    try:
+        await db.commit()
+        return db_product
+    except IntegrityError:
+        await db.rollback()
+        raise ValueError("This name is already used")
+
+
+async def get_product_by_id(
+    product_id: str, db: AsyncSession
+) -> models_amap.Product | None:
+    result = await db.execute(
+        select(models_amap.Product).where(models_amap.Product.id == product_id)
+    )
+    return result.scalars().first()
+
+
+async def edit_product(
+    product_id: str, product_update: schemas_amap.ProductEdit, db: AsyncSession
+):
+    await db.execute(
+        update(models_amap.Product)
+        .where(models_amap.Product.id == product_id)
+        .values(**product_update.dict(exclude_none=True))
+    )
+    await db.commit()
+
+
+async def delete_product(db: AsyncSession, product_id: str):
+    """Delete a product from database by id"""
+
+    await db.execute(
+        delete(models_amap.Product).where(models_amap.Product.id == product_id)
+    )
+    await db.commit()
+
+
+async def get_delivery(db: AsyncSession) -> list[models_amap.Delivery]:
+    """Return all deliveries from database"""
+
+    result = await db.execute(select(models_amap.Delivery))
+    return result.scalars().all()
+
+
+async def create_delivery(
+    delivery: schemas_amap.DeliveryBase, db: AsyncSession
+) -> models_amap.Delivery:
+    """Create a new delivery in database and return it"""
+
+    db_delivery = models_amap.Product(**delivery.dict())
+    db.add(db_delivery)
+    try:
+        await db.commit()
+        return db_delivery
+    except IntegrityError:
+        await db.rollback()
+        raise ValueError(
+            "A Delivery is already planned on that day. Consider editing this one."
+        )
+
+
+async def delete_delivery(db: AsyncSession, delivery_id: str):
+    """Delete a delivery from database by id"""
+
+    await db.execute(
+        delete(models_amap.Delivery).where(models_amap.Delivery.id == delivery_id)
+    )
+    await db.commit()
