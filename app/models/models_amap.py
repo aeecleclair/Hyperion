@@ -33,7 +33,7 @@ class Product(Base):
 class Order(Base):
     __tablename__ = "amap_order"
 
-    userId: str = Column(String, ForeignKey("core_user.id"))
+    user_id: str = Column(String, ForeignKey("core_user.id"), primary_key=True)
     user: CoreUser = relationship(
         "CoreUser",
     )
