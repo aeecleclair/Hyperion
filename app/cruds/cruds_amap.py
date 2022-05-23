@@ -131,16 +131,14 @@ async def remove_product_from_delivery(
 
 async def get_orders_from_delivery(
     db: AsyncSession, delivery_id: str
-) -> list[schemas_amap.OrderBase]:
+) -> list[models_amap.Order]:
     result = await db.execute(
         select(models_amap.Order).where(models_amap.Order.delivery_id == delivery_id)
     )
     return result.scalars().all()
 
 
-async def get_order_by_id(
-    db: AsyncSession, order_id: str
-) -> schemas_amap.OrderBase | None:
+async def get_order_by_id(db: AsyncSession, order_id: str) -> models_amap.Order | None:
     result = await db.execute(
         select(models_amap.Order).where(models_amap.Order.order_id == order_id)
     )
