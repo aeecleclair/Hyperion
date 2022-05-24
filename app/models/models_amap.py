@@ -39,7 +39,7 @@ class Order(Base):
     )
     delivery_id: str = Column(String, index=True, nullable=True)
     order_id: str = Column(String, primary_key=True, index=True)
-    products: list["Product"] = relationship(
+    products: list[Product] = relationship(
         "Product",
         secondary="amap_order_content",
     )
@@ -52,9 +52,9 @@ class Order(Base):
 class Delivery(Base):
     __tablename__ = "amap_delivery"
 
-    id: str = Column(String, primary_key=True)
-    delivery_date: datetime = Column(Date, nullable=False, unique=True)
-    products: list["Product"] = relationship(
+    id: str = Column(String, primary_key=True, index=True)
+    delivery_date: datetime = Column(Date, nullable=False, unique=True, index=True)
+    products: list[Product] = relationship(
         "Product",
         secondary="amap_delivery_content",
     )
