@@ -11,29 +11,16 @@ from app.utils.types.groups_type import AmapSlotType
 class ProductBase(BaseModel):
     """Base schema for AMAP products"""
 
-    id: str
     name: str
     price: float
-    category: str
 
 
 class ProductSimple(ProductBase):
-    name: str
-    price: float
-
-    class Config:
-        orm_mode = True
-
-
-class ProductCreate(BaseModel):
-    name: str
-    price: float
     category: str
 
 
-class ProductEdit(ProductBase):
-    name: str
-    price: float
+class ProductComplete(ProductSimple):
+    id: str
 
     class Config:
         orm_mode = True
@@ -42,35 +29,29 @@ class ProductEdit(ProductBase):
 class DeliveryBase(BaseModel):
     """Base schema for AMAP deliveries"""
 
+    deliveryDate: date
+    products: list[ProductBase] = []
+
+
+class DeliveryComplete(DeliveryBase):
     id: str
-    deliveryDate: date
-    products: list[ProductBase] = []
 
-
-class DeliveryCreate(BaseModel):
-    deliveryDate: date
-    products: list[ProductBase] = []
+    class Config:
+        orm_mode = True
 
 
 class OrderBase(BaseModel):
-    """Base schema for AMAP orders"""
+    user: CoreUserSimple
+    delivery_id: str
+    products: list[ProductBase]
+    collection_slot: AmapSlotType
+    delivery_date: date
 
+
+class OrderComplete(OrderBase):
     order_id: str
-    user: CoreUserSimple
-    delivery_id: str
-    products: list[ProductBase]
     amount: float
-    collection_slot: AmapSlotType
     ordering_date: datetime
-    delivery_date: date
-
-
-class OrderCreate(OrderBase):
-    user: CoreUserSimple
-    delivery_id: str
-    products: list[ProductBase]
-    collection_slot: AmapSlotType
-    delivery_date: date
 
     class Config:
         orm_mode = True
@@ -78,11 +59,6 @@ class OrderCreate(OrderBase):
 
 class OrderEdit(OrderBase):
     order_id: str
-    user: CoreUserSimple
-    delivery_id: str
-    products: list[ProductBase]
-    collection_slot: AmapSlotType
-    delivery_date: date
 
     class Config:
         orm_mode = True
@@ -94,10 +70,12 @@ class AddProductDelivery(BaseModel):
 
 
 class CashBase(BaseModel):
+    balance: float
+
+
+class CashComplete(CashBase):
     user_id: str
     user: CoreUserSimple
-    balance: float
 
-
-class CashUpdate(CashBase):
-    balance: float
+    class Config:
+        orm_mode = True

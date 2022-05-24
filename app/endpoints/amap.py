@@ -16,57 +16,53 @@ router = APIRouter()
 # Prefix "/amap" added in api.py
 @router.get(
     "/amap/products",
-    response_model=list[schemas_amap.ProductBase],
+    response_model=list[schemas_amap.ProductComplete],
     status_code=200,
     tags=[Tags.amap],
 )
 async def get_products(db: AsyncSession = Depends(get_db)):
     """Return all AMAP products from database as a list of dictionaries"""
     products = await cruds_amap.get_products(db)
-    print(products)
-    return [
-        schemas_amap.ProductBase(**products[i].__dict__) for i in range(len(products))
-    ]
+    return products
 
 
 @router.post(
     "/amap/products",
-    response_model=schemas_amap.ProductBase,
+    response_model=schemas_amap.ProductComplete,
     status_code=201,
     tags=[Tags.amap],
 )
 async def create_product(
-    product: schemas_amap.ProductCreate,
+    product: schemas_amap.ProductSimple,
     db: AsyncSession = Depends(get_db),
 ):
     # TODO check if the client is admin
-    db_product = schemas_amap.ProductBase(id=str(uuid.uuid4()), **product.dict())
+    db_product = schemas_amap.ProductComplete(id=str(uuid.uuid4()), **product.dict())
     try:
         result = await cruds_amap.create_product(product=db_product, db=db)
-        return schemas_amap.ProductBase(**result.__dict__)
+        return result
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
 
 @router.get(
     "/amap/products/{product_id}",
-    response_model=schemas_amap.ProductBase,
+    response_model=schemas_amap.ProductComplete,
     status_code=200,
     tags=[Tags.amap],
 )
 async def get_product_by_id(product_id: str, db: AsyncSession = Depends(get_db)):
     product = await cruds_amap.get_product_by_id(product_id=product_id, db=db)
-    return schemas_amap.ProductBase(**product.__dict__)
+    return product
 
 
 @router.put(
     "/amap/products/{product_id}",
-    response_model=schemas_amap.ProductBase,
     tags=[Tags.amap],
 )
 async def edit_product(
     product_id: str,
-    product_update: schemas_amap.ProductEdit,
+    product_update: schemas_amap.ProductBase,
     db: AsyncSession = Depends(get_db),
 ):
     # TODO check if the client is admin
@@ -78,8 +74,6 @@ async def edit_product(
         db=db, product_id=product_id, product_update=product_update
     )
 
-    return schemas_amap.ProductBase(**product.__dict__)
-
 
 @router.delete("/amap/products/{product_id}", status_code=204, tags=[Tags.amap])
 async def delete_product(product_id: str, db: AsyncSession = Depends(get_db)):
@@ -90,34 +84,31 @@ async def delete_product(product_id: str, db: AsyncSession = Depends(get_db)):
 
 @router.get(
     "/amap/deliveries",
-    response_model=list[schemas_amap.DeliveryBase],
+    response_model=list[schemas_amap.DeliveryComplete],
     status_code=200,
     tags=[Tags.amap],
 )
 async def get_delieveries(db: AsyncSession = Depends(get_db)):
     """Return all AMAP planned deliveries from database as a list of dictionaries"""
     deliveries = await cruds_amap.get_deliveries(db)
-    return [
-        schemas_amap.DeliveryBase(**deliveries[i].__dict__)
-        for i in range(len(deliveries))
-    ]
+    return deliveries
 
 
 @router.post(
     "/amap/deliveries",
-    response_model=schemas_amap.DeliveryBase,
+    response_model=schemas_amap.DeliveryComplete,
     status_code=201,
     tags=[Tags.amap],
 )
 async def create_delivery(
-    delivery: schemas_amap.DeliveryCreate,
+    delivery: schemas_amap.DeliveryBase,
     db: AsyncSession = Depends(get_db),
 ):
     # TODO check if the client is admin
     db_delivery = schemas_amap.DeliveryBase(id=str(uuid.uuid4()), **delivery.dict())
     try:
         result = await cruds_amap.create_delivery(delivery=db_delivery, db=db)
-        return schemas_amap.DeliveryBase(**result.__dict__)
+        return result
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
@@ -131,7 +122,7 @@ async def delete_delivery(delivery_id: str, db: AsyncSession = Depends(get_db)):
 
 @router.get(
     "/amap/delieveries/{delivery_id}/products",
-    response_model=list[schemas_amap.ProductBase],
+    response_model=list[schemas_amap.ProductComplete],
     status_code=200,
     tags=[Tags.amap],
 )
@@ -141,14 +132,12 @@ async def get_products_from_delivery(
     products = await cruds_amap.get_products_from_delivery(
         delivery_id=delivery_id, db=db
     )
-    return [
-        schemas_amap.ProductBase(**products[i].__dict__) for i in range(len(products))
-    ]
+    return products
 
 
 @router.post(
     "/amap/delieveries/{delivery_id}/products",
-    response_model=list[schemas_amap.ProductBase],
+    response_model=list[schemas_amap.ProductComplete],
     status_code=201,
     tags=[Tags.amap],
 )
@@ -188,7 +177,7 @@ async def remove_product_from_delievery(
 
 @router.get(
     "/amap/delieveries/{delivery_id}/orders",
-    response_model=list[schemas_amap.OrderBase],
+    response_model=list[schemas_amap.OrderComplete],
     status_code=200,
     tags=[Tags.amap],
 )
@@ -196,12 +185,12 @@ async def get_orders_from_delivery(
     delivery_id: str, db: AsyncSession = Depends(get_db)
 ):
     orders = await cruds_amap.get_orders_from_delivery(delivery_id=delivery_id, db=db)
-    return [schemas_amap.OrderBase(**orders[i].__dict__) for i in range(len(orders))]
+    return orders
 
 
 @router.get(
     "/amap/delieveries/{delivery_id}/orders/{order_id}",
-    response_model=schemas_amap.OrderBase,
+    response_model=schemas_amap.OrderComplete,
     status_code=200,
     tags=[Tags.amap],
 )
@@ -209,17 +198,17 @@ async def get_order_by_id(order_id: str, db: AsyncSession = Depends(get_db)):
     order = await cruds_amap.get_order_by_id(order_id=order_id, db=db)
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
-    return schemas_amap.OrderBase(**order.__dict__)
+    return order
 
 
 @router.post(
     "/amap/delieveries/{delivery_id}/orders",
-    response_model=schemas_amap.OrderBase,
+    response_model=schemas_amap.OrderComplete,
     status_code=201,
     tags=[Tags.amap],
 )
 async def add_order_to_delievery(
-    order: schemas_amap.OrderCreate,
+    order: schemas_amap.OrderBase,
     db: AsyncSession = Depends(get_db),
 ):
 
@@ -242,7 +231,6 @@ async def add_order_to_delievery(
 
 @router.put(
     "/amap/delieveries/{delivery_id}/orders",
-    response_model=schemas_amap.OrderBase,
     status_code=200,
     tags=[Tags.amap],
 )
@@ -251,7 +239,7 @@ async def edit_orders_from_delieveries(
 ):
     amount = sum([p.price for p in order.products])
     ordering_date = datetime.now()
-    db_order = schemas_amap.OrderBase(
+    db_order = schemas_amap.OrderComplete(
         amount=amount, ordering_date=ordering_date, **order.dict()
     )
     try:
@@ -259,8 +247,6 @@ async def edit_orders_from_delieveries(
             order=db_order,
             db=db,
         )
-
-        return schemas_amap.OrderBase(**order.__dict__)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
@@ -319,5 +305,5 @@ async def edit_cash_by_id(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     await cruds_amap.edit_cash_by_id(
-        user_id=user_id, balance=schemas_amap.CashUpdate(balance=balance), db=db
+        user_id=user_id, balance=schemas_amap.CashBase(balance=balance), db=db
     )
