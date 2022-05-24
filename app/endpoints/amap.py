@@ -23,7 +23,10 @@ router = APIRouter()
 async def get_products(db: AsyncSession = Depends(get_db)):
     """Return all AMAP products from database as a list of dictionaries"""
     products = await cruds_amap.get_products(db)
-    return products
+    print(products)
+    return [
+        schemas_amap.ProductBase(**products[i].__dict__) for i in range(len(products))
+    ]
 
 
 @router.post(
@@ -39,7 +42,8 @@ async def create_product(
     # TODO check if the client is admin
     db_product = schemas_amap.ProductBase(id=str(uuid.uuid4()), **product.dict())
     try:
-        return await cruds_amap.create_product(product=db_product, db=db)
+        result = await cruds_amap.create_product(product=db_product, db=db)
+        return schemas_amap.ProductBase(**result.__dict__)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
@@ -52,7 +56,7 @@ async def create_product(
 )
 async def get_product_by_id(product_id: str, db: AsyncSession = Depends(get_db)):
     product = await cruds_amap.get_product_by_id(product_id=product_id, db=db)
-    return product
+    return schemas_amap.ProductBase(**product.__dict__)
 
 
 @router.put(
@@ -74,7 +78,7 @@ async def edit_product(
         db=db, product_id=product_id, product_update=product_update
     )
 
-    return product
+    return schemas_amap.ProductBase(**product.__dict__)
 
 
 @router.delete("/amap/products/{product_id}", status_code=204, tags=[Tags.amap])
@@ -93,7 +97,10 @@ async def delete_product(product_id: str, db: AsyncSession = Depends(get_db)):
 async def get_delieveries(db: AsyncSession = Depends(get_db)):
     """Return all AMAP planned deliveries from database as a list of dictionaries"""
     deliveries = await cruds_amap.get_deliveries(db)
-    return deliveries
+    return [
+        schemas_amap.DeliveryBase(**deliveries[i].__dict__)
+        for i in range(len(deliveries))
+    ]
 
 
 @router.post(
@@ -109,7 +116,8 @@ async def create_delivery(
     # TODO check if the client is admin
     db_delivery = schemas_amap.DeliveryBase(id=str(uuid.uuid4()), **delivery.dict())
     try:
-        return await cruds_amap.create_delivery(delivery=db_delivery, db=db)
+        result = await cruds_amap.create_delivery(delivery=db_delivery, db=db)
+        return schemas_amap.DeliveryBase(**result.__dict__)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
@@ -133,7 +141,9 @@ async def get_products_from_delivery(
     products = await cruds_amap.get_products_from_delivery(
         delivery_id=delivery_id, db=db
     )
-    return products
+    return [
+        schemas_amap.ProductBase(**products[i].__dict__) for i in range(len(products))
+    ]
 
 
 @router.post(
@@ -186,7 +196,7 @@ async def get_orders_from_delivery(
     delivery_id: str, db: AsyncSession = Depends(get_db)
 ):
     orders = await cruds_amap.get_orders_from_delivery(delivery_id=delivery_id, db=db)
-    return orders
+    return [schemas_amap.OrderBase(**orders[i].__dict__) for i in range(len(orders))]
 
 
 @router.get(
@@ -199,7 +209,7 @@ async def get_order_by_id(order_id: str, db: AsyncSession = Depends(get_db)):
     order = await cruds_amap.get_order_by_id(order_id=order_id, db=db)
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
-    return order
+    return schemas_amap.OrderBase(**order.__dict__)
 
 
 @router.post(
@@ -250,7 +260,7 @@ async def edit_orders_from_delieveries(
             db=db,
         )
 
-        return order
+        return schemas_amap.OrderBase(**order.__dict__)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
@@ -263,7 +273,7 @@ async def edit_orders_from_delieveries(
 )
 async def get_users_cash(db: AsyncSession = Depends(get_db)):
     cash = await cruds_amap.get_users_cash(db)
-    return cash
+    return [schemas_amap.CashBase(**cash[i].__dict__) for i in range(len(cash))]
 
 
 @router.get(
@@ -274,7 +284,7 @@ async def get_users_cash(db: AsyncSession = Depends(get_db)):
 )
 async def get_cash_by_id(user_id: str, db: AsyncSession = Depends(get_db)):
     cash = await cruds_amap.get_cash_by_id(user_id=user_id, db=db)
-    return cash
+    return schemas_amap.CashBase(**cash.__dict__)
 
 
 @router.post(
@@ -290,9 +300,10 @@ async def create_cash_of_user(
     user = await read_user(user_id=user_id, db=db)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    return await cruds_amap.create_cash_of_user(
+    result = await cruds_amap.create_cash_of_user(
         cash=schemas_amap.CashBase(user=user, user_id=user_id, balance=balance), db=db
     )
+    return schemas_amap.CashBase(**result.__dict__)
 
 
 @router.put(
