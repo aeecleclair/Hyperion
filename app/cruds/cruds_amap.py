@@ -95,11 +95,11 @@ async def delete_delivery(db: AsyncSession, delivery_id: str):
 
 async def get_products_from_delivery(
     db: AsyncSession, delivery_id: str
-) -> list[models_amap.Product] | None:
+) -> list[models_amap.Product]:
     result = await db.execute(
         select(models_amap.Delivery).where(models_amap.Delivery.id == delivery_id)
     )
-    return result.scalars().first()
+    return result.scalars().all()
 
 
 async def add_product_to_delivery(

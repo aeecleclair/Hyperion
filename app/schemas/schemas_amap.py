@@ -25,13 +25,10 @@ class ProductSimple(ProductBase):
         orm_mode = True
 
 
-class ProductCreate(ProductBase):
+class ProductCreate(BaseModel):
     name: str
     price: float
     category: str
-
-    class Config:
-        orm_mode = True
 
 
 class ProductEdit(ProductBase):
