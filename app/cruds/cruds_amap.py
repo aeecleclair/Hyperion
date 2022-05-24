@@ -41,7 +41,7 @@ async def get_product_by_id(
 
 
 async def edit_product(
-    product_id: str, product_update: schemas_amap.ProductEdit, db: AsyncSession
+    product_id: str, product_update: schemas_amap.ProductBase, db: AsyncSession
 ):
     await db.execute(
         update(models_amap.Product)
@@ -160,7 +160,7 @@ async def add_order_to_delivery(
         raise ValueError("This product is already in this delivery")
 
 
-async def edit_order(db: AsyncSession, order: schemas_amap.OrderBase):
+async def edit_order(db: AsyncSession, order: schemas_amap.OrderComplete):
     await db.execute(
         update(models_amap.Order)
         .where(models_amap.Order.order_id == order.order_id)
@@ -195,7 +195,7 @@ async def create_cash_of_user(
 
 
 async def edit_cash_by_id(
-    db: AsyncSession, user_id: str, balance: schemas_amap.CashUpdate
+    db: AsyncSession, user_id: str, balance: schemas_amap.CashBase
 ):
     await db.execute(
         update(models_amap.Cash)
