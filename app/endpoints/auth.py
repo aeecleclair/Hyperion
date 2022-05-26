@@ -13,7 +13,7 @@ from fastapi import (
     Response,
     status,
 )
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.templating import Jinja2Templates
 from jose import jwt
@@ -63,7 +63,6 @@ templates = Jinja2Templates(directory="templates")
 #     # The subject `sub` is a JWT registered claim name, see https://datatracker.ietf.org/doc/html/rfc7519#section-4.1
 #     access_token = create_access_token(data={"sub": user.id})
 #     return {"access_token": access_token, "token_type": "bearer"}
-
 
 
 # Authorization Code Grant #
@@ -155,7 +154,7 @@ async def post_authorize_page(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    This endpoint is the one the user is redirected to when he begin the Oauth or Openid connect (*oidc*) *Authorization code* process.
+    This endpoint is the one the user is redirected to when he begin the OAuth or Openid connect (*oidc*) *Authorization code* process with or without PKCE.
     The page allows the user to login and may let the user choose what type of data he want to authorize the client for.
 
     This is the endpoint that should be set in the client OAuth or OIDC configuration page. It can be called by a GET or a POST request.
@@ -187,16 +186,21 @@ async def post_authorize_page(
 async def authorize_validation(
     # We use Form(...) as parameters must be `application/x-www-form-urlencoded`
     request: Request,
+    # User validation
     email: str = Form(...),
     password: str = Form(...),
+    # OAuth and Openid connect parameters
     response_type: str = Form(...),
     client_id: str = Form(...),
     redirect_uri: str | None = Form(None),
     scope: str | None = Form(None),
     state: str | None = Form(None),
+    # Openid connect parameters only
     nonce: str | None = Form(None),
+    # PKCE parameters
     code_challenge: str | None = Form(None),
     code_challenge_method: str | None = Form(None),
+    # Database
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -204,9 +208,9 @@ async def authorize_validation(
 
     Parameters must be `application/x-www-form-urlencoded` and includes:
 
-    * parameters for the client which want to get an authorization:
+    * parameters for OAuth and Openid connect:
         * `response_type`: must be `code`
-        * `client_id: str`: client identifier, needs to be registered in the server known_clients
+        * `client_id`: client identifier, needs to be registered in the server known_clients
         * `redirect_uri`: optional for OAuth (when registered in known_clients) but required for oidc. The url we need to redirect the user to after the authorization.
         * `scope`: optional for OAuth, must contain "openid" for oidc. List of scope the client want to get access to.
         * `state`: recommended. Opaque value used to maintain state between the request and the callback.
@@ -258,6 +262,8 @@ async def authorize_validation(
         redirect_uri = known_clients[client_id]["redirect_uri"]
 
     # Check the provided redirect_uri is the same as the one chosen during the client registration (if it exists)
+    print(redirect_uri)
+    print(known_clients[client_id]["redirect_uri"])
     if known_clients[client_id]["redirect_uri"] is not None:
         if redirect_uri != known_clients[client_id]["redirect_uri"]:
             # TODO: add logging error
@@ -328,69 +334,89 @@ async def authorize_validation(
         url += "&state=" + state
     if nonce:
         url += "&nonce=" + nonce
+    print("Redirecting to " + url)
     return RedirectResponse(url)
-
-    # TODO: implement nonce and scope
-
-    # TODO: error handling https://www.rfc-editor.org/rfc/rfc6749.html#section-4.1.2.1
-
-    # Request example from Nextcloud social login app
-    # ?response_type=code&client_id=myeclnextcloud&redirect_uri=http://localhost:8009/apps/sociallogin/custom_oauth2/myecl&scope=&state=HA-HJIDEGL6MQTCW2B3Z8914OUN5X0SPVYR7KAF
-
-    # TODO: scope must contain openid for oidc
 
 
 @router.post("/auth/token")
 async def token(
-    # res: schemas_core.TokenReq,
     request: Request,
     response: Response,
+    # OAuth and Openid connect parameters
     grant_type: str = Form(...),
     code: str = Form(...),
     redirect_uri: str | None = Form(None),
+    # The client id and secret must be passed either in the authorization header or with client_id and client_secret parameters
     authorization: str | None = Header(default=None),
-    client_id: str = Form(...),
+    client_id: str | None = Form(None),
     client_secret: str | None = Form(None),
-    code_verifier: str | None = Form(None),  # For PKCE
+    # PKCE parameters
+    code_verifier: str | None = Form(None),
+    # Database
     db: AsyncSession = Depends(get_db),
-):  # productId: int = Body(...)):  # , request: Request):
+):
     """
-    Part 3 of the authorization code grant.
-    The client ask to exchange its authorization code for an access token
+    Part 2 of the authorization code grant.
+    The client exchange its authorization code for an access token. The endpoint support OAuth and Openid connect, with or without PKCE.
 
+    Parameters must be `application/x-www-form-urlencoded` and includes:
+
+    * parameters for OAuth and Openid connect:
+        * `grant_type`: must be `authorization_code`
+        * `code`: the authorization code received from the authorization endpoint
+        * `redirect_uri`: optional for OAuth (when registered in known_clients) but required for oidc. The url we need to redirect the user to after the authorization. If provided, must be the same as previously registered in the `redirect_uri` field of the client.
+
+    * Client credentials
+        The client must send either:
+            the client id and secret in the authorization header or with client_id and client_secret parameters
+
+    * additional parameters for PKCE:
+        * `code_verifier`: PKCE only, allows to verify the previous code_challenge
+
+    https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.3
     https://openid.net/specs/openid-connect-core-1_0.html#TokenRequestValidation
     """
 
-    # TODO: error handling
     if client_id is not None:
         if grant_type == "authorization_code":
             db_authorization_code = await cruds_auth.get_authorization_token_by_token(
                 db=db, code=code
             )
             if db_authorization_code is None:
-                raise HTTPException(
-                    status_code=422,
-                    detail="Invalid authorization code",
+                # TODO: add logging
+                return JSONResponse(
+                    status_code=400,
+                    content={
+                        "error": "invalid_request",
+                        "error_description": "The provided authorization code is invalid",
+                    },
                 )
 
             # We need to check client id and secret
             if authorization is not None:
-                # client_id and client_secret are base64 encoded in the authorization header
-                # TODO: use a function
-                # TODO is "Bearer" missing
+                # client_id and client_secret are base64 encoded in the Basic authorization header
+                # TODO: If this is useful, create a function to decode Basic or Bearer authorization header
                 client_id, client_secret = (
-                    base64.b64decode(authorization).decode("utf-8").split(":")
+                    base64.b64decode(authorization.replace("Basic ", ""))
+                    .decode("utf-8")
+                    .split(":")
                 )
 
+            # If there is a client secret, we don't use PKCE
             if client_secret is not None:
                 if (
                     client_id not in known_clients
-                    or known_clients[client_id] != client_secret
+                    or known_clients[client_id]["client_secret"] != client_secret
                 ):
-                    raise HTTPException(
-                        status_code=403,
-                        detail="Invalid client_id or client_secret",
+                    # TODO: add logging
+                    return JSONResponse(
+                        status_code=401,
+                        content={
+                            "error": "invalid_client",
+                            "error_description": "Invalid client id or secret",
+                        },
                     )
+            # If there is no client secret, we use PKCE
             elif (
                 db_authorization_code.code_challenge is not None
                 and code_verifier is not None
@@ -402,34 +428,53 @@ async def token(
                     # We need to pass the code_verifier as a b-string, we use `code_verifier.encode()` for that
                     # TODO: Make sure that `.hexdigest()` is applied by the client to code_challenge
                 ):
-                    raise HTTPException(
-                        status_code=403,
-                        detail="Invalid code_verifier",
+                    # TODO: add logging
+                    return JSONResponse(
+                        status_code=400,
+                        content={
+                            "error": "invalid_request",
+                            "error_description": "Invalid code_verifier",
+                        },
                     )
             else:
-                raise HTTPException(
+                # TODO: add logging
+                return JSONResponse(
                     status_code=400,
-                    detail="Client must provide a client_secret or a code_verifier",
+                    content={
+                        "error": "invalid_request",
+                        "error_description": "Client must provide a client_secret or a code_verifier",
+                    },
                 )
 
-                # We can check the authorization code
+            # We can check the authorization code
             if db_authorization_code.expire_on < datetime.now():
-                raise HTTPException(
-                    status_code=422,
-                    detail="Expired authorization code",
+                return JSONResponse(
+                    status_code=400,
+                    content={
+                        "error": "invalid_request",
+                        "error_description": "Expired authorization code",
+                    },
                 )
             await cruds_auth.delete_authorization_token_by_token(db=db, code=code)
 
-            # Ensure that the redirect_uri parameter value is identical to the redirect_uri parameter value that was included in the initial Authorization Request. If the redirect_uri parameter value is not present when there is only one registered redirect_uri value, the Authorization Server MAY return an error (since the Client should have included the parameter) or MAY proceed without an error (since OAuth 2.0 permits the parameter to be omitted in this case).
+            # Ensure that the redirect_uri parameter value is identical to the redirect_uri parameter value that was included in the initial Authorization Request.
+            # If the redirect_uri parameter value is not present when there is only one registered redirect_uri value, the Authorization Server MAY return an error (since the Client should have included the parameter) or MAY proceed without an error (since OAuth 2.0 permits the parameter to be omitted in this case).
+            if redirect_uri is None:
+                redirect_uri = db_authorization_code.redirect_uri
             if redirect_uri != db_authorization_code.redirect_uri:
-                raise HTTPException(
-                    status_code=422,
-                    detail="redirect_uri should remain identical",
+                return JSONResponse(
+                    status_code=400,
+                    content={
+                        "error": "invalid_request",
+                        "error_description": "redirect_uri should remain identical",
+                    },
                 )
 
             access_token_data = {
-                "sub": db_authorization_code.user_id
-            }  # + exp included by the function
+                "sub": db_authorization_code.user_id,
+                # "scope": "scopes",
+            }
+            # Expiration date is included by `create_access_token` function
             access_token = create_access_token(data=access_token_data)
 
             # We will create an OAuth response, then add oidc specific elements if required
@@ -437,8 +482,8 @@ async def token(
                 "access_token": access_token,
                 "token_type": "Bearer",
                 "expires_in": 3600,
-                "refresh_token": "tGzv3JOkF0XG5Qx2TlKWIA",  # What type, JWT ? No, we should be able to invalidate
-                "example_parameter": "example_value",  # ???
+                # "refresh_token": "tGzv3JOkF0XG5Qx2TlKWIA",  # What type, JWT ? No, we should be able to invalidate
+                # "example_parameter": "example_value",  # ???
             }
 
             if (
@@ -459,12 +504,14 @@ async def token(
                     # "exp": 0,      # Included by the function
                     # "auth_time": "" # not sure
                     "iat": 0,  # Required for oidc
-                    "nonce": db_authorization_code.nonce,  # oidc only, required if provided by the client
                 }
+                if db_authorization_code.nonce is not None:
+                    # oidc only, required if provided by the client
+                    id_token_data["nonce"] = db_authorization_code.nonce
 
                 id_token = create_access_token_RS256(id_token_data)
 
-                response_body["id_token"] = (id_token,)
+                response_body["id_token"] = id_token
 
             print("Response body", response_body)
 
