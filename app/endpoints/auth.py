@@ -81,53 +81,85 @@ templates = Jinja2Templates(directory="templates")
 # Authentication Request
 # Common to OAuth 2.0 and OIDC
 
-known_clients = {"application": "secret"}
+# TODO: use a data class, or a SQL table
+known_clients = {
+    "myapplication": {
+        "secret": "mysecret",
+        "redirect_uri": "http://localhost:8000/auth/callback",
+    }
+}
 
 
 # http://127.0.0.1:8000/auth/authorize?response_type=code&client_id=1234&redirect_uri=h&scope=&state=
 
-# Add post
+
 @router.get(
     "/auth/authorize",
 )
-async def authorize_page(
+async def get_authorize_page(
     request: Request,
     response_type: str,
     client_id: str,
     redirect_uri: str,
-    scope: str | None = None,  # Optional for OAuth but must contain "openid" for oidc
-    state: str | None = None,  # RECOMMENDED
-    nonce: str | None = None,  # oidc only
-    code_challenge: str | None = None,  # PKCE only
-    code_challenge_method: str | None = None,  # PKCE only
+    scope: str | None = None,
+    state: str | None = None,
+    nonce: str | None = None,
+    code_challenge: str | None = None,
+    code_challenge_method: str | None = None,
     db: AsyncSession = Depends(get_db),
 ):
     """
-    This endpoint is the one the user is redirected to when beginning the authorization process.
-    The page should allow the user to login and choose if he want to authorize the client.
+    This endpoint is the one the user is redirected to when he begin the Oauth or Openid connect (*oidc*) *Authorization code* process.
+    The page allows the user to login and may let the user choose what type of data he want to authorize the client for.
 
-    The following query parameters are required for Oauth2 Authorization Code Grant flow.
-    They need to be passed to the authorization endpoint `/auth/authorize`
+    This is the endpoint that should be set in the client OAuth or OIDC configuration page. It can be called by a GET or a POST request.
 
-    `response_type: str`: The flow that will be used
-    `redirect_uri: str`: Url we need to redirect to after the authorization
-    `client_id: str`: Client identifier, needs to be registered in the server known_clients
-    `scope: str`: Must contain `openid` for OIDC exchanges
+    See `/auth/authorization-flow/authorize-validation` endpoint for information about the parameters.
 
-    `state: str`: RECOMMENDED Opaque value used to maintain state between the request and the callback.
-    `nonce: str`: OPTIONAL. String value used to associate a Client session with an ID Token, and to mitigate replay attacks. The value is passed through unmodified from the Authentication Request to the ID Token.
-
-
-    **This endpoint is an UI endpoint and is not part of the authorization exchanges**
+    **This endpoint is an UI endpoint which send and html page response. It will redirect to `/auth/authorization-flow/authorize-validation`**
     """
 
-    # Oauth authorization code grant expect to return a *code*
-    # We may implement other flow later
-    if response_type != "code":
-        raise HTTPException(
-            status_code=422,
-            detail="Invalid or not implemented response_type, use Authorization Code Grant flow",
-        )
+    return templates.TemplateResponse(
+        "connexion.html",
+        {
+            "request": request,
+            "response_type": response_type,
+            "redirect_uri": redirect_uri,
+            "client_id": client_id,
+            "scope": scope,
+            "state": state,
+            "nonce": nonce,
+            "code_challenge": code_challenge,
+            "code_challenge_method": code_challenge_method,
+        },
+    )
+
+
+@router.post(
+    "/auth/authorize",
+)
+async def post_authorize_page(
+    request: Request,
+    response_type: str = Form(...),
+    client_id: str = Form(...),
+    redirect_uri: str = Form(...),
+    scope: str | None = Form(None),
+    state: str | None = Form(None),
+    nonce: str | None = Form(None),
+    code_challenge: str | None = Form(None),
+    code_challenge_method: str | None = Form(None),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    This endpoint is the one the user is redirected to when he begin the Oauth or Openid connect (*oidc*) *Authorization code* process.
+    The page allows the user to login and may let the user choose what type of data he want to authorize the client for.
+
+    This is the endpoint that should be set in the client OAuth or OIDC configuration page. It can be called by a GET or a POST request.
+
+    See `/auth/authorization-flow/authorize-validation` endpoint for information about the parameters.
+
+    **This endpoint is an UI endpoint which send and html page response. It will redirect to `/auth/authorization-flow/authorize-validation`**
+    """
 
     return templates.TemplateResponse(
         "connexion.html",
@@ -149,20 +181,18 @@ async def authorize_page(
     "/auth/authorization-flow/authorize-validation",
 )
 async def authorize_validation(
+    # We use Form(...) as parameters must be `application/x-www-form-urlencoded`
     request: Request,
-    email: str = Form(
-        ...
-    ),  # We use Form as parameters must be `application/x-www-form-urlencoded`
+    email: str = Form(...),
     password: str = Form(...),
-    response_type: str = Form(...),  # We only support authorization `code` flow
+    response_type: str = Form(...),
     client_id: str = Form(...),
-    redirect_uri: str | None = Form(None),  # Optional for OAuth but required for oidc ?
-    scope: str
-    | None = Form(None),  # Optional for OAuth, must contain "openid" for oidc
-    state: str | None = Form(None),  # RECOMMENDED
-    nonce: str | None = Form(None),  # oidc only
-    code_challenge: str | None = Form(None),  # PKCE only
-    code_challenge_method: str | None = Form(None),  # PKCE only
+    redirect_uri: str | None = Form(None),
+    scope: str | None = Form(None),
+    state: str | None = Form(None),
+    nonce: str | None = Form(None),
+    code_challenge: str | None = Form(None),
+    code_challenge_method: str | None = Form(None),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -171,57 +201,91 @@ async def authorize_validation(
     Parameters must be `application/x-www-form-urlencoded` and includes:
 
     * parameters for the client which want to get an authorization:
-    `response_type: str`: The flow that will be used
-    `redirect_uri: str`: Url we need to redirect to after the authorization
-    `client_id: str`: Client identifier, needs to be registered in the server known_clients
-    `scope: str`: Must contain `openid` for OIDC exchanges
+        * `response_type`: must be `code`
+        * `client_id: str`: client identifier, needs to be registered in the server known_clients
+        * `redirect_uri`: optional for OAuth (when registered in known_clients) but required for oidc. The url we need to redirect the user to after the authorization.
+        * `scope`: optional for OAuth, must contain "openid" for oidc. List of scope the client want to get access to.
+        * `state`: recommended. Opaque value used to maintain state between the request and the callback.
 
-    `state: str`: RECOMMENDED Opaque value used to maintain state between the request and the callback.
-    `nonce: str`: OPTIONAL. String value used to associate a Client session with an ID Token, and to mitigate replay attacks. The value is passed through unmodified from the Authentication Request to the ID Token.
+    * additional parameters for Openid connect:
+        * `nonce`: oidc only. A string value used to associate a client session with an ID Token, and to mitigate replay attacks.
+
+    * additional parameters for PKCE:
+        * `code_challenge`: PKCE only
+        * `code_challenge_method`: PKCE only
 
 
-    * parameters that allows to authenticate the user and know which scopes it want to grant access to.
-    `email: str`
-    `password: str`
+    * parameters that allows to authenticate the user and know which scopes he grants access to.
+        * `email`
+        * `password`
 
-    Note: we may want to require a JWT here, instead of email/password!
-    Note: we should add a way to indicate which ressources the client should be granted access
+    Note: we may want to use a JWT here instead or email/password in order to be able to check if the user is already logged in.
+    Note: we may want add a windows to let the user which scopes he grants access to.
 
     References:
-     - https://www.rfc-editor.org/rfc/rfc6749.html#section-4.1.2
+     * https://www.rfc-editor.org/rfc/rfc6749.html#section-4.1.2
+     * https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
     """
-    # TODO: implement nonce and scope
 
-    # TODO: error handling https://www.rfc-editor.org/rfc/rfc6749.html#section-4.1.2.1
+    """
+    If the request fails due to a missing, invalid, or mismatching
+    redirection URI, or if the client identifier is missing or invalid,
+    the authorization server SHOULD inform the resource owner of the
+    error and MUST NOT automatically redirect the user-agent to the
+    invalid redirection URI.
+    """
 
-    # Request example from Nextcloud social login app
-    # ?response_type=code&client_id=myeclnextcloud&redirect_uri=http://localhost:8009/apps/sociallogin/custom_oauth2/myecl&scope=&state=HA-HJIDEGL6MQTCW2B3Z8914OUN5X0SPVYR7KAF
-
-    # We need to authenticate the user here:
-    # TODO: we should not use the password like this. Should we use a bearer ?
-    # TODO: clarify this part
-    user = await authenticate_user(db, email, password)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect login or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    # Oauth authorization code grant expect to return a *code*
-    # We may implement other flow later
-    if response_type != "code":
-        raise HTTPException(
-            status_code=422,
-            detail="Invalid or not implemented response_type, use Authorization Code Grant flow",
-        )
-
-    # We want to check `client_id`. Generally clients have to be registered in the authorization server
+    # Check if the client is registered in the server
     if client_id not in known_clients:
+        # TODO: add error logging
         raise HTTPException(
             status_code=422,
             detail="Invalid client_id",
         )
+
+    # If redirect_uri was not provided, use the one chosen during the client registration
+    if redirect_uri is None:
+        if known_clients[client_id]["redirect_uri"] is None:
+            # TODO: add logging error
+            raise HTTPException(
+                status_code=422,
+                detail="No redirect_uri were provided",
+            )
+        redirect_uri = known_clients[client_id]["redirect_uri"]
+
+    # Check the provided redirect_uri is the same as the one chosen during the client registration (if it exists)
+    if known_clients[client_id]["redirect_uri"] is not None:
+        if redirect_uri != known_clients[client_id]["redirect_uri"]:
+            # TODO: add logging error
+            raise HTTPException(
+                status_code=422,
+                detail="Redirect_uri do not math",
+            )
+
+    # Currently, `code` is the only flow supported
+    if response_type != "code":
+        url = (
+            redirect_uri.replace("%3A", ":").replace("%2F", "/")
+            + "?error="
+            + "unsupported_response_type"
+        )
+        if state:
+            url += "&state=" + state
+        return RedirectResponse(url)
+
+    # TODO: replace the email/password by a JWT with an auth only scope.
+    # Currently if the user enter the wrong credentials in the form, he won't be redirected to the login page again but the OAuth process will fail.
+    user = await authenticate_user(db, email, password)
+    if not user:
+        # TODO: add logging
+        url = (
+            redirect_uri.replace("%3A", ":").replace("%2F", "/")
+            + "?error="
+            + "unsupported_response_type"
+        )
+        if state:
+            url += "&state=" + state
+        return RedirectResponse(url)
 
     # We generate a new authorization_code
     # The authorization code MUST expire
@@ -230,9 +294,10 @@ async def authorize_validation(
     # RECOMMENDED.  The client MUST NOT use the authorization code more than once.
     authorization_code = generate_token()
     expire_on = datetime.now() + timedelta(hours=1)
-
     # We save this authorization_code to the database
-    # TODO: could we use a JWT?
+    # We can not use a JWT for this as:
+    # - we need to store data about the OAuth/oidc request
+    # - we need to invalidate the token after its utilisation
     # TODO: we need to remove the token from the db after its expiration
     db_authorization_code = models_core.AuthorizationCode(
         code=authorization_code,
@@ -248,22 +313,8 @@ async def authorize_validation(
         db=db, db_authorization_code=db_authorization_code
     )
 
-    # TODO
-    # Lack of a redirection URI registration requirement can enable an
-    # attacker to use the authorization endpoint as an open redirector as
-    # described in Section 10.15.
-
-    # TODO: scope must contain openid for oidc
-
-    # TODO make optionnal
-    if redirect_uri is None:
-        raise HTTPException(
-            status_code=422,
-            detail="Redirect URI should be passed for the moment",
-        )
-
     # We need to redirect to the `redirect_uri` provided by the *client* providing the new authorization_code.
-    # For security reason, we need to provide the same `state` that was send by the client in the first request
+    # For security reason, we need to provide the same `state` and `nonce` if they were provided by the client in the first request
     url = (
         redirect_uri.replace("%3A", ":").replace("%2F", "/")
         + "?code="
@@ -274,6 +325,15 @@ async def authorize_validation(
     if nonce:
         url += "&nonce=" + nonce
     return RedirectResponse(url)
+
+    # TODO: implement nonce and scope
+
+    # TODO: error handling https://www.rfc-editor.org/rfc/rfc6749.html#section-4.1.2.1
+
+    # Request example from Nextcloud social login app
+    # ?response_type=code&client_id=myeclnextcloud&redirect_uri=http://localhost:8009/apps/sociallogin/custom_oauth2/myecl&scope=&state=HA-HJIDEGL6MQTCW2B3Z8914OUN5X0SPVYR7KAF
+
+    # TODO: scope must contain openid for oidc
 
 
 @router.post("/auth/token")
