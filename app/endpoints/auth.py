@@ -83,10 +83,14 @@ templates = Jinja2Templates(directory="templates")
 
 # TODO: use a data class, or a SQL table
 known_clients = {
+    "application": {
+        "secret": "secret",
+        "redirect_uri": "http://localhost:8009/apps/oidc_login/oidc",
+    },
     "myapplication": {
         "secret": "mysecret",
         "redirect_uri": "http://localhost:8000/auth/callback",
-    }
+    },
 }
 
 
