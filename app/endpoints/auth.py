@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 
 from fastapi import (
     APIRouter,
-    Body,
     Depends,
     Form,
     Header,
@@ -16,7 +15,6 @@ from fastapi import (
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.templating import Jinja2Templates
-from jose import jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import (
@@ -26,11 +24,7 @@ from app.core.security import (
     generate_token,
 )
 from app.cruds import cruds_auth
-from app.dependencies import (
-    get_db,
-    get_user_from_token_with_scopes,
-    is_user_a_member_of,
-)
+from app.dependencies import get_db, get_user_from_token_with_scopes
 from app.models import models_core
 from app.schemas import schemas_core
 from app.utils.types.scopes_type import ScopeType
