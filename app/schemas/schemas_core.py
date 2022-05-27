@@ -5,6 +5,7 @@ from datetime import date, datetime
 from pydantic import BaseModel, validator
 
 from app.core import security
+from app.utils import validators
 from app.utils.examples import examples_core
 from app.utils.types.groups_type import AccountType
 
@@ -89,7 +90,7 @@ class CoreUserCreateRequest(BaseModel):
     # Password validator
     # https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
     _normalize_password = validator("password", allow_reuse=True)(
-        security.password_validator
+        validators.password_validator
     )
 
     class Config:
@@ -109,7 +110,7 @@ class CoreUserActivateRequest(CoreUserBase):
     # Password validator
     # https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
     _normalize_password = validator("password", allow_reuse=True)(
-        security.password_validator
+        validators.password_validator
     )
 
     class Config:
@@ -165,7 +166,7 @@ class ChangePasswordRequest(BaseModel):
     # Password validator
     # https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
     _normalize_password = validator("new_password", allow_reuse=True)(
-        security.password_validator
+        validators.password_validator
     )
 
 
@@ -176,7 +177,7 @@ class ResetPasswordRequest(BaseModel):
     # Password validator
     # https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
     _normalize_password = validator("new_password", allow_reuse=True)(
-        security.password_validator
+        validators.password_validator
     )
 
 
