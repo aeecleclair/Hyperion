@@ -26,7 +26,7 @@ from app.core.security import (
     generate_token,
 )
 from app.cruds import cruds_auth
-from app.dependencies import get_db
+from app.dependencies import get_current_user, get_db
 from app.models import models_core
 from app.schemas import schemas_core
 from app.utils.types.tags import Tags
@@ -84,13 +84,15 @@ templates = Jinja2Templates(directory="templates")
 known_clients = {
     "application": {
         "secret": "secret",
-        "redirect_uri": "http://localhost:8009/apps/oidc_login/oidc",
+        "redirect_uri": "http://localhost:8009/index.php/apps/oidc_login/oidc",
     },
     "myapplication": {
         "secret": "mysecret",
         "redirect_uri": "http://localhost:8000/auth/callback",
     },
 }
+
+AUTH_ISSUER = "hyperion"
 
 
 # http://127.0.0.1:8000/auth/authorize?response_type=code&client_id=1234&redirect_uri=h&scope=&state=
@@ -262,15 +264,18 @@ async def authorize_validation(
         redirect_uri = known_clients[client_id]["redirect_uri"]
 
     # Check the provided redirect_uri is the same as the one chosen during the client registration (if it exists)
-    print(redirect_uri)
-    print(known_clients[client_id]["redirect_uri"])
     if known_clients[client_id]["redirect_uri"] is not None:
         if redirect_uri != known_clients[client_id]["redirect_uri"]:
             # TODO: add logging error
-            raise HTTPException(
-                status_code=422,
-                detail="Redirect_uri do not math",
+            # raise HTTPException(
+            #    status_code=422,
+            #    detail="Redirect_uri do not math",
+            # )
+            # TODO
+            print(
+                "Warning, redirect uri do not match. Using the one provided by the client during the registration"
             )
+            redirect_uri = known_clients[client_id]["redirect_uri"]
 
     # Currently, `code` is the only flow supported
     if response_type != "code":
@@ -381,179 +386,190 @@ async def token(
     https://openid.net/specs/openid-connect-core-1_0.html#TokenRequestValidation
     """
 
-    if client_id is not None:
-        if grant_type == "authorization_code":
-            db_authorization_code = await cruds_auth.get_authorization_token_by_token(
-                db=db, code=code
+    if grant_type == "authorization_code":
+        db_authorization_code = await cruds_auth.get_authorization_token_by_token(
+            db=db, code=code
+        )
+        if db_authorization_code is None:
+            # TODO: add logging
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": "invalid_request",
+                    "error_description": "The provided authorization code is invalid",
+                },
             )
-            if db_authorization_code is None:
-                # TODO: add logging
-                return JSONResponse(
-                    status_code=400,
-                    content={
-                        "error": "invalid_request",
-                        "error_description": "The provided authorization code is invalid",
-                    },
-                )
 
-            # We need to check client id and secret
-            if authorization is not None:
-                # client_id and client_secret are base64 encoded in the Basic authorization header
-                # TODO: If this is useful, create a function to decode Basic or Bearer authorization header
-                client_id, client_secret = (
-                    base64.b64decode(authorization.replace("Basic ", ""))
-                    .decode("utf-8")
-                    .split(":")
-                )
+        # We need to check client id and secret
+        if authorization is not None:
+            # client_id and client_secret are base64 encoded in the Basic authorization header
+            # TODO: If this is useful, create a function to decode Basic or Bearer authorization header
+            client_id, client_secret = (
+                base64.b64decode(authorization.replace("Basic ", ""))
+                .decode("utf-8")
+                .split(":")
+            )
 
-            # If there is a client secret, we don't use PKCE
-            if client_secret is not None:
-                if (
-                    client_id not in known_clients
-                    or known_clients[client_id]["client_secret"] != client_secret
-                ):
-                    # TODO: add logging
-                    return JSONResponse(
-                        status_code=401,
-                        content={
-                            "error": "invalid_client",
-                            "error_description": "Invalid client id or secret",
-                        },
-                    )
-            # If there is no client secret, we use PKCE
-            elif (
-                db_authorization_code.code_challenge is not None
-                and code_verifier is not None
-            ):
-                # We need to verify the hash correspond
-                if (
-                    db_authorization_code.code_challenge
-                    != hashlib.sha256(code_verifier.encode()).hexdigest()
-                    # We need to pass the code_verifier as a b-string, we use `code_verifier.encode()` for that
-                    # TODO: Make sure that `.hexdigest()` is applied by the client to code_challenge
-                ):
-                    # TODO: add logging
-                    return JSONResponse(
-                        status_code=400,
-                        content={
-                            "error": "invalid_request",
-                            "error_description": "Invalid code_verifier",
-                        },
-                    )
-            else:
-                # TODO: add logging
-                return JSONResponse(
-                    status_code=400,
-                    content={
-                        "error": "invalid_request",
-                        "error_description": "Client must provide a client_secret or a code_verifier",
-                    },
-                )
-
-            # We can check the authorization code
-            if db_authorization_code.expire_on < datetime.now():
-                return JSONResponse(
-                    status_code=400,
-                    content={
-                        "error": "invalid_request",
-                        "error_description": "Expired authorization code",
-                    },
-                )
-            await cruds_auth.delete_authorization_token_by_token(db=db, code=code)
-
-            # Ensure that the redirect_uri parameter value is identical to the redirect_uri parameter value that was included in the initial Authorization Request.
-            # If the redirect_uri parameter value is not present when there is only one registered redirect_uri value, the Authorization Server MAY return an error (since the Client should have included the parameter) or MAY proceed without an error (since OAuth 2.0 permits the parameter to be omitted in this case).
-            if redirect_uri is None:
-                redirect_uri = db_authorization_code.redirect_uri
-            if redirect_uri != db_authorization_code.redirect_uri:
-                return JSONResponse(
-                    status_code=400,
-                    content={
-                        "error": "invalid_request",
-                        "error_description": "redirect_uri should remain identical",
-                    },
-                )
-
-            access_token_data = {
-                "sub": db_authorization_code.user_id,
-                # "scope": "scopes",
-            }
-            # Expiration date is included by `create_access_token` function
-            access_token = create_access_token(data=access_token_data)
-
-            # We will create an OAuth response, then add oidc specific elements if required
-            response_body = {
-                "access_token": access_token,
-                "token_type": "Bearer",
-                "expires_in": 3600,
-                # "refresh_token": "tGzv3JOkF0XG5Qx2TlKWIA",  # What type, JWT ? No, we should be able to invalidate
-                # "example_parameter": "example_value",  # ???
-            }
-
+        # If there is a client secret, we don't use PKCE
+        if client_secret is not None:
             if (
-                db_authorization_code.scope is not None
-                and "openid" in db_authorization_code.scope
+                client_id not in known_clients
+                or known_clients[client_id]["secret"] != client_secret
             ):
-                # It's an openid connect request, we need to return an `id_token`
-
-                # Required :
-                # aud existence
-                # iss existence and value : the issuer value form .well-known (corresponding code : https://github.com/pulsejet/nextcloud-oidc-login/blob/0c072ecaa02579384bb5e10fbb9d219bbd96cfb8/3rdparty/jumbojett/openid-connect-php/src/OpenIDConnectClient.php#L1255)
-                # https://github.com/pulsejet/nextcloud-oidc-login/blob/0c072ecaa02579384bb5e10fbb9d219bbd96cfb8/3rdparty/jumbojett/openid-connect-php/src/OpenIDConnectClient.php#L1016
-
-                id_token_data = {
-                    "iss": "http://127.0.0.1:8000/",
-                    "sub": db_authorization_code.user_id,
-                    "aud": client_id,
-                    # "exp": 0,      # Included by the function
-                    # "auth_time": "" # not sure
-                    "iat": 0,  # Required for oidc
-                }
-                if db_authorization_code.nonce is not None:
-                    # oidc only, required if provided by the client
-                    id_token_data["nonce"] = db_authorization_code.nonce
-
-                id_token = create_access_token_RS256(id_token_data)
-
-                response_body["id_token"] = id_token
-
-            print("Response body", response_body)
-
-            # Required headers by Oauth and oidc
-            response.headers["Cache-Control"] = "no-store"
-            response.headers["Pragma"] = "no-cache"
-            return response_body
-
-        elif grant_type == "refresh_token":
-            #Why doesn't this step use PKCE: https://security.stackexchange.com/questions/199000/oauth2-pkce-can-the-refresh-token-be-trusted
-            
-
+                # TODO: add logging
+                print("Invalid client id or secret")
+                return JSONResponse(
+                    status_code=401,
+                    content={
+                        "error": "invalid_client",
+                        "error_description": "Invalid client id or secret",
+                    },
+                )
+        # If there is no client secret, we use PKCE
+        elif (
+            db_authorization_code.code_challenge is not None
+            and code_verifier is not None
+        ):
+            # We need to verify the hash correspond
+            if (
+                db_authorization_code.code_challenge
+                != hashlib.sha256(code_verifier.encode()).hexdigest()
+                # We need to pass the code_verifier as a b-string, we use `code_verifier.encode()` for that
+                # TODO: Make sure that `.hexdigest()` is applied by the client to code_challenge
+            ):
+                # TODO: add logging
+                return JSONResponse(
+                    status_code=400,
+                    content={
+                        "error": "invalid_request",
+                        "error_description": "Invalid code_verifier",
+                    },
+                )
         else:
-            raise HTTPException(
-                status_code=401,
-                detail="invalid_grant",
+            # TODO: add logging
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": "invalid_request",
+                    "error_description": "Client must provide a client_secret or a code_verifier",
+                },
             )
+
+        # We can check the authorization code
+        if db_authorization_code.expire_on < datetime.now():
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": "invalid_request",
+                    "error_description": "Expired authorization code",
+                },
+            )
+        await cruds_auth.delete_authorization_token_by_token(db=db, code=code)
+
+        # TODO
+        # We let the client hardcode a redirect url
+        if known_clients[client_id]["redirect_uri"] != "":
+            redirect_uri = known_clients[client_id]["redirect_uri"]
+
+        # Ensure that the redirect_uri parameter value is identical to the redirect_uri parameter value that was included in the initial Authorization Request.
+        # If the redirect_uri parameter value is not present when there is only one registered redirect_uri value, the Authorization Server MAY return an error (since the Client should have included the parameter) or MAY proceed without an error (since OAuth 2.0 permits the parameter to be omitted in this case).
+        if redirect_uri is None:
+            redirect_uri = db_authorization_code.redirect_uri
+        if redirect_uri != db_authorization_code.redirect_uri:
+            # TODO add logging
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": "invalid_request",
+                    "error_description": "redirect_uri should remain identical",
+                },
+            )
+
+        access_token_data = {
+            "sub": db_authorization_code.user_id,
+            # "scope": "scopes",
+        }
+        # Expiration date is included by `create_access_token` function
+        access_token = create_access_token(data=access_token_data)
+
+        # We will create an OAuth response, then add oidc specific elements if required
+        response_body = {
+            "access_token": access_token,
+            "token_type": "Bearer",
+            "expires_in": 3600,
+            "scope": "openid",  # openid required by nextcloud
+            # "refresh_token": "tGzv3JOkF0XG5Qx2TlKWIA",  # What type, JWT ? No, we should be able to invalidate
+            # "example_parameter": "example_value",  # ???
+        }
+
+        if (
+            db_authorization_code.scope is not None
+            and "openid" in db_authorization_code.scope
+        ):
+            # It's an openid connect request, we need to return an `id_token`
+
+            # Required :
+            # aud existence
+            # iss existence and value : the issuer value form .well-known (corresponding code : https://github.com/pulsejet/nextcloud-oidc-login/blob/0c072ecaa02579384bb5e10fbb9d219bbd96cfb8/3rdparty/jumbojett/openid-connect-php/src/OpenIDConnectClient.php#L1255)
+            # https://github.com/pulsejet/nextcloud-oidc-login/blob/0c072ecaa02579384bb5e10fbb9d219bbd96cfb8/3rdparty/jumbojett/openid-connect-php/src/OpenIDConnectClient.php#L1016
+            # https://github.com/pulsejet/nextcloud-oidc-login/blob/a40ab5d167d71b21d5b5dc3fbe57ee590adbc9a4/3rdparty/jumbojett/openid-connect-php/src/OpenIDConnectClient.php#L293
+
+            # The id_token is a JWS: a signed JWT
+            # https://openid.net/specs/openid-connect-core-1_0.html#IDToken
+            # It must contain the following claims:
+            # * iss: the issuer value. Must be the same as the one provided in the discovery endpoint. Should be an url.
+            # * sub: the subject identifier.
+            # * aud: the audience. Must be the client client_id.
+            # * exp: expiration datetime. Added by the function
+            # * iat: Time at which the JWT was issued.
+            # * if provided, nonce
+            id_token_data = {
+                "iss": AUTH_ISSUER,
+                "sub": db_authorization_code.user_id,
+                "aud": client_id,
+                # "exp"included by the function
+                "iat": datetime.utcnow(),
+            }
+            if db_authorization_code.nonce is not None:
+                # oidc only, required if provided by the client
+                id_token_data["nonce"] = db_authorization_code.nonce
+
+            id_token = create_access_token_RS256(id_token_data)
+
+            response_body["id_token"] = id_token
+
+        print("Response body", response_body)
+
+        # Required headers by Oauth and oidc
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["Pragma"] = "no-cache"
+        return response_body
+
+    elif grant_type == "refresh_token":
+        # Why doesn't this step use PKCE: https://security.stackexchange.com/questions/199000/oauth2-pkce-can-the-refresh-token-be-trusted
+        pass
     else:
+        print("invalid grant")
         raise HTTPException(
             status_code=401,
-            detail="Client must provide a client_id",
+            detail="invalid_grant",
         )
 
 
-@router.get("/auth/userinfo", de)
+@router.get("/auth/userinfo")
 async def auth_get_userinfo(
     request: Request,
-    authorization: str = Header(default=None),
+    user: models_core.CoreUser = Depends(get_current_user),
 ):  # productId: int = Body(...)):  # , request: Request):
-    access_token = authorization
+    # access_token = authorization
     return {
-        "sub": "248289761001",
-        "name": "Jane Doe",
-        "given_name": "Jane",
-        "family_name": "Doe",
-        "preferred_username": "j.doe",
-        "email": "janedoe@example.com",
-        "picture": "http://example.com/janedoe/me.jpg",
+        "sub": user.id,
+        "name": user.firstname,
+        "given_name": user.nickname,
+        "family_name": user.name,
+        "preferred_username": user.nickname,
+        "email": user.email,
+        "picture": "",
     }
 
 
@@ -648,7 +664,7 @@ async def oidc_configuration():
             "RS384",
             "RS512",
         ],
-        "token_endpoint": "http://host.docker.internal:8000/oidc/authorization-flow/token",
+        "token_endpoint": "http://host.docker.internal:8000/auth/token",
         "request_uri_parameter_supported": False,
         "request_object_encryption_enc_values_supported": [
             "A192CBC-HS384",
@@ -694,7 +710,7 @@ async def oidc_configuration():
             "RS512",
             "none",
         ],
-        "authorization_endpoint": "http://127.0.0.1:8000/auth/authorization-flow/authorize-page",
+        "authorization_endpoint": "http://127.0.0.1:8000/auth/authorize",
         "require_request_uri_registration": False,
         "introspection_endpoint": "https://c/introspect",
         "request_object_encryption_alg_values_supported": [
@@ -737,7 +753,7 @@ async def oidc_configuration():
             "phone",
             "offline_access",
         ],
-        "userinfo_endpoint": "http://host.docker.internal:8000/oidc/authorization-flow/userinfo",
+        "userinfo_endpoint": "http://host.docker.internal:8000/auth/userinfo",
         "userinfo_encryption_enc_values_supported": [
             "A192CBC-HS384",
             "A192GCM",
@@ -749,7 +765,7 @@ async def oidc_configuration():
             "A256GCM",
         ],
         "op_tos_uri": "https://g/about",
-        "issuer": "hyperion",
+        "issuer": AUTH_ISSUER,
         "op_policy_uri": "https://idp-p.mitre.org/about",
         "claims_supported": [
             "sub",
