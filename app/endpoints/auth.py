@@ -26,9 +26,14 @@ from app.core.security import (
     generate_token,
 )
 from app.cruds import cruds_auth
-from app.dependencies import get_current_user, get_db
+from app.dependencies import (
+    get_db,
+    get_user_from_token_with_scopes,
+    is_user_a_member_of,
+)
 from app.models import models_core
 from app.schemas import schemas_core
+from app.utils.types.scopes_type import ScopeType
 from app.utils.types.tags import Tags
 
 router = APIRouter()
@@ -533,8 +538,12 @@ async def token(
                 "sub": db_authorization_code.user_id,
                 "aud": client_id,
                 # "exp"included by the function
-                "iat": datetime.utcnow(),
             }
+            id_token_data = schemas_core.TokenData(
+                iss=AUTH_ISSUER,
+                sub=db_authorization_code.user_id,
+                aud=client_id,
+            )
             if db_authorization_code.nonce is not None:
                 # oidc only, required if provided by the client
                 id_token_data["nonce"] = db_authorization_code.nonce
@@ -569,7 +578,9 @@ async def token(
 @router.get("/auth/userinfo")
 async def auth_get_userinfo(
     request: Request,
-    user: models_core.CoreUser = Depends(get_current_user),
+    user: models_core.CoreUser = Depends(
+        get_user_from_token_with_scopes(ScopeType.userinfos)
+    ),
 ):  # productId: int = Body(...)):  # , request: Request):
     # access_token = authorization
     return {
