@@ -10,5 +10,5 @@ class ScopeType(str, Enum):
     API = "API"
     # auth only allows the user to access the auth endpoints
     auth = "auth"
-    # userinfos only allows the user to access the userinfos auth endpoint
-    userinfos = "userinfos"
+    # openid only allows the user to access the userinfos auth endpoint
+    openid = "openid"
