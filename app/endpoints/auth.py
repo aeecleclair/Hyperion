@@ -95,9 +95,6 @@ known_clients = {
 AUTH_ISSUER = "hyperion"
 
 
-# http://127.0.0.1:8000/auth/authorize?response_type=code&client_id=1234&redirect_uri=h&scope=&state=
-
-
 @router.get(
     "/auth/authorize",
 )
@@ -410,6 +407,15 @@ async def token(
                 .split(":")
             )
 
+        if client_id is None or client_id not in known_clients:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": "invalid_request",
+                    "error_description": "Invalid client_id",
+                },
+            )
+
         # If there is a client secret, we don't use PKCE
         if client_secret is not None:
             if (
@@ -506,13 +512,7 @@ async def token(
             db_authorization_code.scope is not None
             and "openid" in db_authorization_code.scope
         ):
-            # It's an openid connect request, we need to return an `id_token`
-
-            # Required :
-            # aud existence
-            # iss existence and value : the issuer value form .well-known (corresponding code : https://github.com/pulsejet/nextcloud-oidc-login/blob/0c072ecaa02579384bb5e10fbb9d219bbd96cfb8/3rdparty/jumbojett/openid-connect-php/src/OpenIDConnectClient.php#L1255)
-            # https://github.com/pulsejet/nextcloud-oidc-login/blob/0c072ecaa02579384bb5e10fbb9d219bbd96cfb8/3rdparty/jumbojett/openid-connect-php/src/OpenIDConnectClient.php#L1016
-            # https://github.com/pulsejet/nextcloud-oidc-login/blob/a40ab5d167d71b21d5b5dc3fbe57ee590adbc9a4/3rdparty/jumbojett/openid-connect-php/src/OpenIDConnectClient.php#L293
+            # It's an openid connect request, we also need to return an `id_token`
 
             # The id_token is a JWS: a signed JWT
             # https://openid.net/specs/openid-connect-core-1_0.html#IDToken
@@ -523,6 +523,11 @@ async def token(
             # * exp: expiration datetime. Added by the function
             # * iat: Time at which the JWT was issued.
             # * if provided, nonce
+
+            # For Nextcloud:
+            # Required iss : the issuer value form .well-known (corresponding code : https://github.com/pulsejet/nextcloud-oidc-login/blob/0c072ecaa02579384bb5e10fbb9d219bbd96cfb8/3rdparty/jumbojett/openid-connect-php/src/OpenIDConnectClient.php#L1255)
+            # Required claims : https://github.com/pulsejet/nextcloud-oidc-login/blob/0c072ecaa02579384bb5e10fbb9d219bbd96cfb8/3rdparty/jumbojett/openid-connect-php/src/OpenIDConnectClient.php#L1016
+
             id_token_data = {
                 "iss": AUTH_ISSUER,
                 "sub": db_authorization_code.user_id,
@@ -547,7 +552,12 @@ async def token(
 
     elif grant_type == "refresh_token":
         # Why doesn't this step use PKCE: https://security.stackexchange.com/questions/199000/oauth2-pkce-can-the-refresh-token-be-trusted
-        pass
+        # TODO: implement
+        print("Not implemented")
+        raise HTTPException(
+            status_code=401,
+            detail="Not implemented",
+        )
     else:
         print("invalid grant")
         raise HTTPException(
@@ -571,62 +581,6 @@ async def auth_get_userinfo(
         "email": user.email,
         "picture": "",
     }
-
-
-"""
-from jose import jwt
-
-claims = {"hello": "world"}
-key = {
-    "kty": "RSA",
-    "d": "RSjC9hfDtq2G3hQJFBI08hu3CJ6hRRlhs-u9nMFhdSpqhWFPK3LuLVSWPxG9lN7NQ963_7AturR9YoEvjXjCMZFEEqewNQNq31v0zgh9k5XFdz1CiVSLdHo7VQjuJB6imLCF266TUFvZwQ4Gs1uq6I6GCVRoenSe9ZsWleYF--E",
-    "e": "AQAB",
-    "use": "sig",
-    "kid": "1234567890",
-    "alg": "RS256",
-    "n": "thBvC_I9NciW6XqTxUFMZaVVpvGx6BvLHd3v8Visk_6OoDCVXF_6vNktNi6W7CBkuHBqGyuF0wDFrHcZuZq_kLKI6IRofEzKyUoReOyYRlPt5ar64oDO-4mwH47fb99ILW94_8RpQHy74hCnfv7d888YaCmta9iOBOvggcvxb5s",
-}
-
-token = jwt.encode(
-    {"sub": "12345678"},
-    key,
-    algorithm="RS256",
-)
-
-
-pubandpriv = {
-    "p": "4kom51UNpLnMUjSzhu5yYI1kHub2Pp-a_13h2Zd_RFYM3Uyo_KSHRFABK_lf1P_yF7eGmkQqi1MLFrVD8A7bdBAbFZmJg1jOpJL-qjGA3YBhP8OCj_AKqpbaY3VVpWmnS9E0qTARaJuDgN18nQSBf9lJOlSsb9GjHgcRiUhrhd0",
-    "kty": "RSA",
-    "q": "o8q8UucMLu0Khg9hX08ei4sFNzSLnjxM7QTXMiDWr9G1WSl7r-wwkTJmuFWp_HacrdWQ6fz4ofVcKlGWs_Eaotij8E6C1QNySdyr7Utx5k_T9dwsiAdoZwrr88Ads0XIvDenJgqX9UWhpDoGCpRASWqfT8BQ6m4DdFt3z_LnaoE",
-    "d": "kKFl4bVvpSUzHFt3HSj7q7l55Itrk6GvpugMoqATyJ5cE6gXcl96IW1WuAcW8j7sikmwmvXjByfhSvixITkzGDHG0-4p-oxxjih3r4CYGawN_4-YCgCaD_tV_nZIRbPupIosVyIcnOKsXbcGVEHx4csbChYaiXVRD0m7mxjAsJgpx2lOe8Gc4cJTZ3gWjSVA7JChPGVFglIYHJo65u2KlCY0TCmojqKdyNtSxyRn67ZgDXbGsN7pxOMjUYykX4zAD4tPOhJXRPy7vcTpkUa4EpO0QqJ7RK5GQ1uYpPGSV-KJjpq8h0tZLiG9Dq5n_veeQ4ajWlnuhKiH980Vfi1oAQ",
-    "e": "AQAB",
-    "use": "sig",
-    "kid": "sig-1652555097",
-    "qi": "myiQFKf_pFmgmCJ6xFQO7quBSbU6yI_2-n7nVcGenyq7vx89Pp5MNVgl_l-OtiNTucuku8BEf_kAbf8OWz0ANNIT2A0du6HYT8arK_-RwLvHiXu72XVTBQZBpqaprrn5bXnbT7u-1Fs0c-ykHdXJIxalArP7A1v94Cl5BeBM298",
-    "dp": "WCsqM1JJaZhXCuSr2nQHrqUIkJ3O7iGD4-HxgLVtifO5OXSIF0AH0E8X1clpVHWRHzqLwIm0xepKVMO1v9AaI4Ou-eCD2uB8S1VW0ntNSYCe45hKw8h0b3ktiDkMcNHUtE7EJPOspMSLHWevCQLbbjP8OzUIptzYoHeClqnX8yU",
-    "alg": "RS256",
-    "dq": "KJ9Zgb4n-WN03rbl0XuP-c_q5Tw0_HO8KHSw4o_ebxC1x31QXdtYWEqFy2YDmMfaKAr1u_Kvv4tY5m4B0HMVxhmw3yK5tBb8u3DtexbhEtvtl-aZbMtZi2TcDEIzm4jNNlEfNYIfGgfBBTgW03zdTNgS1va9msbaOHuPBZYa6wE",
-    "n": "kMhrv7o-00T2kw2jF_J1O9kLRQOlFudYvCmunQ5uPfqbQ0IIpMKwN7ZEj5PyRbBhoyWQ3yHC9NPwvsyqdzH9mMFyaBikdGVXBbeKmMjc9PU4zrR_i3mwY2_PrPY4IuV5TLEv8gq-maAXxrQr5vGeUcq2rbdJTwjY3jXRMGU2q-AHjtq13gDtrR-4yYPVumnjzAaZrntpDLx_SHBn7fyl8KxdGsZcO6xq5Y9Wa9ClVvSsYj724zvWeSUbqZ3VxV-mjzKbYSITeUilNrgeavpHKGRo_6tU3soPruOvAU-2gdDLLdXszIv-jU3LFAUw8p1Ey92OCwf98bjr4qRtuAb2XQ",
-}
-
-pub = {
-    "kty": "RSA",
-    "e": "AQAB",
-    "use": "sig",
-    "kid": "sig-1652555097",
-    "alg": "RS256",
-    "n": "kMhrv7o-00T2kw2jF_J1O9kLRQOlFudYvCmunQ5uPfqbQ0IIpMKwN7ZEj5PyRbBhoyWQ3yHC9NPwvsyqdzH9mMFyaBikdGVXBbeKmMjc9PU4zrR_i3mwY2_PrPY4IuV5TLEv8gq-maAXxrQr5vGeUcq2rbdJTwjY3jXRMGU2q-AHjtq13gDtrR-4yYPVumnjzAaZrntpDLx_SHBn7fyl8KxdGsZcO6xq5Y9Wa9ClVvSsYj724zvWeSUbqZ3VxV-mjzKbYSITeUilNrgeavpHKGRo_6tU3soPruOvAU-2gdDLLdXszIv-jU3LFAUw8p1Ey92OCwf98bjr4qRtuAb2XQ",
-}
-
-token = jwt.encode(
-    {"hello": "world"},
-    pubandpriv,
-    algorithm="RS256",
-)
-
-
-jwt.decode(token, pub)
-"""
 
 
 @router.get("/oidc/authorization-flow/jwks_uri")
