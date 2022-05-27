@@ -198,5 +198,6 @@ class TokenData(BaseModel):
     iss: str | None = None
     aud: str | None = None
     iat: datetime | None = None
+    nonce: str | None = None
     scopes: str = ""
     # exp and iat elements are added by the token generation function

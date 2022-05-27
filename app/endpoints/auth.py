@@ -95,6 +95,10 @@ known_clients = {
         "secret": "mysecret",
         "redirect_uri": "http://localhost:8000/auth/callback",
     },
+    "piwigo": {
+        "secret": "mysecret",
+        "redirect_uri": "http://localhost:8001/plugins/OpenIdConnect/auth.php",
+    },
 }
 
 AUTH_ISSUER = "hyperion"
@@ -496,10 +500,23 @@ async def token(
                 },
             )
 
-        access_token_data = {
-            "sub": db_authorization_code.user_id,
-            # "scope": "scopes",
-        }
+        # We create a list of all the scopes we accept to grant to the user. These copes will be included in the access token.
+        # If API was provided in the request scope, we grant it
+        # If it is an oidc request, we grant userinfos
+        granted_scopes_list = []
+
+        if db_authorization_code.scope is not None:
+            if ScopeType.API in db_authorization_code.scope:
+                granted_scopes_list.append(ScopeType.API)
+            if ScopeType.openid in db_authorization_code.scope:
+                granted_scopes_list.append(ScopeType.openid)
+
+        granted_scopes = " ".join(granted_scopes_list)
+
+        access_token_data = schemas_core.TokenData(
+            sub=db_authorization_code.user_id, scopes=granted_scopes
+        )
+
         # Expiration date is included by `create_access_token` function
         access_token = create_access_token(data=access_token_data)
 
@@ -508,11 +525,13 @@ async def token(
             "access_token": access_token,
             "token_type": "Bearer",
             "expires_in": 3600,
-            "scope": "openid",  # openid required by nextcloud
+            "scope": granted_scopes,  # openid required by nextcloud
             # "refresh_token": "tGzv3JOkF0XG5Qx2TlKWIA",  # What type, JWT ? No, we should be able to invalidate
             # "example_parameter": "example_value",  # ???
+            # "id_token": "" # only added for oidc
         }
 
+        # Perform specifics steps for openid connect
         if (
             db_authorization_code.scope is not None
             and "openid" in db_authorization_code.scope
@@ -533,12 +552,12 @@ async def token(
             # Required iss : the issuer value form .well-known (corresponding code : https://github.com/pulsejet/nextcloud-oidc-login/blob/0c072ecaa02579384bb5e10fbb9d219bbd96cfb8/3rdparty/jumbojett/openid-connect-php/src/OpenIDConnectClient.php#L1255)
             # Required claims : https://github.com/pulsejet/nextcloud-oidc-login/blob/0c072ecaa02579384bb5e10fbb9d219bbd96cfb8/3rdparty/jumbojett/openid-connect-php/src/OpenIDConnectClient.php#L1016
 
-            id_token_data = {
-                "iss": AUTH_ISSUER,
-                "sub": db_authorization_code.user_id,
-                "aud": client_id,
-                # "exp"included by the function
-            }
+            # id_token_data = {
+            #    "iss": AUTH_ISSUER,
+            #    "sub": db_authorization_code.user_id,
+            #    "aud": client_id,
+            #    # "exp"included by the function
+            # }
             id_token_data = schemas_core.TokenData(
                 iss=AUTH_ISSUER,
                 sub=db_authorization_code.user_id,
@@ -546,7 +565,7 @@ async def token(
             )
             if db_authorization_code.nonce is not None:
                 # oidc only, required if provided by the client
-                id_token_data["nonce"] = db_authorization_code.nonce
+                id_token_data.nonce = db_authorization_code.nonce
 
             id_token = create_access_token_RS256(id_token_data)
 
@@ -579,7 +598,7 @@ async def token(
 async def auth_get_userinfo(
     request: Request,
     user: models_core.CoreUser = Depends(
-        get_user_from_token_with_scopes(ScopeType.userinfos)
+        get_user_from_token_with_scopes([ScopeType.openid])
     ),
 ):  # productId: int = Body(...)):  # , request: Request):
     # access_token = authorization
