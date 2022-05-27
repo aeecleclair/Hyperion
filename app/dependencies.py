@@ -73,14 +73,19 @@ def get_user_from_token_with_scopes(
         """
         Dependency that make sure the token is valid, contain the expected scopes and return the corresponding user.
         """
+        print("Get user")
         try:
             payload = jwt.decode(
                 token,
                 settings.ACCESS_TOKEN_SECRET_KEY,
                 algorithms=[security.jwt_algorithme],
             )
+            print(payload)
             token_data = schemas_core.TokenData(**payload)
-        except (jwt.JWTError, ValidationError):
+            print(token_data)
+        except (jwt.JWTError, ValidationError) as error:
+            # TODO logging
+            print(error)
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Could not validate credentials",
@@ -88,7 +93,7 @@ def get_user_from_token_with_scopes(
 
         for scope in scopes:
             # `scopes` contain a " " separated list of scopes
-            if str(scope) not in token_data.scopes:
+            if scope not in token_data.scopes:
                 raise HTTPException(
                     status_code=403,
                     detail=f"Unauthorized, token does not contain the scope {scope}",
