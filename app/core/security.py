@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.settings import settings
 from app.cruds import cruds_users
 from app.models import models_core
+from app.schemas import schemas_core
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=13)
 """
@@ -70,15 +71,16 @@ async def authenticate_user(
 
 
 def create_access_token(
-    data: dict,
+    data: schemas_core.TokenData,
     expires_delta: timedelta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
 ) -> str:
     """
     Create a JWT. The token is generated using ACCESS_TOKEN_SECRET_KEY secret.
     """
-    to_encode = data.copy()
+    to_encode = data.dict(exclude_none=True)
+    iat = datetime.utcnow()
     expire_on = datetime.utcnow() + expires_delta
-    to_encode.update({"exp": expire_on})
+    to_encode.update({"exp": expire_on, "iat": iat})
     encoded_jwt = jwt.encode(
         to_encode, settings.ACCESS_TOKEN_SECRET_KEY, algorithm=jwt_algorithme
     )
@@ -86,21 +88,9 @@ def create_access_token(
 
 
 def create_access_token_RS256(
-    data: dict,
+    data: schemas_core.TokenData,
     expires_delta: timedelta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
 ) -> str:
-    """
-    Create a JWT. The token is generated using ACCESS_TOKEN_SECRET_KEY secret.
-
-    "iss": "http://127.0.0.1:8000/",
-    "sub": "",
-    "aud": client_id,
-    "exp": 0,
-    # "auth_time": "" # not sure
-            "iat": 0,  # Required for oidc
-            "nonce": "",  # oidc only, required if provided by the client
-
-    """
     pubandpriv = {
         "p": "4kom51UNpLnMUjSzhu5yYI1kHub2Pp-a_13h2Zd_RFYM3Uyo_KSHRFABK_lf1P_yF7eGmkQqi1MLFrVD8A7bdBAbFZmJg1jOpJL-qjGA3YBhP8OCj_AKqpbaY3VVpWmnS9E0qTARaJuDgN18nQSBf9lJOlSsb9GjHgcRiUhrhd0",
         "kty": "RSA",
@@ -116,8 +106,9 @@ def create_access_token_RS256(
         "n": "kMhrv7o-00T2kw2jF_J1O9kLRQOlFudYvCmunQ5uPfqbQ0IIpMKwN7ZEj5PyRbBhoyWQ3yHC9NPwvsyqdzH9mMFyaBikdGVXBbeKmMjc9PU4zrR_i3mwY2_PrPY4IuV5TLEv8gq-maAXxrQr5vGeUcq2rbdJTwjY3jXRMGU2q-AHjtq13gDtrR-4yYPVumnjzAaZrntpDLx_SHBn7fyl8KxdGsZcO6xq5Y9Wa9ClVvSsYj724zvWeSUbqZ3VxV-mjzKbYSITeUilNrgeavpHKGRo_6tU3soPruOvAU-2gdDLLdXszIv-jU3LFAUw8p1Ey92OCwf98bjr4qRtuAb2XQ",
     }
 
-    to_encode = data.copy()
+    to_encode = data.dict(exclude_none=True)
+    iat = datetime.utcnow()
     expire_on = datetime.utcnow() + expires_delta
-    to_encode.update({"exp": expire_on})
+    to_encode.update({"exp": expire_on, "iat": iat})
     encoded_jwt = jwt.encode(to_encode, pubandpriv, algorithm="RS256")
     return encoded_jwt
