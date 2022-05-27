@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cruds import cruds_groups
-from app.dependencies import generate_is_user_a_member_of_dependency, get_db
+from app.dependencies import get_db, is_user_a_member_of
 from app.schemas import schemas_core
 from app.utils.types.groups_type import AccountType, GroupType
 from app.utils.types.tags import Tags
@@ -99,7 +99,7 @@ async def delete_group(group_id: str, db: AsyncSession = Depends(get_db)):
 async def create_membership(
     membership: schemas_core.CoreMembership,
     db: AsyncSession = Depends(get_db),
-    user=Depends(generate_is_user_a_member_of_dependency(GroupType.admin)),
+    user=Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """Create a new membership in database and return the group as a dictionary"""
     try:

@@ -6,8 +6,9 @@ They are used in endpoints function signatures. For example:
 async def get_users(db: AsyncSession = Depends(get_db)):
 ```
 """
+
 from functools import lru_cache
-from typing import AsyncGenerator
+from typing import Any, AsyncGenerator, Callable, Coroutine
 
 from fastapi import Depends, HTTPException, Request, status
 from jose import jwt
@@ -21,6 +22,7 @@ from app.database import SessionLocal
 from app.models import models_core
 from app.schemas import schemas_core
 from app.utils.types.groups_type import GroupType
+from app.utils.types.scopes_type import ScopeType
 
 
 async def get_request_id(request: Request) -> str:
@@ -52,38 +54,93 @@ def get_settings() -> Settings:
     return Settings(_env_file=".env")
 
 
-async def get_current_user(
-    db: AsyncSession = Depends(get_db), token: str = Depends(security.oauth2_scheme)
+def get_user_from_token_with_scopes(
+    scopes: list[ScopeType] = [],
+) -> Callable[[AsyncSession, str], Coroutine[Any, Any, models_core.CoreUser]]:
+    """
+    Generate a dependency which will:
+     * check the request header contain a valid JWT token
+     * make sure the token contain the given scopes
+     * return the corresponding user `models_core.CoreUser` object
+
+    This endpoints allow to requires other scopes than the API scope. This should only be used by the auth endpoints.
+    To restrict and endpoint from the API, use `is_user_a_member_of`.
+    """
+
+    async def get_current_user(
+        db: AsyncSession = Depends(get_db), token: str = Depends(security.oauth2_scheme)
+    ) -> models_core.CoreUser:
+        """
+        Dependency that make sure the token is valid, contain the expected scopes and return the corresponding user.
+        """
+        try:
+            payload = jwt.decode(
+                token,
+                settings.ACCESS_TOKEN_SECRET_KEY,
+                algorithms=[security.jwt_algorithme],
+            )
+            token_data = schemas_core.TokenData(**payload)
+        except (jwt.JWTError, ValidationError):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Could not validate credentials",
+            )
+
+        for scope in scopes:
+            # `scopes` contain a " " separated list of scopes
+            if str(scope) not in token_data.scopes:
+                raise HTTPException(
+                    status_code=403,
+                    detail=f"Unauthorized, token does not contain the scope {scope}",
+                )
+
+        user_id = token_data.sub
+
+        user = await cruds_users.get_user_by_id(db=db, user_id=user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        return user
+
+    return get_current_user
+
+
+def is_user_a_member(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(
+        get_user_from_token_with_scopes([ScopeType.API])
+    ),
 ) -> models_core.CoreUser:
     """
-    Make sure the token is valid and return the corresponding user.
+    A dependency that check that:
+        * check the request header contain a valid API JWT token (a token that can be used to call endpoints from the API)
+        * make sure the user making the request exist
+
+    To check the user is the member of a group, use is_user_a_member_of generator
     """
-    try:
-        payload = jwt.decode(
-            token,
-            Settings.ACCESS_TOKEN_SECRET_KEY,
-            algorithms=[security.jwt_algorithme],
-        )
-        token_data = schemas_core.TokenData(**payload)
-    except (jwt.JWTError, ValidationError):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Could not validate credentials",
-        )
-
-    user_id = token_data.sub
-
-    user = await cruds_users.get_user_by_id(db=db, user_id=user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
     return user
 
 
-def generate_is_user_a_member_of_dependency(group_id: GroupType):
+def is_user_a_member_of(
+    group_id: GroupType,
+) -> Callable[
+    [AsyncSession, models_core.CoreUser], Coroutine[Any, Any, models_core.CoreUser]
+]:
+    """
+    Generate a dependency which which will:
+        * check the request header contain a valid API JWT token (a token that can be used to call endpoints from the API)
+        * make sure the user making the request exist and is a member of the group with the given id
+        * return the corresponding user `models_core.CoreUser` object
+    """
+
     async def is_user_a_member_of(
         db: AsyncSession = Depends(get_db),
-        user: models_core.CoreUser = Depends(get_current_user),
-    ):
+        user: models_core.CoreUser = Depends(
+            get_user_from_token_with_scopes([ScopeType.API])
+        ),
+    ) -> models_core.CoreUser:
+        """
+        A dependency that check that user is a member of the group with the given id then return the corresponding user.
+        """
         # We can not directly test is group_id is in user.groups
         # As user.groups is a list of CoreGroup as group_id is an UUID
         for user_group in user.groups:

@@ -194,3 +194,8 @@ class AccessToken(BaseModel):
 
 class TokenData(BaseModel):
     sub: str  # Subject: the user id
+    iss: str | None = None
+    aud: str | None = None
+    iat: datetime | None = None
+    scopes: str = ""
+    # exp and iat elements are added by the token generation function
