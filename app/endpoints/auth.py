@@ -335,7 +335,11 @@ async def authorize_validation(
     if nonce:
         url += "&nonce=" + nonce
     print("Redirecting to " + url)
-    return RedirectResponse(url)
+    # We need to redirect the user with as a GET request.
+    # By default RedirectResponse send a 307 code, which prevent the user browser from changing the POST of this endpoint to a GET
+    # We specifically return a 302 code to allow the user browser to change the POST of this endpoint to a GET
+    # See https://stackoverflow.com/a/65512571
+    return RedirectResponse(url, status_code=status.HTTP_302_FOUND)
 
 
 @router.post("/auth/token")
