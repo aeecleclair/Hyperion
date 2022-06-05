@@ -113,7 +113,7 @@ async def create_delivery(
         raise HTTPException(status_code=422, detail=str(error))
 
 
-@router.delete("/amap/delieveries/{delivery_id}", status_code=204, tags=[Tags.amap])
+@router.delete("/amap/deliveries/{delivery_id}", status_code=204, tags=[Tags.amap])
 async def delete_delivery(delivery_id: str, db: AsyncSession = Depends(get_db)):
     # TODO check if the client is admin
 
@@ -121,7 +121,7 @@ async def delete_delivery(delivery_id: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.get(
-    "/amap/delieveries/{delivery_id}/products",
+    "/amap/deliveries/{delivery_id}/products",
     response_model=list[schemas_amap.ProductComplete],
     status_code=200,
     tags=[Tags.amap],
@@ -136,7 +136,7 @@ async def get_products_from_delivery(
 
 
 @router.post(
-    "/amap/delieveries/{delivery_id}/products",
+    "/amap/deliveries/{delivery_id}/products",
     response_model=list[schemas_amap.ProductComplete],
     status_code=201,
     tags=[Tags.amap],
@@ -162,7 +162,7 @@ async def add_product_to_delievery(
 
 
 @router.delete(
-    "/amap/delieveries/{delivery_id}/products/{product_id}",
+    "/amap/deliveries/{delivery_id}/products/{product_id}",
     status_code=204,
     tags=[Tags.amap],
 )
@@ -176,7 +176,7 @@ async def remove_product_from_delievery(
 
 
 @router.get(
-    "/amap/delieveries/{delivery_id}/orders",
+    "/amap/deliveries/{delivery_id}/orders",
     response_model=list[schemas_amap.OrderComplete],
     status_code=200,
     tags=[Tags.amap],
@@ -189,7 +189,7 @@ async def get_orders_from_delivery(
 
 
 @router.get(
-    "/amap/delieveries/{delivery_id}/orders/{order_id}",
+    "/amap/deliveries/{delivery_id}/orders/{order_id}",
     response_model=schemas_amap.OrderComplete,
     status_code=200,
     tags=[Tags.amap],
@@ -202,7 +202,7 @@ async def get_order_by_id(order_id: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.post(
-    "/amap/delieveries/{delivery_id}/orders",
+    "/amap/deliveries/{delivery_id}/orders",
     response_model=schemas_amap.OrderComplete,
     status_code=201,
     tags=[Tags.amap],
@@ -212,7 +212,11 @@ async def add_order_to_delievery(
     db: AsyncSession = Depends(get_db),
 ):
 
-    amount = sum([p.price for p in order.products])
+    amount = 0.0
+    for p in order.products_ids:
+        prod = await cruds_amap.get_product_by_id(product_id=p, db=db)
+        if prod is not None:
+            amount += prod.price
     ordering_date = datetime.now()
     order_id = str(uuid.uuid4())
     db_order = schemas_amap.OrderBase(
@@ -230,14 +234,18 @@ async def add_order_to_delievery(
 
 
 @router.put(
-    "/amap/delieveries/{delivery_id}/orders",
+    "/amap/deliveries/{delivery_id}/orders",
     status_code=200,
     tags=[Tags.amap],
 )
 async def edit_orders_from_delieveries(
     delivery_id: str, order: schemas_amap.OrderEdit, db: AsyncSession = Depends(get_db)
 ):
-    amount = sum([p.price for p in order.products])
+    amount = 0.0
+    for p in order.products_ids:
+        prod = await cruds_amap.get_product_by_id(product_id=p, db=db)
+        if prod is not None:
+            amount += prod.price
     ordering_date = datetime.now()
     db_order = schemas_amap.OrderComplete(
         amount=amount, ordering_date=ordering_date, **order.dict()
