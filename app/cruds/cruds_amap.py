@@ -188,8 +188,8 @@ async def add_order_to_delivery(
     user = await cruds_users.get_user_by_id(db=db, user_id=order.user_id)
     if delivery is not None and user is not None:
         db_add = models_amap.Order(
-            delivery,
-            user,
+            delivery=delivery,
+            user=user,
             **order.dict(),
         )
 
