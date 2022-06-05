@@ -109,11 +109,16 @@ async def delete_delivery(db: AsyncSession, delivery_id: str):
 
 async def get_products_from_delivery(
     db: AsyncSession, delivery_id: str
-) -> list[models_amap.Product]:
+) -> list[models_amap.Product] | None:
     result = await db.execute(
-        select(models_amap.Delivery).where(models_amap.Delivery.id == delivery_id)
+        select(models_amap.Delivery)
+        .where(models_amap.Delivery.id == delivery_id)
+        .options(selectinload(models_amap.Delivery.products))
     )
-    return result.scalars().all()
+    delivery = result.scalars().first()
+    if delivery is not None:
+        return delivery.products
+    return None
 
 
 async def add_product_to_delivery(
@@ -147,14 +152,18 @@ async def get_orders_from_delivery(
     db: AsyncSession, delivery_id: str
 ) -> list[models_amap.Order]:
     result = await db.execute(
-        select(models_amap.Order).where(models_amap.Order.delivery_id == delivery_id)
+        select(models_amap.Order)
+        .where(models_amap.Order.delivery_id == delivery_id)
+        .options(selectinload(models_amap.Order.products))
     )
     return result.scalars().all()
 
 
 async def get_order_by_id(db: AsyncSession, order_id: str) -> models_amap.Order | None:
     result = await db.execute(
-        select(models_amap.Order).where(models_amap.Order.order_id == order_id)
+        select(models_amap.Order)
+        .where(models_amap.Order.order_id == order_id)
+        .options(selectinload(models_amap.Order.products))
     )
     return result.scalars().first()
 
