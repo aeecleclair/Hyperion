@@ -50,7 +50,7 @@ class DeliveryReturn(BaseModel):
 
 
 class OrderBase(BaseModel):
-    user: CoreUserSimple
+    user_id: str
     delivery_id: str
     products_ids: list[str]
     collection_slot: AmapSlotType
