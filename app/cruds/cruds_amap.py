@@ -180,6 +180,17 @@ async def get_order_by_id(db: AsyncSession, order_id: str) -> models_amap.Order 
     return result.scalars().first()
 
 
+async def get_products_of_order(
+    db: AsyncSession, order_id: str
+) -> list[models_amap.AmapOrderContent]:
+    result = await db.execute(
+        select(models_amap.AmapOrderContent).where(
+            models_amap.AmapOrderContent.order_id == order_id
+        )
+    )
+    return result.scalars().all()
+
+
 async def add_order_to_delivery(
     db: AsyncSession,
     order: schemas_amap.OrderComplete,
@@ -208,6 +219,17 @@ async def add_order_to_delivery(
         db.add(db_add)
         try:
             await db.commit()
+            for i in range(len(order.products_ids)):
+                await db.execute(
+                    update(models_amap.AmapOrderContent)
+                    .where(
+                        models_amap.AmapOrderContent.order_id == order.order_id,
+                        models_amap.AmapOrderContent.product_id
+                        == order.products_ids[i],
+                    )
+                    .values(quantity=order.products_quantity[i])
+                )
+                await db.commit()
             return db_add
         except IntegrityError:
             await db.rollback()
@@ -223,8 +245,14 @@ async def edit_order(db: AsyncSession, order: schemas_amap.OrderComplete):
         )
     )
     await db.commit()
-    for p in order.products_ids:
-        db.add(models_amap.AmapOrderContent(product_id=p, order_id=order.order_id))
+    for i in range(len(order.products_ids)):
+        db.add(
+            models_amap.AmapOrderContent(
+                order_id=order.order_id,
+                product_id=order.products_ids[i],
+                quantity=order.products_quantity[i],
+            )
+        )
         await db.commit()
     await db.execute(
         update(models_amap.Order)
@@ -238,6 +266,13 @@ async def edit_order(db: AsyncSession, order: schemas_amap.OrderComplete):
             ordering_date=order.ordering_date,
             delivery_date=order.delivery_date,
         )
+    )
+    await db.commit()
+
+
+async def remove_order(db: AsyncSession, order_id: str):
+    await db.execute(
+        delete(models_amap.Order).where(models_amap.Order.order_id == order_id)
     )
     await db.commit()
 
