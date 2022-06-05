@@ -273,7 +273,7 @@ async def get_users_cash(db: AsyncSession = Depends(get_db)):
 @router.get(
     "/amap/users/{user_id}/cash",
     response_model=schemas_amap.CashBase,
-    status_code=201,
+    status_code=200,
     tags=[Tags.amap],
 )
 async def get_cash_by_id(user_id: str, db: AsyncSession = Depends(get_db)):
@@ -315,3 +315,14 @@ async def edit_cash_by_id(
     await cruds_amap.edit_cash_by_id(
         user_id=user_id, balance=schemas_amap.CashBase(balance=balance), db=db
     )
+
+
+@router.get(
+    "/amap/users/{user_id}/orders",
+    response_model=list[schemas_amap.OrderComplete],
+    status_code=200,
+    tags=[Tags.amap],
+)
+async def get_orders_of_user(user_id: str, db: AsyncSession = Depends(get_db)):
+    orders = await cruds_amap.get_orders_of_user(user_id=user_id, db=db)
+    return orders
