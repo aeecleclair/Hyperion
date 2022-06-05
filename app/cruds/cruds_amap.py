@@ -226,3 +226,12 @@ async def edit_cash_by_id(
         .values(**balance.dict())
     )
     await db.commit()
+
+
+async def get_orders_of_user(db: AsyncSession, user_id: str) -> list[models_amap.Order]:
+    result = await db.execute(
+        select(models_amap.Order)
+        .where(models_amap.Order.user_id == user_id)
+        .options(selectinload(models_amap.Order.products))
+    )
+    return result.scalars().all()
