@@ -58,6 +58,7 @@ async def get_product_by_id(product_id: str, db: AsyncSession = Depends(get_db))
 
 @router.put(
     "/amap/products/{product_id}",
+    status_code=200,
     tags=[Tags.amap],
 )
 async def edit_product(
@@ -201,6 +202,17 @@ async def get_order_by_id(order_id: str, db: AsyncSession = Depends(get_db)):
     return order
 
 
+@router.get(
+    "/amap/deliveries/{delivery_id}/orders/{order_id}/products",
+    response_model=list[schemas_amap.ProductQuantity],
+    status_code=200,
+    tags=[Tags.amap],
+)
+async def get_products_of_order(order_id: str, db: AsyncSession = Depends(get_db)):
+    products = await cruds_amap.get_products_of_order(order_id=order_id, db=db)
+    return products
+
+
 @router.post(
     "/amap/deliveries/{delivery_id}/orders",
     response_model=schemas_amap.OrderReturn,
@@ -213,10 +225,12 @@ async def add_order_to_delievery(
 ):
 
     amount = 0.0
-    for p in order.products_ids:
-        prod = await cruds_amap.get_product_by_id(product_id=p, db=db)
+    for i in range(len(order.products_ids)):
+        prod = await cruds_amap.get_product_by_id(
+            product_id=order.products_ids[i], db=db
+        )
         if prod is not None:
-            amount += prod.price
+            amount += prod.price * order.products_quantity[i]
     ordering_date = datetime.now()
     order_id = str(uuid.uuid4())
     db_order = schemas_amap.OrderComplete(
@@ -242,10 +256,12 @@ async def edit_orders_from_delieveries(
     delivery_id: str, order: schemas_amap.OrderEdit, db: AsyncSession = Depends(get_db)
 ):
     amount = 0.0
-    for p in order.products_ids:
-        prod = await cruds_amap.get_product_by_id(product_id=p, db=db)
+    for i in range(len(order.products_ids)):
+        prod = await cruds_amap.get_product_by_id(
+            product_id=order.products_ids[i], db=db
+        )
         if prod is not None:
-            amount += prod.price
+            amount += prod.price * order.products_quantity[i]
     ordering_date = datetime.now()
     db_order = schemas_amap.OrderComplete(
         amount=amount, ordering_date=ordering_date, **order.dict()
@@ -257,6 +273,16 @@ async def edit_orders_from_delieveries(
         )
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
+
+
+@router.delete(
+    "/amap/deliveries/{delivery_id}/orders/{order_id}",
+    status_code=204,
+    tags=[Tags.amap],
+)
+async def remove_order(order_id: str, db: AsyncSession = Depends(get_db)):
+    # TODO check if the client is admin or the good user
+    await cruds_amap.remove_order(db=db, order_id=order_id)
 
 
 @router.get(
