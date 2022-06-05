@@ -1,7 +1,7 @@
 """model file for amap"""
 from datetime import date, datetime
 
-from sqlalchemy import Column, Date, DateTime, Enum, Float, ForeignKey, String
+from sqlalchemy import Column, Date, DateTime, Enum, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -13,6 +13,7 @@ class AmapOrderContent(Base):
     __tablename__ = "amap_order_content"
     product_id: str = Column(ForeignKey("amap_product.id"), primary_key=True)
     order_id: str = Column(ForeignKey("amap_order.order_id"), primary_key=True)
+    quantity: int = Column(Integer)
 
 
 class AmapDeliveryContent(Base):
