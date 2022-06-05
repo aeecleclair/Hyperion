@@ -6,6 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.cruds import cruds_users
 from app.models import models_amap
 from app.schemas import schemas_amap
 
@@ -69,6 +70,17 @@ async def get_deliveries(db: AsyncSession) -> list[models_amap.Delivery]:
         )
     )
     return result.scalars().all()
+
+
+async def get_delivery_by_id(
+    db: AsyncSession, delivery_id: str
+) -> models_amap.Delivery:
+    result = await db.execute(
+        select(models_amap.Delivery)
+        .where(models_amap.Delivery.id == delivery_id)
+        .options(selectinload(models_amap.Delivery.products))
+    )
+    return result.scalars().first()
 
 
 async def create_delivery(
@@ -172,7 +184,10 @@ async def add_order_to_delivery(
     db: AsyncSession,
     order: schemas_amap.OrderBase,
 ) -> models_amap.Order:
-    db_add = models_amap.Order(**order.dict())
+    db_add = models_amap.Order(
+        delivery=get_delivery_by_id(db=db, delivery_id=order.delivery_id),
+        user=cruds_users.get_user_by_id(db=db, user_id=order.user_id) ** order.dict(),
+    )
 
     db.add(db_add)
     try:
