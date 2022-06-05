@@ -30,25 +30,6 @@ class Product(Base):
     category: str = Column(String, index=True, nullable=False)
 
 
-class Order(Base):
-    __tablename__ = "amap_order"
-
-    user_id: str = Column(String, ForeignKey("core_user.id"), primary_key=True)
-    user: CoreUser = relationship(
-        "CoreUser",
-    )
-    delivery_id: str = Column(String, index=True, nullable=True)
-    order_id: str = Column(String, primary_key=True, index=True)
-    products: list[Product] = relationship(
-        "Product",
-        secondary="amap_order_content",
-    )
-    amount: float = Column(Float, nullable=False)
-    collection_slot: AmapSlotType = Column(Enum(AmapSlotType), nullable=False)
-    ordering_date: datetime = Column(DateTime, nullable=False)
-    delivery_date: date = Column(Date, nullable=False)
-
-
 class Delivery(Base):
     __tablename__ = "amap_delivery"
 
@@ -58,6 +39,28 @@ class Delivery(Base):
         "Product",
         secondary="amap_delivery_content",
     )
+
+
+class Order(Base):
+    __tablename__ = "amap_order"
+
+    user_id: str = Column(String, ForeignKey("core_user.id"), primary_key=True)
+    user: CoreUser = relationship(
+        "CoreUser",
+    )
+    delivery_id: str = Column(
+        String, ForeignKey("amap_delivery.id"), index=True, nullable=True
+    )
+    delivery: Delivery = relationship("Delivery")
+    order_id: str = Column(String, primary_key=True, index=True)
+    products: list[Product] = relationship(
+        "Product",
+        secondary="amap_order_content",
+    )
+    amount: float = Column(Float, nullable=False)
+    collection_slot: AmapSlotType = Column(Enum(AmapSlotType), nullable=False)
+    ordering_date: datetime = Column(DateTime, nullable=False)
+    delivery_date: date = Column(Date, nullable=False)
 
 
 class Cash(Base):
