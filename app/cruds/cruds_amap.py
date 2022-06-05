@@ -74,7 +74,7 @@ async def get_deliveries(db: AsyncSession) -> list[models_amap.Delivery]:
 
 async def get_delivery_by_id(
     db: AsyncSession, delivery_id: str
-) -> models_amap.Delivery:
+) -> models_amap.Delivery | None:
     result = await db.execute(
         select(models_amap.Delivery)
         .where(models_amap.Delivery.id == delivery_id)
@@ -185,8 +185,9 @@ async def add_order_to_delivery(
     order: schemas_amap.OrderBase,
 ) -> models_amap.Order:
     db_add = models_amap.Order(
-        delivery=get_delivery_by_id(db=db, delivery_id=order.delivery_id),
-        user=cruds_users.get_user_by_id(db=db, user_id=order.user_id) ** order.dict(),
+        delivery=await get_delivery_by_id(db=db, delivery_id=order.delivery_id),
+        user=await cruds_users.get_user_by_id(db=db, user_id=order.user_id),
+        **order.dict(),
     )
 
     db.add(db_add)
