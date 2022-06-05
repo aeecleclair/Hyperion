@@ -177,7 +177,7 @@ async def remove_product_from_delievery(
 
 @router.get(
     "/amap/deliveries/{delivery_id}/orders",
-    response_model=list[schemas_amap.OrderComplete],
+    response_model=list[schemas_amap.OrderReturn],
     status_code=200,
     tags=[Tags.amap],
 )
@@ -190,7 +190,7 @@ async def get_orders_from_delivery(
 
 @router.get(
     "/amap/deliveries/{delivery_id}/orders/{order_id}",
-    response_model=schemas_amap.OrderComplete,
+    response_model=schemas_amap.OrderReturn,
     status_code=200,
     tags=[Tags.amap],
 )
@@ -203,7 +203,7 @@ async def get_order_by_id(order_id: str, db: AsyncSession = Depends(get_db)):
 
 @router.post(
     "/amap/deliveries/{delivery_id}/orders",
-    response_model=schemas_amap.OrderComplete,
+    response_model=schemas_amap.OrderReturn,
     status_code=201,
     tags=[Tags.amap],
 )
@@ -219,16 +219,16 @@ async def add_order_to_delievery(
             amount += prod.price
     ordering_date = datetime.now()
     order_id = str(uuid.uuid4())
-    db_order = schemas_amap.OrderBase(
-        id=order_id, amount=amount, ordering_date=ordering_date, **order.dict()
+    db_order = schemas_amap.OrderComplete(
+        order_id=order_id, amount=amount, ordering_date=ordering_date, **order.dict()
     )
     try:
-        await cruds_amap.add_order_to_delivery(
+        result = await cruds_amap.add_order_to_delivery(
             order=db_order,
             db=db,
         )
 
-        return get_order_by_id(db=db, order_id=order_id)
+        return result
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
