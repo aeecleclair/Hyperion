@@ -52,7 +52,7 @@ class DeliveryReturn(BaseModel):
 class OrderBase(BaseModel):
     user: CoreUserSimple
     delivery_id: str
-    products_ids: list[int]
+    products_ids: list[str]
     collection_slot: AmapSlotType
     delivery_date: date
 
