@@ -184,19 +184,24 @@ async def add_order_to_delivery(
     db: AsyncSession,
     order: schemas_amap.OrderBase,
 ) -> models_amap.Order:
-    db_add = models_amap.Order(
-        delivery=await get_delivery_by_id(db=db, delivery_id=order.delivery_id),
-        user=await cruds_users.get_user_by_id(db=db, user_id=order.user_id),
-        **order.dict(),
-    )
+    delivery = (await get_delivery_by_id(db=db, delivery_id=order.delivery_id),)
+    user = await cruds_users.get_user_by_id(db=db, user_id=order.user_id)
+    if delivery is not None and user is not None:
+        db_add = models_amap.Order(
+            delivery,
+            user,
+            **order.dict(),
+        )
 
-    db.add(db_add)
-    try:
-        await db.commit()
-        return db_add
-    except IntegrityError:
-        await db.rollback()
-        raise ValueError("This product is already in this delivery")
+        db.add(db_add)
+        try:
+            await db.commit()
+            return db_add
+        except IntegrityError:
+            await db.rollback()
+            raise ValueError("This product is already in this delivery")
+    else:
+        raise ValueError("Delivery or user not found.")
 
 
 async def edit_order(db: AsyncSession, order: schemas_amap.OrderComplete):
