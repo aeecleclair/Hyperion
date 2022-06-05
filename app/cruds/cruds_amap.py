@@ -182,15 +182,27 @@ async def get_order_by_id(db: AsyncSession, order_id: str) -> models_amap.Order 
 
 async def add_order_to_delivery(
     db: AsyncSession,
-    order: schemas_amap.OrderBase,
+    order: schemas_amap.OrderComplete,
 ) -> models_amap.Order:
     delivery = await get_delivery_by_id(db=db, delivery_id=order.delivery_id)
     user = await cruds_users.get_user_by_id(db=db, user_id=order.user_id)
+    products = []
+    for p in order.products_ids:
+        product = await get_product_by_id(db=db, product_id=p)
+        if product is not None:
+            products.append(product)
     if delivery is not None and user is not None:
         db_add = models_amap.Order(
             delivery=delivery,
             user=user,
-            **order.dict(),
+            products=products,
+            user_id=order.user_id,
+            delivery_id=order.delivery_id,
+            order_id=order.order_id,
+            amount=order.amount,
+            collection_slot=order.collection_slot,
+            ordering_date=order.ordering_date,
+            delivery_date=order.delivery_date,
         )
 
         db.add(db_add)
@@ -206,9 +218,26 @@ async def add_order_to_delivery(
 
 async def edit_order(db: AsyncSession, order: schemas_amap.OrderComplete):
     await db.execute(
+        delete(models_amap.AmapOrderContent).where(
+            models_amap.AmapOrderContent.order_id == order.order_id
+        )
+    )
+    await db.commit()
+    for p in order.products_ids:
+        db.add(models_amap.AmapOrderContent(product_id=p, order_id=order.order_id))
+        await db.commit()
+    await db.execute(
         update(models_amap.Order)
         .where(models_amap.Order.order_id == order.order_id)
-        .values(**order.dict(exclude_none=True))
+        .values(
+            user_id=order.user_id,
+            delivery_id=order.delivery_id,
+            order_id=order.order_id,
+            amount=order.amount,
+            collection_slot=order.collection_slot,
+            ordering_date=order.ordering_date,
+            delivery_date=order.delivery_date,
+        )
     )
     await db.commit()
 
