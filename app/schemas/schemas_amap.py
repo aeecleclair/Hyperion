@@ -66,6 +66,20 @@ class OrderComplete(OrderBase):
         orm_mode = True
 
 
+class OrderReturn(BaseModel):
+    user_id: str
+    delivery_id: str
+    products: list[ProductComplete]
+    collection_slot: AmapSlotType
+    delivery_date: date
+    order_id: str
+    amount: float
+    ordering_date: datetime
+
+    class Config:
+        orm_mode = True
+
+
 class OrderEdit(OrderBase):
     order_id: str
 
