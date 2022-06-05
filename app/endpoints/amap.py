@@ -84,19 +84,19 @@ async def delete_product(product_id: str, db: AsyncSession = Depends(get_db)):
 
 @router.get(
     "/amap/deliveries",
-    response_model=list[schemas_amap.DeliveryComplete],
+    response_model=list[schemas_amap.DeliveryReturn],
     status_code=200,
     tags=[Tags.amap],
 )
-async def get_delieveries(db: AsyncSession = Depends(get_db)):
-    """Return all AMAP planned deliveries from database as a list of dictionaries"""
+async def get_deliveries(db: AsyncSession = Depends(get_db)):
+    """Return all AMAP products from database as a list of dictionaries"""
     deliveries = await cruds_amap.get_deliveries(db)
     return deliveries
 
 
 @router.post(
     "/amap/deliveries",
-    response_model=schemas_amap.DeliveryComplete,
+    response_model=schemas_amap.DeliveryReturn,
     status_code=201,
     tags=[Tags.amap],
 )
@@ -105,7 +105,7 @@ async def create_delivery(
     db: AsyncSession = Depends(get_db),
 ):
     # TODO check if the client is admin
-    db_delivery = schemas_amap.DeliveryBase(id=str(uuid.uuid4()), **delivery.dict())
+    db_delivery = schemas_amap.DeliveryComplete(id=str(uuid.uuid4()), **delivery.dict())
     try:
         result = await cruds_amap.create_delivery(delivery=db_delivery, db=db)
         return result

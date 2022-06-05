@@ -53,7 +53,7 @@ class Delivery(Base):
     __tablename__ = "amap_delivery"
 
     id: str = Column(String, primary_key=True, index=True)
-    delivery_date: datetime = Column(Date, nullable=False, unique=True, index=True)
+    delivery_date: date = Column(Date, nullable=False, unique=True, index=True)
     products: list[Product] = relationship(
         "Product",
         secondary="amap_delivery_content",
