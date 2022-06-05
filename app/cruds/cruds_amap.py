@@ -4,6 +4,7 @@
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models import models_amap
 from app.schemas import schemas_amap
@@ -62,17 +63,30 @@ async def delete_product(db: AsyncSession, product_id: str):
 
 async def get_deliveries(db: AsyncSession) -> list[models_amap.Delivery]:
     """Return all deliveries from database"""
-
-    result = await db.execute(select(models_amap.Delivery))
+    result = await db.execute(
+        select(models_amap.Delivery).options(
+            selectinload(models_amap.Delivery.products)
+        )
+    )
     return result.scalars().all()
 
 
 async def create_delivery(
-    delivery: schemas_amap.DeliveryBase, db: AsyncSession
+    delivery: schemas_amap.DeliveryComplete, db: AsyncSession
 ) -> models_amap.Delivery:
     """Create a new delivery in database and return it"""
-
-    db_delivery = models_amap.Delivery(**delivery.dict())
+    products_ids = delivery.products_ids
+    products = []
+    for id in products_ids:
+        res = await db.execute(
+            select(models_amap.Product).where(models_amap.Product.id == id)
+        )
+        p = res.scalars().first()
+        if p is not None:
+            products.append(p)
+    db_delivery = models_amap.Delivery(
+        id=delivery.id, delivery_date=delivery.delivery_date, products=products
+    )
     db.add(db_delivery)
     try:
         await db.commit()

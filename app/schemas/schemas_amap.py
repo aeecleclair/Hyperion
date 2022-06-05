@@ -29,8 +29,8 @@ class ProductComplete(ProductSimple):
 class DeliveryBase(BaseModel):
     """Base schema for AMAP deliveries"""
 
-    deliveryDate: date
-    products: list[ProductBase] = []
+    delivery_date: date
+    products_ids: list[str] = []
 
 
 class DeliveryComplete(DeliveryBase):
@@ -40,10 +40,19 @@ class DeliveryComplete(DeliveryBase):
         orm_mode = True
 
 
+class DeliveryReturn(BaseModel):
+    delivery_date: date
+    products: list[ProductComplete] = []
+    id: str
+
+    class Config:
+        orm_mode = True
+
+
 class OrderBase(BaseModel):
     user: CoreUserSimple
     delivery_id: str
-    products: list[ProductBase]
+    products_ids: list[int]
     collection_slot: AmapSlotType
     delivery_date: date
 
