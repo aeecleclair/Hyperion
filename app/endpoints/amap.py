@@ -57,7 +57,7 @@ async def get_product_by_id(product_id: str, db: AsyncSession = Depends(get_db))
     return product
 
 
-@router.put(
+@router.patch(
     "/amap/products/{product_id}",
     status_code=200,
     tags=[Tags.amap],
@@ -244,7 +244,7 @@ async def add_order_to_delievery(
         raise HTTPException(status_code=422, detail=str(error))
 
 
-@router.put(
+@router.patch(
     "/amap/deliveries/{delivery_id}/orders",
     status_code=200,
     tags=[Tags.amap],
@@ -323,7 +323,7 @@ async def create_cash_of_user(
     return schemas_amap.CashBase(**result.__dict__)
 
 
-@router.put(
+@router.patch(
     "/amap/users/{user_id}/cash",
     status_code=200,
     tags=[Tags.amap],
