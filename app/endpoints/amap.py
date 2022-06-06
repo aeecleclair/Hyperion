@@ -345,7 +345,7 @@ async def edit_cash_by_id(
 
 @router.get(
     "/amap/users/{user_id}/orders",
-    response_model=list[schemas_amap.OrderComplete],
+    response_model=list[schemas_amap.OrderReturn],
     status_code=200,
     tags=[Tags.amap],
 )
