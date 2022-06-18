@@ -1,7 +1,6 @@
 import uuid
 from datetime import date
 
-from app.core.settings import settings
 from app.main import app
 from app.models import models_core
 
