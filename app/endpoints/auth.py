@@ -100,6 +100,7 @@ AUTH_ISSUER = "hyperion"
 
 @router.get(
     "/auth/authorize",
+    tags=[Tags.auth],
 )
 async def get_authorize_page(
     request: Request,
@@ -142,6 +143,7 @@ async def get_authorize_page(
 
 @router.post(
     "/auth/authorize",
+    tags=[Tags.auth],
 )
 async def post_authorize_page(
     request: Request,
@@ -184,6 +186,7 @@ async def post_authorize_page(
 
 @router.post(
     "/auth/authorization-flow/authorize-validation",
+    tags=[Tags.auth],
 )
 async def authorize_validation(
     # We use Form(...) as parameters must be `application/x-www-form-urlencoded`
@@ -347,7 +350,10 @@ async def authorize_validation(
     return RedirectResponse(url, status_code=status.HTTP_302_FOUND)
 
 
-@router.post("/auth/token")
+@router.post(
+    "/auth/token",
+    tags=[Tags.auth],
+)
 async def token(
     request: Request,
     response: Response,
@@ -588,7 +594,10 @@ async def token(
         )
 
 
-@router.get("/auth/userinfo")
+@router.get(
+    "/auth/userinfo",
+    tags=[Tags.auth],
+)
 async def auth_get_userinfo(
     request: Request,
     user: models_core.CoreUser = Depends(
@@ -607,7 +616,10 @@ async def auth_get_userinfo(
     }
 
 
-@router.get("/oidc/authorization-flow/jwks_uri")
+@router.get(
+    "/oidc/authorization-flow/jwks_uri",
+    tags=[Tags.auth],
+)
 def jwks_uri():
     return {
         "keys": [
@@ -623,7 +635,10 @@ def jwks_uri():
     }
 
 
-@router.get("/.well-known/openid-configuration")
+@router.get(
+    "/.well-known/openid-configuration",
+    tags=[Tags.auth],
+)
 async def oidc_configuration():
 
     return {
