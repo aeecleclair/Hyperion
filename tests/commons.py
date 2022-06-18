@@ -1,9 +1,12 @@
 from typing import AsyncGenerator
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
+# We can not use `from app.core.settings import settings` as we would not be able to mock the `settings` object. See below.
+from app.core import settings
 from app.database import Base
 from app.dependencies import get_db
 from app.main import app
@@ -35,7 +38,7 @@ app.dependency_overrides[get_db] = override_get_db
 
 
 @app.on_event("startup")
-async def startuptest():
+async def commonstartuptest():
     # create db tables in test.db
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
@@ -50,6 +53,29 @@ async def startuptest():
     async with TestingSessionLocal() as db:
         db.add_all(account_types)
         await db.commit()
+
+
+@pytest.fixture(autouse=True)
+def mock_settings(monkeypatch):
+    """
+    Mock the settings object to use values from the test dotenv file (`.env.test`).
+    Using a dedicated dotenv for tests is better for tests reproductibility and required to be able to run tests in CI.
+
+    To be sure this pytest fixture is run before all tests (`autouse=True` parameter), using a star
+    import is required is tests files. Ex: `from tests.commons import *  # noqa: F401`.
+    """
+    # In this file, we can not use `from app.core.settings import settings` as we would not be able to mock the `settings` object.
+    # We prefer to import the whole module : `from app.core import settings`.
+    # See https://github.com/pytest-dev/pytest/issues/603
+    new_settings = settings.Settings(_env_file=".env.test")
+    monkeypatch.setattr("app.core.settings.settings", new_settings)
+
+
+def test_check_settings_mocking():
+    assert (
+        settings.settings.ACCESS_TOKEN_SECRET_KEY
+        == "YWZOHliiI53lJMJc5BI_WbGbA4GF2T7Wbt1airIhOXE"
+    )
 
 
 client = TestClient(app)  # Create a client to execute tests
