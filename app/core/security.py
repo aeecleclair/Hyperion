@@ -99,7 +99,6 @@ def create_access_token_RS256(
     expire_on = datetime.utcnow() + expires_delta
     to_encode.update({"exp": expire_on, "iat": iat})
 
-    priv = jwk.construct(settings.RSA_PRIVATE_PEM_STRING, algorithm="RS256").to_dict()
     encoded_jwt = jwt.encode(
         to_encode,
         jwk.construct(
