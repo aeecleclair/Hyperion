@@ -81,7 +81,7 @@ def mock_settings(monkeypatch):
 def test_check_settings_mocking():
     assert (
         settings.settings.ACCESS_TOKEN_SECRET_KEY
-        == "YWZOHliiI53lJMJc5BI_WbGbA4GF2T7Wbt1airIhOXE"
+        == "YWZOHliiI53lJMJc5BI_WbGbA4GF2T7Wbt1airIhOXEa3c021c4-1c55-4182-b141-7778bcc8fac4"
     )
 
 
