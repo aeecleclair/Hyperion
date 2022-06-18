@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     USER_ACTIVATION_TOKEN_EXPIRES_HOURS = 24
     PASSWORD_RESET_TOKEN_EXPIRES_HOURS = 12
 
+    RSA_PRIVATE_PEM_STRING: str
+
     # SMTP configuration using starttls
     SMTP_ACTIVE: bool
     SMTP_PORT: int
