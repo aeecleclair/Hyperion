@@ -94,6 +94,11 @@ def create_access_token_RS256(
     data: schemas_core.TokenData,
     expires_delta: timedelta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
 ) -> str:
+    to_encode = data.dict(exclude_none=True)
+    iat = datetime.utcnow()
+    expire_on = datetime.utcnow() + expires_delta
+    to_encode.update({"exp": expire_on, "iat": iat})
+
     pubandpriv = {
         "p": "4kom51UNpLnMUjSzhu5yYI1kHub2Pp-a_13h2Zd_RFYM3Uyo_KSHRFABK_lf1P_yF7eGmkQqi1MLFrVD8A7bdBAbFZmJg1jOpJL-qjGA3YBhP8OCj_AKqpbaY3VVpWmnS9E0qTARaJuDgN18nQSBf9lJOlSsb9GjHgcRiUhrhd0",
         "kty": "RSA",
