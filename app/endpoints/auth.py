@@ -15,6 +15,7 @@ from fastapi import (
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.templating import Jinja2Templates
+from jose import jwk
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import (
@@ -23,6 +24,7 @@ from app.core.security import (
     create_access_token_RS256,
     generate_token,
 )
+from app.core.settings import settings
 from app.cruds import cruds_auth
 from app.dependencies import get_db, get_user_from_token_with_scopes
 from app.models import models_core
@@ -34,6 +36,18 @@ router = APIRouter()
 
 templates = Jinja2Templates(directory="templates")
 
+JWK = (
+    jwk.construct(settings.RSA_PRIVATE_PEM_STRING, algorithm="RS256")
+    .public_key()
+    .to_dict()
+)
+JWK.update(
+    {
+        "use": "sig",
+        "kid": "RSA-JWK-1",  # The kid allows to identify the key in the JWKS, it should match the kid in the token header
+    }
+)
+JWKs = {"keys": [JWK]}
 
 # TODO: maybe remove
 @router.post(
@@ -623,18 +637,7 @@ async def auth_get_userinfo(
     tags=[Tags.auth],
 )
 def jwks_uri():
-    return {
-        "keys": [
-            {
-                "kty": "RSA",
-                "e": "AQAB",
-                "use": "sig",
-                "kid": "sig-16525550979",
-                "alg": "RS256",
-                "n": "kMhrv7o-00T2kw2jF_J1O9kLRQOlFudYvCmunQ5uPfqbQ0IIpMKwN7ZEj5PyRbBhoyWQ3yHC9NPwvsyqdzH9mMFyaBikdGVXBbeKmMjc9PU4zrR_i3mwY2_PrPY4IuV5TLEv8gq-maAXxrQr5vGeUcq2rbdJTwjY3jXRMGU2q-AHjtq13gDtrR-4yYPVumnjzAaZrntpDLx_SHBn7fyl8KxdGsZcO6xq5Y9Wa9ClVvSsYj724zvWeSUbqZ3VxV-mjzKbYSITeUilNrgeavpHKGRo_6tU3soPruOvAU-2gdDLLdXszIv-jU3LFAUw8p1Ey92OCwf98bjr4qRtuAb2XQ",
-            }
-        ]
-    }
+    return JWKs
 
 
 @router.get(
