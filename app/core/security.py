@@ -106,9 +106,7 @@ def create_access_token_RS256(
 
     encoded_jwt = jwt.encode(
         to_encode,
-        jwk.construct(
-            settings.RSA_PRIVATE_PEM_STRING, algorithm="RS256"
-        ),  # TODO: construct the key only once and not each time
+        settings.RSA_PRIVATE_KEY,
         algorithm="RS256",
         headers={
             "kid": "RSA-JWK-1"

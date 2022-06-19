@@ -15,7 +15,6 @@ from fastapi import (
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.templating import Jinja2Templates
-from jose import jwk
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
@@ -26,7 +25,7 @@ from app.core.security import (
     generate_token,
 )
 from app.cruds import cruds_auth
-from app.dependencies import get_db, get_user_from_token_with_scopes
+from app.dependencies import get_db, get_settings, get_user_from_token_with_scopes
 from app.models import models_core
 from app.schemas import schemas_core
 from app.utils.types.scopes_type import ScopeType
@@ -36,19 +35,6 @@ router = APIRouter()
 
 templates = Jinja2Templates(directory="templates")
 
-JWK = (
-    jwk.construct(settings.RSA_PRIVATE_PEM_STRING, algorithm="RS256")
-    .public_key()
-    .to_dict()
-)
-JWK.update(
-    {
-        "use": "sig",
-        "kid": "RSA-JWK-1",  # The kid allows to identify the key in the JWKS, it should match the kid in the token header
-    }
-)
-JWKs = {"keys": [JWK]}
-
 # TODO: maybe remove
 @router.post(
     "/auth/simple_token",
@@ -57,7 +43,9 @@ JWKs = {"keys": [JWK]}
     tags=[Tags.auth],
 )
 async def login_for_access_token(
-    form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Ask for a JWT access token using oauth password flow.
@@ -76,7 +64,7 @@ async def login_for_access_token(
     # We put the user id in the subject field of the token.
     # The subject `sub` is a JWT registered claim name, see https://datatracker.ietf.org/doc/html/rfc7519#section-4.1
     data = schemas_core.TokenData(sub=user.id, scopes=ScopeType.API)
-    access_token = create_access_token(data=data)
+    access_token = create_access_token(settings=settings, data=data)
     return {"access_token": access_token, "token_type": "bearer"}
 
 
@@ -385,6 +373,7 @@ async def token(
     code_verifier: str | None = Form(None),
     # Database
     db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Part 2 of the authorization code grant.
@@ -534,7 +523,7 @@ async def token(
         )
 
         # Expiration date is included by `create_access_token` function
-        access_token = create_access_token(data=access_token_data)
+        access_token = create_access_token(data=access_token_data, settings=settings)
 
         # We will create an OAuth response, then add oidc specific elements if required
         response_body = {
@@ -583,7 +572,7 @@ async def token(
                 # oidc only, required if provided by the client
                 id_token_data.nonce = db_authorization_code.nonce
 
-            id_token = create_access_token_RS256(id_token_data)
+            id_token = create_access_token_RS256(data=id_token_data, settings=settings)
 
             response_body["id_token"] = id_token
 

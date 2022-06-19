@@ -1,3 +1,4 @@
+from jose import jwk
 from pydantic import BaseSettings
 
 
@@ -14,9 +15,30 @@ class Settings(BaseSettings):
     To access these settings, the `get_settings` dependency should be used.
     """
 
+    # TODO: rename
     # Authorization using JWT
     ACCESS_TOKEN_SECRET_KEY: str
     ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+    RSA_PRIVATE_PEM_STRING: str
+
+    @property
+    def RSA_PRIVATE_KEY(self):
+        return jwk.construct(self.RSA_PRIVATE_PEM_STRING, algorithm="RS256")
+
+    @property
+    def RSA_PUBLIC_KEY(self):
+        return self.RSA_PRIVATE_KEY.public_key()
+
+    @property
+    def RSA_PUBLIC_JWK(self):
+        JWK = self.RSA_PUBLIC_KEY.to_dict().update(
+            {
+                "use": "sig",
+                "kid": "RSA-JWK-1",  # The kid allows to identify the key in the JWKS, it should match the kid in the token header
+            }
+        )
+        return {"keys": [JWK]}
 
     # Tokens validity
     USER_ACTIVATION_TOKEN_EXPIRES_HOURS = 24
