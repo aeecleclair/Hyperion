@@ -7,6 +7,7 @@ async def get_users(db: AsyncSession = Depends(get_db)):
 ```
 """
 
+from functools import lru_cache
 from typing import Any, AsyncGenerator, Callable, Coroutine
 
 from fastapi import Depends, HTTPException, status
@@ -15,7 +16,7 @@ from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import security
-from app.core.config import settings
+from app.core.config import Settings
 from app.cruds import cruds_users
 from app.database import SessionLocal
 from app.models import models_core
@@ -36,9 +37,19 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             await db.close()
 
 
+@lru_cache()
+def get_settings():
+    """
+    Return a settings object, based on `.env` dotenv
+    """
+    # `lru_cache()` decorator is here to prevent the class to be instanciated multiple times.
+    # See https://fastapi.tiangolo.com/advanced/settings/#lru_cache-technical-details
+    return Settings(_env_file=".env")
+
+
 def get_user_from_token_with_scopes(
     scopes: list[ScopeType] = [],
-) -> Callable[[AsyncSession, str], Coroutine[Any, Any, models_core.CoreUser]]:
+) -> Callable[[AsyncSession, Settings, str], Coroutine[Any, Any, models_core.CoreUser]]:
     """
     Generate a dependency which will:
      * check the request header contain a valid JWT token
@@ -50,7 +61,9 @@ def get_user_from_token_with_scopes(
     """
 
     async def get_current_user(
-        db: AsyncSession = Depends(get_db), token: str = Depends(security.oauth2_scheme)
+        db: AsyncSession = Depends(get_db),
+        settings: Settings = Depends(get_settings),
+        token: str = Depends(security.oauth2_scheme),
     ) -> models_core.CoreUser:
         """
         Dependency that make sure the token is valid, contain the expected scopes and return the corresponding user.

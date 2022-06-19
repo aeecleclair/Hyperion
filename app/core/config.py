@@ -1,4 +1,3 @@
-from cryptography.hazmat.primitives.asymmetric import rsa
 from pydantic import BaseSettings
 
 
@@ -9,7 +8,10 @@ class Settings(BaseSettings):
     1. An environment variable
     2. The dotenv .env file
 
-    See [Pydantic Settings documentation](https://pydantic-docs.helpmanual.io/usage/settings/#dotenv-env-support) for more informations
+    See [Pydantic Settings documentation](https://pydantic-docs.helpmanual.io/usage/settings/#dotenv-env-support) for more informations.
+    See [FastAPI settings](https://fastapi.tiangolo.com/advanced/settings/) article for best practices with settings.
+
+    To access these settings, the `get_settings` dependency should be used.
     """
 
     # Authorization using JWT
@@ -20,6 +22,7 @@ class Settings(BaseSettings):
     USER_ACTIVATION_TOKEN_EXPIRES_HOURS = 24
     PASSWORD_RESET_TOKEN_EXPIRES_HOURS = 12
 
+    # TODO: comment and rename
     RSA_PRIVATE_PEM_STRING: str
 
     # SMTP configuration using starttls
@@ -36,6 +39,3 @@ class Settings(BaseSettings):
         # Ex: `Settings(_env_file=".env.dev")`
         env_file = ".env"
         env_file_encoding = "utf-8"
-
-
-settings = Settings(_env_file=".env")

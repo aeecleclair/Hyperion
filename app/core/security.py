@@ -6,7 +6,7 @@ from jose import jwk, jwt
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
+from app.core.config import Settings
 from app.cruds import cruds_users
 from app.models import models_core
 from app.schemas import schemas_core
@@ -71,12 +71,16 @@ async def authenticate_user(
 
 
 def create_access_token(
+    settings: Settings,
     data: schemas_core.TokenData,
-    expires_delta: timedelta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+    expires_delta: timedelta | None = None,
 ) -> str:
     """
     Create a JWT. The token is generated using ACCESS_TOKEN_SECRET_KEY secret.
     """
+    if expires_delta is None:
+        # We use the default value
+        expires_delta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode = data.dict(exclude_none=True)
     iat = datetime.utcnow()
     expire_on = datetime.utcnow() + expires_delta
@@ -88,9 +92,13 @@ def create_access_token(
 
 
 def create_access_token_RS256(
+    settings: Settings,
     data: schemas_core.TokenData,
-    expires_delta: timedelta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+    expires_delta: timedelta | None = None,
 ) -> str:
+    if expires_delta is None:
+        # We use the default value
+        expires_delta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode = data.dict(exclude_none=True)
     iat = datetime.utcnow()
     expire_on = datetime.utcnow() + expires_delta
