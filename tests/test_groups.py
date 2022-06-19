@@ -1,9 +1,5 @@
 from app.main import app
 from app.models import models_core
-
-# We specifically import TestingSessionLocal and clientto prevent a flake8 error when they are used
-# We need to import tests.commons in order for the startup events to be triggered, especially monkeypatch mocking
-from tests.commons import *  # noqa: F401
 from tests.commons import TestingSessionLocal, client
 
 id_eclair = "8aab79e7-1e15-456d-b6e2-11e4e9f77e4f"
