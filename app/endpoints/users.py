@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import security
 from app.core.config import Settings
 from app.cruds import cruds_groups, cruds_users
-from app.dependencies import get_db, is_user_a_member
+from app.dependencies import get_db, get_settings, is_user_a_member
 from app.models import models_core
 from app.schemas import schemas_core
 from app.utils.mail.mailworker import send_email

@@ -56,7 +56,7 @@ def get_settings() -> Settings:
 
 def get_user_from_token_with_scopes(
     scopes: list[ScopeType] = [],
-) -> Callable[[AsyncSession, str], Coroutine[Any, Any, models_core.CoreUser]]:
+) -> Callable[[AsyncSession, Settings, str], Coroutine[Any, Any, models_core.CoreUser]]:
     """
     Generate a dependency which will:
      * check the request header contain a valid JWT token
@@ -68,7 +68,9 @@ def get_user_from_token_with_scopes(
     """
 
     async def get_current_user(
-        db: AsyncSession = Depends(get_db), token: str = Depends(security.oauth2_scheme)
+        db: AsyncSession = Depends(get_db),
+        settings: Settings = Depends(get_settings),
+        token: str = Depends(security.oauth2_scheme),
     ) -> models_core.CoreUser:
         """
         Dependency that make sure the token is valid, contain the expected scopes and return the corresponding user.

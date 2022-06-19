@@ -72,7 +72,7 @@ async def authenticate_user(
 
 def create_access_token(
     settings: Settings,
-    data: dict,
+    data: schemas_core.TokenData,
     expires_delta: timedelta | None = None,
 ) -> str:
     """
@@ -81,7 +81,8 @@ def create_access_token(
     if expires_delta is None:
         # We use the default value
         expires_delta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode = data.copy()
+    to_encode = data.dict(exclude_none=True)
+    iat = datetime.utcnow()
     expire_on = datetime.utcnow() + expires_delta
     to_encode.update({"exp": expire_on, "iat": iat})
     encoded_jwt = jwt.encode(
@@ -91,9 +92,13 @@ def create_access_token(
 
 
 def create_access_token_RS256(
+    settings: Settings,
     data: schemas_core.TokenData,
-    expires_delta: timedelta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+    expires_delta: timedelta | None = None,
 ) -> str:
+    if expires_delta is None:
+        # We use the default value
+        expires_delta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode = data.dict(exclude_none=True)
     iat = datetime.utcnow()
     expire_on = datetime.utcnow() + expires_delta
