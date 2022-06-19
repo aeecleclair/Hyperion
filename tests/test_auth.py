@@ -3,10 +3,6 @@ from datetime import date
 
 from app.main import app
 from app.models import models_core
-
-# We specifically import TestingSessionLocal and clientto prevent a flake8 error when they are used
-# We need to import tests.commons in order for the startup events to be triggered, especially monkeypatch mocking
-from tests.commons import *  # noqa: F401
 from tests.commons import TestingSessionLocal, client
 
 
