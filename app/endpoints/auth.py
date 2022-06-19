@@ -18,13 +18,13 @@ from fastapi.templating import Jinja2Templates
 from jose import jwk
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.security import (
     authenticate_user,
     create_access_token,
     create_access_token_RS256,
     generate_token,
 )
-from app.core.settings import settings
 from app.cruds import cruds_auth
 from app.dependencies import get_db, get_user_from_token_with_scopes
 from app.models import models_core
