@@ -161,3 +161,28 @@ def is_user_a_member_of(
         )
 
     return is_user_a_member_of
+
+
+async def get_token_data(
+    settings: Settings = Depends(get_settings),
+    token: str = Depends(security.oauth2_scheme),
+) -> schemas_core.TokenData:
+    """
+    Dependency that return the token payload data
+    """
+    try:
+        payload = jwt.decode(
+            token,
+            settings.ACCESS_TOKEN_SECRET_KEY,
+            algorithms=[security.jwt_algorithme],
+        )
+        token_data = schemas_core.TokenData(**payload)
+    except (jwt.JWTError, ValidationError) as error:
+        # TODO logging
+        print(error)
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Could not validate credentials",
+        )
+
+    return token_data

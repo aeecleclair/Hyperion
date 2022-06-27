@@ -1,6 +1,8 @@
 from jose import jwk
 from pydantic import BaseSettings
 
+from app.utils.auth.providers import BaseAuthClient
+
 
 class Settings(BaseSettings):
     """
@@ -69,6 +71,11 @@ class Settings(BaseSettings):
     SMTP_USERNAME: str
     SMTP_PASSWORD: str
     SMTP_EMAIL: str
+
+    # Auth configuration
+    # Format: {"client_id": ProviderClass}
+    # TODO: How do we store the secret properly ?
+    KNOWN_AUTH_CLIENTS = {"client_id": BaseAuthClient}
 
     class Config:
         # By default, the settings are loaded from the `.env` file but this behaviour can be overridden by using
