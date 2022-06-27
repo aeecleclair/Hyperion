@@ -25,15 +25,22 @@ from app.core.security import (
     generate_token,
 )
 from app.cruds import cruds_auth
-from app.dependencies import get_db, get_settings, get_user_from_token_with_scopes
+from app.dependencies import (
+    get_db,
+    get_settings,
+    get_token_data,
+    get_user_from_token_with_scopes,
+)
 from app.models import models_core
 from app.schemas import schemas_core
+from app.utils.auth.providers import BaseAuthClient
 from app.utils.types.scopes_type import ScopeType
 from app.utils.types.tags import Tags
 
 router = APIRouter()
 
 templates = Jinja2Templates(directory="templates")
+
 
 # TODO: maybe remove
 @router.post(
@@ -188,6 +195,7 @@ async def post_authorize_page(
     )
 
 
+# TODO: fix this strange redirect_uri logic
 @router.post(
     "/auth/authorization-flow/authorize-validation",
     tags=[Tags.auth],
@@ -211,6 +219,7 @@ async def authorize_validation(
     code_challenge_method: str | None = Form(None),
     # Database
     db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Part 1 of the authorization code grant.
@@ -253,7 +262,9 @@ async def authorize_validation(
     """
 
     # Check if the client is registered in the server
-    if client_id not in known_clients:
+    auth_client: BaseAuthClient | None = settings.KNOWN_AUTH_CLIENTS.get(client_id)
+    if auth_client is None:
+        # The client does not exist
         # TODO: add error logging
         raise HTTPException(
             status_code=422,
@@ -262,17 +273,17 @@ async def authorize_validation(
 
     # If redirect_uri was not provided, use the one chosen during the client registration
     if redirect_uri is None:
-        if known_clients[client_id]["redirect_uri"] is None:
+        if auth_client.redirect_uri is None:
             # TODO: add logging error
             raise HTTPException(
                 status_code=422,
                 detail="No redirect_uri were provided",
             )
-        redirect_uri = known_clients[client_id]["redirect_uri"]
+        redirect_uri = auth_client.redirect_uri
 
     # Check the provided redirect_uri is the same as the one chosen during the client registration (if it exists)
-    if known_clients[client_id]["redirect_uri"] is not None:
-        if redirect_uri != known_clients[client_id]["redirect_uri"]:
+    if auth_client.redirect_uri is not None:
+        if redirect_uri != auth_client.redirect_uri:
             # TODO: add logging error
             # raise HTTPException(
             #    status_code=422,
@@ -282,7 +293,14 @@ async def authorize_validation(
             print(
                 "Warning, redirect uri do not match. Using the one provided by the client during the registration"
             )
-            redirect_uri = known_clients[client_id]["redirect_uri"]
+            redirect_uri = auth_client.redirect_uri
+
+    if redirect_uri is None:
+        # TODO: add logging error
+        raise HTTPException(
+            status_code=422,
+            detail="No redirect_uri were provided",
+        )
 
     # Currently, `code` is the only flow supported
     if response_type != "code":
@@ -421,7 +439,7 @@ async def token(
                 .split(":")
             )
 
-        if client_id is None or client_id not in known_clients:
+        if client_id is None or client_id not in settings.KNOWN_AUTH_CLIENTS:
             return JSONResponse(
                 status_code=400,
                 content={
@@ -430,12 +448,22 @@ async def token(
                 },
             )
 
+        # TODO: use get or in but not both
+        # The first is better but slightly more complex to understand
+        auth_client = settings.KNOWN_AUTH_CLIENTS.get(client_id)
+
+        if auth_client is None:
+            return JSONResponse(
+                status_code=401,
+                content={
+                    "error": "invalid_client",
+                    "error_description": "Invalid client id or secret",
+                },
+            )
+
         # If there is a client secret, we don't use PKCE
         if client_secret is not None:
-            if (
-                client_id not in known_clients
-                or known_clients[client_id]["secret"] != client_secret
-            ):
+            if auth_client is None or auth_client.secret != client_secret:
                 # TODO: add logging
                 print("Invalid client id or secret")
                 return JSONResponse(
@@ -488,8 +516,8 @@ async def token(
 
         # TODO
         # We let the client hardcode a redirect url
-        if known_clients[client_id]["redirect_uri"] != "":
-            redirect_uri = known_clients[client_id]["redirect_uri"]
+        if auth_client.redirect_uri is not None and auth_client.redirect_uri != "":
+            redirect_uri = auth_client.redirect_uri
 
         # Ensure that the redirect_uri parameter value is identical to the redirect_uri parameter value that was included in the initial Authorization Request.
         # If the redirect_uri parameter value is not present when there is only one registered redirect_uri value, the Authorization Server MAY return an error (since the Client should have included the parameter) or MAY proceed without an error (since OAuth 2.0 permits the parameter to be omitted in this case).
@@ -518,8 +546,9 @@ async def token(
 
         granted_scopes = " ".join(granted_scopes_list)
 
+        # TODO: is the client_id=aud really logic ? It is for oidc but for the access token i don't know
         access_token_data = schemas_core.TokenData(
-            sub=db_authorization_code.user_id, scopes=granted_scopes
+            sub=db_authorization_code.user_id, scopes=granted_scopes, aud=client_id
         )
 
         # Expiration date is included by `create_access_token` function
@@ -573,6 +602,7 @@ async def token(
                 id_token_data.nonce = db_authorization_code.nonce
 
             id_token = create_access_token_RS256(data=id_token_data, settings=settings)
+            print("Token", id_token)
 
             response_body["id_token"] = id_token
 
@@ -608,25 +638,34 @@ async def auth_get_userinfo(
     user: models_core.CoreUser = Depends(
         get_user_from_token_with_scopes([ScopeType.openid])
     ),
+    token_data: schemas_core.TokenData = Depends(get_token_data),
+    settings: Settings = Depends(get_settings),
 ):  # productId: int = Body(...)):  # , request: Request):
     # access_token = authorization
-    return {
-        "sub": user.id,
-        "name": user.firstname,
-        "given_name": user.nickname,
-        "family_name": user.name,
-        "preferred_username": user.nickname,
-        "email": user.email,
-        "picture": "",
-    }
+
+    # The client_id is contained in aud field
+    client_id = token_data.aud
+
+    if client_id is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Unknown client_id",
+        )
+
+    auth_client = settings.KNOWN_AUTH_CLIENTS[client_id]
+    auth_client.get_userinfo(user)
+
+    return auth_client.get_userinfo(user=user)
 
 
 @router.get(
     "/oidc/authorization-flow/jwks_uri",
     tags=[Tags.auth],
 )
-def jwks_uri():
-    return JWKs
+def jwks_uri(
+    settings: Settings = Depends(get_settings),
+):
+    return settings.RSA_PUBLIC_JWK
 
 
 @router.get(
