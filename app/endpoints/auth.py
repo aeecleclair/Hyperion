@@ -41,6 +41,8 @@ router = APIRouter()
 
 templates = Jinja2Templates(directory="templates")
 
+# WARNING: if new flow are added, openid_config should be updated accordingly
+
 
 # TODO: maybe remove
 @router.post(
@@ -105,8 +107,6 @@ known_clients = {
         "redirect_uri": "http://localhost:8001/plugins/OpenIdConnect/auth.php",
     },
 }
-
-AUTH_ISSUER = "hyperion"
 
 
 @router.get(
@@ -593,7 +593,7 @@ async def token(
             #    # "exp"included by the function
             # }
             id_token_data = schemas_core.TokenData(
-                iss=AUTH_ISSUER,
+                iss=settings.AUTH_ISSUER,
                 sub=db_authorization_code.user_id,
                 aud=client_id,
             )
@@ -672,105 +672,22 @@ def jwks_uri(
     "/.well-known/openid-configuration",
     tags=[Tags.auth],
 )
-async def oidc_configuration():
-
+async def oidc_configuration(
+    settings: Settings = Depends(get_settings),
+):
+    # See https://ldapwiki.com/wiki/Openid-configuration
     return {
+        "issuer": settings.AUTH_ISSUER,
+        "authorization_endpoint": settings.CLIENT_URL + "auth/authorize",
+        "token_endpoint": settings.DOCKER_URL + "auth/token",
+        "userinfo_endpoint": settings.DOCKER_URL + "auth/userinfo",
+        "jwks_uri": settings.DOCKER_URL + "oidc/authorization-flow/jwks_uri",
+        # RECOMMENDED The OAuth 2.0 / OpenID Connect URL of the OP's Dynamic Client Registration Endpoint OpenID.Registration.
+        # TODO: is this relevant?
+        # "registration_endpoint": "https://a/register",
         "request_parameter_supported": True,
-        "id_token_encryption_alg_values_supported": [
-            "RSA-OAEP",
-            "RSA1_5",
-            "RSA-OAEP-256",
-        ],
-        "registration_endpoint": "https://a/register",
-        "userinfo_signing_alg_values_supported": [
-            "HS256",
-            "HS384",
-            "HS512",
-            "RS256",
-            "RS384",
-            "RS512",
-        ],
-        "token_endpoint": "http://host.docker.internal:8000/auth/token",
-        "request_uri_parameter_supported": False,
-        "request_object_encryption_enc_values_supported": [
-            "A192CBC-HS384",
-            "A192GCM",
-            "A256CBC+HS512",
-            "A128CBC+HS256",
-            "A256CBC-HS512",
-            "A128CBC-HS256",
-            "A128GCM",
-            "A256GCM",
-        ],
-        "token_endpoint_auth_methods_supported": [
-            "client_secret_post",
-            "client_secret_basic",
-            "client_secret_jwt",
-            "private_key_jwt",
-            "none",
-        ],
-        "userinfo_encryption_alg_values_supported": [
-            "RSA-OAEP",
-            "RSA1_5",
-            "RSA-OAEP-256",
-        ],
-        "subject_types_supported": ["public", "pairwise"],
-        "id_token_encryption_enc_values_supported": [
-            "A192CBC-HS384",
-            "A192GCM",
-            "A256CBC+HS512",
-            "A128CBC+HS256",
-            "A256CBC-HS512",
-            "A128CBC-HS256",
-            "A128GCM",
-            "A256GCM",
-        ],
-        "claims_parameter_supported": False,
-        "jwks_uri": "http://host.docker.internal:8000/oidc/authorization-flow/jwks_uri",
-        "id_token_signing_alg_values_supported": [
-            "HS256",
-            "HS384",
-            "HS512",
-            "RS256",
-            "RS384",
-            "RS512",
-            "none",
-        ],
-        "authorization_endpoint": "http://127.0.0.1:8000/auth/authorize",
-        "require_request_uri_registration": False,
-        "introspection_endpoint": "https://c/introspect",
-        "request_object_encryption_alg_values_supported": [
-            "RSA-OAEP",
-            "?RSA1_5",
-            "RSA-OAEP-256",
-        ],
-        "service_documentation": "https://d/about",
-        "response_types_supported": ["code", "token"],
-        "token_endpoint_auth_signing_alg_values_supported": [
-            "HS256",
-            "HS384",
-            "HS512",
-            "RS256",
-            "RS384",
-            "RS512",
-        ],
-        "revocation_endpoint": "https://e/revoke",
-        "request_object_signing_alg_values_supported": [
-            "HS256",
-            "HS384",
-            "HS512",
-            "RS256",
-            "RS384",
-            "RS512",
-        ],
-        "claim_types_supported": ["normal"],
-        "grant_types_supported": [
-            "authorization_code",
-            "implicit",
-            "urn:ietf:params:oauth:grant-type:jwt-bearer",
-            "client_credentials",
-            "urn:ietf:params:oauth:grant_type:redelegate",
-        ],
+        # TODO: what do we put? All scopes can be used with custom auth_provider class.
+        # Do we put basic scopes that are always supported or do we concatenate all available scopes
         "scopes_supported": [
             "profile",
             "openid",
@@ -779,20 +696,33 @@ async def oidc_configuration():
             "phone",
             "offline_access",
         ],
-        "userinfo_endpoint": "http://host.docker.internal:8000/auth/userinfo",
-        "userinfo_encryption_enc_values_supported": [
-            "A192CBC-HS384",
-            "A192GCM",
-            "A256CBC+HS512",
-            "A128CBC+HS256",
-            "A256CBC-HS512",
-            "A128CBC-HS256",
-            "A128GCM",
-            "A256GCM",
+        # REQUIRED Must be code as wa only support authorization code grant
+        "response_types_supported": [
+            "code",
         ],
-        "op_tos_uri": "https://g/about",
-        "issuer": AUTH_ISSUER,
-        "op_policy_uri": "https://idp-p.mitre.org/about",
+        "grant_types_supported": [
+            "authorization_code",
+        ],
+        # https://openid.net/specs/openid-connect-core-1_0.html#SubjectIDTypes
+        "subject_types_supported": [
+            "public",
+        ],
+        "id_token_signing_alg_values_supported": [
+            "RS256",
+        ],
+        # We don't support encrypted JWT : JWE
+        # "id_token_encryption_alg_values_supported": [],
+        # We don't support returning userinfo as an encrypted or a signed JWT
+        # "userinfo_signing_alg_values_supported": [],
+        # "userinfo_encryption_alg_values_supported": [],
+        # "userinfo_encryption_enc_values_supported": [],
+        "token_endpoint_auth_methods_supported": [
+            "client_secret_post",
+            "client_secret_basic",
+            "none",  # When using PKCE there may be no client secret provided
+        ],
+        "claim_types_supported": ["normal"],
+        # TODO: note: claims may depend/be extended using auth providers class
         "claims_supported": [
             "sub",
             "name",
@@ -814,4 +744,14 @@ async def oidc_configuration():
             "phone_number",
             "address",
         ],
+        # TODO: do we want to expose a documentation?
+        # "service_documentation": "https://d/about",
+        "claims_parameter_supported": False,
+        "request_uri_parameter_supported": False,
+        "require_request_uri_registration": False,
+        # TODO: add
+        # The privacy policy document URL, omitted if none.
+        # op_policy_uri = ""
+        # The terms of service document URL, omitted if none.
+        # op_tos_uri = ""
     }
