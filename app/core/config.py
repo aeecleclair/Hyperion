@@ -22,6 +22,11 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_SECRET_KEY: str
     ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
+    # TODO: remove the DOCKER_URL
+    CLIENT_URL = "http://127.0.0.1:8000/"
+    DOCKER_URL = "http://host.docker.internal:8000/"  # During dev, docker container can not directly access the client url
+    # Openid connect issuer name
+    AUTH_ISSUER = "hyperion"
     RSA_PRIVATE_PEM_STRING: str
 
     @property
