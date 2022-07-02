@@ -4,24 +4,24 @@ from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import models_core
+from app.models import models_auth
 
 
 async def get_authorization_token_by_token(
     db: AsyncSession, code: str
-) -> models_core.AuthorizationCode | None:
+) -> models_auth.AuthorizationCode | None:
     """Return group with id from database"""
     result = await db.execute(
-        select(models_core.AuthorizationCode).where(
-            models_core.AuthorizationCode.code == code
+        select(models_auth.AuthorizationCode).where(
+            models_auth.AuthorizationCode.code == code
         )
     )
     return result.scalars().first()
 
 
 async def create_authorization_token(
-    db_authorization_code: models_core.AuthorizationCode, db: AsyncSession
-) -> models_core.AuthorizationCode:
+    db_authorization_code: models_auth.AuthorizationCode, db: AsyncSession
+) -> models_auth.AuthorizationCode:
     """Create a new group in database and return it"""
 
     db.add(db_authorization_code)
@@ -35,12 +35,12 @@ async def create_authorization_token(
 
 async def delete_authorization_token_by_token(
     db: AsyncSession, code: str
-) -> models_core.AuthorizationCode | None:
+) -> models_auth.AuthorizationCode | None:
     """Delete a token from database"""
 
     await db.execute(
-        delete(models_core.AuthorizationCode).where(
-            models_core.AuthorizationCode.code == code
+        delete(models_auth.AuthorizationCode).where(
+            models_auth.AuthorizationCode.code == code
         )
     )
     await db.commit()
