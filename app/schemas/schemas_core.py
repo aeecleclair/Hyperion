@@ -9,15 +9,6 @@ from app.utils.examples import examples_core
 from app.utils.types.groups_type import AccountType
 
 
-class TokenReq(BaseModel):
-    code: str | None = None
-    grant_type: str | None = None
-    redirect_uri: str | None = None
-    client_id: str | None = None
-    client_secret: str | None = None
-    code_verifier: str | None = None
-
-
 class CoreUserBase(BaseModel):
     """Base schema for user's model"""
 
@@ -185,18 +176,3 @@ class CoreMembership(BaseModel):
 
     user_id: str
     group_id: str
-
-
-class AccessToken(BaseModel):
-    access_token: str
-    token_type: str
-
-
-class TokenData(BaseModel):
-    sub: str  # Subject: the user id
-    iss: str | None = None
-    aud: str | None = None
-    iat: datetime | None = None
-    nonce: str | None = None
-    scopes: str = ""
-    # exp and iat elements are added by the token generation function

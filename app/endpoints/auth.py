@@ -31,8 +31,8 @@ from app.dependencies import (
     get_token_data,
     get_user_from_token_with_scopes,
 )
-from app.models import models_core
-from app.schemas import schemas_core
+from app.models import models_auth, models_core
+from app.schemas import schemas_auth
 from app.utils.auth.providers import BaseAuthClient
 from app.utils.types.scopes_type import ScopeType
 from app.utils.types.tags import Tags
@@ -47,7 +47,7 @@ templates = Jinja2Templates(directory="templates")
 # TODO: maybe remove
 @router.post(
     "/auth/simple_token",
-    response_model=schemas_core.AccessToken,
+    response_model=schemas_auth.AccessToken,
     status_code=200,
     tags=[Tags.auth],
 )
@@ -72,7 +72,7 @@ async def login_for_access_token(
         )
     # We put the user id in the subject field of the token.
     # The subject `sub` is a JWT registered claim name, see https://datatracker.ietf.org/doc/html/rfc7519#section-4.1
-    data = schemas_core.TokenData(sub=user.id, scopes=ScopeType.API)
+    data = schemas_auth.TokenData(sub=user.id, scopes=ScopeType.API)
     access_token = create_access_token(settings=settings, data=data)
     return {"access_token": access_token, "token_type": "bearer"}
 
@@ -236,7 +236,7 @@ async def authorize_validation(
     * additional parameters for Openid connect:
         * `nonce`: oidc only. A string value used to associate a client session with an ID Token, and to mitigate replay attacks.
 
-    * additional parameters for PKCE:
+    * additional parameters for PKCE (see specs on https://datatracker.ietf.org/doc/html/rfc7636/):
         * `code_challenge`: PKCE only
         * `code_challenge_method`: PKCE only
 
@@ -339,7 +339,7 @@ async def authorize_validation(
     # - we need to store data about the OAuth/oidc request
     # - we need to invalidate the token after its utilisation
     # TODO: we need to remove the token from the db after its expiration
-    db_authorization_code = models_core.AuthorizationCode(
+    db_authorization_code = models_auth.AuthorizationCode(
         code=authorization_code,
         expire_on=expire_on,
         scope=scope,
@@ -533,7 +533,7 @@ async def token(
                 },
             )
 
-        # We create a list of all the scopes we accept to grant to the user. These copes will be included in the access token.
+        # We create a list of all the scopes we accept to grant to the user. These scopes will be included in the access token.
         # If API was provided in the request scope, we grant it
         # If it is an oidc request, we grant userinfos
         granted_scopes_list = []
@@ -547,7 +547,7 @@ async def token(
         granted_scopes = " ".join(granted_scopes_list)
 
         # TODO: is the client_id=aud really logic ? It is for oidc but for the access token i don't know
-        access_token_data = schemas_core.TokenData(
+        access_token_data = schemas_auth.TokenData(
             sub=db_authorization_code.user_id, scopes=granted_scopes, aud=client_id
         )
 
@@ -592,7 +592,7 @@ async def token(
             #    "aud": client_id,
             #    # "exp"included by the function
             # }
-            id_token_data = schemas_core.TokenData(
+            id_token_data = schemas_auth.TokenData(
                 iss=settings.AUTH_ISSUER,
                 sub=db_authorization_code.user_id,
                 aud=client_id,
@@ -615,6 +615,7 @@ async def token(
 
     elif grant_type == "refresh_token":
         # Why doesn't this step use PKCE: https://security.stackexchange.com/questions/199000/oauth2-pkce-can-the-refresh-token-be-trusted
+        # Answer in the link above: PKCE has been implemented because the authorization code could be intercepted, but since the refresh token is exchanged through a secure channel there is no issue here
         # TODO: implement
         print("Not implemented")
         raise HTTPException(
@@ -638,7 +639,7 @@ async def auth_get_userinfo(
     user: models_core.CoreUser = Depends(
         get_user_from_token_with_scopes([ScopeType.openid])
     ),
-    token_data: schemas_core.TokenData = Depends(get_token_data),
+    token_data: schemas_auth.TokenData = Depends(get_token_data),
     settings: Settings = Depends(get_settings),
 ):  # productId: int = Body(...)):  # , request: Request):
     # access_token = authorization
