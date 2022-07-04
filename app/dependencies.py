@@ -20,7 +20,7 @@ from app.core.config import Settings
 from app.cruds import cruds_users
 from app.database import SessionLocal
 from app.models import models_core
-from app.schemas import schemas_core
+from app.schemas import schemas_auth
 from app.utils.types.groups_type import GroupType
 from app.utils.types.scopes_type import ScopeType
 
@@ -83,7 +83,7 @@ def get_user_from_token_with_scopes(
                 algorithms=[security.jwt_algorithme],
             )
             print(payload)
-            token_data = schemas_core.TokenData(**payload)
+            token_data = schemas_auth.TokenData(**payload)
             print(token_data)
         except (jwt.JWTError, ValidationError) as error:
             # TODO logging
@@ -166,7 +166,7 @@ def is_user_a_member_of(
 async def get_token_data(
     settings: Settings = Depends(get_settings),
     token: str = Depends(security.oauth2_scheme),
-) -> schemas_core.TokenData:
+) -> schemas_auth.TokenData:
     """
     Dependency that return the token payload data
     """
@@ -176,7 +176,7 @@ async def get_token_data(
             settings.ACCESS_TOKEN_SECRET_KEY,
             algorithms=[security.jwt_algorithme],
         )
-        token_data = schemas_core.TokenData(**payload)
+        token_data = schemas_auth.TokenData(**payload)
     except (jwt.JWTError, ValidationError) as error:
         # TODO logging
         print(error)

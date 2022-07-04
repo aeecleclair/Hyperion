@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import Settings
 from app.cruds import cruds_users
 from app.models import models_core
-from app.schemas import schemas_core
+from app.schemas import schemas_auth
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=13)
 """
@@ -72,7 +72,7 @@ async def authenticate_user(
 
 def create_access_token(
     settings: Settings,
-    data: schemas_core.TokenData,
+    data: schemas_auth.TokenData,
     expires_delta: timedelta | None = None,
 ) -> str:
     """
@@ -93,7 +93,7 @@ def create_access_token(
 
 def create_access_token_RS256(
     settings: Settings,
-    data: schemas_core.TokenData,
+    data: schemas_auth.TokenData,
     expires_delta: timedelta | None = None,
 ) -> str:
     if expires_delta is None:
