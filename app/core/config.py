@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     # Authorization using JWT
     ACCESS_TOKEN_SECRET_KEY: str
     ACCESS_TOKEN_EXPIRE_MINUTES = 30
+    REFRESH_TOKEN_EXPIRE_MINUTES = 120
 
     # TODO: remove the DOCKER_URL
     CLIENT_URL = "http://127.0.0.1:8000/"
@@ -80,7 +81,10 @@ class Settings(BaseSettings):
     # Auth configuration
     # Format: {"client_id": ProviderClass}
     # TODO: How do we store the secret properly ?
-    KNOWN_AUTH_CLIENTS = {"client_id": BaseAuthClient}
+    KNOWN_AUTH_CLIENTS = {
+        "client_id": BaseAuthClient,
+        "5507cc3a-fd29-11ec-b939-0242ac120002": BaseAuthClient,
+    }
 
     class Config:
         # By default, the settings are loaded from the `.env` file but this behaviour can be overridden by using

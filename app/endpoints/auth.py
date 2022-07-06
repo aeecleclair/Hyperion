@@ -57,7 +57,7 @@ async def login_for_access_token(
     settings: Settings = Depends(get_settings),
 ):
     """
-    Ask for a JWT access token using oauth password flow.
+    Ask for a JWT acc   ess token using oauth password flow.
 
     *username* and *password* must be provided
 
@@ -380,8 +380,9 @@ async def token(
     request: Request,
     response: Response,
     # OAuth and Openid connect parameters
+    refresh_token: str | None = Form(None),
     grant_type: str = Form(...),
-    code: str = Form(...),
+    code: str | None = Form(None),
     redirect_uri: str | None = Form(None),
     # The client id and secret must be passed either in the authorization header or with client_id and client_secret parameters
     authorization: str | None = Header(default=None),
@@ -400,7 +401,7 @@ async def token(
     Parameters must be `application/x-www-form-urlencoded` and includes:
 
     * parameters for OAuth and Openid connect:
-        * `grant_type`: must be `authorization_code`
+        * `grant_type`: must be `authorization_code` or `refresh_token`
         * `code`: the authorization code received from the authorization endpoint
         * `redirect_uri`: optional for OAuth (when registered in known_clients) but required for oidc. The url we need to redirect the user to after the authorization. If provided, must be the same as previously registered in the `redirect_uri` field of the client.
 
@@ -415,7 +416,26 @@ async def token(
     https://openid.net/specs/openid-connect-core-1_0.html#TokenRequestValidation
     """
 
+    # We need to check client id and secret
+    if authorization is not None:
+        # client_id and client_secret are base64 encoded in the Basic authorization header
+        # TODO: If this is useful, create a function to decode Basic or Bearer authorization header
+        client_id, client_secret = (
+            base64.b64decode(authorization.replace("Basic ", ""))
+            .decode("utf-8")
+            .split(":")
+        )
+    print("oui")
     if grant_type == "authorization_code":
+        if code is None:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": "invalid_request",
+                    "error_description": "An authorization code should be provided",
+                },
+            )
+
         db_authorization_code = await cruds_auth.get_authorization_token_by_token(
             db=db, code=code
         )
@@ -427,16 +447,6 @@ async def token(
                     "error": "invalid_request",
                     "error_description": "The provided authorization code is invalid",
                 },
-            )
-
-        # We need to check client id and secret
-        if authorization is not None:
-            # client_id and client_secret are base64 encoded in the Basic authorization header
-            # TODO: If this is useful, create a function to decode Basic or Bearer authorization header
-            client_id, client_secret = (
-                base64.b64decode(authorization.replace("Basic ", ""))
-                .decode("utf-8")
-                .split(":")
             )
 
         if client_id is None or client_id not in settings.KNOWN_AUTH_CLIENTS:
@@ -462,8 +472,8 @@ async def token(
             )
 
         # If there is a client secret, we don't use PKCE
-        if client_secret is not None:
-            if auth_client is None or auth_client.secret != client_secret:
+        elif client_secret is not None:
+            if auth_client.secret != client_secret:
                 # TODO: add logging
                 print("Invalid client id or secret")
                 return JSONResponse(
@@ -473,6 +483,17 @@ async def token(
                         "error_description": "Invalid client id or secret",
                     },
                 )
+
+        elif auth_client.secret != "":
+            print("Invalid client id or secret")
+            return JSONResponse(
+                status_code=401,
+                content={
+                    "error": "invalid_client",
+                    "error_description": "Invalid client id or secret",
+                },
+            )
+
         # If there is no client secret, we use PKCE
         elif (
             db_authorization_code.code_challenge is not None
@@ -533,79 +554,23 @@ async def token(
                 },
             )
 
-        # We create a list of all the scopes we accept to grant to the user. These scopes will be included in the access token.
-        # If API was provided in the request scope, we grant it
-        # If it is an oidc request, we grant userinfos
-        granted_scopes_list = []
-
-        if db_authorization_code.scope is not None:
-            if ScopeType.API in db_authorization_code.scope:
-                granted_scopes_list.append(ScopeType.API)
-            if ScopeType.openid in db_authorization_code.scope:
-                granted_scopes_list.append(ScopeType.openid)
-
-        granted_scopes = " ".join(granted_scopes_list)
-
-        # TODO: is the client_id=aud really logic ? It is for oidc but for the access token i don't know
-        access_token_data = schemas_auth.TokenData(
-            sub=db_authorization_code.user_id, scopes=granted_scopes, aud=client_id
+        refresh_token = generate_token()
+        new_db_refresh_token = models_auth.RefreshToken(
+            token=refresh_token,
+            client_id=client_id,
+            created_on=datetime.now(),
+            user_id=db_authorization_code.user_id,
+            expire_on=datetime.now()
+            + timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES),
+            scope=db_authorization_code.scope,
+        )
+        await cruds_auth.create_refresh_token(
+            db=db, db_refresh_token=new_db_refresh_token
         )
 
-        # Expiration date is included by `create_access_token` function
-        access_token = create_access_token(data=access_token_data, settings=settings)
-
-        # We will create an OAuth response, then add oidc specific elements if required
-        response_body = {
-            "access_token": access_token,
-            "token_type": "Bearer",
-            "expires_in": 3600,
-            "scope": granted_scopes,  # openid required by nextcloud
-            # "refresh_token": "tGzv3JOkF0XG5Qx2TlKWIA",  # What type, JWT ? No, we should be able to invalidate
-            # "example_parameter": "example_value",  # ???
-            # "id_token": "" # only added for oidc
-        }
-
-        # Perform specifics steps for openid connect
-        if (
-            db_authorization_code.scope is not None
-            and "openid" in db_authorization_code.scope
-        ):
-            # It's an openid connect request, we also need to return an `id_token`
-
-            # The id_token is a JWS: a signed JWT
-            # https://openid.net/specs/openid-connect-core-1_0.html#IDToken
-            # It must contain the following claims:
-            # * iss: the issuer value. Must be the same as the one provided in the discovery endpoint. Should be an url.
-            # * sub: the subject identifier.
-            # * aud: the audience. Must be the client client_id.
-            # * exp: expiration datetime. Added by the function
-            # * iat: Time at which the JWT was issued.
-            # * if provided, nonce
-
-            # For Nextcloud:
-            # Required iss : the issuer value form .well-known (corresponding code : https://github.com/pulsejet/nextcloud-oidc-login/blob/0c072ecaa02579384bb5e10fbb9d219bbd96cfb8/3rdparty/jumbojett/openid-connect-php/src/OpenIDConnectClient.php#L1255)
-            # Required claims : https://github.com/pulsejet/nextcloud-oidc-login/blob/0c072ecaa02579384bb5e10fbb9d219bbd96cfb8/3rdparty/jumbojett/openid-connect-php/src/OpenIDConnectClient.php#L1016
-
-            # id_token_data = {
-            #    "iss": AUTH_ISSUER,
-            #    "sub": db_authorization_code.user_id,
-            #    "aud": client_id,
-            #    # "exp"included by the function
-            # }
-            id_token_data = schemas_auth.TokenData(
-                iss=settings.AUTH_ISSUER,
-                sub=db_authorization_code.user_id,
-                aud=client_id,
-            )
-            if db_authorization_code.nonce is not None:
-                # oidc only, required if provided by the client
-                id_token_data.nonce = db_authorization_code.nonce
-
-            id_token = create_access_token_RS256(data=id_token_data, settings=settings)
-            print("Token", id_token)
-
-            response_body["id_token"] = id_token
-
+        response_body = create_response_body(
+            db_authorization_code, client_id, refresh_token, settings
+        )
         print("Response body", response_body)
 
         # Required headers by Oauth and oidc
@@ -616,18 +581,204 @@ async def token(
     elif grant_type == "refresh_token":
         # Why doesn't this step use PKCE: https://security.stackexchange.com/questions/199000/oauth2-pkce-can-the-refresh-token-be-trusted
         # Answer in the link above: PKCE has been implemented because the authorization code could be intercepted, but since the refresh token is exchanged through a secure channel there is no issue here
-        # TODO: implement
-        print("Not implemented")
-        raise HTTPException(
-            status_code=401,
-            detail="Not implemented",
+        if refresh_token is None:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": "invalid_request",
+                    "error_description": "refresh_token is required",
+                },
+            )
+
+        db_refresh_token = await cruds_auth.get_refresh_token_by_token(
+            db=db, token=refresh_token
         )
+
+        if db_refresh_token is None:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": "invalid_request",
+                    "error_description": "The provided refresh token is invalid",
+                },
+            )
+        elif db_refresh_token.revoked_on is not None:
+            await cruds_auth.revoke_refresh_token_by_client_id(
+                db=db, client_id=db_refresh_token.client_id
+            )
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": "invalid_request",
+                    "error_description": "The provided refresh token has been revoked",
+                },
+            )
+
+        await cruds_auth.revoke_refresh_token_by_token(db=db, token=refresh_token)
+
+        if db_refresh_token.expire_on < datetime.now():
+            await cruds_auth.revoke_refresh_token_by_client_id(
+                db=db, client_id=db_refresh_token.client_id
+            )
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": "invalid_request",
+                    "error_description": "The provided refresh token has expired",
+                },
+            )
+
+        if client_id is None or client_id not in settings.KNOWN_AUTH_CLIENTS:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": "invalid_request",
+                    "error_description": "Invalid client_id",
+                },
+            )
+
+        auth_client = settings.KNOWN_AUTH_CLIENTS.get(client_id)
+
+        if auth_client is None:
+            return JSONResponse(
+                status_code=401,
+                content={
+                    "error": "invalid_client",
+                    "error_description": "Invalid client id or secret",
+                },
+            )
+
+        elif client_secret is not None:
+            if auth_client.secret != client_secret:
+                # TODO: add logging
+                print("Invalid client id or secret")
+                return JSONResponse(
+                    status_code=401,
+                    content={
+                        "error": "invalid_client",
+                        "error_description": "Invalid client id or secret",
+                    },
+                )
+        elif auth_client.secret != "":
+            print("Invalid client id or secret")
+            return JSONResponse(
+                status_code=401,
+                content={
+                    "error": "invalid_client",
+                    "error_description": "Invalid client id or secret",
+                },
+            )
+
+        # If everything is good we can finally create the new access/refresh tokens
+        # We use new refresh tokes every as we use some client that can't store secrets (see Refresh token rotation in https://www.pingidentity.com/en/resources/blog/post/refresh-token-rotation-spa.html)
+        # TODO: add logging
+        # TODO: add reuse detection(https://auth0.com/docs/secure/tokens/refresh-tokens/refresh-token-rotation)
+
+        refresh_token = generate_token()
+        new_db_refresh_token = models_auth.RefreshToken(
+            token=refresh_token,
+            client_id=db_refresh_token.client_id,
+            created_on=datetime.now(),
+            user_id=db_refresh_token.user_id,
+            expire_on=datetime.now()
+            + timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES),
+            scope=db_refresh_token.scope,
+        )
+        await cruds_auth.create_refresh_token(
+            db=db, db_refresh_token=new_db_refresh_token
+        )
+
+        response_body = create_response_body(
+            db_refresh_token, client_id, refresh_token, settings
+        )
+
+        print("Response body", response_body)
+
+        # Required headers by Oauth and oidc
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["Pragma"] = "no-cache"
+        return response_body
+
     else:
         print("invalid grant")
         raise HTTPException(
             status_code=401,
             detail="invalid_grant",
         )
+
+
+def create_response_body(db_row, client_id, refresh_token, settings):
+    # We create a list of all the scopes we accept to grant to the user. These scopes will be included in the access token.
+    # If API was provided in the request scope, we grant it
+    # If it is an oidc request, we grant userinfos
+    granted_scopes_list = []
+
+    if db_row.scope is not None:
+        if ScopeType.API in db_row.scope:
+            granted_scopes_list.append(ScopeType.API)
+        if ScopeType.openid in db_row.scope:
+            granted_scopes_list.append(ScopeType.openid)
+
+    granted_scopes = " ".join(granted_scopes_list)
+
+    # TODO: is the client_id=aud really logic ? It is for oidc but for the access token i don't know
+    access_token_data = schemas_auth.TokenData(
+        sub=db_row.user_id, scopes=granted_scopes, aud=client_id
+    )
+
+    # Expiration date is included by `create_access_token` function
+    access_token = create_access_token(data=access_token_data, settings=settings)
+
+    # We will create an OAuth response, then add oidc specific elements if required
+    response_body = {
+        "access_token": access_token,
+        "token_type": "Bearer",
+        "expires_in": 3600,
+        "scope": granted_scopes,  # openid required by nextcloud
+        "refresh_token": refresh_token,  # What type, JWT ? No, we should be able to invalidate
+        # "example_parameter": "example_value",  # ???
+        # "id_token": "" # only added for oidc
+    }
+
+    # Perform specifics steps for openid connect
+    if db_row.scope is not None and "openid" in db_row.scope:
+        # It's an openid connect request, we also need to return an `id_token`
+
+        # The id_token is a JWS: a signed JWT
+        # https://openid.net/specs/openid-connect-core-1_0.html#IDToken
+        # It must contain the following claims:
+        # * iss: the issuer value. Must be the same as the one provided in the discovery endpoint. Should be an url.
+        # * sub: the subject identifier.
+        # * aud: the audience. Must be the client client_id.
+        # * exp: expiration datetime. Added by the function
+        # * iat: Time at which the JWT was issued.
+        # * if provided, nonce
+
+        # For Nextcloud:
+        # Required iss : the issuer value form .well-known (corresponding code : https://github.com/pulsejet/nextcloud-oidc-login/blob/0c072ecaa02579384bb5e10fbb9d219bbd96cfb8/3rdparty/jumbojett/openid-connect-php/src/OpenIDConnectClient.php#L1255)
+        # Required claims : https://github.com/pulsejet/nextcloud-oidc-login/blob/0c072ecaa02579384bb5e10fbb9d219bbd96cfb8/3rdparty/jumbojett/openid-connect-php/src/OpenIDConnectClient.php#L1016
+
+        # id_token_data = {
+        #    "iss": AUTH_ISSUER,
+        #    "sub": db_row.user_id,
+        #    "aud": client_id,
+        #    # "exp"included by the function
+        # }
+        id_token_data = schemas_auth.TokenData(
+            iss=settings.AUTH_ISSUER,
+            sub=db_row.user_id,
+            aud=client_id,
+        )
+        if db_row.nonce is not None:
+            # oidc only, required if provided by the client
+            id_token_data.nonce = db_row.nonce
+
+        id_token = create_access_token_RS256(data=id_token_data, settings=settings)
+        print("Token", id_token)
+
+        response_body["id_token"] = id_token
+
+    return response_body
 
 
 @router.get(
