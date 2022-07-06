@@ -671,8 +671,8 @@ async def token(
 
         # If everything is good we can finally create the new access/refresh tokens
         # We use new refresh tokes every as we use some client that can't store secrets (see Refresh token rotation in https://www.pingidentity.com/en/resources/blog/post/refresh-token-rotation-spa.html)
+        # We use automatique reuse detection to prevent from replay attacks(https://auth0.com/docs/secure/tokens/refresh-tokens/refresh-token-rotation)
         # TODO: add logging
-        # TODO: add reuse detection(https://auth0.com/docs/secure/tokens/refresh-tokens/refresh-token-rotation)
 
         refresh_token = generate_token()
         new_db_refresh_token = models_auth.RefreshToken(
