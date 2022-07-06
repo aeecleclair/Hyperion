@@ -27,3 +27,13 @@ class TokenData(BaseModel):
     nonce: str | None = None
     scopes: str = ""
     # exp and iat elements are added by the token generation function
+
+
+class RefreshToken(BaseModel):
+    client_id: str
+    created_on: datetime
+    expire_on: datetime
+    revoked_on: datetime | None = None
+    token: str
+    scope: str = ""
+    user_id: str
