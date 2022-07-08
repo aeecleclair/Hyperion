@@ -5,4 +5,3 @@ flake8==4.0.1
 isort[requirements_deprecated_finder]==5.10.1
 pep8-naming==0.12.1 # A Flake8 plugin to check code against PEP 8 naming conventions
 pytest==7.1.1
-SQLAlchemy[asyncio, mypy]==1.4.34
