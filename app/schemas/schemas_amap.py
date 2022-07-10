@@ -25,12 +25,14 @@ class ProductComplete(ProductSimple):
     class Config:
         orm_mode = True
 
+
 class ProductQuantity(ProductSimple):
     quantity: int
     id: str
 
     class Config:
         orm_mode = True
+
 
 class DeliveryBase(BaseModel):
     """Base schema for AMAP deliveries"""

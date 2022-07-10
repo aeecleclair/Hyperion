@@ -180,9 +180,7 @@ async def get_order_by_id(db: AsyncSession, order_id: str) -> models_amap.Order 
     return result.scalars().first()
 
 
-async def get_quantities_of_order(
-    db: AsyncSession, order_id: str
-) -> dict:
+async def get_quantities_of_order(db: AsyncSession, order_id: str) -> dict:
     result_db = await db.execute(
         select(models_amap.AmapOrderContent).where(
             models_amap.AmapOrderContent.order_id == order_id
