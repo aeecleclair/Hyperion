@@ -212,7 +212,6 @@ async def get_order_by_id(order_id: str, db: AsyncSession = Depends(get_db)):
 
 @router.post(
     "/amap/deliveries/{delivery_id}/orders",
-    response_model=schemas_amap.OrderReturn,
     status_code=201,
     tags=[Tags.amap],
 )
@@ -234,12 +233,10 @@ async def add_order_to_delievery(
         order_id=order_id, amount=amount, ordering_date=ordering_date, **order.dict()
     )
     try:
-        result = await cruds_amap.add_order_to_delivery(
+        await cruds_amap.add_order_to_delivery(
             order=db_order,
             db=db,
         )
-
-        return result
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
