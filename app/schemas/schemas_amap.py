@@ -25,14 +25,12 @@ class ProductComplete(ProductSimple):
     class Config:
         orm_mode = True
 
-
-class ProductQuantity(BaseModel):
-    product_id: str
+class ProductQuantity(ProductSimple):
     quantity: int
+    id: str
 
     class Config:
         orm_mode = True
-
 
 class DeliveryBase(BaseModel):
     """Base schema for AMAP deliveries"""
@@ -78,7 +76,7 @@ class OrderComplete(OrderBase):
 class OrderReturn(BaseModel):
     user_id: str
     delivery_id: str
-    products: list[ProductComplete]
+    products: list[ProductQuantity]
     collection_slot: AmapSlotType
     delivery_date: date
     order_id: str

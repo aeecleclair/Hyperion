@@ -180,15 +180,19 @@ async def get_order_by_id(db: AsyncSession, order_id: str) -> models_amap.Order 
     return result.scalars().first()
 
 
-async def get_products_of_order(
+async def get_quantities_of_order(
     db: AsyncSession, order_id: str
-) -> list[models_amap.AmapOrderContent]:
-    result = await db.execute(
+) -> dict:
+    result_db = await db.execute(
         select(models_amap.AmapOrderContent).where(
             models_amap.AmapOrderContent.order_id == order_id
         )
     )
-    return result.scalars().all()
+    result = result_db.scalars().all()
+    result_treated = {}
+    for i in range(len(result)):
+        result_treated[result[i].product_id] = result[i].quantity
+    return result_treated
 
 
 async def add_order_to_delivery(
