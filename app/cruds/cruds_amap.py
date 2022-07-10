@@ -196,7 +196,7 @@ async def get_quantities_of_order(db: AsyncSession, order_id: str) -> dict:
 async def add_order_to_delivery(
     db: AsyncSession,
     order: schemas_amap.OrderComplete,
-) -> models_amap.Order:
+):
     delivery = await get_delivery_by_id(db=db, delivery_id=order.delivery_id)
     user = await cruds_users.get_user_by_id(db=db, user_id=order.user_id)
     products = []
@@ -232,7 +232,6 @@ async def add_order_to_delivery(
                     .values(quantity=order.products_quantity[i])
                 )
                 await db.commit()
-            return db_add
         except IntegrityError:
             await db.rollback()
             raise ValueError("This product is already in this delivery")
