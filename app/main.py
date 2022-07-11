@@ -44,7 +44,7 @@ async def logging_middleware(request: Request, call_next):
     response = await call_next(request)
 
     # If the client host and port is provided, we want to log it
-    if request.client.host is not None and request.client.port is not None:
+    if request.client is not None:
         client_address = f"{request.client.host}:{request.client.port}"
     else:
         client_address = "unknown"
