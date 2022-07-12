@@ -6,7 +6,7 @@ from app.models import models_core
 
 class BaseAuthClient:
     secret: str = ""
-    redirect_uri: str = "azerty"
+    redirect_uri: str = ""
 
     def get_userinfo(self, user: models_core.CoreUser):
 
@@ -35,6 +35,11 @@ class BaseAuthClient:
             "picture": "",
             "piwigo_groups": ["pixelbbb", "pixels"],
         }
+
+
+class ExampleClient(BaseAuthClient):
+    secret = "secret"
+    redirect_uri = "http://127.0.0.1:8000/docs"
 
 
 class NextcloudAuthClient(BaseAuthClient):
