@@ -1,7 +1,7 @@
 from jose import jwk
 from pydantic import BaseSettings
 
-from app.utils.auth.providers import BaseAuthClient
+from app.utils.auth.providers import BaseAuthClient, ExampleClient
 
 
 class Settings(BaseSettings):
@@ -83,7 +83,7 @@ class Settings(BaseSettings):
     # TODO: How do we store the secret properly ?
     KNOWN_AUTH_CLIENTS = {
         "client_id": BaseAuthClient,
-        "5507cc3a-fd29-11ec-b939-0242ac120002": BaseAuthClient,
+        "5507cc3a-fd29-11ec-b939-0242ac120002": ExampleClient,
     }
 
     class Config:

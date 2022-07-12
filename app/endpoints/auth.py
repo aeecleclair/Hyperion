@@ -12,7 +12,7 @@ from fastapi import (
     Response,
     status,
 )
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -152,10 +152,7 @@ async def get_authorize_page(
     )
 
 
-@router.post(
-    "/auth/authorize",
-    tags=[Tags.auth],
-)
+@router.post("/auth/authorize", tags=[Tags.auth], response_class=HTMLResponse)
 async def post_authorize_page(
     request: Request,
     response_type: str = Form(...),
@@ -199,24 +196,15 @@ async def post_authorize_page(
 @router.post(
     "/auth/authorization-flow/authorize-validation",
     tags=[Tags.auth],
+    response_class=RedirectResponse,
 )
 async def authorize_validation(
     # We use Form(...) as parameters must be `application/x-www-form-urlencoded`
     request: Request,
     # User validation
-    email: str = Form(...),
-    password: str = Form(...),
-    # OAuth and Openid connect parameters
-    response_type: str = Form(...),
-    client_id: str = Form(...),
-    redirect_uri: str | None = Form(None),
-    scope: str | None = Form(None),
-    state: str | None = Form(None),
-    # Openid connect parameters only
-    nonce: str | None = Form(None),
-    # PKCE parameters
-    code_challenge: str | None = Form(None),
-    code_challenge_method: str | None = Form(None),
+    authorizereq: schemas_auth.AuthorizeValidation = Depends(
+        schemas_auth.AuthorizeValidation.as_form
+    ),
     # Database
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
@@ -262,7 +250,9 @@ async def authorize_validation(
     """
 
     # Check if the client is registered in the server
-    auth_client: BaseAuthClient | None = settings.KNOWN_AUTH_CLIENTS.get(client_id)
+    auth_client: BaseAuthClient | None = settings.KNOWN_AUTH_CLIENTS.get(
+        authorizereq.client_id
+    )
     if auth_client is None:
         # The client does not exist
         # TODO: add error logging
@@ -272,7 +262,7 @@ async def authorize_validation(
         )
 
     # If redirect_uri was not provided, use the one chosen during the client registration
-    if redirect_uri is None:
+    if authorizereq.redirect_uri is None:
         if auth_client.redirect_uri is None:
             # TODO: add logging error
             raise HTTPException(
@@ -280,6 +270,8 @@ async def authorize_validation(
                 detail="No redirect_uri were provided",
             )
         redirect_uri = auth_client.redirect_uri
+    else:
+        redirect_uri = authorizereq.redirect_uri
 
     # Check the provided redirect_uri is the same as the one chosen during the client registration (if it exists)
     if auth_client.redirect_uri is not None:
@@ -303,19 +295,19 @@ async def authorize_validation(
         )
 
     # Currently, `code` is the only flow supported
-    if response_type != "code":
+    if authorizereq.response_type != "code":
         url = (
             redirect_uri.replace("%3A", ":").replace("%2F", "/")
             + "?error="
             + "unsupported_response_type"
         )
-        if state:
-            url += "&state=" + state
+        if authorizereq.state:
+            url += "&state=" + authorizereq.state
         return RedirectResponse(url)
 
     # TODO: replace the email/password by a JWT with an auth only scope.
     # Currently if the user enter the wrong credentials in the form, he won't be redirected to the login page again but the OAuth process will fail.
-    user = await authenticate_user(db, email, password)
+    user = await authenticate_user(db, authorizereq.email, authorizereq.password)
     if not user:
         # TODO: add logging
         url = (
@@ -323,8 +315,8 @@ async def authorize_validation(
             + "?error="
             + "unsupported_response_type"
         )
-        if state:
-            url += "&state=" + state
+        if authorizereq.state:
+            url += "&state=" + authorizereq.state
         return RedirectResponse(url)
 
     # We generate a new authorization_code
@@ -342,12 +334,12 @@ async def authorize_validation(
     db_authorization_code = models_auth.AuthorizationCode(
         code=authorization_code,
         expire_on=expire_on,
-        scope=scope,
+        scope=authorizereq.scope,
         redirect_uri=redirect_uri,
         user_id=user.id,
-        nonce=nonce,
-        code_challenge=code_challenge,
-        code_challenge_method=code_challenge_method,
+        nonce=authorizereq.nonce,
+        code_challenge=authorizereq.code_challenge,
+        code_challenge_method=authorizereq.code_challenge_method,
     )
     await cruds_auth.create_authorization_token(
         db=db, db_authorization_code=db_authorization_code
@@ -360,10 +352,10 @@ async def authorize_validation(
         + "?code="
         + authorization_code
     )
-    if state:
-        url += "&state=" + state
-    if nonce:
-        url += "&nonce=" + nonce
+    if authorizereq.state:
+        url += "&state=" + authorizereq.state
+    if authorizereq.nonce:
+        url += "&nonce=" + authorizereq.nonce
     print("Redirecting to " + url)
     # We need to redirect the user with as a GET request.
     # By default RedirectResponse send a 307 code, which prevent the user browser from changing the POST of this endpoint to a GET
@@ -380,16 +372,9 @@ async def token(
     request: Request,
     response: Response,
     # OAuth and Openid connect parameters
-    refresh_token: str | None = Form(None),
-    grant_type: str = Form(...),
-    code: str | None = Form(None),
-    redirect_uri: str | None = Form(None),
     # The client id and secret must be passed either in the authorization header or with client_id and client_secret parameters
+    tokenreq: schemas_auth.TokenReq = Depends(schemas_auth.TokenReq.as_form),
     authorization: str | None = Header(default=None),
-    client_id: str | None = Form(None),
-    client_secret: str | None = Form(None),
-    # PKCE parameters
-    code_verifier: str | None = Form(None),
     # Database
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
@@ -420,284 +405,27 @@ async def token(
     if authorization is not None:
         # client_id and client_secret are base64 encoded in the Basic authorization header
         # TODO: If this is useful, create a function to decode Basic or Bearer authorization header
-        client_id, client_secret = (
+        tokenreq.client_id, tokenreq.client_secret = (
             base64.b64decode(authorization.replace("Basic ", ""))
             .decode("utf-8")
             .split(":")
         )
-    print("oui")
-    if grant_type == "authorization_code":
-        if code is None:
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "error": "invalid_request",
-                    "error_description": "An authorization code should be provided",
-                },
-            )
 
-        db_authorization_code = await cruds_auth.get_authorization_token_by_token(
-            db=db, code=code
-        )
-        if db_authorization_code is None:
-            # TODO: add logging
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "error": "invalid_request",
-                    "error_description": "The provided authorization code is invalid",
-                },
-            )
-
-        if client_id is None or client_id not in settings.KNOWN_AUTH_CLIENTS:
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "error": "invalid_request",
-                    "error_description": "Invalid client_id",
-                },
-            )
-
-        # TODO: use get or in but not both
-        # The first is better but slightly more complex to understand
-        auth_client = settings.KNOWN_AUTH_CLIENTS.get(client_id)
-
-        if auth_client is None:
-            return JSONResponse(
-                status_code=401,
-                content={
-                    "error": "invalid_client",
-                    "error_description": "Invalid client id or secret",
-                },
-            )
-
-        # If there is a client secret, we don't use PKCE
-        elif client_secret is not None:
-            if auth_client.secret != client_secret:
-                # TODO: add logging
-                print("Invalid client id or secret")
-                return JSONResponse(
-                    status_code=401,
-                    content={
-                        "error": "invalid_client",
-                        "error_description": "Invalid client id or secret",
-                    },
-                )
-
-        elif auth_client.secret != "":
-            print("Invalid client id or secret")
-            return JSONResponse(
-                status_code=401,
-                content={
-                    "error": "invalid_client",
-                    "error_description": "Invalid client id or secret",
-                },
-            )
-
-        # If there is no client secret, we use PKCE
-        elif (
-            db_authorization_code.code_challenge is not None
-            and code_verifier is not None
-        ):
-            # We need to verify the hash correspond
-            if (
-                db_authorization_code.code_challenge
-                != hashlib.sha256(code_verifier.encode()).hexdigest()
-                # We need to pass the code_verifier as a b-string, we use `code_verifier.encode()` for that
-                # TODO: Make sure that `.hexdigest()` is applied by the client to code_challenge
-            ):
-                # TODO: add logging
-                return JSONResponse(
-                    status_code=400,
-                    content={
-                        "error": "invalid_request",
-                        "error_description": "Invalid code_verifier",
-                    },
-                )
-        else:
-            # TODO: add logging
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "error": "invalid_request",
-                    "error_description": "Client must provide a client_secret or a code_verifier",
-                },
-            )
-
-        # We can check the authorization code
-        if db_authorization_code.expire_on < datetime.now():
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "error": "invalid_request",
-                    "error_description": "Expired authorization code",
-                },
-            )
-        await cruds_auth.delete_authorization_token_by_token(db=db, code=code)
-
-        # TODO
-        # We let the client hardcode a redirect url
-        if auth_client.redirect_uri is not None and auth_client.redirect_uri != "":
-            redirect_uri = auth_client.redirect_uri
-
-        # Ensure that the redirect_uri parameter value is identical to the redirect_uri parameter value that was included in the initial Authorization Request.
-        # If the redirect_uri parameter value is not present when there is only one registered redirect_uri value, the Authorization Server MAY return an error (since the Client should have included the parameter) or MAY proceed without an error (since OAuth 2.0 permits the parameter to be omitted in this case).
-        if redirect_uri is None:
-            redirect_uri = db_authorization_code.redirect_uri
-        if redirect_uri != db_authorization_code.redirect_uri:
-            # TODO add logging
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "error": "invalid_request",
-                    "error_description": "redirect_uri should remain identical",
-                },
-            )
-
-        refresh_token = generate_token()
-        new_db_refresh_token = models_auth.RefreshToken(
-            token=refresh_token,
-            client_id=client_id,
-            created_on=datetime.now(),
-            user_id=db_authorization_code.user_id,
-            expire_on=datetime.now()
-            + timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES),
-            scope=db_authorization_code.scope,
-        )
-        await cruds_auth.create_refresh_token(
-            db=db, db_refresh_token=new_db_refresh_token
+    if tokenreq.grant_type == "authorization_code":
+        return await authorization_code_grant(
+            db=db,
+            settings=settings,
+            tokenreq=tokenreq,
+            response=response,
         )
 
-        response_body = create_response_body(
-            db_authorization_code, client_id, refresh_token, settings
+    elif tokenreq.grant_type == "refresh_token":
+        return await refresh_token_grant(
+            db=db,
+            settings=settings,
+            tokenreq=tokenreq,
+            response=response,
         )
-        print("Response body", response_body)
-
-        # Required headers by Oauth and oidc
-        response.headers["Cache-Control"] = "no-store"
-        response.headers["Pragma"] = "no-cache"
-        return response_body
-
-    elif grant_type == "refresh_token":
-        # Why doesn't this step use PKCE: https://security.stackexchange.com/questions/199000/oauth2-pkce-can-the-refresh-token-be-trusted
-        # Answer in the link above: PKCE has been implemented because the authorization code could be intercepted, but since the refresh token is exchanged through a secure channel there is no issue here
-        if refresh_token is None:
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "error": "invalid_request",
-                    "error_description": "refresh_token is required",
-                },
-            )
-
-        db_refresh_token = await cruds_auth.get_refresh_token_by_token(
-            db=db, token=refresh_token
-        )
-
-        if db_refresh_token is None:
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "error": "invalid_request",
-                    "error_description": "The provided refresh token is invalid",
-                },
-            )
-        elif db_refresh_token.revoked_on is not None:
-            await cruds_auth.revoke_refresh_token_by_client_id(
-                db=db, client_id=db_refresh_token.client_id
-            )
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "error": "invalid_request",
-                    "error_description": "The provided refresh token has been revoked",
-                },
-            )
-
-        await cruds_auth.revoke_refresh_token_by_token(db=db, token=refresh_token)
-
-        if db_refresh_token.expire_on < datetime.now():
-            await cruds_auth.revoke_refresh_token_by_client_id(
-                db=db, client_id=db_refresh_token.client_id
-            )
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "error": "invalid_request",
-                    "error_description": "The provided refresh token has expired",
-                },
-            )
-
-        if client_id is None or client_id not in settings.KNOWN_AUTH_CLIENTS:
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "error": "invalid_request",
-                    "error_description": "Invalid client_id",
-                },
-            )
-
-        auth_client = settings.KNOWN_AUTH_CLIENTS.get(client_id)
-
-        if auth_client is None:
-            return JSONResponse(
-                status_code=401,
-                content={
-                    "error": "invalid_client",
-                    "error_description": "Invalid client id or secret",
-                },
-            )
-
-        elif client_secret is not None:
-            if auth_client.secret != client_secret:
-                # TODO: add logging
-                print("Invalid client id or secret")
-                return JSONResponse(
-                    status_code=401,
-                    content={
-                        "error": "invalid_client",
-                        "error_description": "Invalid client id or secret",
-                    },
-                )
-        elif auth_client.secret != "":
-            print("Invalid client id or secret")
-            return JSONResponse(
-                status_code=401,
-                content={
-                    "error": "invalid_client",
-                    "error_description": "Invalid client id or secret",
-                },
-            )
-
-        # If everything is good we can finally create the new access/refresh tokens
-        # We use new refresh tokes every as we use some client that can't store secrets (see Refresh token rotation in https://www.pingidentity.com/en/resources/blog/post/refresh-token-rotation-spa.html)
-        # We use automatique reuse detection to prevent from replay attacks(https://auth0.com/docs/secure/tokens/refresh-tokens/refresh-token-rotation)
-        # TODO: add logging
-
-        refresh_token = generate_token()
-        new_db_refresh_token = models_auth.RefreshToken(
-            token=refresh_token,
-            client_id=db_refresh_token.client_id,
-            created_on=datetime.now(),
-            user_id=db_refresh_token.user_id,
-            expire_on=datetime.now()
-            + timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES),
-            scope=db_refresh_token.scope,
-        )
-        await cruds_auth.create_refresh_token(
-            db=db, db_refresh_token=new_db_refresh_token
-        )
-
-        response_body = create_response_body(
-            db_refresh_token, client_id, refresh_token, settings
-        )
-
-        print("Response body", response_body)
-
-        # Required headers by Oauth and oidc
-        response.headers["Cache-Control"] = "no-store"
-        response.headers["Pragma"] = "no-cache"
-        return response_body
 
     else:
         print("invalid grant")
@@ -705,6 +433,283 @@ async def token(
             status_code=401,
             detail="invalid_grant",
         )
+
+
+async def authorization_code_grant(db, settings, tokenreq, response):
+    if tokenreq.code is None:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": "invalid_request",
+                "error_description": "An authorization code should be provided",
+            },
+        )
+
+    db_authorization_code = await cruds_auth.get_authorization_token_by_token(
+        db=db, code=tokenreq.code
+    )
+    if db_authorization_code is None:
+        # TODO: add logging
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": "invalid_request",
+                "error_description": "The provided authorization code is invalid",
+            },
+        )
+
+    if (
+        tokenreq.client_id is None
+        or tokenreq.client_id not in settings.KNOWN_AUTH_CLIENTS
+    ):
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": "invalid_request",
+                "error_description": "Invalid client_id",
+            },
+        )
+
+    # TODO: use get or in but not both
+    # The first is better but slightly more complex to understand
+    auth_client = settings.KNOWN_AUTH_CLIENTS.get(tokenreq.client_id)
+
+    if auth_client is None:
+        return JSONResponse(
+            status_code=401,
+            content={
+                "error": "invalid_client",
+                "error_description": "Invalid client id or secret",
+            },
+        )
+
+    # If there is a client secret, we don't use PKCE
+    elif tokenreq.client_secret is not None:
+        if auth_client.secret != tokenreq.client_secret:
+            # TODO: add logging
+            print("Invalid client id or secret")
+            return JSONResponse(
+                status_code=401,
+                content={
+                    "error": "invalid_client",
+                    "error_description": "Invalid client id or secret",
+                },
+            )
+
+    elif auth_client.secret != "":
+        print("Invalid client id or secret")
+        return JSONResponse(
+            status_code=401,
+            content={
+                "error": "invalid_client",
+                "error_description": "Invalid client id or secret",
+            },
+        )
+
+    # If there is no client secret, we use PKCE
+    elif (
+        db_authorization_code.code_challenge is not None
+        and tokenreq.code_verifier is not None
+    ):
+        # We need to verify the hash correspond
+        if (
+            db_authorization_code.code_challenge
+            != hashlib.sha256(tokenreq.code_verifier.encode()).hexdigest()
+            # We need to pass the code_verifier as a b-string, we use `code_verifier.encode()` for that
+            # TODO: Make sure that `.hexdigest()` is applied by the client to code_challenge
+        ):
+            # TODO: add logging
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": "invalid_request",
+                    "error_description": "Invalid code_verifier",
+                },
+            )
+    else:
+        # TODO: add logging
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": "invalid_request",
+                "error_description": "Client must provide a client_secret or a code_verifier",
+            },
+        )
+
+    # We can check the authorization code
+    if db_authorization_code.expire_on < datetime.now():
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": "invalid_request",
+                "error_description": "Expired authorization code",
+            },
+        )
+    await cruds_auth.delete_authorization_token_by_token(db=db, code=tokenreq.code)
+
+    # TODO
+    # We let the client hardcode a redirect url
+    if auth_client.redirect_uri is not None and auth_client.redirect_uri != "":
+        redirect_uri = auth_client.redirect_uri
+
+    # Ensure that the redirect_uri parameter value is identical to the redirect_uri parameter value that was included in the initial Authorization Request.
+    # If the redirect_uri parameter value is not present when there is only one registered redirect_uri value, the Authorization Server MAY return an error (since the Client should have included the parameter) or MAY proceed without an error (since OAuth 2.0 permits the parameter to be omitted in this case).
+    if redirect_uri is None:
+        redirect_uri = db_authorization_code.redirect_uri
+    if redirect_uri != db_authorization_code.redirect_uri:
+        # TODO add logging
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": "invalid_request",
+                "error_description": "redirect_uri should remain identical",
+            },
+        )
+
+    refresh_token = generate_token()
+    new_db_refresh_token = models_auth.RefreshToken(
+        token=refresh_token,
+        client_id=tokenreq.client_id,
+        created_on=datetime.now(),
+        user_id=db_authorization_code.user_id,
+        expire_on=datetime.now()
+        + timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES),
+        scope=db_authorization_code.scope,
+    )
+    await cruds_auth.create_refresh_token(db=db, db_refresh_token=new_db_refresh_token)
+
+    response_body = create_response_body(
+        db_authorization_code, tokenreq.client_id, refresh_token, settings
+    )
+    print("Response body", response_body)
+
+    # Required headers by Oauth and oidc
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Pragma"] = "no-cache"
+    return response_body
+
+
+async def refresh_token_grant(db, settings, tokenreq, response):
+    # Why doesn't this step use PKCE: https://security.stackexchange.com/questions/199000/oauth2-pkce-can-the-refresh-token-be-trusted
+    # Answer in the link above: PKCE has been implemented because the authorization code could be intercepted, but since the refresh token is exchanged through a secure channel there is no issue here
+    if tokenreq.refresh_token is None:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": "invalid_request",
+                "error_description": "refresh_token is required",
+            },
+        )
+
+    db_refresh_token = await cruds_auth.get_refresh_token_by_token(
+        db=db, token=tokenreq.refresh_token
+    )
+
+    if db_refresh_token is None:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": "invalid_request",
+                "error_description": "The provided refresh token is invalid",
+            },
+        )
+    elif db_refresh_token.revoked_on is not None:
+        await cruds_auth.revoke_refresh_token_by_client_id(
+            db=db, client_id=db_refresh_token.client_id
+        )
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": "invalid_request",
+                "error_description": "The provided refresh token has been revoked",
+            },
+        )
+
+    await cruds_auth.revoke_refresh_token_by_token(db=db, token=tokenreq.refresh_token)
+
+    if db_refresh_token.expire_on < datetime.now():
+        await cruds_auth.revoke_refresh_token_by_client_id(
+            db=db, client_id=db_refresh_token.client_id
+        )
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": "invalid_request",
+                "error_description": "The provided refresh token has expired",
+            },
+        )
+
+    if (
+        tokenreq.client_id is None
+        or tokenreq.client_id not in settings.KNOWN_AUTH_CLIENTS
+    ):
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": "invalid_request",
+                "error_description": "Invalid client_id",
+            },
+        )
+
+    auth_client = settings.KNOWN_AUTH_CLIENTS.get(tokenreq.client_id)
+
+    if auth_client is None:
+        return JSONResponse(
+            status_code=401,
+            content={
+                "error": "invalid_client",
+                "error_description": "Invalid client id or secret",
+            },
+        )
+
+    elif tokenreq.client_secret is not None:
+        if auth_client.secret != tokenreq.client_secret:
+            # TODO: add logging
+            print("Invalid client id or secret")
+            return JSONResponse(
+                status_code=401,
+                content={
+                    "error": "invalid_client",
+                    "error_description": "Invalid client id or secret",
+                },
+            )
+    elif auth_client.secret != "":
+        print("Invalid client id or secret")
+        return JSONResponse(
+            status_code=401,
+            content={
+                "error": "invalid_client",
+                "error_description": "Invalid client id or secret",
+            },
+        )
+
+    # If everything is good we can finally create the new access/refresh tokens
+    # We use new refresh tokes every as we use some client that can't store secrets (see Refresh token rotation in https://www.pingidentity.com/en/resources/blog/post/refresh-token-rotation-spa.html)
+    # We use automatique reuse detection to prevent from replay attacks(https://auth0.com/docs/secure/tokens/refresh-tokens/refresh-token-rotation)
+    # TODO: add logging
+
+    refresh_token = generate_token()
+    new_db_refresh_token = models_auth.RefreshToken(
+        token=refresh_token,
+        client_id=db_refresh_token.client_id,
+        created_on=datetime.now(),
+        user_id=db_refresh_token.user_id,
+        expire_on=datetime.now()
+        + timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES),
+        scope=db_refresh_token.scope,
+    )
+    await cruds_auth.create_refresh_token(db=db, db_refresh_token=new_db_refresh_token)
+
+    response_body = create_response_body(
+        db_refresh_token, tokenreq.client_id, refresh_token, settings
+    )
+
+    print("Response body", response_body)
+
+    # Required headers by Oauth and oidc
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Pragma"] = "no-cache"
+    return response_body
 
 
 def create_response_body(db_row, client_id, refresh_token, settings):
