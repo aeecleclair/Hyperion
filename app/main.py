@@ -1,12 +1,14 @@
 """Basic function creating the database tables and calling the router"""
 
 import logging
+import logging.config
 import uuid
 
 from fastapi import FastAPI, Request
 from sqlalchemy.exc import IntegrityError
 
 from app import api
+from app.core.log import LogConfig
 from app.database import Base, SessionLocal, engine
 from app.models import models_core
 from app.utils.types.groups_type import AccountType
@@ -26,6 +28,11 @@ hyperion_access_logger.setLevel(logging.DEBUG)
 hyperion_access_logger.addHandler(fh)
 
 
+
+logging.config.dictConfig(LogConfig().dict())
+
+hyperion_access_logger = logging.getLogger("hyperion.access")
+
 @app.middleware("http")
 async def logging_middleware(request: Request, call_next):
     """
@@ -36,7 +43,7 @@ async def logging_middleware(request: Request, call_next):
     # See https://fastapi.tiangolo.com/tutorial/middleware/
 
     # We generate an unique identifier for the request and save it as a state.
-    # This identifier will allow to combine logs from associated with the same request
+    # This identifier will allow to combine logs associated with the same request
     # https://www.starlette.io/requests/#other-state
     request_id = str(uuid.uuid4())
     request.state.request_id = request_id
