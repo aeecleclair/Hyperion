@@ -20,6 +20,18 @@ class Authorize(BaseModel):
 
 
 class AuthorizeValidation(Authorize):
+    """
+    Oauth specifications specifies that all parameters should be `application/x-www-form-urlencoded`.
+    This schema is configured to requires Form(...) parameters.
+
+    The endpoint need to depend from this class:
+    ```python
+        authorizereq: schemas_auth.AuthorizeValidation = Depends(
+            schemas_auth.AuthorizeValidation.as_form
+        ),
+    ```
+    """
+
     email: str
     password: str
 
