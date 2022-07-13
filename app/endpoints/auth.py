@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import logging
 from datetime import datetime, timedelta
 
 from fastapi import (
@@ -27,6 +28,7 @@ from app.core.security import (
 from app.cruds import cruds_auth
 from app.dependencies import (
     get_db,
+    get_request_id,
     get_settings,
     get_token_data,
     get_user_from_token_with_scopes,
@@ -40,6 +42,9 @@ from app.utils.types.tags import Tags
 router = APIRouter()
 
 templates = Jinja2Templates(directory="templates")
+
+logger = logging.getLogger("hyperion.auth")
+
 
 # WARNING: if new flow are added, openid_config should be updated accordingly
 
@@ -199,6 +204,7 @@ async def authorize_validation(
     # Database
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
+    request_id=Depends(get_request_id),
 ):
     """
     Part 1 of the authorization code grant.
@@ -237,19 +243,47 @@ async def authorize_validation(
     invalid redirection URI.
     """
 
-    # Check if the client is registered in the server
     # Note: we may want to use a JWT here instead or email/password in order to be able to check if the user is already logged in.
     # Note: we may want add a windows to let the user which scopes he grants access to.
+
+    logger.info(
+        f"Authorize-validation: Starting for client {authorizereq.client_id} ({request_id})"
+    )
+
+    # Check if the client is registered in the server. auth_client will be None if the client_id is not known.
     auth_client: BaseAuthClient | None = settings.KNOWN_AUTH_CLIENTS.get(
         authorizereq.client_id
     )
     if auth_client is None:
         # The client does not exist
-        # TODO: add error logging
+        logger.warning(
+            f"Authorize-validation: Invalid client_id {authorizereq.client_id} ({request_id})"
+        )
         raise HTTPException(
             status_code=422,
             detail="Invalid client_id",
         )
+
+    # If a redirect_uri is hardcoded in the auth_client we will use this one. If one was provided in the request, we want to check they match.
+    if auth_client.redirect_uri is None:
+        if authorizereq.redirect_uri is not None:
+            if auth_client.redirect_uri != authorizereq.redirect_uri:
+                logger.warning(
+                    f"Authorize-validation: Mismatching redirect_uri, received {authorizereq.redirect_uri} but expected {auth_client.redirect_uri} ({request_id})"
+                )
+                raise HTTPException(
+                    status_code=422,
+                    detail="Mismatching redirect_uri",
+                )
+        redirect_uri = auth_client.redirect_uri
+    else:
+        # A redirect_uri must be provided in the request, as none are already known
+        if authorizereq.redirect_uri is not None:
+            logger.info(f"Authorize-validation: Unprovided redirect_uri ({request_id})")
+            raise HTTPException(
+                status_code=422,
+                detail="Mismatching redirect_uri",
+            )
 
     # If redirect_uri was not provided, use the one chosen during the client registration
     if authorizereq.redirect_uri is None:
