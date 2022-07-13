@@ -114,9 +114,9 @@ known_clients = {
     tags=[Tags.auth],
 )
 async def get_authorize_page(
+    # request need to be passed to Jinja2 to generate the HTML page
     request: Request,
     authorizereq: schemas_auth.Authorize,
-    db: AsyncSession = Depends(get_db),
 ):
     """
     This endpoint is the one the user is redirected to when he begin the Oauth or Openid connect (*oidc*) *Authorization code* process.
@@ -147,6 +147,7 @@ async def get_authorize_page(
 
 @router.post("/auth/authorize", tags=[Tags.auth], response_class=HTMLResponse)
 async def post_authorize_page(
+    # request need to be passed to Jinja2 to generate the HTML page
     request: Request,
     response_type: str = Form(...),
     client_id: str = Form(...),
@@ -156,7 +157,6 @@ async def post_authorize_page(
     nonce: str | None = Form(None),
     code_challenge: str | None = Form(None),
     code_challenge_method: str | None = Form(None),
-    db: AsyncSession = Depends(get_db),
 ):
     """
     This endpoint is the one the user is redirected to when he begin the OAuth or Openid connect (*oidc*) *Authorization code* process with or without PKCE.
@@ -192,8 +192,6 @@ async def post_authorize_page(
     response_class=RedirectResponse,
 )
 async def authorize_validation(
-    # We use Form(...) as parameters must be `application/x-www-form-urlencoded`
-    request: Request,
     # User validation
     authorizereq: schemas_auth.AuthorizeValidation = Depends(
         schemas_auth.AuthorizeValidation.as_form
@@ -226,9 +224,6 @@ async def authorize_validation(
         * `email`
         * `password`
 
-    Note: we may want to use a JWT here instead or email/password in order to be able to check if the user is already logged in.
-    Note: we may want add a windows to let the user which scopes he grants access to.
-
     References:
      * https://www.rfc-editor.org/rfc/rfc6749.html#section-4.1.2
      * https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
@@ -243,6 +238,8 @@ async def authorize_validation(
     """
 
     # Check if the client is registered in the server
+    # Note: we may want to use a JWT here instead or email/password in order to be able to check if the user is already logged in.
+    # Note: we may want add a windows to let the user which scopes he grants access to.
     auth_client: BaseAuthClient | None = settings.KNOWN_AUTH_CLIENTS.get(
         authorizereq.client_id
     )
