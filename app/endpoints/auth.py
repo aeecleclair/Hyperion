@@ -115,14 +115,7 @@ known_clients = {
 )
 async def get_authorize_page(
     request: Request,
-    response_type: str,
-    client_id: str,
-    redirect_uri: str,
-    scope: str | None = None,
-    state: str | None = None,
-    nonce: str | None = None,
-    code_challenge: str | None = None,
-    code_challenge_method: str | None = None,
+    authorizereq: schemas_auth.Authorize,
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -140,14 +133,14 @@ async def get_authorize_page(
         "connexion.html",
         {
             "request": request,
-            "response_type": response_type,
-            "redirect_uri": redirect_uri,
-            "client_id": client_id,
-            "scope": scope,
-            "state": state,
-            "nonce": nonce,
-            "code_challenge": code_challenge,
-            "code_challenge_method": code_challenge_method,
+            "response_type": authorizereq.response_type,
+            "redirect_uri": authorizereq.redirect_uri,
+            "client_id": authorizereq.client_id,
+            "scope": authorizereq.scope,
+            "state": authorizereq.state,
+            "nonce": authorizereq.nonce,
+            "code_challenge": authorizereq.code_challenge,
+            "code_challenge_method": authorizereq.code_challenge_method,
         },
     )
 
@@ -367,6 +360,7 @@ async def authorize_validation(
 @router.post(
     "/auth/token",
     tags=[Tags.auth],
+    response_model=schemas_auth.TokenResponse,
 )
 async def token(
     request: Request,
@@ -734,16 +728,7 @@ def create_response_body(db_row, client_id, refresh_token, settings):
     # Expiration date is included by `create_access_token` function
     access_token = create_access_token(data=access_token_data, settings=settings)
 
-    # We will create an OAuth response, then add oidc specific elements if required
-    response_body = {
-        "access_token": access_token,
-        "token_type": "Bearer",
-        "expires_in": 3600,
-        "scope": granted_scopes,  # openid required by nextcloud
-        "refresh_token": refresh_token,  # What type, JWT ? No, we should be able to invalidate
-        # "example_parameter": "example_value",  # ???
-        # "id_token": "" # only added for oidc
-    }
+    id_token = None  # Will change if oidc is asked in scopes
 
     # Perform specifics steps for openid connect
     if db_row.scope is not None and "openid" in db_row.scope:
@@ -781,7 +766,22 @@ def create_response_body(db_row, client_id, refresh_token, settings):
         id_token = create_access_token_RS256(data=id_token_data, settings=settings)
         print("Token", id_token)
 
-        response_body["id_token"] = id_token
+    # We create an OAuth response, with oidc specific elements if required
+    if id_token is None:
+        response_body = schemas_auth.TokenResponse(
+            access_token=access_token,
+            expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            scopes=granted_scopes,
+            refresh_token=refresh_token,
+        )
+    else:
+        response_body = schemas_auth.TokenResponseoidc(
+            access_token=access_token,
+            expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            scopes=granted_scopes,
+            refresh_token=refresh_token,
+            id_token=id_token,
+        )
 
     return response_body
 
