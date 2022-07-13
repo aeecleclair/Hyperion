@@ -44,6 +44,11 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             await db.close()
 
 
+def get_request_id():
+    # To replace with logging
+    return "request_id"
+
+
 @lru_cache()
 def get_settings() -> Settings:
     """
