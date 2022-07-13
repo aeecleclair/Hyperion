@@ -5,6 +5,8 @@ from datetime import datetime
 from fastapi import Form
 from pydantic import BaseModel
 
+from app.utils.examples import examples_auth
+
 
 class Authorize(BaseModel):
     client_id: str
@@ -20,6 +22,9 @@ class Authorize(BaseModel):
 class AuthorizeValidation(Authorize):
     email: str
     password: str
+
+    class config:
+        schema_extra = {"example": examples_auth.example_AuthorizeValidation}
 
     @classmethod
     def as_form(
@@ -105,3 +110,15 @@ class TokenReq(BaseModel):
                 "client_id": "5507cc3a-fd29-11ec-b939-0242ac120002",
             }
         }
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    expires_in: int = 1800
+    scopes: str = ""
+    refresh_token: str
+
+
+class TokenResponseoidc(TokenResponse):
+    id_token: str
