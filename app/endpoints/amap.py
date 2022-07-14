@@ -297,24 +297,24 @@ async def remove_order(order_id: str, db: AsyncSession = Depends(get_db)):
 
 @router.get(
     "/amap/users/cash",
-    response_model=list[schemas_amap.CashBase],
+    response_model=list[schemas_amap.CashComplete],
     status_code=200,
     tags=[Tags.amap],
 )
 async def get_users_cash(db: AsyncSession = Depends(get_db)):
     cash = await cruds_amap.get_users_cash(db)
-    return [schemas_amap.CashBase(**cash[i].__dict__) for i in range(len(cash))]
+    return cash
 
 
 @router.get(
     "/amap/users/{user_id}/cash",
-    response_model=schemas_amap.CashBase,
+    response_model=schemas_amap.CashComplete,
     status_code=200,
     tags=[Tags.amap],
 )
 async def get_cash_by_id(user_id: str, db: AsyncSession = Depends(get_db)):
     cash = await cruds_amap.get_cash_by_id(user_id=user_id, db=db)
-    return schemas_amap.CashBase(**cash.__dict__)
+    return cash
 
 
 @router.post(
@@ -324,14 +324,15 @@ async def get_cash_by_id(user_id: str, db: AsyncSession = Depends(get_db)):
     tags=[Tags.amap],
 )
 async def create_cash_of_user(
-    user_id: str, balance: float, db: AsyncSession = Depends(get_db)
+    user_id: str, balance: schemas_amap.CashBase, db: AsyncSession = Depends(get_db)
 ):
     # TODO check if the client is admin
     user = await read_user(user_id=user_id, db=db)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     result = await cruds_amap.create_cash_of_user(
-        cash=schemas_amap.CashBase(user=user, user_id=user_id, balance=balance), db=db
+        cash=schemas_amap.CashComplete(user=user, user_id=user_id, **balance.dict()),
+        db=db,
     )
     return schemas_amap.CashBase(**result.__dict__)
 
@@ -342,15 +343,13 @@ async def create_cash_of_user(
     tags=[Tags.amap],
 )
 async def edit_cash_by_id(
-    user_id: str, balance: float, db: AsyncSession = Depends(get_db)
+    user_id: str, balance: schemas_amap.CashBase, db: AsyncSession = Depends(get_db)
 ):
     # TODO check if the client is admin
     user = await read_user(user_id=user_id, db=db)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    await cruds_amap.edit_cash_by_id(
-        user_id=user_id, balance=schemas_amap.CashBase(balance=balance), db=db
-    )
+    await cruds_amap.edit_cash_by_id(user_id=user_id, balance=balance, db=db)
 
 
 @router.get(

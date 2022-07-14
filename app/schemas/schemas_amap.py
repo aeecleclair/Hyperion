@@ -105,8 +105,11 @@ class CashBase(BaseModel):
     balance: float
 
 
-class CashComplete(CashBase):
+class CashId(CashBase):
     user_id: str
+
+
+class CashComplete(CashId):
     user: CoreUserSimple
 
     class Config:
