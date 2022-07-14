@@ -130,7 +130,4 @@ class TokenResponse(BaseModel):
     expires_in: int = 1800
     scopes: str = ""
     refresh_token: str
-
-
-class TokenResponseoidc(TokenResponse):
-    id_token: str
+    id_token: str | None = None
