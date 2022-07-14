@@ -1,8 +1,8 @@
 example_AuthorizeValidation = {
     "client_id": "5507cc3a-fd29-11ec-b939-0242ac120002",
-    "redirect_uri": "http://localhost:8000",
+    "redirect_uri": "http://127.0.0.1:8000/docs",
     "response_type": "code",
-    "scope": "API",
+    "scope": "API, openid",
     "state": "azerty",
     "code_challenge": "c2cf464b7901205c037cd821bc493b191943bdb5244a665e9fcab6478bf79415",  # hashlib.sha256("AntoineMonBelAntoine".encode()).hexdigest()
     "code_challenge_method": "S256",

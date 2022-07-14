@@ -265,7 +265,7 @@ async def authorize_validation(
         )
 
     # If a redirect_uri is hardcoded in the auth_client we will use this one. If one was provided in the request, we want to check they match.
-    if auth_client.redirect_uri is None:
+    if auth_client.redirect_uri is not None:
         if authorizereq.redirect_uri is not None:
             if auth_client.redirect_uri != authorizereq.redirect_uri:
                 logger.warning(
@@ -278,45 +278,13 @@ async def authorize_validation(
         redirect_uri = auth_client.redirect_uri
     else:
         # A redirect_uri must be provided in the request, as none are already known
-        if authorizereq.redirect_uri is not None:
+        if authorizereq.redirect_uri is None:
             logger.info(f"Authorize-validation: Unprovided redirect_uri ({request_id})")
             raise HTTPException(
                 status_code=422,
-                detail="Mismatching redirect_uri",
+                detail="Unprovided redirect_uri",
             )
-
-    # If redirect_uri was not provided, use the one chosen during the client registration
-    if authorizereq.redirect_uri is None:
-        if auth_client.redirect_uri is None:
-            # TODO: add logging error
-            raise HTTPException(
-                status_code=422,
-                detail="No redirect_uri were provided",
-            )
-        redirect_uri = auth_client.redirect_uri
-    else:
         redirect_uri = authorizereq.redirect_uri
-
-    # Check the provided redirect_uri is the same as the one chosen during the client registration (if it exists)
-    if auth_client.redirect_uri is not None:
-        if redirect_uri != auth_client.redirect_uri:
-            # TODO: add logging error
-            # raise HTTPException(
-            #    status_code=422,
-            #    detail="Redirect_uri do not math",
-            # )
-            # TODO
-            print(
-                "Warning, redirect uri do not match. Using the one provided by the client during the registration"
-            )
-            redirect_uri = auth_client.redirect_uri
-
-    if redirect_uri is None:
-        # TODO: add logging error
-        raise HTTPException(
-            status_code=422,
-            detail="No redirect_uri were provided",
-        )
 
     # Currently, `code` is the only flow supported
     if authorizereq.response_type != "code":
@@ -378,9 +346,6 @@ async def authorize_validation(
     )
     if authorizereq.state:
         url += "&state=" + authorizereq.state
-    if authorizereq.nonce:
-        url += "&nonce=" + authorizereq.nonce
-    print("Redirecting to " + url)
     # We need to redirect the user with as a GET request.
     # By default RedirectResponse send a 307 code, which prevent the user browser from changing the POST of this endpoint to a GET
     # We specifically return a 302 code to allow the user browser to change the POST of this endpoint to a GET
@@ -392,6 +357,7 @@ async def authorize_validation(
     "/auth/token",
     tags=[Tags.auth],
     response_model=schemas_auth.TokenResponse,
+    response_model_exclude_none=True,
 )
 async def token(
     request: Request,
@@ -600,6 +566,7 @@ async def authorization_code_grant(db, settings, tokenreq, response):
         expire_on=datetime.now()
         + timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES),
         scope=db_authorization_code.scope,
+        nonce=db_authorization_code.nonce,
     )
     await cruds_auth.create_refresh_token(db=db, db_refresh_token=new_db_refresh_token)
 
@@ -798,21 +765,13 @@ def create_response_body(db_row, client_id, refresh_token, settings):
         print("Token", id_token)
 
     # We create an OAuth response, with oidc specific elements if required
-    if id_token is None:
-        response_body = schemas_auth.TokenResponse(
-            access_token=access_token,
-            expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-            scopes=granted_scopes,
-            refresh_token=refresh_token,
-        )
-    else:
-        response_body = schemas_auth.TokenResponseoidc(
-            access_token=access_token,
-            expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-            scopes=granted_scopes,
-            refresh_token=refresh_token,
-            id_token=id_token,
-        )
+    response_body = schemas_auth.TokenResponse(
+        access_token=access_token,
+        expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        scopes=granted_scopes,
+        refresh_token=refresh_token,
+        id_token=id_token,
+    )
 
     return response_body
 

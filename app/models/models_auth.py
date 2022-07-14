@@ -30,3 +30,4 @@ class RefreshToken(Base):
     )
     scope: str | None = Column(String)
     user_id: str = Column(ForeignKey("core_user.id"), nullable=False)
+    nonce: str | None = Column(String)
