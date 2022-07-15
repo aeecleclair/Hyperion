@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import logging
+import urllib.parse
 from datetime import datetime, timedelta
 
 from fastapi import (
@@ -286,13 +287,13 @@ async def authorize_validation(
             )
         redirect_uri = authorizereq.redirect_uri
 
+    # Special characters like `:` or `/` may be encoded as `%3A` and `%2F`, we need to decode them before returning the redirection object
+    redirect_uri = urllib.parse.unquote(redirect_uri)
+
     # Currently, `code` is the only flow supported
     if authorizereq.response_type != "code":
-        url = (
-            redirect_uri.replace("%3A", ":").replace("%2F", "/")
-            + "?error="
-            + "unsupported_response_type"
         )
+        url = redirect_uri + "?error=" + "unsupported_response_type"
         if authorizereq.state:
             url += "&state=" + authorizereq.state
         return RedirectResponse(url)
@@ -302,11 +303,7 @@ async def authorize_validation(
     user = await authenticate_user(db, authorizereq.email, authorizereq.password)
     if not user:
         # TODO: add logging
-        url = (
-            redirect_uri.replace("%3A", ":").replace("%2F", "/")
-            + "?error="
-            + "unsupported_response_type"
-        )
+        url = redirect_uri + "?error=" + "unsupported_response_type"
         if authorizereq.state:
             url += "&state=" + authorizereq.state
         return RedirectResponse(url)
@@ -339,11 +336,7 @@ async def authorize_validation(
 
     # We need to redirect to the `redirect_uri` provided by the *client* providing the new authorization_code.
     # For security reason, we need to provide the same `state` and `nonce` if they were provided by the client in the first request
-    url = (
-        redirect_uri.replace("%3A", ":").replace("%2F", "/")
-        + "?code="
-        + authorization_code
-    )
+    url = redirect_uri + "?code=" + authorization_code
     if authorizereq.state:
         url += "&state=" + authorizereq.state
     # We need to redirect the user with as a GET request.
