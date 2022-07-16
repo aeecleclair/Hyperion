@@ -345,7 +345,6 @@ async def authorize_validation(
     response_model_exclude_none=True,
 )
 async def token(
-    request: Request,
     response: Response,
     # OAuth and Openid connect parameters
     # The client id and secret must be passed either in the authorization header or with client_id and client_secret parameters
@@ -354,6 +353,7 @@ async def token(
     # Database
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
+    request_id: str = Depends(get_request_id),
 ):
     """
     Part 2 of the authorization code grant.
@@ -380,12 +380,15 @@ async def token(
     # We need to check client id and secret
     if authorization is not None:
         # client_id and client_secret are base64 encoded in the Basic authorization header
-        # TODO: If this is useful, create a function to decode Basic or Bearer authorization header
         tokenreq.client_id, tokenreq.client_secret = (
             base64.b64decode(authorization.replace("Basic ", ""))
             .decode("utf-8")
             .split(":")
         )
+
+    logger.info(
+        f"Token: Starting {tokenreq.grant_type} grant for client {tokenreq.client_id} ({request_id})"
+    )
 
     if tokenreq.grant_type == "authorization_code":
         return await authorization_code_grant(
@@ -393,6 +396,7 @@ async def token(
             settings=settings,
             tokenreq=tokenreq,
             response=response,
+            request_id=request_id,
         )
 
     elif tokenreq.grant_type == "refresh_token":
@@ -404,10 +408,15 @@ async def token(
         )
 
     else:
-        print("invalid grant")
-        raise HTTPException(
-            status_code=401,
-            detail="invalid_grant",
+        logger.warning(
+            f"Token: Unsupported grant_type, received {tokenreq.grant_type} ({request_id})"
+        )
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": "unsupported_grant_type",
+                "error_description": f"{tokenreq.grant_type} is not supported",
+            },
         )
 
 
