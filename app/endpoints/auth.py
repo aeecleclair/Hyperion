@@ -191,7 +191,6 @@ async def post_authorize_page(
     )
 
 
-# TODO: fix this strange redirect_uri logic
 @router.post(
     "/auth/authorization-flow/authorize-validation",
     tags=[Tags.auth],
@@ -265,7 +264,7 @@ async def authorize_validation(
             detail="Invalid client_id",
         )
 
-    # If a redirect_uri is hardcoded in the auth_client we will use this one. If one was provided in the request, we want to check they match.
+    # If a redirect_uri is hardcoded in the auth_client we will use this one. If one was provided in the request, we want to make sure they match.
     if auth_client.redirect_uri is not None:
         if authorizereq.redirect_uri is not None:
             if auth_client.redirect_uri != authorizereq.redirect_uri:
@@ -278,7 +277,7 @@ async def authorize_validation(
                 )
         redirect_uri = auth_client.redirect_uri
     else:
-        # A redirect_uri must be provided in the request, as none are already known
+        # A redirect_uri must be provided in the request, as none are hardcoded in the auth_client
         if authorizereq.redirect_uri is None:
             logger.info(f"Authorize-validation: Unprovided redirect_uri ({request_id})")
             raise HTTPException(
@@ -292,17 +291,20 @@ async def authorize_validation(
 
     # Currently, `code` is the only flow supported
     if authorizereq.response_type != "code":
+        logger.warning(
+            f"Authorize-validation: Unsupported response_type, received {authorizereq.response_type} ({request_id})"
         )
         url = redirect_uri + "?error=" + "unsupported_response_type"
         if authorizereq.state:
             url += "&state=" + authorizereq.state
         return RedirectResponse(url)
 
-    # TODO: replace the email/password by a JWT with an auth only scope.
-    # Currently if the user enter the wrong credentials in the form, he won't be redirected to the login page again but the OAuth process will fail.
+    # TODO: Currently if the user enter the wrong credentials in the form, he won't be redirected to the login page again but the OAuth process will fail.
     user = await authenticate_user(db, authorizereq.email, authorizereq.password)
     if not user:
-        # TODO: add logging
+        logger.warning(
+            f"Authorize-validation: Invalide user email or password for email {authorizereq.email} ({request_id})"
+        )
         url = redirect_uri + "?error=" + "unsupported_response_type"
         if authorizereq.state:
             url += "&state=" + authorizereq.state
@@ -310,11 +312,11 @@ async def authorize_validation(
 
     # We generate a new authorization_code
     # The authorization code MUST expire
-    # shortly after it is issued to mitigate the risk of leaks.  A
+    # shortly after it is issued to mitigate the risk of leaks. A
     # maximum authorization code lifetime of 10 minutes is
-    # RECOMMENDED.  The client MUST NOT use the authorization code more than once.
+    # RECOMMENDED. The client MUST NOT use the authorization code more than once.
     authorization_code = generate_token()
-    expire_on = datetime.now() + timedelta(hours=1)
+    expire_on = datetime.now() + timedelta(minutes=7)
     # We save this authorization_code to the database
     # We can not use a JWT for this as:
     # - we need to store data about the OAuth/oidc request
