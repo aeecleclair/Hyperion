@@ -411,8 +411,18 @@ async def token(
         )
 
 
-async def authorization_code_grant(db, settings, tokenreq, response):
+async def authorization_code_grant(
+    db: AsyncSession,
+    settings: Settings,
+    tokenreq: schemas_auth.TokenReq,
+    response: Response,
+    request_id: str,
+):
+
     if tokenreq.code is None:
+        logger.warning(
+            f"Token authorization_code_grant: Unprovided authorization code ({request_id})"
+        )
         return JSONResponse(
             status_code=400,
             content={
@@ -421,11 +431,14 @@ async def authorization_code_grant(db, settings, tokenreq, response):
             },
         )
 
+    # We need to check the authorization code that was provided in the request is the one that was previously saved in the database
     db_authorization_code = await cruds_auth.get_authorization_token_by_token(
         db=db, code=tokenreq.code
     )
     if db_authorization_code is None:
-        # TODO: add logging
+        logger.warning(
+            f"Token authorization_code_grant: Invalid authorization code ({request_id})"
+        )
         return JSONResponse(
             status_code=400,
             content={
@@ -439,59 +452,81 @@ async def authorization_code_grant(db, settings, tokenreq, response):
     # That's why we delete it at the beginning of this function
     await cruds_auth.delete_authorization_token_by_token(db=db, code=tokenreq.code)
 
-    if (
-        tokenreq.client_id is None
-        or tokenreq.client_id not in settings.KNOWN_AUTH_CLIENTS
-    ):
+    if tokenreq.client_id is None:
+        logger.warning(
+            f"Token authorization_code_grant: Unprovided client_id ({request_id})"
+        )
         return JSONResponse(
             status_code=400,
             content={
-                "error": "invalid_request",
-                "error_description": "Invalid client_id",
+                "error": "invalid_client",
+                "error_description": "Invalid client_id or secret",
             },
         )
 
-    # TODO: use get or in but not both
-    # The first is better but slightly more complex to understand
-    auth_client = settings.KNOWN_AUTH_CLIENTS.get(tokenreq.client_id)
+    auth_client: Type[BaseAuthClient] | None = settings.KNOWN_AUTH_CLIENTS.get(
+        tokenreq.client_id
+    )
 
     if auth_client is None:
+        logger.warning(
+            f"Token authorization_code_grant: Invalid client_id {tokenreq.client_id} ({request_id})"
+        )
         return JSONResponse(
-            status_code=401,
+            status_code=400,
             content={
                 "error": "invalid_client",
                 "error_description": "Invalid client id or secret",
             },
         )
 
-    # If there is a client secret, we don't use PKCE
-    elif tokenreq.client_secret is not None:
-        if auth_client.secret != tokenreq.client_secret:
-            # TODO: add logging
-            print("Invalid client id or secret")
+    # If the auth provider expect to use a client secret, we don't use PKCE
+    elif auth_client.secret is not None:
+        # As PKCE is not used, we need to make sure that PKCE related parameters were not used
+        if (
+            db_authorization_code.code_challenge is not None
+            or tokenreq.code_verifier is not None
+        ):
+            logger.warning(
+                f"Token authorization_code_grant: PKCE related parameters should not be used when using a client secret ({request_id})"
+            )
             return JSONResponse(
-                status_code=401,
+                status_code=400,
+                content={
+                    "error": "invalid_request",
+                    "error_description": "PKCE related parameters should not be used",
+                },
+            )
+        # We need to check the correct client_secret was provided
+        if auth_client.secret != tokenreq.client_secret:
+            logger.warning(
+                f"Token authorization_code_grant: Invalid secret for client {tokenreq.client_id} ({request_id})"
+            )
+            return JSONResponse(
+                status_code=400,
                 content={
                     "error": "invalid_client",
                     "error_description": "Invalid client id or secret",
                 },
             )
 
-    elif auth_client.secret != "":
-        print("Invalid client id or secret")
-        return JSONResponse(
-            status_code=401,
-            content={
-                "error": "invalid_client",
-                "error_description": "Invalid client id or secret",
-            },
-        )
-
     # If there is no client secret, we use PKCE
     elif (
         db_authorization_code.code_challenge is not None
         and tokenreq.code_verifier is not None
     ):
+        # As PKCE is used, we make sure a client secret was not provided
+        if tokenreq.client_secret is not None:
+            logger.warning(
+                f"Token authorization_code_grant: A client secret should not be used when using PKCE ({request_id})"
+            )
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": "invalid_request",
+                    "error_description": "A client secret should not be used with PKCE",
+                },
+            )
         # We need to verify the hash correspond
         if (
             db_authorization_code.code_challenge
@@ -499,7 +534,9 @@ async def authorization_code_grant(db, settings, tokenreq, response):
             # We need to pass the code_verifier as a b-string, we use `code_verifier.encode()` for that
             # TODO: Make sure that `.hexdigest()` is applied by the client to code_challenge
         ):
-            # TODO: add logging
+            logger.warning(
+                f"Token authorization_code_grant: Invalid code_verifier ({request_id})"
+            )
             return JSONResponse(
                 status_code=400,
                 content={
@@ -508,7 +545,9 @@ async def authorization_code_grant(db, settings, tokenreq, response):
                 },
             )
     else:
-        # TODO: add logging
+        logger.warning(
+            f"Token authorization_code_grant: Client must provide a client_secret or a code_verifier ({request_id})"
+        )
         return JSONResponse(
             status_code=400,
             content={
@@ -519,6 +558,9 @@ async def authorization_code_grant(db, settings, tokenreq, response):
 
     # We can check the authorization code
     if db_authorization_code.expire_on < datetime.now():
+        logger.warning(
+            f"Token authorization_code_grant: Expired authorization code ({request_id})"
+        )
         return JSONResponse(
             status_code=400,
             content={
@@ -527,22 +569,54 @@ async def authorization_code_grant(db, settings, tokenreq, response):
             },
         )
 
-    # TODO
-    # We let the client hardcode a redirect url
-    if auth_client.redirect_uri is not None and auth_client.redirect_uri != "":
-        redirect_uri = auth_client.redirect_uri
+    # A redirect_uri may be hardcoded in the client
+    if auth_client.redirect_uri is not None:
+        if tokenreq.redirect_uri is None:
+            # We use the hardcoded value
+            tokenreq.redirect_uri = auth_client.redirect_uri
+        # If a redirect_uri is provided, it should match the one in the auth client
+        if tokenreq.redirect_uri != auth_client.redirect_uri:
+            logger.warning(
+                f"Token authorization_code_grant: redirect_uri {tokenreq.redirect_uri} do not match hardcoded redirect_uri ({request_id})"
+            )
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": "invalid_request",
+                    "error_description": "redirect_uri do not match",
+                },
+            )
 
-    # Ensure that the redirect_uri parameter value is identical to the redirect_uri parameter value that was included in the initial Authorization Request.
-    # If the redirect_uri parameter value is not present when there is only one registered redirect_uri value, the Authorization Server MAY return an error (since the Client should have included the parameter) or MAY proceed without an error (since OAuth 2.0 permits the parameter to be omitted in this case).
-    if redirect_uri is None:
-        redirect_uri = db_authorization_code.redirect_uri
-    if redirect_uri != db_authorization_code.redirect_uri:
-        # TODO add logging
+    # If a redirect_uri was provided in the previous request, we need to check they match
+    # > Ensure that the redirect_uri parameter value is identical to the redirect_uri parameter value that was included in the initial Authorization Request.
+    # > If the redirect_uri parameter value is not present when there is only one registered redirect_uri value, the Authorization Server MAY return an error (since the Client should have included the parameter) or MAY proceed without an error (since OAuth 2.0 permits the parameter to be omitted in this case).
+    if db_authorization_code.redirect_uri is not None:
+        if tokenreq.redirect_uri is None:
+            # We use the value provided previously
+            tokenreq.redirect_uri = db_authorization_code.redirect_uri
+        # If a redirect_uri is provided, it should match the one in the auth client
+        if tokenreq.redirect_uri != db_authorization_code.redirect_uri:
+            logger.warning(
+                f"Token authorization_code_grant: redirect_uri {tokenreq.redirect_uri} do not match the redirect_uri provided previously {db_authorization_code.redirect_uri} ({request_id})"
+            )
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": "invalid_request",
+                    "error_description": "redirect_uri should remain identical",
+                },
+            )
+
+    # If tokenreq.redirect_uri is still None, we should raise an error as we don't know which uri t use
+    if tokenreq.redirect_uri is None:
+        logger.warning(
+            f"Token authorization_code_grant: redirect_uri was never provided ({request_id})"
+        )
         return JSONResponse(
             status_code=400,
             content={
                 "error": "invalid_request",
-                "error_description": "redirect_uri should remain identical",
+                "error_description": "redirect_uri was never provided",
             },
         )
 
@@ -562,7 +636,6 @@ async def authorization_code_grant(db, settings, tokenreq, response):
     response_body = create_response_body(
         db_authorization_code, tokenreq.client_id, refresh_token, settings
     )
-    print("Response body", response_body)
 
     # Required headers by Oauth and oidc
     response.headers["Cache-Control"] = "no-store"
