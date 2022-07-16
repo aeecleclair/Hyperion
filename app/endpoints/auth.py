@@ -3,6 +3,7 @@ import hashlib
 import logging
 import urllib.parse
 from datetime import datetime, timedelta
+from typing import Type
 
 from fastapi import (
     APIRouter,
@@ -98,26 +99,11 @@ async def login_for_access_token(
 # Authentication Request
 # Common to OAuth 2.0 and OIDC
 
-# TODO: use a data class, or a SQL table
-known_clients = {
-    "application": {
-        "secret": "secret",
-        "redirect_uri": "http://localhost:8009/index.php/apps/oidc_login/oidc",
-    },
-    "myapplication": {
-        "secret": "mysecret",
-        "redirect_uri": "http://localhost:8000/auth/callback",
-    },
-    "piwigo": {
-        "secret": "mysecret",
-        "redirect_uri": "http://localhost:8001/plugins/OpenIdConnect/auth.php",
-    },
-}
-
 
 @router.get(
     "/auth/authorize",
     tags=[Tags.auth],
+    response_class=HTMLResponse,
 )
 async def get_authorize_page(
     # request need to be passed to Jinja2 to generate the HTML page
@@ -151,7 +137,11 @@ async def get_authorize_page(
     )
 
 
-@router.post("/auth/authorize", tags=[Tags.auth], response_class=HTMLResponse)
+@router.post(
+    "/auth/authorize",
+    tags=[Tags.auth],
+    response_class=HTMLResponse,
+)
 async def post_authorize_page(
     # request need to be passed to Jinja2 to generate the HTML page
     request: Request,
@@ -204,7 +194,7 @@ async def authorize_validation(
     # Database
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
-    request_id=Depends(get_request_id),
+    request_id: str = Depends(get_request_id),
 ):
     """
     Part 1 of the authorization code grant.
@@ -251,7 +241,7 @@ async def authorize_validation(
     )
 
     # Check if the client is registered in the server. auth_client will be None if the client_id is not known.
-    auth_client: BaseAuthClient | None = settings.KNOWN_AUTH_CLIENTS.get(
+    auth_client: Type[BaseAuthClient] | None = settings.KNOWN_AUTH_CLIENTS.get(
         authorizereq.client_id
     )
     if auth_client is None:
