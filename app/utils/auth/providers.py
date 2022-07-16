@@ -5,8 +5,10 @@ from app.models import models_core
 
 
 class BaseAuthClient:
-    secret: str = ""
-    redirect_uri: str = ""
+    # If no secret are provided, the client is expected to use PKCE
+    secret: str | None = None
+    # If no redirect_uri are hardcoded, the client will need to provide one in its request
+    redirect_uri: str | None = None
 
     def get_userinfo(self, user: models_core.CoreUser):
 
