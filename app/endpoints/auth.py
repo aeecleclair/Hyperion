@@ -444,6 +444,11 @@ async def authorization_code_grant(db, settings, tokenreq, response):
             },
         )
 
+    # The authorization code should only be usable once
+    # We want to remove it from the database even if the request fail.
+    # That's why we delete it at the beginning of this function
+    await cruds_auth.delete_authorization_token_by_token(db=db, code=tokenreq.code)
+
     if (
         tokenreq.client_id is None
         or tokenreq.client_id not in settings.KNOWN_AUTH_CLIENTS
@@ -531,7 +536,6 @@ async def authorization_code_grant(db, settings, tokenreq, response):
                 "error_description": "Expired authorization code",
             },
         )
-    await cruds_auth.delete_authorization_token_by_token(db=db, code=tokenreq.code)
 
     # TODO
     # We let the client hardcode a redirect url
