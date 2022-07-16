@@ -652,10 +652,19 @@ async def authorization_code_grant(
     return response_body
 
 
-async def refresh_token_grant(db, settings, tokenreq, response):
+async def refresh_token_grant(
+    db: AsyncSession,
+    settings: Settings,
+    tokenreq: schemas_auth.TokenReq,
+    response: Response,
+    request_id: str,
+):
     # Why doesn't this step use PKCE: https://security.stackexchange.com/questions/199000/oauth2-pkce-can-the-refresh-token-be-trusted
     # Answer in the link above: PKCE has been implemented because the authorization code could be intercepted, but since the refresh token is exchanged through a secure channel there is no issue here
     if tokenreq.refresh_token is None:
+        logger.warning(
+            f"Token refresh_token_grant: refresh_token was not provided ({request_id})"
+        )
         return JSONResponse(
             status_code=400,
             content={
@@ -669,14 +678,19 @@ async def refresh_token_grant(db, settings, tokenreq, response):
     )
 
     if db_refresh_token is None:
+        logger.warning(
+            f"Token refresh_token_grant: invalid refresh token ({request_id})"
+        )
         return JSONResponse(
             status_code=400,
             content={
                 "error": "invalid_request",
-                "error_description": "The provided refresh token is invalid",
+                "error_description": "Invalid refresh token",
             },
         )
     elif db_refresh_token.revoked_on is not None:
+        # If the client try to use a revoked refresh_token, we want to revoke all other refresh tokens from this client
+        # TODO: problematic loop
         await cruds_auth.revoke_refresh_token_by_client_id(
             db=db, client_id=db_refresh_token.client_id
         )
@@ -702,54 +716,65 @@ async def refresh_token_grant(db, settings, tokenreq, response):
             },
         )
 
-    if (
-        tokenreq.client_id is None
-        or tokenreq.client_id not in settings.KNOWN_AUTH_CLIENTS
-    ):
+    if tokenreq.client_id is None:
+        logger.warning(
+            f"Token refresh_token_grant: Unprovided client_id ({request_id})"
+        )
         return JSONResponse(
             status_code=400,
             content={
-                "error": "invalid_request",
-                "error_description": "Invalid client_id",
+                "error": "invalid_client",
+                "error_description": "Invalid client_id or secret",
             },
         )
 
-    auth_client = settings.KNOWN_AUTH_CLIENTS.get(tokenreq.client_id)
+    auth_client: Type[BaseAuthClient] | None = settings.KNOWN_AUTH_CLIENTS.get(
+        tokenreq.client_id
+    )
 
     if auth_client is None:
+        logger.warning(
+            f"Token authorization_code_grant: Invalid client_id {tokenreq.client_id} ({request_id})"
+        )
         return JSONResponse(
-            status_code=401,
+            status_code=400,
             content={
                 "error": "invalid_client",
                 "error_description": "Invalid client id or secret",
             },
         )
 
-    elif tokenreq.client_secret is not None:
+    # If the auth provider expect to use a client secret, we don't use PKCE
+    elif auth_client.secret is not None:
+        # We need to check the correct client_secret was provided
         if auth_client.secret != tokenreq.client_secret:
-            # TODO: add logging
-            print("Invalid client id or secret")
+            logger.warning(
+                f"Token authorization_code_grant: Invalid secret for client {tokenreq.client_id} ({request_id})"
+            )
             return JSONResponse(
-                status_code=401,
+                status_code=400,
                 content={
                     "error": "invalid_client",
                     "error_description": "Invalid client id or secret",
                 },
             )
-    elif auth_client.secret != "":
-        print("Invalid client id or secret")
-        return JSONResponse(
-            status_code=401,
-            content={
-                "error": "invalid_client",
-                "error_description": "Invalid client id or secret",
-            },
-        )
+    else:
+        # We use PKCE, a client secret should not have been provided
+        if tokenreq.client_secret is not None:
+            logger.warning(
+                f"Token authorization_code_grant: With PKCE, a client secret should not have been provided ({request_id})"
+            )
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": "invalid_client",
+                    "error_description": "Invalid client id or secret",
+                },
+            )
 
     # If everything is good we can finally create the new access/refresh tokens
-    # We use new refresh tokes every as we use some client that can't store secrets (see Refresh token rotation in https://www.pingidentity.com/en/resources/blog/post/refresh-token-rotation-spa.html)
-    # We use automatique reuse detection to prevent from replay attacks(https://auth0.com/docs/secure/tokens/refresh-tokens/refresh-token-rotation)
-    # TODO: add logging
+    # We use new refresh tokens every times as we use some client that can't store secrets (see Refresh token rotation in https://www.pingidentity.com/en/resources/blog/post/refresh-token-rotation-spa.html)
+    # We use automatique reuse detection to prevent from replay attacks (https://auth0.com/docs/secure/tokens/refresh-tokens/refresh-token-rotation)
 
     refresh_token = generate_token()
     new_db_refresh_token = models_auth.RefreshToken(
@@ -764,10 +789,8 @@ async def refresh_token_grant(db, settings, tokenreq, response):
     await cruds_auth.create_refresh_token(db=db, db_refresh_token=new_db_refresh_token)
 
     response_body = create_response_body(
-        db_refresh_token, tokenreq.client_id, refresh_token, settings
+        db_refresh_token, tokenreq.client_id, refresh_token, settings, request_id
     )
-
-    print("Response body", response_body)
 
     # Required headers by Oauth and oidc
     response.headers["Cache-Control"] = "no-store"
