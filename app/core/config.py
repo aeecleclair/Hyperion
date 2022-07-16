@@ -1,3 +1,5 @@
+from typing import Dict, Type
+
 from jose import jwk
 from pydantic import BaseSettings
 
@@ -81,7 +83,7 @@ class Settings(BaseSettings):
     # Auth configuration
     # Format: {"client_id": ProviderClass}
     # TODO: How do we store the secret properly ?
-    KNOWN_AUTH_CLIENTS = {
+    KNOWN_AUTH_CLIENTS: Dict[str, Type[BaseAuthClient]] = {
         "client_id": BaseAuthClient,
         "5507cc3a-fd29-11ec-b939-0242ac120002": ExampleClient,
     }
