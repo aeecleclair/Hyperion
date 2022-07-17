@@ -108,7 +108,8 @@ async def login_for_access_token(
 async def get_authorize_page(
     # request need to be passed to Jinja2 to generate the HTML page
     request: Request,
-    authorizereq: schemas_auth.Authorize,
+    # The parameters should be passed as query strings. We need to use Depends() for that as we want to put them in a schema
+    authorizereq: schemas_auth.Authorize = Depends(),
 ):
     """
     This endpoint is the one the user is redirected to when he begin the Oauth or Openid connect (*oidc*) *Authorization code* process.
