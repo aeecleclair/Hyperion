@@ -27,7 +27,8 @@ class BaseAuthClient:
     # See app.utils.types.scopes_type.ScopeType for possible values
     allowed_scopes: Set[ScopeType] = set()
 
-    def get_userinfo(self, user: models_core.CoreUser):
+    @classmethod
+    def get_userinfo(cls, user: models_core.CoreUser):
 
         # For Nextcloud, partial claims
         # See https://github.com/pulsejet/nextcloud-oidc-login#config right values
@@ -75,7 +76,8 @@ class NextcloudAuthClient(BaseAuthClient):
     # Required iss : the issuer value form .well-known (corresponding code : https://github.com/pulsejet/nextcloud-oidc-login/blob/0c072ecaa02579384bb5e10fbb9d219bbd96cfb8/3rdparty/jumbojett/openid-connect-php/src/OpenIDConnectClient.php#L1255)
     # Required claims : https://github.com/pulsejet/nextcloud-oidc-login/blob/0c072ecaa02579384bb5e10fbb9d219bbd96cfb8/3rdparty/jumbojett/openid-connect-php/src/OpenIDConnectClient.php#L1016
 
-    def get_userinfo(self, user: models_core.CoreUser):
+    @classmethod
+    def get_userinfo(cls, user: models_core.CoreUser):
         # For Nextcloud, various claims can be provided.
         # See https://github.com/pulsejet/nextcloud-oidc-login#config for claim names
 
@@ -92,7 +94,8 @@ class NextcloudAuthClient(BaseAuthClient):
 
 
 class PiwigoAuthClient(BaseAuthClient):
-    def get_userinfo(self, user: models_core.CoreUser):
+    @classmethod
+    def get_userinfo(cls, user: models_core.CoreUser):
         # For Piwigo, a name is sufficient.
         # We need to put the claim name in Piwigo oidc plugin config
 
