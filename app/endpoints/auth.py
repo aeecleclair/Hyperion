@@ -405,6 +405,7 @@ async def token(
             settings=settings,
             tokenreq=tokenreq,
             response=response,
+            request_id=request_id,
         )
 
     else:
@@ -832,7 +833,6 @@ def create_response_body(
 
     granted_scopes = " ".join(granted_scopes_set)
 
-    # TODO: is the client_id=aud really logic ? It is for oidc but for the access token i don't know
     access_token_data = schemas_auth.TokenData(
         sub=db_row.user_id, scopes=granted_scopes, aud=client_id
     )
@@ -856,32 +856,22 @@ def create_response_body(
         # * iat: Time at which the JWT was issued.
         # * if provided, nonce
 
-        # For Nextcloud:
-        # Required iss : the issuer value form .well-known (corresponding code : https://github.com/pulsejet/nextcloud-oidc-login/blob/0c072ecaa02579384bb5e10fbb9d219bbd96cfb8/3rdparty/jumbojett/openid-connect-php/src/OpenIDConnectClient.php#L1255)
-        # Required claims : https://github.com/pulsejet/nextcloud-oidc-login/blob/0c072ecaa02579384bb5e10fbb9d219bbd96cfb8/3rdparty/jumbojett/openid-connect-php/src/OpenIDConnectClient.php#L1016
-
-        # id_token_data = {
-        #    "iss": AUTH_ISSUER,
-        #    "sub": db_row.user_id,
-        #    "aud": client_id,
-        #    # "exp"included by the function
-        # }
+        # exp is set by the token creation function
         id_token_data = schemas_auth.TokenData(
             iss=settings.AUTH_ISSUER,
             sub=db_row.user_id,
             aud=client_id,
         )
         if db_row.nonce is not None:
-            # oidc only, required if provided by the client
+            # parameter for oidc only, required if provided by the client
             id_token_data.nonce = db_row.nonce
 
         id_token = create_access_token_RS256(data=id_token_data, settings=settings)
-        print("Token", id_token)
 
     # We create an OAuth response, with oidc specific elements if required
     response_body = schemas_auth.TokenResponse(
         access_token=access_token,
-        expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # in seconds
         scopes=granted_scopes,
         refresh_token=refresh_token,
         id_token=id_token,
@@ -895,7 +885,6 @@ def create_response_body(
     tags=[Tags.auth],
 )
 async def auth_get_userinfo(
-    request: Request,
     user: models_core.CoreUser = Depends(
         get_user_from_token_with_scopes([ScopeType.openid])
     ),
