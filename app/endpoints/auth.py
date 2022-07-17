@@ -833,6 +833,10 @@ def create_response_body(
 
     granted_scopes = " ".join(granted_scopes_set)
 
+    logger.warning(
+        f"Token create_response_body: Granting scopes {granted_scopes} ({request_id})"
+    )
+
     access_token_data = schemas_auth.TokenData(
         sub=db_row.user_id, scopes=granted_scopes, aud=client_id
     )
@@ -890,20 +894,29 @@ async def auth_get_userinfo(
     ),
     token_data: schemas_auth.TokenData = Depends(get_token_data),
     settings: Settings = Depends(get_settings),
-):  # productId: int = Body(...)):  # , request: Request):
-    # access_token = authorization
+    request_id: str = Depends(get_request_id),
+):
 
     # The client_id is contained in aud field
     client_id = token_data.aud
 
     if client_id is None:
+        logger.warning(f"User info: Unprovided client_id ({request_id})")
         raise HTTPException(
             status_code=401,
-            detail="Unknown client_id",
+            detail="Unprovided client_id",
         )
 
-    auth_client = settings.KNOWN_AUTH_CLIENTS[client_id]
-    auth_client.get_userinfo(user)
+    auth_client: Type[BaseAuthClient] | None = settings.KNOWN_AUTH_CLIENTS.get(
+        client_id
+    )
+
+    if auth_client is None:
+        logger.warning(f"User info: Invalid client_id {client_id} ({request_id})")
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid client_id",
+        )
 
     return auth_client.get_userinfo(user=user)
 
