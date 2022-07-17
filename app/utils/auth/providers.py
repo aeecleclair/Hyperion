@@ -8,6 +8,17 @@ from app.utils.types.scopes_type import ScopeType
 
 
 class BaseAuthClient:
+    """
+    When registering an OAuth or Openid connect client in config, a corresponding auth_client must be provided.
+    The auth_client class is responsible for configuring the redirect_uri, granting scopes, returning adapted userinfo...
+
+    To register a new client, you should create a new class inheriting from `BaseAuthClient` and override its parameters
+    """
+
+    ########################################################
+    # Auth client configuration: override these parameters #
+    ########################################################
+
     # If no secret are provided, the client is expected to use PKCE
     secret: str | None = None
     # If no redirect_uri are hardcoded, the client will need to provide one in its request
@@ -29,6 +40,11 @@ class BaseAuthClient:
 
         # info = BaseAuthClient.base_user_info(user=user)
         # return info
+
+    ########################################################
+    #                   Utilities methods                  #
+    #    The following methods should not be overridden    #
+    ########################################################
 
     @classmethod
     def base_user_info(cls, user: models_core.CoreUser):
@@ -55,6 +71,10 @@ class ExampleClient(BaseAuthClient):
 
 
 class NextcloudAuthClient(BaseAuthClient):
+    # For Nextcloud:
+    # Required iss : the issuer value form .well-known (corresponding code : https://github.com/pulsejet/nextcloud-oidc-login/blob/0c072ecaa02579384bb5e10fbb9d219bbd96cfb8/3rdparty/jumbojett/openid-connect-php/src/OpenIDConnectClient.php#L1255)
+    # Required claims : https://github.com/pulsejet/nextcloud-oidc-login/blob/0c072ecaa02579384bb5e10fbb9d219bbd96cfb8/3rdparty/jumbojett/openid-connect-php/src/OpenIDConnectClient.php#L1016
+
     def get_userinfo(self, user: models_core.CoreUser):
         # For Nextcloud, various claims can be provided.
         # See https://github.com/pulsejet/nextcloud-oidc-login#config for claim names

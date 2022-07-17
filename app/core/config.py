@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_MINUTES = 120
 
     # TODO: remove the DOCKER_URL
+    # A trailing / is required
     CLIENT_URL = "http://127.0.0.1:8000/"
     DOCKER_URL = "http://host.docker.internal:8000/"  # During dev, docker container can not directly access the client url
     # Openid connect issuer name
