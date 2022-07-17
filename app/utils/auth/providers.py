@@ -1,7 +1,10 @@
 # TODO: How do we store the secret properly ?
 
 
+from typing import Set
+
 from app.models import models_core
+from app.utils.types.scopes_type import ScopeType
 
 
 class BaseAuthClient:
@@ -9,6 +12,9 @@ class BaseAuthClient:
     secret: str | None = None
     # If no redirect_uri are hardcoded, the client will need to provide one in its request
     redirect_uri: str | None = None
+    # Set of scopes the auth client is authorized to grant when issuing an access token.
+    # See app.utils.types.scopes_type.ScopeType for possible values
+    allowed_scopes: Set[ScopeType] = set()
 
     def get_userinfo(self, user: models_core.CoreUser):
 
@@ -37,6 +43,10 @@ class BaseAuthClient:
             "picture": "",
             "piwigo_groups": ["pixelbbb", "pixels"],
         }
+
+    @classmethod
+    def filter_scopes(cls, requested_scopes: Set[str]) -> Set[ScopeType]:
+        return cls.allowed_scopes.intersection(requested_scopes)
 
 
 class ExampleClient(BaseAuthClient):

@@ -3,7 +3,7 @@ import hashlib
 import logging
 import urllib.parse
 from datetime import datetime, timedelta
-from typing import Type
+from typing import Set, Type
 
 from fastapi import (
     APIRouter,
@@ -643,7 +643,12 @@ async def authorization_code_grant(
     await cruds_auth.create_refresh_token(db=db, db_refresh_token=new_db_refresh_token)
 
     response_body = create_response_body(
-        db_authorization_code, tokenreq.client_id, refresh_token, settings
+        db_authorization_code,
+        tokenreq.client_id,
+        refresh_token,
+        auth_client,
+        settings,
+        request_id,
     )
 
     # Required headers by Oauth and oidc
@@ -789,7 +794,12 @@ async def refresh_token_grant(
     await cruds_auth.create_refresh_token(db=db, db_refresh_token=new_db_refresh_token)
 
     response_body = create_response_body(
-        db_refresh_token, tokenreq.client_id, refresh_token, settings, request_id
+        db_refresh_token,
+        tokenreq.client_id,
+        refresh_token,
+        auth_client,
+        settings,
+        request_id,
     )
 
     # Required headers by Oauth and oidc
@@ -798,19 +808,29 @@ async def refresh_token_grant(
     return response_body
 
 
-def create_response_body(db_row, client_id, refresh_token, settings):
-    # We create a list of all the scopes we accept to grant to the user. These scopes will be included in the access token.
-    # If API was provided in the request scope, we grant it
-    # If it is an oidc request, we grant userinfos
-    granted_scopes_list = []
+def create_response_body(
+    db_row: models_auth.AuthorizationCode | models_auth.RefreshToken,
+    client_id: str,
+    refresh_token: str,
+    auth_client: Type[BaseAuthClient],
+    settings: Settings,
+    request_id: str,
+):
+    # In the request, the client ask for some scopes. The auth provider decide which scopes he grants to the client.
 
-    if db_row.scope is not None:
-        if ScopeType.API in db_row.scope:
-            granted_scopes_list.append(ScopeType.API)
-        if ScopeType.openid in db_row.scope:
-            granted_scopes_list.append(ScopeType.openid)
+    # We have a space separated string of requested scopes : db_row.scope
+    # We use a set representation as:
+    #  - scopes should be unique
+    #  - we will intersect requested scopes with allowed scopes, which is an easier operation with a set than a list
+    requested_scopes_set: Set[str] = set((db_row.scope or "").split(" "))
 
-    granted_scopes = " ".join(granted_scopes_list)
+    # We create a list of all the scopes we accept to grant to the user to include them in the in the access token.
+
+    granted_scopes_set: Set[ScopeType] = auth_client.filter_scopes(
+        requested_scopes=requested_scopes_set
+    )
+
+    granted_scopes = " ".join(granted_scopes_set)
 
     # TODO: is the client_id=aud really logic ? It is for oidc but for the access token i don't know
     access_token_data = schemas_auth.TokenData(
@@ -823,7 +843,7 @@ def create_response_body(db_row, client_id, refresh_token, settings):
     id_token = None  # Will change if oidc is asked in scopes
 
     # Perform specifics steps for openid connect
-    if db_row.scope is not None and "openid" in db_row.scope:
+    if ScopeType.openid in granted_scopes_set:
         # It's an openid connect request, we also need to return an `id_token`
 
         # The id_token is a JWS: a signed JWT
