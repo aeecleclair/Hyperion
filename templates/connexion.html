@@ -166,8 +166,14 @@
         <input type="hidden" name="scope" value="{{ scope }}">
         <input type="hidden" name="state" value="{{ state }}">
         <input type="hidden" name="nonce" value="{{ nonce }}">
+        {# If code_challenge or code_challenge_method are undefined, we must exclude them from the form if we don't want
+        them to be converted to the string "None" #}
+        {% if code_challenge %}
         <input type="hidden" name="code_challenge" value="{{ code_challenge }}">
+        {% endif %}
+        {% if code_challenge_method %}
         <input type="hidden" name="code_challenge_method" value="{{ code_challenge_method }}">
+        {% endif %}
 
         <button type="submit">Log In</button>
 
