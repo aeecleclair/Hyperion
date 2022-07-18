@@ -72,6 +72,14 @@ class ExampleClient(BaseAuthClient):
 
 
 class NextcloudAuthClient(BaseAuthClient):
+    # If no secret are provided, the client is expected to use PKCE
+    secret: str | None = "secret"
+    # If no redirect_uri are hardcoded, the client will need to provide one in its request
+    redirect_uri: str | None = None
+    # Set of scopes the auth client is authorized to grant when issuing an access token.
+    # See app.utils.types.scopes_type.ScopeType for possible values
+    allowed_scopes: Set[ScopeType] = {ScopeType.openid}
+
     # For Nextcloud:
     # Required iss : the issuer value form .well-known (corresponding code : https://github.com/pulsejet/nextcloud-oidc-login/blob/0c072ecaa02579384bb5e10fbb9d219bbd96cfb8/3rdparty/jumbojett/openid-connect-php/src/OpenIDConnectClient.php#L1255)
     # Required claims : https://github.com/pulsejet/nextcloud-oidc-login/blob/0c072ecaa02579384bb5e10fbb9d219bbd96cfb8/3rdparty/jumbojett/openid-connect-php/src/OpenIDConnectClient.php#L1016
@@ -87,7 +95,10 @@ class NextcloudAuthClient(BaseAuthClient):
             "given_name": user.nickname,
             "family_name": user.name,
             "preferred_username": user.nickname,
-            "ownCloudGroups": user.groups,  # ["pixels"], # We may want to filter which groups are provided as they won't not always all be useful
+            # TODO: should we use group ids instead of names? It would be less human readable but would guarantee uniqueness. Question: are group names unique?
+            "ownCloudGroups": [
+                group.name for group in user.groups
+            ],  # ["pixels"], # We may want to filter which groups are provided as they won't not always all be useful
             "email": user.email,
             "picture": "",  # TODO: add a PFP
         }
