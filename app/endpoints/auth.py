@@ -838,12 +838,13 @@ def create_response_body(
         f"Token create_response_body: Granting scopes {granted_scopes} ({request_id})"
     )
 
+    # The audience field should be the name of the service the access token gives access to
+    # For the access token, it's always the API. We decide not to include this field as we know we are the one who issued the access token
+    # For the id token, it's the service which will use it, we thus need to include aud=client_id
+    # In order to be able to identify the client using the access token we may add a public claim `cid=client_id`, see bellow
     access_token_data = schemas_auth.TokenData(
-        sub=db_row.user_id, scopes=granted_scopes, aud=client_id
+        sub=db_row.user_id, scopes=granted_scopes
     )
-
-    # Expiration date is included by `create_access_token` function
-    access_token = create_access_token(data=access_token_data, settings=settings)
 
     id_token = None  # Will change if oidc is asked in scopes
 
@@ -862,6 +863,7 @@ def create_response_body(
         # * if provided, nonce
 
         # exp is set by the token creation function
+        # aud=client_id as its the client verify the id_token
         id_token_data = schemas_auth.TokenData(
             iss=settings.AUTH_ISSUER,
             sub=db_row.user_id,
@@ -871,7 +873,14 @@ def create_response_body(
             # parameter for oidc only, required if provided by the client
             id_token_data.nonce = db_row.nonce
 
+        # In order to provide the user information in a format understandable by the client, we need to be able to identify it
+        # For that, we include a public cid claim in the access token
+        access_token_data.cid = client_id
+
         id_token = create_access_token_RS256(data=id_token_data, settings=settings)
+
+    # Expiration date is included by `create_access_token` function
+    access_token = create_access_token(data=access_token_data, settings=settings)
 
     # We create an OAuth response, with oidc specific elements if required
     response_body = schemas_auth.TokenResponse(
@@ -898,8 +907,8 @@ async def auth_get_userinfo(
     request_id: str = Depends(get_request_id),
 ):
 
-    # The client_id is contained in aud field
-    client_id = token_data.aud
+    # For openid connect, the client_id is added in the public cid field
+    client_id = token_data.cid
 
     if client_id is None:
         logger.warning(f"User info: Unprovided client_id ({request_id})")

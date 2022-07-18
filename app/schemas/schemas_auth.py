@@ -76,6 +76,7 @@ class TokenData(BaseModel):
     sub: str  # Subject: the user id
     iss: str | None = None
     aud: str | None = None
+    cid: str | None = None  # The client_id of the service which receive the token
     iat: datetime | None = None
     nonce: str | None = None
     scopes: str = ""
