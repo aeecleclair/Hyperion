@@ -3,7 +3,7 @@ from typing import Dict, Type
 from jose import jwk
 from pydantic import BaseSettings
 
-from app.utils.auth.providers import BaseAuthClient, ExampleClient
+from app.utils.auth.providers import BaseAuthClient, ExampleClient, NextcloudAuthClient
 
 
 class Settings(BaseSettings):
@@ -88,6 +88,7 @@ class Settings(BaseSettings):
     KNOWN_AUTH_CLIENTS: Dict[str, Type[BaseAuthClient]] = {
         "client_id": BaseAuthClient,
         "5507cc3a-fd29-11ec-b939-0242ac120002": ExampleClient,
+        "application": NextcloudAuthClient,
     }
 
     class Config:
