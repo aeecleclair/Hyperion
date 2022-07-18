@@ -43,7 +43,8 @@ class Settings(BaseSettings):
 
     @property
     def RSA_PUBLIC_JWK(self):
-        JWK = self.RSA_PUBLIC_KEY.to_dict().update(
+        JWK = self.RSA_PUBLIC_KEY.to_dict()
+        JWK.update(
             {
                 "use": "sig",
                 "kid": "RSA-JWK-1",  # The kid allows to identify the key in the JWKS, it should match the kid in the token header
