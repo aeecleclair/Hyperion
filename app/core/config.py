@@ -1,3 +1,4 @@
+from functools import cached_property
 from typing import Dict, Type
 
 from jose import jwk
@@ -33,17 +34,25 @@ class Settings(BaseSettings):
     AUTH_ISSUER = "hyperion"
     RSA_PRIVATE_PEM_STRING: str
 
-    @property
-    def RSA_PRIVATE_KEY(self):
-        return jwk.construct(self.RSA_PRIVATE_PEM_STRING, algorithm="RS256")
 
-    @property
-    def RSA_PUBLIC_KEY(self):
-        return self.RSA_PRIVATE_KEY.public_key()
+    # The following properties can not be instantiated as class variables as them need to be computed using an other property from the class,
+    # which wont be available before the .env file parsing.
+    # We thus decide to use the decorator `@property` to make these methods usable as properties and not functions: as properties: Settings.RSA_PRIVATE_KEY, Settings.RSA_PUBLIC_KEY and Settings.RSA_PUBLIC_JWK
+    # Their values should not change, we don't want to recompute all of them overtimes. We use the `@lru_cache` decorator to cache them.
+    # The combinaison of `@property` and `@lru_cache` should be replaced by `@cached_property`
+    # See https://docs.python.org/3.8/library/functools.html?highlight=#functools.cached_property
 
-    @property
-    def RSA_PUBLIC_JWK(self):
-        JWK = self.RSA_PUBLIC_KEY.to_dict()
+    @cached_property
+    def RSA_PRIVATE_KEY(cls):
+        return jwk.construct(cls.RSA_PRIVATE_PEM_STRING, algorithm="RS256")
+
+    @cached_property
+    def RSA_PUBLIC_KEY(cls):
+        return cls.RSA_PRIVATE_KEY.public_key()
+
+    @cached_property
+    def RSA_PUBLIC_JWK(cls):
+        JWK = cls.RSA_PUBLIC_KEY.to_dict()
         JWK.update(
             {
                 "use": "sig",
