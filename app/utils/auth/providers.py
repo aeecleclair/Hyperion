@@ -47,6 +47,10 @@ class BaseAuthClient:
     #    The following methods should not be overridden    #
     ########################################################
 
+    def __init__(self, client_id, secret) -> None:
+        self.client_id = client_id
+        self.secret = secret
+
     @classmethod
     def base_user_info(cls, user: models_core.CoreUser):
         return {

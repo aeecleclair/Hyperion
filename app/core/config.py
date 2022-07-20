@@ -4,6 +4,7 @@ from typing import Dict, Type
 from jose import jwk
 from pydantic import BaseSettings
 
+from app.utils.auth import providers
 from app.utils.auth.providers import BaseAuthClient, ExampleClient, NextcloudAuthClient
 
 
@@ -33,7 +34,6 @@ class Settings(BaseSettings):
     # Openid connect issuer name
     AUTH_ISSUER = "hyperion"
     RSA_PRIVATE_PEM_STRING: str
-
 
     # The following properties can not be instantiated as class variables as them need to be computed using an other property from the class,
     # which wont be available before the .env file parsing.
@@ -91,14 +91,30 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str
     SMTP_EMAIL: str
 
-    # Auth configuration
-    # Format: {"client_id": ProviderClass}
-    # TODO: How do we store the secret properly ?
-    KNOWN_AUTH_CLIENTS: Dict[str, Type[BaseAuthClient]] = {
-        "client_id": BaseAuthClient,
-        "5507cc3a-fd29-11ec-b939-0242ac120002": ExampleClient,
-        "application": NextcloudAuthClient,
-    }
+    # Add an AUTH_CLIENTS variable to the .env dotenv to configure auth clients
+    # This variable should have the format: [["client id", "client secret", "app.utils.auth.providers class name"]]
+    # Ex: AUTH_CLIENTS=[["Nextcloudclient", "supersecret", "NextcloudAuthClient"], ["Piwigo", "secret2", "BaseAuthClient"]]
+    AUTH_CLIENTS: list[tuple[str, str, str]]
+    # The AUTH_CLIENTS property should never be used in the code. To get an auth client, use the following KNOWN_AUTH_CLIENTS
+
+    # This property parse AUTH_CLIENTS to create a dictionary of auth clients:
+    # {"client_id": AuthClientClassInstance}
+    @cached_property
+    def KNOWN_AUTH_CLIENTS(cls):
+        clients = {}
+        for client_id, secret, auth_client_name in cls.AUTH_CLIENTS:
+            try:
+                auth_client_class: type[providers.BaseAuthClients] = getattr(
+                    providers, auth_client_name
+                )
+            except AttributeError:
+                # logger.error()
+                raise ValueError(
+                    ".env AUTH_CLIENTS is invalid: {auth_client_name} is not an auth_client from app.utils.auth.providers"
+                )
+            clients[client_id] = auth_client_class(client_id, secret)
+
+        return clients
 
     class Config:
         # By default, the settings are loaded from the `.env` file but this behaviour can be overridden by using
