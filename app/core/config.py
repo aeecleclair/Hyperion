@@ -106,3 +106,7 @@ class Settings(BaseSettings):
         # Ex: `Settings(_env_file=".env.dev")`
         env_file = ".env"
         env_file_encoding = "utf-8"
+
+        # Without this property, @cached_property decorator raise "TypeError: cannot pickle '_thread.RLock' object"
+        # See https://github.com/samuelcolvin/pydantic/issues/1241
+        keep_untouched = (cached_property,)
