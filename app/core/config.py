@@ -93,8 +93,9 @@ class Settings(BaseSettings):
 
     # Add an AUTH_CLIENTS variable to the .env dotenv to configure auth clients
     # This variable should have the format: [["client id", "client secret", "app.utils.auth.providers class name"]]
-    # Ex: AUTH_CLIENTS=[["Nextcloudclient", "supersecret", "NextcloudAuthClient"], ["Piwigo", "secret2", "BaseAuthClient"]]
-    AUTH_CLIENTS: list[tuple[str, str, str]]
+    # Use an empty secret `null` or `""` to use PKCE instead of a client secret
+    # Ex: AUTH_CLIENTS=[["Nextcloudclient", "supersecret", "NextcloudAuthClient"], ["Piwigo", "secret2", "BaseAuthClient"], , ["mobileapp", null, "BaseAuthClient"]]
+    AUTH_CLIENTS: list[tuple[str, str | None, str]]
     # The AUTH_CLIENTS property should never be used in the code. To get an auth client, use the following KNOWN_AUTH_CLIENTS
 
     # This property parse AUTH_CLIENTS to create a dictionary of auth clients:
@@ -112,7 +113,12 @@ class Settings(BaseSettings):
                 raise ValueError(
                     ".env AUTH_CLIENTS is invalid: {auth_client_name} is not an auth_client from app.utils.auth.providers"
                 )
-            clients[client_id] = auth_client_class(client_id, secret)
+            # If the secret is empty, this mean the client is expected to use PKCE
+            # We need to pass a None value to the auth_client_class
+            if not secret:
+                secret = None
+            # We can create a new instance of the auth_client_class with the client id and secret
+            clients[client_id] = auth_client_class(client_id=client_id, secret=secret)
 
         return clients
 
