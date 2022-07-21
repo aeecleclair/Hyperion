@@ -4,6 +4,7 @@
 from typing import Any, Set
 
 from app.models import models_core
+from app.utils.types.groups_type import GroupType
 from app.utils.types.scopes_type import ScopeType
 
 
@@ -25,6 +26,9 @@ class BaseAuthClient:
     # See app.utils.types.scopes_type.ScopeType for possible values
     # WARNING: to be able to use openid connect, `ScopeType.openid` should always be allowed
     allowed_scopes: Set[ScopeType] = {ScopeType.openid}
+    # Restrict the authentification to this client to specifics Hyperion groups.
+    # When set to `None`, users from any group can use the auth client
+    allowed_groups: list[GroupType] | None = None
 
     def get_userinfo(self, user: models_core.CoreUser) -> dict[str, Any]:
         """

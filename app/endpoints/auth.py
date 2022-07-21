@@ -38,6 +38,7 @@ from app.dependencies import (
 from app.models import models_auth, models_core
 from app.schemas import schemas_auth
 from app.utils.auth.providers import BaseAuthClient
+from app.utils.tools import is_user_member_of_an_allowed_group
 from app.utils.types.scopes_type import ScopeType
 from app.utils.types.tags import Tags
 
@@ -300,6 +301,21 @@ async def authorize_validation(
         if authorizereq.state:
             url += "&state=" + authorizereq.state
         return RedirectResponse(url)
+
+    # The auth_client may restrict the usage of the client to specific Hyperion groups.
+    # For example, only ECLAIR members may be allowed to access the wiki
+    if auth_client.allowed_groups is not None:
+        if not is_user_member_of_an_allowed_group(
+            user=user, allowed_groups=auth_client.allowed_groups
+        ):
+            # TODO We should show an HTML page explaining the issue
+            logger.warning(
+                f"Authorize-validation: user is not member of an allowed group {authorizereq.email} ({request_id})"
+            )
+            url = redirect_uri + "?error=" + "consent_required"
+            if authorizereq.state:
+                url += "&state=" + authorizereq.state
+            return RedirectResponse(url)
 
     # We generate a new authorization_code
     # The authorization code MUST expire
