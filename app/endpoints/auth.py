@@ -242,7 +242,7 @@ async def authorize_validation(
     )
 
     # Check if the client is registered in the server. auth_client will be None if the client_id is not known.
-    auth_client: Type[BaseAuthClient] | None = settings.KNOWN_AUTH_CLIENTS.get(
+    auth_client: BaseAuthClient | None = settings.KNOWN_AUTH_CLIENTS.get(
         authorizereq.client_id
     )
     if auth_client is None:
@@ -475,7 +475,7 @@ async def authorization_code_grant(
             },
         )
 
-    auth_client: Type[BaseAuthClient] | None = settings.KNOWN_AUTH_CLIENTS.get(
+    auth_client: BaseAuthClient | None = settings.KNOWN_AUTH_CLIENTS.get(
         tokenreq.client_id
     )
 
@@ -735,7 +735,7 @@ async def refresh_token_grant(
             },
         )
 
-    auth_client: Type[BaseAuthClient] | None = settings.KNOWN_AUTH_CLIENTS.get(
+    auth_client: BaseAuthClient | None = settings.KNOWN_AUTH_CLIENTS.get(
         tokenreq.client_id
     )
 
@@ -814,7 +814,7 @@ def create_response_body(
     db_row: models_auth.AuthorizationCode | models_auth.RefreshToken,
     client_id: str,
     refresh_token: str,
-    auth_client: Type[BaseAuthClient],
+    auth_client: BaseAuthClient,
     settings: Settings,
     request_id: str,
 ):
@@ -917,9 +917,7 @@ async def auth_get_userinfo(
             detail="Unprovided client_id",
         )
 
-    auth_client: Type[BaseAuthClient] | None = settings.KNOWN_AUTH_CLIENTS.get(
-        client_id
-    )
+    auth_client: BaseAuthClient | None = settings.KNOWN_AUTH_CLIENTS.get(client_id)
 
     if auth_client is None:
         logger.warning(f"User info: Invalid client_id {client_id} ({request_id})")

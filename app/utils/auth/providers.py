@@ -1,7 +1,7 @@
 # TODO: How do we store the secret properly ?
 
 
-from typing import Set
+from typing import Any, Set
 
 from app.models import models_core
 from app.utils.types.scopes_type import ScopeType
@@ -12,62 +12,51 @@ class BaseAuthClient:
     When registering an OAuth or Openid connect client in config, a corresponding auth_client must be provided.
     The auth_client class is responsible for configuring the redirect_uri, granting scopes, returning adapted userinfo...
 
-    To register a new client, you should create a new class inheriting from `BaseAuthClient` and override its parameters
+    To register a new client, you should create a new class inheriting from `BaseAuthClient` and override some of its parameters and methods
     """
 
     ########################################################
     # Auth client configuration: override these parameters #
     ########################################################
 
-    # If no secret are provided, the client is expected to use PKCE
-    secret: str | None = None
     # If no redirect_uri are hardcoded, the client will need to provide one in its request
     redirect_uri: str | None = None
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.utils.types.scopes_type.ScopeType for possible values
     allowed_scopes: Set[ScopeType] = set()
 
-    @classmethod
-    def get_userinfo(cls, user: models_core.CoreUser):
+    def get_userinfo(self, user: models_core.CoreUser) -> dict[str, Any]:
+        """
+        Return information about the user in a format understandable by the client.
+        This method return the result of Openid connect userinfo endpoint.
 
-        # For Nextcloud, partial claims
-        # See https://github.com/pulsejet/nextcloud-oidc-login#config right values
+        See oidc specifications and `app.endpoints.auth.auth_get_userinfo` for more information:
+        https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
 
-        # For Piwigo, a name is sufficient. We need to put the claim name in th econfig file
+        See the client documentation and implementation to know claims it needs or can receive
+        """
+        # Override this method with custom information adapted for the client
+        # WARNING: The sub (subject) Claim MUST always be returned in the UserInfo Response.
         return {
             "sub": user.id,
             "name": user.firstname,
         }
-
-        # info = BaseAuthClient.base_user_info(user=user)
-        # return info
 
     ########################################################
     #                   Utilities methods                  #
     #    The following methods should not be overridden    #
     ########################################################
 
-    def __init__(self, client_id, secret) -> None:
-        self.client_id = client_id
-        self.secret = secret
+    def __init__(self, client_id: str, secret: str | None) -> None:
+        # The following parameters are not class variables but instance variables.
+        # There can indeed be more that one client using the class, the client will need to have its own client id and secret.
 
-    @classmethod
-    def base_user_info(cls, user: models_core.CoreUser):
-        return {
-            "sub": user.id,
-            "name": user.firstname,
-            "given_name": user.nickname,
-            "family_name": user.name,
-            "preferred_username": user.nickname,
-            "ownCloudGroups": ["pixels"],
-            "email": user.email,
-            "picture": "",
-            "piwigo_groups": ["pixelbbb", "pixels"],
-        }
+        self.client_id: str = client_id
+        # If no secret are provided, the client is expected to use PKCE
+        self.secret: str | None = secret
 
-    @classmethod
-    def filter_scopes(cls, requested_scopes: Set[str]) -> Set[ScopeType]:
-        return cls.allowed_scopes.intersection(requested_scopes)
+    def filter_scopes(self, requested_scopes: Set[str]) -> Set[ScopeType]:
+        return self.allowed_scopes.intersection(requested_scopes)
 
 
 class ExampleClient(BaseAuthClient):
