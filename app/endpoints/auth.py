@@ -492,7 +492,7 @@ async def authorization_code_grant(
         )
 
     # If the auth provider expect to use a client secret, we don't use PKCE
-    elif auth_client.secret is not None:
+    if auth_client.secret is not None:
         # As PKCE is not used, we need to make sure that PKCE related parameters were not used
         if (
             db_authorization_code.code_challenge is not None
@@ -906,6 +906,20 @@ async def auth_get_userinfo(
     settings: Settings = Depends(get_settings),
     request_id: str = Depends(get_request_id),
 ):
+    """
+    Openid connect specify an endpoint the client can use to get informations about the user.
+    The oidc client while provide the access_token it got previously in the request.
+
+    The informations expected depends from the client and may include the user identifier, name, email, phone...
+    See the reference for possible claims. See the client documentation and implementation to know what it needs and can receive.
+    The sub (subject) Claim MUST always be returned in the UserInfo Response.
+
+    The client can ask for specific informations using scopes and claims. See the reference for more information.
+    This procedure is not implemented in Hyperion as we can customize the response using auth_client class
+
+    Reference:
+    https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
+    """
 
     # For openid connect, the client_id is added in the public cid field
     client_id = token_data.cid

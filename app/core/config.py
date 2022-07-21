@@ -105,7 +105,7 @@ class Settings(BaseSettings):
         clients = {}
         for client_id, secret, auth_client_name in cls.AUTH_CLIENTS:
             try:
-                auth_client_class: type[providers.BaseAuthClients] = getattr(
+                auth_client_class: type[providers.BaseAuthClient] = getattr(
                     providers, auth_client_name
                 )
             except AttributeError:
