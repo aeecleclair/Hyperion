@@ -21,6 +21,7 @@ from app.cruds import cruds_users
 from app.database import SessionLocal
 from app.models import models_core
 from app.schemas import schemas_auth
+from app.utils.tools import is_user_member_of_an_allowed_group
 from app.utils.types.groups_type import GroupType
 from app.utils.types.scopes_type import ScopeType
 
@@ -153,12 +154,9 @@ def is_user_a_member_of(
         """
         A dependency that check that user is a member of the group with the given id then return the corresponding user.
         """
-        # We can not directly test is group_id is in user.groups
-        # As user.groups is a list of CoreGroup as group_id is an UUID
-        for user_group in user.groups:
-            if group_id == user_group.id:
-                # We know the user is a member of the group, we don't need to return an error and can return the CoreUser object
-                return user
+        if is_user_member_of_an_allowed_group(user=user, allowed_groups=[group_id]):
+            # We know the user is a member of the group, we don't need to return an error and can return the CoreUser object
+            return user
 
         raise HTTPException(
             status_code=403,
