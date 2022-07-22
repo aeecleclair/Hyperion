@@ -1,11 +1,9 @@
 from functools import cached_property
-from typing import Dict, Type
 
 from jose import jwk
 from pydantic import BaseSettings
 
 from app.utils.auth import providers
-from app.utils.auth.providers import BaseAuthClient, ExampleClient, NextcloudAuthClient
 
 
 class Settings(BaseSettings):
@@ -21,19 +19,56 @@ class Settings(BaseSettings):
     To access these settings, the `get_settings` dependency should be used.
     """
 
-    # TODO: rename
-    # Authorization using JWT
-    ACCESS_TOKEN_SECRET_KEY: str
+    # NOTE: Variables without a value should not be configured in this class, but added to the dotenv .env file
+
+    #####################################
+    # SMTP configuration using starttls #
+    #####################################
+
+    SMTP_ACTIVE: bool
+    SMTP_PORT: int
+    SMTP_SERVER: str
+    SMTP_USERNAME: str
+    SMTP_PASSWORD: str
+    SMTP_EMAIL: str
+
+    ###################
+    # Tokens validity #
+    ###################
+
+    USER_ACTIVATION_TOKEN_EXPIRES_HOURS = 24
+    PASSWORD_RESET_TOKEN_EXPIRES_HOURS = 12
     ACCESS_TOKEN_EXPIRE_MINUTES = 30
     REFRESH_TOKEN_EXPIRE_MINUTES = 120
+    AUTHORIZATION_CODE_EXPIRE_MINUTES = 7
 
-    # TODO: remove the DOCKER_URL
-    # A trailing / is required
+    ###############################################
+    # Authorization using OAuth or Openid connect #
+    ###############################################
+
+    # ACCESS_TOKEN_SECRET_KEY should contain a random string with enough entropy to securely sign all access_tokens for OAuth and Openid connect
+    ACCESS_TOKEN_SECRET_KEY: str
+    # RSA_PRIVATE_PEM_STRING should be a string containing the PEM certificate of a private RSA key. It will be used to sign id_tokens for Openid connect authentification
+    RSA_PRIVATE_PEM_STRING: str
+
+    # Host or url of the API, used for Openid connect discovery endpoint
+    # NOTE: A trailing / is required
     CLIENT_URL = "http://127.0.0.1:8000/"
     DOCKER_URL = "http://host.docker.internal:8000/"  # During dev, docker container can not directly access the client url
+
     # Openid connect issuer name
     AUTH_ISSUER = "hyperion"
-    RSA_PRIVATE_PEM_STRING: str
+
+    # Add an AUTH_CLIENTS variable to the .env dotenv to configure auth clients
+    # This variable should have the format: [["client id", "client secret", "app.utils.auth.providers class name"]]
+    # Use an empty secret `null` or `""` to use PKCE instead of a client secret
+    # Ex: AUTH_CLIENTS=[["Nextcloudclient", "supersecret", "NextcloudAuthClient"], ["Piwigo", "secret2", "BaseAuthClient"], , ["mobileapp", null, "BaseAuthClient"]]
+    # NOTE: AUTH_CLIENTS property should never be used in the code. To get an auth client, use `KNOWN_AUTH_CLIENTS`
+    AUTH_CLIENTS: list[tuple[str, str | None, str]]
+
+    ######################################
+    # Automatically generated parameters #
+    ######################################
 
     # The following properties can not be instantiated as class variables as them need to be computed using an other property from the class,
     # which wont be available before the .env file parsing.
