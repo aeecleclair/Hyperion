@@ -29,6 +29,11 @@ class BaseAuthClient:
     # Restrict the authentification to this client to specifics Hyperion groups.
     # When set to `None`, users from any group can use the auth client
     allowed_groups: list[GroupType] | None = None
+    # Sometimes, when the client is wrongly configured, it may return an incorrect return_uri. This may also be useful for debugging clients.
+    # `override_redirect_uri` allows to bypass all redirect_uri verifications and override the returned redirect_uri.
+    # This setting will override the previous `BaseAuthClient.redirect_uri``
+    # WARNING: This property is not part of OAuth or Openid connect specifications and should be used with caution.
+    override_redirect_uri: str | None = None
 
     def get_userinfo(self, user: models_core.CoreUser) -> dict[str, Any]:
         """

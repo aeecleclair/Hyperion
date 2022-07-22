@@ -256,8 +256,15 @@ async def authorize_validation(
             detail="Invalid client_id",
         )
 
+    # The auth_client allows to override the redirect_uri and bypass related verifications
+    # This behaviour is not part of OAuth or Openid connect specifications
+    if auth_client.override_redirect_uri is not None:
+        logger.info(
+            f"Authorize-validation: Overriding redirect_uri with {auth_client.override_redirect_uri}, as configured in the auth client ({request_id})"
+        )
+        redirect_uri = auth_client.override_redirect_uri
     # If a redirect_uri is hardcoded in the auth_client we will use this one. If one was provided in the request, we want to make sure they match.
-    if auth_client.redirect_uri is not None:
+    elif auth_client.redirect_uri is not None:
         if authorizereq.redirect_uri is not None:
             if auth_client.redirect_uri != authorizereq.redirect_uri:
                 logger.warning(
@@ -596,8 +603,12 @@ async def authorization_code_grant(
             },
         )
 
+    # The auth_client allows to override the redirect_uri and bypass related verifications
+    # This behaviour is not part of OAuth or Openid connect specifications
+    if auth_client.override_redirect_uri is not None:
+        tokenreq.redirect_uri = auth_client.override_redirect_uri
     # A redirect_uri may be hardcoded in the client
-    if auth_client.redirect_uri is not None:
+    elif auth_client.redirect_uri is not None:
         if tokenreq.redirect_uri is None:
             # We use the hardcoded value
             tokenreq.redirect_uri = auth_client.redirect_uri
