@@ -124,18 +124,38 @@ class NextcloudAuthClient(BaseAuthClient):
 
 
 class PiwigoAuthClient(BaseAuthClient):
-    @classmethod
-    def get_userinfo(cls, user: models_core.CoreUser):
-        # For Piwigo, a name is sufficient.
-        # We need to put the claim name in Piwigo oidc plugin config
+    # If no redirect_uri are hardcoded, the client will need to provide one in its request
+    redirect_uri: str | None = None
+    # Set of scopes the auth client is authorized to grant when issuing an access token.
+    # See app.utils.types.scopes_type.ScopeType for possible values
+    # WARNING: to be able to use openid connect, `ScopeType.openid` should always be allowed
+    allowed_scopes: Set[ScopeType] = {ScopeType.openid}
+    # Restrict the authentification to this client to specifics Hyperion groups.
+    # When set to `None`, users from any group can use the auth client
+    allowed_groups: list[GroupType] | None = None
+    # Sometimes, when the client is wrongly configured, it may return an incorrect return_uri. This may also be useful for debugging clients.
+    # `override_redirect_uri` allows to bypass all redirect_uri verifications and override the returned redirect_uri.
+    # This setting will override the previous `BaseAuthClient.redirect_uri``
+    # WARNING: This property is not part of OAuth or Openid connect specifications and should be used with caution.
+    override_redirect_uri: str | None = None
 
+    def get_userinfo(self, user: models_core.CoreUser) -> dict[str, Any]:
+        """
+        Return information about the user in a format understandable by the client.
+        This method return the result of Openid connect userinfo endpoint.
+
+        See oidc specifications and `app.endpoints.auth.auth_get_userinfo` for more information:
+        https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
+
+        See the client documentation and implementation to know claims it needs or can receive
+        """
+        # Override this method with custom information adapted for the client
+        # WARNING: The sub (subject) Claim MUST always be returned in the UserInfo Response.
+
+        # For Piwigo, providing the user name is sufficient. The name of the claim (here `"name"`) needs to be set in Piwigo oidc plugin configuration page)
         # A modified Piwigo oidc plugin allows to manage groups from the oidc provider
         return {
             "sub": user.id,
             "name": user.firstname,
-            "piwigo_groups": user.groups,  # ["pixels"], # We may want to filter which groups are provided as they won't not always all be useful
+            "piwigo_groups": user.groups,  # TODO: We may want to filter which groups are provided as they won't not always all be useful. For example returning only Student, ECLAIR and Pixels
         }
-
-
-# Where do we put the users that are allowed to access a service
-# Maybe a function in these class
