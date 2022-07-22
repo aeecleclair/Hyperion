@@ -3,7 +3,8 @@ from enum import Enum
 
 class AccountType(str, Enum):
     """
-    Various account type that can be created in Hyperion
+    Various account type that can be created in Hyperion.
+    These values should match GroupType's
     """
 
     student = "39691052-2ae5-4e12-99d0-7a9f5f2b0136"

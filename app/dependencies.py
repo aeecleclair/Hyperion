@@ -81,7 +81,6 @@ def get_user_from_token_with_scopes(
         """
         Dependency that make sure the token is valid, contain the expected scopes and return the corresponding user.
         """
-        print("Get user")
         try:
             payload = jwt.decode(
                 token,
@@ -118,7 +117,6 @@ def get_user_from_token_with_scopes(
 
 
 def is_user_a_member(
-    db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(
         get_user_from_token_with_scopes([ScopeType.API])
     ),
@@ -135,9 +133,7 @@ def is_user_a_member(
 
 def is_user_a_member_of(
     group_id: GroupType,
-) -> Callable[
-    [AsyncSession, models_core.CoreUser], Coroutine[Any, Any, models_core.CoreUser]
-]:
+) -> Callable[[models_core.CoreUser], Coroutine[Any, Any, models_core.CoreUser]]:
     """
     Generate a dependency which which will:
         * check the request header contain a valid API JWT token (a token that can be used to call endpoints from the API)
@@ -146,7 +142,6 @@ def is_user_a_member_of(
     """
 
     async def is_user_a_member_of(
-        db: AsyncSession = Depends(get_db),
         user: models_core.CoreUser = Depends(
             get_user_from_token_with_scopes([ScopeType.API])
         ),

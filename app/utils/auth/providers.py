@@ -1,6 +1,3 @@
-# TODO: How do we store the secret properly ?
-
-
 from typing import Any, Set
 
 from app.models import models_core
@@ -85,14 +82,7 @@ class AppAuthClient:
     allowed_groups: list[GroupType] | None = None
 
 
-class ExampleClient(BaseAuthClient):
-    secret = "secret"
-    redirect_uri = "http://127.0.0.1:8000/docs"
-
-
 class NextcloudAuthClient(BaseAuthClient):
-    # If no secret are provided, the client is expected to use PKCE
-    secret: str | None = "secret"
     # If no redirect_uri are hardcoded, the client will need to provide one in its request
     redirect_uri: str | None = None
     # Set of scopes the auth client is authorized to grant when issuing an access token.
