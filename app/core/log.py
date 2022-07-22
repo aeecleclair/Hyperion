@@ -8,6 +8,7 @@ class LogConfig(BaseModel):
     """
 
     LOG_FORMAT: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    MATRIX_LOG_FORMAT: str = "%(asctime)s - %(name)s - <code>%(levelname)s</code> -  <font color ='green'>%(message)s</font>"
     LOG_LEVEL: str = "DEBUG"
 
     # Logging config
@@ -20,12 +21,22 @@ class LogConfig(BaseModel):
             "fmt": LOG_FORMAT,
             "datefmt": "%d-%b-%y %H:%M:%S",
         },
+        "matrix": {
+            "()": "uvicorn.logging.DefaultFormatter",
+            "fmt": MATRIX_LOG_FORMAT,
+            "datefmt": "%d-%b-%y %H:%M:%S",
+        },
     }
     handlers = {
         "default": {
             "formatter": "default",
             "class": "logging.StreamHandler",
             "stream": "ext://sys.stderr",
+        },
+        "matrix_access": {
+            "formatter": "matrix",
+            "class": "app.utils.loggers_tools.matrix_handler.MatrixHandler",
+            "level": "INFO",
         },
         "file_errors": {
             # file_errors handler logs errors in two 1024 bytes
@@ -56,9 +67,10 @@ class LogConfig(BaseModel):
             "level": "INFO",
         },
     }
+
     loggers = {
         "hyperion.access": {
-            "handlers": ["file_access", "file_errors", "default"],
+            "handlers": ["file_access", "file_errors", "matrix_access", "default"],
             "level": LOG_LEVEL,
         },
         "hyperion.token": {

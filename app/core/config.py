@@ -25,6 +25,13 @@ class Settings(BaseSettings):
     # TODO: comment and rename
     RSA_PRIVATE_PEM_STRING: str
 
+    ########################
+    # Matrix configuration #
+    ########################
+    MATRIX_ACCESS_TOKEN: str
+    MATRIX_USER_NAME: str
+    MATRIX_USER_PASSWORD: str
+
     # SMTP configuration using starttls
     SMTP_ACTIVE: bool
     SMTP_PORT: int
