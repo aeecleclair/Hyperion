@@ -3,7 +3,7 @@ import hashlib
 import logging
 import urllib.parse
 from datetime import datetime, timedelta
-from typing import Set, Type
+from typing import Set
 
 from fastapi import (
     APIRouter,
@@ -120,9 +120,12 @@ async def get_authorize_page(
 
     See `/auth/authorization-flow/authorize-validation` endpoint for information about the parameters.
 
+    > In order for the authorization code grant to be secure, the authorization page must appear in a web browser the user is familiar with,
+    > and must not be embedded in an iframe popup or an embedded browser in a mobile app.
+    > If it could be embedded in another website, the user would have no way of verifying it is the legitimate service and is not a phishing attempt.
+
     **This endpoint is an UI endpoint which send and html page response. It will redirect to `/auth/authorization-flow/authorize-validation`**
     """
-
     return templates.TemplateResponse(
         "connexion.html",
         {
@@ -163,6 +166,10 @@ async def post_authorize_page(
     This is the endpoint that should be set in the client OAuth or OIDC configuration page. It can be called by a GET or a POST request.
 
     See `/auth/authorization-flow/authorize-validation` endpoint for information about the parameters.
+
+    > In order for the authorization code grant to be secure, the authorization page must appear in a web browser the user is familiar with,
+    > and must not be embedded in an iframe popup or an embedded browser in a mobile app.
+    > If it could be embedded in another website, the user would have no way of verifying it is the legitimate service and is not a phishing attempt.
 
     **This endpoint is an UI endpoint which send and html page response. It will redirect to `/auth/authorization-flow/authorize-validation`**
     """
