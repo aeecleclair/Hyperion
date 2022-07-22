@@ -330,7 +330,9 @@ async def authorize_validation(
     # maximum authorization code lifetime of 10 minutes is
     # RECOMMENDED. The client MUST NOT use the authorization code more than once.
     authorization_code = generate_token()
-    expire_on = datetime.now() + timedelta(minutes=7)
+    expire_on = datetime.now() + timedelta(
+        minutes=settings.AUTHORIZATION_CODE_EXPIRE_MINUTES
+    )
     # We save this authorization_code to the database
     # We can not use a JWT for this as:
     # - we need to store data about the OAuth/oidc request
