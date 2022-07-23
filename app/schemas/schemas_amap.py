@@ -103,12 +103,8 @@ class CashBase(BaseModel):
     balance: float
 
 
-class CashId(CashBase):
+class CashComplete(CashBase):
     user_id: str
-
-
-class CashComplete(CashId):
-    user: CoreUserSimple
 
     class Config:
         orm_mode = True
