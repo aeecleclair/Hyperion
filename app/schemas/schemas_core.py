@@ -1,4 +1,4 @@
-"""Commun schemas file for endpoint /users et /groups because it would cause circular import"""
+"""Common schemas file for endpoint /users et /groups because it would cause circular import"""
 
 from datetime import date, datetime
 
