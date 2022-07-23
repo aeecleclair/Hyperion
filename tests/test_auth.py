@@ -49,7 +49,7 @@ def test_simple_token():
     assert response.status_code != 403  # forbidden
 
 
-def test_authorization_code_flow():
+def test_authorization_code_flow_PKCE():
     code_verifier = "AntoineMonBelAntoine"
     code_challenge = "c2cf464b7901205c037cd821bc493b191943bdb5244a665e9fcab6478bf79415"  # hashlib.sha256("AntoineMonBelAntoine".encode()).hexdigest()
     data = examples_auth.example_AuthorizeValidation
@@ -78,12 +78,10 @@ def test_authorization_code_flow():
     assert json["token_type"] == "bearer"
     assert json["expires_in"] == 1800
     assert json["refresh_token"] is not None
-    assert json["id_token"] is not None
 
     refresh_token = json["refresh_token"]
     data = examples_auth.example_TokenReq_refresh_token
     data["refresh_token"] = refresh_token
-    data["client_secret"] = "secret"
     response = client.post("/auth/token", data=data)
 
     assert response.status_code == 200
