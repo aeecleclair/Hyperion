@@ -4,7 +4,6 @@ from datetime import date, datetime
 
 from pydantic import BaseModel
 
-from app.schemas.schemas_core import CoreUserSimple
 from app.utils.types.groups_type import AmapSlotType
 
 
