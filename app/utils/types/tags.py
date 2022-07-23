@@ -7,3 +7,5 @@ class Tags(str, Enum):
     users = "Users"
     groups = "Groups"
     auth = "Auth"
+    amap = "AMAP"
+    bdebooking = "BDEBooking"
