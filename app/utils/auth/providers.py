@@ -66,7 +66,7 @@ class BaseAuthClient:
         return self.allowed_scopes.intersection(requested_scopes)
 
 
-class AppAuthClient:
+class AppAuthClient(BaseAuthClient):
     """
     An auth client for Hyperion mobile application
     """
@@ -76,7 +76,7 @@ class AppAuthClient:
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.utils.types.scopes_type.ScopeType for possible values
     # WARNING: to be able to use openid connect, `ScopeType.openid` should always be allowed
-    allowed_scopes: Set[ScopeType] = set()
+    allowed_scopes: Set[ScopeType] = {ScopeType.API}
     # Restrict the authentification to this client to specifics Hyperion groups.
     # When set to `None`, users from any group can use the auth client
     allowed_groups: list[GroupType] | None = None
