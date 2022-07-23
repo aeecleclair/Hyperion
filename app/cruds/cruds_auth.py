@@ -90,8 +90,8 @@ async def revoke_refresh_token_by_token(
     return None
 
 
-async def revoke_refresh_token_by_client_id(
-    db: AsyncSession, client_id: str
+async def revoke_refresh_token_by_client_and_user_id(
+    db: AsyncSession, client_id: str, user_id: str
 ) -> models_auth.RefreshToken | None:
     """Revoke a refresh token from database"""
 
@@ -99,6 +99,7 @@ async def revoke_refresh_token_by_client_id(
         update(models_auth.RefreshToken)
         .where(
             models_auth.RefreshToken.client_id == client_id,
+            models_auth.RefreshToken.user_id == user_id,
             models_auth.RefreshToken.revoked_on.is_(None),
         )
         .values(revoked_on=datetime.now())
