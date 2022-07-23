@@ -732,10 +732,11 @@ async def refresh_token_grant(
             },
         )
     elif db_refresh_token.revoked_on is not None:
-        # If the client try to use a revoked refresh_token, we want to revoke all other refresh tokens from this client
-        # TODO: problematic loop
-        await cruds_auth.revoke_refresh_token_by_client_id(
-            db=db, client_id=db_refresh_token.client_id
+        # If the client try to use a revoked refresh_token, we want to revoke all other refresh tokens from this client and user
+        await cruds_auth.revoke_refresh_token_by_client_and_user_id(
+            db=db,
+            client_id=db_refresh_token.client_id,
+            user_id=db_refresh_token.user_id,
         )
         return JSONResponse(
             status_code=400,
@@ -748,8 +749,8 @@ async def refresh_token_grant(
     await cruds_auth.revoke_refresh_token_by_token(db=db, token=tokenreq.refresh_token)
 
     if db_refresh_token.expire_on < datetime.now():
-        await cruds_auth.revoke_refresh_token_by_client_id(
-            db=db, client_id=db_refresh_token.client_id
+        await cruds_auth.revoke_refresh_token_by_token(
+            db=db, token=db_refresh_token.token
         )
         return JSONResponse(
             status_code=400,
