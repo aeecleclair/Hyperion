@@ -19,6 +19,14 @@ class Settings(BaseSettings):
     USER_ACTIVATION_TOKEN_EXPIRES_HOURS = 24
     PASSWORD_RESET_TOKEN_EXPIRES_HOURS = 12
 
+    ########################
+    # Matrix configuration #
+    ########################
+    MATRIX_USER_NAME: str | None
+    MATRIX_USER_PASSWORD: str | None
+    MATRIX_ROOM_ID: str | None
+    MATRIX_LOG_ROOM_ID: str | None
+
     # SMTP configuration using starttls
     SMTP_ACTIVE: bool
     SMTP_PORT: int
