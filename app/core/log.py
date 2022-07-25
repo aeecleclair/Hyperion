@@ -4,6 +4,8 @@ from logging.handlers import QueueHandler, QueueListener
 
 from pydantic import BaseModel
 
+from app.core.settings import settings
+
 
 class LogConfig(BaseModel):
     """
@@ -15,7 +17,7 @@ class LogConfig(BaseModel):
 
     LOG_FORMAT: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     MATRIX_LOG_FORMAT: str = "%(asctime)s - %(name)s - <code>%(levelname)s</code> - <font color ='green'>%(message)s</font>"
-    LOG_LEVEL: str = "DEBUG"
+    MINIMUM_LOG_LEVEL: str = "DEBUG" if settings.LOG_DEBUG_MESSAGES else "INFO"
 
     # Logging config
     # See https://docs.python.org/3/library/logging.config.html#logging-config-dictschema
@@ -36,27 +38,39 @@ class LogConfig(BaseModel):
     handlers = {
         "default": {
             "formatter": "default",
-            "class": "logging.StreamHandler",
-            "stream": "ext://sys.stderr",
+            # If settings.LOG_DEBUG_MESSAGES is set, the default handlers should print DEBUG log messages to the console.
+            "class": (
+                "logging.StreamHandler"
+                if settings.LOG_DEBUG_MESSAGES
+                else "logging.NullHandler"
+            ),
+            # "stream": "ext://sys.stderr",
+            "level": "DEBUG",
         },
-        "matrix_access": {
+        "matrix_errors": {
+            # Send error to a Matrix server. If credentials are not set in settings, the handler will be disabled
             "formatter": "matrix",
             "class": "app.utils.loggers_tools.matrix_handler.MatrixHandler",
-            "level": "INFO",
+            "room_id": settings.MATRIX_LOG_ERROR_ROOM_ID,
+            "enabled": (
+                settings.MATRIX_USER_NAME is not None
+                and settings.MATRIX_USER_PASSWORD is not None
+                and settings.MATRIX_LOG_ERROR_ROOM_ID is not None
+            ),
+            "level": "ERROR",
         },
         "file_errors": {
-            # file_errors handler logs errors in two 1024 bytes
+            # file_errors handler logs errors in two 1024 bytes files
             # https://docs.python.org/3/library/logging.handlers.html#logging.handlers.RotatingFileHandler
             "formatter": "default",
             "class": "logging.handlers.RotatingFileHandler",
             "filename": "logs/errors.log",
             "maxBytes": 1024,
             "backupCount": 2,
-            "level": "ERROR",
+            "level": "WARNING",
         },
         "file_access": {
-            # file_errors handler logs errors in two 1024 bytes
-            # https://docs.python.org/3/library/logging.handlers.html#logging.handlers.RotatingFileHandler
+            # file_access should receive information about all incoming requests
             "formatter": "default",
             "class": "logging.handlers.RotatingFileHandler",
             "filename": "logs/access.log",
@@ -65,6 +79,8 @@ class LogConfig(BaseModel):
             "level": "INFO",
         },
         "file_tokens": {
+            # file_tokens should receive informations about JWT verifications.
+            # This allows, with file_access records, to identify which user accessed a specific endpoint
             "formatter": "default",
             "class": "logging.handlers.RotatingFileHandler",
             "filename": "logs/tokens.log",
@@ -72,24 +88,43 @@ class LogConfig(BaseModel):
             "backupCount": 10,
             "level": "INFO",
         },
+        "file_auth": {
+            # file_auth should receive informations about auth operation, like inscription, account validation, authentification and token refresh.
+            # Success and failures should be logged
+            "formatter": "default",
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": "logs/auth.log",
+            "maxBytes": 1024,  # *10
+            "backupCount": 10,
+            "level": "INFO",
+        },
     }
 
+    # We define various loggers which can be used by Hyperion.
+    # Each logger has:
+    #  - specific handlers (ex: file_access or file_tokens), they log targeted records like endpoint access or authentification
+    #  - error related handlers (ex: file_errors and matrix_errors), they log all errors regardless of their provenance
+    #  - default handler which logs to the console for development and debugging purpose
+    # TODO: disable default handler in production
     loggers = {
         "hyperion.access": {
-            "handlers": ["file_access", "file_errors", "matrix_access", "default"],
-            "level": LOG_LEVEL,
+            "handlers": ["file_access", "file_errors", "matrix_errors", "default"],
+            "level": MINIMUM_LOG_LEVEL,
         },
         "hyperion.token": {
-            "handlers": ["file_tokens", "file_errors", "default"],
-            "level": LOG_LEVEL,
+            "handlers": ["file_tokens", "file_errors", "matrix_errors", "default"],
+            "level": MINIMUM_LOG_LEVEL,
         },
         "hyperion.auth": {
             "handlers": ["file_access", "file_errors", "default"],
-            "level": LOG_LEVEL,
+            "level": MINIMUM_LOG_LEVEL,
         },
         # We disable "uvicorn.access" to replace it with our custom "hyperion.access"
-        "uvicorn.access": {"handlers": [], "level": LOG_LEVEL},
-        "hyperion.errors": {"handlers": ["file_errors", "default"], "level": LOG_LEVEL},
+        # "uvicorn.access": {"handlers": [], "level": MINIMUM_LOG_LEVEL},
+        "hyperion.errors": {
+            "handlers": ["file_errors", "matrix_errors", "default"],
+            "level": MINIMUM_LOG_LEVEL,
+        },
     }
 
     @classmethod

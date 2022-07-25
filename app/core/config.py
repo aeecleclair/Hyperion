@@ -25,13 +25,19 @@ class Settings(BaseSettings):
     # TODO: comment and rename
     RSA_PRIVATE_PEM_STRING: str
 
+    LOG_DEBUG_MESSAGES: bool | None
+
     ########################
     # Matrix configuration #
     ########################
+    # Matrix configuration is optional. If configured, Hyperion will be able to send messages to a Matrix server.
+    # This configuration will be used to send errors messages.
+    # If the following parameters are not set, logging won't use the Matrix handler
+    # MATRIX_SERVER_BASE_URL is optional, the official Matrix server will be used if not configured
+    MATRIX_SERVER_BASE_URL: str | None
     MATRIX_USER_NAME: str | None
     MATRIX_USER_PASSWORD: str | None
-    MATRIX_ROOM_ID: str | None
-    MATRIX_LOG_ROOM_ID: str | None
+    MATRIX_LOG_ERROR_ROOM_ID: str | None
 
     # SMTP configuration using starttls
     SMTP_ACTIVE: bool

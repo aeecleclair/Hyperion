@@ -6,9 +6,19 @@ from app.core.settings import settings
 
 
 class Matrix:
-    server = "https://matrix.org/"
+    """
+    A Matrix client.
+    `MATRIX_USER_NAME` and `MATRIX_USER_PASSWORD` need to be configured in settings.
+    A custom Matrix server can be used with `MATRIX_SERVER_BASE_URL`, default is https://matrix.org/
+    """
 
     def __init__(self):
+        if not (settings.MATRIX_USER_NAME and settings.MATRIX_USER_PASSWORD):
+            raise ValueError(
+                "Matrix username and password are not configured in settings"
+            )
+
+        self.server = settings.MATRIX_SERVER_BASE_URL or "https://matrix.org/"
         self.access_token = self.login_for_access_token(
             settings.MATRIX_USER_NAME, settings.MATRIX_USER_PASSWORD
         )
