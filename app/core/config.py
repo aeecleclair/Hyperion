@@ -28,9 +28,10 @@ class Settings(BaseSettings):
     ########################
     # Matrix configuration #
     ########################
-    MATRIX_ACCESS_TOKEN: str
-    MATRIX_USER_NAME: str
-    MATRIX_USER_PASSWORD: str
+    MATRIX_USER_NAME: str | None
+    MATRIX_USER_PASSWORD: str | None
+    MATRIX_ROOM_ID: str | None
+    MATRIX_LOG_ROOM_ID: str | None
 
     # SMTP configuration using starttls
     SMTP_ACTIVE: bool
