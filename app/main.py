@@ -28,8 +28,7 @@ hyperion_access_logger.setLevel(logging.DEBUG)
 hyperion_access_logger.addHandler(fh)
 
 
-
-LogConfig.initialize_loggers()
+LogConfig().initialize_loggers()
 
 hyperion_access_logger = logging.getLogger("hyperion.access")
 

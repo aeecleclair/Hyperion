@@ -13,6 +13,7 @@ class LogConfig(BaseModel):
     We convert this class to a dict to be used by Python logging module.
 
     Call `LogConfig.initialize_loggers()` to configure the logging ecosystem.
+    Call `LogConfig().initialize_loggers()` to configure the logging ecosystem.
     """
 
     LOG_FORMAT: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -127,8 +128,7 @@ class LogConfig(BaseModel):
         },
     }
 
-    @classmethod
-    def initialize_loggers(cls):
+    def initialize_loggers(self):
         """
         Initialize the logging ecosystem.
 
@@ -143,11 +143,15 @@ class LogConfig(BaseModel):
 
         # We may be interested in https://github.com/python/cpython/pull/93269 when it will be released. See https://discuss.python.org/t/a-new-feature-is-being-added-in-logging-config-dictconfig-to-configure-queuehandler-and-queuelistener/16124
 
-        logging.config.dictConfig(cls().dict())
+        logging.config.dictConfig(self.dict())
 
-        loggers = [logging.getLogger(name) for name in logging.root.manager.loggerDict]
+        loggers = [logging.getLogger(name) for name in self.loggers]
 
         for logger in loggers:
+            # If the logger does not have any handler, we don't need to create a QueueHandler
+            if len(logger.handlers) == 0:
+                continue
+
             # We create a queue where all log records will be added
             log_queue = queue.Queue(-1)
 
