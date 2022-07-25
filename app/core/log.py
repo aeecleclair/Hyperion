@@ -1,4 +1,5 @@
 import logging
+import os
 import queue
 from logging.handlers import QueueHandler, QueueListener
 
@@ -142,6 +143,10 @@ class LogConfig(BaseModel):
         # https://www.zopatista.com/python/2019/05/11/asyncio-logging/
 
         # We may be interested in https://github.com/python/cpython/pull/93269 when it will be released. See https://discuss.python.org/t/a-new-feature-is-being-added-in-logging-config-dictconfig-to-configure-queuehandler-and-queuelistener/16124
+
+        # If logs/ folder does not exist, the logging module wont be able to create file handlers
+        if not os.path.exists("logs/"):
+            os.makedirs("logs/")
 
         logging.config.dictConfig(self.dict())
 
