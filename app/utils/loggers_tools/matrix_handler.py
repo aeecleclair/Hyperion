@@ -1,5 +1,6 @@
 from logging import StreamHandler
 
+from app.core.settings import settings
 from app.utils.communication.matrix import Matrix
 
 
@@ -11,4 +12,6 @@ class MatrixHandler(StreamHandler):
 
     def emit(self, record):
         msg = self.format(record)
+        room_id = settings.MATRIX_LOG_ROOM_ID
+
         self.matrix.send_message(room_id, msg)
