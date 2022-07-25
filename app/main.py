@@ -29,7 +29,7 @@ hyperion_access_logger.addHandler(fh)
 
 
 
-logging.config.dictConfig(LogConfig().dict())
+LogConfig.initialize_loggers()
 
 hyperion_access_logger = logging.getLogger("hyperion.access")
 
