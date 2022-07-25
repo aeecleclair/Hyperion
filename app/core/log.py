@@ -13,22 +13,31 @@ class LogConfig(BaseModel):
     Logging configuration to be set for the server
     We convert this class to a dict to be used by Python logging module.
 
-    Call `LogConfig.initialize_loggers()` to configure the logging ecosystem.
     Call `LogConfig().initialize_loggers()` to configure the logging ecosystem.
     """
 
+    # Uvicorn loggers config
+    # https://github.com/encode/uvicorn/blob/b21ecabc5bf911f571e0629438315a1e5472065c/uvicorn/config.py#L95
+
     LOG_FORMAT: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    CONSOLE_LOG_FORMAT: str = "%(asctime)s - %(name)s - \033[1m%(levelname)s\033[0m - \033[92m%(message)s\033[0m"
     MATRIX_LOG_FORMAT: str = "%(asctime)s - %(name)s - <code>%(levelname)s</code> - <font color ='green'>%(message)s</font>"
     MINIMUM_LOG_LEVEL: str = "DEBUG" if settings.LOG_DEBUG_MESSAGES else "INFO"
 
     # Logging config
     # See https://docs.python.org/3/library/logging.config.html#logging-config-dictschema
     version = 1
-    disable_existing_loggers = True
+    # If LOG_DEBUG_MESSAGES is set, we let existing loggers, including the database and uvicorn loggers
+    disable_existing_loggers = not settings.LOG_DEBUG_MESSAGES
     formatters = {
         "default": {
             "()": "uvicorn.logging.DefaultFormatter",
             "fmt": LOG_FORMAT,
+            "datefmt": "%d-%b-%y %H:%M:%S",
+        },
+        "console": {
+            "()": "uvicorn.logging.DefaultFormatter",
+            "fmt": CONSOLE_LOG_FORMAT,
             "datefmt": "%d-%b-%y %H:%M:%S",
         },
         "matrix": {
@@ -38,8 +47,8 @@ class LogConfig(BaseModel):
         },
     }
     handlers = {
-        "default": {
-            "formatter": "default",
+        "debug_console": {
+            "formatter": "console",
             # If settings.LOG_DEBUG_MESSAGES is set, the default handlers should print DEBUG log messages to the console.
             "class": (
                 "logging.StreamHandler"
@@ -48,6 +57,12 @@ class LogConfig(BaseModel):
             ),
             # "stream": "ext://sys.stderr",
             "level": "DEBUG",
+        },
+        "errors_console": {
+            "formatter": "console",
+            "class": "logging.StreamHandler",
+            "stream": "ext://sys.stderr",
+            "level": "INFO",
         },
         "matrix_errors": {
             # Send error to a Matrix server. If credentials are not set in settings, the handler will be disabled
@@ -107,24 +122,37 @@ class LogConfig(BaseModel):
     #  - specific handlers (ex: file_access or file_tokens), they log targeted records like endpoint access or authentification
     #  - error related handlers (ex: file_errors and matrix_errors), they log all errors regardless of their provenance
     #  - default handler which logs to the console for development and debugging purpose
-    # TODO: disable default handler in production
     loggers = {
         "hyperion.access": {
-            "handlers": ["file_access", "file_errors", "matrix_errors", "default"],
+            "handlers": [
+                "file_access",
+                "file_errors",
+                "matrix_errors",
+                "debug_console",
+            ],
             "level": MINIMUM_LOG_LEVEL,
         },
         "hyperion.token": {
-            "handlers": ["file_tokens", "file_errors", "matrix_errors", "default"],
+            "handlers": [
+                "file_tokens",
+                "file_errors",
+                "matrix_errors",
+                "debug_console",
+            ],
             "level": MINIMUM_LOG_LEVEL,
         },
         "hyperion.auth": {
-            "handlers": ["file_access", "file_errors", "default"],
+            "handlers": ["file_access", "file_errors", "debug_console"],
             "level": MINIMUM_LOG_LEVEL,
         },
         # We disable "uvicorn.access" to replace it with our custom "hyperion.access"
-        # "uvicorn.access": {"handlers": [], "level": MINIMUM_LOG_LEVEL},
-        "hyperion.errors": {
-            "handlers": ["file_errors", "matrix_errors", "default"],
+        "uvicorn.access": {"handlers": [], "level": MINIMUM_LOG_LEVEL},
+        "hyperion.error": {
+            "handlers": ["file_errors", "matrix_errors", "errors_console"],
+            "level": MINIMUM_LOG_LEVEL,
+        },
+        "uvicorn.error": {
+            "handlers": ["file_errors", "matrix_errors", "errors_console"],
             "level": MINIMUM_LOG_LEVEL,
         },
     }
