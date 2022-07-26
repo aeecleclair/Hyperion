@@ -32,6 +32,7 @@ LogConfig().initialize_loggers()
 
 hyperion_access_logger = logging.getLogger("hyperion.access")
 
+
 @app.middleware("http")
 async def logging_middleware(request: Request, call_next):
     """
@@ -52,8 +53,6 @@ async def logging_middleware(request: Request, call_next):
     # If the client host and port is provided, we want to log it
     if request.client is not None:
         client_address = f"{request.client.host}:{request.client.port}"
-    else:
-        client_address = "unknown"
 
     hyperion_access_logger.info(
         f'{client_address} - "{request.method} {request.url.path}" {response.status_code} ({request_id})'
