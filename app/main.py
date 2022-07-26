@@ -15,19 +15,6 @@ from app.utils.types.groups_type import AccountType
 
 app = FastAPI()
 
-# create file handler which logs even debug messages
-fh = logging.FileHandler("access.log")
-fh.setLevel(logging.DEBUG)
-
-formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-fh.setFormatter(formatter)
-
-
-hyperion_access_logger = logging.getLogger("hyperion.access")
-hyperion_access_logger.setLevel(logging.DEBUG)
-hyperion_access_logger.addHandler(fh)
-
-
 LogConfig().initialize_loggers()
 
 hyperion_access_logger = logging.getLogger("hyperion.access")
