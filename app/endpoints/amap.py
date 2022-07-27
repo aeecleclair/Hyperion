@@ -303,7 +303,11 @@ async def remove_order(order_id: str, db: AsyncSession = Depends(get_db)):
 )
 async def get_users_cash(db: AsyncSession = Depends(get_db)):
     cash = await cruds_amap.get_users_cash(db)
-    return cash
+    res = []
+    for c in cash:
+        user = await read_user(user_id=c.user_id, db=db)
+        res.append(schemas_amap.CashComplete(user=user, balance=c.balance))
+    return res
 
 
 @router.get(
@@ -314,7 +318,9 @@ async def get_users_cash(db: AsyncSession = Depends(get_db)):
 )
 async def get_cash_by_id(user_id: str, db: AsyncSession = Depends(get_db)):
     cash = await cruds_amap.get_cash_by_id(user_id=user_id, db=db)
-    return cash
+    if cash is not None:
+        user = await read_user(user_id=cash.user_id, db=db)
+        return schemas_amap.CashComplete(balance=cash.balance, user=user)
 
 
 @router.post(
