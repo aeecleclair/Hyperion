@@ -110,3 +110,10 @@ class CashComplete(CashBase):
 
     class Config:
         orm_mode = True
+
+
+class CashDB(CashBase):
+    user_id: str
+
+    class Config:
+        orm_mode = True

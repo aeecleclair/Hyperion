@@ -337,7 +337,7 @@ async def create_cash_of_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     result = await cruds_amap.create_cash_of_user(
-        cash=schemas_amap.CashComplete(user=user, user_id=user_id, **balance.dict()),
+        cash=schemas_amap.CashDB(user_id=user_id, **balance.dict()),
         db=db,
     )
     return schemas_amap.CashBase(**result.__dict__)
