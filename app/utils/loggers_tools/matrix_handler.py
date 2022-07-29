@@ -19,10 +19,22 @@ class MatrixHandler(StreamHandler):
 
         self.room_id = room_id
         self.enabled = enabled
-        self.matrix = Matrix()
+        try:
+            self.matrix = Matrix()
+        except ValueError as err:
+            print(err)
+            print("MatrixHandler: Matrix configuration not set, disabling the handler")
+            self.enabled = False
 
     def emit(self, record):
         if self.enabled:
             msg = self.format(record)
 
-            self.matrix.send_message(self.room_id, msg)
+            try:
+                self.matrix.send_message(self.room_id, msg)
+            except ValueError as err:
+                print(err)
+                print(
+                    "MatrixHandler: Unable to send message to Matrix server, disabling the handler"
+                )
+                self.enabled = False

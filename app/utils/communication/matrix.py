@@ -37,9 +37,13 @@ class Matrix:
                 "type": "m.login.password",
             },
         )
-
-        response.raise_for_status()
-
+        try:
+            response.raise_for_status()
+        except requests.exceptions.HTTPError:
+            raise ValueError(
+                "Could not login to Matrix server. "
+                "Check your username and password in settings."
+            )
         json_response = response.json()
 
         if "access_token" not in json_response:
@@ -61,7 +65,13 @@ class Matrix:
             headers["Authorization"] = "Bearer " + self.access_token
 
         response = requests.post(url, json=json, headers=headers)
-        response.raise_for_status()
+        try:
+            response.raise_for_status()
+        except requests.exceptions.HTTPError:
+            raise ValueError(
+                "Could not send message to Matrix server. "
+                "Check the room_id in settings."
+            )
 
         return response.json()
 
