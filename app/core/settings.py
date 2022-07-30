@@ -28,8 +28,11 @@ class Settings(BaseSettings):
     SMTP_EMAIL: str
 
     class Config:
+        # By default, the settings are loaded from the `.env` file but this behaviour can be overridden by using
+        # `_env_file` parameter during instanciation
+        # Ex: `Settings(_env_file=".env.dev")`
         env_file = ".env"
         env_file_encoding = "utf-8"
 
 
-settings = Settings()
+settings = Settings(_env_file=".env")
