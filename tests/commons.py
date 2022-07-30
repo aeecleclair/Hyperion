@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 # We can not use `from app.core.settings import settings` as we would not be able to mock the `settings` object. See below.
-from app.core import settings
+from app.core import config
 from app.database import Base
 from app.dependencies import get_db
 from app.main import app
@@ -67,14 +67,14 @@ def mock_settings(monkeypatch):
     # In this file, we can not use `from app.core.settings import settings` as we would not be able to mock the `settings` object.
     # We prefer to import the whole module : `from app.core import settings`.
     # See https://github.com/pytest-dev/pytest/issues/603
-    new_settings = settings.Settings(_env_file=".env.test")
+    new_settings = config.Settings(_env_file=".env.test")
     monkeypatch.setattr("app.core.settings.settings", new_settings)
 
 
 def test_check_settings_mocking():
     assert (
-        settings.settings.ACCESS_TOKEN_SECRET_KEY
-        == "YWZOHliiI53lJMJc5BI_WbGbA4GF2T7Wbt1airIhOXE"
+        config.settings.ACCESS_TOKEN_SECRET_KEY
+        == "YWZOHliiI53lJMJc5BI_WbGbA4GF2T7Wbt1airIhOXEa3c021c4-1c55-4182-b141-7778bcc8fac4"
     )
 
 

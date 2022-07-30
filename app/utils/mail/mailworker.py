@@ -2,7 +2,7 @@ import smtplib
 import ssl
 from email.message import EmailMessage
 
-from app.core.settings import settings
+from app.core.config import settings
 
 
 def send_email(recipient: str, subject: str, content: str):

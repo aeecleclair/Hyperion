@@ -6,7 +6,7 @@ from jose import jwt
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.settings import settings
+from app.core.config import settings
 from app.cruds import cruds_users
 from app.models import models_core
 

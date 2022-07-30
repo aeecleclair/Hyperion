@@ -15,7 +15,7 @@ from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import security
-from app.core.settings import settings
+from app.core.config import settings
 from app.cruds import cruds_users
 from app.database import SessionLocal
 from app.models import models_core
