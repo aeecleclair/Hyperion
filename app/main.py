@@ -37,8 +37,13 @@ async def logging_middleware(request: Request, call_next):
 
     response = await call_next(request)
 
+    if request.client is not None:
+        client_address = f"{request.client.host}:{request.client.port}"
+    else:
+        client_address = "unknown"
+
     hyperion_access_logger.info(
-        f'{request.client.host}:{request.client.port} - "{request.method} {request.url.path}" {response.status_code} ({request_id})'
+        f'{client_address} - "{request.method} {request.url.path}" {response.status_code} ({request_id})'
     )
     return response
 
