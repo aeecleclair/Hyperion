@@ -6,7 +6,7 @@ They are used in endpoints function signatures. For example:
 async def get_users(db: AsyncSession = Depends(get_db)):
 ```
 """
-
+from functools import lru_cache
 from typing import AsyncGenerator
 
 from fastapi import Depends, HTTPException, status
@@ -15,7 +15,7 @@ from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import security
-from app.core.config import settings
+from app.core.config import Settings
 from app.cruds import cruds_users
 from app.database import SessionLocal
 from app.models import models_core
@@ -35,6 +35,16 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             await db.close()
 
 
+@lru_cache()
+def get_settings():
+    """
+    Return a settings object, based on `.env` dotenv
+    """
+    # `lru_cache()` decorator is here to prevent the class to be instanciated multiple times.
+    # See https://fastapi.tiangolo.com/advanced/settings/#lru_cache-technical-details
+    return Settings(_env_file=".env")
+
+
 async def get_current_user(
     db: AsyncSession = Depends(get_db), token: str = Depends(security.oauth2_scheme)
 ) -> models_core.CoreUser:
@@ -44,7 +54,7 @@ async def get_current_user(
     try:
         payload = jwt.decode(
             token,
-            settings.ACCESS_TOKEN_SECRET_KEY,
+            Settings.ACCESS_TOKEN_SECRET_KEY,
             algorithms=[security.jwt_algorithme],
         )
         token_data = schemas_core.TokenData(**payload)

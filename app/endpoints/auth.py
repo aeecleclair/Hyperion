@@ -3,7 +3,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import authenticate_user, create_access_token
-from app.dependencies import get_db
+from app.dependencies import get_db, get_settings
 from app.schemas import schemas_core
 from app.utils.types.tags import Tags
 
@@ -35,5 +35,7 @@ async def login_for_access_token(
         )
     # We put the user id in the subject field of the token.
     # The subject `sub` is a JWT registered claim name, see https://datatracker.ietf.org/doc/html/rfc7519#section-4.1
-    access_token = create_access_token(data={"sub": user.id})
+    access_token = create_access_token(
+        data={"sub": user.id}, settings=Depends(get_settings)
+    )
     return {"access_token": access_token, "token_type": "bearer"}

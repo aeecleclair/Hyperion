@@ -2,10 +2,10 @@ import smtplib
 import ssl
 from email.message import EmailMessage
 
-from app.core.config import settings
+from app.core.config import Settings
 
 
-def send_email(recipient: str, subject: str, content: str):
+def send_email(recipient: str, subject: str, content: str, settings: Settings):
     """
     Send a plain text email using **starttls**.
     Use the SMTP settings defined in environments variables or the dotenv file.
