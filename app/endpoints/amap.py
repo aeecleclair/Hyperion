@@ -255,7 +255,7 @@ async def add_order_to_delievery(
                         user_id=order.user_id,
                         balance=schemas_amap.CashBase(balance=balance.balance - amount),
                     )
-                    return get_order_by_id(order_id=db_order.order_id, db=db)
+                    return await get_order_by_id(order_id=db_order.order_id, db=db)
                 except ValueError as error:
                     raise HTTPException(status_code=422, detail=str(error))
         else:
