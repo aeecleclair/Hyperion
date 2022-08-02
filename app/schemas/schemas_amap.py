@@ -51,6 +51,7 @@ class DeliveryReturn(BaseModel):
     delivery_date: date
     products: list[ProductComplete] = []
     id: str
+    locked: bool
 
     class Config:
         orm_mode = True
