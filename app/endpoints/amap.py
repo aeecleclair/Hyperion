@@ -237,7 +237,8 @@ async def add_order_to_delievery(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
 ):
-    if cruds_amap.checkif_delivery_locked(db=db, delivery_id=delivery_id):
+    locked = await cruds_amap.checkif_delivery_locked(db=db, delivery_id=delivery_id)
+    if locked:
         raise HTTPException(status_code=403, detail="Delivery locked")
     else:
         amount = 0.0
@@ -285,7 +286,8 @@ async def add_order_to_delievery(
 async def edit_orders_from_delieveries(
     delivery_id: str, order: schemas_amap.OrderEdit, db: AsyncSession = Depends(get_db)
 ):
-    if cruds_amap.checkif_delivery_locked(db=db, delivery_id=delivery_id):
+    locked = await cruds_amap.checkif_delivery_locked(db=db, delivery_id=delivery_id)
+    if locked:
         raise HTTPException(status_code=403, detail="Delivery locked")
     else:
         amount = 0.0
@@ -338,7 +340,8 @@ async def remove_order(
     order_id: str, delivery_id: str, db: AsyncSession = Depends(get_db)
 ):
     # TODO check if the client is admin or the good user
-    if cruds_amap.checkif_delivery_locked(db=db, delivery_id=delivery_id):
+    locked = await cruds_amap.checkif_delivery_locked(db=db, delivery_id=delivery_id)
+    if locked:
         raise HTTPException(status_code=403, detail="Delivery locked")
     else:
         order = await cruds_amap.get_order_by_id(db=db, order_id=order_id)
