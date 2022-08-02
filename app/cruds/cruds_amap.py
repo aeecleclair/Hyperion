@@ -97,7 +97,10 @@ async def create_delivery(
         if p is not None:
             products.append(p)
     db_delivery = models_amap.Delivery(
-        id=delivery.id, delivery_date=delivery.delivery_date, products=products
+        id=delivery.id,
+        delivery_date=delivery.delivery_date,
+        products=products,
+        locked=delivery.locked,
     )
     db.add(db_delivery)
     try:
