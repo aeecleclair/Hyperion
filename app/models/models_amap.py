@@ -1,7 +1,17 @@
 """model file for amap"""
 from datetime import date, datetime
 
-from sqlalchemy import Column, Date, DateTime, Enum, Float, ForeignKey, Integer, String
+from sqlalchemy import (
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+)
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -40,6 +50,7 @@ class Delivery(Base):
         "Product",
         secondary="amap_delivery_content",
     )
+    locked: bool = Column(Boolean, nullable=False)
 
 
 class Order(Base):
