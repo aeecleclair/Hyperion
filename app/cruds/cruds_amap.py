@@ -193,6 +193,14 @@ async def get_quantities_of_order(db: AsyncSession, order_id: str) -> dict:
     return result_treated
 
 
+async def checkif_delivery_locked(db: AsyncSession, delivery_id: str) -> bool:
+    delivery = await get_delivery_by_id(db=db, delivery_id=delivery_id)
+    if delivery is not None:
+        return delivery.locked
+    else:
+        return True
+
+
 async def add_order_to_delivery(
     db: AsyncSession,
     order: schemas_amap.OrderComplete,

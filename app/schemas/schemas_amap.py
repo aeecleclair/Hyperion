@@ -39,6 +39,7 @@ class DeliveryBase(BaseModel):
 
     delivery_date: date
     products_ids: list[str] = []
+    locked: bool = False
 
 
 class DeliveryComplete(DeliveryBase):

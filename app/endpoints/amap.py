@@ -228,33 +228,53 @@ async def get_order_by_id(order_id: str, db: AsyncSession = Depends(get_db)):
 
 @router.post(
     "/amap/deliveries/{delivery_id}/orders",
+    response_model=schemas_amap.OrderReturn,
     status_code=201,
     tags=[Tags.amap],
 )
 async def add_order_to_delievery(
     order: schemas_amap.OrderBase,
+    delivery_id: str,
     db: AsyncSession = Depends(get_db),
 ):
-
-    amount = 0.0
-    for i in range(len(order.products_ids)):
-        prod = await cruds_amap.get_product_by_id(
-            product_id=order.products_ids[i], db=db
+    if cruds_amap.checkif_delivery_locked(db=db, delivery_id=delivery_id):
+        raise HTTPException(status_code=403, detail="Delivery locked")
+    else:
+        amount = 0.0
+        for i in range(len(order.products_ids)):
+            prod = await cruds_amap.get_product_by_id(
+                product_id=order.products_ids[i], db=db
+            )
+            if prod is not None:
+                amount += prod.price * order.products_quantity[i]
+        ordering_date = datetime.now()
+        order_id = str(uuid.uuid4())
+        db_order = schemas_amap.OrderComplete(
+            order_id=order_id,
+            amount=amount,
+            ordering_date=ordering_date,
+            **order.dict(),
         )
-        if prod is not None:
-            amount += prod.price * order.products_quantity[i]
-    ordering_date = datetime.now()
-    order_id = str(uuid.uuid4())
-    db_order = schemas_amap.OrderComplete(
-        order_id=order_id, amount=amount, ordering_date=ordering_date, **order.dict()
-    )
-    try:
-        await cruds_amap.add_order_to_delivery(
-            order=db_order,
-            db=db,
-        )
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+        balance = await cruds_amap.get_cash_by_id(db=db, user_id=order.user_id)
+        if balance is not None:
+            if balance.balance < amount:
+                raise HTTPException(status_code=403, detail="Not enough money")
+            else:
+                try:
+                    await cruds_amap.add_order_to_delivery(
+                        order=db_order,
+                        db=db,
+                    )
+                    await cruds_amap.edit_cash_by_id(
+                        db=db,
+                        user_id=order.user_id,
+                        balance=schemas_amap.CashBase(balance=balance.balance - amount),
+                    )
+                    return get_order_by_id(order_id=db_order.order_id, db=db)
+                except ValueError as error:
+                    raise HTTPException(status_code=422, detail=str(error))
+        else:
+            raise HTTPException(status_code=404, detail="No cash found")
 
 
 @router.patch(
@@ -265,24 +285,48 @@ async def add_order_to_delievery(
 async def edit_orders_from_delieveries(
     delivery_id: str, order: schemas_amap.OrderEdit, db: AsyncSession = Depends(get_db)
 ):
-    amount = 0.0
-    for i in range(len(order.products_ids)):
-        prod = await cruds_amap.get_product_by_id(
-            product_id=order.products_ids[i], db=db
+    if cruds_amap.checkif_delivery_locked(db=db, delivery_id=delivery_id):
+        raise HTTPException(status_code=403, detail="Delivery locked")
+    else:
+        amount = 0.0
+        for i in range(len(order.products_ids)):
+            prod = await cruds_amap.get_product_by_id(
+                product_id=order.products_ids[i], db=db
+            )
+            if prod is not None:
+                amount += prod.price * order.products_quantity[i]
+        ordering_date = datetime.now()
+        db_order = schemas_amap.OrderComplete(
+            amount=amount, ordering_date=ordering_date, **order.dict()
         )
-        if prod is not None:
-            amount += prod.price * order.products_quantity[i]
-    ordering_date = datetime.now()
-    db_order = schemas_amap.OrderComplete(
-        amount=amount, ordering_date=ordering_date, **order.dict()
-    )
-    try:
-        await cruds_amap.edit_order(
-            order=db_order,
-            db=db,
+        previous_order = await cruds_amap.get_order_by_id(
+            db=db, order_id=order.order_id
         )
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+        if previous_order is not None:
+            previous_amount = previous_order.amount
+            balance = await cruds_amap.get_cash_by_id(db=db, user_id=order.user_id)
+            if balance is not None:
+                if balance.balance + previous_amount < amount:
+                    raise HTTPException(status_code=403, detail="Not enough money")
+                else:
+                    try:
+                        await cruds_amap.edit_order(
+                            order=db_order,
+                            db=db,
+                        )
+                        await cruds_amap.edit_cash_by_id(
+                            db=db,
+                            user_id=order.user_id,
+                            balance=schemas_amap.CashBase(
+                                balance=balance.balance + previous_amount - amount
+                            ),
+                        )
+                    except ValueError as error:
+                        raise HTTPException(status_code=422, detail=str(error))
+            else:
+                raise HTTPException(status_code=404, detail="No cash found")
+        else:
+            raise HTTPException(status_code=404, detail="No order found")
 
 
 @router.delete(
@@ -290,9 +334,28 @@ async def edit_orders_from_delieveries(
     status_code=204,
     tags=[Tags.amap],
 )
-async def remove_order(order_id: str, db: AsyncSession = Depends(get_db)):
+async def remove_order(
+    order_id: str, delivery_id: str, db: AsyncSession = Depends(get_db)
+):
     # TODO check if the client is admin or the good user
-    await cruds_amap.remove_order(db=db, order_id=order_id)
+    if cruds_amap.checkif_delivery_locked(db=db, delivery_id=delivery_id):
+        raise HTTPException(status_code=403, detail="Delivery locked")
+    else:
+        order = await cruds_amap.get_order_by_id(db=db, order_id=order_id)
+        if order is not None:
+            amount = order.amount
+            balance = await cruds_amap.get_cash_by_id(db=db, user_id=order.user_id)
+            if balance is not None:
+                await cruds_amap.edit_cash_by_id(
+                    db=db,
+                    user_id=order.user_id,
+                    balance=schemas_amap.CashBase(balance=balance.balance + amount),
+                )
+                await cruds_amap.remove_order(db=db, order_id=order_id)
+            else:
+                raise HTTPException(status_code=404, detail="No cash found")
+        else:
+            raise HTTPException(status_code=404, detail="No order found")
 
 
 @router.get(
