@@ -109,8 +109,8 @@ class LogConfig:
                     "formatter": "default",
                     "class": "logging.handlers.RotatingFileHandler",
                     "filename": "logs/errors.log",
-                    "maxBytes": 1024,
-                    "backupCount": 2,
+                    "maxBytes": 1024 * 1024 * 10,  # ~ 10 MB
+                    "backupCount": 20,
                     "level": "WARNING",
                 },
                 "file_access": {
@@ -118,8 +118,8 @@ class LogConfig:
                     "formatter": "default",
                     "class": "logging.handlers.RotatingFileHandler",
                     "filename": "logs/access.log",
-                    "maxBytes": 1024,
-                    "backupCount": 10,
+                    "maxBytes": 1024 * 1024 * 40,  # ~ 40 MB
+                    "backupCount": 50,
                     "level": "INFO",
                 },
                 "file_security": {
@@ -128,8 +128,8 @@ class LogConfig:
                     "formatter": "default",
                     "class": "logging.handlers.RotatingFileHandler",
                     "filename": "logs/security.log",
-                    "maxBytes": 1024,  # *10
-                    "backupCount": 10,
+                    "maxBytes": 1024 * 1024 * 40,  # ~ 40 MB
+                    "backupCount": 50,
                     "level": "INFO",
                 },
             },
