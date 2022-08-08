@@ -23,9 +23,11 @@ class MatrixHandler(StreamHandler):
         user_name: str,
         user_password: str,
         server_base_url: str | None,
+        level: str = "INFO",
         enabled: bool = True,
     ) -> None:
         StreamHandler.__init__(self)
+        self.setLevel(level)
 
         self.room_id = room_id
         self.enabled = enabled
