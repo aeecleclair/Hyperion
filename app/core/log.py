@@ -1,14 +1,13 @@
 import logging
+import logging.config
 import os
 import queue
 from logging.handlers import QueueHandler, QueueListener
 
-from pydantic import BaseModel
-
-from app.core.settings import settings
+from app.core.config import Settings
 
 
-class LogConfig(BaseModel):
+class LogConfig:
     """
     Logging configuration to be set for the server
     We convert this class to a dict to be used by Python logging module.
@@ -36,137 +35,143 @@ class LogConfig(BaseModel):
         + console_color.END
     )
     MATRIX_LOG_FORMAT: str = "%(asctime)s - %(name)s - <code>%(levelname)s</code> - <font color ='green'>%(message)s</font>"
-    MINIMUM_LOG_LEVEL: str = "DEBUG" if settings.LOG_DEBUG_MESSAGES else "INFO"
+    MINIMUM_LOG_LEVEL: str = "DEBUG"  # if settings.LOG_DEBUG_MESSAGES else "INFO"
 
     # Logging config
     # See https://docs.python.org/3/library/logging.config.html#logging-config-dictschema
-    version = 1
-    # If LOG_DEBUG_MESSAGES is set, we let existing loggers, including the database and uvicorn loggers
-    disable_existing_loggers = not settings.LOG_DEBUG_MESSAGES
-    formatters = {
-        "default": {
-            "()": "uvicorn.logging.DefaultFormatter",
-            "fmt": LOG_FORMAT,
-            "datefmt": "%d-%b-%y %H:%M:%S",
-        },
-        "console_formatter": {
-            "()": "uvicorn.logging.DefaultFormatter",
-            "fmt": CONSOLE_LOG_FORMAT,
-            "datefmt": "%d-%b-%y %H:%M:%S",
-        },
-        "matrix": {
-            "()": "uvicorn.logging.DefaultFormatter",
-            "fmt": MATRIX_LOG_FORMAT,
-            "datefmt": "%d-%b-%y %H:%M:%S",
-        },
-    }
-    handlers = {
-        # Debug console is an handler which is only enabled if Hyperion is in Debug mode
-        "debug_console": {
-            "formatter": "console_formatter",
-            # If settings.LOG_DEBUG_MESSAGES is set, the default handlers should print DEBUG log messages to the console.
-            "class": (
-                "logging.StreamHandler"
-                if settings.LOG_DEBUG_MESSAGES
-                else "logging.NullHandler"
-            ),
-            # "stream": "ext://sys.stderr",
-            "level": "DEBUG",
-        },
-        # Console handler is always active, even in production.
-        # It should be used to log errors and information about the server (starting up, hostname...)
-        "console": {
-            "formatter": "console_formatter",
-            "class": "logging.StreamHandler",
-            "stream": "ext://sys.stderr",
-            "level": "INFO",
-        },
-        # Matrix_errors handler send text messages to a Matrix server
-        "matrix_errors": {
-            # Send error to a Matrix server. If credentials are not set in settings, the handler will be disabled
-            "formatter": "matrix",
-            "class": "app.utils.loggers_tools.matrix_handler.MatrixHandler",
-            "room_id": settings.MATRIX_LOG_ERROR_ROOM_ID,
-            "enabled": (
-                settings.MATRIX_USER_NAME is not None
-                and settings.MATRIX_USER_PASSWORD is not None
-                and settings.MATRIX_LOG_ERROR_ROOM_ID is not None
-            ),
-            "level": "ERROR",
-        },
-        # There is an handler per log file #
-        # They are based on RotatingFileHandler to logs in multiple 1024 bytes files
-        # https://docs.python.org/3/library/logging.handlers.html#logging.handlers.RotatingFileHandler
-        "file_errors": {
-            # File_errors should receive all errors, even when they are already logged elsewhere
-            "formatter": "default",
-            "class": "logging.handlers.RotatingFileHandler",
-            "filename": "logs/errors.log",
-            "maxBytes": 1024,
-            "backupCount": 2,
-            "level": "WARNING",
-        },
-        "file_access": {
-            # file_access should receive information about all incoming requests and JWT verifications
-            "formatter": "default",
-            "class": "logging.handlers.RotatingFileHandler",
-            "filename": "logs/access.log",
-            "maxBytes": 1024,
-            "backupCount": 10,
-            "level": "INFO",
-        },
-        "file_security": {
-            # file_security should receive informations about auth operation, inscription, account validation, authentification and token refresh success or failure.
-            # Success and failures should be logged
-            "formatter": "default",
-            "class": "logging.handlers.RotatingFileHandler",
-            "filename": "logs/security.log",
-            "maxBytes": 1024,  # *10
-            "backupCount": 10,
-            "level": "INFO",
-        },
-    }
+    def get_config_dict(self, settings: Settings):
+        # We can not use a dependency to access settings as this function is not an endpoint
+        return {
+            "version": 1,
+            # If LOG_DEBUG_MESSAGES is set, we let existing loggers, including the database and uvicorn loggers
+            "disable_existing_loggers": True,  # not settings.LOG_DEBUG_MESSAGES
+            "formatters": {
+                "default": {
+                    "()": "uvicorn.logging.DefaultFormatter",
+                    "fmt": self.LOG_FORMAT,
+                    "datefmt": "%d-%b-%y %H:%M:%S",
+                },
+                "console_formatter": {
+                    "()": "uvicorn.logging.DefaultFormatter",
+                    "fmt": self.CONSOLE_LOG_FORMAT,
+                    "datefmt": "%d-%b-%y %H:%M:%S",
+                },
+                "matrix": {
+                    "()": "uvicorn.logging.DefaultFormatter",
+                    "fmt": self.MATRIX_LOG_FORMAT,
+                    "datefmt": "%d-%b-%y %H:%M:%S",
+                },
+            },
+            "handlers": {
+                # Debug console is an handler which is only enabled if Hyperion is in Debug mode
+                "debug_console": {
+                    "formatter": "console_formatter",
+                    # If settings.LOG_DEBUG_MESSAGES is set, the default handlers should print DEBUG log messages to the console.
+                    "class": (
+                        "logging.StreamHandler"
+                        if settings.LOG_DEBUG_MESSAGES
+                        else "logging.NullHandler"
+                    ),
+                    # "stream": "ext://sys.stderr",
+                    "level": "DEBUG",
+                },
+                # Console handler is always active, even in production.
+                # It should be used to log errors and information about the server (starting up, hostname...)
+                "console": {
+                    "formatter": "console_formatter",
+                    "class": "logging.StreamHandler",
+                    "stream": "ext://sys.stderr",
+                    "level": "INFO",
+                },
+                # Matrix_errors handler send text messages to a Matrix server
+                "matrix_errors": {
+                    # Send error to a Matrix server. If credentials are not set in settings, the handler will be disabled
+                    "formatter": "matrix",
+                    "class": "app.utils.loggers_tools.matrix_handler.MatrixHandler",
+                    "room_id": settings.MATRIX_LOG_ERROR_ROOM_ID,
+                    "user_name": settings.MATRIX_USER_NAME,
+                    "user_password": settings.MATRIX_USER_PASSWORD,
+                    "server_base_url": settings.MATRIX_SERVER_BASE_URL,
+                    "enabled": (
+                        settings.MATRIX_USER_NAME is not None
+                        and settings.MATRIX_USER_PASSWORD is not None
+                        and settings.MATRIX_LOG_ERROR_ROOM_ID is not None
+                    ),
+                    "level": "ERROR",
+                },
+                # There is an handler per log file #
+                # They are based on RotatingFileHandler to logs in multiple 1024 bytes files
+                # https://docs.python.org/3/library/logging.handlers.html#logging.handlers.RotatingFileHandler
+                "file_errors": {
+                    # File_errors should receive all errors, even when they are already logged elsewhere
+                    "formatter": "default",
+                    "class": "logging.handlers.RotatingFileHandler",
+                    "filename": "logs/errors.log",
+                    "maxBytes": 1024,
+                    "backupCount": 2,
+                    "level": "WARNING",
+                },
+                "file_access": {
+                    # file_access should receive information about all incoming requests and JWT verifications
+                    "formatter": "default",
+                    "class": "logging.handlers.RotatingFileHandler",
+                    "filename": "logs/access.log",
+                    "maxBytes": 1024,
+                    "backupCount": 10,
+                    "level": "INFO",
+                },
+                "file_security": {
+                    # file_security should receive informations about auth operation, inscription, account validation, authentification and token refresh success or failure.
+                    # Success and failures should be logged
+                    "formatter": "default",
+                    "class": "logging.handlers.RotatingFileHandler",
+                    "filename": "logs/security.log",
+                    "maxBytes": 1024,  # *10
+                    "backupCount": 10,
+                    "level": "INFO",
+                },
+            },
+            # We define various loggers which can be used by Hyperion.
+            # Each logger has:
+            #  - specific handlers (ex: file_access or file_security), they log targeted records like endpoint access or authentification
+            #  - error related handlers (ex: file_errors and matrix_errors), they log all errors regardless of their provenance
+            #  - default handler which logs to the console for development and debugging purpose
+            "loggers": {
+                # hyperion.access should log incoming request and JWT verifications
+                "hyperion.access": {
+                    "handlers": [
+                        "file_access",
+                        "file_errors",
+                        "matrix_errors",
+                        "debug_console",
+                    ],
+                    "level": self.MINIMUM_LOG_LEVEL,
+                },
+                "hyperion.security": {
+                    "handlers": [
+                        "file_security",
+                        "file_errors",
+                        "matrix_errors",
+                        "debug_console",
+                    ],
+                    "level": self.MINIMUM_LOG_LEVEL,
+                },
+                # hyperion.error should be used to log all errors which does not correspond to one of the specific logger
+                # Other loggers can process errors messages and may be more appropriated then hyperion.error
+                "hyperion.error": {
+                    "handlers": ["file_errors", "matrix_errors", "console"],
+                    "level": self.MINIMUM_LOG_LEVEL,
+                },
+                # We disable "uvicorn.access" to replace it with our custom "hyperion.access" which add custom informations like a the request_id
+                "uvicorn.access": {"handlers": []},
+                "uvicorn.error": {
+                    "handlers": ["file_errors", "matrix_errors", "console"],
+                    "level": self.MINIMUM_LOG_LEVEL,
+                },
+            },
+        }
 
-    # We define various loggers which can be used by Hyperion.
-    # Each logger has:
-    #  - specific handlers (ex: file_access or file_security), they log targeted records like endpoint access or authentification
-    #  - error related handlers (ex: file_errors and matrix_errors), they log all errors regardless of their provenance
-    #  - default handler which logs to the console for development and debugging purpose
-    loggers = {
-        # hyperion.access should log incoming request and JWT verifications
-        "hyperion.access": {
-            "handlers": [
-                "file_access",
-                "file_errors",
-                "matrix_errors",
-                "debug_console",
-            ],
-            "level": MINIMUM_LOG_LEVEL,
-        },
-        "hyperion.security": {
-            "handlers": [
-                "file_security",
-                "file_errors",
-                "matrix_errors",
-                "debug_console",
-            ],
-            "level": MINIMUM_LOG_LEVEL,
-        },
-        # hyperion.error should be used to log all errors which does not correspond to one of the specific logger
-        # Other loggers can process errors messages and may be more appropriated then hyperion.error
-        "hyperion.error": {
-            "handlers": ["file_errors", "matrix_errors", "console"],
-            "level": MINIMUM_LOG_LEVEL,
-        },
-        # We disable "uvicorn.access" to replace it with our custom "hyperion.access" which add custom informations like a the request_id
-        "uvicorn.access": {"handlers": []},
-        "uvicorn.error": {
-            "handlers": ["file_errors", "matrix_errors", "console"],
-            "level": MINIMUM_LOG_LEVEL,
-        },
-    }
-
-    def initialize_loggers(self):
+    def initialize_loggers(self, settings: Settings):
         """
         Initialize the logging ecosystem.
 
@@ -185,9 +190,10 @@ class LogConfig(BaseModel):
         if not os.path.exists("logs/"):
             os.makedirs("logs/")
 
-        logging.config.dictConfig(self.dict())
+        config_dict = self.get_config_dict(settings=settings)
+        logging.config.dictConfig(config_dict)
 
-        loggers = [logging.getLogger(name) for name in self.loggers]
+        loggers = [logging.getLogger(name) for name in config_dict["loggers"]]
 
         for logger in loggers:
             # If the logger does not have any handler, we don't need to create a QueueHandler
@@ -195,7 +201,7 @@ class LogConfig(BaseModel):
                 continue
 
             # We create a queue where all log records will be added
-            log_queue = queue.Queue(-1)
+            log_queue: queue.Queue = queue.Queue(-1)
 
             # queue_handler is the handler which add all log records to the queue
             queue_handler = QueueHandler(log_queue)
