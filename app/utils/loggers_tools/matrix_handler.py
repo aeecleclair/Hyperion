@@ -1,6 +1,9 @@
+import logging
 from logging import StreamHandler
 
 from app.utils.communication.matrix import Matrix
+
+hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 class MatrixHandler(StreamHandler):
@@ -26,6 +29,7 @@ class MatrixHandler(StreamHandler):
 
         self.room_id = room_id
         self.enabled = enabled
+
         try:
             self.matrix = Matrix(
                 user_name=user_name,
@@ -33,8 +37,9 @@ class MatrixHandler(StreamHandler):
                 server_base_url=server_base_url,
             )
         except ValueError as err:
-            print(err)
-            print("MatrixHandler: Matrix configuration not set, disabling the handler")
+            hyperion_error_logger.warning(
+                f"MatrixHandler: Matrix configuration failed, disabling the handler: {err}"
+            )
             self.enabled = False
 
     def emit(self, record):
@@ -44,8 +49,7 @@ class MatrixHandler(StreamHandler):
             try:
                 self.matrix.send_message(self.room_id, msg)
             except ValueError as err:
-                print(err)
-                print(
-                    "MatrixHandler: Unable to send message to Matrix server, disabling the handler"
+                hyperion_error_logger.warning(
+                    f"MatrixHandler: Unable to send message to Matrix server, disabling the handler: {err}"
                 )
                 self.enabled = False

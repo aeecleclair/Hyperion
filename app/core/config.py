@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     # TODO: comment and rename
     RSA_PRIVATE_PEM_STRING: str
 
+    # By default, only production's records are logged
     LOG_DEBUG_MESSAGES: bool | None
 
     ########################

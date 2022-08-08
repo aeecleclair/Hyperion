@@ -65,8 +65,7 @@ class Matrix:
             response.raise_for_status()
         except requests.exceptions.HTTPError:
             raise ValueError(
-                "Could not send message to Matrix server. "
-                "Check the room_id in settings."
+                "Could not send message to Matrix server, check the room_id in settings."
             )
 
         return response.json()

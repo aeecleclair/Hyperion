@@ -35,12 +35,14 @@ class LogConfig:
         + console_color.END
     )
     MATRIX_LOG_FORMAT: str = "%(asctime)s - %(name)s - <code>%(levelname)s</code> - <font color ='green'>%(message)s</font>"
-    MINIMUM_LOG_LEVEL: str = "DEBUG"  # if settings.LOG_DEBUG_MESSAGES else "INFO"
 
     # Logging config
     # See https://docs.python.org/3/library/logging.config.html#logging-config-dictschema
     def get_config_dict(self, settings: Settings):
-        # We can not use a dependency to access settings as this function is not an endpoint
+        # We can not use a dependency to access settings as this function is not an endpoint. The object must thus be passed as a parameter.
+
+        MINIMUM_LOG_LEVEL: str = "DEBUG" if settings.LOG_DEBUG_MESSAGES else "INFO"
+
         return {
             "version": 1,
             # If LOG_DEBUG_MESSAGES is set, we let existing loggers, including the database and uvicorn loggers
@@ -145,7 +147,7 @@ class LogConfig:
                         "matrix_errors",
                         "debug_console",
                     ],
-                    "level": self.MINIMUM_LOG_LEVEL,
+                    "level": MINIMUM_LOG_LEVEL,
                 },
                 "hyperion.security": {
                     "handlers": [
@@ -154,19 +156,19 @@ class LogConfig:
                         "matrix_errors",
                         "debug_console",
                     ],
-                    "level": self.MINIMUM_LOG_LEVEL,
+                    "level": MINIMUM_LOG_LEVEL,
                 },
                 # hyperion.error should be used to log all errors which does not correspond to one of the specific logger
                 # Other loggers can process errors messages and may be more appropriated then hyperion.error
                 "hyperion.error": {
                     "handlers": ["file_errors", "matrix_errors", "console"],
-                    "level": self.MINIMUM_LOG_LEVEL,
+                    "level": MINIMUM_LOG_LEVEL,
                 },
                 # We disable "uvicorn.access" to replace it with our custom "hyperion.access" which add custom informations like a the request_id
                 "uvicorn.access": {"handlers": []},
                 "uvicorn.error": {
                     "handlers": ["file_errors", "matrix_errors", "console"],
-                    "level": self.MINIMUM_LOG_LEVEL,
+                    "level": MINIMUM_LOG_LEVEL,
                 },
             },
         }
