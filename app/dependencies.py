@@ -43,11 +43,11 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 
 @lru_cache()
-def get_settings():
+def get_settings() -> Settings:
     """
     Return a settings object, based on `.env` dotenv
     """
-    # `lru_cache()` decorator is here to prevent the class to be instanciated multiple times.
+    # `lru_cache()` decorator is here to prevent the class to be instantiated multiple times.
     # See https://fastapi.tiangolo.com/advanced/settings/#lru_cache-technical-details
     return Settings(_env_file=".env")
 

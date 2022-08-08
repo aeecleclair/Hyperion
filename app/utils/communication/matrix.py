@@ -2,8 +2,6 @@ from typing import Any, Dict
 
 import requests
 
-from app.core.settings import settings
-
 
 class Matrix:
     """
@@ -12,16 +10,14 @@ class Matrix:
     A custom Matrix server can be used with `MATRIX_SERVER_BASE_URL`, default is https://matrix.org/
     """
 
-    def __init__(self):
-        if not (settings.MATRIX_USER_NAME and settings.MATRIX_USER_PASSWORD):
-            raise ValueError(
-                "Matrix username and password are not configured in settings"
-            )
-
-        self.server = settings.MATRIX_SERVER_BASE_URL or "https://matrix.org/"
-        self.access_token = self.login_for_access_token(
-            settings.MATRIX_USER_NAME, settings.MATRIX_USER_PASSWORD
-        )
+    def __init__(
+        self,
+        user_name: str,
+        user_password: str,
+        server_base_url: str | None = None,
+    ):
+        self.server = server_base_url or "https://matrix.org/"
+        self.access_token = self.login_for_access_token(user_name, user_password)
 
     def login_for_access_token(self, username: str, password: str) -> str:
         """

@@ -15,7 +15,6 @@ from app.utils.types.groups_type import AccountType
 
 app = FastAPI()
 
-LogConfig().initialize_loggers()
 
 hyperion_access_logger = logging.getLogger("hyperion.access")
 
@@ -48,9 +47,15 @@ async def logging_middleware(request: Request, call_next):
     return response
 
 
-# Alembic should be used for any migration, this function can only create new tables and ensure that the necessary groups are avaible
+# Alembic should be used for any migration, this function can only create new tables and ensure that the necessary groups are available
 @app.on_event("startup")
 async def startup():
+    # Initialize loggers
+    # Unfortunately, FastAPI does not support using dependency in startup events.
+    # We reproduce FastAPI logic to access settings. See https://github.com/tiangolo/fastapi/issues/425#issuecomment-954963966
+    settings = app.dependency_overrides.get(get_settings, get_settings)()
+    LogConfig().initialize_loggers(settings=settings)
+
     # create db tables
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

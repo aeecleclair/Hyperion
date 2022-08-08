@@ -14,13 +14,24 @@ class MatrixHandler(StreamHandler):
     Has this handler needs a Matrix configuration to be set, it is possible to disable it.
     """
 
-    def __init__(self, room_id: str, enabled: bool = True) -> None:
+    def __init__(
+        self,
+        room_id: str,
+        user_name: str,
+        user_password: str,
+        server_base_url: str | None,
+        enabled: bool = True,
+    ) -> None:
         StreamHandler.__init__(self)
 
         self.room_id = room_id
         self.enabled = enabled
         try:
-            self.matrix = Matrix()
+            self.matrix = Matrix(
+                user_name=user_name,
+                user_password=user_password,
+                server_base_url=server_base_url,
+            )
         except ValueError as err:
             print(err)
             print("MatrixHandler: Matrix configuration not set, disabling the handler")
