@@ -5,9 +5,9 @@ from fastapi import APIRouter, Body, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import security
-from app.core.settings import settings
+from app.core.config import Settings
 from app.cruds import cruds_groups, cruds_users
-from app.dependencies import get_current_user, get_db
+from app.dependencies import get_current_user, get_db, get_settings
 from app.models import models_core
 from app.schemas import schemas_core
 from app.utils.mail.mailworker import send_email
@@ -88,7 +88,9 @@ async def update_user(
     tags=[Tags.users],
 )
 async def create_user(
-    user_create: schemas_core.CoreUserCreateRequest, db: AsyncSession = Depends(get_db)
+    user_create: schemas_core.CoreUserCreateRequest,
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Start the user account creation process. The user will be sent an email with a link to activate his account.
@@ -157,6 +159,7 @@ async def create_user(
                 recipient=user_create.email,
                 subject="MyECL - confirm your email",
                 content=f"Please confirm your MyECL account with the token {activation_token}",
+                settings=settings,
             )
         print(activation_token)
 
@@ -244,7 +247,9 @@ async def activate_user(
     tags=[Tags.users],
 )
 async def recover_user(
-    email: str = Body(..., embed=True), db: AsyncSession = Depends(get_db)
+    email: str = Body(..., embed=True),
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Allow an user to start a password reset process.
@@ -276,6 +281,7 @@ async def recover_user(
                 recipient=db_user.email,
                 subject="MyECL - reset your password",
                 content=f"You can reset your password with the token {reset_token}",
+                settings=settings,
             )
         print(reset_token)
 

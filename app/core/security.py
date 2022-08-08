@@ -6,7 +6,7 @@ from jose import jwt
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.settings import settings
+from app.core.config import Settings
 from app.cruds import cruds_users
 from app.models import models_core
 
@@ -82,12 +82,16 @@ async def authenticate_user(
 
 
 def create_access_token(
+    settings: Settings,
     data: dict,
-    expires_delta: timedelta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+    expires_delta: timedelta | None = None,
 ) -> str:
     """
     Create a JWT. The token is generated using ACCESS_TOKEN_SECRET_KEY secret.
     """
+    if expires_delta is None:
+        # We use the default value
+        expires_delta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode = data.copy()
     expire_on = datetime.utcnow() + expires_delta
     to_encode.update({"exp": expire_on})
