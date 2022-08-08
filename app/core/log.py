@@ -46,7 +46,7 @@ class LogConfig:
         return {
             "version": 1,
             # If LOG_DEBUG_MESSAGES is set, we let existing loggers, including the database and uvicorn loggers
-            "disable_existing_loggers": True,  # not settings.LOG_DEBUG_MESSAGES
+            "disable_existing_loggers": not settings.LOG_DEBUG_MESSAGES,
             "formatters": {
                 "default": {
                     "()": "uvicorn.logging.DefaultFormatter",
