@@ -32,6 +32,25 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str
     SMTP_EMAIL: str
 
+    ########################
+    # Matrix configuration #
+    ########################
+    # Matrix configuration is optional. If configured, Hyperion will be able to send messages to a Matrix server.
+    # This configuration will be used to send errors messages.
+    # If the following parameters are not set, logging won't use the Matrix handler
+    # MATRIX_SERVER_BASE_URL is optional, the official Matrix server will be used if not configured
+    MATRIX_SERVER_BASE_URL: str | None
+    MATRIX_USER_NAME: str | None
+    MATRIX_USER_PASSWORD: str | None
+    MATRIX_LOG_ERROR_ROOM_ID: str | None
+
+    #####################
+    # Hyperion settings #
+    #####################
+
+    # By default, only production's records are logged
+    LOG_DEBUG_MESSAGES: bool | None
+
     ###################
     # Tokens validity #
     ###################
@@ -99,39 +118,6 @@ class Settings(BaseSettings):
     # Tokens validity
     USER_ACTIVATION_TOKEN_EXPIRES_HOURS = 24
     PASSWORD_RESET_TOKEN_EXPIRES_HOURS = 12
-
-    # TODO: comment and rename
-    RSA_PRIVATE_PEM_STRING: str
-
-    # By default, only production's records are logged
-    LOG_DEBUG_MESSAGES: bool | None
-
-    ########################
-    # Matrix configuration #
-    ########################
-    # Matrix configuration is optional. If configured, Hyperion will be able to send messages to a Matrix server.
-    # This configuration will be used to send errors messages.
-    # If the following parameters are not set, logging won't use the Matrix handler
-    # MATRIX_SERVER_BASE_URL is optional, the official Matrix server will be used if not configured
-    MATRIX_SERVER_BASE_URL: str | None
-    MATRIX_USER_NAME: str | None
-    MATRIX_USER_PASSWORD: str | None
-    MATRIX_LOG_ERROR_ROOM_ID: str | None
-
-    # SMTP configuration using starttls
-    SMTP_ACTIVE: bool
-    SMTP_PORT: int
-    SMTP_SERVER: str
-    SMTP_USERNAME: str
-    SMTP_PASSWORD: str
-    SMTP_EMAIL: str
-
-    # Add an AUTH_CLIENTS variable to the .env dotenv to configure auth clients
-    # This variable should have the format: [["client id", "client secret", "app.utils.auth.providers class name"]]
-    # Use an empty secret `null` or `""` to use PKCE instead of a client secret
-    # Ex: AUTH_CLIENTS=[["Nextcloudclient", "supersecret", "NextcloudAuthClient"], ["Piwigo", "secret2", "BaseAuthClient"], , ["mobileapp", null, "BaseAuthClient"]]
-    AUTH_CLIENTS: list[tuple[str, str | None, str]]
-    # The AUTH_CLIENTS property should never be used in the code. To get an auth client, use the following KNOWN_AUTH_CLIENTS
 
     # This property parse AUTH_CLIENTS to create a dictionary of auth clients:
     # {"client_id": AuthClientClassInstance}

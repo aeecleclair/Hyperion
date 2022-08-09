@@ -7,6 +7,7 @@ async def get_users(db: AsyncSession = Depends(get_db)):
 ```
 """
 
+import logging
 from functools import lru_cache
 from typing import Any, AsyncGenerator, Callable, Coroutine
 
@@ -24,6 +25,9 @@ from app.schemas import schemas_auth
 from app.utils.tools import is_user_member_of_an_allowed_group
 from app.utils.types.groups_type import GroupType
 from app.utils.types.scopes_type import ScopeType
+
+# We could maybe use hyperion.security
+hyperion_access_logger = logging.getLogger("hyperion.access")
 
 
 async def get_request_id(request: Request) -> str:
@@ -43,11 +47,6 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             yield db
         finally:
             await db.close()
-
-
-def get_request_id():
-    # To replace with logging
-    return "request_id"
 
 
 @lru_cache()
@@ -77,6 +76,7 @@ def get_user_from_token_with_scopes(
         db: AsyncSession = Depends(get_db),
         settings: Settings = Depends(get_settings),
         token: str = Depends(security.oauth2_scheme),
+        request_id: str = Depends(get_request_id),
     ) -> models_core.CoreUser:
         """
         Dependency that make sure the token is valid, contain the expected scopes and return the corresponding user.
@@ -87,12 +87,14 @@ def get_user_from_token_with_scopes(
                 settings.ACCESS_TOKEN_SECRET_KEY,
                 algorithms=[security.jwt_algorithme],
             )
-            print(payload)
             token_data = schemas_auth.TokenData(**payload)
-            print(token_data)
+            hyperion_access_logger.info(
+                f"Get_current_user: Decoded a token for user {token_data.sub} ({request_id})"
+            )
         except (jwt.JWTError, ValidationError) as error:
-            # TODO logging
-            print(error)
+            hyperion_access_logger.warning(
+                f"Get_current_user: Failed to decode a token: {error} ({request_id})"
+            )
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Could not validate credentials",
@@ -164,6 +166,7 @@ def is_user_a_member_of(
 async def get_token_data(
     settings: Settings = Depends(get_settings),
     token: str = Depends(security.oauth2_scheme),
+    request_id: str = Depends(get_request_id),
 ) -> schemas_auth.TokenData:
     """
     Dependency that return the token payload data
@@ -175,9 +178,13 @@ async def get_token_data(
             algorithms=[security.jwt_algorithme],
         )
         token_data = schemas_auth.TokenData(**payload)
+        hyperion_access_logger.info(
+            f"Get_token_data: Decoded a token for user {token_data.sub} ({request_id})"
+        )
     except (jwt.JWTError, ValidationError) as error:
-        # TODO logging
-        print(error)
+        hyperion_access_logger.warning(
+            f"Get_token_data: Failed to decode a token: {error} ({request_id})"
+        )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Could not validate credentials",

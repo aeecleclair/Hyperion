@@ -1,9 +1,5 @@
 # Hyperion
 
-https://fastapi.tiangolo.com/advanced/security/http-basic-auth/#timing-attacks
-
-https://auth0.com/blog/refresh-tokens-what-are-they-and-when-to-use-them/
-
 ## Creating a virtual environment for Python 3.10.x
 
 ### Windows

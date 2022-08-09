@@ -46,7 +46,8 @@ router = APIRouter()
 
 templates = Jinja2Templates(directory="templates")
 
-logger = logging.getLogger("hyperion.auth")
+# We could maybe use hyperion.security
+logger = logging.getLogger("hyperion.access")
 
 
 # WARNING: if new flow are added, openid_config should be updated accordingly
@@ -454,7 +455,7 @@ async def token(
         )
 
 
-async def authorization_code_grant(
+async def authorization_code_grant(  # noqa: C901 # The function is too complex for flake8
     db: AsyncSession,
     settings: Settings,
     tokenreq: schemas_auth.TokenReq,
