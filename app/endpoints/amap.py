@@ -3,7 +3,6 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import inspect
 
 from app.cruds import cruds_amap
 from app.dependencies import get_db
@@ -187,7 +186,7 @@ async def get_orders_from_delivery(
     delivery_id: str, db: AsyncSession = Depends(get_db)
 ):
     orders = await cruds_amap.get_orders_from_delivery(delivery_id=delivery_id, db=db)
-    return [await get_order_by_id(order.order_id,db) for order in orders]
+    return [await get_order_by_id(order.order_id, db) for order in orders]
 
 
 @router.get(
@@ -198,16 +197,33 @@ async def get_orders_from_delivery(
 )
 async def get_order_by_id(order_id: str, db: AsyncSession = Depends(get_db)):
     order = await cruds_amap.get_order_by_id(order_id=order_id, db=db)
-    quantities = await cruds_amap.get_quantities_of_order(db=db,order_id=order_id)
+    quantities = await cruds_amap.get_quantities_of_order(db=db, order_id=order_id)
     products = []
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     for p in order.products:
         quantity = quantities[p.id]
-        products.append(schemas_amap.ProductQuantity(quantity=quantity,id=p.id,category=p.category,name=p.name,price=p.price))
+        products.append(
+            schemas_amap.ProductQuantity(
+                quantity=quantity,
+                id=p.id,
+                category=p.category,
+                name=p.name,
+                price=p.price,
+            )
+        )
     print(products)
     print(order)
-    return schemas_amap.OrderReturn(products=products,user_id=order.user_id,delivery_id=order.delivery_id,collection_slot=order.collection_slot,delivery_date=order.delivery_date,order_id=order.order_id,amount=order.amount,ordering_date=order.ordering_date)
+    return schemas_amap.OrderReturn(
+        products=products,
+        user_id=order.user_id,
+        delivery_id=order.delivery_id,
+        collection_slot=order.collection_slot,
+        delivery_date=order.delivery_date,
+        order_id=order.order_id,
+        amount=order.amount,
+        ordering_date=order.ordering_date,
+    )
 
 
 @router.post(
