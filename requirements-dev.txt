@@ -5,3 +5,4 @@ flake8==5.0.1
 isort[requirements_deprecated_finder]==5.10.1
 pep8-naming==0.13.1 # A Flake8 plugin to check code against PEP 8 naming conventions
 pytest==7.1.2
+types-requests==2.28.4

@@ -9,7 +9,7 @@ async def get_users(db: AsyncSession = Depends(get_db)):
 from functools import lru_cache
 from typing import AsyncGenerator
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from jose import jwt
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,6 +21,13 @@ from app.database import SessionLocal
 from app.models import models_core
 from app.schemas import schemas_core
 from app.utils.types.groups_type import GroupType
+
+
+async def get_request_id(request: Request) -> str:
+    """
+    The request identifier is an unique UUID which is used to associate logs saved during the same request
+    """
+    return request.state.request_id
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
@@ -36,11 +43,11 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 
 @lru_cache()
-def get_settings():
+def get_settings() -> Settings:
     """
     Return a settings object, based on `.env` dotenv
     """
-    # `lru_cache()` decorator is here to prevent the class to be instanciated multiple times.
+    # `lru_cache()` decorator is here to prevent the class to be instantiated multiple times.
     # See https://fastapi.tiangolo.com/advanced/settings/#lru_cache-technical-details
     return Settings(_env_file=".env")
 
