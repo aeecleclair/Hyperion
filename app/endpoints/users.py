@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import security
 from app.core.config import Settings
 from app.cruds import cruds_groups, cruds_users
-from app.dependencies import get_current_user, get_db, get_settings
+from app.dependencies import get_db, get_settings, is_user_a_member
 from app.models import models_core
 from app.schemas import schemas_core
 from app.utils.mail.mailworker import send_email
@@ -26,7 +26,7 @@ router = APIRouter()
 )
 async def get_users(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(get_current_user),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """Return all users from database as a list of CoreUserSimple"""
 
@@ -139,7 +139,7 @@ async def create_user(
             activation_token=activation_token,
             created_on=datetime.now(),
             expire_on=datetime.now()
-            + timedelta(hours=settings.USER_ACTIVATION_TOKEN_EXPIRES_HOURS),
+            + timedelta(hours=settings.USER_ACTIVATION_TOKEN_EXPIRE_HOURS),
         )
 
         await cruds_users.create_unconfirmed_user(
@@ -269,7 +269,7 @@ async def recover_user(
             reset_token=reset_token,
             created_on=datetime.now(),
             expire_on=datetime.now()
-            + timedelta(hours=settings.PASSWORD_RESET_TOKEN_EXPIRES_HOURS),
+            + timedelta(hours=settings.PASSWORD_RESET_TOKEN_EXPIRE_HOURS),
         )
 
         await cruds_users.create_user_recover_request(
