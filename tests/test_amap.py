@@ -19,11 +19,6 @@ async def startuptest():
         await db.commit()
 
 
-def test_create_rows():  # A first test is needed to run startuptest once and create the datas needed for the actual tests
-    with client:  # That syntax trigger the startup events in commons.py and all test files
-        pass
-
-
 def test_products():
     response = client.get("/amap/products")
     assert response.status_code == 200
