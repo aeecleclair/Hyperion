@@ -22,10 +22,6 @@ async def startuptest():
 def test_products():
     response = client.get("/amap/products")
     assert response.status_code == 200
-    assert (
-        models_amap.Product(id="test1", name="Test1", price=0.99, category="Tests")
-        in response.content
-    )
     response = client.post(
         "/amap/products",
         schemas_amap.ProductSimple(name="Test2", price=0.01, category="Tests"),
