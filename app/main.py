@@ -12,7 +12,7 @@ from app.core.log import LogConfig
 from app.database import Base, SessionLocal, engine
 from app.dependencies import get_settings
 from app.models import models_core
-from app.utils.types.groups_type import AccountType
+from app.utils.types.groups_type import GroupType
 
 app = FastAPI()
 
@@ -65,7 +65,7 @@ async def startup():
     description = "Account type"
     account_types = [
         models_core.CoreGroup(id=id, name=id.name, description=description)
-        for id in AccountType
+        for id in GroupType
     ]
     async with SessionLocal() as db:
         try:
