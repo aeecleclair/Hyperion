@@ -10,7 +10,7 @@ from app.database import Base
 from app.dependencies import get_db, get_settings
 from app.main import app
 from app.models import models_core
-from app.utils.types.groups_type import AccountType
+from app.utils.types.groups_type import GroupType
 
 SQLALCHEMY_DATABASE_URL = (
     "sqlite+aiosqlite:///./test.db"  # Connect to the test's database
@@ -54,7 +54,7 @@ async def commonstartuptest():
     description = "Account type"
     account_types = [
         models_core.CoreGroup(id=id, name=id.name, description=description)
-        for id in AccountType
+        for id in GroupType
     ]
     async with TestingSessionLocal() as db:
         db.add_all(account_types)
