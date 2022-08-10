@@ -1,13 +1,19 @@
+import logging
+import os
+import shutil
 import uuid
 from datetime import datetime, timedelta
+from os.path import exists
 
-from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import security
 from app.core.config import Settings
 from app.cruds import cruds_groups, cruds_users
 from app.dependencies import get_db, get_settings, is_user_a_member
+    is_user_a_member,
 from app.models import models_core
 from app.schemas import schemas_core
 from app.utils.mail.mailworker import send_email
@@ -16,6 +22,8 @@ from app.utils.types.groups_type import AccountType
 from app.utils.types.tags import Tags
 
 router = APIRouter()
+
+hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 @router.get(
@@ -79,6 +87,76 @@ async def update_user(
     await cruds_users.update_user(db=db, user_id=user_id, user_update=user_update)
 
     return user
+
+
+@router.post(
+    "/users/me/profile-picture",
+    response_model=standard_responses.Result,
+    status_code=201,
+    tags=[Tags.users],
+)
+async def create_current_user_profile_picture(
+    image: UploadFile = File(...),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+    request_id: str = Depends(get_request_id),
+):
+    """
+    Upload a profile picture for the current user.
+
+    **The user must be authenticated to use this endpoint**
+    """
+
+    if image.content_type not in ["image/jpeg", "image/png", "image/webp"]:
+        raise HTTPException(
+            status_code=400, detail="Invalid file format, supported jpeg, png and webp"
+        )
+
+    # We need to go to the end of the file to be able to get the size of the file
+    image.file.seek(0, os.SEEK_END)
+    # Use file.tell() to retrieve the cursor's current position
+    file_size = image.file.tell()
+    if file_size > 1024 * 3:  # 3 MB
+        raise HTTPException(
+            status_code=413,
+            detail="File size is too big. Limit is 10 MB",
+        )
+    # We go back to the beginning of the file to save it on the disk
+    await image.seek(0)
+
+    try:
+        with open(f"data/profile-pictures/{user.id}.png", "wb") as buffer:
+            shutil.copyfileobj(image.file, buffer)
+
+    except Exception as error:
+        hyperion_error_logger.error(
+            f"Create_current_user_profile_picture: could not save profile picture: {error} ({request_id})"
+        )
+        raise HTTPException(status_code=422, detail="Could not save profile picture")
+
+    return standard_responses.Result(success=True)
+
+
+@router.get(
+    "/users/{user_id}/profile-picture/",
+    response_class=FileResponse,
+    status_code=201,
+    tags=[Tags.users],
+)
+async def read_user_profile_picture(
+    user_id: str,
+    # TODO: we may want to remove this user requirement to be able to display images easily in html code
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Get the profile picture of an user.
+
+    **The user must be authenticated to use this endpoint**
+    """
+
+    if not exists(f"data/profile-pictures/{user_id}.png"):
+        return FileResponse("assets/images/default_profile_picture.png")
+
+    return FileResponse(f"data/profile-pictures/{user_id}.png")
 
 
 @router.post(

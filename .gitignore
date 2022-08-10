@@ -3,9 +3,10 @@ __pycache__
 .mypy_cache
 .pytest_cache
 
-# Databases
+# Databases and data
 sql_app.db
 test.db
+data/
 
 # Dotenv file
 .env

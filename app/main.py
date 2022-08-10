@@ -2,6 +2,7 @@
 
 import logging
 import logging.config
+import os
 import uuid
 
 from fastapi import FastAPI, Request
@@ -56,6 +57,10 @@ async def startup():
     # We reproduce FastAPI logic to access settings. See https://github.com/tiangolo/fastapi/issues/425#issuecomment-954963966
     settings = app.dependency_overrides.get(get_settings, get_settings)()
     LogConfig().initialize_loggers(settings=settings)
+
+    # Create the asset folder if it does not exist
+    if not os.path.exists("data/profile-pictures/"):
+        os.makedirs("data/profile-pictures/")
 
     # create db tables
     async with engine.begin() as conn:
