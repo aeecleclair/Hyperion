@@ -1,3 +1,5 @@
+import logging
+import uuid
 from functools import lru_cache
 from typing import AsyncGenerator
 
@@ -5,11 +7,14 @@ from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
+from app.core import security
 from app.core.config import Settings
+from app.cruds import cruds_groups, cruds_users
 from app.database import Base
 from app.dependencies import get_db, get_settings
 from app.main import app
 from app.models import models_core
+from app.schemas import schemas_auth, schemas_core
 from app.utils.types.groups_type import GroupType
 
 SQLALCHEMY_DATABASE_URL = (
@@ -62,3 +67,56 @@ async def commonstartuptest():
 
 
 client = TestClient(app)  # Create a client to execute tests
+
+logger = logging.getLogger("hyperion.access")
+
+
+async def create_user_with_groups(
+    groups: list[GroupType],
+    db: AsyncSession,
+) -> models_core.CoreUser:
+    """
+    Add a dummy user to the database
+    The user will be named with its user_id. Email and password will both be its user_id
+
+    The user will be added to provided `groups`
+    """
+    user_id = str(uuid.uuid4())
+
+    password_hash = security.get_password_hash(user_id)
+
+    user = models_core.CoreUser(
+        id=user_id,
+        email=user_id,
+        password_hash=password_hash,
+        name=user_id,
+        firstname=user_id,
+        floor=user_id,
+    )
+
+    await cruds_users.create_user(db=db, user=user)
+
+    for group in groups:
+        await cruds_groups.create_membership(
+            db=db,
+            membership=schemas_core.CoreMembership(
+                group_id=group.value,
+                user_id=user_id,
+            ),
+        )
+
+    return user
+
+
+def create_api_access_token(user: models_core.CoreUser):
+    """
+    Create a JWT access token for the `user` with the scope `API`
+    """
+    # Unfortunately, FastAPI does not support using dependency in startup events.
+    # We reproduce FastAPI logic to access settings. See https://github.com/tiangolo/fastapi/issues/425#issuecomment-954963966
+    settings = app.dependency_overrides.get(get_settings, get_settings)()
+
+    access_token_data = schemas_auth.TokenData(sub=user.id, scopes="API")
+    token = security.create_access_token(data=access_token_data, settings=settings)
+
+    return token
