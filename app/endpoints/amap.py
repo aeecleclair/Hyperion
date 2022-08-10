@@ -527,10 +527,10 @@ async def get_orders_of_user(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    if user.id == user_id or is_user_member_of_an_allowed_group(user, [GroupType.amap]):
+    if user_id == user.id or is_user_member_of_an_allowed_group(user, [GroupType.amap]):
         orders = await cruds_amap.get_orders_of_user(user_id=user_id, db=db)
         print(orders)
-        res = [await get_order_by_id(order.order_id, db) for order in orders]
+        res = [await get_order_by_id(order.order_id, db, user) for order in orders]
         return res
     else:
         raise HTTPException(status_code=403)
