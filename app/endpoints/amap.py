@@ -18,6 +18,23 @@ router = APIRouter()
 
 # Prefix "/amap" added in api.py
 @router.get(
+    "/amap/rights",
+    response_model=list[schemas_amap.Rights],
+    status_code=200,
+    tags=[Tags.amap],
+)
+async def get_rights(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    view = is_user_member_of_an_allowed_group(
+        user, [GroupType.student, GroupType.staff]
+    )
+    manage = is_user_member_of_an_allowed_group(user, [GroupType.amap])
+    return schemas_amap.Rights(view=view, manage=manage)
+
+
+@router.get(
     "/amap/products",
     response_model=list[schemas_amap.ProductComplete],
     status_code=200,

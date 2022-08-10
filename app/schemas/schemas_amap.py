@@ -8,6 +8,14 @@ from app.schemas.schemas_core import CoreUserSimple
 from app.utils.types.groups_type import AmapSlotType
 
 
+class Rights(BaseModel):
+    view: bool
+    manage: bool
+
+    class Config:
+        orm_mode = True
+
+
 class ProductBase(BaseModel):
     """Base schema for AMAP products"""
 
