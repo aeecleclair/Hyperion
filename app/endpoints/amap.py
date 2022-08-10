@@ -529,8 +529,37 @@ async def get_orders_of_user(
 ):
     if user_id == user.id or is_user_member_of_an_allowed_group(user, [GroupType.amap]):
         orders = await cruds_amap.get_orders_of_user(user_id=user_id, db=db)
-        print(orders)
-        res = [await get_order_by_id(order.order_id, db, user) for order in orders]
+        res = []
+        for order in orders:
+            quantities = await cruds_amap.get_quantities_of_order(
+                db=db, order_id=order.order_id
+            )
+            products = []
+            if not order:
+                raise HTTPException(status_code=404, detail="Order not found")
+            for p in order.products:
+                quantity = quantities[p.id]
+                products.append(
+                    schemas_amap.ProductQuantity(
+                        quantity=quantity,
+                        id=p.id,
+                        category=p.category,
+                        name=p.name,
+                        price=p.price,
+                    )
+                )
+            res.append(
+                schemas_amap.OrderReturn(
+                    products=products,
+                    user_id=order.user_id,
+                    delivery_id=order.delivery_id,
+                    collection_slot=order.collection_slot,
+                    delivery_date=order.delivery_date,
+                    order_id=order.order_id,
+                    amount=order.amount,
+                    ordering_date=order.ordering_date,
+                )
+            )
         return res
     else:
         raise HTTPException(status_code=403)
