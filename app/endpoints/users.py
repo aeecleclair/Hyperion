@@ -106,6 +106,28 @@ async def read_user(
 
 
 @router.patch(
+    "/users/me",
+    response_model=schemas_core.CoreUser,
+    status_code=200,
+    tags=[Tags.users],
+)
+async def update_current_user(
+    user_update: schemas_core.CoreUserUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Update the current user, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value
+
+    **The user must be authenticated to use this endpoint**
+    """
+
+    await cruds_users.update_user(db=db, user_id=user.id, user_update=user_update)
+
+    return user
+
+
+@router.patch(
     "/users/{user_id}",
     response_model=schemas_core.CoreUser,
     status_code=200,
@@ -129,28 +151,6 @@ async def update_user(
     await cruds_users.update_user(db=db, user_id=user_id, user_update=user_update)
 
     return db_user
-
-
-@router.patch(
-    "/users/me",
-    response_model=schemas_core.CoreUser,
-    status_code=200,
-    tags=[Tags.users],
-)
-async def update_current_user(
-    user_update: schemas_core.CoreUserUpdate,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
-):
-    """
-    Update the current user, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value
-
-    **The user must be authenticated to use this endpoint**
-    """
-
-    await cruds_users.update_user(db=db, user_id=user.id, user_update=user_update)
-
-    return user
 
 
 @router.post(
@@ -204,7 +204,7 @@ async def create_current_user_profile_picture(
 @router.get(
     "/users/{user_id}/profile-picture/",
     response_class=FileResponse,
-    status_code=201,
+    status_code=200,
     tags=[Tags.users],
 )
 async def read_user_profile_picture(
