@@ -12,13 +12,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import security
 from app.core.config import Settings
 from app.cruds import cruds_groups, cruds_users
-from app.dependencies import get_db, get_settings, is_user_a_member
+from app.dependencies import (
+    get_db,
+    get_request_id,
+    get_settings,
     is_user_a_member,
+    is_user_a_member_of,
+)
 from app.models import models_core
 from app.schemas import schemas_core
 from app.utils.mail.mailworker import send_email
 from app.utils.types import standard_responses
-from app.utils.types.groups_type import AccountType
+from app.utils.types.groups_type import AccountType, GroupType
 from app.utils.types.tags import Tags
 
 router = APIRouter()
@@ -32,24 +37,54 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
     status_code=200,
     tags=[Tags.users],
 )
-async def get_users(
+async def read_users(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
-    """Return all users from database as a list of CoreUserSimple"""
+    """
+    Return all users from database as a list of `CoreUserSimple`
+
+    **This endpoint is only usable by administrators**
+    """
 
     users = await cruds_users.get_users(db)
     return users
 
 
 @router.get(
-    "/users/{user_id}",
+    "/users/me",
     response_model=schemas_core.CoreUser,
     status_code=200,
     tags=[Tags.users],
 )
-async def read_user(user_id: str, db: AsyncSession = Depends(get_db)):
-    """Return user with id from database as a dictionary"""
+async def read_current_user(
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Return `CoreUser` representation of current user
+
+    **The user must be authenticated to use this endpoint**
+    """
+
+    return user
+
+
+@router.get(
+    "/users/{user_id}",
+    response_model=schemas_core.CoreUserSimple,
+    status_code=200,
+    tags=[Tags.users],
+)
+async def read_user(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Return `CoreUserSimple` representation of user with id `user_id`
+
+    **The user must be authenticated to use this endpoint**
+    """
 
     db_user = await cruds_users.get_user_by_id(db=db, user_id=user_id)
     if db_user is None:
@@ -57,34 +92,63 @@ async def read_user(user_id: str, db: AsyncSession = Depends(get_db)):
     return db_user
 
 
-@router.delete(
-    "/users/{user_id}",
-    status_code=204,
-    tags=[Tags.users],
-)
-async def delete_user(user_id: str, db: AsyncSession = Depends(get_db)):
-    """Delete user from database by id"""
-    # TODO: WARNING - deleting an user without removing its relations ship in other tables will have unexpected consequences
-
-    await cruds_users.delete_user(db=db, user_id=user_id)
+# TODO: readd this after making sure all information about the user has been deleted
+# @router.delete(
+#    "/users/{user_id}",
+#    status_code=204,
+#    tags=[Tags.users],
+# )
+# async def delete_user(user_id: str, db: AsyncSession = Depends(get_db), user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin))):
+#    """Delete user from database by id"""
+#    # TODO: WARNING - deleting an user without removing its relations ship in other tables will have unexpected consequences
+#
+#    await cruds_users.delete_user(db=db, user_id=user_id)
 
 
 @router.patch(
     "/users/{user_id}",
     response_model=schemas_core.CoreUser,
+    status_code=200,
     tags=[Tags.users],
 )
 async def update_user(
     user_id: str,
     user_update: schemas_core.CoreUserUpdate,
     db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
-    """Update a user, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value"""
-    user = await cruds_users.get_user_by_id(db=db, user_id=user_id)
-    if not user:
+    """
+    Update an user, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value
+
+    **This endpoint is only usable by administrators**
+    """
+    db_user = await cruds_users.get_user_by_id(db=db, user_id=user_id)
+    if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
 
     await cruds_users.update_user(db=db, user_id=user_id, user_update=user_update)
+
+    return db_user
+
+
+@router.patch(
+    "/users/me",
+    response_model=schemas_core.CoreUser,
+    status_code=200,
+    tags=[Tags.users],
+)
+async def update_current_user(
+    user_update: schemas_core.CoreUserUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Update the current user, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value
+
+    **The user must be authenticated to use this endpoint**
+    """
+
+    await cruds_users.update_user(db=db, user_id=user.id, user_update=user_update)
 
     return user
 
