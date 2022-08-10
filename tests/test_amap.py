@@ -1,6 +1,5 @@
 from app.main import app
 from app.models import models_amap
-from app.schemas import schemas_amap
 from tests.commons import TestingSessionLocal, client
 
 
@@ -22,8 +21,3 @@ async def startuptest():
 def test_products():
     response = client.get("/amap/products")
     assert response.status_code == 200
-    response = client.post(
-        "/amap/products",
-        schemas_amap.ProductSimple(name="Test2", price=0.01, category="Tests"),
-    )
-    assert response.status_code == 201
