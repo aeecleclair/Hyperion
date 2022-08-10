@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cruds import cruds_amap
@@ -359,6 +359,7 @@ async def remove_order(
                 raise HTTPException(status_code=404, detail="No cash found")
         else:
             raise HTTPException(status_code=404, detail="No order found")
+    return Response(status_code=204)
 
 
 @router.get(

@@ -6,6 +6,8 @@
 
 Create the virtual environment
 
+> You need to be in Hyperion main folder
+
 ```bash
 py -3.10 -m venv .venv
 ```
@@ -21,11 +23,11 @@ Activate it
 Install Pyenv
 
 ```bash
-brew install
+brew install pyenv
 brew install pyenv-virtualenv
 ```
 
-Edit `.zhsrc` and add at the end of the file :
+Edit `~/.zhsrc` and add at the end of the file :
 
 ```bash
 eval "$(pyenv init -)"

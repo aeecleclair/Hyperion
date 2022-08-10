@@ -15,3 +15,6 @@ test.db
 
 # Virtual environment
 .venv
+
+# Logs
+logs/
