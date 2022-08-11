@@ -105,14 +105,14 @@ async def read_current_user(
 
 @router.get(
     "/users/{user_id}",
-    response_model=schemas_core.CoreUserSimple,
+    response_model=schemas_core.CoreUser,
     status_code=200,
     tags=[Tags.users],
 )
 async def read_user(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
     Return `CoreUserSimple` representation of user with id `user_id`
