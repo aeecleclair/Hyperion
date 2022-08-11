@@ -214,10 +214,10 @@ async def create_current_user_profile_picture(
     # Use file.tell() to retrieve the cursor's current position
     file_size = image.file.tell()  # Bytes
     print(file_size)
-    if file_size > 1024 * 1024 * 3:  # 3 MB
+    if file_size > 1024 * 1024 * 4:  # 4 MB
         raise HTTPException(
             status_code=413,
-            detail="File size is too big. Limit is 10 MB",
+            detail="File size is too big. Limit is 4 MB",
         )
     # We go back to the beginning of the file to save it on the disk
     await image.seek(0)
