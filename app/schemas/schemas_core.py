@@ -77,13 +77,12 @@ class CoreUserUpdate(BaseModel):
 
 class CoreUserCreateRequest(BaseModel):
     """
-    The schema is used to send an account creation request
+    The schema is used to send an account creation request.
     **password** is optional as it can either be provided during the creation or the activation
     """
 
     email: str
     password: str | None = None
-    account_type: AccountType
 
     # Password validator
     # https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
@@ -95,6 +94,20 @@ class CoreUserCreateRequest(BaseModel):
         orm_mode = True
 
         schema_extra = examples_core.example_CoreUserCreateRequest
+
+
+class CoreBatchUserCreateRequest(BaseModel):
+    """
+    The schema is used for batch account creation requests. An account type should be provided
+    """
+
+    email: str
+    account_type: AccountType
+
+    class Config:
+        orm_mode = True
+
+        schema_extra = examples_core.example_CoreBatchUserCreateRequest
 
 
 class CoreUserActivateRequest(CoreUserBase):
