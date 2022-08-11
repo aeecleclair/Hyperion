@@ -16,7 +16,7 @@ from sqlalchemy.orm import relationship
 
 from app.database import Base
 from app.models.models_core import CoreUser
-from app.utils.types.groups_type import AmapSlotType
+from app.utils.types.amap_types import AmapSlotType
 
 
 class AmapOrderContent(Base):
