@@ -2,6 +2,7 @@
 
 import logging
 import logging.config
+import os
 import uuid
 
 from fastapi import FastAPI, Request
@@ -57,12 +58,17 @@ async def startup():
     settings = app.dependency_overrides.get(get_settings, get_settings)()
     LogConfig().initialize_loggers(settings=settings)
 
+    # Create the asset folder if it does not exist
+    if not os.path.exists("data/profile-pictures/"):
+        os.makedirs("data/profile-pictures/")
+
     # create db tables
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
     # Add the necessary groups for account types
-    description = "Account type"
+    # TODO:fix also in tests
+    description = "Group type"
     account_types = [
         models_core.CoreGroup(id=id, name=id.name, description=description)
         for id in GroupType

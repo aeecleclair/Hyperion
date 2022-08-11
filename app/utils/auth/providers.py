@@ -82,6 +82,17 @@ class AppAuthClient(BaseAuthClient):
     allowed_groups: list[GroupType] | None = None
 
 
+class PostmanAuthClient(BaseAuthClient):
+    """
+    An auth client for Postman
+    """
+
+    # Set of scopes the auth client is authorized to grant when issuing an access token.
+    # See app.utils.types.scopes_type.ScopeType for possible values
+    # WARNING: to be able to use openid connect, `ScopeType.openid` should always be allowed
+    allowed_scopes: Set[ScopeType] = {ScopeType.API}
+
+
 class NextcloudAuthClient(BaseAuthClient):
     # If no redirect_uri are hardcoded, the client will need to provide one in its request
     redirect_uri: str | None = None

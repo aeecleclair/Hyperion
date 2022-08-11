@@ -1,7 +1,7 @@
 import secrets
 from datetime import datetime, timedelta
 
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import OAuth2AuthorizationCodeBearer
 from jose import jwt
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,7 +20,11 @@ deprecated="auto" may be used to do password hash migration, see [Passlib hash m
 It is improtant to use enough rounds while accounting for the hash computation time. Default is 12. 13 allows for a 0.5 seconds computing delay.
 """
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
+oauth2_scheme = OAuth2AuthorizationCodeBearer(
+    authorizationUrl="auth/authorize",
+    tokenUrl="auth/token",
+    scheme_name="Authorization Code authentification",
+)
 """
 To generate JWT access tokens, we use a *FastAPI* OAuth2PasswordBearer object.
 See [FastAPI documentation](https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/) about JWT.
