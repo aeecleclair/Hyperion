@@ -265,7 +265,7 @@ async def read_user_profile_picture(
     status_code=201,
     tags=[Tags.users],
 )
-async def create_user(
+async def create_user_by_user(
     user_create: schemas_core.CoreUserCreateRequest,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
@@ -273,7 +273,7 @@ async def create_user(
     request_id: str = Depends(get_request_id),
 ):
     """
-    Start the user account creation process. The user will be sent an email with a link to activate his account.
+    Start the user account creation process. The user will be sent an email with a link to activate their account.
     > The received token needs to be send to `/users/activate` endpoint to activate the account.
 
     If the **password** is not provided, it will be required during the activation process. Don't submit a password if you are creating an account for someone else.
@@ -304,6 +304,66 @@ async def create_user(
             detail="Invalid ECL email address.",
         )
 
+    return await create_user(
+        user_create=user_create,
+        account_type=account_type,
+        background_tasks=background_tasks,
+        db=db,
+        settings=settings,
+        request_id=request_id,
+    )
+
+
+@router.post(
+    "/users/batch-creation",
+    response_model=standard_responses.Result,
+    status_code=201,
+    tags=[Tags.users],
+)
+async def batch_create_users(
+    user_creates: list[schemas_core.CoreBatchUserCreateRequest],
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+    request_id: str = Depends(get_request_id),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Batch user account creation process. All users will be sent an email with a link to activate their account.
+    > The received token needs to be send to `/users/activate` endpoint to activate the account.
+
+    Even for creating **student** or **staff** account a valid ECL email is not required but should preferably be used.
+
+    **This endpoint is only usable by administrators**
+    """
+
+    results = {}
+
+    for user_create in user_creates:
+        results[user_create.email] = await create_user(
+            user_create=user_create,
+            account_type=user_create.account_type,
+            background_tasks=background_tasks,
+            db=db,
+            settings=settings,
+            request_id=request_id,
+        )
+
+    return results
+
+
+async def create_user(
+    user_create: schemas_core.CoreUserCreateRequest
+    | schemas_core.CoreBatchUserCreateRequest,
+    account_type: AccountType,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession,
+    settings: Settings,
+    request_id: str,
+) -> standard_responses.Result:
+    """
+    User creation process. This function is used by both `/users/create` and `/users/admin/create` endpoints
+    """
     # Make sure a confirmed account does not already exist
     db_user = await cruds_users.get_user_by_email(db=db, email=user_create.email)
     if db_user is not None:
