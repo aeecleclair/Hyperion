@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 import shutil
 import uuid
 from datetime import datetime, timedelta
@@ -274,19 +275,26 @@ async def create_user(
     Only admin users can create other **account types**, contact ÉCLAIR for more informations.
     """
     # Check the account type
-    if (
-        user_create.account_type == AccountType.student
-        or user_create.account_type == AccountType.staff
+
+    # For staff and student
+    # ^[\w\-.]*@(ecl\d{2})|(alternance\d{4})?.ec-lyon.fr$
+    # For staff
+    # ^[\w\-.]*@ec-lyon.fr$
+    # For student
+    # ^[\w\-.]*@(ecl\d{2})|(alternance\d{4}).ec-lyon.fr$
+
+    if re.match(r"^[a-zA-Z0-9_\-.]*@ec-lyon.fr", user_create.email):
+        # Its a staff email address
+        account_type = AccountType.staff
+    elif re.match(
+        r"^[\w\-.]*@(ecl\d{2})|(alternance\d{4}).ec-lyon.fr$", user_create.email
     ):
-        # Students and staffs account should only be created with valid ECL address.
-        # We compare to ".ec-lyon.fr" with a first dot to prevent someone from using a false domain (ex: pirate@other-ec-lyon.fr)
-        if not user_create.email[-11:] == ".ec-lyon.fr":
-            raise HTTPException(status_code=400, detail="Invalid ECL email address")
+        # Its a student email address
+        account_type = AccountType.student
     else:
-        # TODO: check if the user is admin
         raise HTTPException(
-            status_code=403,
-            detail=f"Unauthorized create a {user_create.account_type} account",
+            status_code=400,
+            detail="Invalid ECL email address.",
         )
 
     # Make sure a confirmed account does not already exist
@@ -320,7 +328,7 @@ async def create_user(
             id=str(uuid.uuid4()),
             email=user_create.email,
             password_hash=password_hash,
-            account_type=user_create.account_type,
+            account_type=account_type,
             activation_token=activation_token,
             created_on=datetime.now(),
             expire_on=datetime.now()
