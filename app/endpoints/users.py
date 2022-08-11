@@ -1,21 +1,44 @@
+import logging
+import os
+import shutil
 import uuid
 from datetime import datetime, timedelta
+from os.path import exists
 
-from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Body,
+    Depends,
+    File,
+    HTTPException,
+    UploadFile,
+)
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import security
 from app.core.config import Settings
 from app.cruds import cruds_groups, cruds_users
-from app.dependencies import get_db, get_settings, is_user_a_member
+from app.dependencies import (
+    get_db,
+    get_request_id,
+    get_settings,
+    is_user_a_member,
+    is_user_a_member_of,
+)
 from app.models import models_core
 from app.schemas import schemas_core
 from app.utils.mail.mailworker import send_email
+from app.utils.tools import fuzzy_search_user
 from app.utils.types import standard_responses
-from app.utils.types.groups_type import AccountType
+from app.utils.types.groups_type import AccountType, GroupType
 from app.utils.types.tags import Tags
 
 router = APIRouter()
+
+hyperion_error_logger = logging.getLogger("hyperion.error")
+hyperion_security_logger = logging.getLogger("hyperion.security")
 
 
 @router.get(
@@ -24,14 +47,60 @@ router = APIRouter()
     status_code=200,
     tags=[Tags.users],
 )
-async def get_users(
+async def read_users(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
-    """Return all users from database as a list of CoreUserSimple"""
+    """
+    Return all users from database as a list of `CoreUserSimple`
+
+    **This endpoint is only usable by administrators**
+    """
 
     users = await cruds_users.get_users(db)
     return users
+
+
+@router.get(
+    "/users/search",
+    response_model=list[schemas_core.CoreUserSimple],
+    status_code=200,
+    tags=[Tags.users],
+)
+async def search_users(
+    query: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Search for an user using Fuzzy String Matching
+
+    `query` will be compared against users name, firstname and nickname
+
+    **The user must be authenticated to use this endpoint**
+    """
+
+    users = await cruds_users.get_users(db)
+
+    return fuzzy_search_user(query, users)
+
+
+@router.get(
+    "/users/me",
+    response_model=schemas_core.CoreUser,
+    status_code=200,
+    tags=[Tags.users],
+)
+async def read_current_user(
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Return `CoreUser` representation of current user
+
+    **The user must be authenticated to use this endpoint**
+    """
+
+    return user
 
 
 @router.get(
@@ -40,8 +109,16 @@ async def get_users(
     status_code=200,
     tags=[Tags.users],
 )
-async def read_user(user_id: str, db: AsyncSession = Depends(get_db)):
-    """Return user with id from database as a dictionary"""
+async def read_user(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Return `CoreUserSimple` representation of user with id `user_id`
+
+    **The user must be authenticated to use this endpoint**
+    """
 
     db_user = await cruds_users.get_user_by_id(db=db, user_id=user_id)
     if db_user is None:
@@ -49,36 +126,136 @@ async def read_user(user_id: str, db: AsyncSession = Depends(get_db)):
     return db_user
 
 
-@router.delete(
-    "/users/{user_id}",
-    status_code=204,
+# TODO: readd this after making sure all information about the user has been deleted
+# @router.delete(
+#    "/users/{user_id}",
+#    status_code=204,
+#    tags=[Tags.users],
+# )
+# async def delete_user(user_id: str, db: AsyncSession = Depends(get_db), user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin))):
+#    """Delete user from database by id"""
+#    # TODO: WARNING - deleting an user without removing its relations ship in other tables will have unexpected consequences
+#
+#    await cruds_users.delete_user(db=db, user_id=user_id)
+
+
+@router.patch(
+    "/users/me",
+    response_model=schemas_core.CoreUser,
+    status_code=200,
     tags=[Tags.users],
 )
-async def delete_user(user_id: str, db: AsyncSession = Depends(get_db)):
-    """Delete user from database by id"""
-    # TODO: WARNING - deleting an user without removing its relations ship in other tables will have unexpected consequences
+async def update_current_user(
+    user_update: schemas_core.CoreUserUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Update the current user, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value
 
-    await cruds_users.delete_user(db=db, user_id=user_id)
+    **The user must be authenticated to use this endpoint**
+    """
+
+    await cruds_users.update_user(db=db, user_id=user.id, user_update=user_update)
+
+    return user
 
 
 @router.patch(
     "/users/{user_id}",
     response_model=schemas_core.CoreUser,
+    status_code=200,
     tags=[Tags.users],
 )
 async def update_user(
     user_id: str,
     user_update: schemas_core.CoreUserUpdate,
     db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
-    """Update a user, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value"""
-    user = await cruds_users.get_user_by_id(db=db, user_id=user_id)
-    if not user:
+    """
+    Update an user, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value
+
+    **This endpoint is only usable by administrators**
+    """
+    db_user = await cruds_users.get_user_by_id(db=db, user_id=user_id)
+    if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
 
     await cruds_users.update_user(db=db, user_id=user_id, user_update=user_update)
 
-    return user
+    return db_user
+
+
+@router.post(
+    "/users/me/profile-picture",
+    response_model=standard_responses.Result,
+    status_code=201,
+    tags=[Tags.users],
+)
+async def create_current_user_profile_picture(
+    image: UploadFile = File(...),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+    request_id: str = Depends(get_request_id),
+):
+    """
+    Upload a profile picture for the current user.
+
+    **The user must be authenticated to use this endpoint**
+    """
+
+    if image.content_type not in ["image/jpeg", "image/png", "image/webp"]:
+        raise HTTPException(
+            status_code=400, detail="Invalid file format, supported jpeg, png and webp"
+        )
+
+    # We need to go to the end of the file to be able to get the size of the file
+    image.file.seek(0, os.SEEK_END)
+    # Use file.tell() to retrieve the cursor's current position
+    file_size = image.file.tell()  # Bytes
+    print(file_size)
+    if file_size > 1024 * 1024 * 4:  # 4 MB
+        raise HTTPException(
+            status_code=413,
+            detail="File size is too big. Limit is 4 MB",
+        )
+    # We go back to the beginning of the file to save it on the disk
+    await image.seek(0)
+
+    try:
+        with open(f"data/profile-pictures/{user.id}.png", "wb") as buffer:
+            shutil.copyfileobj(image.file, buffer)
+
+    except Exception as error:
+        hyperion_error_logger.error(
+            f"Create_current_user_profile_picture: could not save profile picture: {error} ({request_id})"
+        )
+        raise HTTPException(status_code=422, detail="Could not save profile picture")
+
+    return standard_responses.Result(success=True)
+
+
+@router.get(
+    "/users/{user_id}/profile-picture/",
+    response_class=FileResponse,
+    status_code=200,
+    tags=[Tags.users],
+)
+async def read_user_profile_picture(
+    user_id: str,
+    # TODO: we may want to remove this user requirement to be able to display images easily in html code
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Get the profile picture of an user.
+
+    **The user must be authenticated to use this endpoint**
+    """
+
+    if not exists(f"data/profile-pictures/{user_id}.png"):
+        return FileResponse("assets/images/default_profile_picture.png")
+
+    return FileResponse(f"data/profile-pictures/{user_id}.png")
 
 
 @router.post(
@@ -89,8 +266,10 @@ async def update_user(
 )
 async def create_user(
     user_create: schemas_core.CoreUserCreateRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
+    request_id: str = Depends(get_request_id),
 ):
     """
     Start the user account creation process. The user will be sent an email with a link to activate his account.
@@ -120,8 +299,21 @@ async def create_user(
     # Make sure a confirmed account does not already exist
     db_user = await cruds_users.get_user_by_email(db=db, email=user_create.email)
     if db_user is not None:
-        # Fail silently
-        raise HTTPException(status_code=422, detail="User already exist")
+        hyperion_security_logger.warning(
+            f"Create_user: an user with email {user_create.email} already exist ({request_id})"
+        )
+        # We will send to the email a message explaining he already have an account and can reset their password if they want.
+        if settings.SMTP_ACTIVE:
+            background_tasks.add_task(
+                send_email,
+                recipient=user_create.email,
+                subject="MyECL - your account already exist",
+                content="This email address is already associated to an account. If you forget your credentials, you can reset your password [here]()",
+                settings=settings,
+            )
+
+        # Fail silently: the user should not be informed that an user with the email address already exist.
+        return standard_responses.Result(success=True)
 
     if user_create.password is not None:
         password_hash = security.get_password_hash(user_create.password)
@@ -151,19 +343,19 @@ async def create_user(
         # After adding the unconfirmed user to the database, we got an activation token that need to be send by email,
         # in order to make sure the email address is valid
 
-        # TODO
-        # Send email in an other thread
-        # Catch errors
         if settings.SMTP_ACTIVE:
-            send_email(
+            background_tasks.add_task(
+                send_email,
                 recipient=user_create.email,
                 subject="MyECL - confirm your email",
                 content=f"Please confirm your MyECL account with the token {activation_token}",
                 settings=settings,
             )
-        print(activation_token)
+        hyperion_security_logger.info(
+            f"Create_user: Creating an unconfirmed account for {user_create.email} with token {activation_token} ({request_id})"
+        )
 
-        # Warning: the validation token (and thus user_unconfirmed object) should **never** be returned by the request
+        # Warning: the validation token (and thus user_unconfirmed object) should **never** be returned in the request
         return standard_responses.Result(success=True)
 
 
@@ -174,7 +366,9 @@ async def create_user(
     tags=[Tags.users],
 )
 async def activate_user(
-    user: schemas_core.CoreUserActivateRequest, db: AsyncSession = Depends(get_db)
+    user: schemas_core.CoreUserActivateRequest,
+    db: AsyncSession = Depends(get_db),
+    request_id: str = Depends(get_request_id),
 ):
     """
     Activate the previously created account.
@@ -237,6 +431,9 @@ async def activate_user(
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
+    hyperion_security_logger.info(
+        f"Activate_user: Activated user {confirmed_user.id} ({request_id})"
+    )
     return standard_responses.Result()
 
 
