@@ -22,6 +22,7 @@ from app.dependencies import (
 from app.models import models_core
 from app.schemas import schemas_core
 from app.utils.mail.mailworker import send_email
+from app.utils.tools import fuzzy_search_user
 from app.utils.types import standard_responses
 from app.utils.types.groups_type import AccountType, GroupType
 from app.utils.types.tags import Tags
@@ -49,6 +50,30 @@ async def read_users(
 
     users = await cruds_users.get_users(db)
     return users
+
+
+@router.get(
+    "/users/search",
+    response_model=list[schemas_core.CoreUserSimple],
+    status_code=200,
+    tags=[Tags.users],
+)
+async def search_users(
+    query: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Search for an user using Fuzzy String Matching
+
+    `query` will be compared against users name, firstname and nickname
+
+    **The user must be authenticated to use this endpoint**
+    """
+
+    users = await cruds_users.get_users(db)
+
+    return fuzzy_search_user(query, users)
 
 
 @router.get(
