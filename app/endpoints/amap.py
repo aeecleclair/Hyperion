@@ -42,7 +42,7 @@ async def get_rights(
 )
 async def get_products(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
     """Return all AMAP products from database as a list of dictionaries"""
     products = await cruds_amap.get_products(db)
@@ -535,8 +535,6 @@ async def get_orders_of_user(
                 db=db, order_id=order.order_id
             )
             products = []
-            if not order:
-                raise HTTPException(status_code=404, detail="Order not found")
             for p in order.products:
                 quantity = quantities[p.id]
                 products.append(

@@ -1,6 +1,6 @@
 from app.main import app
 from app.models import models_amap
-from tests.commons import TestingSessionLocal, client
+from tests.commons import TestingSessionLocal
 
 
 @app.on_event("startup")  # create the datas needed in the tests
@@ -12,8 +12,3 @@ async def startuptest():
 
         db.add(test1)
         await db.commit()
-
-
-def test_products():
-    response = client.get("/amap/products")
-    assert response.status_code == 200
