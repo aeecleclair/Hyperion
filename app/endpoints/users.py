@@ -5,7 +5,15 @@ import uuid
 from datetime import datetime, timedelta
 from os.path import exists
 
-from fastapi import APIRouter, Body, Depends, File, HTTPException, UploadFile
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Body,
+    Depends,
+    File,
+    HTTPException,
+    UploadFile,
+)
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,6 +38,7 @@ from app.utils.types.tags import Tags
 router = APIRouter()
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
+hyperion_security_logger = logging.getLogger("hyperion.security")
 
 
 @router.get(
@@ -257,8 +266,10 @@ async def read_user_profile_picture(
 )
 async def create_user(
     user_create: schemas_core.CoreUserCreateRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
+    request_id: str = Depends(get_request_id),
 ):
     """
     Start the user account creation process. The user will be sent an email with a link to activate his account.
@@ -288,8 +299,21 @@ async def create_user(
     # Make sure a confirmed account does not already exist
     db_user = await cruds_users.get_user_by_email(db=db, email=user_create.email)
     if db_user is not None:
-        # Fail silently
-        raise HTTPException(status_code=422, detail="User already exist")
+        hyperion_security_logger.warning(
+            f"Create_user: an user with email {user_create.email} already exist ({request_id})"
+        )
+        # We will send to the email a message explaining he already have an account and can reset their password if they want.
+        if settings.SMTP_ACTIVE:
+            background_tasks.add_task(
+                send_email,
+                recipient=user_create.email,
+                subject="MyECL - your account already exist",
+                content="This email address is already associated to an account. If you forget your credentials, you can reset your password [here]()",
+                settings=settings,
+            )
+
+        # Fail silently: the user should not be informed that an user with the email address already exist.
+        return standard_responses.Result(success=True)
 
     if user_create.password is not None:
         password_hash = security.get_password_hash(user_create.password)
@@ -319,19 +343,19 @@ async def create_user(
         # After adding the unconfirmed user to the database, we got an activation token that need to be send by email,
         # in order to make sure the email address is valid
 
-        # TODO
-        # Send email in an other thread
-        # Catch errors
         if settings.SMTP_ACTIVE:
-            send_email(
+            background_tasks.add_task(
+                send_email,
                 recipient=user_create.email,
                 subject="MyECL - confirm your email",
                 content=f"Please confirm your MyECL account with the token {activation_token}",
                 settings=settings,
             )
-        print(activation_token)
+        hyperion_security_logger.info(
+            f"Create_user: Creating an unconfirmed account for {user_create.email} with token {activation_token} ({request_id})"
+        )
 
-        # Warning: the validation token (and thus user_unconfirmed object) should **never** be returned by the request
+        # Warning: the validation token (and thus user_unconfirmed object) should **never** be returned in the request
         return standard_responses.Result(success=True)
 
 
@@ -342,7 +366,9 @@ async def create_user(
     tags=[Tags.users],
 )
 async def activate_user(
-    user: schemas_core.CoreUserActivateRequest, db: AsyncSession = Depends(get_db)
+    user: schemas_core.CoreUserActivateRequest,
+    db: AsyncSession = Depends(get_db),
+    request_id: str = Depends(get_request_id),
 ):
     """
     Activate the previously created account.
@@ -405,6 +431,9 @@ async def activate_user(
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
+    hyperion_security_logger.info(
+        f"Activate_user: Activated user {confirmed_user.id} ({request_id})"
+    )
     return standard_responses.Result()
 
 
