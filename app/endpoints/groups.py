@@ -1,6 +1,9 @@
-"""File defining the API itself, using fastAPI and schemas, and calling the cruds functions"""
+"""
+File defining the API itself, using fastAPI and schemas, and calling the cruds functions
 
-import uuid
+Group management is part of the core of Hyperion. These endpoints allows to manage membership between users and groups.
+"""
+
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,8 +23,15 @@ router = APIRouter()
     status_code=200,
     tags=[Tags.groups],
 )
-async def get_groups(db: AsyncSession = Depends(get_db)):
-    """Return all groups from database as a list of dictionaries"""
+async def get_groups(
+    db: AsyncSession = Depends(get_db),
+    user=Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Return all groups from database as a list of dictionaries
+
+    **This endpoint is only usable by administrators**
+    """
 
     groups = await cruds_groups.get_groups(db)
     return groups
@@ -33,8 +43,16 @@ async def get_groups(db: AsyncSession = Depends(get_db)):
     status_code=200,
     tags=[Tags.groups],
 )
-async def read_group(group_id: str, db: AsyncSession = Depends(get_db)):
-    """Return group with id from database as a dictionary"""
+async def read_group(
+    group_id: str,
+    db: AsyncSession = Depends(get_db),
+    user=Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Return group with id from database as a dictionary. This include a list of users being members of the group.
+
+    **This endpoint is only usable by administrators**
+    """
 
     db_group = await cruds_groups.get_group_by_id(db=db, group_id=group_id)
     if db_group is None:
@@ -101,7 +119,11 @@ async def create_membership(
     db: AsyncSession = Depends(get_db),
     user=Depends(is_user_a_member_of(GroupType.admin)),
 ):
-    """Create a new membership in database and return the group as a dictionary"""
+    """
+    Create a new membership in database and return the group. This allows to "add an user to a group"
+
+    **This endpoint is only usable by administrators**
+    """
     try:
         return await cruds_groups.create_membership(db=db, membership=membership)
     except ValueError as error:
