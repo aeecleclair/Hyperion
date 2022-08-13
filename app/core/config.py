@@ -61,6 +61,10 @@ class Settings(BaseSettings):
 
     # By default, only production's records are logged
     LOG_DEBUG_MESSAGES: bool | None
+    # Hyperion follows Semantic Versioning
+    # https://semver.org/
+    HYPERION_VERSION: str = "0.0.1"  # This value should never be modified by hand. See [Hyperion release] documentation
+    MINIMAL_TITAN_VERSION: str = "0.0.1"
 
     ###################
     # Tokens validity #
