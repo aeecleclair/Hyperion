@@ -5,6 +5,20 @@ from pydantic import BaseModel
 from app.schemas.schemas_core import CoreGroup, CoreUserSimple
 
 
+class LoanerBase(BaseModel):
+    """Base schema to create a loaner"""
+
+    name: str
+    group_manager_id: str
+
+    class Config:
+        orm_mode = True
+
+
+class LoanerInDB(LoanerBase):
+    id: str
+
+
 class ItemBase(BaseModel):
     """Base schema for item's model"""
 

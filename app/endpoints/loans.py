@@ -3,27 +3,127 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.cruds import cruds_loans
-from app.dependencies import get_db
+from app.cruds import cruds_groups, cruds_loans
+from app.dependencies import get_db, is_user_a_member, is_user_a_member_of
+from app.models import models_core, models_loan
 from app.schemas import schemas_loans
+from app.utils.tools import is_group_id_valid, is_user_member_of_an_allowed_group
+from app.utils.types import standard_responses
 from app.utils.types.tags import Tags
+
+from ..utils.types.groups_type import GroupType
 
 router = APIRouter()
 
-# =============================================================
+
+# TODO restrict to some groups
+
+
+@router.post(
+    "/loans/loaners/",
+    response_model=schemas_loans.LoanerInDB,
+    status_code=201,
+    tags=[Tags.loans],
+)
+async def create_loaner(
+    loaner: schemas_loans.LoanerBase,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Create a new loaner
+
+    **This endpoint is only usable by administrators**
+    """
+
+    # We need to check that loaner.group_manager_id is a valid group
+    if not await is_group_id_valid(loaner.group_manager_id, db=db):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid id, group_manager_id must be a valid group id",
+        )
+
+    try:
+        loaner_db = models_loan.Loaner(
+            id=str(uuid.uuid4()),
+            name=loaner.name,
+            group_manager_id=loaner.group_manager_id,
+        )
+
+        return await cruds_loans.create_loaner(loaner=loaner_db, db=db)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))
+
+
+# TODO: readd this after making sure all information were deleted
+# @router.delete(
+#    "/loans/loaners/{loaner_id}",
+#    status_code=204,
+#    tags=[Tags.loans],
+# )
+# async def delete_loaner(loaner_id: str, db: AsyncSession = Depends(get_db), user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin))):
+#
+
+
+@router.patch(
+    "/loans/loaners/{loaner_id}",
+    response_model=schemas_loans.LoanerBase,
+    status_code=200,
+    tags=[Tags.loans],
+)
+async def update_loaner(
+    loaner_id: str,
+    loaner_update: schemas_loans.LoanerBase,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Update a loaner, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value
+
+    **This endpoint is only usable by administrators**
+    """
+
+    await cruds_loans.update_loaner(
+        loaner_id=loaner_id, loaner_update=loaner_update, db=db
+    )
+
+    return loaner_update
 
 
 @router.get(
-    "/loans/{group_id}",
+    "/loans/loaners/{loaner_id}/loans",
     response_model=list[schemas_loans.Loan],
     status_code=200,
     tags=[Tags.loans],
 )
-async def get_loans_by_groups(group_id: str, db: AsyncSession = Depends(get_db)):
-    """Return all loans from database as a list of dictionaries"""
+async def get_loans_by_groups(
+    loaner_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Return all loans from a given group
 
-    loans = await cruds_loans.get_loans_by_groups(db=db, group_id=group_id)
-    return loans
+    **The user must be a member of the group to use this endpoint**
+    """
+
+    # We need to make sure the user is allowed to manage the loaner
+    loaner: models_loan.Loaner | None = await cruds_loans.get_loaner_by_id(
+        loaner_id=loaner_id, db=db
+    )
+    if loaner is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid loaner_id",
+        )
+    # The user should be a member of the loaner's manager group
+    if not is_user_member_of_an_allowed_group(user, [loaner.group_manager_id]):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Unauthorized to manage {loaner_id} loaner",
+        )
+    return await cruds_loans.get_loans_by_loaner_id(loaner_id=loaner_id, db=db)
+
 
 
 @router.get(
