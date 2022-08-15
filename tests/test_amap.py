@@ -123,7 +123,7 @@ def test_amap():
     assert response.status_code == 200
 
     response = client.post(
-        f"/amap/deliveries/{amap_user.id}/products",
+        f"/amap/users/{amap_user.id}/cash",
         json={"balance": 50},
         headers={"Authorization": f"Bearer {token}"},
     )
