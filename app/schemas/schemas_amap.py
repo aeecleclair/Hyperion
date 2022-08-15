@@ -27,6 +27,12 @@ class ProductSimple(ProductBase):
     category: str
 
 
+class ProductEdit(BaseModel):
+    category: str | None = None
+    name: str | None = None
+    price: float | None = None
+
+
 class ProductComplete(ProductSimple):
     id: str
 

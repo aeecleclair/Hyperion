@@ -90,7 +90,7 @@ async def get_product_by_id(
 )
 async def edit_product(
     product_id: str,
-    product_update: schemas_amap.ProductBase,
+    product_update: schemas_amap.ProductEdit,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):

@@ -43,7 +43,7 @@ async def get_product_by_id(
 
 
 async def edit_product(
-    product_id: str, product_update: schemas_amap.ProductBase, db: AsyncSession
+    product_id: str, product_update: schemas_amap.ProductEdit, db: AsyncSession
 ):
     await db.execute(
         update(models_amap.Product)
