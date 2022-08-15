@@ -422,42 +422,42 @@ async def create_loan(
 #    return standard_responses.Result(success=True)
 
 
-@router.patch(
-    "/loans/{loan_id}",
-    response_model=schemas_loans.Loan,
-    tags=[Tags.loans],
-)
-async def update_loan(
-    loan_id: str,
-    loan_update: schemas_loans.Loan,
-    db: AsyncSession = Depends(get_db),
-):
-    """Update a loan, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value"""
-    loan = await cruds_loans.get_loan_by_id(db=db, loan_id=loan_id)
-    if not loan:
-        raise HTTPException(status_code=404, detail="loan not found")
+# @router.patch(
+#    "/loans/{loan_id}",
+#    response_model=schemas_loans.Loan,
+#    tags=[Tags.loans],
+# )
+# async def update_loan(
+#    loan_id: str,
+#    loan_update: schemas_loans.Loan,
+#    db: AsyncSession = Depends(get_db),
+# ):
+#    """Update a loan, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value"""
+#    loan = await cruds_loans.get_loan_by_id(db=db, loan_id=loan_id)
+#    if not loan:
+#        raise HTTPException(status_code=404, detail="loan not found")
+#
+#    await cruds_loans.update_loan(db=db, loan_id=loan_id, loan_update=loan_update)
+#
+#    return loan
 
-    await cruds_loans.update_loan(db=db, loan_id=loan_id, loan_update=loan_update)
 
-    return loan
+# @router.patch(
+#     "/loans/return/{loan_id}",
+#     response_model=schemas_loans.Loan,
+#     tags=[Tags.loans],
+# )
+# async def return_loan(
+#     loan_id: str,
+#     db: AsyncSession = Depends(get_db),
+# ):
+#     loan = await cruds_loans.get_loan_by_id(db=db, loan_id=loan_id)
+#     if not loan:
+#         raise HTTPException(status_code=404, detail="loan not found")
 
+#     await cruds_loans.return_loan(db=db, loan_id=loan_id)
 
-@router.patch(
-    "/loans/return/{loan_id}",
-    response_model=schemas_loans.Loan,
-    tags=[Tags.loans],
-)
-async def return_loan(
-    loan_id: str,
-    db: AsyncSession = Depends(get_db),
-):
-    loan = await cruds_loans.get_loan_by_id(db=db, loan_id=loan_id)
-    if not loan:
-        raise HTTPException(status_code=404, detail="loan not found")
-
-    await cruds_loans.return_loan(db=db, loan_id=loan_id)
-
-    return loan
+#     return loan
 
 
 #
@@ -477,12 +477,12 @@ async def return_loan(
 # =====================================================
 
 
-@router.get(
-    "/loans/history/{group_id}",
-    response_model=list[schemas_loans.Loan],
-    status_code=200,
-    tags=[Tags.loans],
-)
-async def get_history(group_id: str, db: AsyncSession = Depends(get_db)):
-    """Return all returned loans from database as a list of dictionaries"""
-    return await cruds_loans.get_history(db, group_id=group_id)
+# @router.get(
+#     "/loans/history/{group_id}",
+#     response_model=list[schemas_loans.Loan],
+#     status_code=200,
+#     tags=[Tags.loans],
+# )
+# async def get_history(group_id: str, db: AsyncSession = Depends(get_db)):
+#     """Return all returned loans from database as a list of dictionaries"""
+#     return await cruds_loans.get_history(db, group_id=group_id)
