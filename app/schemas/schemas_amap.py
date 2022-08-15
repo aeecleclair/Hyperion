@@ -67,6 +67,12 @@ class DeliveryReturn(BaseModel):
         orm_mode = True
 
 
+class DeliveryUpdate(BaseModel):
+    delivery_date: date | None = None
+    id: str
+    locked: bool | None = None
+
+
 class OrderBase(BaseModel):
     user_id: str
     delivery_id: str

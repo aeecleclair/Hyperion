@@ -163,6 +163,16 @@ async def remove_product_from_delivery(
     await db.commit()
 
 
+async def edit_delivery(
+    db: AsyncSession, delivery_id: str, delivery: schemas_amap.DeliveryUpdate
+):
+    await db.execute(
+        update(models_amap.Delivery)
+        .where(models_amap.Delivery.id == delivery_id)
+        .values(**delivery.dict(exclude_none=True))
+    )
+
+
 async def get_orders_from_delivery(
     db: AsyncSession, delivery_id: str
 ) -> list[models_amap.Order]:

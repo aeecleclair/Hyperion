@@ -218,6 +218,20 @@ async def remove_product_from_delievery(
     )
 
 
+@router.patch(
+    "/amap/deliveries/{delivery_id}",
+    status_code=200,
+    tags=[Tags.amap],
+)
+async def edit_delivery(
+    delivery_id: str,
+    delivery: schemas_amap.DeliveryUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
+):
+    await cruds_amap.edit_delivery(db=db, delivery_id=delivery_id, delivery=delivery)
+
+
 @router.get(
     "/amap/deliveries/{delivery_id}/orders",
     response_model=list[schemas_amap.OrderReturn],
