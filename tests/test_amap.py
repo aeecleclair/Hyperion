@@ -87,7 +87,7 @@ def test_amap():
 
     response = client.patch(
         f"/amap/deliveries/{id}",
-        json={"delivery_date": "2022-08-18", "products_ids": [], "locked": False},
+        json={"delivery_date": "2022-08-18", "id": id, "locked": False},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
