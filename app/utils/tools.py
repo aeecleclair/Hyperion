@@ -9,7 +9,7 @@ from app.utils.types.groups_type import GroupType
 
 def is_user_member_of_an_allowed_group(
     user: CoreUser,
-    allowed_groups: list[GroupType | str],  # allowed_groups may be a str when the
+    allowed_groups: list[GroupType] | list[str],  # allowed_groups may be a str when the
 ) -> bool:
     """
     Test if the provided user is a member of at least one group from `allowed_groups`.

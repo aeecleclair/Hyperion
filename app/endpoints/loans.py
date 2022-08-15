@@ -18,9 +18,28 @@ from app.utils.types.tags import Tags
 router = APIRouter()
 
 
+@router.get(
+    "/loans/loaners/",
+    response_model=list[schemas_loans.Loaner],
+    status_code=200,
+    tags=[Tags.loans],
+)
+async def read_loaners(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Create a new loaner
+
+    **This endpoint is only usable by administrators**
+    """
+
+    return await cruds_loans.get_loaners(db=db)
+
+
 @router.post(
     "/loans/loaners/",
-    response_model=schemas_loans.LoanerInDB,
+    response_model=schemas_loans.Loaner,
     status_code=201,
     tags=[Tags.loans],
 )

@@ -6,6 +6,15 @@ from app.models import models_loan
 from app.schemas import schemas_loans
 
 
+async def get_loaners(
+    db: AsyncSession,
+) -> list[models_loan.Loaner]:
+    """Return the loaner with id"""
+
+    result = await db.execute(select(models_loan.Loaner))
+    return result.scalars().all()
+
+
 async def create_loaner(
     loaner: models_loan.Loaner,
     db: AsyncSession,

@@ -15,7 +15,7 @@ class LoanerBase(BaseModel):
         orm_mode = True
 
 
-class LoanerInDB(LoanerBase):
+class Loaner(LoanerBase):
     id: str
 
 
