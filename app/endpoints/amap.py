@@ -19,7 +19,7 @@ router = APIRouter()
 # Prefix "/amap" added in api.py
 @router.get(
     "/amap/rights",
-    response_model=list[schemas_amap.Rights],
+    response_model=schemas_amap.Rights,
     status_code=200,
     tags=[Tags.amap],
 )
