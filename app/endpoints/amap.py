@@ -197,7 +197,7 @@ async def add_product_to_delievery(
                 ),
                 db=db,
             )
-            return get_products_from_delivery(db=db, delivery_id=delivery_id)
+            return await get_products_from_delivery(db=db, delivery_id=delivery_id)
         except ValueError as error:
             raise HTTPException(status_code=422, detail=str(error))
 
