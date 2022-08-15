@@ -105,15 +105,13 @@ def test_amap():
     assert response.status_code == 200
 
     response = client.post(
-        f"/amap/deliveries/{id}/products",
-        json={"delivery_id": id, "product_id": prod_id},
+        f"/amap/deliveries/{id}/products/{prod_id}",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 201
 
     response = client.delete(
-        f"/amap/deliveries/{id}/products",
-        json={"delivery_id": id, "product_id": prod_id},
+        f"/amap/deliveries/{id}/products/{prod_id}",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 204

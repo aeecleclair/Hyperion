@@ -175,7 +175,7 @@ async def get_products_from_delivery(
 
 
 @router.post(
-    "/amap/deliveries/{delivery_id}/products",
+    "/amap/deliveries/{delivery_id}/products/{product_id}",
     response_model=list[schemas_amap.ProductComplete],
     status_code=201,
     tags=[Tags.amap],
