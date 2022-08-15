@@ -171,6 +171,7 @@ async def edit_delivery(
         .where(models_amap.Delivery.id == delivery_id)
         .values(**delivery.dict(exclude_none=True))
     )
+    await db.commit()
 
 
 async def get_orders_from_delivery(
