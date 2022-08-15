@@ -26,3 +26,40 @@ def test_get_rights():
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
+
+
+def test_product():
+    token = create_api_access_token(amap_user)
+
+    response = client.post(
+        "/amap/products",
+        json={"name": "test", "price": 0.1, "category": "test"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 201
+
+    response = client.get(
+        "/amap/products",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+
+    id = response.json()[0]["id"]
+    response = client.get(
+        f"/amap/products/{id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+
+    response = client.patch(
+        f"/amap/products/{id}",
+        json={"name": "testupdate", "price": 0.1, "category": "test"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+
+    response = client.delete(
+        f"/amap/products/{id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 204
