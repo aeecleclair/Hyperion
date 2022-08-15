@@ -1,6 +1,15 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
-from sqlalchemy import TEXT, Boolean, Column, Date, DateTime, ForeignKey, String
+from sqlalchemy import (
+    TEXT,
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    ForeignKey,
+    Interval,
+    String,
+)
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -34,9 +43,9 @@ class LoanerItem(Base):
     suggested_caution: str = Column(String)
     multiple: bool = Column(Boolean)
 
-    expiration: date = Column(Date, nullable=False)
+    suggested_lending_duration: timedelta = Column(Interval, nullable=False)
 
-    available: bool = Column(Boolean)
+    available: bool | None = Column(Boolean)
 
     # loaner: Loaner = relationship(Loaner)
 
@@ -63,11 +72,11 @@ class Loan(Base):
     loaner: Loaner = relationship(
         "Loaner",
     )
-    start: datetime | None = Column(DateTime, nullable=False)
-    end: datetime | None = Column(DateTime, nullable=False)
-    notes: str | None = Column(TEXT, nullable=False)
-    returned: bool = Column(Boolean)
-    caution: str = Column(String)
+    start: date = Column(Date, nullable=False)
+    end: date = Column(Date, nullable=False)
+    notes: str | None = Column(TEXT)
+    caution: str | None = Column(String)
+    returned: bool = Column(Boolean, nullable=False)
 
     items: list["LoanerItem"] = relationship(
         "LoanerItem",

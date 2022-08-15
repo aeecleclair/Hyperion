@@ -1,7 +1,7 @@
 from rapidfuzz import process
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.cruds import cruds_groups
+from app.cruds import cruds_groups, cruds_users
 from app.models import models_core
 from app.models.models_core import CoreUser
 from app.utils.types.groups_type import GroupType
@@ -69,3 +69,10 @@ async def is_group_id_valid(group_id: str, db: AsyncSession) -> bool:
      - a group created on runtime and stored in the database
     """
     return await cruds_groups.get_group_by_id(db=db, group_id=group_id) is not None
+
+
+async def is_user_id_valid(user_id: str, db: AsyncSession) -> bool:
+    """
+    Test if the provided user_id is a valid user.
+    """
+    return await cruds_users.get_user_by_id(db=db, user_id=user_id) is not None

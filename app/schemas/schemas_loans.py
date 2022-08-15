@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 
 from pydantic import BaseModel
 
@@ -19,21 +19,23 @@ class LoanerInDB(LoanerBase):
     id: str
 
 
-class ItemBase(BaseModel):
+class LoanerItemBase(BaseModel):
     """Base schema for item's model"""
 
     name: str
-    caution: str
-    group_id: str
-    expiration: date | None = None
+    suggested_caution: str
+    # A multiple item can be lend to multiple persons at the same time
+    multiple: bool = False
+    suggested_lending_duration: timedelta
 
 
-class ItemInDB(ItemBase):
-
+class LoanerItemInDB(LoanerItemBase):
     id: str
+    loaner_id: str
+    available: bool
 
 
-class Item(ItemInDB):
+class LoanerItem(LoanerItemInDB):
 
     group: CoreGroup
 
@@ -42,24 +44,34 @@ class Item(ItemInDB):
 
 
 class LoanBase(BaseModel):
-    """Base schema for loan's model"""
+    """
+    Base schema for loan's model
+    """
 
     borrower_id: str
-    item: Item
-    notes: str | None = None
-    caution: bool | None = None
-
-
-class LoanInDB(LoanBase):
-
+    loaner_id: str
     start: date
     end: date
-    id: str
-
-
-class Loan(LoanInDB):
-    borrower: CoreUserSimple
-    item: Item  # TODO change in list[Item] = []
+    notes: str | None = None
+    caution: str | None = None
 
     class Config:
         orm_mode = True
+
+
+class LoanCreation(LoanBase):
+    """
+    A schema used to create a new loan
+    """
+
+    # These ids will be used to create the corresponding LoanContent associations
+    item_ids: list[str]
+
+
+class Loan(LoanBase):
+    """
+    A complete representation of a Loan which can be send by the API
+    """
+
+    returned: bool
+    items: list[LoanerItem]
