@@ -1,15 +1,15 @@
 from datetime import date, timedelta
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-from app.schemas.schemas_core import CoreGroup, CoreUserSimple
+from app.schemas.schemas_core import CoreGroup
 
 
 class LoanerBase(BaseModel):
-    """Base schema to create a loaner"""
-
     name: str
-    group_manager_id: str
+    group_manager_id: str = Field(
+        description="The group manager id should by a group identifier"
+    )
 
     class Config:
         orm_mode = True
@@ -30,21 +30,13 @@ class LoanerItemBase(BaseModel):
     name: str
     suggested_caution: str
     # A multiple item can be lend to multiple persons at the same time
-    multiple: bool = False
+    multiple: bool = Field(
+        False, description="If the item can be lend to multiple users at the same time"
+    )
     suggested_lending_duration: timedelta
 
     class Config:
         orm_mode = True
-
-
-class LoanerItemInDB(LoanerItemBase):
-    id: str
-    loaner_id: str
-    available: bool
-
-
-class LoanerItem(LoanerItemInDB):
-    group: CoreGroup
 
 
 class LoanerItemUpdate(BaseModel):
@@ -53,6 +45,12 @@ class LoanerItemUpdate(BaseModel):
     suggested_caution: str | None = None
     multiple: bool | None = None
     suggested_lending_duration: timedelta | None = None
+
+
+class LoanerItem(LoanerItemBase):
+    id: str
+    loaner_id: str
+    available: bool
 
 
 class LoanBase(BaseModel):
@@ -86,4 +84,4 @@ class Loan(LoanBase):
     """
 
     returned: bool
-    items: list[LoanerItemInDB]
+    items: list[LoanerItem]

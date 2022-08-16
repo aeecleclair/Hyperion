@@ -3,7 +3,6 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import cruds
 from app.cruds import cruds_loans
 from app.dependencies import get_db, is_user_a_member, is_user_a_member_of
 from app.models import models_core, models_loan
@@ -30,7 +29,7 @@ async def read_loaners(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
-    Create a new loaner
+    Get existing loaners.
 
     **This endpoint is only usable by administrators**
     """
@@ -50,7 +49,9 @@ async def create_loaner(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
-    Create a new loaner
+    Create a new loaner.
+
+    Each loaner is associated with a `manager_group`. Users belonging to this group are able to manage the loaner items and loans.
 
     **This endpoint is only usable by administrators**
     """
@@ -96,7 +97,7 @@ async def update_loaner(
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
-    Update a loaner, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value
+    Update a loaner, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value.
 
     **This endpoint is only usable by administrators**
     """
@@ -118,7 +119,7 @@ async def get_loans_by_loaner(
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
-    Return all loans from a given group
+    Return all loans from a given group.
 
     **The user must be a member of the loaner group_manager to use this endpoint**
     """
@@ -139,12 +140,14 @@ async def get_loans_by_loaner(
             status_code=403,
             detail=f"Unauthorized to manage {loaner_id} loaner",
         )
+
+    # We use the ORM relationship capabilities to load loans in the loaner object
     return loaner.loans
 
 
 @router.get(
     "/loans/loaners/{loaner_id}/items",
-    response_model=list[schemas_loans.LoanerItemInDB],
+    response_model=list[schemas_loans.LoanerItem],
     status_code=200,
     tags=[Tags.loans],
 )
@@ -154,7 +157,7 @@ async def get_items_by_loaner(
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
-    Return all item of a group from database as a list of dictionaries
+    Return all items of a loaner.
 
     **The user must be a member of the loaner group_manager to use this endpoint**
     """
@@ -175,12 +178,13 @@ async def get_items_by_loaner(
             detail=f"Unauthorized to manage {loaner_id} loaner",
         )
 
+    # We use the ORM relationship capabilities to load items in the loaner object
     return loaner.items
 
 
 @router.post(
     "/loans/loaners/{loaner_id}/items",
-    response_model=schemas_loans.LoanerItemInDB,
+    response_model=schemas_loans.LoanerItem,
     status_code=200,
     tags=[Tags.loans],
 )
@@ -191,7 +195,7 @@ async def create_items_for_loaner(
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
-    Create a new item for a loaner
+    Create a new item for a loaner. A given loaner can not have more than one item with the same `name`.
 
     **The user must be a member of the loaner group_manager to use this endpoint**
     """
@@ -254,7 +258,7 @@ async def update_items_for_loaner(
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
-    Update a loaner's item
+    Update a loaner's item.
 
     **The user must be a member of the group to use this endpoint**
     """
@@ -303,21 +307,18 @@ async def update_items_for_loaner(
 #
 
 
-# Users management
-
-
 @router.get(
     "/loans/users/me",
     response_model=list[schemas_loans.Loan],
     status_code=200,
     tags=[Tags.loans],
 )
-async def get_loans_by_borrowers(
+async def get_current_user_loans(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
-    Return all loans from the current user
+    Return all loans from the current user.
 
     **The user must be authenticated to use this endpoint**
     """
