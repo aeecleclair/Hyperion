@@ -125,7 +125,7 @@ async def get_loaner_item_by_name_and_loaner_id(
 
 async def update_loaner_item(
     item_id: str,
-    item_update: schemas_loans.LoanerItemBase,
+    item_update: schemas_loans.LoanerItemUpdate,
     db: AsyncSession,
 ):
     await db.execute(
@@ -136,13 +136,13 @@ async def update_loaner_item(
     await db.commit()
 
 
-async def get_loans_by_borrowers(
+async def get_loans_by_borrower(
     db: AsyncSession, borrower_id: str
 ) -> list[models_loan.Loan]:
     """Return all loans of a borrower from database"""
 
     result = await db.execute(
-        select(models_loan.Loan).where(models_loan.Loan.borrower.id == borrower_id)
+        select(models_loan.Loan).where(models_loan.Loan.borrower_id == borrower_id)
     )
     return result.scalars().all()
 

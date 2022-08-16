@@ -242,19 +242,18 @@ async def create_items_for_loaner(
 
 @router.patch(
     "/loans/loaners/{loaner_id}/items/{item_id}",
-    response_model=schemas_loans.LoanerItemBase,
-    status_code=200,
+    status_code=204,
     tags=[Tags.loans],
 )
 async def update_items_for_loaner(
     loaner_id: str,
     item_id: str,
-    item_update: schemas_loans.LoanerItemBase,
+    item_update: schemas_loans.LoanerItemUpdate,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
-    Create a loaner's item
+    Update a loaner's item
 
     **The user must be a member of the group to use this endpoint**
     """
@@ -292,8 +291,6 @@ async def update_items_for_loaner(
         item_id=item_id, item_update=item_update, db=db
     )
 
-    return item_update
-
 
 # TODO: readd this after making sure all information were deleted
 # @router.delete(
@@ -324,7 +321,7 @@ async def get_loans_by_borrowers(
     **The user must be authenticated to use this endpoint**
     """
 
-    return await cruds_loans.get_loans_by_borrowers(db=db, borrower_id=user.id)
+    return await cruds_loans.get_loans_by_borrower(db=db, borrower_id=user.id)
 
 
 # @router.get(

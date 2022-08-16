@@ -47,6 +47,14 @@ class LoanerItem(LoanerItemInDB):
     group: CoreGroup
 
 
+class LoanerItemUpdate(BaseModel):
+
+    name: str | None = None
+    suggested_caution: str | None = None
+    multiple: bool | None = None
+    suggested_lending_duration: timedelta | None = None
+
+
 class LoanBase(BaseModel):
     """
     Base schema for loan's model
