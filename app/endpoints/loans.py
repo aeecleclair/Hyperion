@@ -3,6 +3,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app import cruds
 from app.cruds import cruds_loans
 from app.dependencies import get_db, is_user_a_member, is_user_a_member_of
 from app.models import models_core, models_loan
@@ -357,7 +358,7 @@ async def get_loans_by_borrowers(
 
 @router.post(
     "/loans/",
-    response_model=schemas_loans.LoanCreation,
+    response_model=schemas_loans.Loan,
     status_code=201,
     tags=[Tags.loans],
 )
@@ -397,7 +398,7 @@ async def create_loan(
 
     items: list[models_loan.LoanerItem] = []
 
-    # All item ids should be valid
+    # All items should be valid, available and belong to the loaner
     for item_id in loan_creation.item_ids:
         item: models_loan.LoanerItem | None = await cruds_loans.get_loaner_item_by_id(
             loaner_item_id=item_id, db=db
@@ -406,6 +407,12 @@ async def create_loan(
             raise HTTPException(
                 status_code=400,
                 detail=f"Invalid item_id {item_id}",
+            )
+        # We check the item belong to the loaner
+        if item.loaner_id != loan_creation.loaner_id:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Item {item_id} does not belong to {loan_creation.loaner_id} loaner",
             )
         # If the item can not be borrowed more than one time at the time
         # we need to check it is available
@@ -430,9 +437,25 @@ async def create_loan(
     )
 
     try:
-        return await cruds_loans.create_loan(loan=db_loan, db=db)
+        await cruds_loans.create_loan(loan=db_loan, db=db)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
+
+    for item in items:
+        # We mark all borrowed items that are not multiple as not available
+        if not item.multiple:
+            await cruds_loans.update_loaner_item_availability(
+                item_id=item.id, available=False, db=db
+            )
+        # We add each item to the loan
+        loan_content = models_loan.LoanContent(
+            loan_id=db_loan.id,
+            item_id=item.id,
+        )
+        await cruds_loans.create_loan_content(loan_content=loan_content, db=db)
+
+    res = await cruds_loans.get_loan_by_id(loan_id=db_loan.id, db=db)
+    return res
 
 
 # @router.delete(

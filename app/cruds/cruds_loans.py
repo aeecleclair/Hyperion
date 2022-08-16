@@ -136,13 +136,32 @@ async def update_loaner_item(
     await db.commit()
 
 
+async def update_loaner_item_availability(
+    item_id: str,
+    available: bool,
+    db: AsyncSession,
+):
+    await db.execute(
+        update(models_loan.LoanerItem)
+        .where(models_loan.LoanerItem.id == item_id)
+        .values({"available": available})
+    )
+    await db.commit()
+
+
 async def get_loans_by_borrower(
-    db: AsyncSession, borrower_id: str
+    db: AsyncSession,
+    borrower_id: str,
 ) -> list[models_loan.Loan]:
     """Return all loans of a borrower from database"""
 
     result = await db.execute(
-        select(models_loan.Loan).where(models_loan.Loan.borrower_id == borrower_id)
+        select(models_loan.Loan)
+        .where(models_loan.Loan.borrower_id == borrower_id)
+        .options(
+            # The relationship need to be loaded
+            selectinload(models_loan.Loan.items),
+        )
     )
     return result.scalars().all()
 
@@ -160,13 +179,37 @@ async def create_loan(
         raise
 
 
-async def get_loan_by_id(db: AsyncSession, loan_id: str) -> models_loan.Loan | None:
+async def get_loan_by_id(
+    db: AsyncSession,
+    loan_id: str,
+) -> models_loan.Loan | None:
     """Return loan with id from database as a dictionary"""
 
     result = await db.execute(
-        select(models_loan.Loan).where(models_loan.Loan.id == loan_id)
+        select(models_loan.Loan)
+        .where(models_loan.Loan.id == loan_id)
+        .options(
+            # The relationship need to be loaded
+            selectinload(models_loan.Loan.items),
+        )
     )
     return result.scalars().first()
+
+
+async def create_loan_content(
+    loan_content: models_loan.LoanContent,
+    db: AsyncSession,
+) -> None:
+    """
+    Add an item to a loan using a LoanContent row
+    """
+
+    db.add(loan_content)
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise
 
 
 # async def update_loan(db: AsyncSession, loan_id: str, loan_update: schemas_loans.LoanCreation):

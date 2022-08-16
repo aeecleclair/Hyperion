@@ -86,4 +86,4 @@ class Loan(LoanBase):
     """
 
     returned: bool
-    items: list[LoanerItem]
+    items: list[LoanerItemInDB]
