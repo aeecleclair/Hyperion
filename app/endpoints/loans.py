@@ -326,6 +326,36 @@ async def get_current_user_loans(
     return await cruds_loans.get_loans_by_borrower(db=db, borrower_id=user.id)
 
 
+@router.get(
+    "/loans/users/me/loaners",
+    response_model=list[schemas_loans.Loaner],
+    status_code=200,
+    tags=[Tags.loans],
+)
+async def get_current_user_loaners(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Return all loaners the current user can manage.
+
+    **The user must be authenticated to use this endpoint**
+    """
+
+    user_loaners: list[models_loan.Loaner] = []
+
+    existing_loaners: list[models_loan.Loaner] = await cruds_loans.get_loaners(db=db)
+
+    for loaner in existing_loaners:
+        if is_user_member_of_an_allowed_group(
+            allowed_groups=[loaner.group_manager_id],
+            user=user,
+        ):
+            user_loaners.append(loaner)
+
+    return existing_loaners
+
+
 # @router.get(
 #    "/loans/users/{user_id}",
 #    response_model=list[schemas_loans.Loan],
