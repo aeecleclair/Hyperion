@@ -1,6 +1,7 @@
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models import models_loan
 from app.schemas import schemas_loans
@@ -11,7 +12,12 @@ async def get_loaners(
 ) -> list[models_loan.Loaner]:
     """Return the loaner with id"""
 
-    result = await db.execute(select(models_loan.Loaner))
+    result = await db.execute(
+        select(models_loan.Loaner).options(
+            # The relationship need to be loaded
+            selectinload(models_loan.Loaner.loans)
+        )
+    )
     return result.scalars().all()
 
 
@@ -32,7 +38,7 @@ async def create_loaner(
 
 async def update_loaner(
     loaner_id: str,
-    loaner_update: schemas_loans.LoanerBase,
+    loaner_update: schemas_loans.LoanerUpdate,
     db: AsyncSession,
 ):
     await db.execute(
@@ -50,7 +56,13 @@ async def get_loaner_by_id(
     """Return the loaner with id"""
 
     result = await db.execute(
-        select(models_loan.Loaner).where(models_loan.Loaner.id == loaner_id)
+        select(models_loan.Loaner)
+        .where(models_loan.Loaner.id == loaner_id)
+        .options(
+            # The relationship need to be loaded
+            selectinload(models_loan.Loaner.loans),
+            selectinload(models_loan.Loaner.items),
+        )
     )
     return result.scalars().first()
 
@@ -90,6 +102,22 @@ async def get_loaner_item_by_id(
     result = await db.execute(
         select(models_loan.LoanerItem).where(
             models_loan.LoanerItem.id == loaner_item_id
+        )
+    )
+    return result.scalars().first()
+
+
+async def get_loaner_item_by_name_and_loaner_id(
+    loaner_item_name: str,
+    loaner_id: str,
+    db: AsyncSession,
+) -> models_loan.LoanerItem | None:
+    """Return the item with id"""
+
+    result = await db.execute(
+        select(models_loan.LoanerItem).where(
+            models_loan.LoanerItem.name == loaner_item_name,
+            models_loan.LoanerItem.loaner_id == loaner_id,
         )
     )
     return result.scalars().first()

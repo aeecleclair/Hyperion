@@ -15,6 +15,11 @@ class LoanerBase(BaseModel):
         orm_mode = True
 
 
+class LoanerUpdate(BaseModel):
+    name: str | None = None
+    group_manager_id: str | None = None
+
+
 class Loaner(LoanerBase):
     id: str
 
@@ -28,6 +33,9 @@ class LoanerItemBase(BaseModel):
     multiple: bool = False
     suggested_lending_duration: timedelta
 
+    class Config:
+        orm_mode = True
+
 
 class LoanerItemInDB(LoanerItemBase):
     id: str
@@ -36,11 +44,7 @@ class LoanerItemInDB(LoanerItemBase):
 
 
 class LoanerItem(LoanerItemInDB):
-
     group: CoreGroup
-
-    class Config:
-        orm_mode = True
 
 
 class LoanBase(BaseModel):

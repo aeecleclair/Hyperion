@@ -85,13 +85,12 @@ async def create_loaner(
 
 @router.patch(
     "/loans/loaners/{loaner_id}",
-    response_model=schemas_loans.LoanerBase,
-    status_code=200,
+    status_code=204,
     tags=[Tags.loans],
 )
 async def update_loaner(
     loaner_id: str,
-    loaner_update: schemas_loans.LoanerBase,
+    loaner_update: schemas_loans.LoanerUpdate,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
@@ -104,8 +103,6 @@ async def update_loaner(
     await cruds_loans.update_loaner(
         loaner_id=loaner_id, loaner_update=loaner_update, db=db
     )
-
-    return loaner_update
 
 
 @router.get(
@@ -134,13 +131,14 @@ async def get_loans_by_loaner(
             status_code=404,
             detail="Invalid loaner_id",
         )
+
     # The user should be a member of the loaner's manager group
     if not is_user_member_of_an_allowed_group(user, [loaner.group_manager_id]):
         raise HTTPException(
             status_code=403,
             detail=f"Unauthorized to manage {loaner_id} loaner",
         )
-    return await cruds_loans.get_loans_by_loaner_id(loaner_id=loaner_id, db=db)
+    return loaner.loans
 
 
 @router.get(
@@ -213,17 +211,33 @@ async def create_items_for_loaner(
             detail=f"Unauthorized to manage {loaner_id} loaner",
         )
 
-    loaner_item_db = models_loan.LoanerItem(
-        id=str(uuid.uuid4()),
-        name=item.name,
-        loaner_id=loaner_id,
-        suggested_caution=item.suggested_caution,
-        multiple=item.multiple,
-        suggested_lending_duration=item.suggested_lending_duration,
-        available=True,
-    )
+    # We need to check that the loaner does not have an other item with the same name
+    if (
+        await cruds_loans.get_loaner_item_by_name_and_loaner_id(
+            loaner_item_name=item.name, loaner_id=loaner_id, db=db
+        )
+        is not None
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail=f"The loaner {loaner_id} has already an item with the name {item.name}",
+        )
 
-    return await cruds_loans.create_item(item=loaner_item_db, db=db)
+    try:
+        loaner_item_db = models_loan.LoanerItem(
+            id=str(uuid.uuid4()),
+            name=item.name,
+            loaner_id=loaner_id,
+            suggested_caution=item.suggested_caution,
+            multiple=item.multiple,
+            suggested_lending_duration=item.suggested_lending_duration,
+            available=True,
+        )
+
+        return await cruds_loans.create_item(item=loaner_item_db, db=db)
+
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))
 
 
 @router.patch(

@@ -38,8 +38,9 @@ class LoanerItem(Base):
     __tablename__ = "loaner_item"
 
     id: str = Column(String, primary_key=True, index=True)
-    name: str = Column(String, nullable=False, unique=True)
-    loaner_id: str = Column(ForeignKey("loaner.id"))
+    # Two items with the same name may exist in two different loaners
+    name: str = Column(String, nullable=False)
+    loaner_id: str = Column(String, ForeignKey("loaner.id"))
     suggested_caution: str = Column(String)
     multiple: bool = Column(Boolean)
 
@@ -62,16 +63,15 @@ class Loan(Base):
         ForeignKey("core_user.id"),
         index=True,
     )
-    borrower: CoreUser = relationship(
-        "CoreUser",
-    )
+    # borrower: CoreUser = relationship(
+    #    "CoreUser",
+    # )
     loaner_id: str = Column(
+        String,
         ForeignKey("loaner.id"),
         index=True,
     )
-    loaner: Loaner = relationship(
-        "Loaner",
-    )
+    # loaner: Loaner = relationship("Loaner")
     start: date = Column(Date, nullable=False)
     end: date = Column(Date, nullable=False)
     notes: str | None = Column(TEXT)
