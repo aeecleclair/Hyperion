@@ -90,18 +90,14 @@ class LoanInDBUpdate(BaseModel):
     end: date | None = None
     notes: str | None = None
     caution: str | None = None
+    returned: bool | None = None
 
 
-class LoanUpdate(BaseModel):
+class LoanUpdate(LoanInDBUpdate):
     """
     When the client ask to update the Loan with a PATCH request, they should be able to change the loan items.
     """
 
-    borrower_id: str | None = None
-    start: date | None = None
-    end: date | None = None
-    notes: str | None = None
-    caution: str | None = None
     item_ids: list[str] | None = None
 
 

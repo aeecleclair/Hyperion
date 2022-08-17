@@ -435,7 +435,7 @@ async def create_loan(
     """
     Create a new loan in database and add the requested items
 
-    **The user must be a member of the group to use this endpoint**
+    **The user must be a member of the loaner group_manager to use this endpoint**
     """
 
     # We need to make sure the user is allowed to manage the loaner
@@ -541,7 +541,7 @@ async def update_loan(
     As the endpoint can update the loan items, it will send back
     the new representation of the loan `Loan` including the new items relationships
 
-    **The user must be a member of the group to use this endpoint**
+    **The user must be a member of the loaner group_manager to use this endpoint**
     """
 
     # We need to make sure the user is allowed to manage the loaner
@@ -605,14 +605,18 @@ async def update_loan(
                     status_code=400,
                     detail=f"Item {item_id} does not belong to {loan.loaner_id} loaner",
                 )
-            # If the item can not be borrowed more than one time at the time
-            # we need to check it is available
-            if not item.multiple:
-                if not item.available:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Item {item_id} is not available",
-                    )
+            # If the loan is not marked as returned we can check its availability
+            if (
+                loan_update.returned is None and loan.returned is False
+            ) or loan_update.returned is False:
+                # If the item can not be borrowed more than one time at the time
+                # we need to check it is available
+                if not item.multiple:
+                    if not item.available:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"Item {item_id} is not available",
+                        )
             # We make a list of every items to mark them as unavailable later
             items.append(item)
 
@@ -626,11 +630,14 @@ async def update_loan(
         raise HTTPException(status_code=422, detail=str(error))
 
     for item in items:
-        # We mark all borrowed items that are not multiple as not available
-        if not item.multiple:
-            await cruds_loans.update_loaner_item_availability(
-                item_id=item.id, available=False, db=db
-            )
+        if (
+            loan_update.returned is None and loan.returned is False
+        ) or loan_update.returned is False:
+            # We mark all borrowed items that are not multiple as not available
+            if not item.multiple:
+                await cruds_loans.update_loaner_item_availability(
+                    item_id=item.id, available=False, db=db
+                )
         # We add each item to the loan
         loan_content = models_loan.LoanContent(
             loan_id=loan_id,
@@ -694,3 +701,60 @@ async def delete_loan(
 
     await cruds_loans.delete_loan_content_by_loan_id(loan_id=loan_id, db=db)
     await cruds_loans.delete_loan_by_id(loan_id=loan_id, db=db)
+
+
+@router.post(
+    "/loans/{loan_id}/return",
+    status_code=204,
+    tags=[Tags.loans],
+)
+async def return_loan(
+    loan_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Mark a loan as returned. This will update items availability.
+
+    **The user must be a member of the loaner group_manager to use this endpoint**
+    """
+
+    # We need to make sure the user is allowed to manage the loaner
+    loan: models_loan.Loan | None = await cruds_loans.get_loan_by_id(
+        loan_id=loan_id, db=db
+    )
+    if loan is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid loan_id",
+        )
+    # TODO: use a lazy loaded relationship to prevent this extra crud call
+    loaner: models_loan.Loaner | None = await cruds_loans.get_loaner_by_id(
+        loaner_id=loan.loaner_id, db=db
+    )
+    if loaner is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid loaner_id",
+        )
+    # The user should be a member of the loaner's manager group
+    if not is_user_member_of_an_allowed_group(user, [loaner.group_manager_id]):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Unauthorized to manage {loan.loaner_id} loaner",
+        )
+
+    # We need to mark all items included in the loan as available
+    for item in loan.items:
+        if not item.multiple:
+            await cruds_loans.update_loaner_item_availability(
+                item_id=item.id,
+                available=True,
+                db=db,
+            )
+
+    await cruds_loans.update_loan_returned_status(
+        loan_id=loan_id,
+        returned=True,
+        db=db,
+    )
