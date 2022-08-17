@@ -26,7 +26,7 @@ router = APIRouter()
     status_code=200,
     tags=[Tags.groups],
 )
-async def get_groups(
+async def read_groups(
     db: AsyncSession = Depends(get_db),
     user=Depends(is_user_a_member_of(GroupType.admin)),
 ):

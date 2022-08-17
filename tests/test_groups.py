@@ -31,7 +31,17 @@ async def startuptest():
         await db.commit()
 
 
-def test_get_group_by_id():
+def test_read_groups():
+    token = create_api_access_token(admin_user)
+
+    response = client.get(
+        "/groups/",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+
+
+def test_read_group():
     token = create_api_access_token(admin_user)
 
     response = client.get(
@@ -41,3 +51,45 @@ def test_get_group_by_id():
     assert response.status_code == 200
     data = response.json()
     assert data["name"] == "eclair"
+
+
+def test_create_group():
+    token = create_api_access_token(admin_user)
+
+    response = client.post(
+        "/groups/",
+        json={
+            "name": "Group",
+            "description": "A new group",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 201
+
+
+def test_update_group():
+    token = create_api_access_token(admin_user)
+
+    response = client.patch(
+        f"/groups/{id_eclair}",
+        json={
+            "name": "Group ECLAIR",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+
+
+def test_create_membership():
+    token = create_api_access_token(admin_user)
+
+    response = client.post(
+        "/groups/membership",
+        json={
+            "user_id": admin_user.id,
+            "group_id": id_eclair,
+            "description": "Group membership",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 201
