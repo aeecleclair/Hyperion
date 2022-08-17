@@ -75,14 +75,39 @@ async def create_loaner(
         raise HTTPException(status_code=422, detail=str(error))
 
 
-# TODO: readd this after making sure all information were deleted
-# @router.delete(
-#    "/loans/loaners/{loaner_id}",
-#    status_code=204,
-#    tags=[Tags.loans],
-# )
-# async def delete_loaner(loaner_id: str, db: AsyncSession = Depends(get_db), user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin))):
-#
+@router.delete(
+    "/loans/loaners/{loaner_id}",
+    status_code=204,
+    tags=[Tags.loans],
+)
+async def delete_loaner(
+    loaner_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Delete a loaner. All items and loans associated with the loaner will also be deleted from the database.
+
+    **This endpoint is only usable by administrators**
+    """
+    loaner: models_loan.Loaner | None = await cruds_loans.get_loaner_by_id(
+        loaner_id=loaner_id, db=db
+    )
+    if loaner is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid loaner_id",
+        )
+
+    # We delete all loans associated with this loaner
+    for loan in loaner.loans:
+        # We first remove LoanContents associated with the loan
+        await cruds_loans.delete_loan_content_by_loan_id(loan_id=loan.id, db=db)
+        # Then we remove the loan
+        await cruds_loans.delete_loan_by_id(loan_id=loan.id, db=db)
+
+    await cruds_loans.delete_loaner_items_by_loaner_id(loaner_id=loaner_id, db=db)
+    await cruds_loans.delete_loaner_by_id(loaner_id=loaner_id, db=db)
 
 
 @router.patch(
@@ -260,7 +285,7 @@ async def update_items_for_loaner(
     """
     Update a loaner's item.
 
-    **The user must be a member of the group to use this endpoint**
+    **The user must be a member of the loaner group_manager to use this endpoint**
     """
 
     # We need to make sure the user is allowed to manage the loaner
@@ -297,14 +322,54 @@ async def update_items_for_loaner(
     )
 
 
-# TODO: readd this after making sure all information were deleted
-# @router.delete(
-#    "/loans/loaners/{loaner_id}/items/{item_id}",
-#    status_code=204,
-#    tags=[Tags.loans],
-# )
-# async def delete_loaner_item(loaner_id: str, db: AsyncSession = Depends(get_db), user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin))):
-#
+@router.delete(
+    "/loans/loaners/{loaner_id}/items/{item_id}",
+    status_code=204,
+    tags=[Tags.loans],
+)
+async def delete_loaner_item(
+    loaner_id: str,
+    item_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Delete a loaner's item.
+    This will remove the item from all loans but won't delete any loan.
+
+    **The user must be a member of the loaner group_manager to use this endpoint**
+    """
+    # We need to make sure the user is allowed to manage the loaner
+    loaner: models_loan.Loaner | None = await cruds_loans.get_loaner_by_id(
+        loaner_id=loaner_id, db=db
+    )
+    item: models_loan.LoanerItem | None = await cruds_loans.get_loaner_item_by_id(
+        loaner_item_id=item_id, db=db
+    )
+    if item is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid item_id",
+        )
+    if loaner is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid loaner_id",
+        )
+    if item.loaner_id != loaner_id:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Item {item_id} does not belong to {loaner_id} loaner",
+        )
+    # The user should be a member of the loaner's manager group
+    if not is_user_member_of_an_allowed_group(user, [loaner.group_manager_id]):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Unauthorized to manage {loaner_id} loaner",
+        )
+
+    await cruds_loans.delete_loan_content_by_item_id(item_id=item_id, db=db)
+    await cruds_loans.delete_loaner_item_by_id(item_id=item_id, db=db)
 
 
 @router.get(
@@ -354,37 +419,6 @@ async def get_current_user_loaners(
             user_loaners.append(loaner)
 
     return existing_loaners
-
-
-# @router.get(
-#    "/loans/users/{user_id}",
-#    response_model=list[schemas_loans.Loan],
-#    status_code=200,
-#    tags=[Tags.loans],
-# )
-# async def get_loans_by_borrowers(
-#    user_id: str,
-#    db: AsyncSession = Depends(get_db),
-#    user: models_core.CoreUser = Depends(is_user_a_member),
-# ):
-#    """Return all loans from database as a list of dictionaries"""
-#
-#    loans = await cruds_loans.get_loans_by_borrowers(db=db, borrower_id=borrower_id)
-#    return loans
-
-# @router.get(
-#    "/loans/{loan_id}",
-#    response_model=schemas_loans.Loan,
-#    status_code=200,
-#    tags=[Tags.loans],
-# )
-# async def read_loan(loan_id: str, db: AsyncSession = Depends(get_db)):
-#    """Return loan with id from database as a dictionary"""
-#
-#    db_loan = await cruds_loans.get_loan_by_id(db=db, loan_id=loan_id)
-#    if db_loan is None:
-#        raise HTTPException(status_code=404, detail="loan not found")
-#    return db_loan
 
 
 @router.post(
@@ -489,84 +523,45 @@ async def create_loan(
     return res
 
 
-# @router.delete(
-#    "/loans/{loan_id}",
-#    response_model=standard_responses.Result,
-#    status_code=200,  # 204,
-#    tags=[Tags.loans],
-# )
-# async def delete_loan(
-#    loan_id: str,
-#    db: AsyncSession = Depends(get_db),
-# ):
-#    """Delete loan from database by id"""
-#
-#    await cruds_loans.delete_loan(db=db, loan_id=loan_id)
-#
-#    return standard_responses.Result(success=True)
+@router.delete(
+    "/loans/{loan_id}",
+    status_code=204,
+    tags=[Tags.loans],
+)
+async def delete_loan(
+    loan_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Delete a loaner's item.
+    This will remove the item from all loans but won't delete any loan.
 
+    **The user must be a member of the loaner group_manager to use this endpoint**
+    """
+    # We need to make sure the user is allowed to manage the loaner
+    loan: models_loan.Loan | None = await cruds_loans.get_loan_by_id(
+        loan_id=loan_id, db=db
+    )
+    if loan is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid loan_id",
+        )
+    loaner: models_loan.Loaner | None = await cruds_loans.get_loaner_by_id(
+        loaner_id=loan.loaner_id, db=db
+    )
+    if loaner is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid loaner_id",
+        )
+    # The user should be a member of the loaner's manager group
+    if not is_user_member_of_an_allowed_group(user, [loaner.group_manager_id]):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Unauthorized to manage {loan.loaner_id} loaner",
+        )
 
-# @router.patch(
-#    "/loans/{loan_id}",
-#    response_model=schemas_loans.Loan,
-#    tags=[Tags.loans],
-# )
-# async def update_loan(
-#    loan_id: str,
-#    loan_update: schemas_loans.Loan,
-#    db: AsyncSession = Depends(get_db),
-# ):
-#    """Update a loan, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value"""
-#    loan = await cruds_loans.get_loan_by_id(db=db, loan_id=loan_id)
-#    if not loan:
-#        raise HTTPException(status_code=404, detail="loan not found")
-#
-#    await cruds_loans.update_loan(db=db, loan_id=loan_id, loan_update=loan_update)
-#
-#    return loan
-
-
-# @router.patch(
-#     "/loans/return/{loan_id}",
-#     response_model=schemas_loans.Loan,
-#     tags=[Tags.loans],
-# )
-# async def return_loan(
-#     loan_id: str,
-#     db: AsyncSession = Depends(get_db),
-# ):
-#     loan = await cruds_loans.get_loan_by_id(db=db, loan_id=loan_id)
-#     if not loan:
-#         raise HTTPException(status_code=404, detail="loan not found")
-
-#     await cruds_loans.return_loan(db=db, loan_id=loan_id)
-
-#     return loan
-
-
-#
-
-#
-
-#
-
-#
-
-
-##
-
-
-# ===============================================================
-
-# =====================================================
-
-
-# @router.get(
-#     "/loans/history/{group_id}",
-#     response_model=list[schemas_loans.Loan],
-#     status_code=200,
-#     tags=[Tags.loans],
-# )
-# async def get_history(group_id: str, db: AsyncSession = Depends(get_db)):
-#     """Return all returned loans from database as a list of dictionaries"""
-#     return await cruds_loans.get_history(db, group_id=group_id)
+    await cruds_loans.delete_loan_content_by_loan_id(loan_id=loan_id, db=db)
+    await cruds_loans.delete_loan_by_id(loan_id=loan_id, db=db)

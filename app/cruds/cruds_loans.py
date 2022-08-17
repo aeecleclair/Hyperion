@@ -67,6 +67,17 @@ async def get_loaner_by_id(
     return result.scalars().first()
 
 
+async def delete_loaner_by_id(
+    loaner_id: str,
+    db: AsyncSession,
+):
+
+    await db.execute(
+        delete(models_loan.Loaner).where(models_loan.Loaner.id == loaner_id)
+    )
+    await db.commit()
+
+
 async def get_loans_by_loaner_id(
     loaner_id: str,
     db: AsyncSession,
@@ -149,6 +160,29 @@ async def update_loaner_item_availability(
     await db.commit()
 
 
+async def delete_loaner_items_by_loaner_id(
+    loaner_id: str,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_loan.LoanerItem).where(
+            models_loan.LoanerItem.loaner_id == loaner_id
+        )
+    )
+    await db.commit()
+
+
+async def delete_loaner_item_by_id(
+    item_id: str,
+    db: AsyncSession,
+):
+
+    await db.execute(
+        delete(models_loan.LoanerItem).where(models_loan.LoanerItem.item_id == item_id)
+    )
+    await db.commit()
+
+
 async def get_loans_by_borrower(
     db: AsyncSession,
     borrower_id: str,
@@ -196,6 +230,15 @@ async def get_loan_by_id(
     return result.scalars().first()
 
 
+async def delete_loan_by_id(
+    loan_id: str,
+    db: AsyncSession,
+):
+
+    await db.execute(delete(models_loan.Loan).where(models_loan.Loan.id == loan_id))
+    await db.commit()
+
+
 async def create_loan_content(
     loan_content: models_loan.LoanContent,
     db: AsyncSession,
@@ -210,6 +253,32 @@ async def create_loan_content(
     except IntegrityError:
         await db.rollback()
         raise
+
+
+async def delete_loan_content_by_loan_id(
+    loan_id: str,
+    db: AsyncSession,
+):
+
+    await db.execute(
+        delete(models_loan.LoanContent).where(
+            models_loan.LoanContent.loan_id == loan_id
+        )
+    )
+    await db.commit()
+
+
+async def delete_loan_content_by_item_id(
+    item_id: str,
+    db: AsyncSession,
+):
+
+    await db.execute(
+        delete(models_loan.LoanContent).where(
+            models_loan.LoanContent.item_id == item_id
+        )
+    )
+    await db.commit()
 
 
 # async def update_loan(db: AsyncSession, loan_id: str, loan_update: schemas_loans.LoanCreation):
