@@ -105,7 +105,7 @@ class Loan(LoanBase):
     """
 
     returned: bool
-    items: list[Loaner]
+    items: list[Item]
 
 
 class LoanExtend(BaseModel):
