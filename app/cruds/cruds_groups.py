@@ -45,18 +45,17 @@ async def get_group_by_name(
 
 
 async def create_group(
-    group: schemas_core.CoreGroupInDB, db: AsyncSession
+    group: models_core.CoreGroup, db: AsyncSession
 ) -> models_core.CoreGroup:
     """Create a new group in database and return it"""
 
-    db_group = models_core.CoreGroup(**group.dict())
-    db.add(db_group)
+    db.add(group)
     try:
         await db.commit()
-        return db_group
+        return group
     except IntegrityError:
         await db.rollback()
-        raise ValueError("This name is already used")
+        raise
 
 
 async def delete_group(db: AsyncSession, group_id: str):
@@ -68,17 +67,31 @@ async def delete_group(db: AsyncSession, group_id: str):
     await db.commit()
 
 
-async def create_membership(db: AsyncSession, membership: schemas_core.CoreMembership):
-    """Add a user to a group"""
+async def create_membership(
+    membership: models_core.CoreMembership,
+    db: AsyncSession,
+):
+    """Add a user to a group using a membership"""
 
-    db_membership = models_core.CoreMembership(**membership.dict())
-    db.add(db_membership)
+    db.add(membership)
     try:
         await db.commit()
-        return await get_group_by_id(db, db_membership.group_id)
+        return await get_group_by_id(db, membership.group_id)
     except IntegrityError:
         await db.rollback()
         raise ValueError("This user is already in this group")
+
+
+async def delete_membership_by_group_id(
+    group_id: str,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_core.CoreMembership).where(
+            models_core.CoreMembership.group_id == group_id
+        )
+    )
+    await db.commit()
 
 
 async def update_group(
