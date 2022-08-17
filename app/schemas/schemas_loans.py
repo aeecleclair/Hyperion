@@ -104,6 +104,7 @@ class Loan(LoanBase):
     A complete representation of a Loan which can be send by the API
     """
 
+    id: str
     returned: bool
     items: list[Item]
 
