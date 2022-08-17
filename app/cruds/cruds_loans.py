@@ -78,18 +78,6 @@ async def delete_loaner_by_id(
     await db.commit()
 
 
-async def get_loans_by_loaner_id(
-    loaner_id: str,
-    db: AsyncSession,
-) -> list[models_loan.Loan]:
-    """Return all loans of a loaner from database"""
-
-    result = await db.execute(
-        select(models_loan.Loan).where(models_loan.Loan.loaner_id == loaner_id)
-    )
-    return result.scalars().all()
-
-
 async def create_item(
     item: models_loan.Item,
     db: AsyncSession,
@@ -173,9 +161,7 @@ async def delete_loaner_item_by_id(
     db: AsyncSession,
 ):
 
-    await db.execute(
-        delete(models_loan.Item).where(models_loan.Item.item_id == item_id)
-    )
+    await db.execute(delete(models_loan.Item).where(models_loan.Item.id == item_id))
     await db.commit()
 
 
