@@ -108,3 +108,12 @@ class Loan(LoanBase):
 
     returned: bool
     items: list[Loaner]
+
+
+class LoanExtend(BaseModel):
+
+    # The client can either provide a new end date or a timedelta to be added to the old end date.
+    end: date | None = Field(None, description="A new return date for the Loan")
+    duration: timedelta | None = Field(
+        None, description="The duration the loan should be extended of"
+    )

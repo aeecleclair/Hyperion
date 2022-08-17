@@ -727,3 +727,53 @@ async def return_loan(
         returned=True,
         db=db,
     )
+
+
+@router.post(
+    "/loans/{loan_id}/extend",
+    status_code=204,
+    tags=[Tags.loans],
+)
+async def extend_loan(
+    loan_id: str,
+    loan_extend: schemas_loans.LoanExtend,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    A new `end` date or an extended `duration` can be provided. If the two are provided, only `end` will be used.
+
+    **The user must be a member of the loaner group_manager to use this endpoint**
+    """
+
+    # We need to make sure the user is allowed to manage the loaner
+    loan: models_loan.Loan | None = await cruds_loans.get_loan_by_id(
+        loan_id=loan_id, db=db
+    )
+    if loan is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid loan_id",
+        )
+
+    # The user should be a member of the loaner's manager group
+    if not is_user_member_of_an_allowed_group(user, [loan.loaner.group_manager_id]):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Unauthorized to manage {loan.loaner_id} loaner",
+        )
+
+    if loan_extend.end is not None:
+        loan_update = schemas_loans.LoanUpdate(
+            end=loan_extend.end,
+        )
+    elif loan_extend.duration is not None:
+        loan_update = schemas_loans.LoanUpdate(
+            end=loan.end + loan_extend.duration,
+        )
+
+    await cruds_loans.update_loan(
+        loan_id=loan_id,
+        loan_update=loan_update,
+        db=db,
+    )
