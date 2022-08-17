@@ -14,7 +14,7 @@ from app.database import Base
 from app.dependencies import get_db, get_settings
 from app.main import app
 from app.models import models_core
-from app.schemas import schemas_auth, schemas_core
+from app.schemas import schemas_auth
 from app.utils.types.groups_type import GroupType
 
 SQLALCHEMY_DATABASE_URL = (
@@ -99,7 +99,7 @@ async def create_user_with_groups(
     for group in groups:
         await cruds_groups.create_membership(
             db=db,
-            membership=schemas_core.CoreMembership(
+            membership=models_core.CoreMembership(
                 group_id=group.value,
                 user_id=user_id,
             ),

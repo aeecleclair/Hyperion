@@ -418,7 +418,7 @@ async def activate_user(
         await cruds_users.create_user(db=db, user=confirmed_user)
         await cruds_groups.create_membership(
             db=db,
-            membership=schemas_core.CoreMembership(
+            membership=models_core.CoreMembership(
                 group_id=unconfirmed_user.account_type,
                 user_id=unconfirmed_user.id,
             ),
