@@ -340,9 +340,6 @@ async def delete_loaner_item(
     **The user must be a member of the loaner group_manager to use this endpoint**
     """
     # We need to make sure the user is allowed to manage the loaner
-    loaner: models_loan.Loaner | None = await cruds_loans.get_loaner_by_id(
-        loaner_id=loaner_id, db=db
-    )
     item: models_loan.Item | None = await cruds_loans.get_loaner_item_by_id(
         loaner_item_id=item_id, db=db
     )
@@ -351,18 +348,13 @@ async def delete_loaner_item(
             status_code=404,
             detail="Invalid item_id",
         )
-    if loaner is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid loaner_id",
-        )
     if item.loaner_id != loaner_id:
         raise HTTPException(
             status_code=400,
             detail=f"Item {item_id} does not belong to {loaner_id} loaner",
         )
     # The user should be a member of the loaner's manager group
-    if not is_user_member_of_an_allowed_group(user, [loaner.group_manager_id]):
+    if not is_user_member_of_an_allowed_group(user, [item.loaner.group_manager_id]):
         raise HTTPException(
             status_code=403,
             detail=f"Unauthorized to manage {loaner_id} loaner",
@@ -554,16 +546,8 @@ async def update_loan(
             detail="Invalid loan_id",
         )
 
-    loaner: models_loan.Loaner | None = await cruds_loans.get_loaner_by_id(
-        loaner_id=loan.loaner_id, db=db
-    )
-    if loaner is None:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid loaner_id",
-        )
     # The user should be a member of the loaner's manager group
-    if not is_user_member_of_an_allowed_group(user, [loaner.group_manager_id]):
+    if not is_user_member_of_an_allowed_group(user, [loan.loaner.group_manager_id]):
         raise HTTPException(
             status_code=403,
             detail=f"Unauthorized to manage {loan.loaner_id} loaner",
@@ -675,16 +659,9 @@ async def delete_loan(
             status_code=404,
             detail="Invalid loan_id",
         )
-    loaner: models_loan.Loaner | None = await cruds_loans.get_loaner_by_id(
-        loaner_id=loan.loaner_id, db=db
-    )
-    if loaner is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid loaner_id",
-        )
+
     # The user should be a member of the loaner's manager group
-    if not is_user_member_of_an_allowed_group(user, [loaner.group_manager_id]):
+    if not is_user_member_of_an_allowed_group(user, [loan.loaner.group_manager_id]):
         raise HTTPException(
             status_code=403,
             detail=f"Unauthorized to manage {loan.loaner_id} loaner",
@@ -728,17 +705,9 @@ async def return_loan(
             status_code=400,
             detail="Invalid loan_id",
         )
-    # TODO: use a lazy loaded relationship to prevent this extra crud call
-    loaner: models_loan.Loaner | None = await cruds_loans.get_loaner_by_id(
-        loaner_id=loan.loaner_id, db=db
-    )
-    if loaner is None:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid loaner_id",
-        )
+
     # The user should be a member of the loaner's manager group
-    if not is_user_member_of_an_allowed_group(user, [loaner.group_manager_id]):
+    if not is_user_member_of_an_allowed_group(user, [loan.loaner.group_manager_id]):
         raise HTTPException(
             status_code=403,
             detail=f"Unauthorized to manage {loan.loaner_id} loaner",

@@ -47,9 +47,8 @@ class Item(Base):
 
     available: bool | None = Column(Boolean)
 
-    # loaner: Loaner = relationship(Loaner)
-
-    # loans: list["Loan"] = relationship("Loan", secondary="loan_content")
+    # The loaner field won't usually be returned. We won't to only fetch it from the database when it is accessed
+    loaner: Loaner = relationship(Loaner, lazy="select")
 
 
 class Loan(Base):
@@ -70,7 +69,8 @@ class Loan(Base):
         ForeignKey("loaner.id"),
         index=True,
     )
-    # loaner: Loaner = relationship("Loaner")
+    # The loaner field won't usually be returned. We won't to only fetch it from the database when it is accessed
+    loaner: Loaner = relationship("Loaner", lazy="select")
     start: date = Column(Date, nullable=False)
     end: date = Column(Date, nullable=False)
     notes: str | None = Column(TEXT)
