@@ -521,7 +521,7 @@ async def create_loan(
     status_code=200,
     tags=[Tags.loans],
 )
-async def update_loan(
+async def update_loan(  # noqa: C901
     loan_id: str,
     loan_update: schemas_loans.LoanUpdate,
     db: AsyncSession = Depends(get_db),

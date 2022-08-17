@@ -2,8 +2,6 @@ from datetime import date, timedelta
 
 from pydantic import BaseModel, Field
 
-from app.schemas.schemas_core import CoreGroup
-
 
 class LoanerBase(BaseModel):
     name: str
