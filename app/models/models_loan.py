@@ -1,11 +1,10 @@
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 
 from sqlalchemy import (
     TEXT,
     Boolean,
     Column,
     Date,
-    DateTime,
     ForeignKey,
     Integer,
     Interval,
@@ -14,7 +13,6 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 
 from app.database import Base
-from app.models.models_core import CoreUser
 
 
 class Loaner(Base):
