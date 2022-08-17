@@ -7,6 +7,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     ForeignKey,
+    Integer,
     Interval,
     String,
 )
@@ -41,7 +42,7 @@ class LoanerItem(Base):
     # Two items with the same name may exist in two different loaners
     name: str = Column(String, nullable=False)
     loaner_id: str = Column(String, ForeignKey("loaner.id"))
-    suggested_caution: str = Column(String)
+    suggested_caution: int = Column(Integer)
     multiple: bool = Column(Boolean)
 
     suggested_lending_duration: timedelta = Column(Interval, nullable=False)

@@ -28,7 +28,7 @@ class LoanerItemBase(BaseModel):
     """Base schema for item's model"""
 
     name: str
-    suggested_caution: str
+    suggested_caution: int
     # A multiple item can be lend to multiple persons at the same time
     multiple: bool = Field(
         False, description="If the item can be lend to multiple users at the same time"
@@ -42,7 +42,7 @@ class LoanerItemBase(BaseModel):
 class LoanerItemUpdate(BaseModel):
 
     name: str | None = None
-    suggested_caution: str | None = None
+    suggested_caution: int | None = None
     multiple: bool | None = None
     suggested_lending_duration: timedelta | None = None
 
