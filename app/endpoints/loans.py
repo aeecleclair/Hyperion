@@ -172,7 +172,7 @@ async def get_loans_by_loaner(
 
 @router.get(
     "/loans/loaners/{loaner_id}/items",
-    response_model=list[schemas_loans.LoanerItem],
+    response_model=list[schemas_loans.Item],
     status_code=200,
     tags=[Tags.loans],
 )
@@ -209,13 +209,13 @@ async def get_items_by_loaner(
 
 @router.post(
     "/loans/loaners/{loaner_id}/items",
-    response_model=schemas_loans.LoanerItem,
+    response_model=schemas_loans.Item,
     status_code=200,
     tags=[Tags.loans],
 )
 async def create_items_for_loaner(
     loaner_id: str,
-    item: schemas_loans.LoanerItemBase,
+    item: schemas_loans.ItemBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
@@ -254,7 +254,7 @@ async def create_items_for_loaner(
         )
 
     try:
-        loaner_item_db = models_loan.LoanerItem(
+        loaner_item_db = models_loan.Item(
             id=str(uuid.uuid4()),
             name=item.name,
             loaner_id=loaner_id,
@@ -278,7 +278,7 @@ async def create_items_for_loaner(
 async def update_items_for_loaner(
     loaner_id: str,
     item_id: str,
-    item_update: schemas_loans.LoanerItemUpdate,
+    item_update: schemas_loans.ItemUpdate,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
@@ -292,7 +292,7 @@ async def update_items_for_loaner(
     loaner: models_loan.Loaner | None = await cruds_loans.get_loaner_by_id(
         loaner_id=loaner_id, db=db
     )
-    item: models_loan.LoanerItem | None = await cruds_loans.get_loaner_item_by_id(
+    item: models_loan.Item | None = await cruds_loans.get_loaner_item_by_id(
         loaner_item_id=item_id, db=db
     )
     if item is None:
@@ -343,7 +343,7 @@ async def delete_loaner_item(
     loaner: models_loan.Loaner | None = await cruds_loans.get_loaner_by_id(
         loaner_id=loaner_id, db=db
     )
-    item: models_loan.LoanerItem | None = await cruds_loans.get_loaner_item_by_id(
+    item: models_loan.Item | None = await cruds_loans.get_loaner_item_by_id(
         loaner_item_id=item_id, db=db
     )
     if item is None:
@@ -461,11 +461,11 @@ async def create_loan(
             detail="Invalid user_id",
         )
 
-    items: list[models_loan.LoanerItem] = []
+    items: list[models_loan.Item] = []
 
     # All items should be valid, available and belong to the loaner
     for item_id in loan_creation.item_ids:
-        item: models_loan.LoanerItem | None = await cruds_loans.get_loaner_item_by_id(
+        item: models_loan.Item | None = await cruds_loans.get_loaner_item_by_id(
             loaner_item_id=item_id, db=db
         )
         if item is None:
@@ -587,12 +587,12 @@ async def update_loan(
                     db=db,
                 )
 
-        items: list[models_loan.LoanerItem] = []
+        items: list[models_loan.Item] = []
 
         # All items should be valid, available and belong to the loaner
         for item_id in loan_update.item_ids:
-            item: models_loan.LoanerItem | None = (
-                await cruds_loans.get_loaner_item_by_id(loaner_item_id=item_id, db=db)
+            item: models_loan.Item | None = await cruds_loans.get_loaner_item_by_id(
+                loaner_item_id=item_id, db=db
             )
             if item is None:
                 raise HTTPException(

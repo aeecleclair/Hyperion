@@ -91,9 +91,9 @@ async def get_loans_by_loaner_id(
 
 
 async def create_item(
-    item: models_loan.LoanerItem,
+    item: models_loan.Item,
     db: AsyncSession,
-) -> models_loan.LoanerItem:
+) -> models_loan.Item:
 
     db.add(item)
     try:
@@ -107,13 +107,11 @@ async def create_item(
 async def get_loaner_item_by_id(
     loaner_item_id: str,
     db: AsyncSession,
-) -> models_loan.LoanerItem | None:
+) -> models_loan.Item | None:
     """Return the item with id"""
 
     result = await db.execute(
-        select(models_loan.LoanerItem).where(
-            models_loan.LoanerItem.id == loaner_item_id
-        )
+        select(models_loan.Item).where(models_loan.Item.id == loaner_item_id)
     )
     return result.scalars().first()
 
@@ -122,13 +120,13 @@ async def get_loaner_item_by_name_and_loaner_id(
     loaner_item_name: str,
     loaner_id: str,
     db: AsyncSession,
-) -> models_loan.LoanerItem | None:
+) -> models_loan.Item | None:
     """Return the item with id"""
 
     result = await db.execute(
-        select(models_loan.LoanerItem).where(
-            models_loan.LoanerItem.name == loaner_item_name,
-            models_loan.LoanerItem.loaner_id == loaner_id,
+        select(models_loan.Item).where(
+            models_loan.Item.name == loaner_item_name,
+            models_loan.Item.loaner_id == loaner_id,
         )
     )
     return result.scalars().first()
@@ -136,12 +134,12 @@ async def get_loaner_item_by_name_and_loaner_id(
 
 async def update_loaner_item(
     item_id: str,
-    item_update: schemas_loans.LoanerItemUpdate,
+    item_update: schemas_loans.ItemUpdate,
     db: AsyncSession,
 ):
     await db.execute(
-        update(models_loan.LoanerItem)
-        .where(models_loan.LoanerItem.id == item_id)
+        update(models_loan.Item)
+        .where(models_loan.Item.id == item_id)
         .values(**item_update.dict(exclude_none=True))
     )
     await db.commit()
@@ -153,8 +151,8 @@ async def update_loaner_item_availability(
     db: AsyncSession,
 ):
     await db.execute(
-        update(models_loan.LoanerItem)
-        .where(models_loan.LoanerItem.id == item_id)
+        update(models_loan.Item)
+        .where(models_loan.Item.id == item_id)
         .values({"available": available})
     )
     await db.commit()
@@ -165,9 +163,7 @@ async def delete_loaner_items_by_loaner_id(
     db: AsyncSession,
 ):
     await db.execute(
-        delete(models_loan.LoanerItem).where(
-            models_loan.LoanerItem.loaner_id == loaner_id
-        )
+        delete(models_loan.Item).where(models_loan.Item.loaner_id == loaner_id)
     )
     await db.commit()
 
@@ -178,7 +174,7 @@ async def delete_loaner_item_by_id(
 ):
 
     await db.execute(
-        delete(models_loan.LoanerItem).where(models_loan.LoanerItem.item_id == item_id)
+        delete(models_loan.Item).where(models_loan.Item.item_id == item_id)
     )
     await db.commit()
 

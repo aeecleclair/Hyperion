@@ -24,7 +24,7 @@ class Loaner(Base):
     name: str = Column(String, nullable=False, unique=True)
     group_manager_id: str = Column(String, nullable=False)
 
-    items: list["LoanerItem"] = relationship("LoanerItem")
+    items: list["Item"] = relationship("Item")
     loans: list["Loan"] = relationship("Loan")
 
 
@@ -35,7 +35,7 @@ class LoanContent(Base):
     item_id: str = Column(ForeignKey("loaner_item.id"), primary_key=True)
 
 
-class LoanerItem(Base):
+class Item(Base):
     __tablename__ = "loaner_item"
 
     id: str = Column(String, primary_key=True, index=True)
@@ -79,7 +79,7 @@ class Loan(Base):
     caution: str | None = Column(String)
     returned: bool = Column(Boolean, nullable=False)
 
-    items: list["LoanerItem"] = relationship(
-        "LoanerItem",
+    items: list["Item"] = relationship(
+        "Item",
         secondary="loan_content",
     )

@@ -24,7 +24,7 @@ class Loaner(LoanerBase):
     id: str
 
 
-class LoanerItemBase(BaseModel):
+class ItemBase(BaseModel):
     """Base schema for item's model"""
 
     name: str
@@ -39,7 +39,7 @@ class LoanerItemBase(BaseModel):
         orm_mode = True
 
 
-class LoanerItemUpdate(BaseModel):
+class ItemUpdate(BaseModel):
 
     name: str | None = None
     suggested_caution: int | None = None
@@ -47,7 +47,7 @@ class LoanerItemUpdate(BaseModel):
     suggested_lending_duration: timedelta | None = None
 
 
-class LoanerItem(LoanerItemBase):
+class Item(ItemBase):
     id: str
     loaner_id: str
     available: bool
@@ -107,4 +107,4 @@ class Loan(LoanBase):
     """
 
     returned: bool
-    items: list[LoanerItem]
+    items: list[Loaner]
