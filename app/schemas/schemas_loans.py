@@ -78,6 +78,33 @@ class LoanCreation(LoanBase):
     item_ids: list[str]
 
 
+class LoanInDBUpdate(BaseModel):
+    """
+    item_ids are stored in the database using a relationship table (LoanContent).
+    As they are not stored in the loan table in the database, we need a schema that does not contains them
+    for the cruds update_loan function
+    """
+
+    borrower_id: str | None = None
+    start: date | None = None
+    end: date | None = None
+    notes: str | None = None
+    caution: str | None = None
+
+
+class LoanUpdate(BaseModel):
+    """
+    When the client ask to update the Loan with a PATCH request, they should be able to change the loan items.
+    """
+
+    borrower_id: str | None = None
+    start: date | None = None
+    end: date | None = None
+    notes: str | None = None
+    caution: str | None = None
+    item_ids: list[str] | None = None
+
+
 class Loan(LoanBase):
     """
     A complete representation of a Loan which can be send by the API

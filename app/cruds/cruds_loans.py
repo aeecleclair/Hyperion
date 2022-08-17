@@ -213,6 +213,19 @@ async def create_loan(
         raise
 
 
+async def update_loan(
+    loan_id: str,
+    loan_update: schemas_loans.LoanInDBUpdate,
+    db: AsyncSession,
+):
+    await db.execute(
+        update(models_loan.Loan)
+        .where(models_loan.Loan.id == loan_id)
+        .values(**loan_update.dict(exclude_none=True))
+    )
+    await db.commit()
+
+
 async def get_loan_by_id(
     db: AsyncSession,
     loan_id: str,

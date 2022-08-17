@@ -523,6 +523,126 @@ async def create_loan(
     return res
 
 
+@router.patch(
+    "/loans/{loan_id}",
+    response_model=schemas_loans.Loan,
+    status_code=200,
+    tags=[Tags.loans],
+)
+async def update_loan(
+    loan_id: str,
+    loan_update: schemas_loans.LoanUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Update a loan and its items.
+
+    As the endpoint can update the loan items, it will send back
+    the new representation of the loan `Loan` including the new items relationships
+
+    **The user must be a member of the group to use this endpoint**
+    """
+
+    # We need to make sure the user is allowed to manage the loaner
+    loan: models_loan.Loan | None = await cruds_loans.get_loan_by_id(
+        loan_id=loan_id, db=db
+    )
+    if loan is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid loan_id",
+        )
+
+    loaner: models_loan.Loaner | None = await cruds_loans.get_loaner_by_id(
+        loaner_id=loan.loaner_id, db=db
+    )
+    if loaner is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid loaner_id",
+        )
+    # The user should be a member of the loaner's manager group
+    if not is_user_member_of_an_allowed_group(user, [loaner.group_manager_id]):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Unauthorized to manage {loan.loaner_id} loaner",
+        )
+
+    # If a new borrower id was provided, it should be a valid user
+    if loan_update.borrower_id:
+        if not await is_user_id_valid(user_id=loan_update.borrower_id, db=db):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid user_id",
+            )
+
+    # If a new list of items was provided, we need to mark old items as available and new items as not available
+    if loan_update.item_ids:
+        for old_item in loan.items:
+            if not old_item.multiple:
+                await cruds_loans.update_loaner_item_availability(
+                    item_id=old_item.id,
+                    available=True,
+                    db=db,
+                )
+
+        items: list[models_loan.LoanerItem] = []
+
+        # All items should be valid, available and belong to the loaner
+        for item_id in loan_update.item_ids:
+            item: models_loan.LoanerItem | None = (
+                await cruds_loans.get_loaner_item_by_id(loaner_item_id=item_id, db=db)
+            )
+            if item is None:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid item_id {item_id}",
+                )
+            # We check the item belong to the loaner
+            if item.loaner_id != loan.loaner_id:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Item {item_id} does not belong to {loan.loaner_id} loaner",
+                )
+            # If the item can not be borrowed more than one time at the time
+            # we need to check it is available
+            if not item.multiple:
+                if not item.available:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Item {item_id} is not available",
+                    )
+            # We make a list of every items to mark them as unavailable later
+            items.append(item)
+
+    try:
+        # We need to remove the item_ids list from the schema before calling the update_loan crud function
+        loan_in_db_update = schemas_loans.LoanInDBUpdate(**loan_update.dict())
+        await cruds_loans.update_loan(
+            loan_id=loan_id, loan_update=loan_in_db_update, db=db
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))
+
+    for item in items:
+        # We mark all borrowed items that are not multiple as not available
+        if not item.multiple:
+            await cruds_loans.update_loaner_item_availability(
+                item_id=item.id, available=False, db=db
+            )
+        # We add each item to the loan
+        loan_content = models_loan.LoanContent(
+            loan_id=loan_id,
+            item_id=item.id,
+        )
+        await cruds_loans.create_loan_content(loan_content=loan_content, db=db)
+
+        # Generally, we don't send the object back after a PATCH request
+        # But here the client will need to access the new items relationship
+        return cruds_loans.get_loan_by_id(loan_id=loan_id, db=db)
+
+
 @router.delete(
     "/loans/{loan_id}",
     status_code=204,
