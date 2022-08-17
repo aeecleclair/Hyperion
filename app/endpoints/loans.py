@@ -563,5 +563,14 @@ async def delete_loan(
             detail=f"Unauthorized to manage {loan.loaner_id} loaner",
         )
 
+    # We need to mark all items included in the loan as available
+    for item in loan.items:
+        if not item.multiple:
+            await cruds_loans.update_loaner_item_availability(
+                item_id=item.id,
+                available=True,
+                db=db,
+            )
+
     await cruds_loans.delete_loan_content_by_loan_id(loan_id=loan_id, db=db)
     await cruds_loans.delete_loan_by_id(loan_id=loan_id, db=db)
