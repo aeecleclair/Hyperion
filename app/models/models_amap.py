@@ -1,4 +1,4 @@
-"""model file for amap"""
+"""Models file for amap"""
 from datetime import date, datetime
 
 from sqlalchemy import (
