@@ -1,7 +1,6 @@
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.models import models_loan
 from app.schemas import schemas_loans
@@ -12,13 +11,11 @@ async def get_loaners(
 ) -> list[models_loan.Loaner]:
     """Return the loaner with id"""
 
-    result = await db.execute(
-        select(models_loan.Loaner).options(
-            # The relationship need to be loaded
-            selectinload(models_loan.Loaner.loans)
-        )
-    )
-    return result.scalars().all()
+    result = await db.execute(select(models_loan.Loaner))
+    # With the `unique()` call, the function raise an error inviting to add `unique()` to `result`.
+    # `unique()` make sure a row can not be present multiple times in the result
+    # This may be caused structure of the database with a relationship loop: loaner->loans->items->loaner
+    return result.unique().scalars().all()
 
 
 async def create_loaner(
@@ -56,13 +53,7 @@ async def get_loaner_by_id(
     """Return the loaner with id"""
 
     result = await db.execute(
-        select(models_loan.Loaner)
-        .where(models_loan.Loaner.id == loaner_id)
-        .options(
-            # The relationship need to be loaded
-            selectinload(models_loan.Loaner.loans),
-            selectinload(models_loan.Loaner.items),
-        )
+        select(models_loan.Loaner).where(models_loan.Loaner.id == loaner_id)
     )
     return result.scalars().first()
 
@@ -172,14 +163,12 @@ async def get_loans_by_borrower(
     """Return all loans of a borrower from database"""
 
     result = await db.execute(
-        select(models_loan.Loan)
-        .where(models_loan.Loan.borrower_id == borrower_id)
-        .options(
-            # The relationship need to be loaded
-            selectinload(models_loan.Loan.items),
-        )
+        select(models_loan.Loan).where(models_loan.Loan.borrower_id == borrower_id)
     )
-    return result.scalars().all()
+    # With the `unique()` call, the function raise an error inviting to add `unique()` to `result`.
+    # `unique()` make sure a row can not be present multiple times in the result
+    # This may be caused structure of the database with a relationship loop: loaner->loans->items->loaner
+    return result.unique().scalars().all()
 
 
 async def create_loan(
@@ -228,12 +217,7 @@ async def get_loan_by_id(
     """Return loan with id from database as a dictionary"""
 
     result = await db.execute(
-        select(models_loan.Loan)
-        .where(models_loan.Loan.id == loan_id)
-        .options(
-            # The relationship need to be loaded
-            selectinload(models_loan.Loan.items),
-        )
+        select(models_loan.Loan).where(models_loan.Loan.id == loan_id)
     )
     return result.scalars().first()
 

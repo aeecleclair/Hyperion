@@ -23,8 +23,8 @@ class Loaner(Base):
     name: str = Column(String, nullable=False, unique=True)
     group_manager_id: str = Column(String, nullable=False)
 
-    items: list["Item"] = relationship("Item")
-    loans: list["Loan"] = relationship("Loan")
+    items: list["Item"] = relationship("Item", lazy="joined", back_populates="loaner")
+    loans: list["Loan"] = relationship("Loan", lazy="joined", back_populates="loaner")
 
 
 class LoanContent(Base):
@@ -49,7 +49,7 @@ class Item(Base):
     available: bool | None = Column(Boolean)
 
     # The loaner field won't usually be returned. We won't to only fetch it from the database when it is accessed
-    loaner: Loaner = relationship(Loaner, lazy="select")
+    loaner: Loaner = relationship(Loaner, lazy="joined", back_populates="items")
 
 
 class Loan(Base):
@@ -62,14 +62,18 @@ class Loan(Base):
         ForeignKey("core_user.id"),
         index=True,
     )
-    borrower: models_core.CoreUser = relationship("CoreUser", lazy="select")
+    borrower: models_core.CoreUser = relationship("CoreUser", lazy="joined")
     loaner_id: str = Column(
         String,
         ForeignKey("loaner.id"),
         index=True,
     )
     # The loaner field won't usually be returned. We won't to only fetch it from the database when it is accessed
-    loaner: Loaner = relationship("Loaner", lazy="select")
+    loaner: Loaner = relationship(
+        "Loaner",
+        lazy="joined",
+        back_populates="loans",
+    )
     start: date = Column(Date, nullable=False)
     end: date = Column(Date, nullable=False)
     notes: str | None = Column(TEXT)
@@ -79,4 +83,5 @@ class Loan(Base):
     items: list["Item"] = relationship(
         "Item",
         secondary="loan_content",
+        lazy="joined",
     )
