@@ -1,6 +1,7 @@
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models import models_loan
 from app.schemas import schemas_loans
@@ -53,7 +54,9 @@ async def get_loaner_by_id(
     """Return the loaner with id"""
 
     result = await db.execute(
-        select(models_loan.Loaner).where(models_loan.Loaner.id == loaner_id)
+        select(models_loan.Loaner)
+        .where(models_loan.Loaner.id == loaner_id)
+        .options(selectinload(models_loan.Loaner.loans))
     )
     return result.scalars().first()
 
