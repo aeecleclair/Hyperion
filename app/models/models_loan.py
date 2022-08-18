@@ -13,6 +13,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 
 from app.database import Base
+from app.models import models_core
 
 
 class Loaner(Base):
@@ -61,9 +62,7 @@ class Loan(Base):
         ForeignKey("core_user.id"),
         index=True,
     )
-    # borrower: CoreUser = relationship(
-    #    "CoreUser",
-    # )
+    borrower: models_core.CoreUser = relationship("CoreUser", lazy="select")
     loaner_id: str = Column(
         String,
         ForeignKey("loaner.id"),

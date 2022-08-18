@@ -2,6 +2,8 @@ from datetime import date, timedelta
 
 from pydantic import BaseModel, Field
 
+from app.schemas import schemas_core
+
 
 class LoanerBase(BaseModel):
     name: str
@@ -107,6 +109,8 @@ class Loan(LoanBase):
     id: str
     returned: bool
     items: list[Item]
+    borrower: schemas_core.CoreUserSimple
+    loaner: Loaner
 
 
 class LoanExtend(BaseModel):
