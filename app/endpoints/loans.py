@@ -210,7 +210,7 @@ async def get_items_by_loaner(
 @router.post(
     "/loans/loaners/{loaner_id}/items",
     response_model=schemas_loans.Item,
-    status_code=200,
+    status_code=201,
     tags=[Tags.loans],
 )
 async def create_items_for_loaner(
