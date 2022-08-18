@@ -9,6 +9,8 @@ class GroupType(str, Enum):
 
     admin = "0a25cb76-4b63-4fd3-b939-da6d9feabf28"
 
+    family = "d4eab725-130a-4da2-9cb9-90554dc51848"
+
     def __str__(self):
         return f"{self.name}<{self.value}>"
 
