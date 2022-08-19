@@ -569,6 +569,8 @@ async def update_loan(  # noqa: C901
                     available=True,
                     db=db,
                 )
+        # We remove the old items from the database
+        await cruds_loans.delete_loan_content_by_loan_id(loan_id=loan_id, db=db)
 
         items: list[models_loan.Item] = []
 
