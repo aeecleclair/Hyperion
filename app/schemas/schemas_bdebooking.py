@@ -10,13 +10,24 @@ class Rights(BaseModel):
     manage: bool
 
 
+class RoomBase(BaseModel):
+    name: str
+
+
+class RoomComplete(RoomBase):
+    id: str
+
+    class Config:
+        orm_mode = True
+
+
 class BookingBase(BaseModel):
     url: str
     reason: str
     start: datetime
     end: datetime
     note: str
-    room: str
+    room_id: str
     key: bool
     multipleDay: bool
     recurring: bool
@@ -26,6 +37,10 @@ class BookingComplete(BookingBase):
     id: str
     confirmed: bool
     authorized: bool
+
+
+class BookingReturn(BookingComplete):
+    room: RoomComplete
 
     class Config:
         orm_mode = True
