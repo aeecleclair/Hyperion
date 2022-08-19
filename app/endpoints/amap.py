@@ -85,7 +85,7 @@ async def get_product_by_id(
 
 @router.patch(
     "/amap/products/{product_id}",
-    status_code=200,
+    status_code=204,
     tags=[Tags.amap],
 )
 async def edit_product(
@@ -109,8 +109,12 @@ async def delete_product(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
-
-    await cruds_amap.delete_product(db=db, product_id=product_id)
+    if await cruds_amap.is_product_not_used(db=db, product_id=product_id):
+        await cruds_amap.delete_product(db=db, product_id=product_id)
+    else:
+        raise HTTPException(
+            status_code=403, detail="This product is used in a delivery"
+        )
 
 
 @router.get(
@@ -220,7 +224,7 @@ async def remove_product_from_delievery(
 
 @router.patch(
     "/amap/deliveries/{delivery_id}",
-    status_code=200,
+    status_code=204,
     tags=[Tags.amap],
 )
 async def edit_delivery(
@@ -352,7 +356,7 @@ async def add_order_to_delievery(
 
 @router.patch(
     "/amap/deliveries/{delivery_id}/orders",
-    status_code=200,
+    status_code=204,
     tags=[Tags.amap],
 )
 async def edit_orders_from_delieveries(
@@ -515,7 +519,7 @@ async def create_cash_of_user(
 
 @router.patch(
     "/amap/users/{user_id}/cash",
-    status_code=200,
+    status_code=204,
     tags=[Tags.amap],
 )
 async def edit_cash_by_id(

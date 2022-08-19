@@ -53,6 +53,15 @@ async def edit_product(
     await db.commit()
 
 
+async def is_product_not_used(db: AsyncSession, product_id: str) -> bool:
+    result = await db.execute(
+        select(models_amap.AmapDeliveryContent).where(
+            models_amap.AmapDeliveryContent.product_id == product_id
+        )
+    )
+    return result.scalars().all() == []
+
+
 async def delete_product(db: AsyncSession, product_id: str):
     """Delete a product from database by id"""
 
