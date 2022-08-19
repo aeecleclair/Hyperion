@@ -16,7 +16,6 @@ from app.utils.types.tags import Tags
 router = APIRouter()
 
 
-# Prefix "/amap" added in api.py
 @router.get(
     "/amap/rights",
     response_model=schemas_amap.Rights,
