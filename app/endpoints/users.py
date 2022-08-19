@@ -141,8 +141,8 @@ async def read_user(
 
 @router.patch(
     "/users/me",
-    response_model=schemas_core.CoreUser,
-    status_code=200,
+    # response_model=schemas_core.CoreUser,
+    status_code=204,
     tags=[Tags.users],
 )
 async def update_current_user(
@@ -163,8 +163,8 @@ async def update_current_user(
 
 @router.patch(
     "/users/{user_id}",
-    response_model=schemas_core.CoreUser,
-    status_code=200,
+    # response_model=schemas_core.CoreUser,
+    status_code=204,
     tags=[Tags.users],
 )
 async def update_user(

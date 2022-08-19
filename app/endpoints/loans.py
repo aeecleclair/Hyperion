@@ -517,8 +517,8 @@ async def create_loan(
 
 @router.patch(
     "/loans/{loan_id}",
-    response_model=schemas_loans.Loan,
-    status_code=200,
+    # response_model=schemas_loans.Loan,
+    status_code=204,
     tags=[Tags.loans],
 )
 async def update_loan(  # noqa: C901
