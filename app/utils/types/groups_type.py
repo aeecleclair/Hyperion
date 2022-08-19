@@ -8,6 +8,7 @@ class GroupType(str, Enum):
     association = "29751438-103c-42f2-b09b-33fbb20758a7"
 
     admin = "0a25cb76-4b63-4fd3-b939-da6d9feabf28"
+    BDE = "53a669d6-84b1-4352-8d7c-421c1fbd9c6a"
 
     def __str__(self):
         return f"{self.name}<{self.value}>"
