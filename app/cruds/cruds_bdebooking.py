@@ -74,3 +74,45 @@ async def delete_booking(db: AsyncSession, booking_id: str):
         )
     )
     await db.commit()
+
+
+async def get_rooms(db: AsyncSession) -> list[models_bdebooking.Room]:
+    result = await db.execute(select(models_bdebooking.Room))
+    return result.scalars().all()
+
+
+async def get_room_by_id(
+    db: AsyncSession, room_id: str
+) -> models_bdebooking.Room | None:
+    result = await db.execute(
+        select(models_bdebooking.Room).where(models_bdebooking.Room.id == room_id)
+    )
+    return result.scalars().first()
+
+
+async def create_room(db: AsyncSession, room: schemas_bdebooking.RoomComplete):
+    db.add(models_bdebooking.Room(**room.dict()))
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise ValueError()
+
+
+async def edit_room(db: AsyncSession, room: schemas_bdebooking.RoomComplete):
+    await db.execute(
+        update(models_bdebooking.Room)
+        .where(models_bdebooking.Room.id == room.id)
+        .values(name=room.name)
+    )
+
+
+async def delete_room(db: AsyncSession, room_id: str):
+    await db.execute(
+        delete(models_bdebooking.Room).where(models_bdebooking.Room.id == room_id)
+    )
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise ValueError()

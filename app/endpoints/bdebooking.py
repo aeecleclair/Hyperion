@@ -33,7 +33,7 @@ async def get_rights(
 
 @router.get(
     "/bdebooking/bookings",
-    response_model=list[schemas_bdebooking.BookingComplete],
+    response_model=list[schemas_bdebooking.BookingReturn],
     status_code=200,
     tags=[Tags.bdebooking],
 )
@@ -47,7 +47,7 @@ async def get_confirmed_bookings(
 
 @router.get(
     "/bdebooking/bookings/unconfirmed",
-    response_model=list[schemas_bdebooking.BookingComplete],
+    response_model=list[schemas_bdebooking.BookingReturn],
     status_code=200,
     tags=[Tags.bdebooking],
 )
@@ -61,7 +61,7 @@ async def get_unconfirmed_bookings(
 
 @router.get(
     "/bdebooking/bookings/{applicant_id}",
-    response_model=list[schemas_bdebooking.BookingComplete],
+    response_model=list[schemas_bdebooking.BookingReturn],
     status_code=200,
     tags=[Tags.bdebooking],
 )
@@ -83,7 +83,7 @@ async def get_applicant_bookings(
 
 @router.get(
     "/bdebooking/bookings/{booking_id}",
-    response_model=list[schemas_bdebooking.BookingComplete],
+    response_model=list[schemas_bdebooking.BookingReturn],
     status_code=200,
     tags=[Tags.bdebooking],
 )
@@ -157,3 +157,72 @@ async def delete_bookings_id(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
 ):
     await cruds_bdebooking.delete_booking(booking_id=booking_id, db=db)
+
+
+@router.get(
+    "/bdebooking/rooms",
+    response_model=list[schemas_bdebooking.RoomComplete],
+    status_code=200,
+    tags=[Tags.bdebooking],
+)
+async def get_rooms(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    return await cruds_bdebooking.get_rooms(db=db)
+
+
+@router.get(
+    "/bdebooking/rooms/{room_id}",
+    response_model=schemas_bdebooking.RoomComplete,
+    status_code=200,
+    tags=[Tags.bdebooking],
+)
+async def get_room_by_id(
+    room_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
+):
+    return await cruds_bdebooking.get_room_by_id(db=db, room_id=room_id)
+
+
+@router.post(
+    "/bdebooking/rooms",
+    response_model=schemas_bdebooking.RoomComplete,
+    status_code=201,
+    tags=[Tags.bdebooking],
+)
+async def create_room(
+    room: schemas_bdebooking.RoomBase,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
+):
+    db_room = schemas_bdebooking.RoomComplete(id=uuid.uuid4(), **room.dict())
+    await cruds_bdebooking.create_room(db=db, room=db_room)
+    return db_room
+
+
+@router.patch(
+    "/bdebooking/rooms",
+    status_code=204,
+    tags=[Tags.bdebooking],
+)
+async def edit_room(
+    room: schemas_bdebooking.RoomComplete,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
+):
+    await cruds_bdebooking.edit_room(db=db, room=room)
+
+
+@router.delete(
+    "/bdebooking/rooms/{room_id}",
+    status_code=204,
+    tags=[Tags.bdebooking],
+)
+async def delete_room(
+    room_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
+):
+    await cruds_bdebooking.delete_room(db=db, room_id=room_id)
