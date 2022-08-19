@@ -5,6 +5,11 @@ from datetime import datetime
 from pydantic import BaseModel
 
 
+class Rights(BaseModel):
+    view: bool
+    manage: bool
+
+
 class BookingBase(BaseModel):
     url: str
     reason: str
@@ -20,6 +25,20 @@ class BookingBase(BaseModel):
 class BookingComplete(BookingBase):
     id: str
     confirmed: bool
+    authorized: bool
 
     class Config:
         orm_mode = True
+
+
+class BookingEdit(BaseModel):
+    url: str | None = None
+    reason: str | None = None
+    start: datetime | None = None
+    end: datetime | None = None
+    note: str | None = None
+    room: str | None = None
+    key: bool | None = None
+    multipleDay: bool | None = None
+    recurring: bool | None = None
+    id: str
