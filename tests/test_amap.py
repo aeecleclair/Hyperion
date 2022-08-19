@@ -56,7 +56,7 @@ def test_amap():
         json={"name": "testupdate", "price": 0.1, "category": "test"},
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert response.status_code == 200
+    assert response.status_code == 204
 
     response = client.delete(
         f"/amap/products/{id}",
@@ -90,7 +90,7 @@ def test_amap():
         json={"delivery_date": "2022-08-18", "id": id, "locked": False},
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert response.status_code == 200
+    assert response.status_code == 204
 
     response = client.get(
         f"/amap/deliveries/{id}/products",
@@ -146,7 +146,7 @@ def test_amap():
         json={"balance": 45},
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert response.status_code == 200
+    assert response.status_code == 204
 
     response = client.post(
         f"/amap/deliveries/{id}/orders",
@@ -176,7 +176,7 @@ def test_amap():
         },
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert response.status_code == 200
+    assert response.status_code == 204
 
     response = client.get(
         f"/amap/deliveries/{id}/orders/{order_id}",
