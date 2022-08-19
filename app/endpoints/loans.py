@@ -517,7 +517,6 @@ async def create_loan(
 
 @router.patch(
     "/loans/{loan_id}",
-    # response_model=schemas_loans.Loan,
     status_code=204,
     tags=[Tags.loans],
 )
@@ -628,10 +627,6 @@ async def update_loan(  # noqa: C901
             item_id=item.id,
         )
         await cruds_loans.create_loan_content(loan_content=loan_content, db=db)
-
-        # Generally, we don't send the object back after a PATCH request
-        # But here the client will need to access the new items relationship
-        return cruds_loans.get_loan_by_id(loan_id=loan_id, db=db)
 
 
 @router.delete(
