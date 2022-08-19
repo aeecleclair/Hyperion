@@ -277,8 +277,6 @@ async def get_order_by_id(
                 price=p.price,
             )
         )
-    print(products)
-    print(order)
     return schemas_amap.OrderReturn(
         products=products,
         user_id=order.user_id,
