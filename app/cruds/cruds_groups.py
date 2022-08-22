@@ -94,6 +94,20 @@ async def delete_membership_by_group_id(
     await db.commit()
 
 
+async def delete_membership_by_group_and_user_id(
+    group_id: str,
+    user_id: str,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_core.CoreMembership).where(
+            models_core.CoreMembership.group_id == group_id
+            and models_core.CoreMembership.user_id == user_id
+        )
+    )
+    await db.commit()
+
+
 async def update_group(
     db: AsyncSession, group_id: str, group_update: schemas_core.CoreGroupUpdate
 ):

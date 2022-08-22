@@ -191,3 +191,24 @@ async def create_membership(
         return await cruds_groups.create_membership(db=db, membership=membership_db)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
+
+
+@router.delete(
+    "/groups/membership",
+    status_code=204,
+    tags=[Tags.groups],
+)
+async def delete_membership(
+    membership: schemas_core.CoreMembershipDelete,
+    db: AsyncSession = Depends(get_db),
+    user=Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Delete a membership using the user and group ids.
+
+    **This endpoint is only usable by administrators**
+    """
+
+    await cruds_groups.delete_membership_by_group_and_user_id(
+        group_id=membership.group_id, user_id=membership.user_id, db=db
+    )
