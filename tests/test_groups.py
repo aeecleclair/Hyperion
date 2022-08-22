@@ -77,7 +77,7 @@ def test_update_group():
         },
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert response.status_code == 200
+    assert response.status_code == 204
 
 
 def test_create_membership():

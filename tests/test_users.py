@@ -66,11 +66,7 @@ def test_update_current_user():
         json={"name": "NewName2"},
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert response.status_code == 200
-
-    data = response.json()
-    # We want to make sure the name was changed
-    assert data["name"] == "NewName2"
+    assert response.status_code == 204
 
 
 def test_update_user():
@@ -91,10 +87,7 @@ def test_update_user():
         json={"name": "NewName"},
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert response.status_code == 200
-    data = response.json()
-    # We want to make sure the name was changed
-    assert data["name"] == "NewName"
+    assert response.status_code == 204
 
 
 def test_create_current_user_profile_picture():

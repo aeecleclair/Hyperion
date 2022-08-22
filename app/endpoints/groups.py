@@ -97,7 +97,7 @@ async def create_group(
 
 @router.patch(
     "/groups/{group_id}",
-    response_model=schemas_core.CoreGroup,
+    status_code=204,
     tags=[Tags.groups],
 )
 async def update_group(
@@ -128,8 +128,6 @@ async def update_group(
             )
 
     await cruds_groups.update_group(db=db, group_id=group_id, group_update=group_update)
-
-    return group
 
 
 @router.delete(
