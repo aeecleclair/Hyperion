@@ -140,11 +140,16 @@ async def update_loaner(
 )
 async def get_loans_by_loaner(
     loaner_id: str,
+    returned: bool | None = None,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Return all loans from a given group.
+
+
+    The query string `returned` can be used to get only return or non returned loans. By default all loans are returned.
+
 
     **The user must be a member of the loaner group_manager to use this endpoint**
     """
@@ -165,6 +170,11 @@ async def get_loans_by_loaner(
             status_code=403,
             detail=f"Unauthorized to manage {loaner_id} loaner",
         )
+
+    # We didn't manage to use a filter condition in the ORM, as we did for /loans/users/me
+    # so we iterate over the list to filter loans based on their returned status
+    if returned is not None:
+        return [loan for loan in loaner.loans if loan.returned == returned]
 
     # We use the ORM relationship capabilities to load loans in the loaner object
     return loaner.loans
