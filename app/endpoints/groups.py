@@ -61,8 +61,7 @@ async def create_group(
 
 @router.patch(
     "/groups/{group_id}",
-    # response_model=schemas_core.CoreGroup,
-    status_code=204,
+    response_model=schemas_core.CoreGroup,
     tags=[Tags.groups],
 )
 async def update_group(
