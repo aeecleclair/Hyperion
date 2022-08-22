@@ -162,12 +162,15 @@ async def delete_loaner_item_by_id(
 async def get_loans_by_borrower(
     db: AsyncSession,
     borrower_id: str,
+    returned: bool | None = None,
 ) -> list[models_loan.Loan]:
     """Return all loans of a borrower from database"""
 
-    result = await db.execute(
-        select(models_loan.Loan).where(models_loan.Loan.borrower_id == borrower_id)
-    )
+    query = select(models_loan.Loan).where(models_loan.Loan.borrower_id == borrower_id)
+    if returned is not None:
+        query = query.filter(models_loan.Loan.returned.is_(returned))
+
+    result = await db.execute(query)
     # With the `unique()` call, the function raise an error inviting to add `unique()` to `result`.
     # `unique()` make sure a row can not be present multiple times in the result
     # This may be caused structure of the database with a relationship loop: loaner->loans->items->loaner

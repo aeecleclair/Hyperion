@@ -371,16 +371,23 @@ async def delete_loaner_item(
     tags=[Tags.loans],
 )
 async def get_current_user_loans(
+    returned: bool | None = None,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Return all loans from the current user.
 
+    The query string `returned` can be used to get only return or non returned loans. By default all loans are returned.
+
     **The user must be authenticated to use this endpoint**
     """
 
-    return await cruds_loans.get_loans_by_borrower(db=db, borrower_id=user.id)
+    return await cruds_loans.get_loans_by_borrower(
+        db=db,
+        borrower_id=user.id,
+        returned=returned,
+    )
 
 
 @router.get(
