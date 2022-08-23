@@ -40,9 +40,8 @@ async def get_rights(
 )
 async def get_confirmed_bookings(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
 ):
-    bookings = cruds_bdebooking.get_bookings(db=db, decision=Decision.approved)
+    bookings = await cruds_bdebooking.get_bookings(db=db, decision=Decision.approved)
     return bookings
 
 
@@ -56,7 +55,7 @@ async def get_unconfirmed_bookings(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
 ):
-    bookings = cruds_bdebooking.get_bookings(db=db, decision=Decision.pending)
+    bookings = await cruds_bdebooking.get_bookings(db=db, decision=Decision.pending)
     return bookings
 
 
@@ -70,7 +69,7 @@ async def get_declined_bookings(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
 ):
-    bookings = cruds_bdebooking.get_bookings(db=db, decision=Decision.declined)
+    bookings = await cruds_bdebooking.get_bookings(db=db, decision=Decision.declined)
     return bookings
 
 
@@ -88,7 +87,7 @@ async def get_applicant_bookings(
     if user.id == applicant_id or is_user_member_of_an_allowed_group(
         user, [GroupType.BDE]
     ):
-        bookings = cruds_bdebooking.get_applicant_bookings(
+        bookings = await cruds_bdebooking.get_applicant_bookings(
             db=db, applicant_id=applicant_id
         )
         return bookings
