@@ -70,6 +70,8 @@ async def read_users(
 )
 async def search_users(
     query: str,
+    includedGroups: list[str] = [],
+    excludedGroups: list[str] = [],
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
@@ -81,7 +83,9 @@ async def search_users(
     **The user must be authenticated to use this endpoint**
     """
 
-    users = await cruds_users.get_users(db)
+    users = await cruds_users.get_users(
+        db, includedGroups=includedGroups, excludedGroups=excludedGroups
+    )
 
     return fuzzy_search_user(query, users)
 
