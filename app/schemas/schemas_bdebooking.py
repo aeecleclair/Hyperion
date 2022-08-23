@@ -4,6 +4,8 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
+from app.utils.types.bdebooking_type import Decision
+
 
 class Rights(BaseModel):
     view: bool
@@ -35,8 +37,7 @@ class BookingBase(BaseModel):
 
 class BookingComplete(BookingBase):
     id: str
-    confirmed: bool
-    authorized: bool
+    decision: Decision
 
 
 class BookingReturn(BookingComplete):
