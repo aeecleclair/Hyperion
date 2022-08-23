@@ -212,7 +212,7 @@ async def create_room(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
 ):
-    db_room = schemas_bdebooking.RoomComplete(id=uuid.uuid4(), **room.dict())
+    db_room = schemas_bdebooking.RoomComplete(id=str(uuid.uuid4()), **room.dict())
     await cruds_bdebooking.create_room(db=db, room=db_room)
     return db_room
 
