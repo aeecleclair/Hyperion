@@ -130,34 +130,6 @@ async def update_group(
     await cruds_groups.update_group(db=db, group_id=group_id, group_update=group_update)
 
 
-@router.delete(
-    "/groups/{group_id}",
-    status_code=204,
-    tags=[Tags.groups],
-)
-async def delete_group(
-    group_id: str,
-    db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_a_member_of(GroupType.admin)),
-):
-    """
-    Delete group from database.
-    This will remove the group from all users but won't delete any user.
-
-    `GroupTypes` groups can not be deleted.
-
-    **This endpoint is only usable by administrators**
-    """
-
-    if group_id in GroupType:
-        raise HTTPException(
-            status_code=400, detail="GroupTypes groups can not be deleted"
-        )
-
-    await cruds_groups.delete_membership_by_group_id(group_id=group_id, db=db)
-    await cruds_groups.delete_group(db=db, group_id=group_id)
-
-
 @router.post(
     "/groups/membership",
     response_model=schemas_core.CoreGroup,
@@ -212,3 +184,31 @@ async def delete_membership(
     await cruds_groups.delete_membership_by_group_and_user_id(
         group_id=membership.group_id, user_id=membership.user_id, db=db
     )
+
+
+@router.delete(
+    "/groups/{group_id}",
+    status_code=204,
+    tags=[Tags.groups],
+)
+async def delete_group(
+    group_id: str,
+    db: AsyncSession = Depends(get_db),
+    user=Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Delete group from database.
+    This will remove the group from all users but won't delete any user.
+
+    `GroupTypes` groups can not be deleted.
+
+    **This endpoint is only usable by administrators**
+    """
+
+    if group_id in GroupType:
+        raise HTTPException(
+            status_code=400, detail="GroupTypes groups can not be deleted"
+        )
+
+    await cruds_groups.delete_membership_by_group_id(group_id=group_id, db=db)
+    await cruds_groups.delete_group(db=db, group_id=group_id)
