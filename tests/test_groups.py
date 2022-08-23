@@ -93,3 +93,17 @@ def test_create_membership():
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 201
+
+
+def test_delete_membership():
+    token = create_api_access_token(admin_user)
+
+    response = client.delete(
+        "/groups/membership",
+        json={
+            "user_id": admin_user.id,
+            "group_id": id_eclair,
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 204
