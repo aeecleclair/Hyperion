@@ -24,8 +24,7 @@ class Booking(Base):
     room_id: str = Column(ForeignKey("bde_booking_room.id"), nullable=False, index=True)
     room: Room = relationship("Room")
     key: bool = Column(Boolean, nullable=False)
-    confirmed: bool = Column(Boolean, nullable=False)  # If BDE made a decision
-    authorized: bool = Column(Boolean, nullable=False)  # BDE's decision
+    decision: str = Column(String, nullable=False)
     multipleDay: bool = Column(Boolean, nullable=False)
     recurring: bool = Column(Boolean, nullable=False)
     applicant_id: str = Column(ForeignKey("core_user.id"), nullable=False)

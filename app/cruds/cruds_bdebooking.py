@@ -4,14 +4,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import models_bdebooking
 from app.schemas import schemas_bdebooking
+from app.utils.types.bdebooking_type import Decision
 
 
 async def get_bookings(
-    db: AsyncSession, confirmed: bool
+    db: AsyncSession, decision: Decision
 ) -> list[models_bdebooking.Booking]:
     result = await db.execute(
         select(models_bdebooking.Booking).where(
-            models_bdebooking.Booking.confirmed is confirmed
+            models_bdebooking.Booking.decision == decision
         )
     )
     return result.scalars().all()
@@ -58,11 +59,11 @@ async def edit_booking(db: AsyncSession, booking: schemas_bdebooking.BookingEdit
     await db.commit()
 
 
-async def confirm_booking(db: AsyncSession, decision: bool, booking_id: str):
+async def confirm_booking(db: AsyncSession, decision: Decision, booking_id: str):
     await db.execute(
         update(models_bdebooking.Booking)
         .where(models_bdebooking.Booking.id == booking_id)
-        .values(confirmed=True, decision=decision)
+        .values(decision=decision)
     )
     await db.commit()
 

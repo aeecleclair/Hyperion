@@ -8,6 +8,7 @@ from app.dependencies import get_db, is_user_a_member, is_user_a_member_of
 from app.models import models_core
 from app.schemas import schemas_bdebooking
 from app.utils.tools import is_user_member_of_an_allowed_group
+from app.utils.types.bdebooking_type import Decision
 from app.utils.types.groups_type import GroupType
 from app.utils.types.tags import Tags
 
@@ -41,7 +42,7 @@ async def get_confirmed_bookings(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
 ):
-    bookings = cruds_bdebooking.get_bookings(db=db, confirmed=True)
+    bookings = cruds_bdebooking.get_bookings(db=db, decision=Decision.approved)
     return bookings
 
 
@@ -55,12 +56,26 @@ async def get_unconfirmed_bookings(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
 ):
-    bookings = cruds_bdebooking.get_bookings(db=db, confirmed=False)
+    bookings = cruds_bdebooking.get_bookings(db=db, decision=Decision.pending)
     return bookings
 
 
 @router.get(
-    "/bdebooking/bookings/{applicant_id}",
+    "/bdebooking/bookings/declined",
+    response_model=list[schemas_bdebooking.BookingReturn],
+    status_code=200,
+    tags=[Tags.bdebooking],
+)
+async def get_declined_bookings(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
+):
+    bookings = cruds_bdebooking.get_bookings(db=db, decision=Decision.declined)
+    return bookings
+
+
+@router.get(
+    "/bdebooking/user/{applicant_id}",
     response_model=list[schemas_bdebooking.BookingReturn],
     status_code=200,
     tags=[Tags.bdebooking],
@@ -108,7 +123,7 @@ async def get_booking_by_id(
 async def create_bookings(
     booking: schemas_bdebooking.BookingBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     db_booking = schemas_bdebooking.BookingComplete(
         id=str(uuid.uuid4()), confirmed=False, authorized=False, **booking.dict()
@@ -133,13 +148,13 @@ async def edit_bookings_id(
 
 
 @router.patch(
-    "/bdebooking/bookings/{booking_id}/confirm/{decision}",
+    "/bdebooking/bookings/{booking_id}/reply/{decision}",
     status_code=204,
     tags=[Tags.bdebooking],
 )
 async def confirm_booking(
     booking_id: str,
-    decision: bool,
+    decision: Decision,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
 ):
