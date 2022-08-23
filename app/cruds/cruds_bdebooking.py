@@ -56,7 +56,11 @@ async def edit_booking(db: AsyncSession, booking: schemas_bdebooking.BookingEdit
         .where(models_bdebooking.Booking.id == booking.id)
         .values(**booking.dict(exclude_none=True))
     )
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise ValueError()
 
 
 async def confirm_booking(db: AsyncSession, decision: Decision, booking_id: str):
@@ -65,7 +69,11 @@ async def confirm_booking(db: AsyncSession, decision: Decision, booking_id: str)
         .where(models_bdebooking.Booking.id == booking_id)
         .values(decision=decision)
     )
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise ValueError()
 
 
 async def delete_booking(db: AsyncSession, booking_id: str):
@@ -74,7 +82,11 @@ async def delete_booking(db: AsyncSession, booking_id: str):
             models_bdebooking.Booking.id == booking_id
         )
     )
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise ValueError()
 
 
 async def get_rooms(db: AsyncSession) -> list[models_bdebooking.Room]:
@@ -106,6 +118,11 @@ async def edit_room(db: AsyncSession, room: schemas_bdebooking.RoomComplete):
         .where(models_bdebooking.Room.id == room.id)
         .values(name=room.name)
     )
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise ValueError()
 
 
 async def delete_room(db: AsyncSession, room_id: str):

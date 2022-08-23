@@ -98,7 +98,7 @@ async def get_applicant_bookings(
 
 @router.get(
     "/bdebooking/bookings/{booking_id}",
-    response_model=list[schemas_bdebooking.BookingReturn],
+    response_model=schemas_bdebooking.BookingReturn,
     status_code=200,
     tags=[Tags.bdebooking],
 )
