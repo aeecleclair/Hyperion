@@ -126,7 +126,7 @@ async def create_bookings(
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     db_booking = schemas_bdebooking.BookingComplete(
-        id=str(uuid.uuid4()), confirmed=False, authorized=False, **booking.dict()
+        id=str(uuid.uuid4()), decision=Decision.pending, **booking.dict()
     )
     try:
         await cruds_bdebooking.create_booking(booking=db_booking, db=db)
