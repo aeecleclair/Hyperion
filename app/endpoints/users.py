@@ -301,14 +301,41 @@ async def create_user_by_user(
             detail="Invalid ECL email address.",
         )
 
-    return await create_user(
-        user_create=user_create,
-        account_type=account_type,
-        background_tasks=background_tasks,
-        db=db,
-        settings=settings,
-        request_id=request_id,
-    )
+    # Make sure a confirmed account does not already exist
+    db_user = await cruds_users.get_user_by_email(db=db, email=user_create.email)
+    if db_user is not None:
+        hyperion_security_logger.warning(
+            f"Create_user: an user with email {user_create.email} already exist ({request_id})"
+        )
+        # We will send to the email a message explaining he already have an account and can reset their password if they want.
+        if settings.SMTP_ACTIVE:
+            background_tasks.add_task(
+                send_email,
+                recipient=user_create.email,
+                subject="MyECL - your account already exist",
+                content="This email address is already associated to an account. If you forget your credentials, you can reset your password [here]()",
+                settings=settings,
+            )
+
+        # Fail silently: the user should not be informed that an user with the email address already exist.
+        return standard_responses.Result(success=True)
+
+    # There might be an unconfirmed user in the database but its not an issue. We will generate a second activation token.
+
+    try:
+        await create_user(
+            email=user_create.email,
+            password=user_create.password,
+            account_type=account_type,
+            background_tasks=background_tasks,
+            db=db,
+            settings=settings,
+            request_id=request_id,
+        )
+    except Exception as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+    return standard_responses.Result(success=True)
 
 
 @router.post(
@@ -331,97 +358,85 @@ async def batch_create_users(
 
     Even for creating **student** or **staff** account a valid ECL email is not required but should preferably be used.
 
+    The endpoint return a dictionary of unsuccessful user creation: `{email: error message}`.
+
     **This endpoint is only usable by administrators**
     """
 
-    results = {}
+    failed = {}
 
     for user_create in user_creates:
-        results[user_create.email] = await create_user(
-            user_create=user_create,
-            account_type=user_create.account_type,
-            background_tasks=background_tasks,
-            db=db,
-            settings=settings,
-            request_id=request_id,
-        )
+        try:
+            await create_user(
+                email=user_create.email,
+                password=None,  # The administrator does not provide an email when creating an account for someone else
+                account_type=user_create.account_type,
+                background_tasks=background_tasks,
+                db=db,
+                settings=settings,
+                request_id=request_id,
+            )
+        except Exception as error:
+            failed[user_create.email] = error
 
-    return results
+    return standard_responses.BatchResult(failed=failed)
 
 
 async def create_user(
-    user_create: schemas_core.CoreUserCreateRequest
-    | schemas_core.CoreBatchUserCreateRequest,
+    email: str,
+    password: str | None,
     account_type: AccountType,
     background_tasks: BackgroundTasks,
     db: AsyncSession,
     settings: Settings,
     request_id: str,
-) -> standard_responses.Result:
+) -> None:
     """
     User creation process. This function is used by both `/users/create` and `/users/admin/create` endpoints
     """
-    # Make sure a confirmed account does not already exist
-    db_user = await cruds_users.get_user_by_email(db=db, email=user_create.email)
+    # Warning: the validation token (and thus user_unconfirmed object) should **never** be returned in the request
+
+    # If an account already exist, we can not create a new one
+    db_user = await cruds_users.get_user_by_email(db=db, email=email)
     if db_user is not None:
-        hyperion_security_logger.warning(
-            f"Create_user: an user with email {user_create.email} already exist ({request_id})"
-        )
-        # We will send to the email a message explaining he already have an account and can reset their password if they want.
-        if settings.SMTP_ACTIVE:
-            background_tasks.add_task(
-                send_email,
-                recipient=user_create.email,
-                subject="MyECL - your account already exist",
-                content="This email address is already associated to an account. If you forget your credentials, you can reset your password [here]()",
-                settings=settings,
-            )
+        raise ValueError(f"An account with the email {email} already exist")
+    # There might be an unconfirmed user in the database but its not an issue. We will generate a second activation token.
 
-        # Fail silently: the user should not be informed that an user with the email address already exist.
-        return standard_responses.Result(success=True)
-
-    if user_create.password is not None:
-        password_hash = security.get_password_hash(user_create.password)
+    if password is not None:
+        password_hash = security.get_password_hash(password)
     else:
         password_hash = None
     activation_token = security.generate_token()
 
     # Add the unconfirmed user to the unconfirmed_user table
-    try:
-        user_unconfirmed = models_core.CoreUserUnconfirmed(
-            id=str(uuid.uuid4()),
-            email=user_create.email,
-            password_hash=password_hash,
-            account_type=account_type,
-            activation_token=activation_token,
-            created_on=datetime.now(),
-            expire_on=datetime.now()
-            + timedelta(hours=settings.USER_ACTIVATION_TOKEN_EXPIRE_HOURS),
-        )
 
-        await cruds_users.create_unconfirmed_user(
-            user_unconfirmed=user_unconfirmed, db=db
-        )
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
-    else:
-        # After adding the unconfirmed user to the database, we got an activation token that need to be send by email,
-        # in order to make sure the email address is valid
+    user_unconfirmed = models_core.CoreUserUnconfirmed(
+        id=str(uuid.uuid4()),
+        email=email,
+        password_hash=password_hash,
+        account_type=account_type,
+        activation_token=activation_token,
+        created_on=datetime.now(),
+        expire_on=datetime.now()
+        + timedelta(hours=settings.USER_ACTIVATION_TOKEN_EXPIRE_HOURS),
+    )
 
-        if settings.SMTP_ACTIVE:
-            background_tasks.add_task(
-                send_email,
-                recipient=user_create.email,
-                subject="MyECL - confirm your email",
-                content=f"Please confirm your MyECL account with the token {activation_token}",
-                settings=settings,
-            )
-        hyperion_security_logger.info(
-            f"Create_user: Creating an unconfirmed account for {user_create.email} with token {activation_token} ({request_id})"
-        )
+    await cruds_users.create_unconfirmed_user(user_unconfirmed=user_unconfirmed, db=db)
 
-        # Warning: the validation token (and thus user_unconfirmed object) should **never** be returned in the request
-        return standard_responses.Result(success=True)
+    # After adding the unconfirmed user to the database, we got an activation token that need to be send by email,
+    # in order to make sure the email address is valid
+
+    if settings.SMTP_ACTIVE:
+        background_tasks.add_task(
+            send_email,
+            recipient=email,
+            subject="MyECL - confirm your email",
+            content=f"Please confirm your MyECL account with the token {activation_token}",
+            settings=settings,
+        )
+    hyperion_security_logger.info(
+        f"Create_user: Creating an unconfirmed account for {email} with token {activation_token} ({request_id})"
+    )
 
 
 @router.post(
@@ -447,11 +462,22 @@ async def activate_user(
         db=db, activation_token=user.activation_token
     )
     if unconfirmed_user is None:
-        raise HTTPException(status_code=422, detail="Invalid activation token")
+        raise HTTPException(status_code=404, detail="Invalid activation token")
 
     # We need to make sure the unconfirmed user is still valid
     if unconfirmed_user.expire_on < datetime.now():
-        raise HTTPException(status_code=422, detail="Expired activation token")
+        raise HTTPException(status_code=400, detail="Expired activation token")
+
+    # An account with the same email may exist if:
+    # - the user called two times the user creation endpoints and got two activation token
+    # - used a first token to activate its account
+    # - tries to use the second one
+    db_user = await cruds_users.get_user_by_email(db=db, email=unconfirmed_user.email)
+    if db_user is not None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"The account with the email {unconfirmed_user.email} is already confirmed",
+        )
 
     # If a password was provided in this request, we will use this one as it is more recent
     if user.password is not None:
@@ -461,9 +487,7 @@ async def activate_user(
         if unconfirmed_user.password_hash is not None:
             password_hash = unconfirmed_user.password_hash
         else:
-            raise HTTPException(status_code=422, detail="A password was never provided")
-
-    print(unconfirmed_user.account_type)
+            raise HTTPException(status_code=400, detail="A password was never provided")
 
     confirmed_user = models_core.CoreUser(
         id=unconfirmed_user.id,
