@@ -625,11 +625,19 @@ async def change_password(
 
     This endpoint will check the **old_password**, see also `/users/reset-password` endpoint if the user forgot its password.
     """
-    # TODO: check the old_password
+
+    user = await security.authenticate_user(
+        db=db,
+        email=change_password_request.email,
+        password=change_password_request.old_password,
+    )
+    if user is None:
+        raise HTTPException(status_code=403, detail="The old password is invalid")
+
     new_password_hash = security.get_password_hash(change_password_request.new_password)
     await cruds_users.update_user_password_by_id(
         db=db,
-        user_id=change_password_request.user_id,
+        user_id=user.id,
         new_password_hash=new_password_hash,
     )
 
