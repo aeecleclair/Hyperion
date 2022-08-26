@@ -30,7 +30,7 @@ async def get_rights(
         user, [GroupType.student, GroupType.staff]
     )
     manage = is_user_member_of_an_allowed_group(user, [GroupType.amap])
-    return schemas_amap.Rights(view=view, manage=manage)
+    return schemas_amap.Rights(view=view, manage=manage, amap_id=GroupType.amap)
 
 
 @router.get(

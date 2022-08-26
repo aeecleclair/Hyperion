@@ -11,6 +11,7 @@ from app.utils.types.amap_types import AmapSlotType
 class Rights(BaseModel):
     view: bool
     manage: bool
+    amap_id: str
 
     class Config:
         orm_mode = True
