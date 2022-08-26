@@ -132,6 +132,7 @@ async def create_bookings(
         **booking.dict(),
     )
     await cruds_bdebooking.create_booking(booking=db_booking, db=db)
+    return db_booking
 
 
 @router.patch("/bdebooking/bookings", status_code=204, tags=[Tags.bdebooking])
