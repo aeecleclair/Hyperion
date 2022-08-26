@@ -472,6 +472,7 @@ async def activate_user(
     # - the user called two times the user creation endpoints and got two activation token
     # - used a first token to activate its account
     # - tries to use the second one
+    # Though usually all activation tokens linked to the email should have been deleted when the account was activated
     db_user = await cruds_users.get_user_by_email(db=db, email=unconfirmed_user.email)
     if db_user is not None:
         raise HTTPException(
@@ -533,6 +534,7 @@ async def activate_user(
     tags=[Tags.users],
 )
 async def recover_user(
+    # We use embed for email parameter: https://fastapi.tiangolo.com/tutorial/body-multiple-params/#embed-a-single-body-parameter
     email: str = Body(..., embed=True),
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
@@ -543,7 +545,7 @@ async def recover_user(
     If the provided **email** correspond to an existing account, a password reset token will be send.
     Using this token, the password can be changed with `/users/reset-password` endpoint
     """
-    # We use embed for email parameter : https://fastapi.tiangolo.com/tutorial/body-multiple-params/#embed-a-single-body-parameter
+
     db_user = await cruds_users.get_user_by_email(db=db, email=email)
     if db_user is not None:
         # The user exist, we can send a password reset invitation
@@ -591,11 +593,11 @@ async def reset_password(
         db=db, reset_token=reset_password_request.reset_token
     )
     if recover_request is None:
-        raise HTTPException(status_code=422, detail="Invalid reset token")
+        raise HTTPException(status_code=404, detail="Invalid reset token")
 
     # We need to make sure the unconfirmed user is still valid
     if recover_request.expire_on < datetime.now():
-        raise HTTPException(status_code=422, detail="Expired reset token")
+        raise HTTPException(status_code=400, detail="Expired reset token")
 
     new_password_hash = security.get_password_hash(reset_password_request.new_password)
     await cruds_users.update_user_password_by_id(
