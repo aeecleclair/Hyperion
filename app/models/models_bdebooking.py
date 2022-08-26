@@ -22,7 +22,7 @@ class Booking(Base):
     end: datetime = Column(DateTime, nullable=False)
     note: str = Column(String, nullable=True)
     room_id: str = Column(ForeignKey("bde_booking_room.id"), nullable=False, index=True)
-    room: Room = relationship("Room")
+    room: Room = relationship(Room, lazy="joined")
     key: bool = Column(Boolean, nullable=False)
     decision: str = Column(String, nullable=False)
     multipleDay: bool = Column(Boolean, nullable=False)

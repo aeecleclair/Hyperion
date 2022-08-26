@@ -38,6 +38,7 @@ class BookingBase(BaseModel):
 class BookingComplete(BookingBase):
     id: str
     decision: Decision
+    applicant_id: str
 
 
 class BookingReturn(BookingComplete):
