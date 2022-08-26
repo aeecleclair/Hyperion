@@ -45,9 +45,9 @@ async def create_booking(db: AsyncSession, booking: schemas_bdebooking.BookingCo
     db.add(db_booking)
     try:
         await db.commit()
-    except IntegrityError:
+    except IntegrityError as error:
         await db.rollback()
-        raise ValueError()
+        raise ValueError(error)
 
 
 async def edit_booking(db: AsyncSession, booking: schemas_bdebooking.BookingEdit):

@@ -126,12 +126,12 @@ async def create_bookings(
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     db_booking = schemas_bdebooking.BookingComplete(
-        id=str(uuid.uuid4()), decision=Decision.pending, **booking.dict()
+        id=str(uuid.uuid4()),
+        decision=Decision.pending,
+        applicant_id=user.id,
+        **booking.dict(),
     )
-    try:
-        await cruds_bdebooking.create_booking(booking=db_booking, db=db)
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+    await cruds_bdebooking.create_booking(booking=db_booking, db=db)
 
 
 @router.patch("/bdebooking/bookings", status_code=204, tags=[Tags.bdebooking])
