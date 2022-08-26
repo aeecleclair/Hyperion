@@ -119,7 +119,12 @@ async def get_booking_by_id(
         raise HTTPException(status_code=404)
 
 
-@router.post("/bdebooking/bookings", status_code=201, tags=[Tags.bdebooking])
+@router.post(
+    "/bdebooking/bookings",
+    response_model=schemas_bdebooking.BookingReturn,
+    status_code=201,
+    tags=[Tags.bdebooking],
+)
 async def create_bookings(
     booking: schemas_bdebooking.BookingBase,
     db: AsyncSession = Depends(get_db),
@@ -132,7 +137,7 @@ async def create_bookings(
         **booking.dict(),
     )
     await cruds_bdebooking.create_booking(booking=db_booking, db=db)
-    return db_booking
+    return await cruds_bdebooking.get_booking_by_id(db=db, booking_id=db_booking.id)
 
 
 @router.patch("/bdebooking/bookings", status_code=204, tags=[Tags.bdebooking])
