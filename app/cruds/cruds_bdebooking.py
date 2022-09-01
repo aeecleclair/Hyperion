@@ -8,12 +8,14 @@ from app.utils.types.bdebooking_type import Decision
 
 
 async def get_bookings(
-    db: AsyncSession, decision: Decision
+    db: AsyncSession,
+    # decision: Decision
 ) -> list[models_bdebooking.Booking]:
     result = await db.execute(
-        select(models_bdebooking.Booking).where(
-            models_bdebooking.Booking.decision == decision
-        )
+        select(models_bdebooking.Booking)
+        # .where(
+        #     models_bdebooking.Booking.decision == decision
+        # )
     )
     return result.scalars().all()
 
