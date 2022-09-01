@@ -2,6 +2,7 @@ import asyncio
 import uuid
 from datetime import datetime, timedelta
 from enum import Enum
+from typing import Union
 
 import yaml
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
@@ -51,7 +52,7 @@ class Fillot(ExportFillot):
     """
 
     # FamilyTokens is a personal identifiers and should not be leaked. It gives rights over this module
-    family_token: str | None = None
+    family_token: Union[str, None] = None
 
     def __str__(self) -> str:
         return f"Fillot[{self.fillot_id}]<{self.family_token}; {self.sged}>"
