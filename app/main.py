@@ -62,23 +62,5 @@ async def startup():
     if not os.path.exists("data/profile-pictures/"):
         os.makedirs("data/profile-pictures/")
 
-    # create db tables
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    # Add the necessary groups for account types
-    # TODO:fix also in tests
-    description = "Group type"
-    account_types = [
-        models_core.CoreGroup(id=id, name=id.name, description=description)
-        for id in GroupType
-    ]
-    async with SessionLocal() as db:
-        try:
-            db.add_all(account_types)
-            await db.commit()
-        except IntegrityError:
-            await db.rollback()
-
 
 app.include_router(api.api_router)
