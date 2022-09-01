@@ -42,36 +42,36 @@ async def get_confirmed_bookings(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
 ):
-    bookings = await cruds_bdebooking.get_bookings(db=db, decision=Decision.approved)
+    bookings = await cruds_bdebooking.get_bookings(db=db)
     return bookings
 
 
-@router.get(
-    "/bdebooking/bookings/unconfirmed",
-    response_model=list[schemas_bdebooking.BookingReturn],
-    status_code=200,
-    tags=[Tags.bdebooking],
-)
-async def get_unconfirmed_bookings(
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
-):
-    bookings = await cruds_bdebooking.get_bookings(db=db, decision=Decision.pending)
-    return bookings
+# @router.get(
+#     "/bdebooking/bookings/unconfirmed",
+#     response_model=list[schemas_bdebooking.BookingReturn],
+#     status_code=200,
+#     tags=[Tags.bdebooking],
+# )
+# async def get_unconfirmed_bookings(
+#     db: AsyncSession = Depends(get_db),
+#     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
+# ):
+#     bookings = await cruds_bdebooking.get_bookings(db=db, decision=Decision.pending)
+#     return bookings
 
 
-@router.get(
-    "/bdebooking/bookings/declined",
-    response_model=list[schemas_bdebooking.BookingReturn],
-    status_code=200,
-    tags=[Tags.bdebooking],
-)
-async def get_declined_bookings(
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
-):
-    bookings = await cruds_bdebooking.get_bookings(db=db, decision=Decision.declined)
-    return bookings
+# @router.get(
+#     "/bdebooking/bookings/declined",
+#     response_model=list[schemas_bdebooking.BookingReturn],
+#     status_code=200,
+#     tags=[Tags.bdebooking],
+# )
+# async def get_declined_bookings(
+#     db: AsyncSession = Depends(get_db),
+#     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
+# ):
+#     bookings = await cruds_bdebooking.get_bookings(db=db, decision=Decision.declined)
+#     return bookings
 
 
 @router.get(
