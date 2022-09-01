@@ -100,6 +100,8 @@ class Command(str, Enum):
     # When a fillot is sged, the API should broadcast a sg_done to indicates that the fillot is now unavailable
     sg_done = "sg_done"
 
+    invalid_token = "invalid_token"
+
 
 class Message(BaseModel):
     """
@@ -114,6 +116,8 @@ class Message(BaseModel):
 
 class CountdownMessage(Message):
     countdown: str
+
+    family_name: str = ""
 
 
 class StartMessage(Message):
@@ -132,6 +136,8 @@ class StartMessage(Message):
     max_nb_fillots_comparat: int
     nb_fillots_by_floors: dict[str, int]
     max_nb_fillots_by_floors: dict[str, int]
+
+    family_name: str = ""
 
 
 class SGResponseMessage(Message):
@@ -257,16 +263,14 @@ max_nb_fillots_comparat: int = 13
 # Key of the floor that is not in Comparat
 ADOMA = "Adoma"
 # Dict of Family with FamilyToken as key
-families: dict[str, Family] = {
-    "token": Family(family_token="token", name="ECLAIR", size=10)
-}
+families: dict[str, Family] = {}
 
 # Datetime of the sg
 # TODO remove
 startdatetime = datetime.now() + timedelta(seconds=15)
 
 
-with open("family.yaml") as f:
+with open("fillots.yaml") as f:
     data = yaml.safe_load(f)
 
 for floor_name in data:
@@ -288,6 +292,20 @@ for floor_name in data:
         fillots[fillot_id] = fillot
         fillots_by_floor[floor_name].append(fillot)
 
+with open("families.yaml") as f:
+    data = yaml.safe_load(f)
+
+for token in data:
+    if token in families:
+        raise ValueError(f"Token {token} is not unique in families.yaml")
+    families[token] = Family(
+        family_token=token,
+        name=data[token]["name"],
+        fillot_ids=[],
+        nb_fillots=0,
+        nb_fillots_by_floors={},
+        nb_fillots_comparat=0,
+    )
 
 manager = ConnectionManager()
 
@@ -452,10 +470,15 @@ async def websocket_endpoint(
     websocket: WebSocket,
     # user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.family)),
 ):
-    if family_token not in families:
-        raise HTTPException(status_code=404, detail="Invalid family token")
 
     await manager.connect(websocket=websocket, family_token=family_token)
+
+    if family_token not in families:
+        await manager.send_to(
+            family_token=family_token, message=Message(command=Command.invalid_token)
+        )
+        manager.disconnect(family_token=family_token)
+        return
     # data = await websocket.receive_json()
 
     print("New connection", module_status.status)
@@ -477,14 +500,17 @@ async def websocket_endpoint(
                 max_nb_fillots_comparat=max_nb_fillots_comparat,
                 nb_fillots_by_floors=family.nb_fillots_by_floors,
                 max_nb_fillots_by_floors=max_nb_fillots_by_floors,
+                family_name=family.name,
             ),
         )
     elif module_status.status == Status.countdown:
+        family = families[family_token]
         await manager.send_to(
             family_token=family_token,
             message=CountdownMessage(
                 command=Command.countdown,
                 countdown=str(startdatetime.strftime("%H:%M")),
+                family_name=family.name,
             ),
         )
 
@@ -495,7 +521,11 @@ async def websocket_endpoint(
                 sg_request = SGRequest(
                     family_token=family_token, fillot_id=data["fillot_id"]
                 )
+                now = datetime.now()
                 await sg_queue.put(sg_request)
+                with open("log.txt", "a") as f:
+                    f.write(f"{now}: {family_token} - {data['fillot_id']}\n")
+
             else:
                 pass
                 # TODO: Send error
