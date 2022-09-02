@@ -255,7 +255,7 @@ def remove_family_token(
 
 
 # Max amount of fillots a family can have
-max_nb_fillots: int = 3
+max_nb_fillots: int = 15
 # Max amount of fillots by floor a family can have
 max_nb_fillots_by_floors: dict[str, int] = {}
 # Max amount of fillots that are not in Adoma a family can have
