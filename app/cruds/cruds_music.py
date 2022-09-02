@@ -60,3 +60,26 @@ async def delete_musician(db: AsyncSession, user_id: str):
         delete(models_music.Musicians).where(models_music.Musicians.user_id == user_id)
     )
     await db.commit()
+
+
+async def get_instruments(db: AsyncSession) -> list[models_music.Instruments]:
+    """Return all instruments from database"""
+
+    result = await db.execute(select(models_music.Instruments))
+    return result.scalars().all()
+
+
+async def add_instrument(db: AsyncSession, instrument: models_music.Instruments):
+    """Add an instrument to the database"""
+
+    db.add(instrument)
+    await db.commit()
+
+
+async def delete_instrument(db: AsyncSession, instrument_name: str):
+    await db.execute(
+        delete(models_music.Instruments).where(
+            models_music.Instruments.name == instrument_name
+        )
+    )
+    await db.commit()
