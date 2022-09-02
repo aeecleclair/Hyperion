@@ -279,7 +279,7 @@ async def get_order_by_id(
         )
     return schemas_amap.OrderReturn(
         products=products,
-        user_id=order.user_id,
+        user=order.user,
         delivery_id=order.delivery_id,
         collection_slot=order.collection_slot,
         delivery_date=order.delivery_date,
