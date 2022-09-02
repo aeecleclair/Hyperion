@@ -464,6 +464,11 @@ async def startworker():  # background_tasks: BackgroundTasks):
     return "ok"
 
 
+@router.get("/results")
+async def results():  # background_tasks: BackgroundTasks):
+    return families
+
+
 @router.websocket("/ws/{family_token}")
 async def websocket_endpoint(
     family_token: str,
