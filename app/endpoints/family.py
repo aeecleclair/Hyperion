@@ -514,7 +514,7 @@ async def websocket_endpoint(
             family_token=family_token,
             message=CountdownMessage(
                 command=Command.countdown,
-                countdown=str(startdatetime.strftime("%H:%M")),
+                countdown=str("13h02"),
                 family_name=family.name,
             ),
         )
