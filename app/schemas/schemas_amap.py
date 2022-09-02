@@ -99,7 +99,7 @@ class OrderComplete(OrderBase):
 
 
 class OrderReturn(BaseModel):
-    user_id: str
+    user: CoreUserSimple
     delivery_id: str
     products: list[ProductQuantity]
     collection_slot: AmapSlotType
