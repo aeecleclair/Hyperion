@@ -47,6 +47,7 @@ async def create_musician(
 
 
 async def update_musician(db: AsyncSession, user_id: str, musician_update):
+    """Update a musician in the database"""
     await db.execute(
         update(models_music.Musicians)
         .where(models_music.Musicians.user_id == user_id)
@@ -56,6 +57,7 @@ async def update_musician(db: AsyncSession, user_id: str, musician_update):
 
 
 async def delete_musician(db: AsyncSession, user_id: str):
+    """Delete a musician from the database"""
     await db.execute(
         delete(models_music.Musicians).where(models_music.Musicians.user_id == user_id)
     )
@@ -77,9 +79,31 @@ async def add_instrument(db: AsyncSession, instrument: models_music.Instruments)
 
 
 async def delete_instrument(db: AsyncSession, instrument_name: str):
+    """Delete an instrument from the database"""
     await db.execute(
         delete(models_music.Instruments).where(
             models_music.Instruments.name == instrument_name
         )
+    )
+    await db.commit()
+
+
+async def add_played_instrument(
+    db: AsyncSession, played_instrument: models_music.PlayedInstruments
+):
+    """Add a played instrument to the database"""
+
+    db.add(played_instrument)
+    await db.commit()
+
+
+async def delete_played_instrument(
+    db: AsyncSession, user_id: str, instrument_name: str
+):
+    """Delete a played instrument from the database"""
+    await db.execute(
+        delete(models_music.PlayedInstruments)
+        .where(models_music.PlayedInstruments.user_id == user_id)
+        .where(models_music.PlayedInstruments.instrument_name == instrument_name)
     )
     await db.commit()
