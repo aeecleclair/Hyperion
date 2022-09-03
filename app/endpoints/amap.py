@@ -564,7 +564,7 @@ async def get_orders_of_user(
             res.append(
                 schemas_amap.OrderReturn(
                     products=products,
-                    user_id=order.user_id,
+                    user=order.user,
                     delivery_id=order.delivery_id,
                     collection_slot=order.collection_slot,
                     delivery_date=order.delivery_date,
