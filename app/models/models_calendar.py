@@ -12,17 +12,15 @@ class Event(Base):
     event_id: str = Column(String, primary_key=True, index=True)
     name: str = Column(String, nullable=False)
     organizer: str = Column(String, nullable=False)
-    supervisor: CoreUser = relationship(
-        "CoreUser",
-    )
+    supervisor: CoreUser | None = relationship("CoreUser")
     start: datetime = Column(DateTime, nullable=False)
     end: datetime = Column(DateTime, nullable=False)
-    place: str = Column(String)
+    place: str = Column(String, nullable=False)
     type: CalendarEventType = Column(
         Enum(CalendarEventType),
         nullable=False,
     )
     description: str = Column(String, nullable=False)
     recurrence: bool = Column(Boolean, nullable=False)
-    recurrence_end_date: datetime = Column(DateTime)
-    recurrence_rule: str = Column(String)
+    recurrence_end_date: datetime | None = Column(DateTime)
+    recurrence_rule: str | None = Column(String)
