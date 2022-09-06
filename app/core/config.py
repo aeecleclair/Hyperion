@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     # This configuration will be used to send errors messages.
     # If the following parameters are not set, logging won't use the Matrix handler
     # MATRIX_SERVER_BASE_URL is optional, the official Matrix server will be used if not configured
+    # Advanced note: Username and password will be used to ask for an access token. A Matrix custom client `Hyperion` is used to make all requests
     MATRIX_SERVER_BASE_URL: str | None
     MATRIX_USER_NAME: str | None
     MATRIX_USER_PASSWORD: str | None
@@ -80,14 +81,16 @@ class Settings(BaseSettings):
     # Authorization using OAuth or Openid connect #
     ###############################################
 
-    # ACCESS_TOKEN_SECRET_KEY should contain a random string with enough entropy to securely sign all access_tokens for OAuth and Openid connect
+    # ACCESS_TOKEN_SECRET_KEY should contain a random string with enough entropy (at least 32 bytes long) to securely sign all access_tokens for OAuth and Openid connect
     ACCESS_TOKEN_SECRET_KEY: str
     # RSA_PRIVATE_PEM_STRING should be a string containing the PEM certificate of a private RSA key. It will be used to sign id_tokens for Openid connect authentification
+    # In the pem certificates newlines can be replaced by `\n`
     RSA_PRIVATE_PEM_STRING: str
 
     # Host or url of the API, used for Openid connect discovery endpoint
     # NOTE: A trailing / is required
     CLIENT_URL = "http://127.0.0.1:8000/"
+    # TODO: remove
     DOCKER_URL = "http://host.docker.internal:8000/"  # During dev, docker container can not directly access the client url
 
     # Openid connect issuer name
