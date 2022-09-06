@@ -257,7 +257,7 @@ async def authorize_validation(
     if auth_client is None:
         # The client does not exist
         logger.warning(
-            f"Authorize-validation: Invalid client_id {authorizereq.client_id} ({request_id})"
+            f"Authorize-validation: Invalid client_id {authorizereq.client_id}. Is `AUTH_CLIENTS` variable correctly configured in the dotenv? ({request_id})"
         )
         raise HTTPException(
             status_code=422,
@@ -514,7 +514,7 @@ async def authorization_code_grant(  # noqa: C901 # The function is too complex 
 
     if auth_client is None:
         logger.warning(
-            f"Token authorization_code_grant: Invalid client_id {tokenreq.client_id} ({request_id})"
+            f"Token authorization_code_grant: Invalid client_id {tokenreq.client_id}. Is `AUTH_CLIENTS` variable correctly configured in the dotenv? ({request_id})"
         )
         return JSONResponse(
             status_code=400,
@@ -972,7 +972,9 @@ async def auth_get_userinfo(
     auth_client: BaseAuthClient | None = settings.KNOWN_AUTH_CLIENTS.get(client_id)
 
     if auth_client is None:
-        logger.warning(f"User info: Invalid client_id {client_id} ({request_id})")
+        logger.warning(
+            f"User info: Invalid client_id {client_id}. Is `AUTH_CLIENTS` variable correctly configured in the dotenv? ({request_id})"
+        )
         raise HTTPException(
             status_code=401,
             detail="Invalid client_id",
