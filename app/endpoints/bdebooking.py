@@ -16,7 +16,7 @@ router = APIRouter()
 
 
 @router.get(
-    "bdebooking/rights",
+    "/bdebooking/rights",
     response_model=schemas_bdebooking.Rights,
     status_code=200,
     tags=[Tags.bdebooking],
