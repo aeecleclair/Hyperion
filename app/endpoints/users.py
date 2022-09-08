@@ -528,6 +528,35 @@ async def activate_user(
 
 
 @router.post(
+    "/users/make-admin",
+    response_model=standard_responses.Result,
+    status_code=200,
+    tags=[Tags.users],
+)
+async def make_admin(
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    This endpoint is only usable if the database contains exactly one user.
+    It will add this user to the `admin` group.
+    """
+    users = await cruds_users.get_users(db=db)
+
+    if len(users) != 1:
+        raise HTTPException(
+            status_code=404,
+            detail="This endpoint is only usable if there is exactly one user in the database",
+        )
+
+    await cruds_groups.create_membership(
+        db=db,
+        membership=schemas_core.CoreMembership(
+            user_id=users[0].id, group_id=GroupType.admin
+        ),
+    )
+
+
+@router.post(
     "/users/recover",
     response_model=standard_responses.Result,
     status_code=201,
