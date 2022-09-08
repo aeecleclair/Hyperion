@@ -1,18 +1,19 @@
 from datetime import datetime
 
 from sqlalchemy import Boolean, Column, DateTime, Enum, String
-from sqlalchemy.orm import relationship
 
 from app.database import Base
-from app.models.models_core import CoreUser
 from app.utils.types.calendar_types import CalendarEventType
 
 
 class Event(Base):
-    event_id: str = Column(String, primary_key=True, index=True)
+    """Events for calendar."""
+
+    __tablename__ = "calendar_events"
+
+    id: str = Column(String, primary_key=True, index=True)
     name: str = Column(String, nullable=False)
     organizer: str = Column(String, nullable=False)
-    supervisor: CoreUser | None = relationship("CoreUser")
     start: datetime = Column(DateTime, nullable=False)
     end: datetime = Column(DateTime, nullable=False)
     place: str = Column(String, nullable=False)
