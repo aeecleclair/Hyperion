@@ -14,7 +14,7 @@ from tests.commons import (
 calendar_event: models_calendar.Event | None = None
 calendar_user_bde: models_core.CoreUser | None = None
 calendar_user_simple: models_core.CoreUser | None = None
-token_admin: str = ""
+token_bde: str = ""
 token_simple: str = ""
 
 
@@ -25,8 +25,8 @@ async def startuptest():
         calendar_user_bde = await create_user_with_groups([GroupType.BDE], db=db)
         await db.commit()
 
-    global token_admin
-    token_admin = create_api_access_token(calendar_user_bde)
+    global token_bde
+    token_bde = create_api_access_token(calendar_user_bde)
 
     global calendar_user_simple
     async with TestingSessionLocal() as db:
@@ -54,21 +54,21 @@ async def startuptest():
 
 
 def test_get_all_events():
-    global token_admin
+    global token_bde
 
     response = client.get(
         "/calendar/",
-        headers={"Authorization": f"Bearer {token_admin}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
 
 
 def test_get_event():
-    global token_admin
+    global token_bde
 
     response = client.get(
         f"/calendar/event/{calendar_event.id}",
-        headers={"Authorization": f"Bearer {token_admin}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
 
@@ -76,13 +76,13 @@ def test_get_event():
 def test_get_nonexistent_event():
     response = client.get(
         "/calendar/event/bad_id",
-        headers={"Authorization": f"Bearer {token_admin}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 404
 
 
 def test_add_event():
-    global token_admin
+    global token_bde
 
     response = client.post(
         "/calendar/event/",
@@ -96,14 +96,14 @@ def test_add_event():
             "description": "Apprendre à coder !",
             "recurrence": False,
         },
-        headers={"Authorization": f"Bearer {token_admin}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 201
 
 
 def test_add_event_missing_parameter():
     """Test to add an event but a parameter is missing. `start` is missing"""
-    global token_admin
+    global token_bde
 
     response = client.post(
         "/calendar/event/",
@@ -116,7 +116,7 @@ def test_add_event_missing_parameter():
             "description": "Apprendre à coder !",
             "recurrence": False,
         },
-        headers={"Authorization": f"Bearer {token_admin}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 422
 
@@ -145,11 +145,11 @@ def test_add_event_unauthorized_user():
 def test_delete_event():
     """Test if an admin can delete an event."""
 
-    global token_admin
+    global token_bde
 
     response = client.delete(
         f"/calendar/event/{calendar_event.id}",
-        headers={"Authorization": f"Bearer {token_admin}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 204
 
