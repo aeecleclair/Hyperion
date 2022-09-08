@@ -12,7 +12,7 @@ from tests.commons import (
 )
 
 calendar_event: models_calendar.Event | None = None
-calendar_user_admin: models_core.CoreUser | None = None
+calendar_user_bde: models_core.CoreUser | None = None
 calendar_user_simple: models_core.CoreUser | None = None
 token_admin: str = ""
 token_simple: str = ""
@@ -20,13 +20,13 @@ token_simple: str = ""
 
 @app.on_event("startup")  # create the datas needed in the tests
 async def startuptest():
-    global calendar_user_admin
+    global calendar_user_bde
     async with TestingSessionLocal() as db:
-        calendar_user_admin = await create_user_with_groups([GroupType.admin], db=db)
+        calendar_user_bde = await create_user_with_groups([GroupType.BDE], db=db)
         await db.commit()
 
     global token_admin
-    token_admin = create_api_access_token(calendar_user_admin)
+    token_admin = create_api_access_token(calendar_user_bde)
 
     global calendar_user_simple
     async with TestingSessionLocal() as db:
