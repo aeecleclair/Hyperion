@@ -8,6 +8,7 @@ class GroupType(str, Enum):
     association = "29751438-103c-42f2-b09b-33fbb20758a7"
 
     admin = "0a25cb76-4b63-4fd3-b939-da6d9feabf28"
+    amap = "70db65ee-d533-4f6b-9ffa-a4d70a17b7ef"
 
     def __str__(self):
         return f"{self.name}<{self.value}>"
@@ -19,6 +20,7 @@ class AccountType(str, Enum):
     These values should match GroupType's
     """
 
+    admin = "0a25cb76-4b63-4fd3-b939-da6d9feabf28"
     student = GroupType.student.value
     staff = GroupType.staff.value
     association = GroupType.association.value
