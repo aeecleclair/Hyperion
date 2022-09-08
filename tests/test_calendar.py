@@ -140,3 +140,27 @@ def test_add_event_unauthorized_user():
         headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response.status_code == 403
+
+
+def test_delete_event():
+    """Test if an admin can delete an event."""
+
+    global token_admin
+
+    response = client.delete(
+        f"/calendar/event/{calendar_event.id}",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 204
+
+
+def test_delete_event_unauthorized_user():
+    """Test if a simple user can't delete an event."""
+
+    global token_simple
+
+    response = client.delete(
+        f"/calendar/event/{calendar_event.id}",
+        headers={"Authorization": f"Bearer {token_simple}"},
+    )
+    assert response.status_code == 403
