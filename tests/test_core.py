@@ -22,6 +22,6 @@ def test_get_security_txt():
 def test_get_wellknown_security_txt():
 
     response = client.get(
-        "/.wellknown/security.txt",
+        "/.well-known/security.txt",
     )
     assert response.status_code == 200

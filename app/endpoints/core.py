@@ -42,7 +42,7 @@ async def read_security_txt():
 
 
 @router.get(
-    "/.wellknown/security.txt",
+    "/.well-known/security.txt",
     response_class=FileResponse,
     status_code=200,
     tags=[Tags.core],
