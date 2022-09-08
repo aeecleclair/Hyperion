@@ -72,3 +72,12 @@ async def get_event_by_id(
         return event
     else:
         raise HTTPException(status_code=404)
+
+
+@router.delete("/calendar/event/{event_id}", status_code=204, tags=[Tags.calendar])
+async def delete_bookings_id(
+    event_id,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    await cruds_calendar.delete_event(event_id=event_id, db=db)
