@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,3 +31,14 @@ async def add_event(
     except IntegrityError as error:
         await db.rollback()
         raise ValueError(error)
+
+
+async def delete_event(db: AsyncSession, event_id: str) -> None:
+    await db.execute(
+        delete(models_calendar.Event).where(models_calendar.Event.id == event_id)
+    )
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise ValueError()
