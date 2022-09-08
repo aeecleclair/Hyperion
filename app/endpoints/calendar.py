@@ -78,6 +78,6 @@ async def get_event_by_id(
 async def delete_bookings_id(
     event_id,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
 ):
     await cruds_calendar.delete_event(event_id=event_id, db=db)
