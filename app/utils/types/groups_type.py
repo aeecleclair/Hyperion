@@ -18,6 +18,7 @@ class GroupType(str, Enum):
 
     # Core groups
     admin = "0a25cb76-4b63-4fd3-b939-da6d9feabf28"
+    amap = "70db65ee-d533-4f6b-9ffa-a4d70a17b7ef"
 
     # Module related groups
 
@@ -33,6 +34,7 @@ class AccountType(str, Enum):
     These values should match GroupType's. They are the lower level groups in Hyperion
     """
 
+    admin = "0a25cb76-4b63-4fd3-b939-da6d9feabf28"
     student = GroupType.student.value
     staff = GroupType.staff.value
     association = GroupType.association.value
