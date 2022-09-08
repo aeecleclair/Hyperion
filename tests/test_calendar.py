@@ -57,7 +57,7 @@ def test_get_all_events():
     global token_bde
 
     response = client.get(
-        "/calendar/",
+        "/calendar/events/",
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
@@ -67,7 +67,7 @@ def test_get_event():
     global token_bde
 
     response = client.get(
-        f"/calendar/event/{calendar_event.id}",
+        f"/calendar/events/{calendar_event.id}",
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
@@ -75,7 +75,7 @@ def test_get_event():
 
 def test_get_nonexistent_event():
     response = client.get(
-        "/calendar/event/bad_id",
+        "/calendar/events/bad_id",
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 404
@@ -85,7 +85,7 @@ def test_add_event():
     global token_bde
 
     response = client.post(
-        "/calendar/event/",
+        "/calendar/events/",
         json={
             "name": "Dojo",
             "organizer": "Eclair",
@@ -106,7 +106,7 @@ def test_add_event_missing_parameter():
     global token_bde
 
     response = client.post(
-        "/calendar/event/",
+        "/calendar/events/",
         json={
             "name": "Dojo",
             "organizer": "Eclair",
@@ -126,7 +126,7 @@ def test_add_event_unauthorized_user():
     global token_simple
 
     response = client.post(
-        "/calendar/event/",
+        "/calendar/events/",
         json={
             "name": "Dojo",
             "organizer": "Eclair",
@@ -148,7 +148,7 @@ def test_delete_event():
     global token_bde
 
     response = client.delete(
-        f"/calendar/event/{calendar_event.id}",
+        f"/calendar/events/{calendar_event.id}",
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 204
@@ -160,7 +160,7 @@ def test_delete_event_unauthorized_user():
     global token_simple
 
     response = client.delete(
-        f"/calendar/event/{calendar_event.id}",
+        f"/calendar/events/{calendar_event.id}",
         headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response.status_code == 403

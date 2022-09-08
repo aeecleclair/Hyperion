@@ -14,7 +14,7 @@ router = APIRouter()
 
 
 @router.get(
-    "/calendar/",
+    "/calendar/events/",
     response_model=list[schemas_calendar.EventComplete],
     status_code=200,
     tags=[Tags.calendar],
@@ -29,7 +29,7 @@ async def get_events(
 
 
 @router.post(
-    "/calendar/event/",
+    "/calendar/events/",
     response_model=schemas_calendar.EventBase,
     status_code=201,
     tags=[Tags.calendar],
@@ -55,7 +55,7 @@ async def add_event(
 
 
 @router.get(
-    "/calendar/event/{event_id}",
+    "/calendar/events/{event_id}",
     response_model=schemas_calendar.EventBase,
     status_code=200,
     tags=[Tags.calendar],
@@ -74,7 +74,7 @@ async def get_event_by_id(
         raise HTTPException(status_code=404)
 
 
-@router.delete("/calendar/event/{event_id}", status_code=204, tags=[Tags.calendar])
+@router.delete("/calendar/events/{event_id}", status_code=204, tags=[Tags.calendar])
 async def delete_bookings_id(
     event_id,
     db: AsyncSession = Depends(get_db),
