@@ -1,3 +1,7 @@
+import os
+from datetime import datetime
+
+from icalendar import Calendar, Event, vText
 from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,11 +27,38 @@ async def add_event(
     db: AsyncSession, event: models_calendar.Event
 ) -> models_calendar.Event:
     """Add an event to the database."""
+    ics_directory = "data/ics"
+
+    ical_event = Event()
+    ical_event["uid"] = f"{event.id}@myecl.fr"
+    ical_event.add("summary", event.name)
+    ical_event.add("description", event.description)
+    ical_event.add("dtstart", event.start)
+    ical_event.add("dtend", event.end)
+    ical_event.add("dtstamp", datetime.now())
+    ical_event.add("class", "public")
+    ical_event["organizer"] = vText(event.organizer)
+    ical_event["location"] = vText(event.place)
 
     db.add(event)
     try:
         await db.commit()
+        # try:
+        with open(
+            os.path.join(ics_directory, "ae_calendar.ics"), "rb"
+        ) as calendar_file:
+            calendar = Calendar.from_ical(calendar_file.read())
+
+        calendar.add_component(ical_event)
+
+        with open(
+            os.path.join(ics_directory, "ae_calendar.ics"), "wb"
+        ) as calendar_file:
+            calendar_file.write(calendar.to_ical())
         return event
+        # except Exception as error:
+        #     await db.rollback()
+        #     raise ValueError(error)
     except IntegrityError as error:
         await db.rollback()
         raise ValueError(error)

@@ -1,6 +1,8 @@
+import os
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cruds import cruds_calendar
@@ -81,3 +83,23 @@ async def delete_bookings_id(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
 ):
     await cruds_calendar.delete_event(event_id=event_id, db=db)
+
+
+@router.get(
+    "/calendar/ical",
+    response_class=FileResponse,
+    status_code=200,
+    tags=[Tags.calendar],
+)
+async def get_icalendar_file(
+    event_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """Get the icalendar file corresponding to the event in the database."""
+
+    if not os.path.exists("data/ics/ae_calendar.ics"):
+        return FileResponse("data/ics/ae_calendar.ics")
+
+    else:
+        raise HTTPException(status_code=404)
