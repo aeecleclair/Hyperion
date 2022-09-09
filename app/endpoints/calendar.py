@@ -84,6 +84,8 @@ async def delete_bookings_id(
 ):
     await cruds_calendar.delete_event(event_id=event_id, db=db)
 
+    ## TODO : Delte event from the ical file.
+
 
 @router.get(
     "/calendar/ical",
