@@ -30,7 +30,7 @@ async def get_events(
 
 @router.post(
     "/calendar/events/",
-    response_model=schemas_calendar.EventBase,
+    response_model=schemas_calendar.EventComplete,
     status_code=201,
     tags=[Tags.calendar],
 )
