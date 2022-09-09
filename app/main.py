@@ -67,11 +67,11 @@ async def startup():
     if not os.path.exists("data/ics/"):
         os.makedirs("data/ics/")
 
-    if not os.path.exists("data/ics/ae_calender.ics"):
+    if not os.path.exists("data/ics/ae_calendar.ics"):
         calendar = Calendar()
         calendar.add("version", "2.0")
         calendar.add("proid", "myecl.fr")
-        with open("data/ics/ae_calender.ics", "wb") as file_calendar:
+        with open("data/ics/ae_calendar.ics", "wb") as file_calendar:
             file_calendar.write(calendar.to_ical())
         hyperion_access_logger.info("ae_calendar.ics has been created.")
 
