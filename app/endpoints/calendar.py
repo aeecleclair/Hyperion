@@ -13,6 +13,7 @@ from app.utils.types.groups_type import GroupType
 from app.utils.types.tags import Tags
 
 router = APIRouter()
+ical_file_path = "data/ics/ae_calendar.ics"
 
 
 @router.get(
@@ -100,8 +101,8 @@ async def get_icalendar_file(
 ):
     """Get the icalendar file corresponding to the event in the database."""
 
-    if not os.path.exists("data/ics/ae_calendar.ics"):
-        return FileResponse("data/ics/ae_calendar.ics")
+    if not os.path.exists("ical_file_path"):
+        return FileResponse("ical_file_path")
 
     else:
         raise HTTPException(status_code=404)

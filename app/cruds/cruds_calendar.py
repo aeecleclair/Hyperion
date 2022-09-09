@@ -1,4 +1,3 @@
-import os
 from datetime import datetime
 
 from icalendar import Calendar, Event, vText
@@ -7,6 +6,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import models_calendar
+
+ical_file_path = "data/ics/ae_calendar.ics"
 
 
 async def get_all_events(db: AsyncSession) -> list[models_calendar.Event]:
@@ -27,7 +28,6 @@ async def add_event(
     db: AsyncSession, event: models_calendar.Event
 ) -> models_calendar.Event:
     """Add an event to the database."""
-    ics_directory = "data/ics"
 
     ical_event = Event()
     ical_event["uid"] = f"{event.id}@myecl.fr"
@@ -44,16 +44,12 @@ async def add_event(
     try:
         await db.commit()
         # try:
-        with open(
-            os.path.join(ics_directory, "ae_calendar.ics"), "rb"
-        ) as calendar_file:
+        with open(ical_file_path, "rb") as calendar_file:
             calendar = Calendar.from_ical(calendar_file.read())
 
         calendar.add_component(ical_event)
 
-        with open(
-            os.path.join(ics_directory, "ae_calendar.ics"), "wb"
-        ) as calendar_file:
+        with open(ical_file_path, "wb") as calendar_file:
             calendar_file.write(calendar.to_ical())
         return event
         # except Exception as error:
