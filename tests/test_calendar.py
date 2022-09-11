@@ -47,7 +47,6 @@ async def startuptest():
             location="Skylab",
             type="Event AE",
             description="Apprendre à coder !",
-            recurrence=False,
         )
         db.add(calendar_event)
         await db.commit()
@@ -94,7 +93,6 @@ def test_add_event():
             "location": "Skylab",
             "type": "Event AE",
             "description": "Apprendre à coder !",
-            "recurrence": False,
         },
         headers={"Authorization": f"Bearer {token_bde}"},
     )
@@ -114,7 +112,6 @@ def test_add_event_missing_parameter():
             "location": "Skylab",
             "type": "Event AE",
             "description": "Apprendre à coder !",
-            "recurrence": False,
         },
         headers={"Authorization": f"Bearer {token_bde}"},
     )
@@ -135,7 +132,6 @@ def test_add_event_unauthorized_user():
             "location": "Skylab",
             "type": "Event AE",
             "description": "Apprendre à coder !",
-            "recurrence": False,
         },
         headers={"Authorization": f"Bearer {token_simple}"},
     )

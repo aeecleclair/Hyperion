@@ -14,8 +14,6 @@ class EventBase(BaseModel):
     location: str
     type: CalendarEventType
     description: str
-    recurrence: bool
-    recurrence_end_date: datetime | None
     recurrence_rule: str | None
 
     class Config:

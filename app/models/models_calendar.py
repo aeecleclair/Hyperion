@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, Enum, String
+from sqlalchemy import Column, DateTime, Enum, String
 
 from app.database import Base
 from app.utils.types.calendar_types import CalendarEventType
@@ -22,6 +22,4 @@ class Event(Base):
         nullable=False,
     )
     description: str = Column(String, nullable=False)
-    recurrence: bool = Column(Boolean, nullable=False)
-    recurrence_end_date: datetime | None = Column(DateTime)
     recurrence_rule: str | None = Column(String)
