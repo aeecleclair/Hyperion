@@ -6,7 +6,6 @@ import os
 import uuid
 
 from fastapi import FastAPI, Request
-from icalendar import Calendar
 from sqlalchemy.exc import IntegrityError
 
 from app import api
@@ -66,14 +65,6 @@ async def startup():
     # Create folder for calendars
     if not os.path.exists("data/ics/"):
         os.makedirs("data/ics/")
-
-    if not os.path.exists("data/ics/ae_calendar.ics"):
-        calendar = Calendar()
-        calendar.add("version", "2.0")
-        calendar.add("proid", "myecl.fr")
-        with open("data/ics/ae_calendar.ics", "wb") as file_calendar:
-            file_calendar.write(calendar.to_ical())
-        hyperion_access_logger.info("ae_calendar.ics has been created.")
 
     # create db tables
     async with engine.begin() as conn:

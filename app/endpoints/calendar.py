@@ -94,15 +94,11 @@ async def delete_bookings_id(
     status_code=200,
     tags=[Tags.calendar],
 )
-async def get_icalendar_file(
-    event_id: str,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
-):
+async def get_icalendar_file(db: AsyncSession = Depends(get_db)):
     """Get the icalendar file corresponding to the event in the database."""
 
-    if not os.path.exists("ical_file_path"):
-        return FileResponse("ical_file_path")
+    if os.path.exists(ical_file_path):
+        return FileResponse(ical_file_path)
 
     else:
         raise HTTPException(status_code=404)
