@@ -8,3 +8,4 @@ class Tags(str, Enum):
     groups = "Groups"
     auth = "Auth"
     loans = "Loans"
+    amap = "AMAP"
