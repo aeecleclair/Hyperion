@@ -45,6 +45,7 @@ async def add_event(
 
 
 async def delete_event(db: AsyncSession, event_id: str) -> None:
+    """Delete the event given in the database."""
     await db.execute(
         delete(models_calendar.Event).where(models_calendar.Event.id == event_id)
     )
@@ -61,6 +62,7 @@ async def delete_event(db: AsyncSession, event_id: str) -> None:
 
 
 async def create_icalendar_file(db: AsyncSession, calendar_file_path) -> None:
+    """Create the ics file corresponding to the database. The calendar is entirely recreated each time an event is added or deleted in the db."""
     events = await get_all_events(db)
 
     calendar = Calendar()
