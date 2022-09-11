@@ -11,6 +11,7 @@ class EventBase(BaseModel):
     organizer: str
     start: datetime
     end: datetime
+    all_day: bool
     location: str
     type: CalendarEventType
     description: str

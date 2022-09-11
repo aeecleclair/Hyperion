@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from icalendar import Calendar, Event, vText
+from icalendar import Calendar, Event
 from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -69,15 +69,17 @@ async def create_icalendar_file(db: AsyncSession, calendar_file_path) -> None:
 
     for event in events:
         ical_event = Event()
-        ical_event["uid"] = f"{event.id}@myecl.fr"
+        ical_event.add("uid", f"{event.id}@myecl.fr")
         ical_event.add("summary", event.name)
         ical_event.add("description", event.description)
         ical_event.add("dtstart", event.start)
         ical_event.add("dtend", event.end)
         ical_event.add("dtstamp", datetime.now())
         ical_event.add("class", "public")
-        ical_event["organizer"] = vText(event.organizer)
-        ical_event["location"] = vText(event.location)
+        ical_event.add("organizer", event.organizer)
+        ical_event.add("location", event.location)
+        if event.recurrence_rule:
+            ical_event["rrule"] = event.recurrence_rule
 
         calendar.add_component(ical_event)
 

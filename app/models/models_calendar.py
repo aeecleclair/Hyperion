@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, Enum, String
+from sqlalchemy import Boolean, Column, DateTime, Enum, String
 
 from app.database import Base
 from app.utils.types.calendar_types import CalendarEventType
@@ -16,6 +16,7 @@ class Event(Base):
     organizer: str = Column(String, nullable=False)
     start: datetime = Column(DateTime, nullable=False)
     end: datetime = Column(DateTime, nullable=False)
+    all_day: bool = Column(Boolean, nullable=False)
     location: str = Column(String, nullable=False)
     type: CalendarEventType = Column(
         Enum(CalendarEventType),
