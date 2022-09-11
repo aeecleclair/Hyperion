@@ -77,7 +77,7 @@ async def create_icalendar_file(db: AsyncSession, calendar_file_path) -> None:
         ical_event.add("dtstamp", datetime.now())
         ical_event.add("class", "public")
         ical_event["organizer"] = vText(event.organizer)
-        ical_event["location"] = vText(event.place)
+        ical_event["location"] = vText(event.location)
 
         calendar.add_component(ical_event)
 

@@ -16,7 +16,7 @@ class Event(Base):
     organizer: str = Column(String, nullable=False)
     start: datetime = Column(DateTime, nullable=False)
     end: datetime = Column(DateTime, nullable=False)
-    place: str = Column(String, nullable=False)
+    location: str = Column(String, nullable=False)
     type: CalendarEventType = Column(
         Enum(CalendarEventType),
         nullable=False,

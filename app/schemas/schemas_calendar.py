@@ -11,7 +11,7 @@ class EventBase(BaseModel):
     organizer: str
     start: datetime
     end: datetime
-    place: str
+    location: str
     type: CalendarEventType
     description: str
     recurrence: bool
