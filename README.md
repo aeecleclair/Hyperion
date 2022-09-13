@@ -1,5 +1,11 @@
 # Hyperion
 
+## Presentation
+
+Hyperion is the API of an open-source project launched by ÉCLAIR, the computer science association of Ecole Centrale de Lyon. This project aims to provide students of business and engineering schools a digital tool to simplify the association process. In a way, we could say that Hyperion is trying to create a social network for school associations. 
+
+The structure of this project is modular. Hyperion has a core that performs vital functions (authentication, database migration, authorization, etc). The other functions of Hyperion are realized in what we call modules. You can contribute to the project by adding modules if you wish.
+
 ## Creating a virtual environment for Python 3.10.x
 
 ### Windows
@@ -82,18 +88,4 @@ pip install -r requirements.txt
 
 ```bash
 uvicorn app.main:app --reload
-```
-
-## Hyperion structure
-
-```
-└── app
-    ├── main.py
-    ├── __init__.py
-    ├── crud
-    ├── database.py
-    ├── models
-        └──
-    └── schemas
-        └──
 ```
