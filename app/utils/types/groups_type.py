@@ -10,6 +10,8 @@ class GroupType(str, Enum):
     admin = "0a25cb76-4b63-4fd3-b939-da6d9feabf28"
     amap = "70db65ee-d533-4f6b-9ffa-a4d70a17b7ef"
 
+    grocery = "0a7de209-6961-4296-ac7e-7701d984f2ca"
+
     def __str__(self):
         return f"{self.name}<{self.value}>"
 
