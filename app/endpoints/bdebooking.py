@@ -40,7 +40,7 @@ async def get_rights(
 )
 async def get_confirmed_bookings(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     bookings = await cruds_bdebooking.get_bookings(db=db)
     return bookings
