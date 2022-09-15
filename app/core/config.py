@@ -67,6 +67,10 @@ class Settings(BaseSettings):
     HYPERION_VERSION: str = "0.0.1"  # This value should never be modified by hand. See [Hyperion release] documentation
     MINIMAL_TITAN_VERSION: str = "0.0.1"
 
+    # Origins for the CORS middleware. `["http://localhost"]` can be used for development.
+    # See https://fastapi.tiangolo.com/tutorial/cors/
+    CORS_ORIGINS: list[str]
+
     ###################
     # Tokens validity #
     ###################
