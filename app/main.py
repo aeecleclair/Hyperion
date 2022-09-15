@@ -7,7 +7,10 @@ import uuid
 from typing import Literal
 
 import redis
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request, Response, status
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError
 
 from app import api
@@ -76,6 +79,18 @@ async def logging_middleware(
     else:
         response = Response(status_code=429, content="Too Many Requests")
     return response
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    hyperion_error_logger.error(
+        f"Validation error: {exc.errors()} ({request.state.request_id})"
+    )
+
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content=jsonable_encoder({"detail": exc.errors(), "body": exc.body}),
+    )
 
 
 # Alembic should be used for any migration, this function can only create new tables and ensure that the necessary groups are available
