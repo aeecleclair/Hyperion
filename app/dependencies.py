@@ -11,6 +11,7 @@ import logging
 from functools import lru_cache
 from typing import Any, AsyncGenerator, Callable, Coroutine
 
+import redis
 from fastapi import Depends, HTTPException, Request, status
 from jose import jwt
 from pydantic import ValidationError
@@ -22,12 +23,28 @@ from app.cruds import cruds_users
 from app.database import SessionLocal
 from app.models import models_core
 from app.schemas import schemas_auth
+from app.utils.redis import connect
 from app.utils.tools import is_user_member_of_an_allowed_group
 from app.utils.types.groups_type import GroupType
 from app.utils.types.scopes_type import ScopeType
 
 # We could maybe use hyperion.security
 hyperion_access_logger = logging.getLogger("hyperion.access")
+
+redis_client = None  # Create a global variable for the redis client, so that it can be instancied in the startup and shutdown events
+
+
+def get_redis_client(
+    settings=None,
+) -> redis.Redis | None:  # settings can be None if the redis client is already instancied, so that we don't need to pass the settings to the function
+    """
+    Dependency that return the redis client
+    """
+    global redis_client
+    if redis_client is None and settings is not None:
+        if settings.REDIS_HOST != "":
+            redis_client = connect(settings)
+    return redis_client
 
 
 async def get_request_id(request: Request) -> str:

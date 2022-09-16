@@ -11,20 +11,12 @@ from sqlalchemy.exc import IntegrityError
 from app import api
 from app.core.log import LogConfig
 from app.database import Base, SessionLocal, engine
-from app.dependencies import get_settings
+from app.dependencies import get_redis_client, get_settings
 from app.models import models_core
-from app.utils import redis
+from app.utils.redis import limiter
 from app.utils.types.groups_type import GroupType
 
 app = FastAPI()
-
-# We reproduce FastAPI logic to access settings. See https://github.com/tiangolo/fastapi/issues/425#issuecomment-954963966
-settings = app.dependency_overrides.get(get_settings, get_settings)()
-if settings.REDIS_HOST != "":
-    redis_client = redis.connect(settings)
-    process_all = False
-else:
-    process_all = True  # If redis is not configured, we don't use the rate limiter, so we will process every request
 
 
 hyperion_access_logger = logging.getLogger("hyperion.access")
@@ -32,7 +24,10 @@ hyperion_security_logger = logging.getLogger("hyperion.security")
 
 
 @app.middleware("http")
-async def logging_middleware(request: Request, call_next):
+async def logging_middleware(
+    request: Request,
+    call_next,
+):
     """
     This middleware is called around each requests.
     It logs the request and inject an unique identifier in the request that should be used to associate logs saved during the request.
@@ -53,16 +48,20 @@ async def logging_middleware(request: Request, call_next):
     else:
         client_address = "unknown"
 
+    settings = app.dependency_overrides.get(get_settings, get_settings)()
+    redis_client = get_redis_client(settings)
+
     # We test the ip adress with the redis limiter
-    if not process_all:  # If redis is configured
-        process, log = redis.limiter(
+    process = True
+    if redis_client:  # If redis is configured
+        process, log = limiter(
             redis_client, ip_address, settings.REDIS_LIMIT, settings.REDIS_WINDOW
         )
         if log:
             hyperion_security_logger.warning(
                 f"Rate limit reached for {ip_address} (limit: {settings.REDIS_LIMIT}, window: {settings.REDIS_WINDOW})"
             )
-    if process_all or process:
+    if process:
         response = await call_next(request)
 
         hyperion_access_logger.info(
@@ -76,6 +75,9 @@ async def logging_middleware(request: Request, call_next):
 # Alembic should be used for any migration, this function can only create new tables and ensure that the necessary groups are available
 @app.on_event("startup")
 async def startup():
+    # We reproduce FastAPI logic to access settings. See https://github.com/tiangolo/fastapi/issues/425#issuecomment-954963966
+    settings = app.dependency_overrides.get(get_settings, get_settings)()
+
     # Initialize loggers
     LogConfig().initialize_loggers(settings=settings)
 
