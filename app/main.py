@@ -21,6 +21,7 @@ app = FastAPI()
 
 hyperion_access_logger = logging.getLogger("hyperion.access")
 hyperion_security_logger = logging.getLogger("hyperion.security")
+hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 @app.middleware("http")
@@ -49,7 +50,9 @@ async def logging_middleware(
         client_address = "unknown"
 
     settings = app.dependency_overrides.get(get_settings, get_settings)()
-    redis_client = get_redis_client(settings)
+    redis_client = app.dependency_overrides.get(get_redis_client, get_redis_client)(
+        settings=settings
+    )
 
     # We test the ip adress with the redis limiter
     process = True
@@ -80,6 +83,11 @@ async def startup():
 
     # Initialize loggers
     LogConfig().initialize_loggers(settings=settings)
+
+    if not app.dependency_overrides.get(get_redis_client, get_redis_client)(
+        settings=settings
+    ):
+        hyperion_error_logger.info("Redis client not configured")
 
     # Create the asset folder if it does not exist
     if not os.path.exists("data/profile-pictures/"):

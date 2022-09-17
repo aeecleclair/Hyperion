@@ -1,8 +1,22 @@
 import redis
 
+from app.core.config import Settings
 
-def connect(settings) -> redis.Redis:
-    return redis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT)
+
+def connect(settings: Settings) -> redis.Redis | bool:
+    try:
+        redis_client = redis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT)
+        redis_client.ping()  # Test the connection
+    except redis.exceptions.ConnectionError as e:
+        print("Redis connection error: ", e)
+        print("Check the Redis configuration  or the Redis server")
+        return False
+
+    return redis_client
+
+
+def disconnect(redis_client: redis.Redis) -> None:
+    redis_client.close()
 
 
 def limiter(redis_client: redis.Redis, key: str, limit: int, window: int):
