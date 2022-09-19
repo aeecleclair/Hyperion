@@ -14,7 +14,6 @@ from app.endpoints import (
     groups,
     loans,
     users,
-    campaign,
 )
 
 api_router = APIRouter()
