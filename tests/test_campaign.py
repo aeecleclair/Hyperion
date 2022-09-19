@@ -1,5 +1,3 @@
-import uuid
-
 from app.main import app
 from app.models import models_campaign, models_core
 from app.utils.types.groups_type import GroupType
@@ -81,7 +79,7 @@ def test_get_lists_from_section():
 def test_get_lists():
     token = create_api_access_token(student_user)
     response = client.get(
-        f"/campaign/lists",
+        "/campaign/lists",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
