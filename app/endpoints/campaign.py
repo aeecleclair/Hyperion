@@ -41,18 +41,17 @@ async def add_section(
 
     **This endpoint is only usable by administrators**
     """
-    db_section = schemas_campaign.SectionComplete(
-        id=str(uuid.uuid4()), **section.dict()
-    )
     try:
-        await cruds_campaign.add_section(section=db_section, db=db)
+        await cruds_campaign.add_section(section=section, db=db)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
 
-@router.delete("/campaign/sections/{section_id}", status_code=204, tags=[Tags.campaign])
+@router.delete(
+    "/campaign/sections/{section_name}", status_code=204, tags=[Tags.campaign]
+)
 async def delete_section(
-    section_id: str,
+    section_name: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
@@ -62,33 +61,43 @@ async def delete_section(
     **This endpoint is only usable by administrators**
     """
     try:
-        await cruds_campaign.delete_section(section_id=section_id, db=db)
+        await cruds_campaign.delete_section(section_name=section_name, db=db)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
 
 @router.get(
-    "/campaign/{sections_name}/lists",
-    response_model=None,
+    "/campaign/sections/{section_name}/lists",
+    response_model=list[schemas_campaign.ListBase],
     status_code=200,
     tags=[Tags.campaign],
 )
-async def get_lists_of_section(
+async def get_lists_from_section(
     section_name: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    return ""
+    """
+    Return lists for the given section.
+    """
+    lists = await cruds_campaign.get_lists_from_section(
+        section_name=section_name, db=db
+    )
+    return lists
 
 
 @router.get(
-    "/campaign/lists", response_model=None, status_code=200, tags=[Tags.campaign]
+    "/campaign/lists",
+    response_model=list[schemas_campaign.ListBase],
+    status_code=200,
+    tags=[Tags.campaign],
 )
 async def get_lists(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    return ""
+    lists = await cruds_campaign.get_lists(db=db)
+    return lists
 
 
 @router.post("/campaign/lists", status_code=201, tags=[Tags.campaign])
