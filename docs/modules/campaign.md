@@ -9,4 +9,4 @@ L'administrateur à la possibilité d'ouvrir et fermer le vote manuellement, et 
 
 Les votes ont lieu sur une journée. Un votant choisis pour chaque sections une liste parmis celle présenté. Il ne peut voter qu'une fois. Le vote étant anonyme, le serveur ne garde pas de trace.
 
-Il y a deux types de listes : listes pipos et listes serios; un vote blanc est également proposé. Le vote s'organise en deux tours, seules les deux premières listes serios de chaques sections sont autorisées à participer au deuxième tour. L'administrateur peut supprimer les listes éliminées.
+Il y a deux types de listes : listes pipos et listes serios; une vote blnc est également proposée. Le vote s'organise en deux tours, seules les deux premières listes serios de chaques sections sont autorisées à participer au deuxième tour. L'administrateur peut supprimer les listes éliminées.

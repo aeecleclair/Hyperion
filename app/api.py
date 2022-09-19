@@ -14,6 +14,7 @@ from app.endpoints import (
     groups,
     loans,
     users,
+    campaign,
 )
 
 api_router = APIRouter()
@@ -28,3 +29,4 @@ api_router.include_router(groups.router)
 api_router.include_router(core.router)
 api_router.include_router(users.router)
 api_router.include_router(loans.router)
+api_router.include_router(campaign.router)
