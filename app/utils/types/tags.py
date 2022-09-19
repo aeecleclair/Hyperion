@@ -12,4 +12,4 @@ class Tags(str, Enum):
     amap = "AMAP"
     bdebooking = "BDEBooking"
     calendar = "Calendar"
-	campaign = "Campaign"
+    campaign = "Campaign"
