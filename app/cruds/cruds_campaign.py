@@ -13,9 +13,7 @@ async def get_sections(db: AsyncSession) -> list[models_campaign.Sections]:
     return result.scalars().all()
 
 
-async def add_section(
-    db: AsyncSession, section: schemas_campaign.SectionComplete
-) -> None:
+async def add_section(db: AsyncSession, section: schemas_campaign.SectionBase) -> None:
     db_section = models_campaign.Sections(**section.dict())
     db.add(db_section)
     try:
@@ -25,10 +23,28 @@ async def add_section(
         raise ValueError("This name is already used")
 
 
-async def delete_section(db: AsyncSession, section_id: str) -> None:
+async def delete_section(db: AsyncSession, section_name: str) -> None:
     await db.execute(
         delete(models_campaign.Sections).where(
-            models_campaign.Sections.id == section_id
+            models_campaign.Sections.name == section_name
         )
     )
     await db.commit()
+
+
+async def get_lists_from_section(
+    db: AsyncSession, section_name: str
+) -> list[models_campaign.Lists]:
+    result = await db.execute(
+        select(models_campaign.Lists).where(
+            models_campaign.Lists.section_name == section_name
+        )
+    )
+    lists = result.scalars().all()
+    return lists
+
+
+async def get_lists(db: AsyncSession) -> list[models_campaign.Lists]:
+    result = await db.execute(select(models_campaign.Lists))
+    lists = result.scalars().all()
+    return lists
