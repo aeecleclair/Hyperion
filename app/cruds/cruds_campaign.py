@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,3 +23,12 @@ async def add_section(
     except IntegrityError:
         await db.rollback()
         raise ValueError("This name is already used")
+
+
+async def delete_section(db: AsyncSession, section_id: str) -> None:
+    await db.execute(
+        delete(models_campaign.Sections).where(
+            models_campaign.Sections.id == section_id
+        )
+    )
+    await db.commit()
