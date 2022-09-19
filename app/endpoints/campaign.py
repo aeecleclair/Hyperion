@@ -23,6 +23,9 @@ async def get_sections(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Return sections in the database as a list of `schemas_campaign.SectionBase`
+    """
     sections = await cruds_campaign.get_sections(db)
     return sections
 
@@ -33,6 +36,11 @@ async def add_section(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
+    """
+    Allow an admin to add a section of AEECL to the database.
+
+    **This endpoint is only usable by administrators**
+    """
     db_section = schemas_campaign.SectionComplete(
         id=str(uuid.uuid4()), **section.dict()
     )
@@ -42,13 +50,21 @@ async def add_section(
         raise HTTPException(status_code=422, detail=str(error))
 
 
-@router.delete("/campaign/sections", status_code=204, tags=[Tags.campaign])
+@router.delete("/campaign/sections/{section_id}", status_code=204, tags=[Tags.campaign])
 async def delete_section(
     section_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
-    return ""
+    """
+    Allow an admin to delete a section of AEECL from the database.
+
+    **This endpoint is only usable by administrators**
+    """
+    try:
+        await cruds_campaign.delete_section(section_id=section_id, db=db)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))
 
 
 @router.get(
