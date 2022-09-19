@@ -12,5 +12,12 @@ class SectionBase(BaseModel):
         orm_mode = True
 
 
-class SectionComplete(SectionBase):
-    id: str
+class ListBase(BaseModel):
+    """Base schema for a list."""
+
+    name: str
+    description: str
+    logo_path: str
+
+    class Config:
+        orm_mode = True

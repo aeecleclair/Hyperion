@@ -6,8 +6,7 @@ from app.database import Base
 class Sections(Base):
     __tablename__ = "campaign_sections"
 
-    id: str = Column(String, primary_key=True)
-    name: str = Column(String, unique=True)
+    name: str = Column(String, primary_key=True)
     description: str = Column(String)
     logo_path: str = Column(String, nullable=False)
 
@@ -18,7 +17,7 @@ class Lists(Base):
     id: str = Column(String, primary_key=True)
     name: str = Column(String, unique=True)
     description: str = Column(String)
-    section_id: str = Column(ForeignKey("campaign_sections.id"))
+    section_name: str = Column(ForeignKey("campaign_sections.name"))
     type: str = Column(String, nullable=False)
     logo_path: str = Column(String, nullable=False)
     picture_path: str = Column(String)
