@@ -10,3 +10,7 @@ class SectionBase(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class SectionComplete(SectionBase):
+    id: str

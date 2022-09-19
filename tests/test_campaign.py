@@ -23,9 +23,23 @@ async def startuptest():
         await db.commit()
 
 
-def test_get_get_sections():
+def test_get_sections():
     token = create_api_access_token(student_user)
     response = client.get(
         "/campaign/sections", headers={"Authorization": f"Bearer {token}"}
     )
     assert response.status_code == 200
+
+
+def test_add_sections():
+    token = create_api_access_token(admin_user)
+    response = client.post(
+        "/campaign/sections",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "name": "ECLAIR",
+            "description": "Association Informatique",
+            "logo_path": "src",
+        },
+    )
+    assert response.status_code == 201
