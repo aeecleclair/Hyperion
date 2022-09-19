@@ -30,7 +30,6 @@ async def startuptest():
 
     async with TestingSessionLocal() as db:
         section = models_campaign.Sections(
-            id=str(uuid.uuid4()),
             name="BDE",
             description="Bureau Des Eleves",
             logo_path=".png",
@@ -64,6 +63,25 @@ def test_add_sections():
 def test_delete_section():
     token = create_api_access_token(admin_user)
     response = client.delete(
-        f"/campaign/sections/{section.id}", headers={"Authorization": f"Bearer {token}"}
+        f"/campaign/sections/{section.name}",
+        headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 204
+
+
+def test_get_lists_from_section():
+    token = create_api_access_token(student_user)
+    response = client.get(
+        f"/campaign/sections/{section.name}/lists",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+
+
+def test_get_lists():
+    token = create_api_access_token(student_user)
+    response = client.get(
+        f"/campaign/lists",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
