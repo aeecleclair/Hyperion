@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends
+import uuid
+
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cruds import cruds_campaign
@@ -27,11 +29,17 @@ async def get_sections(
 
 @router.post("/campaign/sections", status_code=201, tags=[Tags.campaign])
 async def add_section(
-    section: None,
+    section: schemas_campaign.SectionBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
-    return ""
+    db_section = schemas_campaign.SectionComplete(
+        id=str(uuid.uuid4()), **section.dict()
+    )
+    try:
+        await cruds_campaign.add_section(section=db_section, db=db)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))
 
 
 @router.delete("/campaign/sections", status_code=204, tags=[Tags.campaign])
