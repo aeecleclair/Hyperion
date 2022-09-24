@@ -4,11 +4,14 @@ import logging
 import logging.config
 import os
 import uuid
+from typing import Literal
 
+import redis
 from fastapi import FastAPI, Request, Response
 from sqlalchemy.exc import IntegrityError
 
 from app import api
+from app.core.config import Settings
 from app.core.log import LogConfig
 from app.database import Base, SessionLocal, engine
 from app.dependencies import get_redis_client, get_settings
@@ -49,10 +52,10 @@ async def logging_middleware(
     else:
         client_address = "unknown"
 
-    settings = app.dependency_overrides.get(get_settings, get_settings)()
-    redis_client = app.dependency_overrides.get(get_redis_client, get_redis_client)(
-        settings=settings
-    )
+    settings: Settings = app.dependency_overrides.get(get_settings, get_settings)()
+    redis_client: redis.Redis | Literal[False] | None = app.dependency_overrides.get(
+        get_redis_client, get_redis_client
+    )(settings=settings)
 
     # We test the ip adress with the redis limiter
     process = True
@@ -79,7 +82,7 @@ async def logging_middleware(
 @app.on_event("startup")
 async def startup():
     # We reproduce FastAPI logic to access settings. See https://github.com/tiangolo/fastapi/issues/425#issuecomment-954963966
-    settings = app.dependency_overrides.get(get_settings, get_settings)()
+    settings: Settings = app.dependency_overrides.get(get_settings, get_settings)()
 
     # Initialize loggers
     LogConfig().initialize_loggers(settings=settings)

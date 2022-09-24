@@ -30,21 +30,30 @@ from app.utils.types.scopes_type import ScopeType
 
 # We could maybe use hyperion.security
 hyperion_access_logger = logging.getLogger("hyperion.access")
+hyperion_error_logger = logging.getLogger("hyperion.error")
 
-redis_client = None  # Create a global variable for the redis client, so that it can be instancied in the startup and shutdown events
+redis_client: redis.Redis | bool | None = None  # Create a global variable for the redis client, so that it can be instancied in the startup and shutdown events
 # Is None if the redis client is not instancied, is False if the redis client is instancied but not connected, is a redis.Redis object if the redis client is connected
 
 
 def get_redis_client(
-    settings=None,
-) -> redis.Redis | None | bool:  # settings can be None if the redis client is already instancied, so that we don't need to pass the settings to the function
+    settings: Settings | None = None,
+) -> redis.Redis | None | bool:
     """
     Dependency that return the redis client
+
+    Settings can be None if the redis client is already instanced, so that we don't need to pass the settings to the function.
+    Is None if the redis client is not instancied, is False if the redis client is instancied but not connected, is a redis.Redis object if the redis client is connected
     """
     global redis_client
     if redis_client is None and settings is not None:
         if settings.REDIS_HOST != "":
-            redis_client = connect(settings)
+            try:
+                redis_client = connect(settings)
+            except redis.exceptions.ConnectionError:
+                hyperion_error_logger.warning(
+                    "Redis connection error: Check the Redis configuration  or the Redis server"
+                )
     return redis_client
 
 
