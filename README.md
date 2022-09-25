@@ -89,3 +89,24 @@ pip install -r requirements.txt
 ```bash
 uvicorn app.main:app --reload
 ```
+
+## Complete the dotenv (`.env`)
+
+> Hyperion settings are documented in [app/core/config.py](./app/core/config.py).
+> Check this file to know what can and should be set using the dotenv.
+
+`ACCESS_TOKEN_SECRET_KEY`
+
+```python
+from app.core.security import generate_token
+generate_token(64)
+```
+
+`RSA_PRIVATE_PEM_STRING`
+
+```bash
+# Generate a 2048 bits long PEM certificate and replace newlines by `\n`
+openssl req -newkey rsa:2048 -nodes -x509 -days 365 | sed 's/$/\\n/g' | tr -d '\n'
+# If you only want to generate a PEM certificate and save it in a file, th following command may be used
+# openssl req -newkey rsa:2048 -nodes -keyout key.pem -x509 -days 365 -out certificate.pem
+```

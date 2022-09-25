@@ -7,7 +7,11 @@ import uuid
 from typing import Literal
 
 import redis
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request, Response, status
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError
 
 from app import api
@@ -25,6 +29,19 @@ app = FastAPI()
 hyperion_access_logger = logging.getLogger("hyperion.access")
 hyperion_security_logger = logging.getLogger("hyperion.security")
 hyperion_error_logger = logging.getLogger("hyperion.error")
+
+# Unfortunately, FastAPI does not support using dependency in startup events.
+# We reproduce FastAPI logic to access settings. See https://github.com/tiangolo/fastapi/issues/425#issuecomment-954963966
+settings = app.dependency_overrides.get(get_settings, get_settings)()
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.middleware("http")
@@ -78,13 +95,23 @@ async def logging_middleware(
     return response
 
 
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    hyperion_error_logger.error(
+        f"Validation error: {exc.errors()} ({request.state.request_id})"
+    )
+
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content=jsonable_encoder({"detail": exc.errors(), "body": exc.body}),
+    )
+
+
 # Alembic should be used for any migration, this function can only create new tables and ensure that the necessary groups are available
 @app.on_event("startup")
 async def startup():
-    # We reproduce FastAPI logic to access settings. See https://github.com/tiangolo/fastapi/issues/425#issuecomment-954963966
-    settings: Settings = app.dependency_overrides.get(get_settings, get_settings)()
-
     # Initialize loggers
+
     LogConfig().initialize_loggers(settings=settings)
 
     if not app.dependency_overrides.get(get_redis_client, get_redis_client)(

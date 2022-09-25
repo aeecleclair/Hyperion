@@ -9,6 +9,7 @@ from app.endpoints import (
     auth,
     bdebooking,
     bdecalendar,
+    core,
     groups,
     users,
 )
@@ -21,4 +22,5 @@ api_router.include_router(auth.router)
 api_router.include_router(bdebooking.router)
 api_router.include_router(bdecalendar.router)
 api_router.include_router(groups.router)
+api_router.include_router(core.router)
 api_router.include_router(users.router)

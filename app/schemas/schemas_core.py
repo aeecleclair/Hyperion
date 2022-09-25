@@ -9,6 +9,14 @@ from app.utils.examples import examples_core
 from app.utils.types.groups_type import AccountType
 
 
+class CoreInformation(BaseModel):
+    """Information about Hyperion"""
+
+    ready: bool
+    version: str
+    minimal_titan_version: str
+
+
 class CoreUserBase(BaseModel):
     """Base schema for user's model"""
 

@@ -51,9 +51,11 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 
-def generate_token() -> str:
+def generate_token(nbytes=32) -> str:
     """
-    Generate a 32 bytes cryptographically strong random urlsafe token using the *secrets* library.
+    Generate a `nbytes` bytes cryptographically strong random urlsafe token using the *secrets* library.
+
+    By default the a 32 bytes token is generated.
     """
     # We use https://docs.python.org/3/library/secrets.html#secrets.token_urlsafe to generate the activation secret token
     return secrets.token_urlsafe(32)

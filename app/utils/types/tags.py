@@ -6,5 +6,6 @@ from enum import Enum
 class Tags(str, Enum):
     users = "Users"
     groups = "Groups"
+    core = "Core"
     auth = "Auth"
     amap = "AMAP"

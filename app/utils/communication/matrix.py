@@ -17,6 +17,10 @@ class Matrix:
         server_base_url: str | None = None,
     ):
         self.server = server_base_url or "https://matrix.org/"
+        # A trailing slash is required
+        if self.server[-1] != "/":
+            self.server += "/"
+
         self.access_token = self.login_for_access_token(user_name, user_password)
 
     def login_for_access_token(self, username: str, password: str) -> str:
