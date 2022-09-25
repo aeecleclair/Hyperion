@@ -3,6 +3,7 @@ import uuid
 from functools import lru_cache
 from typing import AsyncGenerator
 
+import redis
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
@@ -11,10 +12,11 @@ from app.core import security
 from app.core.config import Settings
 from app.cruds import cruds_groups, cruds_users
 from app.database import Base
-from app.dependencies import get_db, get_settings
+from app.dependencies import get_db, get_redis_client, get_settings
 from app.main import app
 from app.models import models_core
-from app.schemas import schemas_auth
+from app.schemas import schemas_auth, schemas_core
+from app.utils.redis import connect, disconnect
 from app.utils.types.groups_type import GroupType
 
 SQLALCHEMY_DATABASE_URL = (
@@ -44,8 +46,27 @@ def override_get_settings() -> Settings:
     return Settings(_env_file=".env.test")
 
 
+redis_client = None
+
+
+def override_get_redis_client(
+    settings=None, activate=False, deactivate=False
+) -> redis.Redis | None | bool:  # As we don't want the limiter to be activated, except during the disigned test, we add an "activate"/"deactivate" option
+    """Override the get_redis_client function to use the testing session"""
+    global redis_client
+    if activate:
+        if redis_client is None:
+            redis_client = connect(settings)
+    elif deactivate:
+        if type(redis_client) == redis.Redis:
+            disconnect(redis_client)
+        redis_client = None
+    return redis_client
+
+
 app.dependency_overrides[get_db] = override_get_db
 app.dependency_overrides[get_settings] = override_get_settings
+app.dependency_overrides[get_redis_client] = override_get_redis_client
 
 
 @app.on_event("startup")

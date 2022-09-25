@@ -39,10 +39,22 @@ class Settings(BaseSettings):
     # This configuration will be used to send errors messages.
     # If the following parameters are not set, logging won't use the Matrix handler
     # MATRIX_SERVER_BASE_URL is optional, the official Matrix server will be used if not configured
+    # Advanced note: Username and password will be used to ask for an access token. A Matrix custom client `Hyperion` is used to make all requests
     MATRIX_SERVER_BASE_URL: str | None
     MATRIX_USER_NAME: str | None
     MATRIX_USER_PASSWORD: str | None
     MATRIX_LOG_ERROR_ROOM_ID: str | None
+
+    ########################
+    # Redis configuration #
+    ########################
+    # Redis configuration is needed to use the rate limiter
+    # We use the default redis configuration, so the protected mode is enabled by default (see https://redis.io/docs/manual/security/#protected-mode)
+    # If you want to use a custom configuration, a password and a specific binds should be used to avoid security issues
+    REDIS_HOST: str
+    REDIS_PORT: int
+    REDIS_LIMIT: int
+    REDIS_WINDOW: int
 
     #####################
     # Hyperion settings #
@@ -50,6 +62,14 @@ class Settings(BaseSettings):
 
     # By default, only production's records are logged
     LOG_DEBUG_MESSAGES: bool | None
+    # Hyperion follows Semantic Versioning
+    # https://semver.org/
+    HYPERION_VERSION: str = "0.0.1"  # This value should never be modified by hand. See [Hyperion release] documentation
+    MINIMAL_TITAN_VERSION: str = "0.0.1"
+
+    # Origins for the CORS middleware. `["http://localhost"]` can be used for development.
+    # See https://fastapi.tiangolo.com/tutorial/cors/
+    CORS_ORIGINS: list[str]
 
     ###################
     # Tokens validity #
@@ -58,21 +78,23 @@ class Settings(BaseSettings):
     USER_ACTIVATION_TOKEN_EXPIRE_HOURS = 24
     PASSWORD_RESET_TOKEN_EXPIRE_HOURS = 12
     ACCESS_TOKEN_EXPIRE_MINUTES = 30
-    REFRESH_TOKEN_EXPIRE_MINUTES = 120
+    REFRESH_TOKEN_EXPIRE_MINUTES = 60 * 24 * 14  # 14 days
     AUTHORIZATION_CODE_EXPIRE_MINUTES = 7
 
     ###############################################
     # Authorization using OAuth or Openid connect #
     ###############################################
 
-    # ACCESS_TOKEN_SECRET_KEY should contain a random string with enough entropy to securely sign all access_tokens for OAuth and Openid connect
+    # ACCESS_TOKEN_SECRET_KEY should contain a random string with enough entropy (at least 32 bytes long) to securely sign all access_tokens for OAuth and Openid connect
     ACCESS_TOKEN_SECRET_KEY: str
     # RSA_PRIVATE_PEM_STRING should be a string containing the PEM certificate of a private RSA key. It will be used to sign id_tokens for Openid connect authentification
+    # In the pem certificates newlines can be replaced by `\n`
     RSA_PRIVATE_PEM_STRING: str
 
     # Host or url of the API, used for Openid connect discovery endpoint
     # NOTE: A trailing / is required
     CLIENT_URL = "http://127.0.0.1:8000/"
+    # TODO: remove
     DOCKER_URL = "http://host.docker.internal:8000/"  # During dev, docker container can not directly access the client url
 
     # Openid connect issuer name

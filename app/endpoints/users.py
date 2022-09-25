@@ -207,7 +207,6 @@ async def create_current_user_profile_picture(
     image.file.seek(0, os.SEEK_END)
     # Use file.tell() to retrieve the cursor's current position
     file_size = image.file.tell()  # Bytes
-    print(file_size)
     if file_size > 1024 * 1024 * 4:  # 4 MB
         raise HTTPException(
             status_code=413,
