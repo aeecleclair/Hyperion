@@ -15,7 +15,7 @@ from app.database import Base
 from app.dependencies import get_db, get_redis_client, get_settings
 from app.main import app
 from app.models import models_core
-from app.schemas import schemas_auth, schemas_core
+from app.schemas import schemas_auth
 from app.utils.redis import connect, disconnect
 from app.utils.types.groups_type import GroupType
 
