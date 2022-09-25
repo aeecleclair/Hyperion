@@ -184,3 +184,10 @@ class CoreMembership(BaseModel):
 
     user_id: str
     group_id: str
+    description: str | None = None
+
+
+class CoreMembershipDelete(BaseModel):
+
+    user_id: str
+    group_id: str

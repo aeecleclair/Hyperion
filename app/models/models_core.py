@@ -13,6 +13,9 @@ class CoreMembership(Base):
 
     user_id: str = Column(ForeignKey("core_user.id"), primary_key=True)
     group_id: str = Column(ForeignKey("core_group.id"), primary_key=True)
+    # A description can be added to the membership
+    # This can be used to note why an user is in a given group
+    description: str | None = Column(String)
 
 
 class CoreUser(Base):
