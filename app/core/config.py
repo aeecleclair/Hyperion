@@ -44,6 +44,17 @@ class Settings(BaseSettings):
     MATRIX_USER_PASSWORD: str | None
     MATRIX_LOG_ERROR_ROOM_ID: str | None
 
+    ########################
+    # Redis configuration #
+    ########################
+    # Redis configuration is needed to use the rate limiter
+    # We use the default redis configuration, so the protected mode is enabled by default (see https://redis.io/docs/manual/security/#protected-mode)
+    # If you want to use a custom configuration, a password and a specific binds should be used to avoid security issues
+    REDIS_HOST: str
+    REDIS_PORT: int
+    REDIS_LIMIT: int
+    REDIS_WINDOW: int
+
     #####################
     # Hyperion settings #
     #####################

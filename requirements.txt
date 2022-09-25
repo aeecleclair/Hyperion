@@ -8,3 +8,4 @@ python-multipart==0.0.5             # a form data parser, as oauth flow requires
 SQLAlchemy[asyncio, mypy]==1.4.40   # [asyncio] allows greenlet to be installed on Apple M1 devices. The my[py] plugin is required in devellopment but Dependabot fails to manage two versions of the same module.
 rapidfuzz                           # Fuzzy String Matching
 uvicorn[standard]==0.18.3
+redis==4.3.4
