@@ -108,154 +108,6 @@ async def read_current_user(
     return user
 
 
-@router.get(
-    "/users/{user_id}",
-    response_model=schemas_core.CoreUser,
-    status_code=200,
-    tags=[Tags.users],
-)
-async def read_user(
-    user_id: str,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
-):
-    """
-    Return `CoreUserSimple` representation of user with id `user_id`
-
-    **The user must be authenticated to use this endpoint**
-    """
-
-    db_user = await cruds_users.get_user_by_id(db=db, user_id=user_id)
-    if db_user is None:
-        raise HTTPException(status_code=404, detail="User not found")
-    return db_user
-
-
-# TODO: readd this after making sure all information about the user has been deleted
-# @router.delete(
-#    "/users/{user_id}",
-#    status_code=204,
-#    tags=[Tags.users],
-# )
-# async def delete_user(user_id: str, db: AsyncSession = Depends(get_db), user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin))):
-#    """Delete user from database by id"""
-#    # TODO: WARNING - deleting an user without removing its relations ship in other tables will have unexpected consequences
-#
-#    await cruds_users.delete_user(db=db, user_id=user_id)
-
-
-@router.patch(
-    "/users/me",
-    status_code=204,
-    tags=[Tags.users],
-)
-async def update_current_user(
-    user_update: schemas_core.CoreUserUpdate,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
-):
-    """
-    Update the current user, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value
-
-    **The user must be authenticated to use this endpoint**
-    """
-
-    await cruds_users.update_user(db=db, user_id=user.id, user_update=user_update)
-
-
-@router.patch(
-    "/users/{user_id}",
-    status_code=204,
-    tags=[Tags.users],
-)
-async def update_user(
-    user_id: str,
-    user_update: schemas_core.CoreUserUpdate,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
-):
-    """
-    Update an user, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value
-
-    **This endpoint is only usable by administrators**
-    """
-    db_user = await cruds_users.get_user_by_id(db=db, user_id=user_id)
-    if not db_user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    await cruds_users.update_user(db=db, user_id=user_id, user_update=user_update)
-
-
-@router.post(
-    "/users/me/profile-picture",
-    response_model=standard_responses.Result,
-    status_code=201,
-    tags=[Tags.users],
-)
-async def create_current_user_profile_picture(
-    image: UploadFile = File(...),
-    user: models_core.CoreUser = Depends(is_user_a_member),
-    request_id: str = Depends(get_request_id),
-):
-    """
-    Upload a profile picture for the current user.
-
-    **The user must be authenticated to use this endpoint**
-    """
-
-    if image.content_type not in ["image/jpeg", "image/png", "image/webp"]:
-        raise HTTPException(
-            status_code=400, detail="Invalid file format, supported jpeg, png and webp"
-        )
-
-    # We need to go to the end of the file to be able to get the size of the file
-    image.file.seek(0, os.SEEK_END)
-    # Use file.tell() to retrieve the cursor's current position
-    file_size = image.file.tell()  # Bytes
-    if file_size > 1024 * 1024 * 4:  # 4 MB
-        raise HTTPException(
-            status_code=413,
-            detail="File size is too big. Limit is 4 MB",
-        )
-    # We go back to the beginning of the file to save it on the disk
-    await image.seek(0)
-
-    try:
-        with open(f"data/profile-pictures/{user.id}.png", "wb") as buffer:
-            shutil.copyfileobj(image.file, buffer)
-
-    except Exception as error:
-        hyperion_error_logger.error(
-            f"Create_current_user_profile_picture: could not save profile picture: {error} ({request_id})"
-        )
-        raise HTTPException(status_code=422, detail="Could not save profile picture")
-
-    return standard_responses.Result(success=True)
-
-
-@router.get(
-    "/users/{user_id}/profile-picture/",
-    response_class=FileResponse,
-    status_code=200,
-    tags=[Tags.users],
-)
-async def read_user_profile_picture(
-    user_id: str,
-    # TODO: we may want to remove this user requirement to be able to display images easily in html code
-    user: models_core.CoreUser = Depends(is_user_a_member),
-):
-    """
-    Get the profile picture of an user.
-
-    **The user must be authenticated to use this endpoint**
-    """
-
-    if not exists(f"data/profile-pictures/{user_id}.png"):
-        return FileResponse("assets/images/default_profile_picture.png")
-
-    return FileResponse(f"data/profile-pictures/{user_id}.png")
-
-
 @router.post(
     "/users/create",
     response_model=standard_responses.Result,
@@ -673,3 +525,163 @@ async def change_password(
     )
 
     return standard_responses.Result()
+
+
+# We put the following endpoints at the end of the file to prevent them
+# from interacting with the previous endpoints
+# Ex: /users/activate is interpreted as a user whose id is "activate"
+
+
+@router.get(
+    "/users/{user_id}",
+    response_model=schemas_core.CoreUser,
+    status_code=200,
+    tags=[Tags.users],
+)
+async def read_user(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Return `CoreUserSimple` representation of user with id `user_id`
+
+    **The user must be authenticated to use this endpoint**
+    """
+
+    db_user = await cruds_users.get_user_by_id(db=db, user_id=user_id)
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return db_user
+
+
+# TODO: readd this after making sure all information about the user has been deleted
+# @router.delete(
+#    "/users/{user_id}",
+#    status_code=204,
+#    tags=[Tags.users],
+# )
+# async def delete_user(user_id: str, db: AsyncSession = Depends(get_db), user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin))):
+#    """Delete user from database by id"""
+#    # TODO: WARNING - deleting an user without removing its relations ship in other tables will have unexpected consequences
+#
+#    await cruds_users.delete_user(db=db, user_id=user_id)
+
+
+@router.patch(
+    "/users/me",
+    response_model=schemas_core.CoreUser,
+    status_code=200,
+    tags=[Tags.users],
+)
+async def update_current_user(
+    user_update: schemas_core.CoreUserUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Update the current user, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value
+
+    **The user must be authenticated to use this endpoint**
+    """
+
+    await cruds_users.update_user(db=db, user_id=user.id, user_update=user_update)
+
+    return user
+
+
+@router.patch(
+    "/users/{user_id}",
+    response_model=schemas_core.CoreUser,
+    status_code=200,
+    tags=[Tags.users],
+)
+async def update_user(
+    user_id: str,
+    user_update: schemas_core.CoreUserUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Update an user, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value
+
+    **This endpoint is only usable by administrators**
+    """
+    db_user = await cruds_users.get_user_by_id(db=db, user_id=user_id)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    await cruds_users.update_user(db=db, user_id=user_id, user_update=user_update)
+
+    return db_user
+
+
+@router.post(
+    "/users/me/profile-picture",
+    response_model=standard_responses.Result,
+    status_code=201,
+    tags=[Tags.users],
+)
+async def create_current_user_profile_picture(
+    image: UploadFile = File(...),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+    request_id: str = Depends(get_request_id),
+):
+    """
+    Upload a profile picture for the current user.
+
+    **The user must be authenticated to use this endpoint**
+    """
+
+    if image.content_type not in ["image/jpeg", "image/png", "image/webp"]:
+        raise HTTPException(
+            status_code=400, detail="Invalid file format, supported jpeg, png and webp"
+        )
+
+    # We need to go to the end of the file to be able to get the size of the file
+    image.file.seek(0, os.SEEK_END)
+    # Use file.tell() to retrieve the cursor's current position
+    file_size = image.file.tell()  # Bytes
+    print(file_size)
+    if file_size > 1024 * 1024 * 4:  # 4 MB
+        raise HTTPException(
+            status_code=413,
+            detail="File size is too big. Limit is 4 MB",
+        )
+    # We go back to the beginning of the file to save it on the disk
+    await image.seek(0)
+
+    try:
+        with open(f"data/profile-pictures/{user.id}.png", "wb") as buffer:
+            shutil.copyfileobj(image.file, buffer)
+
+    except Exception as error:
+        hyperion_error_logger.error(
+            f"Create_current_user_profile_picture: could not save profile picture: {error} ({request_id})"
+        )
+        raise HTTPException(status_code=422, detail="Could not save profile picture")
+
+    return standard_responses.Result(success=True)
+
+
+@router.get(
+    "/users/{user_id}/profile-picture/",
+    response_class=FileResponse,
+    status_code=200,
+    tags=[Tags.users],
+)
+async def read_user_profile_picture(
+    user_id: str,
+    # TODO: we may want to remove this user requirement to be able to display images easily in html code
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Get the profile picture of an user.
+
+    **The user must be authenticated to use this endpoint**
+    """
+
+    if not exists(f"data/profile-pictures/{user_id}.png"):
+        return FileResponse("assets/images/default_profile_picture.png")
+
+    return FileResponse(f"data/profile-pictures/{user_id}.png")
