@@ -1,11 +1,23 @@
 from rapidfuzz import process
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.cruds import cruds_groups, cruds_users
 from app.models import models_core
 from app.models.models_core import CoreUser
 from app.utils.types.groups_type import GroupType
 
 
-def is_user_member_of_an_allowed_group(user: CoreUser, allowed_groups: list[GroupType]):
+def is_user_member_of_an_allowed_group(
+    user: CoreUser,
+    allowed_groups: list[GroupType] | list[str],
+) -> bool:
+    """
+    Test if the provided user is a member of at least one group from `allowed_groups`.
+
+    When required groups can only be determined on runtime a list of strings (group UUIDs) can be provided.
+    This may be useful for modules that can be used multiple times like loans module.
+    NOTE: if the provided string does not match a valid group, the function will return False
+    """
     # We can not directly test is group_id is in user.groups
     # As user.groups is a list of CoreGroup and group_id is an UUID
     for allowed_group in allowed_groups:
@@ -45,3 +57,22 @@ def fuzzy_search_user(
 
     # results has the format : (string used for the comparison, similarity score, object)
     return [res[2] for res in results]
+
+
+async def is_group_id_valid(group_id: str, db: AsyncSession) -> bool:
+    """
+    Test if the provided group_id is a valid group.
+
+    The group may be
+     - an account type
+     - a group type
+     - a group created on runtime and stored in the database
+    """
+    return await cruds_groups.get_group_by_id(db=db, group_id=group_id) is not None
+
+
+async def is_user_id_valid(user_id: str, db: AsyncSession) -> bool:
+    """
+    Test if the provided user_id is a valid user.
+    """
+    return await cruds_users.get_user_by_id(db=db, user_id=user_id) is not None

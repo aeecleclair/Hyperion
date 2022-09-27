@@ -11,6 +11,7 @@ from app.endpoints import (
     bdecalendar,
     core,
     groups,
+    loans,
     users,
 )
 
@@ -24,3 +25,4 @@ api_router.include_router(bdecalendar.router)
 api_router.include_router(groups.router)
 api_router.include_router(core.router)
 api_router.include_router(users.router)
+api_router.include_router(loans.router)
