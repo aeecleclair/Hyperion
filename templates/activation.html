@@ -27,11 +27,9 @@
                 <h1 class="text-2xl xl:text-3xl font-extrabold">
                     Activate your account
                 </h1>
-                <div class="w-full flex-1 mt-8">
+                <div class="w-full flex-1 mt-8" id="page-content">
 
-
-
-                    <form class="mx-auto max-w-xs">
+                    <form class="mx-auto max-w-xs" id="form">
 
                         <label for="email" class="font-medium pb-1">Email</label>
                         <input
@@ -42,52 +40,45 @@
                         <input
                             class="w-full px-8 py-4 rounded-lg font-medium bg-gray-100 border border-gray-200 placeholder-gray-500 text-sm focus:outline-none focus:border-gray-400 focus:bg-white mb-5"
                             id="password" name="password" type="password" placeholder="Password" />
+                        <p style="font-size: 0.75rem; line-height: 1rem;"
+                            class="font-xs text-right text-red-700 font-medium" id="password-hint-length"
+                            visibility="hidden">The password should be at least 7 characters
+                            long</p>
+                        <p style="font-size: 0.75rem; line-height: 1rem;"
+                            class="font-xs text-right text-red-700 font-medium" id="password-hint-letter"
+                            visibility="hidden">The password should contains a letter</p>
+                        <p style="font-size: 0.75rem; line-height: 1rem;"
+                            class="font-xs text-right text-red-700 font-medium" id="password-hint-digit"
+                            visibility="hidden">The password should contains a digit</p>
+                        <p style="font-size: 0.75rem; line-height: 1rem;"
+                            class="font-xs text-right text-red-700 font-medium" id="password-hint-specialcharacter"
+                            visibility="hidden">The password should contains a
+                            special character</p>
+                        <p style="font-size: 0.75rem; line-height: 1rem;" class="font-xs text-right font-medium mb-5"
+                            visibility="hidden">
+                            How can I choose a good
+                            password ?</p>
 
                         {% for name, type in [("Name", "text"), ("Firstname", "text"), ("Nickname", "text"),
-                        ("Phone", "text"), ("Birthday", "date"), ("Promo", "text"), ("Floor", "text")] %}
+                        ("Phone", "text"), ("Birthday", "date"), ("Floor", "text")] %}
                         <label for="{{ name }}" class="font-medium pb-1">{{ name }}</label>
                         <input
-                            class="w-full px-8 py-4 rounded-lg font-medium bg-gray-100 border border-gray-200 placeholder-gray-500 text-sm focus:outline-none focus:border-gray-400 focus:bg-white mb-5"
-                            id="{{ name }}" name="{{ name }}" type="{{ type }}" placeholder="{{ name }}" />
+                            class="w-full px-8 py-4 rounded-lg font-medium bg-gray-100 border border-gray-200 placeholder-gray-500 text-sm focus:outline-none focus:border-gray-400 focus:bg-white"
+                            id="{{ name }}" name="{{ name }}" type="{{ type }}" placeholder="{{ name }}" required />
+                        <p style="font-size: 0.75rem; line-height: 1rem;"
+                            class="font-xs text-right text-red-700 font-medium mb-5" id="{{ name }}-hint">The field
+                            is required</p>
                         {% endfor %}
 
-
-                        <label for="name" class="font-medium pb-1">Birthday</label>
+                        <label for="Promo" class="font-medium pb-1">Promo</label>
                         <input
-                            class="w-full px-8 py-4 rounded-lg font-medium bg-gray-100 border border-gray-200 placeholder-gray-500 text-sm focus:outline-none focus:border-gray-400 focus:bg-white mb-5"
-                            id="name" name="name" type="date" placeholder="Birthday" />
+                            class="w-full px-8 py-4 rounded-lg font-medium bg-gray-100 border border-gray-200 placeholder-gray-500 text-sm focus:outline-none focus:border-gray-400 focus:bg-white"
+                            id="Promo" name="Promo" type="number" placeholder="22" required />
+                        <p style="font-size: 0.75rem; line-height: 1rem;"
+                            class="font-xs text-right text-red-700 font-medium mb-5" id="Promo-hint">The field
+                            should be a number</p>
 
-                        <label for="birthday" class="font-medium pb-1">Birthday</label>
-                        <input
-                            class="w-full px-8 py-4 rounded-lg font-medium bg-gray-100 border border-gray-200 placeholder-gray-500 text-sm focus:outline-none focus:border-gray-400 focus:bg-white mb-5"
-                            id="birthday" name="birthday" type="date" placeholder="Birthday" />
-                        <label for="birthday" class="font-medium pb-1">Birthday</label>
-                        <input
-                            class="w-full px-8 py-4 rounded-lg font-medium bg-gray-100 border border-gray-200 placeholder-gray-500 text-sm focus:outline-none focus:border-gray-400 focus:bg-white mb-5"
-                            id="birthday" name="birthday" type="date" placeholder="Birthday" />
-
-
-                        <label for="birthday" class="font-medium pb-1">Birthday</label>
-                        <input
-                            class="w-full px-8 py-4 rounded-lg font-medium bg-gray-100 border border-gray-200 placeholder-gray-500 text-sm focus:outline-none focus:border-gray-400 focus:bg-white mb-5"
-                            id="birthday" name="birthday" type="date" placeholder="Birthday" />
-
-                        <label for="phone" class="font-medium pb-1">Phone number</label>
-                        <input
-                            class="w-full px-8 py-4 rounded-lg font-medium bg-gray-100 border border-gray-200 placeholder-gray-500 text-sm focus:outline-none focus:border-gray-400 focus:bg-white mb-5"
-                            id="phone" name="phone" type="tel" placeholder="Phone Number" />
-
-                        <label for="promo" class="font-medium pb-1">Promo</label>
-                        <input
-                            class="w-full px-8 py-4 rounded-lg font-medium bg-gray-100 border border-gray-200 placeholder-gray-500 text-sm focus:outline-none focus:border-gray-400 focus:bg-white mb-5"
-                            id="promo" name="promo" type="text" placeholder="Promo" />
-
-                        <label for="floor" class="font-medium pb-1">Floor</label>
-                        <input
-                            class="w-full px-8 py-4 rounded-lg font-medium bg-gray-100 border border-gray-200 placeholder-gray-500 text-sm focus:outline-none focus:border-gray-400 focus:bg-white mb-5"
-                            id="floor" name="floor" type="text" placeholder="Floor" />
-
-
+                        <span id="info"></span>
                         <button type="submit"
                             class="mt-5 tracking-wide font-semibold bg-indigo-500 text-gray-100 w-full py-4 rounded-lg hover:bg-indigo-700 transition-all duration-300 ease-in-out flex items-center justify-center focus:shadow-outline focus:outline-none">
                             <svg class="w-6 h-6 -ml-2" fill="none" stroke="currentColor" stroke-width="2"
@@ -122,70 +113,164 @@
     </div>
 
     <script>
+        const password = document.getElementById("password");
 
-        async function handleSubmit(event) {
+        const password_hint_length = document.getElementById("password-hint-length");
+        const password_hint_letter = document.getElementById("password-hint-letter");
+        const password_hint_digit = document.getElementById("password-hint-digit");
+        const password_hint_specialcharacter = document.getElementById("password-hint-specialcharacter");
+
+        function passwordValidator() {
+            is_password_valid = true
+            if (password.value.length > 6) {
+                password_hint_length.style.color = "green"
+            } else {
+                password_hint_length.style.color = "red"
+                is_password_valid = false
+            }
+            if (/[a-zA-Z]/.test(password.value)) {
+                password_hint_letter.style.color = "green"
+            } else {
+                password_hint_letter.style.color = "red"
+                is_password_valid = false
+            }
+            if (/\d/.test(password.value)) {
+                password_hint_digit.style.color = "green"
+            } else {
+                password_hint_digit.style.color = "red"
+                is_password_valid = false
+            }
+            if (/[`!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~]/.test(password.value)) {
+                password_hint_specialcharacter.style.color = "green"
+            } else {
+                password_hint_specialcharacter.style.color = "red"
+                is_password_valid = false
+            }
+            return is_password_valid
+        }
+
+        password.addEventListener("input", (event) => {
+            // Each time the user types something, we check if the password is valid.
+            passwordValidator()
+        });
+
+        function handleSubmit(event) {
             event.preventDefault();
+
+            if (!passwordValidator() || !fieldValidator()) {
+                return
+            }
 
             const data = {
                 "email": document.getElementById("email").value,
                 "password": document.getElementById("password").value,
-                "birthday": document.getElementById("birthday").value,
-                "phone": document.getElementById("phone").value,
-                "promo": document.getElementById("promo").value,
-                "floor": document.getElementById("floor").value,
+                "name": document.getElementById("Name").value,
+                "firstname": document.getElementById("Firstname").value,
+                "surname": document.getElementById("Nickname").value,
+                "birthday": document.getElementById("Birthday").value,
+                "phone": document.getElementById("Phone").value,
+                "promo": document.getElementById("Promo").value,
+                "floor": document.getElementById("Floor").value,
+                "activation_token": "{{ activation_token }}",
             }
+
 
             console.log({ data });
 
-            const response = await fetch("/users/activate", {
+            fetch("/users/activate", {
                 method: 'POST', // *GET, POST, PUT, DELETE, etc.
                 cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(data) // body data type must match "Content-Type" header
-            });
-            console.log(response)
+            })
+                .then(response => response.json())
+                .then(response => {
 
-            return response.json(); // parses JSON response into native JavaScript objects
+                    console.log("response", response)
 
+                    //json = JSON.stringify(response)
+                    json = response
 
+                    console.log("json", json)
+                    console.log("status", json.status)
+
+                    if (json.success === true) {
+                        console.log("Success")
+                        document.getElementById("page-content").innerHTML = "<h1>Account Successfully created</h1>"
+                    } else {
+                        console.log("Failure", json.status)
+                        document.getElementById("info").innerHTML = "<p>Account creation failed</p><p>Reason: " + json.status + " - " + json.statusText + "</p>"
+                    }
+                })
         }
 
+        const identifiers = ["Name", "Firstname", "Nickname", "Phone", "Birthday", "Floor"]
+
+        function fieldValidator() {
+            is_valid = true
+            for (const identifier of identifiers) {
+
+                const input = document.getElementById(identifier);
+
+                const input_hint = document.getElementById(identifier + "-hint");
+
+                if (input.value.length > 0) {
+                    input_hint.style.color = "green"
+                } else {
+                    input_hint.style.color = "red"
+                    is_valid = false
+                }
+            }
+            return is_valid
+        }
+        const promo_input = document.getElementById("Promo");
+        function promoValidator() {
+            is_valid = true
 
 
-        const form = document.querySelector('form');
+
+            const input_hint = document.getElementById("Promo-hint");
+
+            if (!isNaN(promo_input.value.length) && promo_input.value.length > 0) {
+                input_hint.style.color = "green"
+            } else {
+                input_hint.style.color = "red"
+                is_valid = false
+            }
+
+            return is_valid
+        }
+
+        promo_input.addEventListener("input", (event) => {
+            // Each time the user types something, we check if the password is valid.
+            promoValidator()
+        })
+
+
+
+        for (const identifier of identifiers) {
+
+            const input = document.getElementById(identifier);
+
+            const input_hint = document.getElementById(identifier + "-hint");
+
+
+            input.addEventListener("input", (event) => {
+                // Each time the user types something, we check if the password is valid.
+                is_valid = true
+                if (input.value.length > 0) {
+                    input_hint.style.color = "green"
+                } else {
+                    input_hint.style.color = "red"
+                    is_valid = false
+                }
+            })
+        }
+
+        const form = document.getElementById('form');
         form.addEventListener('submit', handleSubmit);
-
-        console.log({ form });
-        /*
-        $(document).ready(function () {
-            $("form").submit(function (event) {
-                var formData = {
-                    activation_token: "{{ activation_token }}",
-                    email: $("email").val(),
-                    password: $("password").val(),
-                    birthday: $("birthday").val(),
-                    phone: $("phone").val(),
-                    promo: $("promo").val(),
-                    floor: $("floor").val(),
-                };
-
-                $.ajax({
-                    type: "POST",
-                    url: "process.php",
-                    data: formData,
-                    dataType: "json",
-                    encode: true,
-                }).done(function (data) {
-                    console.log(data);
-                });
-
-                event.preventDefault();
-            });
-
-        });
-        */
 
     </script>
 

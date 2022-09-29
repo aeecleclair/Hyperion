@@ -13,9 +13,11 @@ from fastapi import (
     Depends,
     File,
     HTTPException,
+    Request,
     UploadFile,
 )
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import security
@@ -40,6 +42,8 @@ router = APIRouter()
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 hyperion_security_logger = logging.getLogger("hyperion.security")
+
+templates = Jinja2Templates(directory="templates")
 
 
 @router.get(
@@ -288,6 +292,56 @@ async def create_user(
         )
     hyperion_security_logger.info(
         f"Create_user: Creating an unconfirmed account for {email} with token {activation_token} ({request_id})"
+    )
+
+
+@router.get(
+    "/users/activate",
+    response_class=HTMLResponse,
+    status_code=201,
+    tags=[Tags.users],
+)
+async def get_user_activation_page(
+    # request need to be passed to Jinja2 to generate the HTML page
+    request: Request,
+    activation_token: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Return a HTML page to activate an account. The activation token is passed as a query string.
+
+    **This endpoint is an UI endpoint which send and html page response.
+    """
+    print("Hello")
+
+    unconfirmed_user = await cruds_users.get_unconfirmed_user_by_activation_token(
+        db=db, activation_token=activation_token
+    )
+    if unconfirmed_user is None:
+        return templates.TemplateResponse(
+            "error.html",
+            {
+                "request": request,
+                "message": "The activation token is invalid",
+            },
+        )
+    if unconfirmed_user.expire_on < datetime.now():
+        return templates.TemplateResponse(
+            "error.html",
+            {
+                "request": request,
+                "message": "The activation token has expired",
+            },
+        )
+
+    return templates.TemplateResponse(
+        "activation.html",
+        {
+            "request": request,
+            "activation_token": activation_token,
+            "user_email": unconfirmed_user.email,
+            "has_password": unconfirmed_user.password_hash is not None,
+        },
     )
 
 
