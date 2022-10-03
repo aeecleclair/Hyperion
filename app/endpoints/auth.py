@@ -572,9 +572,16 @@ async def authorization_code_grant(  # noqa: C901 # The function is too complex 
                 },
             )
         # We need to verify the hash correspond
+        # The hash is a H256, urlbase64 encoded
+        # If the last character is not a "=", we need to add it, as the = is optional for urlbase64 encoding
+        code_challenge = db_authorization_code.code_challenge
+        if code_challenge[-1] != "=":
+            code_challenge += "="
         if (
-            db_authorization_code.code_challenge
-            != hashlib.sha256(tokenreq.code_verifier.encode()).hexdigest()
+            code_challenge.encode()
+            != base64.urlsafe_b64encode(
+                hashlib.sha256(tokenreq.code_verifier.encode()).digest()
+            )
             # We need to pass the code_verifier as a b-string, we use `code_verifier.encode()` for that
             # TODO: Make sure that `.hexdigest()` is applied by the client to code_challenge
         ):
