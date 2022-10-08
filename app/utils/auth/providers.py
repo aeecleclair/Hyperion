@@ -23,11 +23,11 @@ class BaseAuthClient:
     # See app.utils.types.scopes_type.ScopeType for possible values
     # WARNING: to be able to use openid connect, `ScopeType.openid` should always be allowed
     allowed_scopes: Set[ScopeType] = {ScopeType.openid}
-    # Restrict the authentification to this client to specifics Hyperion groups.
+    # Restrict the authentication to this client to specific Hyperion groups.
     # When set to `None`, users from any group can use the auth client
     allowed_groups: list[GroupType] | None = None
     # Sometimes, when the client is wrongly configured, it may return an incorrect return_uri. This may also be useful for debugging clients.
-    # `override_redirect_uri` allows to bypass all redirect_uri verifications and override the returned redirect_uri.
+    # `override_redirect_uri` allows bypassing all redirect_uri verifications and overriding the returned redirect_uri.
     # This setting will override the previous `BaseAuthClient.redirect_uri``
     # WARNING: This property is not part of OAuth or Openid connect specifications and should be used with caution.
     override_redirect_uri: str | None = None
@@ -56,10 +56,10 @@ class BaseAuthClient:
 
     def __init__(self, client_id: str, secret: str | None) -> None:
         # The following parameters are not class variables but instance variables.
-        # There can indeed be more that one client using the class, the client will need to have its own client id and secret.
+        # There can indeed be more than one client using the class, the client will need to have its own client id and secret.
 
         self.client_id: str = client_id
-        # If no secret are provided, the client is expected to use PKCE
+        # If no secret is provided, the client is expected to use PKCE
         self.secret: str | None = secret
 
     def filter_scopes(self, requested_scopes: Set[str]) -> Set[ScopeType]:
@@ -77,7 +77,7 @@ class AppAuthClient(BaseAuthClient):
     # See app.utils.types.scopes_type.ScopeType for possible values
     # WARNING: to be able to use openid connect, `ScopeType.openid` should always be allowed
     allowed_scopes: Set[ScopeType] = {ScopeType.API}
-    # Restrict the authentification to this client to specifics Hyperion groups.
+    # Restrict the authentication to this client to specific Hyperion groups.
     # When set to `None`, users from any group can use the auth client
     allowed_groups: list[GroupType] | None = None
 
@@ -118,7 +118,7 @@ class NextcloudAuthClient(BaseAuthClient):
             # TODO: should we use group ids instead of names? It would be less human readable but would guarantee uniqueness. Question: are group names unique?
             "ownCloudGroups": [
                 group.name for group in user.groups
-            ],  # ["pixels"], # We may want to filter which groups are provided as they won't not always all be useful
+            ],  # ["pixels"], # We may want to filter which groups are provided as they won't always all be useful
             "email": user.email,
             "picture": "",  # TODO: add a PFP
         }
@@ -131,7 +131,7 @@ class PiwigoAuthClient(BaseAuthClient):
     # See app.utils.types.scopes_type.ScopeType for possible values
     # WARNING: to be able to use openid connect, `ScopeType.openid` should always be allowed
     allowed_scopes: Set[ScopeType] = {ScopeType.openid}
-    # Restrict the authentification to this client to specifics Hyperion groups.
+    # Restrict the authentication to this client to specific Hyperion groups.
     # When set to `None`, users from any group can use the auth client
     allowed_groups: list[GroupType] | None = None
     # Sometimes, when the client is wrongly configured, it may return an incorrect return_uri. This may also be useful for debugging clients.
@@ -153,8 +153,8 @@ class PiwigoAuthClient(BaseAuthClient):
         # Override this method with custom information adapted for the client
         # WARNING: The sub (subject) Claim MUST always be returned in the UserInfo Response.
 
-        # For Piwigo, providing the user name is sufficient. The name of the claim (here `"name"`) needs to be set in Piwigo oidc plugin configuration page)
-        # A modified Piwigo oidc plugin allows to manage groups from the oidc provider
+        # For Piwigo, providing the username is sufficient. The name of the claim (here `"name"`) needs to be set in Piwigo oidc plugin configuration page.
+        # A modified Piwigo oidc plugin allows managing groups from the oidc provider
         return {
             "sub": user.id,
             "name": user.firstname,

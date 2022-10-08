@@ -33,7 +33,7 @@ async def get_users_association(association_id):
     return ""
 
 
-@router.post("/assocations/{association_id}/users/{user_id}")
+@router.post("/associations/{association_id}/users/{user_id}")
 async def create_user_association(association_id, user_id):
 
     return ""

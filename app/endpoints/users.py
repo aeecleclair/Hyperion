@@ -73,7 +73,7 @@ async def search_users(
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
-    Search for an user using Fuzzy String Matching
+    Search for a user using Fuzzy String Matching
 
     `query` will be compared against users name, firstname and nickname
 
@@ -126,7 +126,7 @@ async def read_user(
     return db_user
 
 
-# TODO: readd this after making sure all information about the user has been deleted
+# TODO: read this after making sure all information about the user has been deleted
 # @router.delete(
 #    "/users/{user_id}",
 #    status_code=204,
@@ -134,7 +134,7 @@ async def read_user(
 # )
 # async def delete_user(user_id: str, db: AsyncSession = Depends(get_db), user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin))):
 #    """Delete user from database by id"""
-#    # TODO: WARNING - deleting an user without removing its relations ship in other tables will have unexpected consequences
+#    # TODO: WARNING - deleting an user without removing its relationship in other tables will have unexpected consequences
 #
 #    await cruds_users.delete_user(db=db, user_id=user_id)
 
@@ -150,7 +150,7 @@ async def update_current_user(
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
-    Update the current user, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value
+    Update the current user, the request should contain a JSON with the fields to change (not necessarily all fields) and their new values
 
     **The user must be authenticated to use this endpoint**
     """
@@ -170,7 +170,7 @@ async def update_user(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
-    Update an user, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value
+    Update a user, the request should contain a JSON with the fields to change (not necessarily all fields) and their new values
 
     **This endpoint is only usable by administrators**
     """
@@ -240,7 +240,7 @@ async def read_user_profile_picture(
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
-    Get the profile picture of an user.
+    Get the profile picture of a user.
 
     **The user must be authenticated to use this endpoint**
     """
@@ -266,12 +266,12 @@ async def create_user(
 ):
     """
     Start the user account creation process. The user will be sent an email with a link to activate his account.
-    > The received token needs to be send to `/users/activate` endpoint to activate the account.
+    > The received token needs to be sent to the `/users/activate` endpoint to activate the account.
 
     If the **password** is not provided, it will be required during the activation process. Don't submit a password if you are creating an account for someone else.
 
     When creating **student** or **staff** account a valid ECL email is required.
-    Only admin users can create other **account types**, contact ÉCLAIR for more informations.
+    Only admin users can create other **account types**, contact ÉCLAIR for more information.
     """
     # Check the account type
     if (
@@ -286,26 +286,27 @@ async def create_user(
         # TODO: check if the user is admin
         raise HTTPException(
             status_code=403,
-            detail=f"Unauthorized create a {user_create.account_type} account",
+            detail=f"Unauthorized to create a {user_create.account_type} account",
         )
 
     # Make sure a confirmed account does not already exist
     db_user = await cruds_users.get_user_by_email(db=db, email=user_create.email)
     if db_user is not None:
         hyperion_security_logger.warning(
-            f"Create_user: an user with email {user_create.email} already exist ({request_id})"
+            f"Create_user: an user with email {user_create.email} already exists ({request_id})"
         )
-        # We will send to the email a message explaining he already have an account and can reset their password if they want.
+        # We will send to the email a message explaining they already have an account and can reset their password if they want.
         if settings.SMTP_ACTIVE:
             background_tasks.add_task(
                 send_email,
                 recipient=user_create.email,
-                subject="MyECL - your account already exist",
-                content="This email address is already associated to an account. If you forget your credentials, you can reset your password [here]()",
+                subject="MyECL - your account already exists",
+                # TODO: Replace this link with a link that points to the password reset page
+                content="This email address is already associated to an account. If you forgot your credentials, you can reset your password [here](https://www.youtube.com/watch?v=dQw4w9WgXcQ)",
                 settings=settings,
             )
 
-        # Fail silently: the user should not be informed that an user with the email address already exist.
+        # Fail silently: the user should not be informed that a user with the email address already exist.
         return standard_responses.Result(success=True)
 
     if user_create.password is not None:
@@ -333,7 +334,7 @@ async def create_user(
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
     else:
-        # After adding the unconfirmed user to the database, we got an activation token that need to be send by email,
+        # After adding the unconfirmed user to the database, we got an activation token that needs to be sent by email,
         # in order to make sure the email address is valid
 
         if settings.SMTP_ACTIVE:
@@ -348,7 +349,7 @@ async def create_user(
             f"Create_user: Creating an unconfirmed account for {user_create.email} with token {activation_token} ({request_id})"
         )
 
-        # Warning: the validation token (and thus user_unconfirmed object) should **never** be returned in the request
+        # Warning: the validation token (and therefore the user_unconfirmed object) should **never** be returned in the request
         return standard_responses.Result(success=True)
 
 
@@ -366,7 +367,7 @@ async def activate_user(
     """
     Activate the previously created account.
 
-    **token**: the activation token send by email to the user
+    **token**: the activation token sent by email to the user
 
     **password**: user password, required if it was not provided previously
     """
@@ -442,15 +443,15 @@ async def recover_user(
     settings: Settings = Depends(get_settings),
 ):
     """
-    Allow an user to start a password reset process.
+    Allow a user to start a password reset process.
 
-    If the provided **email** correspond to an existing account, a password reset token will be send.
+    If the provided **email** corresponds to an existing account, a password reset token will be sent.
     Using this token, the password can be changed with `/users/reset-password` endpoint
     """
     # We use embed for email parameter : https://fastapi.tiangolo.com/tutorial/body-multiple-params/#embed-a-single-body-parameter
     db_user = await cruds_users.get_user_by_email(db=db, email=email)
     if db_user is not None:
-        # The user exist, we can send a password reset invitation
+        # The user exists, we can send a password reset invitation
         reset_token = security.generate_token()
 
         recover_request = models_core.CoreUserRecoverRequest(
@@ -506,7 +507,7 @@ async def reset_password(
         db=db, user_id=recover_request.user_id, new_password_hash=new_password_hash
     )
 
-    # As the user has reset its password, all other recovery request can be deleted from the table
+    # As the user has reset its password, all other recovery requests can be deleted from the table
     await cruds_users.delete_recover_request_by_email(
         db=db, email=recover_request.email
     )
@@ -527,7 +528,7 @@ async def change_password(
     """
     Change a user password.
 
-    This endpoint will check the **old_password**, see also `/users/reset-password` endpoint if the user forgot its password.
+    This endpoint will check the **old_password**, see also the `/users/reset-password` endpoint if the user forgot their password.
     """
     # TODO: check the old_password
     new_password_hash = security.get_password_hash(change_password_request.new_password)

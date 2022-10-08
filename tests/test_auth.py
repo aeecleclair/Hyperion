@@ -8,7 +8,7 @@ from app.utils.examples import examples_auth
 from tests.commons import TestingSessionLocal, client
 
 
-@app.on_event("startup")  # create the datas needed in the tests
+@app.on_event("startup")  # create the data needed in the tests
 async def startuptest():
     async with TestingSessionLocal() as db:
         user = models_core.CoreUser(

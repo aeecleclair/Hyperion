@@ -9,7 +9,7 @@ def send_email(recipient: str, subject: str, content: str, settings: Settings):
     """
     Send a plain text email using **starttls**.
     Use the SMTP settings defined in environments variables or the dotenv file.
-    See [Settings class](app/core/settings.py) for more informations
+    See [Settings class](app/core/settings.py) for more information
     """
     # Send email using
     # https://realpython.com/python-send-email/#option-1-setting-up-a-gmail-account-for-development

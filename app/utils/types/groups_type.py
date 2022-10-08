@@ -3,10 +3,10 @@ from enum import Enum
 
 class GroupType(str, Enum):
     """
-    In Hyperion, each user may have multiple groups. Belonging to a group gives access to a set of specific endpoint.
-    Usually, one or a few groups are associated to some rights over their corresponding module. For exemple a member of amap group is allowed to administrate the amap module
+    In Hyperion, each user may have multiple groups. Belonging to a group gives access to a set of specific endpoints.
+    Usually, one or a few groups are associated to some rights over their corresponding module. For example a member of amap group is allowed to administrate the amap module
 
-    A group may also allows to use Hyperion OAuth/Openid connect capabilities to sign into a specific external platform.
+    A group may also allow using Hyperion OAuth/Openid connect capabilities to sign in to a specific external platform.
 
     Being member of admin only gives rights over admin specific endpoints. For example, an admin won't be able to administrate amap module
     """
@@ -22,7 +22,7 @@ class GroupType(str, Enum):
 
     # Module related groups
 
-    # Auth related groupes
+    # Auth related groups
 
     def __str__(self):
         return f"{self.name}<{self.value}>"
@@ -30,7 +30,7 @@ class GroupType(str, Enum):
 
 class AccountType(str, Enum):
     """
-    Various account type that can be created in Hyperion.
+    Various account types that can be created in Hyperion.
     These values should match GroupType's. They are the lower level groups in Hyperion
     """
 

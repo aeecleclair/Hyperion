@@ -39,7 +39,7 @@ class LogConfig:
     # Logging config
     # See https://docs.python.org/3/library/logging.config.html#logging-config-dictschema
     def get_config_dict(self, settings: Settings):
-        # We can not use a dependency to access settings as this function is not an endpoint. The object must thus be passed as a parameter.
+        # We can't use a dependency to access settings as this function is not an endpoint. The object must thus be passed as a parameter.
 
         MINIMUM_LOG_LEVEL: str = "DEBUG" if settings.LOG_DEBUG_MESSAGES else "INFO"
 
@@ -65,7 +65,7 @@ class LogConfig:
                 },
             },
             "handlers": {
-                # Debug console is an handler which is only enabled if Hyperion is in Debug mode
+                # Debug console is a handler which is only enabled if Hyperion is in Debug mode
                 "debug_console": {
                     "formatter": "console_formatter",
                     # If settings.LOG_DEBUG_MESSAGES is set, the default handlers should print DEBUG log messages to the console.
@@ -101,7 +101,7 @@ class LogConfig:
                     ),
                     "level": "ERROR",
                 },
-                # There is an handler per log file #
+                # There is a handler per log file #
                 # They are based on RotatingFileHandler to logs in multiple 1024 bytes files
                 # https://docs.python.org/3/library/logging.handlers.html#logging.handlers.RotatingFileHandler
                 "file_errors": {
@@ -135,7 +135,7 @@ class LogConfig:
             },
             # We define various loggers which can be used by Hyperion.
             # Each logger has:
-            #  - specific handlers (ex: file_access or file_security), they log targeted records like endpoint access or authentification
+            #  - specific handlers (ex: file_access or file_security), they log targeted records like endpoint access or authentication
             #  - error related handlers (ex: file_errors and matrix_errors), they log all errors regardless of their provenance
             #  - default handler which logs to the console for development and debugging purpose
             "loggers": {
@@ -158,13 +158,13 @@ class LogConfig:
                     ],
                     "level": MINIMUM_LOG_LEVEL,
                 },
-                # hyperion.error should be used to log all errors which does not correspond to one of the specific logger
-                # Other loggers can process errors messages and may be more appropriated then hyperion.error
+                # hyperion.error should be used to log all errors which does not correspond to one of the specific loggers
+                # Other loggers can process error messages and may be more appropriated than hyperion.error
                 "hyperion.error": {
                     "handlers": ["file_errors", "matrix_errors", "console"],
                     "level": MINIMUM_LOG_LEVEL,
                 },
-                # We disable "uvicorn.access" to replace it with our custom "hyperion.access" which add custom informations like a the request_id
+                # We disable "uvicorn.access" to replace it with our custom "hyperion.access" which add custom information like the request_id
                 "uvicorn.access": {"handlers": []},
                 "uvicorn.error": {
                     "handlers": ["file_errors", "matrix_errors", "console"],
@@ -188,7 +188,7 @@ class LogConfig:
 
         # We may be interested in https://github.com/python/cpython/pull/93269 when it will be released. See https://discuss.python.org/t/a-new-feature-is-being-added-in-logging-config-dictconfig-to-configure-queuehandler-and-queuelistener/16124
 
-        # If logs/ folder does not exist, the logging module wont be able to create file handlers
+        # If logs/ folder does not exist, the logging module won't be able to create file handlers
         if not os.path.exists("logs/"):
             os.makedirs("logs/")
 
@@ -205,7 +205,7 @@ class LogConfig:
             # We create a queue where all log records will be added
             log_queue: queue.Queue = queue.Queue(-1)
 
-            # queue_handler is the handler which add all log records to the queue
+            # queue_handler is the handler which adds all log records to the queue
             queue_handler = QueueHandler(log_queue)
 
             # The listener will watch the queue and let the previous handler process logs records in their own thread

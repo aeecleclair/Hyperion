@@ -180,7 +180,7 @@ class ResetPasswordRequest(BaseModel):
 
 
 class CoreMembership(BaseModel):
-    """Schema for membership creation (allows to add a user to a group)"""
+    """Schema for membership creation (allows adding a user to a group)"""
 
     user_id: str
     group_id: str

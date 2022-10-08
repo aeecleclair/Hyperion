@@ -12,7 +12,7 @@ from app.schemas import schemas_amap
 
 
 async def get_products(db: AsyncSession) -> list[models_amap.Product]:
-    """Return all product from database"""
+    """Return all products from database"""
 
     result = await db.execute(select(models_amap.Product))
     return result.scalars().all()

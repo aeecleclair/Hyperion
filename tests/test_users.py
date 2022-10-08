@@ -12,7 +12,7 @@ admin_user: models_core.CoreUser | None = None
 student_user: models_core.CoreUser | None = None
 
 
-@app.on_event("startup")  # create the datas needed in the tests
+@app.on_event("startup")  # create the data needed in the tests
 async def startuptest():
     global admin_user, student_user
 
@@ -52,7 +52,7 @@ def test_read_user():
     assert response.status_code == 200
     data = response.json()
     assert data["id"] == student_user.id
-    # If the endpoint return a CoreUserSimple, we could check that email was not returned
+    # If the endpoint returns a CoreUserSimple, we could check that email was not returned
     # assert "email" not in data
     # Currently the endpoint return a CoreUser
     assert "email" in data
