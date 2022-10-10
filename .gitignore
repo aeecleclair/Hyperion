@@ -19,3 +19,6 @@ data/
 
 # Logs
 logs/
+
+# Migrations scripts
+migrations/*.py

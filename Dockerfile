@@ -1,14 +1,16 @@
 # PROD
-FROM python:3.10-bullseye
+FROM python:3.11-rc-slim
 
 WORKDIR /code
 
-COPY ./requirements_dev.txt /code/requirements_dev.txt
+COPY ./requirements-dev.txt /code/requirements-dev.txt
 COPY ./requirements.txt /code/requirements.txt
 COPY ./.env /code/.env
+COPY ./alembic.ini /code/alembic.ini
+COPY ./migrations /code/migrations
 
-RUN pip install --upgrade -r /code/requirements_dev.txt
+RUN pip install --upgrade -r /code/requirements-dev.txt
 
 COPY ./app /code/app
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
