@@ -21,4 +21,4 @@ data/
 logs/
 
 # Migrations scripts
-migrations/*.py
+migrations/versions/*.py
