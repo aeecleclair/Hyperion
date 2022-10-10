@@ -456,7 +456,7 @@ async def make_admin(
 
     await cruds_groups.create_membership(
         db=db,
-        membership=schemas_core.CoreMembership(
+        membership=models_core.CoreMembership(
             user_id=users[0].id, group_id=GroupType.admin
         ),
     )
