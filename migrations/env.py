@@ -1,6 +1,8 @@
 """Environment file defining the required functions for the alembic migration to work"""
 
 import asyncio
+import os
+import re
 from logging.config import fileConfig
 
 from alembic import context
@@ -9,6 +11,9 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from app.database import Base
 
+models_files = [x for x in os.listdir("./app/models") if re.match("models*", x)]
+for models_file in models_files:
+    __import__(f"app.models.{models_file[:-3]}")
 # from app.models import models_core
 
 # this is the Alembic Config object, which provides
