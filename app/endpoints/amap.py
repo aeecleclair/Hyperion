@@ -4,7 +4,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.cruds import cruds_amap
+from app.cruds import cruds_amap, cruds_users
 from app.dependencies import get_db, is_user_a_member, is_user_a_member_of
 from app.endpoints.users import read_user
 from app.models import models_core
@@ -79,6 +79,10 @@ async def get_product_by_id(
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     product = await cruds_amap.get_product_by_id(product_id=product_id, db=db)
+
+    if product is None:
+        raise HTTPException(status_code=404, detail="Product not found")
+
     return product
 
 
@@ -102,12 +106,20 @@ async def edit_product(
     )
 
 
-@router.delete("/amap/products/{product_id}", status_code=204, tags=[Tags.amap])
+@router.delete(
+    "/amap/products/{product_id}",
+    status_code=204,
+    tags=[Tags.amap],
+)
 async def delete_product(
     product_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
+    product = await cruds_amap.get_product_by_id(db=db, product_id=product_id)
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
     if await cruds_amap.is_product_not_used(db=db, product_id=product_id):
         await cruds_amap.delete_product(db=db, product_id=product_id)
     else:
@@ -142,7 +154,10 @@ async def create_delivery(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
-    db_delivery = schemas_amap.DeliveryComplete(id=str(uuid.uuid4()), **delivery.dict())
+    db_delivery = schemas_amap.DeliveryComplete(
+        id=str(uuid.uuid4()),
+        **delivery.dict(),
+    )
     try:
         result = await cruds_amap.create_delivery(delivery=db_delivery, db=db)
         return result
@@ -156,6 +171,9 @@ async def delete_delivery(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
+    delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
+    if delivery is None:
+        raise HTTPException(status_code=404, detail="Delivery not found")
 
     await cruds_amap.delete_delivery(db=db, delivery_id=delivery_id)
 
@@ -171,6 +189,10 @@ async def get_products_from_delivery(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
+    if delivery is None:
+        raise HTTPException(status_code=404, detail="Delivery not found")
+
     products = await cruds_amap.get_products_from_delivery(
         delivery_id=delivery_id, db=db
     )
@@ -192,17 +214,17 @@ async def add_product_to_delivery(
     product = await cruds_amap.get_product_by_id(db=db, product_id=product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
-    else:
-        try:
-            await cruds_amap.add_product_to_delivery(
-                link=schemas_amap.AddProductDelivery(
-                    product_id=product_id, delivery_id=delivery_id
-                ),
-                db=db,
-            )
-            return await get_products_from_delivery(db=db, delivery_id=delivery_id)
-        except ValueError as error:
-            raise HTTPException(status_code=422, detail=str(error))
+
+    try:
+        await cruds_amap.add_product_to_delivery(
+            link=schemas_amap.AddProductDelivery(
+                product_id=product_id, delivery_id=delivery_id
+            ),
+            db=db,
+        )
+        return await get_products_from_delivery(db=db, delivery_id=delivery_id)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))
 
 
 @router.delete(
@@ -216,6 +238,16 @@ async def remove_product_from_delivery(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
+    """
+    Remove a given product from a delivery. This won't delete the product nor the delivery.
+    """
+    delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
+    if delivery is None:
+        raise HTTPException(status_code=404, detail="Delivery not found")
+    product = await cruds_amap.get_product_by_id(db=db, product_id=product_id)
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
     await cruds_amap.remove_product_from_delivery(
         db=db, delivery_id=delivery_id, product_id=product_id
     )
@@ -232,6 +264,10 @@ async def edit_delivery(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
+    delivery_db = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
+    if delivery_db is None:
+        raise HTTPException(status_code=404, detail="Delivery not found")
+
     await cruds_amap.edit_delivery(db=db, delivery_id=delivery_id, delivery=delivery)
 
 
@@ -246,8 +282,15 @@ async def get_orders_from_delivery(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
+    delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
+    if delivery is None:
+        raise HTTPException(status_code=404, detail="Delivery not found")
+
     orders = await cruds_amap.get_orders_from_delivery(delivery_id=delivery_id, db=db)
-    return [await get_order_by_id(order.order_id, db) for order in orders]
+    return [
+        await get_order_by_id(delivery_id=delivery_id, order_id=order.order_id, db=db)
+        for order in orders
+    ]
 
 
 @router.get(
@@ -257,11 +300,20 @@ async def get_orders_from_delivery(
     tags=[Tags.amap],
 )
 async def get_order_by_id(
+    delivery_id: str,
     order_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
+
     order = await cruds_amap.get_order_by_id(order_id=order_id, db=db)
+    if order is None:
+        raise HTTPException(status_code=404, detail="Delivery not found")
+    if delivery_id != order.delivery_id:
+        raise HTTPException(
+            status_code=404, detail="The order does not belong to this delivery"
+        )
+
     quantities = await cruds_amap.get_quantities_of_order(db=db, order_id=order_id)
     products = []
     if not order:
@@ -301,6 +353,10 @@ async def add_order_to_delievery(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
+    if delivery is None:
+        raise HTTPException(status_code=404, detail="Delivery not found")
+
     if user.id == order.user_id or is_user_member_of_an_allowed_group(
         user, [GroupType.amap]
     ):
@@ -342,7 +398,9 @@ async def add_order_to_delievery(
                                 balance=balance.balance - amount
                             ),
                         )
-                        return await get_order_by_id(order_id=db_order.order_id, db=db)
+                        return await get_order_by_id(
+                            delivery_id=delivery_id, order_id=db_order.order_id, db=db
+                        )
                     except ValueError as error:
                         raise HTTPException(status_code=422, detail=str(error))
             else:
@@ -362,6 +420,10 @@ async def edit_orders_from_delieveries(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
+    if delivery is None:
+        raise HTTPException(status_code=404, detail="Delivery not found")
+
     if user.id == order.user_id or is_user_member_of_an_allowed_group(
         user, [GroupType.amap]
     ):
@@ -426,32 +488,34 @@ async def remove_order(
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     order = await cruds_amap.get_order_by_id(db=db, order_id=order_id)
-    if order is not None:
-        if user.id == order.user_id or is_user_member_of_an_allowed_group(
-            user, [GroupType.amap]
-        ):
-            locked = await cruds_amap.checkif_delivery_locked(
-                db=db, delivery_id=delivery_id
-            )
-            if locked:
-                raise HTTPException(status_code=403, detail="Delivery locked")
-            else:
-                amount = order.amount
-                balance = await cruds_amap.get_cash_by_id(db=db, user_id=order.user_id)
-                if balance is not None:
-                    await cruds_amap.edit_cash_by_id(
-                        db=db,
-                        user_id=order.user_id,
-                        balance=schemas_amap.CashBase(balance=balance.balance + amount),
-                    )
-                    await cruds_amap.remove_order(db=db, order_id=order_id)
-                else:
-                    raise HTTPException(status_code=404, detail="No cash found")
-            return Response(status_code=204)
-        else:
-            raise HTTPException(status_code=403)
-    else:
+    if order is None:
         raise HTTPException(status_code=404, detail="No order found")
+    if order.delivery_id != delivery_id:
+        raise HTTPException(status_code=404, detail="The order is not in this delivery")
+
+    if user.id == order.user_id or is_user_member_of_an_allowed_group(
+        user, [GroupType.amap]
+    ):
+        locked = await cruds_amap.checkif_delivery_locked(
+            db=db, delivery_id=delivery_id
+        )
+        if locked:
+            raise HTTPException(status_code=403, detail="Delivery locked")
+        else:
+            amount = order.amount
+            balance = await cruds_amap.get_cash_by_id(db=db, user_id=order.user_id)
+            if balance is not None:
+                await cruds_amap.edit_cash_by_id(
+                    db=db,
+                    user_id=order.user_id,
+                    balance=schemas_amap.CashBase(balance=balance.balance + amount),
+                )
+                await cruds_amap.remove_order(db=db, order_id=order_id)
+            else:
+                raise HTTPException(status_code=404, detail="No cash found")
+        return Response(status_code=204)
+    else:
+        raise HTTPException(status_code=403)
 
 
 @router.get(
@@ -483,11 +547,17 @@ async def get_cash_by_id(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    user_db = await cruds_users.get_user_by_id(db=db, user_id=user_id)
+    if user_db is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
     if user_id == user.id or is_user_member_of_an_allowed_group(user, [GroupType.amap]):
         cash = await cruds_amap.get_cash_by_id(user_id=user_id, db=db)
         if cash is not None:
             user = await read_user(user_id=cash.user_id, db=db)
             return schemas_amap.CashComplete(balance=cash.balance, user=user)
+        else:
+            return schemas_amap.CashComplete(balance=0, user=user)
     else:
         raise HTTPException(status_code=403)
 
@@ -542,6 +612,10 @@ async def get_orders_of_user(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    user = await read_user(user_id=user_id, db=db)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
     if user_id == user.id or is_user_member_of_an_allowed_group(user, [GroupType.amap]):
         orders = await cruds_amap.get_orders_of_user(user_id=user_id, db=db)
         res = []
