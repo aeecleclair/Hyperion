@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  hyperion-db:
+    image: postgres
+    container_name: hyperion-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_USER: user
+      POSTGRES_DB: db
+    expose:
+      - 5432
+    # volumes:
+    #   - ./hyperion_db_data:/var/lib/postgresql/data
+
+  hyperion-redis:
+    image: redis
+    container_name: hyperion-redis
+    restart: unless-stopped
+    expose:
+      - 6379
+
+  hyperion-app:
+    image: hyperion-app
+    container_name: hyperion-app
+    depends_on:
+      - hyperion-db
+      - hyperion-redis
+    ports:
+      - 8000:80
