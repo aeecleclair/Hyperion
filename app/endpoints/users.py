@@ -182,7 +182,6 @@ async def create_user_by_user(
     try:
         await create_user(
             email=user_create.email,
-            password=user_create.password,
             account_type=account_type,
             background_tasks=background_tasks,
             db=db,
@@ -226,7 +225,6 @@ async def batch_create_users(
         try:
             await create_user(
                 email=user_create.email,
-                password=None,  # The administrator does not provide an email when creating an account for someone else
                 account_type=user_create.account_type,
                 background_tasks=background_tasks,
                 db=db,
@@ -241,7 +239,6 @@ async def batch_create_users(
 
 async def create_user(
     email: str,
-    password: str | None,
     account_type: AccountType,
     background_tasks: BackgroundTasks,
     db: AsyncSession,
@@ -259,10 +256,6 @@ async def create_user(
         raise ValueError(f"An account with the email {email} already exist")
     # There might be an unconfirmed user in the database but its not an issue. We will generate a second activation token.
 
-    if password is not None:
-        password_hash = security.get_password_hash(password)
-    else:
-        password_hash = None
     activation_token = security.generate_token()
 
     # Add the unconfirmed user to the unconfirmed_user table
@@ -270,7 +263,6 @@ async def create_user(
     user_unconfirmed = models_core.CoreUserUnconfirmed(
         id=str(uuid.uuid4()),
         email=email,
-        password_hash=password_hash,
         account_type=account_type,
         activation_token=activation_token,
         created_on=datetime.now(),
@@ -341,7 +333,6 @@ async def get_user_activation_page(
             "request": request,
             "activation_token": activation_token,
             "user_email": unconfirmed_user.email,
-            "has_password": unconfirmed_user.password_hash is not None,
         },
     )
 
@@ -387,15 +378,8 @@ async def activate_user(
             detail=f"The account with the email {unconfirmed_user.email} is already confirmed",
         )
 
-    # If a password was provided in this request, we will use this one as it is more recent
-    if user.password is not None:
-        password_hash = security.get_password_hash(user.password)
-    else:
-        # No new password were provided, we need to make sure one was previously provided during the account creation process
-        if unconfirmed_user.password_hash is not None:
-            password_hash = unconfirmed_user.password_hash
-        else:
-            raise HTTPException(status_code=400, detail="A password was never provided")
+    # A password should have been provided
+    password_hash = security.get_password_hash(user.password)
 
     confirmed_user = models_core.CoreUser(
         id=unconfirmed_user.id,
@@ -455,12 +439,20 @@ async def make_admin(
             detail="This endpoint is only usable if there is exactly one user in the database",
         )
 
-    await cruds_groups.create_membership(
-        db=db,
-        membership=models_core.CoreMembership(
-            user_id=users[0].id, group_id=GroupType.admin
-        ),
-    )
+    try:
+        await cruds_groups.create_membership(
+            db=db,
+            membership=models_core.CoreMembership(
+                user_id=users[0].id, group_id=GroupType.admin
+            ),
+        )
+    except Exception as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        )
+
+    return standard_responses.Result()
 
 
 @router.post(
