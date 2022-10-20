@@ -66,7 +66,7 @@ def test_update_current_user():
         json={"name": "NewName2"},
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert response.status_code == 204
+    assert response.status_code == 200
 
 
 def test_update_user():
@@ -87,7 +87,7 @@ def test_update_user():
         json={"name": "NewName"},
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert response.status_code == 204
+    assert response.status_code == 200
 
 
 def test_create_current_user_profile_picture():

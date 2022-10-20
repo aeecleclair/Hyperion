@@ -1,6 +1,6 @@
 """File defining the functions called by the endpoints, making queries to the table using the models"""
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import and_, delete, not_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -10,10 +10,42 @@ from app.models import models_core
 # from app.schemas.schemas_core import CoreUserUpdate
 
 
-async def get_users(db: AsyncSession) -> list[models_core.CoreUser]:
-    """Return all users from database"""
+async def get_users(
+    db: AsyncSession,
+    includedGroups: list[str] = [],
+    excludedGroups: list[str] = [],
+) -> list[models_core.CoreUser]:
+    """
+    Return all users from database.
 
-    result = await db.execute(select(models_core.CoreUser))
+    Parameters `includedGroups` and `excludedGroups` can be used to filter results.
+    """
+
+    result = await db.execute(
+        select(models_core.CoreUser).where(
+            and_(
+                # We want, for each group that should be included check if
+                # - at least one of the user's groups match the expected group
+                *[
+                    models_core.CoreUser.groups.any(
+                        models_core.CoreGroup.id == group_id
+                    )
+                    for group_id in includedGroups
+                ],
+                # We want, for each group that should not be included
+                # check that the following condition is false :
+                # - at least one of the user's groups match the expected group
+                *[
+                    not_(
+                        models_core.CoreUser.groups.any(
+                            models_core.CoreGroup.id == group_id
+                        )
+                    )
+                    for group_id in excludedGroups
+                ],
+            )
+        )
+    )
     return result.scalars().all()
 
 

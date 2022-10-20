@@ -12,6 +12,13 @@ example_CoreUserUpdate = {
 example_CoreUserCreateRequest = {
     "example": {
         "email": "user@example.fr",
+    }
+}
+
+
+example_CoreBatchUserCreateRequest = {
+    "example": {
+        "email": "user@example.fr",
         "account_type": "39691052-2ae5-4e12-99d0-7a9f5f2b0136",
     }
 }
