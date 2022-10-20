@@ -56,7 +56,7 @@ class Settings(BaseSettings):
     # If you want to use a custom configuration, a password and a specific binds should be used to avoid security issues
     REDIS_HOST: str
     REDIS_PORT: int
-    REDIS_PASSWORD: str
+    REDIS_PASSWORD: str | None
     REDIS_LIMIT: int
     REDIS_WINDOW: int
 
