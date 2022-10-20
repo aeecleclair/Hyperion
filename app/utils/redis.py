@@ -4,7 +4,11 @@ from app.core.config import Settings
 
 
 def connect(settings: Settings) -> redis.Redis | bool:
-    redis_client = redis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT)
+    redis_client = redis.Redis(
+        host=settings.REDIS_HOST,
+        port=settings.REDIS_PORT,
+        password=settings.REDIS_PASSWORD,
+    )
     redis_client.ping()  # Test the connection
 
     return redis_client

@@ -6,10 +6,12 @@ import re
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import engine_from_config, pool
-from sqlalchemy.ext.asyncio import AsyncEngine
 
-from app.database import Base
+from app.database import SQLALCHEMY_DATABASE_URL, Base, engine
+
+# from sqlalchemy import engine_from_config, pool
+# from sqlalchemy.ext.asyncio import AsyncEngine
+
 
 models_files = [x for x in os.listdir("./app/models") if re.match("models*", x)]
 for models_file in models_files:
@@ -49,7 +51,7 @@ def run_migrations_offline():
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
+    url = SQLALCHEMY_DATABASE_URL
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -75,14 +77,7 @@ async def run_migrations_online():
     and associate a connection with the context.
 
     """
-    connectable = AsyncEngine(
-        engine_from_config(
-            config.get_section(config.config_ini_section),
-            prefix="sqlalchemy.",
-            poolclass=pool.NullPool,
-            future=True,
-        )
-    )
+    connectable = engine
 
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)

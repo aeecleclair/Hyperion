@@ -111,8 +111,10 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 # Alembic should be used for any migration, this function can only create new tables and ensure that the necessary groups are available
 @app.on_event("startup")
 async def startup():
-    # Initialize loggers
+    # We reproduce FastAPI logic to access settings. See https://github.com/tiangolo/fastapi/issues/425#issuecomment-954963966
+    settings = app.dependency_overrides.get(get_settings, get_settings)()
 
+    # Initialize loggers
     LogConfig().initialize_loggers(settings=settings)
 
     if not app.dependency_overrides.get(get_redis_client, get_redis_client)(
@@ -124,28 +126,29 @@ async def startup():
     if not os.path.exists("data/ics/"):
         os.makedirs("data/ics/")
 
-    # create db tables
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    if not settings.TESTING:
+        # create db tables
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
 
-    # Add the necessary groups for account types
-    async with SessionLocal() as db:
-        for id in GroupType:
-            exists = await cruds_groups.get_group_by_id(group_id=id, db=db)
-            # We don't want to recreate the groups if they already exist
-            if not exists:
-                group = models_core.CoreGroup(
-                    id=id, name=id.name, description="Group type"
-                )
-
-                try:
-                    db.add(group)
-                    await db.commit()
-                except IntegrityError as error:
-                    hyperion_error_logger.fatal(
-                        f"Startup: Could not add group {group.name}<{group.id}> in the database: {error}"
+        # Add the necessary groups for account types
+        async with SessionLocal() as db:
+            for id in GroupType:
+                exists = await cruds_groups.get_group_by_id(group_id=id, db=db)
+                # We don't want to recreate the groups if they already exist
+                if not exists:
+                    group = models_core.CoreGroup(
+                        id=id, name=id.name, description="Group type"
                     )
-                    await db.rollback()
+
+                    try:
+                        db.add(group)
+                        await db.commit()
+                    except IntegrityError as error:
+                        hyperion_error_logger.fatal(
+                            f"Startup: Could not add group {group.name}<{group.id}> in the database: {error}"
+                        )
+                        await db.rollback()
 
 
 app.include_router(api.api_router)
