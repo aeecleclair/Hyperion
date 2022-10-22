@@ -13,3 +13,4 @@ class Tags(str, Enum):
     bdebooking = "BDEBooking"
     calendar = "Calendar"
     campaign = "Campaign"
+    cinema = "Cinema"
