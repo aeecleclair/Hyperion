@@ -82,6 +82,10 @@ class CoreUserCreateRequest(BaseModel):
 
     email: str
 
+    # Email normalization, this will modify the email variable
+    # https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
+    _normalize_email = validator("email", allow_reuse=True)(validators.email_normalizer)
+
     class Config:
         orm_mode = True
 
@@ -95,6 +99,10 @@ class CoreBatchUserCreateRequest(BaseModel):
 
     email: str
     account_type: AccountType
+
+    # Email normalization, this will modify the email variable
+    # https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
+    _normalize_email = validator("email", allow_reuse=True)(validators.email_normalizer)
 
     class Config:
         orm_mode = True
