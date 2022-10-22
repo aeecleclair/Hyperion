@@ -306,7 +306,7 @@ async def authorize_validation(
         url = redirect_uri + "?error=" + "unsupported_response_type"
         if authorizereq.state:
             url += "&state=" + authorizereq.state
-        return RedirectResponse(url)
+        return RedirectResponse(url, status_code=status.HTTP_302_FOUND)
 
     # TODO: Currently if the user enters the wrong credentials in the form, they won't be redirected to the login page again but the OAuth process will fail.
     user = await authenticate_user(db, authorizereq.email, authorizereq.password)
@@ -343,7 +343,7 @@ async def authorize_validation(
             url = redirect_uri + "?error=" + "consent_required"
             if authorizereq.state:
                 url += "&state=" + authorizereq.state
-            return RedirectResponse(url)
+            return RedirectResponse(url, status_code=status.HTTP_302_FOUND)
 
     # We generate a new authorization_code
     # The authorization code MUST expire
