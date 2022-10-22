@@ -8,7 +8,7 @@ from app.endpoints import (
     associations,
     auth,
     bdebooking,
-    bdecalendar,
+    calendar,
     core,
     groups,
     loans,
