@@ -17,7 +17,7 @@ class Lists(Base):
     id: str = Column(String, primary_key=True)
     name: str = Column(String, unique=True)
     description: str = Column(String)
-    section_name: str = Column(ForeignKey("campaign_sections.name"))
+    section: str = Column(ForeignKey("campaign_sections.name"))
     type: str = Column(String, nullable=False)
     logo_path: str = Column(String, nullable=False)
     picture_path: str = Column(String)
@@ -40,6 +40,7 @@ class Votes(Base):
 
 
 class HasVoted(Base):
-    __tablename__ = "campagin_has_voted"
+    __tablename__ = "campaign_has_voted"
 
     user_id: str = Column(ForeignKey("core_user.id"), primary_key=True)
+    section_name: str = Column(ForeignKey("campaign_sections.name"))

@@ -5,12 +5,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cruds import cruds_campaign
 from app.dependencies import get_db, is_user_a_member, is_user_a_member_of
-from app.models import models_core
+from app.models import models_campaign, models_core
 from app.schemas import schemas_campaign
 from app.utils.types.groups_type import GroupType
 from app.utils.types.tags import Tags
 
 router = APIRouter()
+
+
+VOTE_OPENED = False
 
 
 @router.get(
@@ -68,7 +71,7 @@ async def delete_section(
 
 @router.get(
     "/campaign/sections/{section_name}/lists",
-    response_model=list[schemas_campaign.ListBase],
+    response_model=list[schemas_campaign.ListComplete],
     status_code=200,
     tags=[Tags.campaign],
 )
@@ -80,15 +83,15 @@ async def get_lists_from_section(
     """
     Return lists for the given section.
     """
-    lists = await cruds_campaign.get_lists_from_section(
+    campaign_lists = await cruds_campaign.get_lists_from_section(
         section_name=section_name, db=db
     )
-    return lists
+    return campaign_lists
 
 
 @router.get(
     "/campaign/lists",
-    response_model=list[schemas_campaign.ListBase],
+    response_model=list[schemas_campaign.ListComplete],
     status_code=200,
     tags=[Tags.campaign],
 )
@@ -96,17 +99,36 @@ async def get_lists(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """Return list of campaing lists"""
     lists = await cruds_campaign.get_lists(db=db)
     return lists
 
 
 @router.post("/campaign/lists", status_code=201, tags=[Tags.campaign])
 async def add_list(
-    list: None,
+    list: schemas_campaign.ListBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
-    return ""
+    """Allow an admin to add a campaign list.
+
+    **Only for admin users.**
+    """
+    try:
+        # Check if the section given exists in the DB.
+        # Check if the section given exists in the DB.
+        section = await cruds_campaign.get_section_by_name(
+            db=db, section_name=list.section
+        )
+        if section is not None:
+            model_campaign_list = models_campaign.Lists(
+                id=str(uuid.uuid4()), **list.dict()
+            )
+            await cruds_campaign.add_list(campaign_list=model_campaign_list, db=db)
+        else:
+            raise HTTPException(status_code=404, detail="Given section doesn't exist.")
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))
 
 
 @router.delete("/campaign/lists/{list_id}", status_code=204, tags=[Tags.campaign])
@@ -115,50 +137,153 @@ async def delete_list(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
-    return ""
+    """Allow an admin to delete the list with the given id.
+
+    **Only for admin.**"""
+    try:
+        await cruds_campaign.delete_list(list_id=list_id, db=db)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))
 
 
 @router.patch("/campaign/lists/{list_id}", status_code=201, tags=[Tags.campaign])
 async def update_list(
     list_id: str,
+    campaign_list: schemas_campaign.ListBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
-    return ""
+    """Allow an admin to update the list with the given id.
+
+    **Only for admins.**
+    """
+    try:
+        await cruds_campaign.update_list(
+            list_id=list_id,
+            campaign_list=campaign_list,
+            db=db,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))
 
 
 @router.post("/campaign/votes", status_code=201, tags=[Tags.campaign])
 async def vote(
-    vote: None,
+    vote: schemas_campaign.VoteBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    return ""
+    """Add a vote."""
+    try:
+        if VOTE_OPENED:
+            campaign_list = await cruds_campaign.get_list_by_id(
+                db=db, list_id=vote.list_id
+            )
+
+            # Check if the campaign list exist.
+            if campaign_list is not None:
+                # Check if the user has already vote for a list in the section.
+                has_voted = await cruds_campaign.get_has_voted(
+                    db=db, user_id=user.id, section_name=campaign_list.section
+                )
+                if has_voted is None:
+                    # Mark user has voted for the given section.
+                    await cruds_campaign.mark_has_voted(
+                        db=db, user_id=user.id, section_name=campaign_list.section
+                    )
+                    # Add the vote to the db
+                    model_vote = models_campaign.Votes(
+                        id=str(uuid.uuid4()), **vote.dict()
+                    )
+                    await cruds_campaign.add_vote(
+                        db=db,
+                        vote=model_vote,
+                    )
+                else:
+                    raise ValueError(
+                        "User has already vote for a list in this section."
+                    )
+            else:
+                raise ValueError("This list doesn't exist.")
+        else:
+            raise ValueError("Votes are closed.")
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))
 
 
 @router.get(
-    "/campaign/votes", response_model=None, status_code=200, tags=[Tags.campaign]
+    "/campaign/votes",
+    response_model=list[schemas_campaign.VoteBase],
+    status_code=200,
+    tags=[Tags.campaign],
 )
 async def get_results(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
-    return ""
+    """Get all votes
+
+    **Only for admin.**"""
+    votes = await cruds_campaign.get_votes(db=db)
+    return votes
 
 
-@router.patch("/campaign/votes/status", status_code=201, tags=[Tags.campaign])
+@router.get(
+    "/campaign/votes/{section}",
+    response_model=list[schemas_campaign.VoteBase],
+    status_code=200,
+    tags=[Tags.campaign],
+)
+async def get_results_by_section(
+    section: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """Get all votes for a sections.
+
+    **Only for admin.**
+    """
+    votes = await cruds_campaign.get_votes_for_section(db=db, section_name=section)
+    return votes
+
+
+@router.patch("/campaign/status", status_code=201, tags=[Tags.campaign])
 async def toggle_vote(
-    status: None,
+    status: schemas_campaign.VoteStatus,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
-    return ""
+    """Change the status of the vote (open or close).
+
+    **Only for admin**"""
+    global VOTE_OPENED
+    VOTE_OPENED = status.status
 
 
-@router.post("/campaign/votes/reset", status_code=201, tags=[Tags.campaign])
+@router.get(
+    "/campaign/status",
+    response_model=schemas_campaign.VoteStatus,
+    status_code=201,
+    tags=[Tags.campaign],
+)
+async def get_status_vote(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """Get the status of the vote (open or closed)"""
+    global VOTE_OPENED
+    return schemas_campaign.VoteStatus(status=VOTE_OPENED)
+
+
+@router.delete("/campaign/votes", status_code=204, tags=[Tags.campaign])
 async def reset_vote(
-    status: None,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
-    return ""
+    """Delete all vote in the database."""
+    try:
+        await cruds_campaign.delete_votes(
+            db=db,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))
