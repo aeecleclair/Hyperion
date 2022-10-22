@@ -116,7 +116,7 @@ def test_edit_booking():
         json={"reason": "Pas un test"},
         headers={"Authorization": f"Bearer {token_bde}"},
     )
-    assert response.status_code == 200
+    assert response.status_code == 204
 
 
 def test_reply_booking():
@@ -124,7 +124,7 @@ def test_reply_booking():
         f"/bdebooking/bookings/{booking.id}/reply/declined",
         headers={"Authorization": f"Bearer {token_bde}"},
     )
-    assert response.status_code == 200
+    assert response.status_code == 204
 
 
 def test_delete_booking():
@@ -166,7 +166,7 @@ def test_edit_room():
         json={"name": "Foyer"},
         headers={"Authorization": f"Bearer {token_bde}"},
     )
-    assert response.status_code == 200
+    assert response.status_code == 204
 
 
 def test_delete_room():

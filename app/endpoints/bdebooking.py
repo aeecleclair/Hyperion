@@ -152,7 +152,9 @@ async def create_bookings(
 
 
 @router.patch(
-    "/bdebooking/bookings/{booking_id}", status_code=200, tags=[Tags.bdebooking]
+    "/bdebooking/bookings/{booking_id}",
+    status_code=204,
+    tags=[Tags.bdebooking],
 )
 async def edit_bookings_id(
     booking_id: str,
@@ -175,7 +177,7 @@ async def edit_bookings_id(
 
 @router.patch(
     "/bdebooking/bookings/{booking_id}/reply/{decision}",
-    status_code=200,
+    status_code=204,
     tags=[Tags.bdebooking],
 )
 async def confirm_booking(
@@ -270,7 +272,7 @@ async def create_room(
 
 @router.patch(
     "/bdebooking/rooms/{room_id}",
-    status_code=200,
+    status_code=204,
     tags=[Tags.bdebooking],
 )
 async def edit_room(
