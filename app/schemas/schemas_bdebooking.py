@@ -24,15 +24,13 @@ class RoomComplete(RoomBase):
 
 
 class BookingBase(BaseModel):
-    url: str
     reason: str
     start: datetime
     end: datetime
-    note: str
+    note: str | None
     room_id: str
     key: bool
-    multipleDay: bool
-    recurring: bool
+    recurrence_rule: str | None = None
 
 
 class BookingComplete(BookingBase):
@@ -49,13 +47,10 @@ class BookingReturn(BookingComplete):
 
 
 class BookingEdit(BaseModel):
-    url: str | None = None
     reason: str | None = None
     start: datetime | None = None
     end: datetime | None = None
     note: str | None = None
     room: str | None = None
     key: bool | None = None
-    multipleDay: bool | None = None
-    recurring: bool | None = None
-    id: str
+    recurrence_rule: str | None = None

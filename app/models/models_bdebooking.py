@@ -15,7 +15,6 @@ class Room(Base):
 
 class Booking(Base):
     __tablename__ = "bde_booking"
-    url: str = Column(String, nullable=False)
     id: str = Column(String, primary_key=True, index=True)
     reason: str = Column(String, nullable=False)
     start: datetime = Column(DateTime, nullable=False)
@@ -25,6 +24,5 @@ class Booking(Base):
     room: Room = relationship(Room, lazy="joined")
     key: bool = Column(Boolean, nullable=False)
     decision: str = Column(String, nullable=False)
-    multipleDay: bool = Column(Boolean, nullable=False)
-    recurring: bool = Column(Boolean, nullable=False)
+    recurrence_rule: str | None = Column(String)
     applicant_id: str = Column(ForeignKey("core_user.id"), nullable=False)

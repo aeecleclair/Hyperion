@@ -9,14 +9,8 @@ from app.utils.types.bdebooking_type import Decision
 
 async def get_bookings(
     db: AsyncSession,
-    # decision: Decision
 ) -> list[models_bdebooking.Booking]:
-    result = await db.execute(
-        select(models_bdebooking.Booking)
-        # .where(
-        #     models_bdebooking.Booking.decision == decision
-        # )
-    )
+    result = await db.execute(select(models_bdebooking.Booking))
     return result.scalars().all()
 
 
@@ -52,10 +46,12 @@ async def create_booking(db: AsyncSession, booking: schemas_bdebooking.BookingCo
         raise ValueError(error)
 
 
-async def edit_booking(db: AsyncSession, booking: schemas_bdebooking.BookingEdit):
+async def edit_booking(
+    db: AsyncSession, booking_id: str, booking: schemas_bdebooking.BookingEdit
+):
     await db.execute(
         update(models_bdebooking.Booking)
-        .where(models_bdebooking.Booking.id == booking.id)
+        .where(models_bdebooking.Booking.id == booking_id)
         .values(**booking.dict(exclude_none=True))
     )
     try:
@@ -114,10 +110,10 @@ async def create_room(db: AsyncSession, room: schemas_bdebooking.RoomComplete):
         raise ValueError()
 
 
-async def edit_room(db: AsyncSession, room: schemas_bdebooking.RoomComplete):
+async def edit_room(db: AsyncSession, room_id: str, room: schemas_bdebooking.RoomBase):
     await db.execute(
         update(models_bdebooking.Room)
-        .where(models_bdebooking.Room.id == room.id)
+        .where(models_bdebooking.Room.id == room_id)
         .values(name=room.name)
     )
     try:

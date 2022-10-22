@@ -46,34 +46,6 @@ async def get_confirmed_bookings(
     return bookings
 
 
-# @router.get(
-#     "/bdebooking/bookings/unconfirmed",
-#     response_model=list[schemas_bdebooking.BookingReturn],
-#     status_code=200,
-#     tags=[Tags.bdebooking],
-# )
-# async def get_unconfirmed_bookings(
-#     db: AsyncSession = Depends(get_db),
-#     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
-# ):
-#     bookings = await cruds_bdebooking.get_bookings(db=db, decision=Decision.pending)
-#     return bookings
-
-
-# @router.get(
-#     "/bdebooking/bookings/declined",
-#     response_model=list[schemas_bdebooking.BookingReturn],
-#     status_code=200,
-#     tags=[Tags.bdebooking],
-# )
-# async def get_declined_bookings(
-#     db: AsyncSession = Depends(get_db),
-#     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
-# ):
-#     bookings = await cruds_bdebooking.get_bookings(db=db, decision=Decision.declined)
-#     return bookings
-
-
 @router.get(
     "/bdebooking/user/{applicant_id}",
     response_model=list[schemas_bdebooking.BookingReturn],
@@ -140,22 +112,27 @@ async def create_bookings(
     return await cruds_bdebooking.get_booking_by_id(db=db, booking_id=db_booking.id)
 
 
-@router.patch("/bdebooking/bookings", status_code=204, tags=[Tags.bdebooking])
+@router.patch(
+    "/bdebooking/bookings/{booking_id}", status_code=200, tags=[Tags.bdebooking]
+)
 async def edit_bookings_id(
+    booking_id: str,
     booking: schemas_bdebooking.BookingEdit,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
 ):
 
     try:
-        await cruds_bdebooking.edit_booking(booking=booking, db=db)
+        await cruds_bdebooking.edit_booking(
+            booking_id=booking_id, booking=booking, db=db
+        )
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
 
 @router.patch(
     "/bdebooking/bookings/{booking_id}/reply/{decision}",
-    status_code=204,
+    status_code=200,
     tags=[Tags.bdebooking],
 )
 async def confirm_booking(
@@ -224,16 +201,17 @@ async def create_room(
 
 
 @router.patch(
-    "/bdebooking/rooms",
-    status_code=204,
+    "/bdebooking/rooms/{room_id}",
+    status_code=200,
     tags=[Tags.bdebooking],
 )
 async def edit_room(
-    room: schemas_bdebooking.RoomComplete,
+    room_id: str,
+    room: schemas_bdebooking.RoomBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
 ):
-    await cruds_bdebooking.edit_room(db=db, room=room)
+    await cruds_bdebooking.edit_room(db=db, room_id=room_id, room=room)
 
 
 @router.delete(
