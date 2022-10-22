@@ -119,9 +119,13 @@ async def startup():
     ):
         hyperion_error_logger.info("Redis client not configured")
 
-    # Create the asset folder if it does not exist
+    # Create the data folders if it does not exist
     if not os.path.exists("data/profile-pictures/"):
         os.makedirs("data/profile-pictures/")
+
+    # Create folder for calendars
+    if not os.path.exists("data/ics/"):
+        os.makedirs("data/ics/")
 
     # create db tables
     async with engine.begin() as conn:
@@ -143,3 +147,16 @@ async def startup():
 
 
 app.include_router(api.api_router)
+
+
+# @app.post("/users/{user_id}/items/", response_model=schemas.Item)
+# def create_item_for_user(
+#     user_id: int, item: schemas.ItemCreate, db: Session = Depends(get_db)
+# ):
+#     return crud.create_user_item(db=db, item=item, user_id=user_id)
+
+
+# @app.get("/items/", response_model=list[schemas.Item])
+# def read_items(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+#     items = crud.get_items(db, skip=skip, limit=limit)
+#     return items
