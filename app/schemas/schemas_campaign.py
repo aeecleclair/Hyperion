@@ -18,6 +18,25 @@ class ListBase(BaseModel):
     name: str
     description: str
     logo_path: str
+    type: str  # Add an enum
+    section: str
 
     class Config:
         orm_mode = True
+
+
+class ListComplete(ListBase):
+    id: str
+
+
+class VoteBase(BaseModel):
+    """Base schema for a vote."""
+
+    list_id: str
+
+    class Config:
+        orm_mode = True
+
+
+class VoteStatus(BaseModel):
+    status: bool
