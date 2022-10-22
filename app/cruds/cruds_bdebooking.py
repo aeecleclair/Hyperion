@@ -14,6 +14,17 @@ async def get_bookings(
     return result.scalars().all()
 
 
+async def get_confirmed_bookings(
+    db: AsyncSession,
+) -> list[models_bdebooking.Booking]:
+    result = await db.execute(
+        select(models_bdebooking.Booking).where(
+            models_bdebooking.Booking.decision == Decision.approved
+        )
+    )
+    return result.scalars().all()
+
+
 async def get_applicant_bookings(
     db: AsyncSession, applicant_id: str
 ) -> list[models_bdebooking.Booking]:

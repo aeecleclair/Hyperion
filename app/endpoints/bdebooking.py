@@ -38,11 +38,35 @@ async def get_rights(
     status_code=200,
     tags=[Tags.bdebooking],
 )
+async def get_bookings(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
+):
+    """
+    Get all bookings.
+
+    **Only usable by admins**
+    """
+    bookings = await cruds_bdebooking.get_bookings(db=db)
+    return bookings
+
+
+@router.get(
+    "/bdebooking/bookings/confirmed",
+    response_model=list[schemas_bdebooking.BookingReturn],
+    status_code=200,
+    tags=[Tags.bdebooking],
+)
 async def get_confirmed_bookings(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    bookings = await cruds_bdebooking.get_bookings(db=db)
+    """
+    Get all confirmed bookings.
+
+    **Usable by every member**
+    """
+    bookings = await cruds_bdebooking.get_confirmed_bookings(db=db)
     return bookings
 
 
@@ -57,6 +81,11 @@ async def get_applicant_bookings(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Get one user bookings.
+
+    **Usable by the user or admins**
+    """
     if user.id == applicant_id or is_user_member_of_an_allowed_group(
         user, [GroupType.BDE]
     ):
@@ -79,6 +108,11 @@ async def get_booking_by_id(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Get one booking.
+
+    **Usable by admins or booking's applicant**
+    """
     booking = await cruds_bdebooking.get_booking_by_id(db=db, booking_id=booking_id)
     if booking is not None:
         if booking.applicant_id == user.id or is_user_member_of_an_allowed_group(
@@ -102,6 +136,11 @@ async def create_bookings(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Create a booking.
+
+    **Usable by every members**
+    """
     db_booking = schemas_bdebooking.BookingComplete(
         id=str(uuid.uuid4()),
         decision=Decision.pending,
@@ -121,7 +160,11 @@ async def edit_bookings_id(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
 ):
+    """
+    Edit a booking.
 
+    **Only usable by admins**
+    """
     try:
         await cruds_bdebooking.edit_booking(
             booking_id=booking_id, booking=booking, db=db
@@ -141,6 +184,11 @@ async def confirm_booking(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
 ):
+    """
+    Give a decision to a booking.
+
+    **Only usable by admins**
+    """
     await cruds_bdebooking.confirm_booking(
         booking_id=booking_id, decision=decision, db=db
     )
@@ -154,6 +202,11 @@ async def delete_bookings_id(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
 ):
+    """
+    Remove a booking.
+
+    **Only usable by admins**
+    """
     await cruds_bdebooking.delete_booking(booking_id=booking_id, db=db)
 
 
@@ -167,6 +220,11 @@ async def get_rooms(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Get all rooms.
+
+    **Usable by every member**
+    """
     return await cruds_bdebooking.get_rooms(db=db)
 
 
@@ -179,8 +237,13 @@ async def get_rooms(
 async def get_room_by_id(
     room_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Get a particular room.
+
+    **Usable by every member**
+    """
     return await cruds_bdebooking.get_room_by_id(db=db, room_id=room_id)
 
 
@@ -195,6 +258,11 @@ async def create_room(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
 ):
+    """
+    Create a room.
+
+    **Only usable by admins**
+    """
     db_room = schemas_bdebooking.RoomComplete(id=str(uuid.uuid4()), **room.dict())
     await cruds_bdebooking.create_room(db=db, room=db_room)
     return db_room
@@ -211,6 +279,11 @@ async def edit_room(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
 ):
+    """
+    Edit a room.
+
+    **Only usable by admins**
+    """
     await cruds_bdebooking.edit_room(db=db, room_id=room_id, room=room)
 
 
@@ -224,4 +297,9 @@ async def delete_room(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
 ):
+    """
+    Remove a room.
+
+    **Only usable by admins**
+    """
     await cruds_bdebooking.delete_room(db=db, room_id=room_id)
