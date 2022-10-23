@@ -624,8 +624,7 @@ async def read_user(
 
 @router.patch(
     "/users/me",
-    response_model=schemas_core.CoreUser,
-    status_code=200,
+    status_code=204,
     tags=[Tags.users],
 )
 async def update_current_user(
@@ -641,13 +640,10 @@ async def update_current_user(
 
     await cruds_users.update_user(db=db, user_id=user.id, user_update=user_update)
 
-    return user
-
 
 @router.patch(
     "/users/{user_id}",
-    response_model=schemas_core.CoreUser,
-    status_code=200,
+    status_code=204,
     tags=[Tags.users],
 )
 async def update_user(
@@ -666,8 +662,6 @@ async def update_user(
         raise HTTPException(status_code=404, detail="User not found")
 
     await cruds_users.update_user(db=db, user_id=user_id, user_update=user_update)
-
-    return db_user
 
 
 @router.post(
