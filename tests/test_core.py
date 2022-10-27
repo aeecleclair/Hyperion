@@ -25,3 +25,25 @@ def test_get_wellknown_security_txt():
         "/.well-known/security.txt",
     )
     assert response.status_code == 200
+
+
+def test_get_stylesheet():
+
+    response = client.get(
+        "/style/connexion.css",
+    )
+    assert response.status_code == 200
+
+    # This request should return a 404 as the stylesheet does not exist
+    response = client.get(
+        "/style/dontexist.css",
+    )
+    assert response.status_code == 404
+
+
+def test_get_favicon():
+
+    response = client.get(
+        "/favicon.ico",
+    )
+    assert response.status_code == 200
