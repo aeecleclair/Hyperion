@@ -43,7 +43,7 @@ router = APIRouter()
 hyperion_error_logger = logging.getLogger("hyperion.error")
 hyperion_security_logger = logging.getLogger("hyperion.security")
 
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory="assets/templates")
 
 
 @router.get(

@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends
+from os import path
+
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 
 from app.core.config import Settings
@@ -53,3 +55,22 @@ async def read_wellknown_security_txt():
     """
 
     return FileResponse("assets/security.txt")
+
+
+@router.get(
+    "/style/{file}.css",
+    response_class=FileResponse,
+    status_code=200,
+    tags=[Tags.core],
+)
+async def get_style_file(
+    file: str,
+):
+    """
+    Return a style file from the assets folder
+    """
+
+    if not path.isfile(f"assets/style/{file}.css"):
+        raise HTTPException(status_code=404, detail="File not found")
+
+    return FileResponse(f"assets/style/{file}.css")

@@ -44,7 +44,7 @@ from app.utils.types.tags import Tags
 
 router = APIRouter()
 
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory="assets/templates")
 
 # We could maybe use hyperion.security
 logger = logging.getLogger("hyperion.access")
