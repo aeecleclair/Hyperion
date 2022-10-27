@@ -35,7 +35,6 @@ class AccountType(str, Enum):
     These values should match GroupType's. They are the lower level groups in Hyperion
     """
 
-    admin = "0a25cb76-4b63-4fd3-b939-da6d9feabf28"
     student = GroupType.student.value
     staff = GroupType.staff.value
     association = GroupType.association.value

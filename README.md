@@ -111,16 +111,3 @@ openssl req -newkey rsa:2048 -nodes -x509 -days 365 | sed 's/$/\\n/g' | tr -d '\
 # openssl req -newkey rsa:2048 -nodes -keyout key.pem -x509 -days 365 -out certificate.pem
 ```
 
-Structure :
-
-``` 
-└── app
-    ├── main.py
-    ├── __init__.py
-    ├── crud
-    ├── database.py
-    ├── models
-        └──
-    └── schemas
-        └──
-```
