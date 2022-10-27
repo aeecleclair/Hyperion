@@ -74,3 +74,13 @@ async def get_style_file(
         raise HTTPException(status_code=404, detail="File not found")
 
     return FileResponse(f"assets/style/{file}.css")
+
+
+@router.get(
+    "/favicon.ico",
+    response_class=FileResponse,
+    status_code=200,
+    tags=[Tags.core],
+)
+async def get_favicon():
+    return FileResponse("assets/images/favicon.ico")
