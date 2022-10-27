@@ -197,6 +197,8 @@ async def post_authorize_page(
     response_class=RedirectResponse,
 )
 async def authorize_validation(
+    # request need to be passed to Jinja2 to generate the HTML page
+    request: Request,
     # User validation
     authorizereq: schemas_auth.AuthorizeValidation = Depends(
         schemas_auth.AuthorizeValidation.as_form
@@ -312,10 +314,21 @@ async def authorize_validation(
         logger.warning(
             f"Authorize-validation: Invalide user email or password for email {authorizereq.email} ({request_id})"
         )
-        url = redirect_uri + "?error=" + "unsupported_response_type"
-        if authorizereq.state:
-            url += "&state=" + authorizereq.state
-        return RedirectResponse(url)
+        return templates.TemplateResponse(
+            "connexion.html",
+            {
+                "request": request,
+                "response_type": authorizereq.response_type,
+                "redirect_uri": redirect_uri,
+                "client_id": authorizereq.client_id,
+                "scope": authorizereq.scope,
+                "state": authorizereq.state,
+                "nonce": authorizereq.nonce,
+                "code_challenge": authorizereq.code_challenge,
+                "code_challenge_method": authorizereq.code_challenge_method,
+                "show_invalid_warning": True,
+            },
+        )
 
     # The auth_client may restrict the usage of the client to specific Hyperion groups.
     # For example, only ECLAIR members may be allowed to access the wiki

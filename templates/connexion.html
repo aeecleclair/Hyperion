@@ -143,6 +143,12 @@
         .social i {
             margin-right: 4px;
         }
+
+        .invalid {
+            color: red;
+            text-align: center;
+            padding-top: 1rem;
+        }
     </style>
 </head>
 
@@ -175,7 +181,12 @@
         <input type="hidden" name="code_challenge_method" value="{{ code_challenge_method }}">
         {% endif %}
 
+
         <button type="submit">Log In</button>
+
+        {% if show_invalid_warning %}
+        <p class="invalid">Invalid email or password</p>
+        {% endif %}
 
     </form>
 </body>
