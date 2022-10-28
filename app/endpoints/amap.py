@@ -120,12 +120,12 @@ async def delete_product(
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    if await cruds_amap.is_product_not_used(db=db, product_id=product_id):
-        await cruds_amap.delete_product(db=db, product_id=product_id)
-    else:
+    if await cruds_amap.is_product_used(db=db, product_id=product_id):
         raise HTTPException(
             status_code=403, detail="This product is used in a delivery"
         )
+
+    await cruds_amap.delete_product(db=db, product_id=product_id)
 
 
 @router.get(
