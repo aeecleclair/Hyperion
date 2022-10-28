@@ -131,20 +131,6 @@ async def delete_delivery(db: AsyncSession, delivery_id: str):
     await db.commit()
 
 
-async def get_products_from_delivery(
-    db: AsyncSession, delivery_id: str
-) -> list[models_amap.Product] | None:
-    result = await db.execute(
-        select(models_amap.Delivery)
-        .where(models_amap.Delivery.id == delivery_id)
-        .options(selectinload(models_amap.Delivery.products))
-    )
-    delivery = result.scalars().first()
-    if delivery is not None:
-        return delivery.products
-    return None
-
-
 async def add_product_to_delivery(
     db: AsyncSession, link: schemas_amap.AddProductDelivery
 ):

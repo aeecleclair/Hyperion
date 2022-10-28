@@ -193,10 +193,7 @@ async def get_products_from_delivery(
     if delivery is None:
         raise HTTPException(status_code=404, detail="Delivery not found")
 
-    products = await cruds_amap.get_products_from_delivery(
-        delivery_id=delivery_id, db=db
-    )
-    return products
+    return delivery.products
 
 
 @router.post(
