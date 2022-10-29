@@ -686,10 +686,16 @@ async def create_cash_of_user(
 
     **The user must be a member of the group AMAP to use this endpoint**
     """
-    # TODO: what happen if a cash already exist?
     user = await read_user(user_id=user_id, db=db)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
+    cash = await cruds_amap.get_cash_by_id(db=db, user_id=user_id)
+    if cash is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="This user already has a cash.",
+        )
     result = await cruds_amap.create_cash_of_user(
         cash=schemas_amap.CashDB(user_id=user_id, **balance.dict()),
         db=db,
@@ -713,10 +719,17 @@ async def edit_cash_by_id(
 
     **The user must be a member of the group AMAP to use this endpoint**
     """
-    # TODO: what happen if the cash does not already exist?
     user = await read_user(user_id=user_id, db=db)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
+    cash = await cruds_amap.get_cash_by_id(db=db, user_id=user_id)
+    if cash is None:
+        raise HTTPException(
+            status_code=404,
+            detail="The user don't have a cash.",
+        )
+
     await cruds_amap.edit_cash_by_id(user_id=user_id, balance=balance, db=db)
 
 
