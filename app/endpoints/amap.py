@@ -43,7 +43,11 @@ async def get_products(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
-    """Return all AMAP products from database as a list of dictionaries"""
+    """
+    Return all products
+
+    **The user must be a member of the group AMAP to use this endpoint**
+    """
     products = await cruds_amap.get_products(db)
     return products
 
@@ -59,6 +63,11 @@ async def create_product(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
+    """
+    Create a new product
+
+    **The user must be a member of the group AMAP to use this endpoint**
+    """
     db_product = schemas_amap.ProductComplete(id=str(uuid.uuid4()), **product.dict())
     try:
         result = await cruds_amap.create_product(product=db_product, db=db)
@@ -78,6 +87,9 @@ async def get_product_by_id(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Get a specific product
+    """
     product = await cruds_amap.get_product_by_id(product_id=product_id, db=db)
 
     if product is None:
@@ -97,6 +109,12 @@ async def edit_product(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
+    """
+    Edit a product
+
+    **The user must be a member of the group AMAP to use this endpoint**
+    """
+
     product = await cruds_amap.get_product_by_id(db=db, product_id=product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
@@ -116,6 +134,12 @@ async def delete_product(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
+    """
+    Delete a product. A product can not be deleted if it is already used in a delivery.
+
+    **The user must be a member of the group AMAP to use this endpoint**
+    """
+
     product = await cruds_amap.get_product_by_id(db=db, product_id=product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
@@ -138,9 +162,10 @@ async def get_deliveries(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    """Return all AMAP products from database as a list of dictionaries"""
-    deliveries = await cruds_amap.get_deliveries(db)
-    return deliveries
+    """
+    Get all deliveries.
+    """
+    return await cruds_amap.get_deliveries(db)
 
 
 @router.post(
@@ -154,6 +179,12 @@ async def create_delivery(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
+    """
+    Create a new delivery.
+
+    **The user must be a member of the group AMAP to use this endpoint**
+    """
+
     db_delivery = schemas_amap.DeliveryComplete(
         id=str(uuid.uuid4()),
         **delivery.dict(),
@@ -165,12 +196,22 @@ async def create_delivery(
         raise HTTPException(status_code=422, detail=str(error))
 
 
-@router.delete("/amap/deliveries/{delivery_id}", status_code=204, tags=[Tags.amap])
+@router.delete(
+    "/amap/deliveries/{delivery_id}",
+    status_code=204,
+    tags=[Tags.amap],
+)
 async def delete_delivery(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
+    """
+    Delete a delivery.
+
+    **The user must be a member of the group AMAP to use this endpoint**
+    """
+
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
     if delivery is None:
         raise HTTPException(status_code=404, detail="Delivery not found")
@@ -189,6 +230,10 @@ async def get_products_from_delivery(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Get products from a delivery.
+    """
+
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
     if delivery is None:
         raise HTTPException(status_code=404, detail="Delivery not found")
@@ -208,6 +253,14 @@ async def add_product_to_delivery(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
+    """
+    Add `product_id` product to `delivery_id` delivery. This endpoint will only add a membership between the two objects.
+
+    **The user must be a member of the group AMAP to use this endpoint**
+    """
+    # TODO: do we want to ask the client for a schema containing the product_id instead of putting it in the path?
+    # For groups, we have a specific POST /groups/membership
+
     product = await cruds_amap.get_product_by_id(db=db, product_id=product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
@@ -220,8 +273,9 @@ async def add_product_to_delivery(
             db=db,
         )
         return await get_products_from_delivery(db=db, delivery_id=delivery_id)
+
     except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @router.delete(
@@ -237,6 +291,8 @@ async def remove_product_from_delivery(
 ):
     """
     Remove a given product from a delivery. This won't delete the product nor the delivery.
+
+    **The user must be a member of the group AMAP to use this endpoint**
     """
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
     if delivery is None:
@@ -261,6 +317,12 @@ async def edit_delivery(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
+    """
+    Edit a delivery.
+
+    **The user must be a member of the group AMAP to use this endpoint**
+    """
+
     delivery_db = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
     if delivery_db is None:
         raise HTTPException(status_code=404, detail="Delivery not found")
@@ -279,6 +341,14 @@ async def get_orders_from_delivery(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
+    """
+    Get orders from a delivery.
+
+    **The user must be a member of the group AMAP to use this endpoint**
+    """
+    # TODO: should we use a relation ship to load orders when querying the delivery?
+    # We are currently making 2+N database calls.
+
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
     if delivery is None:
         raise HTTPException(status_code=404, detail="Delivery not found")
@@ -302,6 +372,12 @@ async def get_order_by_id(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
+    """
+    Get content of an order.
+
+    **The user must be a member of the group AMAP to use this endpoint**
+    """
+    # TODO: document this endpoint
 
     order = await cruds_amap.get_order_by_id(order_id=order_id, db=db)
     if order is None:
@@ -350,6 +426,13 @@ async def add_order_to_delievery(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Get orders from a delivery.
+
+    **The user must be a member of the group AMAP to use this endpoint**
+    """
+    # TODO: document this endpoint
+
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
     if delivery is None:
         raise HTTPException(status_code=404, detail="Delivery not found")
@@ -417,6 +500,13 @@ async def edit_orders_from_delieveries(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Edit an order.
+
+    **The user must be a member of the group AMAP to use this endpoint**
+    """
+    # TODO: document this endpoint
+
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
     if delivery is None:
         raise HTTPException(status_code=404, detail="Delivery not found")
@@ -484,6 +574,13 @@ async def remove_order(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Delete and order.
+
+    **The user must be a member of the group AMAP to use this endpoint**
+    """
+    # TODO: document this endpoint
+
     order = await cruds_amap.get_order_by_id(db=db, order_id=order_id)
     if order is None:
         raise HTTPException(status_code=404, detail="No order found")
@@ -525,6 +622,11 @@ async def get_users_cash(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
+    """
+    Get cash from all users.
+
+    **The user must be a member of the group AMAP to use this endpoint**
+    """
     cash = await cruds_amap.get_users_cash(db)
     res = []
     for c in cash:
@@ -544,6 +646,11 @@ async def get_cash_by_id(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Get cash from a specific user.
+
+    **The user must be a member of the group AMAP to use this endpoint or can only access the endpoint for its own user_id**
+    """
     user_db = await cruds_users.get_user_by_id(db=db, user_id=user_id)
     if user_db is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -556,7 +663,10 @@ async def get_cash_by_id(
         else:
             return schemas_amap.CashComplete(balance=0, user=user)
     else:
-        raise HTTPException(status_code=403)
+        raise HTTPException(
+            status_code=403,
+            detail="Users that are not member of the group AMAP can only access the endpoint for their own user_id.",
+        )
 
 
 @router.post(
@@ -571,6 +681,12 @@ async def create_cash_of_user(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
+    """
+    Create cash for an user.
+
+    **The user must be a member of the group AMAP to use this endpoint**
+    """
+    # TODO: what happen if a cash already exist?
     user = await read_user(user_id=user_id, db=db)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -578,7 +694,7 @@ async def create_cash_of_user(
         cash=schemas_amap.CashDB(user_id=user_id, **balance.dict()),
         db=db,
     )
-    return schemas_amap.CashBase(**result.__dict__)
+    return result
 
 
 @router.patch(
@@ -592,6 +708,12 @@ async def edit_cash_by_id(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
+    """
+    Edit cash for an user.
+
+    **The user must be a member of the group AMAP to use this endpoint**
+    """
+    # TODO: what happen if the cash does not already exist?
     user = await read_user(user_id=user_id, db=db)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -609,6 +731,11 @@ async def get_orders_of_user(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Get orders from an user.
+
+    **The user must be a member of the group AMAP to use this endpoint or can only access the endpoint for its own user_id**
+    """
     user = await read_user(user_id=user_id, db=db)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
