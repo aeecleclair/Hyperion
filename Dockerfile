@@ -6,7 +6,7 @@ WORKDIR /code
 COPY ./requirements.txt /code/requirements.txt
 RUN pip install --upgrade -r /code/requirements.txt
 
-
+COPY ./assets /code/assets
 COPY ./alembic.ini /code/alembic.ini
 COPY ./migrations /code/migrations
 COPY ./wait-for-it.sh /code/wait-for-it.sh
