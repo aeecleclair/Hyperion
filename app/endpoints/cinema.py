@@ -15,7 +15,7 @@ router = APIRouter()
 
 @router.get(
     "/cinema/sessions",
-    response_model=schemas_cinema.CineSessionComplete,
+    response_model=list[schemas_cinema.CineSessionComplete],
     status_code=200,
     tags=[Tags.cinema],
 )
