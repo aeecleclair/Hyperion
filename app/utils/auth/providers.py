@@ -195,5 +195,5 @@ class WikijsAuthClient(BaseAuthClient):
             "sub": user.id,
             "name": user.firstname,
             "email": user.email,
-            "groups": user.groups,
+            "groups": [group.name for group in user.groups],
         }
