@@ -177,3 +177,23 @@ class HedgeDocAuthClient(BaseAuthClient):
             "name": user.firstname,
             "email": user.email,
         }
+
+
+class WikijsAuthClient(BaseAuthClient):
+    # https://github.com/requarks/wiki/blob/main/server/modules/authentication/oidc/definition.yml
+
+    # If no redirect_uri are hardcoded, the client will need to provide one in its request
+    redirect_uri: str | None = None
+    # Set of scopes the auth client is authorized to grant when issuing an access token.
+    # See app.utils.types.scopes_type.ScopeType for possible values
+    allowed_scopes: Set[ScopeType] = {ScopeType.openid}
+
+    @classmethod
+    def get_userinfo(cls, user: models_core.CoreUser):
+
+        return {
+            "sub": user.id,
+            "name": user.firstname,
+            "email": user.email,
+            "groups": user.groups,
+        }
