@@ -64,7 +64,9 @@ async def get_lists(db: AsyncSession) -> list[models_campaign.Lists]:
     return lists
 
 
-async def get_list_by_id(db: AsyncSession, list_id: str) -> models_campaign.Lists:
+async def get_list_by_id(
+    db: AsyncSession, list_id: str
+) -> models_campaign.Lists | None:
     """Return list with the given id."""
     result = await db.execute(
         select(models_campaign.Lists).where(models_campaign.Lists.id == list_id)
@@ -114,7 +116,7 @@ async def add_vote(db: AsyncSession, vote: models_campaign.Votes) -> None:
 
 async def get_has_voted(
     db: AsyncSession, user_id: str, section_name: str
-) -> models_campaign.HasVoted:
+) -> models_campaign.HasVoted | None:
     """Return HasVoted object from the db."""
     result = await db.execute(
         select(models_campaign.HasVoted)
