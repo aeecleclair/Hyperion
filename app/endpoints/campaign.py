@@ -49,9 +49,10 @@ async def add_section(
 
     **This endpoint is only usable by administrators**
     """
+    db_section = models_campaign.Sections(id=str(uuid.uuid4()), **section.dict())
     try:
-        await cruds_campaign.add_section(section=section, db=db)
-        return models_campaign.Sections(**section.dict())
+        await cruds_campaign.add_section(section=db_section, db=db)
+        return db_section
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
@@ -133,10 +134,13 @@ async def add_list(
         )
         if section is not None:
             model_campaign_list = models_campaign.Lists(
-                id=str(uuid.uuid4()), **list.dict()
+                id=str(uuid.uuid4()),
+                **list.dict(exclude={"members"}),
             )
             try:
-                await cruds_campaign.add_list(campaign_list=model_campaign_list, db=db)
+                await cruds_campaign.add_list(
+                    campaign_list=model_campaign_list, members=list.members, db=db
+                )
                 return model_campaign_list
             except ValueError as error:
                 raise HTTPException(status_code=422, detail=str(error))
@@ -164,7 +168,7 @@ async def delete_list(
 @router.patch("/campaign/lists/{list_id}", status_code=201, tags=[Tags.campaign])
 async def update_list(
     list_id: str,
-    campaign_list: schemas_campaign.ListBase,
+    campaign_list: schemas_campaign.ListEdit,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
