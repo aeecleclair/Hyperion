@@ -145,12 +145,10 @@ async def add_list(
         if section is not None:
             model_campaign_list = models_campaign.Lists(
                 id=str(uuid.uuid4()),
-                **list.dict(exclude={"members"}),
+                **list.dict(),
             )
             try:
-                await cruds_campaign.add_list(
-                    campaign_list=model_campaign_list, members=list.members, db=db
-                )
+                await cruds_campaign.add_list(campaign_list=model_campaign_list, db=db)
                 return model_campaign_list
             except ValueError as error:
                 raise HTTPException(status_code=422, detail=str(error))
