@@ -13,11 +13,11 @@ async def get_sections(db: AsyncSession) -> list[models_campaign.Sections]:
     return result.scalars().all()
 
 
-async def get_section_by_name(db: AsyncSession, section_name: str):
+async def get_section_by_name(db: AsyncSession, section_id: str):
     """Return section with the given name."""
     result = await db.execute(
         select(models_campaign.Sections).where(
-            models_campaign.Sections.name == section_name
+            models_campaign.Sections.id == section_id
         )
     )
     return result.scalars().first()
@@ -33,24 +33,22 @@ async def add_section(db: AsyncSession, section: models_campaign.Sections) -> No
         raise ValueError("This name is already used")
 
 
-async def delete_section(db: AsyncSession, section_name: str) -> None:
+async def delete_section(db: AsyncSession, section_id: str) -> None:
     """Delete a section."""
     await db.execute(
         delete(models_campaign.Sections).where(
-            models_campaign.Sections.name == section_name
+            models_campaign.Sections.id == section_id
         )
     )
     await db.commit()
 
 
 async def get_lists_from_section(
-    db: AsyncSession, section_name: str
+    db: AsyncSession, section_id: str
 ) -> list[models_campaign.Lists]:
     """Return all campaign lists of the given section."""
     result = await db.execute(
-        select(models_campaign.Lists).where(
-            models_campaign.Lists.section == section_name
-        )
+        select(models_campaign.Lists).where(models_campaign.Lists.section == section_id)
     )
     lists = result.scalars().all()
     return lists
@@ -146,20 +144,20 @@ async def add_vote(db: AsyncSession, vote: models_campaign.Votes) -> None:
 
 
 async def get_has_voted(
-    db: AsyncSession, user_id: str, section_name: str
+    db: AsyncSession, user_id: str, section_id: str
 ) -> models_campaign.HasVoted | None:
     """Return HasVoted object from the db."""
     result = await db.execute(
         select(models_campaign.HasVoted)
         .where(models_campaign.HasVoted.user_id == user_id)
-        .where(models_campaign.HasVoted.section_name == section_name)
+        .where(models_campaign.HasVoted.section_id == section_id)
     )
     return result.scalars().first()
 
 
-async def mark_has_voted(db: AsyncSession, user_id: str, section_name: str) -> None:
+async def mark_has_voted(db: AsyncSession, user_id: str, section_id: str) -> None:
     """Mark user has having vote for the given section."""
-    has_voted = models_campaign.HasVoted(user_id=user_id, section_name=section_name)
+    has_voted = models_campaign.HasVoted(user_id=user_id, section_id=section_id)
     db.add(has_voted)
     try:
         await db.commit()
@@ -174,7 +172,7 @@ async def get_votes(db: AsyncSession) -> list[models_campaign.Votes]:
 
 
 async def get_votes_for_section(
-    db: AsyncSession, section_name: str
+    db: AsyncSession, section_id: str
 ) -> list[models_campaign.Votes]:
     result = await db.execute(
         select(models_campaign.Votes)
@@ -182,7 +180,7 @@ async def get_votes_for_section(
             models_campaign.Lists,
             onclause=models_campaign.Lists.id == models_campaign.Votes.list_id,
         )
-        .where(models_campaign.Lists.section == section_name)
+        .where(models_campaign.Lists.section == section_id)
     )
     return result.scalars().all()
 
