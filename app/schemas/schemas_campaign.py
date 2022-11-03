@@ -1,5 +1,7 @@
 from pydantic import BaseModel
 
+from app.utils.types.campaign_type import ListType
+
 
 class SectionBase(BaseModel):
     """Base schema for a section of AEECL."""
@@ -7,6 +9,18 @@ class SectionBase(BaseModel):
     name: str
     logo_path: str
     description: str
+
+
+class SectionComplete(SectionBase):
+    id: str
+
+    class Config:
+        orm_mode = True
+
+
+class ListMember(BaseModel):
+    user_id: str
+    role: str
 
     class Config:
         orm_mode = True
@@ -18,8 +32,9 @@ class ListBase(BaseModel):
     name: str
     description: str
     logo_path: str
-    type: str  # Add an enum
+    type: ListType
     section: str
+    members: list[ListMember]
 
     class Config:
         orm_mode = True
@@ -27,6 +42,15 @@ class ListBase(BaseModel):
 
 class ListComplete(ListBase):
     id: str
+
+
+class ListEdit(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    logo_path: str | None = None
+    type: ListType | None = None
+    section: str | None = None
+    members: list[ListMember] | None = None
 
 
 class VoteBase(BaseModel):
