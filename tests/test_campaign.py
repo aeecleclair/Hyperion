@@ -33,7 +33,6 @@ async def startuptest():
             id=str(uuid.uuid4()),
             name="BDE",
             description="Bureau Des Eleves",
-            logo_path=".png",
         )
         db.add(section)
         await db.commit()
@@ -55,7 +54,6 @@ def test_add_sections():
         json={
             "name": "ECLAIR",
             "description": "Association Informatique",
-            "logo_path": "src",
         },
     )
     assert response.status_code == 201
@@ -86,3 +84,19 @@ def test_get_lists():
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
+
+
+def test_add_list():
+    token = create_api_access_token(admin_user)
+    response = client.post(
+        "/campaign/lists",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "name": "Mr Reboot",
+            "description": "Probablement la meilleure liste disponible",
+            "type": "Serio",
+            "section": section.id,
+            "members": [],
+        },
+    )
+    assert response.status_code == 201
