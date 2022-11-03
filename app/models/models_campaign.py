@@ -18,7 +18,6 @@ class Sections(Base):
     id: str = Column(String, primary_key=True)
     name: str = Column(String, unique=True)
     description: str = Column(String)
-    logo_path: str = Column(String, nullable=False)
 
 
 class Lists(Base):
@@ -27,10 +26,8 @@ class Lists(Base):
     id: str = Column(String, primary_key=True)
     name: str = Column(String, unique=True)
     description: str = Column(String)
-    section: str = Column(ForeignKey("campaign_sections.name"))
+    section: str = Column(ForeignKey("campaign_sections.id"))
     type: str = Column(String, nullable=False)
-    logo_path: str = Column(String, nullable=False)
-    picture_path: str = Column(String)
     members: list[ListMemberships] = relationship(
         "ListMemberships",
     )
@@ -47,4 +44,4 @@ class HasVoted(Base):
     __tablename__ = "campaign_has_voted"
 
     user_id: str = Column(ForeignKey("core_user.id"), primary_key=True)
-    section_name: str = Column(ForeignKey("campaign_sections.name"))
+    section_id: str = Column(ForeignKey("campaign_sections.id"))

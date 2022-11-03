@@ -1,3 +1,5 @@
+import uuid
+
 from app.main import app
 from app.models import models_campaign, models_core
 from app.utils.types.groups_type import GroupType
@@ -28,6 +30,7 @@ async def startuptest():
 
     async with TestingSessionLocal() as db:
         section = models_campaign.Sections(
+            id=str(uuid.uuid4()),
             name="BDE",
             description="Bureau Des Eleves",
             logo_path=".png",
