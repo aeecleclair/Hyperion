@@ -33,7 +33,12 @@ async def get_sections(
     return sections
 
 
-@router.post("/campaign/sections", status_code=201, tags=[Tags.campaign])
+@router.post(
+    "/campaign/sections",
+    response_model=schemas_campaign.SectionBase,
+    status_code=201,
+    tags=[Tags.campaign],
+)
 async def add_section(
     section: schemas_campaign.SectionBase,
     db: AsyncSession = Depends(get_db),
@@ -46,6 +51,7 @@ async def add_section(
     """
     try:
         await cruds_campaign.add_section(section=section, db=db)
+        return models_campaign.Sections(**section.dict())
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
@@ -104,7 +110,12 @@ async def get_lists(
     return lists
 
 
-@router.post("/campaign/lists", status_code=201, tags=[Tags.campaign])
+@router.post(
+    "/campaign/lists",
+    response_model=schemas_campaign.ListComplete,
+    status_code=201,
+    tags=[Tags.campaign],
+)
 async def add_list(
     list: schemas_campaign.ListBase,
     db: AsyncSession = Depends(get_db),
@@ -124,7 +135,11 @@ async def add_list(
             model_campaign_list = models_campaign.Lists(
                 id=str(uuid.uuid4()), **list.dict()
             )
-            await cruds_campaign.add_list(campaign_list=model_campaign_list, db=db)
+            try:
+                await cruds_campaign.add_list(campaign_list=model_campaign_list, db=db)
+                return model_campaign_list
+            except ValueError as error:
+                raise HTTPException(status_code=422, detail=str(error))
         else:
             raise HTTPException(status_code=404, detail="Given section doesn't exist.")
     except ValueError as error:
@@ -167,7 +182,11 @@ async def update_list(
         raise HTTPException(status_code=422, detail=str(error))
 
 
-@router.post("/campaign/votes", status_code=201, tags=[Tags.campaign])
+@router.post(
+    "/campaign/votes",
+    status_code=201,
+    tags=[Tags.campaign],
+)
 async def vote(
     vote: schemas_campaign.VoteBase,
     db: AsyncSession = Depends(get_db),
@@ -195,10 +214,13 @@ async def vote(
                     model_vote = models_campaign.Votes(
                         id=str(uuid.uuid4()), **vote.dict()
                     )
-                    await cruds_campaign.add_vote(
-                        db=db,
-                        vote=model_vote,
-                    )
+                    try:
+                        await cruds_campaign.add_vote(
+                            db=db,
+                            vote=model_vote,
+                        )
+                    except ValueError as error:
+                        raise HTTPException(status_code=422, detail=str(error))
                 else:
                     raise ValueError(
                         "User has already vote for a list in this section."
