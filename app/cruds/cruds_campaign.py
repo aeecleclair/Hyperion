@@ -1,6 +1,7 @@
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models import models_campaign
 from app.schemas import schemas_campaign
@@ -48,7 +49,9 @@ async def get_lists_from_section(
 ) -> list[models_campaign.Lists]:
     """Return all campaign lists of the given section."""
     result = await db.execute(
-        select(models_campaign.Lists).where(models_campaign.Lists.section == section_id)
+        select(models_campaign.Lists)
+        .where(models_campaign.Lists.section == section_id)
+        .options(selectinload(models_campaign.Lists.members))
     )
     lists = result.scalars().all()
     return lists
@@ -56,7 +59,11 @@ async def get_lists_from_section(
 
 async def get_lists(db: AsyncSession) -> list[models_campaign.Lists]:
     """Return all the campaign lists."""
-    result = await db.execute(select(models_campaign.Lists))
+    result = await db.execute(
+        select(models_campaign.Lists).options(
+            selectinload(models_campaign.Lists.members)
+        )
+    )
     lists = result.scalars().all()
     return lists
 
@@ -66,24 +73,19 @@ async def get_list_by_id(
 ) -> models_campaign.Lists | None:
     """Return list with the given id."""
     result = await db.execute(
-        select(models_campaign.Lists).where(models_campaign.Lists.id == list_id)
+        select(models_campaign.Lists)
+        .where(models_campaign.Lists.id == list_id)
+        .options(selectinload(models_campaign.Lists.members))
     )
     return result.scalars().first()
 
 
 async def add_list(
     db: AsyncSession,
-    members: list[schemas_campaign.ListMember],
     campaign_list: models_campaign.Lists,
 ) -> None:
     """Add a list of AEECL."""
     db.add(campaign_list)
-    for member in members:
-        db.add(
-            models_campaign.ListMemberships(
-                **{"group_id": campaign_list.id, **member.dict()}
-            )
-        )
     try:
         await db.commit()
     except IntegrityError:
@@ -93,11 +95,6 @@ async def add_list(
 
 async def delete_list(db: AsyncSession, list_id: str) -> None:
     """Delete a campaign list."""
-    await db.execute(
-        delete(models_campaign.ListMemberships).where(
-            models_campaign.ListMemberships.group_id == list_id
-        )
-    )
     await db.execute(
         delete(models_campaign.Lists).where(models_campaign.Lists.id == list_id)
     )
@@ -111,20 +108,8 @@ async def update_list(
     await db.execute(
         update(models_campaign.Lists)
         .where(models_campaign.Lists.id == list_id)
-        .values(**campaign_list.dict(exclude_none=True, exclude={"members"}))
+        .values(**campaign_list.dict(exclude_none=True))
     )
-    if campaign_list.members is not None:
-        await db.execute(
-            delete(models_campaign.ListMemberships).where(
-                models_campaign.ListMemberships.group_id == list_id
-            )
-        )
-        for member in campaign_list.members:
-            db.add(
-                models_campaign.ListMemberships(
-                    **{"group_id": list_id, **member.dict()}
-                )
-            )
 
     try:
         await db.commit()
