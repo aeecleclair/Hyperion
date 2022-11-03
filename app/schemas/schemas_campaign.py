@@ -7,7 +7,6 @@ class SectionBase(BaseModel):
     """Base schema for a section of AEECL."""
 
     name: str
-    logo_path: str
     description: str
 
 
@@ -31,7 +30,6 @@ class ListBase(BaseModel):
 
     name: str
     description: str
-    logo_path: str
     type: ListType
     section: str
     members: list[ListMember]
