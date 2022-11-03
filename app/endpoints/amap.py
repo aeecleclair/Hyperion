@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.cruds import cruds_amap, cruds_users
 from app.dependencies import get_db, is_user_a_member, is_user_a_member_of
 from app.endpoints.users import read_user
-from app.models import models_core
+from app.models import models_amap, models_core
 from app.schemas import schemas_amap
 from app.utils.tools import is_user_member_of_an_allowed_group
 from app.utils.types.groups_type import GroupType
@@ -68,7 +68,8 @@ async def create_product(
 
     **The user must be a member of the group AMAP to use this endpoint**
     """
-    db_product = schemas_amap.ProductComplete(id=str(uuid.uuid4()), **product.dict())
+    db_product = models_amap.Product(id=str(uuid.uuid4()), **product.dict())
+
     try:
         result = await cruds_amap.create_product(product=db_product, db=db)
         return result
