@@ -143,7 +143,8 @@ async def add_list(
             db=db, section_id=list.section
         )
         if section is not None:
-            model_campaign_list = models_campaign.Lists(
+            print("12345")
+            model_campaign_list = schemas_campaign.ListComplete(
                 id=str(uuid.uuid4()),
                 **list.dict(),
             )
