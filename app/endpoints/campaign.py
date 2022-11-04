@@ -88,7 +88,7 @@ async def delete_section(
 
 @router.get(
     "/campaign/sections/{section_id}/lists",
-    response_model=list[schemas_campaign.ListComplete],
+    response_model=list[schemas_campaign.ListReturn],
     status_code=200,
     tags=[Tags.campaign],
 )
@@ -123,7 +123,7 @@ async def get_lists(
 
 @router.post(
     "/campaign/lists",
-    response_model=schemas_campaign.ListComplete,
+    response_model=schemas_campaign.ListReturn,
     status_code=201,
     tags=[Tags.campaign],
 )
@@ -150,7 +150,9 @@ async def add_list(
             )
             try:
                 await cruds_campaign.add_list(campaign_list=model_campaign_list, db=db)
-                return model_campaign_list
+                return await cruds_campaign.get_list_by_id(
+                    db=db, list_id=model_campaign_list.id
+                )
             except ValueError as error:
                 raise HTTPException(status_code=422, detail=str(error))
         else:
