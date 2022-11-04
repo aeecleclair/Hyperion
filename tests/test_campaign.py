@@ -2,6 +2,7 @@ import uuid
 
 from app.main import app
 from app.models import models_campaign, models_core
+from app.utils.types.campaign_type import ListType
 from app.utils.types.groups_type import GroupType
 from tests.commons import (
     TestingSessionLocal,
@@ -14,6 +15,7 @@ admin_user: models_core.CoreUser | None = None
 student_user: models_core.CoreUser | None = None
 
 section: models_campaign.Sections | None = None
+list: models_campaign.Lists | None = None
 
 
 @app.on_event("startup")  # create the datas needed in the tests
@@ -35,6 +37,28 @@ async def startuptest():
             description="Bureau Des Eleves",
         )
         db.add(section)
+        await db.commit()
+
+    global list
+
+    async with TestingSessionLocal() as db:
+        list_id = str(uuid.uuid4())
+        list = models_campaign.Lists(
+            id=list_id,
+            name="Liste 1",
+            description="une liste",
+            section=section.id,
+            type=ListType.serio,
+            members=[
+                models_campaign.ListMemberships(
+                    user_id=admin_user.id, group_id=list_id, role="Prez"
+                ),
+                models_campaign.ListMemberships(
+                    user_id=student_user.id, group_id=list_id, role="SG"
+                ),
+            ],
+        )
+        db.add(list)
         await db.commit()
 
 
