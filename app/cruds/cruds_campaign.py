@@ -87,15 +87,11 @@ async def add_list(
     """Add a list of AEECL."""
     db.add(
         models_campaign.Lists(
-            id=campaign_list.id,
-            name=campaign_list.name,
-            description=campaign_list.description,
-            section=campaign_list.section,
-            type=campaign_list.type,
             members=[
                 models_campaign.ListMemberships(**member.dict())
                 for member in campaign_list.members
             ],
+            **campaign_list.dict(exclude={"members"}),
         )
     )
     try:
@@ -117,11 +113,24 @@ async def update_list(
     db: AsyncSession, list_id: str, campaign_list: schemas_campaign.ListEdit
 ) -> None:
     """Update a campaign list."""
-    await db.execute(
-        update(models_campaign.Lists)
-        .where(models_campaign.Lists.id == list_id)
-        .values(**campaign_list.dict(exclude_none=True))
-    )
+    if campaign_list.members is not None:
+        await db.execute(
+            update(models_campaign.Lists)
+            .where(models_campaign.Lists.id == list_id)
+            .values(
+                members=[
+                    models_campaign.ListMemberships(**member.dict())
+                    for member in campaign_list.members
+                ],
+                **campaign_list.dict(exclude={"members"}, exclude_none=True),
+            )
+        )
+    else:
+        await db.execute(
+            update(models_campaign.Lists)
+            .where(models_campaign.Lists.id == list_id)
+            .values(**campaign_list.dict(exclude_none=True))
+        )
 
     try:
         await db.commit()
