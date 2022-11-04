@@ -96,7 +96,7 @@ def test_add_list():
             "description": "Probablement la meilleure liste disponible",
             "type": "Serio",
             "section": section.id,
-            "members": [],
+            "members": [{"user_id": admin_user.id, "role": "Prez"}],
         },
     )
     assert response.status_code == 201
