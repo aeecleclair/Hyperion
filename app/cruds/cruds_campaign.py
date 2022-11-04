@@ -82,10 +82,22 @@ async def get_list_by_id(
 
 async def add_list(
     db: AsyncSession,
-    campaign_list: models_campaign.Lists,
+    campaign_list: schemas_campaign.ListComplete,
 ) -> None:
     """Add a list of AEECL."""
-    db.add(campaign_list)
+    db.add(
+        models_campaign.Lists(
+            id=campaign_list.id,
+            name=campaign_list.name,
+            description=campaign_list.description,
+            section=campaign_list.section,
+            type=campaign_list.type,
+            members=[
+                models_campaign.ListMemberships(**member.dict())
+                for member in campaign_list.members
+            ],
+        )
+    )
     try:
         await db.commit()
     except IntegrityError:
