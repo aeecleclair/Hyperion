@@ -51,7 +51,11 @@ async def get_lists_from_section(
     result = await db.execute(
         select(models_campaign.Lists)
         .where(models_campaign.Lists.section == section_id)
-        .options(selectinload(models_campaign.Lists.members))
+        .options(
+            selectinload(models_campaign.Lists.members).selectinload(
+                models_campaign.ListMemberships.user
+            )
+        )
     )
     lists = result.scalars().all()
     return lists
@@ -61,7 +65,9 @@ async def get_lists(db: AsyncSession) -> list[models_campaign.Lists]:
     """Return all the campaign lists."""
     result = await db.execute(
         select(models_campaign.Lists).options(
-            selectinload(models_campaign.Lists.members)
+            selectinload(models_campaign.Lists.members).selectinload(
+                models_campaign.ListMemberships.user
+            )
         )
     )
     lists = result.scalars().all()
@@ -75,7 +81,11 @@ async def get_list_by_id(
     result = await db.execute(
         select(models_campaign.Lists)
         .where(models_campaign.Lists.id == list_id)
-        .options(selectinload(models_campaign.Lists.members))
+        .options(
+            selectinload(models_campaign.Lists.members).selectinload(
+                models_campaign.ListMemberships.user
+            )
+        )
     )
     return result.scalars().first()
 
