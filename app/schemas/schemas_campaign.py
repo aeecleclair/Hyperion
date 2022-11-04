@@ -39,7 +39,7 @@ class ListBase(BaseModel):
     name: str
     description: str
     type: ListType
-    section: str
+    section_id: str
     members: list[ListMemberBase]
 
 
@@ -55,7 +55,7 @@ class ListReturn(BaseModel):
     name: str
     description: str
     type: ListType
-    section: str
+    section: SectionComplete
     members: list[ListMemberComplete]
 
     class Config:

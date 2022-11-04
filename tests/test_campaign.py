@@ -47,7 +47,7 @@ async def startuptest():
             id=list_id,
             name="Liste 1",
             description="une liste",
-            section=section.id,
+            section_id=section.id,
             type=ListType.serio,
             members=[
                 models_campaign.ListMemberships(
@@ -119,7 +119,7 @@ def test_add_list():
             "name": "Mr Reboot",
             "description": "Probablement la meilleure liste disponible",
             "type": "Serio",
-            "section": section.id,
+            "section_id": section.id,
             "members": [{"user_id": admin_user.id, "role": "Prez"}],
         },
     )

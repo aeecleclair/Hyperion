@@ -140,7 +140,7 @@ async def add_list(
         # Check if the section given exists in the DB.
         # Check if the section given exists in the DB.
         section = await cruds_campaign.get_section_by_name(
-            db=db, section_id=list.section
+            db=db, section_id=list.section_id
         )
         if section is not None:
             print("12345")
@@ -218,12 +218,12 @@ async def vote(
             if campaign_list is not None:
                 # Check if the user has already vote for a list in the section.
                 has_voted = await cruds_campaign.get_has_voted(
-                    db=db, user_id=user.id, section_id=campaign_list.section
+                    db=db, user_id=user.id, section_id=campaign_list.section_id
                 )
                 if has_voted is None:
                     # Mark user has voted for the given section.
                     await cruds_campaign.mark_has_voted(
-                        db=db, user_id=user.id, section_id=campaign_list.section
+                        db=db, user_id=user.id, section_id=campaign_list.section_id
                     )
                     # Add the vote to the db
                     model_vote = models_campaign.Votes(
@@ -266,13 +266,13 @@ async def get_results(
 
 
 @router.get(
-    "/campaign/votes/{section}",
+    "/campaign/votes/{section_id}",
     response_model=list[schemas_campaign.VoteBase],
     status_code=200,
     tags=[Tags.campaign],
 )
 async def get_results_by_section(
-    section: str,
+    section_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
@@ -280,7 +280,7 @@ async def get_results_by_section(
 
     **Only for admin.**
     """
-    votes = await cruds_campaign.get_votes_for_section(db=db, section_id=section)
+    votes = await cruds_campaign.get_votes_for_section(db=db, section_id=section_id)
     return votes
 
 
