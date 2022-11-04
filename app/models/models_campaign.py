@@ -21,6 +21,7 @@ class Sections(Base):
     id: str = Column(String, primary_key=True)
     name: str = Column(String, unique=True)
     description: str = Column(String)
+    lists: list["Lists"] = relationship("Lists", back_populates="section")
 
 
 class Lists(Base):
@@ -29,7 +30,8 @@ class Lists(Base):
     id: str = Column(String, primary_key=True)
     name: str = Column(String, unique=True)
     description: str = Column(String)
-    section: str = Column(ForeignKey("campaign_sections.id"))
+    section_id: str = Column(ForeignKey("campaign_sections.id"))
+    section: Sections = relationship("Sections", back_populates="lists")
     type: str = Column(String, nullable=False)
     members: list[ListMemberships] = relationship(
         "ListMemberships", back_populates="group"
