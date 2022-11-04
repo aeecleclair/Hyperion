@@ -51,6 +51,7 @@ class ListComplete(ListBase):
 
 
 class ListReturn(BaseModel):
+    id: str
     name: str
     description: str
     type: ListType
