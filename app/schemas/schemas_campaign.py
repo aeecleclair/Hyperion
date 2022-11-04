@@ -22,6 +22,9 @@ class ListMemberBase(BaseModel):
     user_id: str
     role: str
 
+    class Config:
+        orm_mode = True
+
 
 class ListMemberComplete(ListMemberBase):
     user: schemas_core.CoreUserSimple
