@@ -2,6 +2,7 @@ from sqlalchemy import Column, ForeignKey, String
 from sqlalchemy.orm import relationship
 
 from app.database import Base
+from app.models import models_core
 
 
 class ListMemberships(Base):
@@ -9,6 +10,7 @@ class ListMemberships(Base):
 
     user_id: str = Column(ForeignKey("core_user.id"), primary_key=True)
     group_id: str = Column(ForeignKey("campaign_lists.id"), primary_key=True)
+    user: models_core.CoreUser = relationship("CoreUser")
     group: "Lists" = relationship("Lists", back_populates="members")
     role: str = Column(String)
 

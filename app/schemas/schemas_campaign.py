@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+from app.schemas import schemas_core
 from app.utils.types.campaign_type import ListType
 
 
@@ -17,9 +18,13 @@ class SectionComplete(SectionBase):
         orm_mode = True
 
 
-class ListMember(BaseModel):
+class ListMemberBase(BaseModel):
     user_id: str
     role: str
+
+
+class ListMemberComplete(ListMemberBase):
+    user: schemas_core.CoreUserSimple
 
     class Config:
         orm_mode = True
@@ -32,11 +37,22 @@ class ListBase(BaseModel):
     description: str
     type: ListType
     section: str
-    members: list[ListMember]
+    members: list[ListMemberBase]
 
 
 class ListComplete(ListBase):
     id: str
+
+    class Config:
+        orm_mode = True
+
+
+class ListReturn(BaseModel):
+    name: str
+    description: str
+    type: ListType
+    section: str
+    members: list[ListMemberComplete]
 
     class Config:
         orm_mode = True
@@ -48,7 +64,7 @@ class ListEdit(BaseModel):
     logo_path: str | None = None
     type: ListType | None = None
     section: str | None = None
-    members: list[ListMember] | None = None
+    members: list[ListMemberBase] | None = None
 
 
 class VoteBase(BaseModel):
