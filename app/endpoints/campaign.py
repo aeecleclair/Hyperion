@@ -108,7 +108,7 @@ async def get_lists_from_section(
 
 @router.get(
     "/campaign/lists",
-    response_model=list[schemas_campaign.ListComplete],
+    response_model=list[schemas_campaign.ListReturn],
     status_code=200,
     tags=[Tags.campaign],
 )
