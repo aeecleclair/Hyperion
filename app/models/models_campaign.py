@@ -9,6 +9,7 @@ class ListMemberships(Base):
 
     user_id: str = Column(ForeignKey("core_user.id"), primary_key=True)
     group_id: str = Column(ForeignKey("campaign_lists.id"), primary_key=True)
+    group: "Lists" = relationship("Lists", back_populates="members")
     role: str = Column(String)
 
 
@@ -29,7 +30,7 @@ class Lists(Base):
     section: str = Column(ForeignKey("campaign_sections.id"))
     type: str = Column(String, nullable=False)
     members: list[ListMemberships] = relationship(
-        "ListMemberships",
+        "ListMemberships", back_populates="group"
     )
 
 

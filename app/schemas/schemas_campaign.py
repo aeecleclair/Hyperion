@@ -34,12 +34,12 @@ class ListBase(BaseModel):
     section: str
     members: list[ListMember]
 
-    class Config:
-        orm_mode = True
-
 
 class ListComplete(ListBase):
     id: str
+
+    class Config:
+        orm_mode = True
 
 
 class ListEdit(BaseModel):
