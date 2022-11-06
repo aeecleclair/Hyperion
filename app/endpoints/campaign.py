@@ -284,7 +284,7 @@ async def get_results_by_section(
     return votes
 
 
-@router.patch("/campaign/status", status_code=201, tags=[Tags.campaign])
+@router.patch("/campaign/status", status_code=204, tags=[Tags.campaign])
 async def toggle_vote(
     status: schemas_campaign.VoteStatus,
     db: AsyncSession = Depends(get_db),
@@ -300,7 +300,7 @@ async def toggle_vote(
 @router.get(
     "/campaign/status",
     response_model=schemas_campaign.VoteStatus,
-    status_code=201,
+    status_code=200,
     tags=[Tags.campaign],
 )
 async def get_status_vote(
