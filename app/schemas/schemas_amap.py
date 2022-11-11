@@ -76,7 +76,6 @@ class DeliveryReturn(BaseModel):
 
 class DeliveryUpdate(BaseModel):
     delivery_date: date | None = None
-    id: str
     locked: bool | None = None
 
 

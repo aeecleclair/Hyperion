@@ -220,6 +220,30 @@ async def delete_delivery(
     await cruds_amap.delete_delivery(db=db, delivery_id=delivery_id)
 
 
+@router.patch(
+    "/amap/deliveries/{delivery_id}",
+    status_code=204,
+    tags=[Tags.amap],
+)
+async def edit_delivery(
+    delivery_id: str,
+    delivery: schemas_amap.DeliveryUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
+):
+    """
+    Edit a delivery.
+
+    **The user must be a member of the group AMAP to use this endpoint**
+    """
+
+    delivery_db = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
+    if delivery_db is None:
+        raise HTTPException(status_code=404, detail="Delivery not found")
+
+    await cruds_amap.edit_delivery(db=db, delivery_id=delivery_id, delivery=delivery)
+
+
 @router.get(
     "/amap/deliveries/{delivery_id}/products",
     response_model=list[schemas_amap.ProductComplete],
@@ -305,30 +329,6 @@ async def remove_product_from_delivery(
     await cruds_amap.remove_product_from_delivery(
         db=db, delivery_id=delivery_id, product_id=product_id
     )
-
-
-@router.patch(
-    "/amap/deliveries/{delivery_id}",
-    status_code=204,
-    tags=[Tags.amap],
-)
-async def edit_delivery(
-    delivery_id: str,
-    delivery: schemas_amap.DeliveryUpdate,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
-):
-    """
-    Edit a delivery.
-
-    **The user must be a member of the group AMAP to use this endpoint**
-    """
-
-    delivery_db = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
-    if delivery_db is None:
-        raise HTTPException(status_code=404, detail="Delivery not found")
-
-    await cruds_amap.edit_delivery(db=db, delivery_id=delivery_id, delivery=delivery)
 
 
 @router.get(
