@@ -170,7 +170,7 @@ async def create_user_by_user(
                 recipient=user_create.email,
                 subject="MyECL - your account already exists",
                 # TODO: Replace this link with a link that points to the password reset page
-                content="This email address is already associated to an account. If you forgot your credentials, you can reset your password [here](https://www.youtube.com/watch?v=dQw4w9WgXcQ)",
+                content="This email address is already associated to an account. If you forgot your credentials, you can reset your password",
                 settings=settings,
             )
 
