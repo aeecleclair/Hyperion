@@ -14,7 +14,7 @@ class CoreMembership(Base):
     user_id: str = Column(ForeignKey("core_user.id"), primary_key=True)
     group_id: str = Column(ForeignKey("core_group.id"), primary_key=True)
     # A description can be added to the membership
-    # This can be used to note why an user is in a given group
+    # This can be used to note why a user is in a given group
     description: str | None = Column(String)
 
 
@@ -34,7 +34,7 @@ class CoreUser(Base):
     created_on: datetime | None = Column(DateTime)
 
     # We use list["CoreGroup"] with quotes as CoreGroup is only defined after this class
-    # Defining CoreUser after CoreGroup would a similar issue issue
+    # Defining CoreUser after CoreGroup would a similar issue
     groups: list["CoreGroup"] = relationship(
         "CoreGroup",
         secondary="core_membership",
@@ -48,8 +48,8 @@ class CoreUserUnconfirmed(Base):
     id: str = Column(String, primary_key=True)
     # The email column should not be unique.
     # Someone can indeed create more than one user creation request,
-    # for example after loosing the previously received confirmation email.
-    # Each user creation request, a row will be added in this table with a new token
+    # for example after losing the previously received confirmation email.
+    # For each user creation request, a row will be added in this table with a new token
     email: str = Column(String, nullable=False)
     password_hash: str | None = Column(String)
     account_type: str = Column(String, nullable=False)

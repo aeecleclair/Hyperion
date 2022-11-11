@@ -24,7 +24,7 @@ class AuthorizeValidation(Authorize):
     Oauth specifications specifies that all parameters should be `application/x-www-form-urlencoded`.
     This schema is configured to requires Form(...) parameters.
 
-    The endpoint needs to depend from this class:
+    The endpoint needs to depend on this class:
     ```python
         authorizereq: schemas_auth.AuthorizeValidation = Depends(
             schemas_auth.AuthorizeValidation.as_form
@@ -76,7 +76,7 @@ class TokenData(BaseModel):
     sub: str  # Subject: the user id
     iss: str | None = None
     aud: str | None = None
-    cid: str | None = None  # The client_id of the service which receive the token
+    cid: str | None = None  # The client_id of the service which receives the token
     iat: datetime | None = None
     nonce: str | None = None
     scopes: str = ""

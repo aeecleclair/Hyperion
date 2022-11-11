@@ -1,7 +1,7 @@
 """
 File defining the API itself, using fastAPI and schemas, and calling the cruds functions
 
-Group management is part of the core of Hyperion. These endpoints allows to manage membership between users and groups.
+Group management is part of the core of Hyperion. These endpoints allow managing membership between users and groups.
 """
 
 
@@ -52,7 +52,7 @@ async def read_group(
     user=Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
-    Return group with id from database as a dictionary. This include a list of users being members of the group.
+    Return group with id from database as a dictionary. This includes a list of users being members of the group.
 
     **This endpoint is only usable by administrators**
     """
@@ -142,7 +142,7 @@ async def create_membership(
     user=Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
-    Create a new membership in database and return the group. This allows to "add an user to a group".
+    Create a new membership in database and return the group. This allows to "add a user to a group".
 
     **This endpoint is only usable by administrators**
     """

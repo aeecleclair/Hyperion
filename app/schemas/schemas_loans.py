@@ -29,9 +29,9 @@ class ItemBase(BaseModel):
 
     name: str
     suggested_caution: int
-    # A multiple item can be lend to multiple persons at the same time
+    # A multiple item can be lent to multiple persons at the same time
     multiple: bool = Field(
-        False, description="If the item can be lend to multiple users at the same time"
+        False, description="If the item can be lent to multiple users at the same time"
     )
     suggested_lending_duration: timedelta
 
@@ -81,7 +81,7 @@ class LoanCreation(LoanBase):
 class LoanInDBUpdate(BaseModel):
     """
     item_ids are stored in the database using a relationship table (LoanContent).
-    As they are not stored in the loan table in the database, we need a schema that does not contains them
+    As they are not stored in the loan table in the database, we need a schema that does not contain them
     for the cruds update_loan function
     """
 
@@ -95,7 +95,7 @@ class LoanInDBUpdate(BaseModel):
 
 class LoanUpdate(LoanInDBUpdate):
     """
-    When the client ask to update the Loan with a PATCH request, they should be able to change the loan items.
+    When the client asks to update the Loan with a PATCH request, they should be able to change the loan items.
     """
 
     item_ids: list[str] | None = None
@@ -103,7 +103,7 @@ class LoanUpdate(LoanInDBUpdate):
 
 class Loan(LoanBase):
     """
-    A complete representation of a Loan which can be send by the API
+    A complete representation of a Loan which can be sent by the API
     """
 
     id: str
@@ -118,5 +118,5 @@ class LoanExtend(BaseModel):
     # The client can either provide a new end date or a timedelta to be added to the old end date.
     end: date | None = Field(None, description="A new return date for the Loan")
     duration: timedelta | None = Field(
-        None, description="The duration the loan should be extended of"
+        None, description="The duration by which the loan should be extended"
     )

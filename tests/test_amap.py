@@ -11,7 +11,7 @@ from tests.commons import (
 amap_user: models_core.CoreUser | None = None
 
 
-@app.on_event("startup")  # create the datas needed in the tests
+@app.on_event("startup")  # create the data needed in the tests
 async def startuptest():
     global amap_user
     async with TestingSessionLocal() as db:

@@ -14,7 +14,7 @@ admin_user: models_core.CoreUser | None = None
 id_eclair = "8aab79e7-1e15-456d-b6e2-11e4e9f77e4f"
 
 
-@app.on_event("startup")  # create the datas needed in the tests
+@app.on_event("startup")  # create the data needed in the tests
 async def startuptest():
     global admin_user
 

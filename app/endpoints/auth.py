@@ -89,10 +89,10 @@ async def login_for_access_token(
 # Authorization Code Grant #
 
 # Terminology:
-# Authorization Code Grant: a type of oauth flow. Usefull for server served webapp or mobile app
-# Client: the entity which want to get an authorization to some ressource from the ressource server owned by an user
-# Ressource server: the entity that can serve ressources in exchange for a token, ex: a user profil. Here it's Hyperion
-# Authorization server: the entity that is in charge of authorization. Using a oauth flow, it will give tokens.
+# Authorization Code Grant: a type of oauth flow. Useful for server served webapp or mobile app
+# Client: the entity which want to get an authorization to some resources from the resource server owned by a user
+# Resource server: the entity that can serve resources in exchange for a token, ex: a user profile. Here it's Hyperion
+# Authorization server: the entity that is in charge of authorization. Using an oauth flow, it will give tokens.
 
 # https://www.oauth.com/oauth2-servers/server-side-apps/authorization-code/
 # https://www.oauth.com/oauth2-servers/server-side-apps/example-flow/
@@ -114,8 +114,8 @@ async def get_authorize_page(
     authorizereq: schemas_auth.Authorize = Depends(),
 ):
     """
-    This endpoint is the one the user is redirected to when he begin the Oauth or Openid connect (*oidc*) *Authorization code* process.
-    The page allows the user to login and may let the user choose what type of data he want to authorize the client for.
+    This endpoint is the one the user is redirected to when they begin the Oauth or Openid connect (*oidc*) *Authorization code* process.
+    The page allows the user to login and may let the user choose what type of data they want to authorize the client for.
 
     This is the endpoint that should be set in the client OAuth or OIDC configuration page. It can be called by a GET or a POST request.
 
@@ -125,7 +125,7 @@ async def get_authorize_page(
     > and must not be embedded in an iframe popup or an embedded browser in a mobile app.
     > If it could be embedded in another website, the user would have no way of verifying it is the legitimate service and is not a phishing attempt.
 
-    **This endpoint is an UI endpoint which send and html page response. It will redirect to `/auth/authorization-flow/authorize-validation`**
+    **This endpoint is a UI endpoint which send and html page response. It will redirect to `/auth/authorization-flow/authorize-validation`**
     """
     return templates.TemplateResponse(
         "connexion.html",
@@ -161,8 +161,8 @@ async def post_authorize_page(
     code_challenge_method: str | None = Form(None),
 ):
     """
-    This endpoint is the one the user is redirected to when he begin the OAuth or Openid connect (*oidc*) *Authorization code* process with or without PKCE.
-    The page allows the user to login and may let the user choose what type of data he want to authorize the client for.
+    This endpoint is the one the user is redirected to when they begin the OAuth or Openid connect (*oidc*) *Authorization code* process with or without PKCE.
+    The page allows the user to login and may let the user choose what type of data they want to authorize the client for.
 
     This is the endpoint that should be set in the client OAuth or OIDC configuration page. It can be called by a GET or a POST request.
 
@@ -172,7 +172,7 @@ async def post_authorize_page(
     > and must not be embedded in an iframe popup or an embedded browser in a mobile app.
     > If it could be embedded in another website, the user would have no way of verifying it is the legitimate service and is not a phishing attempt.
 
-    **This endpoint is an UI endpoint which send and html page response. It will redirect to `/auth/authorization-flow/authorize-validation`**
+    **This endpoint is a UI endpoint which send and html page response. It will redirect to `/auth/authorization-flow/authorize-validation`**
     """
 
     return templates.TemplateResponse(
@@ -246,7 +246,7 @@ async def authorize_validation(
     """
 
     # Note: we may want to use a JWT here instead or email/password in order to be able to check if the user is already logged in.
-    # Note: we may want add a windows to let the user which scopes he grants access to.
+    # Note: we may want to add a window to let the user choose which scopes they grant access to.
 
     logger.info(
         f"Authorize-validation: Starting for client {authorizereq.client_id} ({request_id})"
@@ -308,11 +308,11 @@ async def authorize_validation(
             url += "&state=" + authorizereq.state
         return RedirectResponse(url)
 
-    # TODO: Currently if the user enter the wrong credentials in the form, he won't be redirected to the login page again but the OAuth process will fail.
+    # TODO: Currently if the user enters the wrong credentials in the form, they won't be redirected to the login page again but the OAuth process will fail.
     user = await authenticate_user(db, authorizereq.email, authorizereq.password)
     if not user:
         logger.warning(
-            f"Authorize-validation: Invalide user email or password for email {authorizereq.email} ({request_id})"
+            f"Authorize-validation: Invalid user email or password for email {authorizereq.email} ({request_id})"
         )
         return templates.TemplateResponse(
             "connexion.html",
@@ -379,7 +379,7 @@ async def authorize_validation(
     if authorizereq.state:
         url += "&state=" + authorizereq.state
     # We need to redirect the user with as a GET request.
-    # By default RedirectResponse send a 307 code, which prevent the user browser from changing the POST of this endpoint to a GET
+    # By default, RedirectResponse send a 307 code, which prevent the user browser from changing the POST of this endpoint to a GET
     # We specifically return a 302 code to allow the user browser to change the POST of this endpoint to a GET
     # See https://stackoverflow.com/a/65512571
     return RedirectResponse(url, status_code=status.HTTP_302_FOUND)
@@ -404,9 +404,9 @@ async def token(
 ):
     """
     Part 2 of the authorization code grant.
-    The client exchange its authorization code for an access token. The endpoint support OAuth and Openid connect, with or without PKCE.
+    The client exchange its authorization code for an access token. The endpoint supports OAuth and Openid connect, with or without PKCE.
 
-    Parameters must be `application/x-www-form-urlencoded` and includes:
+    Parameters must be `application/x-www-form-urlencoded` and include:
 
     * parameters for OAuth and Openid connect:
         * `grant_type`: must be `authorization_code` or `refresh_token`
@@ -488,7 +488,7 @@ async def authorization_code_grant(  # noqa: C901 # The function is too complex 
             },
         )
 
-    # We need to check the authorization code that was provided in the request is the one that was previously saved in the database
+    # We need to check that the authorization code that was provided in the request is the one that was previously saved in the database
     db_authorization_code = await cruds_auth.get_authorization_token_by_token(
         db=db, code=tokenreq.code
     )
@@ -675,7 +675,7 @@ async def authorization_code_grant(  # noqa: C901 # The function is too complex 
                 },
             )
 
-    # If tokenreq.redirect_uri is still None, we should raise an error as we don't know which uri t use
+    # If tokenreq.redirect_uri is still None, we should raise an error as we don't know which uri to use
     if tokenreq.redirect_uri is None:
         logger.warning(
             f"Token authorization_code_grant: redirect_uri was never provided ({request_id})"
@@ -753,7 +753,7 @@ async def refresh_token_grant(
             },
         )
     elif db_refresh_token.revoked_on is not None:
-        # If the client try to use a revoked refresh_token, we want to revoke all other refresh tokens from this client and user
+        # If the client tries to use a revoked refresh_token, we want to revoke all other refresh tokens from this client and user
         await cruds_auth.revoke_refresh_token_by_client_and_user_id(
             db=db,
             client_id=db_refresh_token.client_id,
@@ -809,7 +809,7 @@ async def refresh_token_grant(
             },
         )
 
-    # If the auth provider expect to use a client secret, we don't use PKCE
+    # If the auth provider expects to use a client secret, we don't use PKCE
     elif auth_client.secret is not None:
         # We need to check the correct client_secret was provided
         if auth_client.secret != tokenreq.client_secret:
@@ -838,8 +838,8 @@ async def refresh_token_grant(
             )
 
     # If everything is good we can finally create the new access/refresh tokens
-    # We use new refresh tokens every times as we use some client that can't store secrets (see Refresh token rotation in https://www.pingidentity.com/en/resources/blog/post/refresh-token-rotation-spa.html)
-    # We use automatique reuse detection to prevent from replay attacks (https://auth0.com/docs/secure/tokens/refresh-tokens/refresh-token-rotation)
+    # We use new refresh tokens every time as we use some client that can't store secrets (see Refresh token rotation in https://www.pingidentity.com/en/resources/blog/post/refresh-token-rotation-spa.html)
+    # We use automatic reuse detection to prevent from replay attacks (https://auth0.com/docs/secure/tokens/refresh-tokens/refresh-token-rotation)
 
     refresh_token = generate_token()
     new_db_refresh_token = models_auth.RefreshToken(
@@ -876,7 +876,7 @@ def create_response_body(
     settings: Settings,
     request_id: str,
 ):
-    # In the request, the client ask for some scopes. The auth provider decide which scopes he grants to the client.
+    # In the request, the client ask for some scopes. The auth provider decides which scopes he grants to the client.
 
     # We have a space separated string of requested scopes : db_row.scope
     # We use a set representation as:
@@ -884,7 +884,7 @@ def create_response_body(
     #  - we will intersect requested scopes with allowed scopes, which is an easier operation with a set than a list
     requested_scopes_set: Set[str] = set((db_row.scope or "").split(" "))
 
-    # We create a list of all the scopes we accept to grant to the user to include them in the in the access token.
+    # We create a list of all the scopes we accept to grant to the user to include them in the access token.
 
     granted_scopes_set: Set[ScopeType] = auth_client.filter_scopes(
         requested_scopes=requested_scopes_set
@@ -921,7 +921,7 @@ def create_response_body(
         # * if provided, nonce
 
         # exp is set by the token creation function
-        # aud=client_id as its the client verify the id_token
+        # aud=client_id as it's the client verify the id_token
         id_token_data = schemas_auth.TokenData(
             iss=settings.AUTH_ISSUER,
             sub=db_row.user_id,
@@ -965,14 +965,14 @@ async def auth_get_userinfo(
     request_id: str = Depends(get_request_id),
 ):
     """
-    Openid connect specify an endpoint the client can use to get informations about the user.
-    The oidc client while provide the access_token it got previously in the request.
+    Openid connect specify an endpoint the client can use to get information about the user.
+    The oidc client will provide the access_token it got previously in the request.
 
-    The informations expected depends from the client and may include the user identifier, name, email, phone...
+    The information expected depends on the client and may include the user identifier, name, email, phone...
     See the reference for possible claims. See the client documentation and implementation to know what it needs and can receive.
     The sub (subject) Claim MUST always be returned in the UserInfo Response.
 
-    The client can ask for specific informations using scopes and claims. See the reference for more information.
+    The client can ask for specific information using scopes and claims. See the reference for more information.
     This procedure is not implemented in Hyperion as we can customize the response using auth_client class
 
     Reference:

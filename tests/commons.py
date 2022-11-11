@@ -51,7 +51,7 @@ redis_client = None
 
 def override_get_redis_client(
     settings=None, activate=False, deactivate=False
-) -> redis.Redis | None | bool:  # As we don't want the limiter to be activated, except during the disigned test, we add an "activate"/"deactivate" option
+) -> redis.Redis | None | bool:  # As we don't want the limiter to be activated, except during the designed test, we add an "activate"/"deactivate" option
     """Override the get_redis_client function to use the testing session"""
     global redis_client
     if activate:

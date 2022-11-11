@@ -80,7 +80,7 @@ async def search_users(
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
-    Search for an user using Fuzzy String Matching
+    Search for a user using Fuzzy String Matching
 
     `query` will be compared against users name, firstname and nickname
 
@@ -126,13 +126,13 @@ async def create_user_by_user(
     request_id: str = Depends(get_request_id),
 ):
     """
-    Start the user account creation process. The user will be sent an email with a link to activate their account.
-    > The received token needs to be send to `/users/activate` endpoint to activate the account.
+    Start the user account creation process. The user will be sent an email with a link to activate his account.
+    > The received token needs to be sent to the `/users/activate` endpoint to activate the account.
 
     If the **password** is not provided, it will be required during the activation process. Don't submit a password if you are creating an account for someone else.
 
     When creating **student** or **staff** account a valid ECL email is required.
-    Only admin users can create other **account types**, contact ÉCLAIR for more informations.
+    Only admin users can create other **account types**, contact ÉCLAIR for more information.
     """
     # Check the account type
 
@@ -161,19 +161,20 @@ async def create_user_by_user(
     db_user = await cruds_users.get_user_by_email(db=db, email=user_create.email)
     if db_user is not None:
         hyperion_security_logger.warning(
-            f"Create_user: an user with email {user_create.email} already exist ({request_id})"
+            f"Create_user: an user with email {user_create.email} already exists ({request_id})"
         )
-        # We will send to the email a message explaining he already have an account and can reset their password if they want.
+        # We will send to the email a message explaining they already have an account and can reset their password if they want.
         if settings.SMTP_ACTIVE:
             background_tasks.add_task(
                 send_email,
                 recipient=user_create.email,
-                subject="MyECL - your account already exist",
-                content="This email address is already associated to an account. If you forget your credentials, you can reset your password [here]()",
+                subject="MyECL - your account already exists",
+                # TODO: Replace this link with a link that points to the password reset page
+                content="This email address is already associated to an account. If you forgot your credentials, you can reset your password",
                 settings=settings,
             )
 
-        # Fail silently: the user should not be informed that an user with the email address already exist.
+        # Fail silently: the user should not be informed that a user with the email address already exist.
         return standard_responses.Result(success=True)
 
     # There might be an unconfirmed user in the database but its not an issue. We will generate a second activation token.
@@ -359,7 +360,7 @@ async def activate_user(
     """
     Activate the previously created account.
 
-    **token**: the activation token send by email to the user
+    **token**: the activation token sent by email to the user
 
     **password**: user password, required if it was not provided previously
     """
@@ -475,15 +476,15 @@ async def recover_user(
     settings: Settings = Depends(get_settings),
 ):
     """
-    Allow an user to start a password reset process.
+    Allow a user to start a password reset process.
 
-    If the provided **email** correspond to an existing account, a password reset token will be send.
+    If the provided **email** corresponds to an existing account, a password reset token will be sent.
     Using this token, the password can be changed with `/users/reset-password` endpoint
     """
 
     db_user = await cruds_users.get_user_by_email(db=db, email=email)
     if db_user is not None:
-        # The user exist, we can send a password reset invitation
+        # The user exists, we can send a password reset invitation
         reset_token = security.generate_token()
 
         recover_request = models_core.CoreUserRecoverRequest(
@@ -539,7 +540,7 @@ async def reset_password(
         db=db, user_id=recover_request.user_id, new_password_hash=new_password_hash
     )
 
-    # As the user has reset its password, all other recovery request can be deleted from the table
+    # As the user has reset its password, all other recovery requests can be deleted from the table
     await cruds_users.delete_recover_request_by_email(
         db=db, email=recover_request.email
     )
@@ -560,7 +561,7 @@ async def change_password(
     """
     Change a user password.
 
-    This endpoint will check the **old_password**, see also `/users/reset-password` endpoint if the user forgot its password.
+    This endpoint will check the **old_password**, see also the `/users/reset-password` endpoint if the user forgot their password.
     """
 
     user = await security.authenticate_user(

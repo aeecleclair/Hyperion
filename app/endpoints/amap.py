@@ -183,7 +183,7 @@ async def get_products_from_delivery(
     status_code=201,
     tags=[Tags.amap],
 )
-async def add_product_to_delievery(
+async def add_product_to_delivery(
     product_id: str,
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
@@ -210,7 +210,7 @@ async def add_product_to_delievery(
     status_code=204,
     tags=[Tags.amap],
 )
-async def remove_product_from_delievery(
+async def remove_product_from_delivery(
     delivery_id: str,
     product_id: str,
     db: AsyncSession = Depends(get_db),

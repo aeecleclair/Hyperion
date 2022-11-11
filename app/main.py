@@ -1,4 +1,4 @@
-"""Basic function creating the database tables and calling the router"""
+"""Basic functions creating the database tables and calling the router"""
 
 import logging
 import logging.config
@@ -51,14 +51,14 @@ async def logging_middleware(
     call_next,
 ):
     """
-    This middleware is called around each requests.
-    It logs the request and inject an unique identifier in the request that should be used to associate logs saved during the request.
+    This middleware is called around each request.
+    It logs the request and inject a unique identifier in the request that should be used to associate logs saved during the request.
     """
-    # We use a middleware to log every requests
+    # We use a middleware to log every request
     # See https://fastapi.tiangolo.com/tutorial/middleware/
 
-    # We generate an unique identifier for the request and save it as a state.
-    # This identifier will allow to combine logs associated with the same request
+    # We generate a unique identifier for the request and save it as a state.
+    # This identifier will allow combining logs associated with the same request
     # https://www.starlette.io/requests/#other-state
     request_id = str(uuid.uuid4())
     request.state.request_id = request_id
@@ -75,7 +75,7 @@ async def logging_middleware(
         get_redis_client, get_redis_client
     )(settings=settings)
 
-    # We test the ip adress with the redis limiter
+    # We test the ip address with the redis limiter
     process = True
     if redis_client:  # If redis is configured
         process, log = limiter(

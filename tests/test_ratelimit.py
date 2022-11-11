@@ -18,5 +18,5 @@ def test_limiter():
     assert response.status_code == 429
 
 
-def test_deactivate_limiter():  # We deactivate the limiter to avoid errors in other tests, it is not really a test but it is needed
+def test_deactivate_limiter():  # We deactivate the limiter to avoid errors in other tests, it is not really a test, but it is needed
     app.dependency_overrides.get(get_redis_client, get_redis_client)(deactivate=True)
