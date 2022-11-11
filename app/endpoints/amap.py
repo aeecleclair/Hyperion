@@ -194,7 +194,7 @@ async def create_delivery(
         result = await cruds_amap.create_delivery(delivery=db_delivery, db=db)
         return result
     except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @router.delete(
