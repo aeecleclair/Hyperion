@@ -44,7 +44,7 @@ from app.utils.types.tags import Tags
 
 router = APIRouter()
 
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory="assets/templates")
 
 # We could maybe use hyperion.security
 logger = logging.getLogger("hyperion.access")
@@ -197,6 +197,8 @@ async def post_authorize_page(
     response_class=RedirectResponse,
 )
 async def authorize_validation(
+    # request need to be passed to Jinja2 to generate the HTML page
+    request: Request,
     # User validation
     authorizereq: schemas_auth.AuthorizeValidation = Depends(
         schemas_auth.AuthorizeValidation.as_form
@@ -312,10 +314,21 @@ async def authorize_validation(
         logger.warning(
             f"Authorize-validation: Invalid user email or password for email {authorizereq.email} ({request_id})"
         )
-        url = redirect_uri + "?error=" + "unsupported_response_type"
-        if authorizereq.state:
-            url += "&state=" + authorizereq.state
-        return RedirectResponse(url)
+        return templates.TemplateResponse(
+            "connexion.html",
+            {
+                "request": request,
+                "response_type": authorizereq.response_type,
+                "redirect_uri": redirect_uri,
+                "client_id": authorizereq.client_id,
+                "scope": authorizereq.scope,
+                "state": authorizereq.state,
+                "nonce": authorizereq.nonce,
+                "code_challenge": authorizereq.code_challenge,
+                "code_challenge_method": authorizereq.code_challenge_method,
+                "show_invalid_warning": True,
+            },
+        )
 
     # The auth_client may restrict the usage of the client to specific Hyperion groups.
     # For example, only ECLAIR members may be allowed to access the wiki
@@ -572,9 +585,16 @@ async def authorization_code_grant(  # noqa: C901 # The function is too complex 
                 },
             )
         # We need to verify the hash correspond
+        # The hash is a H256, urlbase64 encoded
+        # If the last character is not a "=", we need to add it, as the = is optional for urlbase64 encoding
+        code_challenge = db_authorization_code.code_challenge
+        if code_challenge[-1] != "=":
+            code_challenge += "="
         if (
-            db_authorization_code.code_challenge
-            != hashlib.sha256(tokenreq.code_verifier.encode()).hexdigest()
+            code_challenge.encode()
+            != base64.urlsafe_b64encode(
+                hashlib.sha256(tokenreq.code_verifier.encode()).digest()
+            )
             # We need to pass the code_verifier as a b-string, we use `code_verifier.encode()` for that
             # TODO: Make sure that `.hexdigest()` is applied by the client to code_challenge
         ):

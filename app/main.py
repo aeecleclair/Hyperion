@@ -17,6 +17,7 @@ from sqlalchemy.exc import IntegrityError
 from app import api
 from app.core.config import Settings
 from app.core.log import LogConfig
+from app.cruds import cruds_groups
 from app.database import Base, SessionLocal, engine
 from app.dependencies import get_redis_client, get_settings
 from app.models import models_core
@@ -119,27 +120,37 @@ async def startup():
     ):
         hyperion_error_logger.info("Redis client not configured")
 
-    # Create the asset folder if it does not exist
+    # Create the data folders if it does not exist
     if not os.path.exists("data/profile-pictures/"):
         os.makedirs("data/profile-pictures/")
+
+    # Create folder for calendars
+    if not os.path.exists("data/ics/"):
+        os.makedirs("data/ics/")
 
     # create db tables
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
     # Add the necessary groups for account types
-    # TODO:fix also in tests
-    description = "Group type"
-    account_types = [
-        models_core.CoreGroup(id=id, name=id.name, description=description)
-        for id in GroupType
-    ]
     async with SessionLocal() as db:
-        try:
-            db.add_all(account_types)
-            await db.commit()
-        except IntegrityError:
-            await db.rollback()
+        for id in GroupType:
+            exists = await cruds_groups.get_group_by_id(group_id=id, db=db)
+            # We don't want to recreate the groups if they already exist
+            if not exists:
+
+                group = models_core.CoreGroup(
+                    id=id, name=id.name, description="Group type"
+                )
+
+                try:
+                    db.add(group)
+                    await db.commit()
+                except IntegrityError as error:
+                    hyperion_error_logger.fatal(
+                        f"Startup: Could not add group {group.name}<{group.id}> in the database: {error}"
+                    )
+                    await db.rollback()
 
 
 app.include_router(api.api_router)

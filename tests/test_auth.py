@@ -51,7 +51,7 @@ async def startuptest():
 
 def test_authorization_code_flow_PKCE():
     code_verifier = "AntoineMonBelAntoine"
-    code_challenge = "c2cf464b7901205c037cd821bc493b191943bdb5244a665e9fcab6478bf79415"  # hashlib.sha256("AntoineMonBelAntoine".encode()).hexdigest()
+    code_challenge = "ws9GS3kBIFwDfNghvEk7GRlDvbUkSmZen8q2R4v3lBU="  # base64.urlsafe_b64encode(hashlib.sha256("AntoineMonBelAntoine".encode()).digest())
     data = examples_auth.example_AuthorizeValidation
     data["code_challenge"] = code_challenge
     response = client.post(

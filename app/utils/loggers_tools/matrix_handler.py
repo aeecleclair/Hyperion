@@ -32,17 +32,18 @@ class MatrixHandler(StreamHandler):
         self.room_id = room_id
         self.enabled = enabled
 
-        try:
-            self.matrix = Matrix(
-                user_name=user_name,
-                user_password=user_password,
-                server_base_url=server_base_url,
-            )
-        except ValueError as err:
-            hyperion_error_logger.warning(
-                f"MatrixHandler: Matrix configuration failed, disabling the handler: {err}"
-            )
-            self.enabled = False
+        if enabled:
+            try:
+                self.matrix = Matrix(
+                    user_name=user_name,
+                    user_password=user_password,
+                    server_base_url=server_base_url,
+                )
+            except ValueError as err:
+                hyperion_error_logger.warning(
+                    f"MatrixHandler: Matrix configuration failed, disabling the handler: {err}"
+                )
+                self.enabled = False
 
     def emit(self, record):
         if self.enabled:
