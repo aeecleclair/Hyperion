@@ -462,30 +462,39 @@ async def add_order_to_delievery(
                 ordering_date=ordering_date,
                 **order.dict(),
             )
-            balance = await cruds_amap.get_cash_by_id(db=db, user_id=order.user_id)
-            if balance is not None:
-                if balance.balance < amount:
-                    raise HTTPException(status_code=403, detail="Not enough money")
-                else:
-                    try:
-                        await cruds_amap.add_order_to_delivery(
-                            order=db_order,
-                            db=db,
-                        )
-                        await cruds_amap.edit_cash_by_id(
-                            db=db,
-                            user_id=order.user_id,
-                            balance=schemas_amap.CashBase(
-                                balance=balance.balance - amount
-                            ),
-                        )
-                        return await get_order_by_id(
-                            delivery_id=delivery_id, order_id=db_order.order_id, db=db
-                        )
-                    except ValueError as error:
-                        raise HTTPException(status_code=422, detail=str(error))
+            balance: models_amap.Cash | None = await cruds_amap.get_cash_by_id(
+                db=db,
+                user_id=order.user_id,
+            )
+            # If the balance does not exist, we create a new one with a balance of 0
+            if balance is None:
+                new_cash_db = schemas_amap.CashDB(
+                    balance=0,
+                    user_id=order.user_id,
+                )
+                # And we use it for the rest of the function
+                balance = models_amap.Cash(
+                    **new_cash_db.dict(),
+                )
+            if balance.balance < amount:
+                raise HTTPException(status_code=403, detail="Not enough money")
             else:
-                raise HTTPException(status_code=404, detail="No cash found")
+                try:
+                    await cruds_amap.add_order_to_delivery(
+                        order=db_order,
+                        db=db,
+                    )
+                    await cruds_amap.edit_cash_by_id(
+                        db=db,
+                        user_id=order.user_id,
+                        balance=schemas_amap.CashBase(balance=balance.balance - amount),
+                    )
+                    return await get_order_by_id(
+                        delivery_id=delivery_id, order_id=db_order.order_id, db=db
+                    )
+                except ValueError as error:
+                    raise HTTPException(status_code=422, detail=str(error))
+
     else:
         raise HTTPException(status_code=403)
 
