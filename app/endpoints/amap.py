@@ -728,7 +728,8 @@ async def edit_cash_by_id(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
     """
-    Edit cash for an user.
+    Edit cash for an user. This will add the balance to the current balance.
+    A negative value can be provided to remove money from the user.
 
     **The user must be a member of the group AMAP to use this endpoint**
     """
