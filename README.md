@@ -100,9 +100,7 @@ uvicorn app.main:app --reload
 > Hyperion settings are documented in [app/core/config.py](./app/core/config.py).
 > Check this file to know what can and should be set using the dotenv.
 
-`TESTING` is set to False by default. If you want to run the tests, set it to True.
-
-`SQLITE_DB` is set to False by default. If you want to use SQLite (if you don't use docker and don't have a postgres running), set it to True.
+`SQLITE_DB` is None by default. If you want to use SQLite (if you don't use docker or don't have a postgres running), set it with the name of the db file (app.db for example).
 
 `ACCESS_TOKEN_SECRET_KEY`
 

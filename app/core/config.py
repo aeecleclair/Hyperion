@@ -21,8 +21,7 @@ class Settings(BaseSettings):
 
     # NOTE: Variables without a value should not be configured in this class, but added to the dotenv .env file
 
-    TESTING: bool = False  # If True, the application is running in a test environment
-    SQLITE_DB: bool = False  # If True, the application use a SQLite database instead of PostgreSQL, for testing or development purposes (should not be used if possible)
+    SQLITE_DB: str | None = None  # If set, the application use a SQLite database instead of PostgreSQL, for testing or development purposes (should not be used if possible)
 
     #####################################
     # SMTP configuration using starttls #
@@ -68,6 +67,7 @@ class Settings(BaseSettings):
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str
     POSTGRES_DB: str
+    DATABASE_DEBUG: bool  # If True, the database will log all queries
 
     #####################
     # Hyperion settings #

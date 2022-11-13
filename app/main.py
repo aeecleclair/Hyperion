@@ -17,8 +17,13 @@ from app import api
 from app.core.config import Settings
 from app.core.log import LogConfig
 from app.cruds import cruds_groups
-from app.database import Base, SessionLocal, engine
-from app.dependencies import get_redis_client, get_settings
+from app.database import Base
+from app.dependencies import (
+    get_db_engine,
+    get_redis_client,
+    get_session_maker,
+    get_settings,
+)
 from app.models import models_core
 from app.utils.redis import limiter
 from app.utils.types.groups_type import GroupType
@@ -126,29 +131,31 @@ async def startup():
     if not os.path.exists("data/ics/"):
         os.makedirs("data/ics/")
 
-    if not settings.TESTING:
-        # create db tables
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+    engine = get_db_engine(settings=settings)
 
-        # Add the necessary groups for account types
-        async with SessionLocal() as db:
-            for id in GroupType:
-                exists = await cruds_groups.get_group_by_id(group_id=id, db=db)
-                # We don't want to recreate the groups if they already exist
-                if not exists:
-                    group = models_core.CoreGroup(
-                        id=id, name=id.name, description="Group type"
+    # create db tables
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    SessionLocal = app.dependency_overrides.get(get_session_maker, get_session_maker)()
+    # Add the necessary groups for account types
+    async with SessionLocal() as db:
+        for id in GroupType:
+            exists = await cruds_groups.get_group_by_id(group_id=id, db=db)
+            # We don't want to recreate the groups if they already exist
+            if not exists:
+                group = models_core.CoreGroup(
+                    id=id, name=id.name, description="Group type"
+                )
+
+                try:
+                    db.add(group)
+                    await db.commit()
+                except IntegrityError as error:
+                    hyperion_error_logger.fatal(
+                        f"Startup: Could not add group {group.name}<{group.id}> in the database: {error}"
                     )
-
-                    try:
-                        db.add(group)
-                        await db.commit()
-                    except IntegrityError as error:
-                        hyperion_error_logger.fatal(
-                            f"Startup: Could not add group {group.name}<{group.id}> in the database: {error}"
-                        )
-                        await db.rollback()
+                    await db.rollback()
 
 
 app.include_router(api.api_router)

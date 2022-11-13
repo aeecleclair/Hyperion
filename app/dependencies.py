@@ -15,12 +15,12 @@ import redis
 from fastapi import Depends, HTTPException, Request, status
 from jose import jwt
 from pydantic import ValidationError
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
+from sqlalchemy.orm import sessionmaker
 
 from app.core import security
 from app.core.config import Settings
 from app.cruds import cruds_users
-from app.database import SessionLocal
 from app.models import models_core
 from app.schemas import schemas_auth
 from app.utils.redis import connect
@@ -32,8 +32,13 @@ from app.utils.types.scopes_type import ScopeType
 hyperion_access_logger = logging.getLogger("hyperion.access")
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
-redis_client: redis.Redis | bool | None = None  # Create a global variable for the redis client, so that it can be instantiated in the startup and shutdown events
-# Is None if the redis client is not instantiated, is False if the redis client is instantiated but not connected, is a redis.Redis object if the redis client is connected
+redis_client: redis.Redis | bool | None = None  # Create a global variable for the redis client, so that it can be instancied in the startup event
+# Is None if the redis client is not instantiated, is False if the redis client is instancied but not connected, is a redis.Redis object if the redis client is connected
+
+engine: AsyncEngine | None = None  # Create a global variable for the database engine, so that it can be instancied in the startup event
+SessionLocal: Callable[
+    [], AsyncSession
+] | None = None  # Create a global variable for the database session, so that it can be instancied in the startup event
 
 
 def get_redis_client(
@@ -64,11 +69,48 @@ async def get_request_id(request: Request) -> str:
     return request.state.request_id
 
 
+def get_db_engine(settings: Settings) -> AsyncEngine:
+    """Return the database engine, if the engine doesn't exit yet it will create one based on the settings"""
+    global engine
+    global SessionLocal
+    if settings.SQLITE_DB:
+        SQLALCHEMY_DATABASE_URL = f"sqlite+aiosqlite:///./{settings.SQLITE_DB}"  # Connect to the test's database
+    else:
+        SQLALCHEMY_DATABASE_URL = f"postgresql+asyncpg://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}/{settings.POSTGRES_DB}"
+
+    if engine is None:
+        engine = create_async_engine(
+            SQLALCHEMY_DATABASE_URL, echo=settings.DATABASE_DEBUG
+        )
+        SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    return engine
+
+
+def get_session_maker() -> Callable[[], AsyncSession]:
+    """
+    Return the session maker
+    """
+    global SessionLocal
+    if SessionLocal is None:
+        hyperion_error_logger.error("Database engine is not initialized")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Database engine is not initialized",
+        )
+    return SessionLocal
+
+
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
     Return a database session
     """
-
+    global SessionLocal
+    if SessionLocal is None:
+        hyperion_error_logger.error("Database engine is not initialized")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Database engine is not initialized",
+        )
     async with SessionLocal() as db:
         try:
             yield db

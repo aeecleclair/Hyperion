@@ -26,7 +26,7 @@ settings = Settings(
 )  # Load the test's settings to configure the database
 if settings.SQLITE_DB:
     SQLALCHEMY_DATABASE_URL = (
-        "sqlite+aiosqlite:///./test.db"  # Connect to the test's database
+        f"sqlite+aiosqlite:///./{settings.SQLITE_DB}"  # Connect to the test's database
     )
 else:
     SQLALCHEMY_DATABASE_URL = f"postgresql+asyncpg://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}/{settings.POSTGRES_DB}"

@@ -15,7 +15,7 @@ def test_limiter():
                 "/health"
             )  # Fake endpoint, we don't care about the response
             assert response.status_code == 404
-        response = client.get("/users")
+        response = client.get("/health")
         assert response.status_code == 429
 
 
