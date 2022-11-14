@@ -19,22 +19,23 @@ async def get_products(db: AsyncSession) -> list[models_amap.Product]:
 
 
 async def create_product(
-    product: schemas_amap.ProductBase, db: AsyncSession
+    product: models_amap.Product,
+    db: AsyncSession,
 ) -> models_amap.Product:
     """Create a new product in database and return it"""
 
-    db_product = models_amap.Product(**product.dict())
-    db.add(db_product)
+    db.add(product)
     try:
         await db.commit()
-        return db_product
+        return product
     except IntegrityError:
         await db.rollback()
         raise ValueError("This name is already used")
 
 
 async def get_product_by_id(
-    product_id: str, db: AsyncSession
+    product_id: str,
+    db: AsyncSession,
 ) -> models_amap.Product | None:
     result = await db.execute(
         select(models_amap.Product).where(models_amap.Product.id == product_id)
@@ -43,7 +44,9 @@ async def get_product_by_id(
 
 
 async def edit_product(
-    product_id: str, product_update: schemas_amap.ProductEdit, db: AsyncSession
+    product_id: str,
+    product_update: schemas_amap.ProductEdit,
+    db: AsyncSession,
 ):
     await db.execute(
         update(models_amap.Product)
@@ -53,16 +56,22 @@ async def edit_product(
     await db.commit()
 
 
-async def is_product_not_used(db: AsyncSession, product_id: str) -> bool:
+async def is_product_used(
+    db: AsyncSession,
+    product_id: str,
+) -> bool:
     result = await db.execute(
         select(models_amap.AmapDeliveryContent).where(
             models_amap.AmapDeliveryContent.product_id == product_id
         )
     )
-    return result.scalars().all() == []
+    return result.scalars().all() != []
 
 
-async def delete_product(db: AsyncSession, product_id: str):
+async def delete_product(
+    db: AsyncSession,
+    product_id: str,
+):
     """Delete a product from database by id"""
 
     await db.execute(
@@ -71,7 +80,9 @@ async def delete_product(db: AsyncSession, product_id: str):
     await db.commit()
 
 
-async def get_deliveries(db: AsyncSession) -> list[models_amap.Delivery]:
+async def get_deliveries(
+    db: AsyncSession,
+) -> list[models_amap.Delivery]:
     """Return all deliveries from database"""
     result = await db.execute(
         select(models_amap.Delivery).options(
@@ -82,7 +93,8 @@ async def get_deliveries(db: AsyncSession) -> list[models_amap.Delivery]:
 
 
 async def get_delivery_by_id(
-    db: AsyncSession, delivery_id: str
+    db: AsyncSession,
+    delivery_id: str,
 ) -> models_amap.Delivery | None:
     result = await db.execute(
         select(models_amap.Delivery)
@@ -93,7 +105,8 @@ async def get_delivery_by_id(
 
 
 async def create_delivery(
-    delivery: schemas_amap.DeliveryComplete, db: AsyncSession
+    delivery: schemas_amap.DeliveryComplete,
+    db: AsyncSession,
 ) -> models_amap.Delivery:
     """Create a new delivery in database and return it"""
     products_ids = delivery.products_ids
@@ -129,20 +142,6 @@ async def delete_delivery(db: AsyncSession, delivery_id: str):
         delete(models_amap.Delivery).where(models_amap.Delivery.id == delivery_id)
     )
     await db.commit()
-
-
-async def get_products_from_delivery(
-    db: AsyncSession, delivery_id: str
-) -> list[models_amap.Product] | None:
-    result = await db.execute(
-        select(models_amap.Delivery)
-        .where(models_amap.Delivery.id == delivery_id)
-        .options(selectinload(models_amap.Delivery.products))
-    )
-    delivery = result.scalars().first()
-    if delivery is not None:
-        return delivery.products
-    return None
 
 
 async def add_product_to_delivery(
@@ -322,13 +321,12 @@ async def get_cash_by_id(db: AsyncSession, user_id: str) -> models_amap.Cash | N
 
 
 async def create_cash_of_user(
-    db: AsyncSession, cash: schemas_amap.CashDB
+    db: AsyncSession, cash: models_amap.Cash
 ) -> models_amap.Cash:
-    db_add = models_amap.Cash(**cash.dict(exclude_none=True))
-    db.add(db_add)
+    db.add(cash)
     try:
         await db.commit()
-        return db_add
+        return cash
     except IntegrityError:
         await db.rollback()
         raise ValueError("This user already has a balance")

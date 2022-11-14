@@ -76,7 +76,6 @@ class DeliveryReturn(BaseModel):
 
 class DeliveryUpdate(BaseModel):
     delivery_date: date | None = None
-    id: str
     locked: bool | None = None
 
 
@@ -127,16 +126,13 @@ class AddProductDelivery(BaseModel):
 class CashBase(BaseModel):
     balance: float
 
+    class Config:
+        orm_mode = True
+
 
 class CashComplete(CashBase):
     user: CoreUserSimple
 
-    class Config:
-        orm_mode = True
-
 
 class CashDB(CashBase):
     user_id: str
-
-    class Config:
-        orm_mode = True
