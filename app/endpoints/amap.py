@@ -144,7 +144,7 @@ async def delete_product(
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    if await cruds_amap.is_product_not_used(db=db, product_id=product_id):
+    if not await cruds_amap.is_product_used(db=db, product_id=product_id):
         await cruds_amap.delete_product(db=db, product_id=product_id)
     else:
         raise HTTPException(
@@ -264,7 +264,6 @@ async def get_products_from_delivery(
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
     if delivery is None:
         raise HTTPException(status_code=404, detail="Delivery not found")
-
 
     return delivery.products
 
@@ -386,7 +385,6 @@ async def get_order_by_id(
     """
     # TODO: document this endpoint
 
-
     order = await cruds_amap.get_order_by_id(order_id=order_id, db=db)
     if order is None:
         raise HTTPException(status_code=404, detail="Delivery not found")
@@ -492,22 +490,6 @@ async def add_order_to_delievery(
                         )
                     except ValueError as error:
                         raise HTTPException(status_code=422, detail=str(error))
-            else:
-                try:
-                    await cruds_amap.add_order_to_delivery(
-                        order=db_order,
-                        db=db,
-                    )
-                    await cruds_amap.edit_cash_by_id(
-                        db=db,
-                        user_id=order.user_id,
-                        balance=schemas_amap.CashBase(balance=balance.balance - amount),
-                    )
-                    return await get_order_by_id(
-                        delivery_id=delivery_id, order_id=db_order.order_id, db=db
-                    )
-                except ValueError as error:
-                    raise HTTPException(status_code=422, detail=str(error))
 
     else:
         raise HTTPException(status_code=403)
@@ -705,11 +687,15 @@ async def create_cash_of_user(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
-    result = await cruds_amap.create_cash_of_user(
-        cash=cash,
-        db=db,
-    )
-    return result
+    existing_cash = await cruds_amap.get_cash_by_id(user_id=user_id, db=db)
+    if existing_cash is None:
+        result = await cruds_amap.create_cash_of_user(
+            cash=cash,
+            db=db,
+        )
+        return result
+    else:
+        return existing_cash
 
 
 @router.patch(
@@ -729,8 +715,8 @@ async def edit_cash_by_id(
 
     **The user must be a member of the group AMAP to use this endpoint**
     """
-    user = await read_user(user_id=user_id, db=db)
-    if not user:
+    user_db = await read_user(user_id=user_id, db=db)
+    if not user_db:
         raise HTTPException(status_code=404, detail="User not found")
 
     cash = await cruds_amap.get_cash_by_id(db=db, user_id=user_id)

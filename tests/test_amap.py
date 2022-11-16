@@ -275,7 +275,7 @@ def test_create_cash_of_user():
 
     response = client.post(
         f"/amap/users/{student_user.id}/cash",
-        json={"balance": 50},
+        json={"balance": 50, "user_id": student_user.id},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 201
@@ -284,9 +284,15 @@ def test_create_cash_of_user():
 def test_edit_cash_by_id():
     token = create_api_access_token(amap_user)
 
+    response = client.post(
+        f"/amap/users/{amap_user.id}/cash",
+        json={"balance": 50, "user_id": amap_user.id},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
     response = client.patch(
         f"/amap/users/{amap_user.id}/cash",
-        json={"balance": 45, "user_id": amap_user.id},
+        json={"balance": 45},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 204
