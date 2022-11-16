@@ -124,7 +124,7 @@ def test_amap():
 
     response = client.post(
         f"/amap/users/{amap_user.id}/cash",
-        json={"balance": 50},
+        json={"balance": 50, "user_id": amap_user.id},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 201
@@ -143,7 +143,7 @@ def test_amap():
 
     response = client.patch(
         f"/amap/users/{amap_user.id}/cash",
-        json={"balance": 45},
+        json={"balance": 45, "user_id": amap_user.id},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 204

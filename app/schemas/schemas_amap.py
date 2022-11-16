@@ -126,6 +126,7 @@ class AddProductDelivery(BaseModel):
 
 class CashBase(BaseModel):
     balance: float
+    user_id: str
 
 
 class CashComplete(CashBase):
@@ -135,8 +136,5 @@ class CashComplete(CashBase):
         orm_mode = True
 
 
-class CashDB(CashBase):
-    user_id: str
-
-    class Config:
-        orm_mode = True
+class CashEdit(BaseModel):
+    balance: str

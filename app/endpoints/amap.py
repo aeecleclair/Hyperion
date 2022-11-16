@@ -4,7 +4,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.cruds import cruds_amap, cruds_users
+from app.cruds import cruds_amap
 from app.dependencies import get_db, is_user_a_member, is_user_a_member_of
 from app.endpoints.users import read_user
 from app.models import models_core
@@ -394,7 +394,7 @@ async def add_order_to_delievery(
                         await cruds_amap.edit_cash_by_id(
                             db=db,
                             user_id=order.user_id,
-                            balance=schemas_amap.CashBase(
+                            balance=schemas_amap.CashEdit(
                                 balance=balance.balance - amount
                             ),
                         )
@@ -462,7 +462,7 @@ async def edit_orders_from_delieveries(
                             await cruds_amap.edit_cash_by_id(
                                 db=db,
                                 user_id=order.user_id,
-                                balance=schemas_amap.CashBase(
+                                balance=schemas_amap.CashEdit(
                                     balance=balance.balance + previous_amount - amount
                                 ),
                             )
@@ -508,7 +508,7 @@ async def remove_order(
                 await cruds_amap.edit_cash_by_id(
                     db=db,
                     user_id=order.user_id,
-                    balance=schemas_amap.CashBase(balance=balance.balance + amount),
+                    balance=schemas_amap.CashEdit(balance=balance.balance + amount),
                 )
                 await cruds_amap.remove_order(db=db, order_id=order_id)
             else:
@@ -529,11 +529,7 @@ async def get_users_cash(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
     cash = await cruds_amap.get_users_cash(db)
-    res = []
-    for c in cash:
-        user = await read_user(user_id=c.user_id, db=db)
-        res.append(schemas_amap.CashComplete(user=user, balance=c.balance))
-    return res
+    return cash
 
 
 @router.get(
@@ -547,41 +543,37 @@ async def get_cash_by_id(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    user_db = await cruds_users.get_user_by_id(db=db, user_id=user_id)
-    if user_db is None:
-        raise HTTPException(status_code=404, detail="User not found")
-
     if user_id == user.id or is_user_member_of_an_allowed_group(user, [GroupType.amap]):
         cash = await cruds_amap.get_cash_by_id(user_id=user_id, db=db)
         if cash is not None:
-            user = await read_user(user_id=cash.user_id, db=db)
-            return schemas_amap.CashComplete(balance=cash.balance, user=user)
+            return cash
         else:
-            return schemas_amap.CashComplete(balance=0, user=user)
+            return await create_cash_of_user(
+                user_id=user_id,
+                cash=schemas_amap.CashBase(balance=0, user_id=user_id),
+                db=db,
+            )
     else:
         raise HTTPException(status_code=403)
 
 
 @router.post(
     "/amap/users/{user_id}/cash",
-    response_model=schemas_amap.CashBase,
+    response_model=schemas_amap.CashComplete,
     status_code=201,
     tags=[Tags.amap],
 )
 async def create_cash_of_user(
     user_id: str,
-    balance: schemas_amap.CashBase,
+    cash: schemas_amap.CashBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
-    user = await read_user(user_id=user_id, db=db)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
     result = await cruds_amap.create_cash_of_user(
-        cash=schemas_amap.CashDB(user_id=user_id, **balance.dict()),
+        cash=cash,
         db=db,
     )
-    return schemas_amap.CashBase(**result.__dict__)
+    return result
 
 
 @router.patch(
@@ -591,7 +583,7 @@ async def create_cash_of_user(
 )
 async def edit_cash_by_id(
     user_id: str,
-    balance: schemas_amap.CashBase,
+    balance: schemas_amap.CashEdit,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
@@ -612,10 +604,6 @@ async def get_orders_of_user(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    user = await read_user(user_id=user_id, db=db)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
     if user_id == user.id or is_user_member_of_an_allowed_group(user, [GroupType.amap]):
         orders = await cruds_amap.get_orders_of_user(user_id=user_id, db=db)
         res = []

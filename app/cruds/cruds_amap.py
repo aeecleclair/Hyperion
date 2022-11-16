@@ -310,32 +310,36 @@ async def remove_order(db: AsyncSession, order_id: str):
 
 
 async def get_users_cash(db: AsyncSession) -> list[models_amap.Cash]:
-    result = await db.execute(select(models_amap.Cash))
+    result = await db.execute(
+        select(models_amap.Cash).options(selectinload(models_amap.Cash.user))
+    )
     return result.scalars().all()
 
 
 async def get_cash_by_id(db: AsyncSession, user_id: str) -> models_amap.Cash | None:
     result = await db.execute(
-        select(models_amap.Cash).where(models_amap.Cash.user_id == user_id)
+        select(models_amap.Cash)
+        .where(models_amap.Cash.user_id == user_id)
+        .options(selectinload(models_amap.Cash.user))
     )
     return result.scalars().first()
 
 
 async def create_cash_of_user(
-    db: AsyncSession, cash: schemas_amap.CashDB
-) -> models_amap.Cash:
+    db: AsyncSession, cash: schemas_amap.CashBase
+) -> models_amap.Cash | None:
     db_add = models_amap.Cash(**cash.dict(exclude_none=True))
     db.add(db_add)
     try:
         await db.commit()
         return db_add
-    except IntegrityError:
+    except IntegrityError as err:
         await db.rollback()
-        raise ValueError("This user already has a balance")
+        raise ValueError(err)
 
 
 async def edit_cash_by_id(
-    db: AsyncSession, user_id: str, balance: schemas_amap.CashBase
+    db: AsyncSession, user_id: str, balance: schemas_amap.CashEdit
 ):
     await db.execute(
         update(models_amap.Cash)
