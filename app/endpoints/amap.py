@@ -705,13 +705,20 @@ async def create_cash_of_user(
             status_code=400,
             detail="This user already has a cash.",
         )
+
     cash_db = models_amap.Cash(user_id=user_id, balance=cash.balance)
 
-    result = await cruds_amap.create_cash_of_user(
+    await cruds_amap.create_cash_of_user(
         cash=cash_db,
         db=db,
     )
-    return result
+
+    # We can not directly return the cash_db because it does not contain the user.
+    # Calling get_cash_by_id will return the cash with the user loaded as it's a relationship.
+    return await cruds_amap.get_cash_by_id(
+        user_id=user_id,
+        db=db,
+    )
 
 
 @router.patch(
