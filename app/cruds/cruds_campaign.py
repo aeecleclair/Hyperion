@@ -7,6 +7,22 @@ from app.models import models_campaign
 from app.schemas import schemas_campaign
 
 
+async def get_status(db: AsyncSession) -> models_campaign.Status:
+    result = await db.execute(select(models_campaign.Status))
+    status = result.scalars().all()
+    if status == []:
+        db_status = models_campaign.Status(status="waiting")
+        db.add(db_status)
+        try:
+            await db.commit()
+            return db_status
+        except IntegrityError:
+            await db.rollback()
+            raise ValueError("Error in status creation")
+    else:
+        return status[0]
+
+
 async def get_sections(db: AsyncSession) -> list[models_campaign.Sections]:
     """Return all users from database."""
 

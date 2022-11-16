@@ -50,3 +50,9 @@ class HasVoted(Base):
 
     user_id: str = Column(ForeignKey("core_user.id"), primary_key=True)
     section_id: str = Column(ForeignKey("campaign_sections.id"))
+
+
+class Status(Base):
+    __tablename__ = "campaign_status"
+
+    status: str = Column(String, nullable=False)
