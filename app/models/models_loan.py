@@ -48,7 +48,6 @@ class Item(Base):
 
     available: bool | None = Column(Boolean)
 
-    # The loaner field won't usually be returned. We won't to only fetch it from the database when it is accessed
     loaner: Loaner = relationship(Loaner, lazy="joined", back_populates="items")
 
 
@@ -56,7 +55,7 @@ class Loan(Base):
     __tablename__ = "loan"
 
     id: str = Column(String, primary_key=True, index=True)
-    # link the table Loan to the table CoreUser with a one to many relationship on the id_user
+    # link the table Loan to the table CoreUser with a one-to-many relationship on the id_user
 
     borrower_id: str = Column(
         ForeignKey("core_user.id"),
@@ -68,7 +67,6 @@ class Loan(Base):
         ForeignKey("loaner.id"),
         index=True,
     )
-    # The loaner field won't usually be returned. We won't to only fetch it from the database when it is accessed
     loaner: Loaner = relationship(
         "Loaner",
         lazy="joined",

@@ -55,7 +55,7 @@ class Matrix:
 
     def post(self, url, json, headers={}) -> Dict[str, Any]:
         """
-        The function add an access token to the request authorization header and issue a post operation.
+        The function adds an access token to the request authorization header and issue a post operation.
         The authorization header will only be added if one is not already provided
 
         https://spec.matrix.org/v1.3/client-server-api/#using-access-tokens
@@ -77,7 +77,7 @@ class Matrix:
     def send_message(self, room_id: str, formatted_body: str) -> None:
         """
         Send a message to the room `room_id`.
-        `formatted_body` can contain html formated text
+        `formatted_body` can contain html formatted text
         """
         url = (
             "https://matrix.org/_matrix/client/r0/rooms/"

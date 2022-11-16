@@ -8,9 +8,9 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 
 class MatrixHandler(StreamHandler):
     """
-    A logging handler which send log records to a Matrix server.
+    A logging handler which sends log records to a Matrix server.
 
-    `room_id`: str, the Matrix room identifier the messages needs to be send to.
+    `room_id`: str, the Matrix room identifier the messages need to be sent to.
     `enabled`: bool, default True, if the handler should be enabled
 
     NOTE: the Matrix user configured in the dotenv should have access to the room.
@@ -32,17 +32,18 @@ class MatrixHandler(StreamHandler):
         self.room_id = room_id
         self.enabled = enabled
 
-        try:
-            self.matrix = Matrix(
-                user_name=user_name,
-                user_password=user_password,
-                server_base_url=server_base_url,
-            )
-        except ValueError as err:
-            hyperion_error_logger.warning(
-                f"MatrixHandler: Matrix configuration failed, disabling the handler: {err}"
-            )
-            self.enabled = False
+        if enabled:
+            try:
+                self.matrix = Matrix(
+                    user_name=user_name,
+                    user_password=user_password,
+                    server_base_url=server_base_url,
+                )
+            except ValueError as err:
+                hyperion_error_logger.warning(
+                    f"MatrixHandler: Matrix configuration failed, disabling the handler: {err}"
+                )
+                self.enabled = False
 
     def emit(self, record):
         if self.enabled:

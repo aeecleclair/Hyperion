@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     1. An environment variable
     2. The dotenv .env file
 
-    See [Pydantic Settings documentation](https://pydantic-docs.helpmanual.io/usage/settings/#dotenv-env-support) for more informations.
+    See [Pydantic Settings documentation](https://pydantic-docs.helpmanual.io/usage/settings/#dotenv-env-support) for more information.
     See [FastAPI settings](https://fastapi.tiangolo.com/advanced/settings/) article for best practices with settings.
 
     To access these settings, the `get_settings` dependency should be used.
@@ -87,7 +87,7 @@ class Settings(BaseSettings):
 
     # ACCESS_TOKEN_SECRET_KEY should contain a random string with enough entropy (at least 32 bytes long) to securely sign all access_tokens for OAuth and Openid connect
     ACCESS_TOKEN_SECRET_KEY: str
-    # RSA_PRIVATE_PEM_STRING should be a string containing the PEM certificate of a private RSA key. It will be used to sign id_tokens for Openid connect authentification
+    # RSA_PRIVATE_PEM_STRING should be a string containing the PEM certificate of a private RSA key. It will be used to sign id_tokens for Openid connect authentication
     # In the pem certificates newlines can be replaced by `\n`
     RSA_PRIVATE_PEM_STRING: str
 
@@ -111,11 +111,11 @@ class Settings(BaseSettings):
     # Automatically generated parameters #
     ######################################
 
-    # The following properties can not be instantiated as class variables as them need to be computed using an other property from the class,
-    # which wont be available before the .env file parsing.
+    # The following properties can not be instantiated as class variables as them need to be computed using another property from the class,
+    # which won't be available before the .env file parsing.
     # We thus decide to use the decorator `@property` to make these methods usable as properties and not functions: as properties: Settings.RSA_PRIVATE_KEY, Settings.RSA_PUBLIC_KEY and Settings.RSA_PUBLIC_JWK
     # Their values should not change, we don't want to recompute all of them overtimes. We use the `@lru_cache` decorator to cache them.
-    # The combinaison of `@property` and `@lru_cache` should be replaced by `@cached_property`
+    # The combination of `@property` and `@lru_cache` should be replaced by `@cached_property`
     # See https://docs.python.org/3.8/library/functools.html?highlight=#functools.cached_property
 
     @cached_property
@@ -167,7 +167,7 @@ class Settings(BaseSettings):
 
     class Config:
         # By default, the settings are loaded from the `.env` file but this behaviour can be overridden by using
-        # `_env_file` parameter during instanciation
+        # `_env_file` parameter during instantiation
         # Ex: `Settings(_env_file=".env.dev")`
         env_file = ".env"
         env_file_encoding = "utf-8"

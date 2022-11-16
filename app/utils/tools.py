@@ -14,8 +14,8 @@ def is_user_member_of_an_allowed_group(
     """
     Test if the provided user is a member of at least one group from `allowed_groups`.
 
-    When required groups can only be determined on runtime a list of strings (group UUIDs) can be provided.
-    This may be useful for modules that can be used multiple times like loans module.
+    When required groups can only be determined at runtime a list of strings (group UUIDs) can be provided.
+    This may be useful for modules that can be used multiple times like the loans module.
     NOTE: if the provided string does not match a valid group, the function will return False
     """
     # We can not directly test is group_id is in user.groups
@@ -66,7 +66,7 @@ async def is_group_id_valid(group_id: str, db: AsyncSession) -> bool:
     The group may be
      - an account type
      - a group type
-     - a group created on runtime and stored in the database
+     - a group created at runtime and stored in the database
     """
     return await cruds_groups.get_group_by_id(db=db, group_id=group_id) is not None
 

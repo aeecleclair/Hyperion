@@ -15,7 +15,7 @@ def disconnect(redis_client: redis.Redis) -> None:
 
 
 def limiter(redis_client: redis.Redis, key: str, limit: int, window: int):
-    """Simple fixed window rate limiter, returns a couple  of boolean: the first is True if the request can be processed, False otherwise; the second indicate if an alert should be issued. key should be an ip address or a user id"""
+    """Simple fixed window rate limiter, returns a couple of booleans: the first is True if the request can be processed, False otherwise; the second indicates if an alert should be issued. key should be an ip address or a user id"""
     # Fixed window: see https://konghq.com/blog/how-to-design-a-scalable-rate-limiting-algorithm.
     nb = redis_client.incr(key)
     if nb == 1:

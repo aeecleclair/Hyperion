@@ -15,15 +15,15 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds
 """
 In order to salt and hash password, we use a *passlib* [CryptContext](https://passlib.readthedocs.io/en/stable/narr/quickstart.html) object.
 
-We use "bcrypt" to hash password, a different hash will be added automatically for each password. See [Auth0 Understanding bcrypt](https://auth0.com/blog/hashing-in-action-understanding-bcrypt/) for informations about bcrypt.
+We use "bcrypt" to hash password, a different hash will be added automatically for each password. See [Auth0 Understanding bcrypt](https://auth0.com/blog/hashing-in-action-understanding-bcrypt/) for information about bcrypt.
 deprecated="auto" may be used to do password hash migration, see [Passlib hash migration](https://passlib.readthedocs.io/en/stable/narr/context-tutorial.html#deprecation-hash-migration).
-It is improtant to use enough rounds while accounting for the hash computation time. Default is 12. 13 allows for a 0.5 seconds computing delay.
+It is important to use enough rounds while accounting for the hash computation time. Default is 12. 13 allows for a 0.5 seconds computing delay.
 """
 
 oauth2_scheme = OAuth2AuthorizationCodeBearer(
     authorizationUrl="auth/authorize",
     tokenUrl="auth/token",
-    scheme_name="Authorization Code authentification",
+    scheme_name="Authorization Code authentication",
 )
 """
 To generate JWT access tokens, we use a *FastAPI* OAuth2PasswordBearer object.
@@ -39,7 +39,7 @@ The algorithme used to generate JWT access tokens
 def get_password_hash(password: str) -> str:
     """
     Return a salted hash computed from password. The function use a bcrypt based *passlib* CryptContext.
-    Both the salt and the algorithme identifier are included in the hash.
+    Both the salt and the algorithm identifier are included in the hash.
     """
     return pwd_context.hash(password)
 
@@ -55,7 +55,7 @@ def generate_token(nbytes=32) -> str:
     """
     Generate a `nbytes` bytes cryptographically strong random urlsafe token using the *secrets* library.
 
-    By default the a 32 bytes token is generated.
+    By default, a 32 bytes token is generated.
     """
     # We use https://docs.python.org/3/library/secrets.html#secrets.token_urlsafe to generate the activation secret token
     return secrets.token_urlsafe(32)

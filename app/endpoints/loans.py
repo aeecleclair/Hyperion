@@ -148,7 +148,7 @@ async def get_loans_by_loaner(
     Return all loans from a given group.
 
 
-    The query string `returned` can be used to get only return or non returned loans. By default all loans are returned.
+    The query string `returned` can be used to get only return or non returned loans. By default, all loans are returned.
 
 
     **The user must be a member of the loaner group_manager to use this endpoint**
@@ -251,7 +251,7 @@ async def create_items_for_loaner(
             detail=f"Unauthorized to manage {loaner_id} loaner",
         )
 
-    # We need to check that the loaner does not have an other item with the same name
+    # We need to check that the loaner does not have another item with the same name
     if (
         await cruds_loans.get_loaner_item_by_name_and_loaner_id(
             loaner_item_name=item.name, loaner_id=loaner_id, db=db
@@ -388,7 +388,7 @@ async def get_current_user_loans(
     """
     Return all loans from the current user.
 
-    The query string `returned` can be used to get only return or non returned loans. By default all loans are returned.
+    The query string `returned` can be used to get only returned or non returned loans. By default, all loans are returned.
 
     **The user must be authenticated to use this endpoint**
     """
@@ -496,7 +496,7 @@ async def create_loan(
                     status_code=400,
                     detail=f"Item {item_id} is not available",
                 )
-        # We make a list of every items to mark them as unavailable later
+        # We make a list of every item to mark them as unavailable later
         items.append(item)
 
     db_loan = models_loan.Loan(
@@ -619,7 +619,7 @@ async def update_loan(  # noqa: C901
                             status_code=400,
                             detail=f"Item {item_id} is not available",
                         )
-            # We make a list of every items to mark them as unavailable later
+            # We make a list of every item to mark them as unavailable later
             items.append(item)
 
     try:

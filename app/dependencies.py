@@ -32,18 +32,18 @@ from app.utils.types.scopes_type import ScopeType
 hyperion_access_logger = logging.getLogger("hyperion.access")
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
-redis_client: redis.Redis | bool | None = None  # Create a global variable for the redis client, so that it can be instancied in the startup and shutdown events
-# Is None if the redis client is not instancied, is False if the redis client is instancied but not connected, is a redis.Redis object if the redis client is connected
+redis_client: redis.Redis | bool | None = None  # Create a global variable for the redis client, so that it can be instantiated in the startup and shutdown events
+# Is None if the redis client is not instantiated, is False if the redis client is instantiated but not connected, is a redis.Redis object if the redis client is connected
 
 
 def get_redis_client(
     settings: Settings | None = None,
 ) -> redis.Redis | None | bool:
     """
-    Dependency that return the redis client
+    Dependency that returns the redis client
 
     Settings can be None if the redis client is already instanced, so that we don't need to pass the settings to the function.
-    Is None if the redis client is not instancied, is False if the redis client is instancied but not connected, is a redis.Redis object if the redis client is connected
+    Is None if the redis client is not instantiated, is False if the redis client is instantiated but not connected, is a redis.Redis object if the redis client is connected
     """
     global redis_client
     if redis_client is None and settings is not None:
@@ -52,14 +52,14 @@ def get_redis_client(
                 redis_client = connect(settings)
             except redis.exceptions.ConnectionError:
                 hyperion_error_logger.warning(
-                    "Redis connection error: Check the Redis configuration  or the Redis server"
+                    "Redis connection error: Check the Redis configuration or the Redis server"
                 )
     return redis_client
 
 
 async def get_request_id(request: Request) -> str:
     """
-    The request identifier is an unique UUID which is used to associate logs saved during the same request
+    The request identifier is a unique UUID which is used to associate logs saved during the same request
     """
     return request.state.request_id
 
@@ -95,8 +95,8 @@ def get_user_from_token_with_scopes(
      * make sure the token contain the given scopes
      * return the corresponding user `models_core.CoreUser` object
 
-    This endpoints allow to requires other scopes than the API scope. This should only be used by the auth endpoints.
-    To restrict and endpoint from the API, use `is_user_a_member_of`.
+    This endpoint allows to require scopes other than the API scope. This should only be used by the auth endpoints.
+    To restrict an endpoint from the API, use `is_user_a_member_of`.
     """
 
     async def get_current_user(
@@ -106,7 +106,7 @@ def get_user_from_token_with_scopes(
         request_id: str = Depends(get_request_id),
     ) -> models_core.CoreUser:
         """
-        Dependency that make sure the token is valid, contain the expected scopes and return the corresponding user.
+        Dependency that makes sure the token is valid, contains the expected scopes and returns the corresponding user.
         """
         try:
             payload = jwt.decode(
@@ -151,11 +151,11 @@ def is_user_a_member(
     ),
 ) -> models_core.CoreUser:
     """
-    A dependency that check that:
-        * check the request header contain a valid API JWT token (a token that can be used to call endpoints from the API)
-        * make sure the user making the request exist
+    A dependency that will:
+        * check if the request header contains a valid API JWT token (a token that can be used to call endpoints from the API)
+        * make sure the user making the request exists
 
-    To check the user is the member of a group, use is_user_a_member_of generator
+    To check if the user is the member of a group, use is_user_a_member_of generator
     """
     return user
 
@@ -164,9 +164,9 @@ def is_user_a_member_of(
     group_id: GroupType,
 ) -> Callable[[models_core.CoreUser], Coroutine[Any, Any, models_core.CoreUser]]:
     """
-    Generate a dependency which which will:
-        * check the request header contain a valid API JWT token (a token that can be used to call endpoints from the API)
-        * make sure the user making the request exist and is a member of the group with the given id
+    Generate a dependency which will:
+        * check if the request header contains a valid API JWT token (a token that can be used to call endpoints from the API)
+        * make sure the user making the request exists and is a member of the group with the given id
         * return the corresponding user `models_core.CoreUser` object
     """
 
@@ -176,7 +176,7 @@ def is_user_a_member_of(
         ),
     ) -> models_core.CoreUser:
         """
-        A dependency that check that user is a member of the group with the given id then return the corresponding user.
+        A dependency that checks that user is a member of the group with the given id then returns the corresponding user.
         """
         if is_user_member_of_an_allowed_group(user=user, allowed_groups=[group_id]):
             # We know the user is a member of the group, we don't need to return an error and can return the CoreUser object
@@ -196,7 +196,7 @@ async def get_token_data(
     request_id: str = Depends(get_request_id),
 ) -> schemas_auth.TokenData:
     """
-    Dependency that return the token payload data
+    Dependency that returns the token payload data
     """
     try:
         payload = jwt.decode(
