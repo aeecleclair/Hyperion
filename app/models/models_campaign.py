@@ -55,4 +55,5 @@ class HasVoted(Base):
 class Status(Base):
     __tablename__ = "campaign_status"
 
+    id: str = Column(String, primary_key=True)
     status: str = Column(String, nullable=False)

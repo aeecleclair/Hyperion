@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
 from app.schemas import schemas_core
-from app.utils.types.campaign_type import ListType, Status
+from app.utils.types.campaign_type import ListType, StatusType
 
 
 class SectionBase(BaseModel):
@@ -91,4 +91,7 @@ class VoteBase(BaseModel):
 
 
 class VoteStatus(BaseModel):
-    status: Status
+    status: StatusType
+
+    class Config:
+        orm_mode = True

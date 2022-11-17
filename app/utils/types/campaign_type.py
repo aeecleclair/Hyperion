@@ -8,9 +8,10 @@ class ListType(str, Enum):
 
     serio = "Serio"
     pipo = "Pipo"
+    blank = "Blank"
 
 
-class Status(str, Enum):
+class StatusType(str, Enum):
     """
     Status of the voting
     """
