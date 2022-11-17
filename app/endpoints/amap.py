@@ -140,13 +140,12 @@ async def delete_product(
 
     **The user must be a member of the group AMAP to use this endpoint**
     """
+
     product = await cruds_amap.get_product_by_id(db=db, product_id=product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    if not await cruds_amap.is_product_used(db=db, product_id=product_id):
-        await cruds_amap.delete_product(db=db, product_id=product_id)
-    else:
+    if await cruds_amap.is_product_used(db=db, product_id=product_id):
         raise HTTPException(
             status_code=403, detail="This product is used in a delivery"
         )
@@ -256,7 +255,6 @@ async def get_products_from_delivery(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-
     """
     Get products from a delivery.
     """
@@ -320,7 +318,6 @@ async def remove_product_from_delivery(
     Remove a given product from a delivery. This won't delete the product nor the delivery.
 
     **The user must be a member of the group AMAP to use this endpoint**
-
     """
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
     if delivery is None:
@@ -345,7 +342,6 @@ async def get_orders_from_delivery(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
-
     """
     Get orders from a delivery.
 
@@ -377,7 +373,6 @@ async def get_order_by_id(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
-
     """
     Get content of an order.
 
@@ -432,7 +427,6 @@ async def add_order_to_delievery(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-
     """
     Get orders from a delivery.
 
@@ -468,28 +462,38 @@ async def add_order_to_delievery(
                 ordering_date=ordering_date,
                 **order.dict(),
             )
-            balance = await cruds_amap.get_cash_by_id(db=db, user_id=order.user_id)
-            if balance is not None:
-                if balance.balance < amount:
-                    raise HTTPException(status_code=403, detail="Not enough money")
-                else:
-                    try:
-                        await cruds_amap.add_order_to_delivery(
-                            order=db_order,
-                            db=db,
-                        )
-                        await cruds_amap.edit_cash_by_id(
-                            db=db,
-                            user_id=order.user_id,
-                            balance=schemas_amap.CashEdit(
-                                balance=balance.balance - amount
-                            ),
-                        )
-                        return await get_order_by_id(
-                            delivery_id=delivery_id, order_id=db_order.order_id, db=db
-                        )
-                    except ValueError as error:
-                        raise HTTPException(status_code=422, detail=str(error))
+            balance: models_amap.Cash | None = await cruds_amap.get_cash_by_id(
+                db=db,
+                user_id=order.user_id,
+            )
+            # If the balance does not exist, we create a new one with a balance of 0
+            if balance is None:
+                new_cash_db = schemas_amap.CashDB(
+                    balance=0,
+                    user_id=order.user_id,
+                )
+                # And we use it for the rest of the function
+                balance = models_amap.Cash(
+                    **new_cash_db.dict(),
+                )
+            if balance.balance < amount:
+                raise HTTPException(status_code=403, detail="Not enough money")
+            else:
+                try:
+                    await cruds_amap.add_order_to_delivery(
+                        order=db_order,
+                        db=db,
+                    )
+                    await cruds_amap.edit_cash_by_id(
+                        db=db,
+                        user_id=order.user_id,
+                        balance=schemas_amap.CashEdit(balance=balance.balance - amount),
+                    )
+                    return await get_order_by_id(
+                        delivery_id=delivery_id, order_id=db_order.order_id, db=db
+                    )
+                except ValueError as error:
+                    raise HTTPException(status_code=422, detail=str(error))
 
     else:
         raise HTTPException(status_code=403)
@@ -506,7 +510,6 @@ async def edit_orders_from_delieveries(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-
     """
     Edit an order.
 
@@ -663,11 +666,10 @@ async def get_cash_by_id(
         if cash is not None:
             return cash
         else:
-            return await create_cash_of_user(
-                user_id=user_id,
-                cash=schemas_amap.CashBase(balance=0, user_id=user_id),
-                db=db,
-            )
+            # We want to return a balance of 0 but we don't want to add it to the database
+            # An admin AMAP has indeed to add a cash to the user the first time
+            # TODO: this is a strange behaviour
+            return schemas_amap.CashComplete(balance=0, user_id=user_id, user=user_db)
     else:
         raise HTTPException(
             status_code=403,
@@ -683,19 +685,40 @@ async def get_cash_by_id(
 )
 async def create_cash_of_user(
     user_id: str,
-    cash: schemas_amap.CashBase,
+    cash: schemas_amap.CashEdit,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
-    existing_cash = await cruds_amap.get_cash_by_id(user_id=user_id, db=db)
-    if existing_cash is None:
-        result = await cruds_amap.create_cash_of_user(
-            cash=cash,
-            db=db,
+    """
+    Create cash for an user.
+
+    **The user must be a member of the group AMAP to use this endpoint**
+    """
+
+    user = await read_user(user_id=user_id, db=db)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    existing_cash = await cruds_amap.get_cash_by_id(db=db, user_id=user_id)
+    if existing_cash is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="This user already has a cash.",
         )
-        return result
-    else:
-        return existing_cash
+
+    cash_db = models_amap.Cash(user_id=user_id, balance=cash.balance)
+
+    await cruds_amap.create_cash_of_user(
+        cash=cash_db,
+        db=db,
+    )
+
+    # We can not directly return the cash_db because it does not contain the user.
+    # Calling get_cash_by_id will return the cash with the user loaded as it's a relationship.
+    return await cruds_amap.get_cash_by_id(
+        user_id=user_id,
+        db=db,
+    )
 
 
 @router.patch(
@@ -715,8 +738,8 @@ async def edit_cash_by_id(
 
     **The user must be a member of the group AMAP to use this endpoint**
     """
-    user_db = await read_user(user_id=user_id, db=db)
-    if not user_db:
+    user = await read_user(user_id=user_id, db=db)
+    if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
     cash = await cruds_amap.get_cash_by_id(db=db, user_id=user_id)

@@ -135,6 +135,9 @@ class CashComplete(CashBase):
     user: CoreUserSimple
 
 
-class CashEdit(BaseModel):
-    balance: str
+class CashDB(CashBase):
+    user_id: str
 
+
+class CashEdit(BaseModel):
+    balance: float

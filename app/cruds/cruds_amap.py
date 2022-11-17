@@ -325,13 +325,12 @@ async def get_cash_by_id(db: AsyncSession, user_id: str) -> models_amap.Cash | N
 
 
 async def create_cash_of_user(
-    db: AsyncSession, cash: schemas_amap.CashBase
-) -> models_amap.Cash | None:
-    db_add = models_amap.Cash(**cash.dict(exclude_none=True))
-    db.add(db_add)
+    db: AsyncSession, cash: models_amap.Cash
+) -> models_amap.Cash:
+    db.add(cash)
     try:
         await db.commit()
-        return db_add
+        return cash
     except IntegrityError as err:
         await db.rollback()
         raise ValueError(err)
