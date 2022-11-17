@@ -5,13 +5,14 @@ from sqlalchemy.orm import selectinload
 
 from app.models import models_campaign
 from app.schemas import schemas_campaign
+from app.utils.types.campaign_type import ListType, StatusType
 
 
 async def get_status(db: AsyncSession) -> models_campaign.Status:
     result = await db.execute(select(models_campaign.Status))
     status = result.scalars().all()
     if status == []:
-        db_status = models_campaign.Status(status="waiting")
+        db_status = models_campaign.Status(id="status", status=StatusType.waiting)
         db.add(db_status)
         try:
             await db.commit()
@@ -21,6 +22,46 @@ async def get_status(db: AsyncSession) -> models_campaign.Status:
             raise ValueError("Error in status creation")
     else:
         return status[0]
+
+
+async def set_status(db: AsyncSession, new_status: schemas_campaign.VoteStatus):
+    current_status = await db.execute(select(models_campaign.Status))
+    await db.execute(
+        update(models_campaign.Status)
+        .where(
+            models_campaign.Status.status == current_status.scalars().all()[0].status
+        )
+        .values(status=new_status.status)
+    )
+
+
+async def add_blank_option(db: AsyncSession):
+    result = await db.execute(select(models_campaign.Sections.id))
+    sections_ids = result.scalars().all()
+
+    result = await db.execute(
+        select(models_campaign.Lists.section_id).where(
+            models_campaign.Lists.type == ListType.blank
+        )
+    )
+    blank_lists = result.scalars().all()
+    for sid in sections_ids:
+        if sid not in blank_lists:
+            db.add(
+                models_campaign.Lists(
+                    id="blank" + sid,
+                    name="Vote Blanc",
+                    description="",
+                    section_id=sid,
+                    type=ListType.blank,
+                    members=[],
+                )
+            )
+    try:
+        await db.commit()
+    except IntegrityError as err:
+        await db.rollback()
+        raise ValueError(err)
 
 
 async def get_sections(db: AsyncSession) -> list[models_campaign.Sections]:
