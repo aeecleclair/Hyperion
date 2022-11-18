@@ -29,25 +29,20 @@ async def startuptest():
         await db.commit()
 
     global section
-
+    global list
+    list_id = str(uuid.uuid4())
+    section_id = str(uuid.uuid4())
     async with TestingSessionLocal() as db:
         section = models_campaign.Sections(
-            id=str(uuid.uuid4()),
+            id=section_id,
             name="BDE",
             description="Bureau Des Eleves",
         )
-        db.add(section)
-        await db.commit()
-
-    global list
-
-    async with TestingSessionLocal() as db:
-        list_id = str(uuid.uuid4())
         list = models_campaign.Lists(
             id=list_id,
             name="Liste 1",
             description="une liste",
-            section_id=section.id,
+            section_id=section_id,
             type=ListType.serio,
             members=[
                 models_campaign.ListMemberships(
@@ -58,6 +53,7 @@ async def startuptest():
                 ),
             ],
         )
+        db.add(section)
         db.add(list)
         await db.commit()
 
@@ -83,19 +79,10 @@ def test_add_sections():
     assert response.status_code == 201
 
 
-def test_delete_section():
-    token = create_api_access_token(admin_user)
-    response = client.delete(
-        f"/campaign/sections/{section.name}",
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert response.status_code == 204
-
-
 def test_get_lists_from_section():
     token = create_api_access_token(student_user)
     response = client.get(
-        f"/campaign/sections/{section.name}/lists",
+        f"/campaign/sections/{section.id}/lists",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
@@ -124,3 +111,47 @@ def test_add_list():
         },
     )
     assert response.status_code == 201
+
+
+def test_vote_if_not_opened():
+    token = create_api_access_token(student_user)
+    response = client.post(
+        "/campaign/votes",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"list_id": list.id},
+    )
+    assert response.status_code == 403
+
+
+def test_vote_if_opened():
+    token = create_api_access_token(admin_user)
+    response = client.post(
+        "/campaign/votes/open", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert response.status_code == 201
+
+    token = create_api_access_token(student_user)
+    response = client.post(
+        "/campaign/votes",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"list_id": list.id},
+    )
+    assert response.status_code == 201
+
+
+def test_delete_list():
+    token = create_api_access_token(admin_user)
+    response = client.delete(
+        f"/campaign/lists/{list.id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 204
+
+
+def test_delete_section():
+    token = create_api_access_token(admin_user)
+    response = client.delete(
+        f"/campaign/sections/{section.id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 204

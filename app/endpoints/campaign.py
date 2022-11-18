@@ -154,9 +154,11 @@ async def add_list(
         try:
             # Check if the section given exists in the DB.
             # Check if the section given exists in the DB.
-            section = await cruds_campaign.get_section_by_name(
+            section = await cruds_campaign.get_section_by_id(
                 db=db, section_id=list.section_id
             )
+            print("12345")
+            print(section)
             if section is not None:
                 model_campaign_list = schemas_campaign.ListComplete(
                     id=str(uuid.uuid4()),
