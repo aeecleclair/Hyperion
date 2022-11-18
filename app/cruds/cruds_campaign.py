@@ -71,7 +71,7 @@ async def get_sections(db: AsyncSession) -> list[models_campaign.Sections]:
     return result.scalars().all()
 
 
-async def get_section_by_name(db: AsyncSession, section_id: str):
+async def get_section_by_id(db: AsyncSession, section_id: str):
     """Return section with the given name."""
     result = await db.execute(
         select(models_campaign.Sections).where(
@@ -93,30 +93,21 @@ async def add_section(db: AsyncSession, section: models_campaign.Sections) -> No
 
 async def delete_section(db: AsyncSession, section_id: str) -> None:
     """Delete a section."""
-    await db.execute(
-        delete(models_campaign.Sections).where(
+    result = await db.execute(
+        select(models_campaign.Sections).where(
             models_campaign.Sections.id == section_id
         )
     )
-    await db.commit()
-
-
-async def get_lists_from_section(
-    db: AsyncSession, section_id: str
-) -> list[models_campaign.Lists]:
-    """Return all campaign lists of the given section."""
-    result = await db.execute(
-        select(models_campaign.Lists)
-        .where(models_campaign.Lists.section_id == section_id)
-        .options(
-            selectinload(models_campaign.Lists.members).selectinload(
-                models_campaign.ListMemberships.user
-            ),
-            selectinload(models_campaign.Lists.section),
+    section = result.scalars().all()
+    if section[0].lists == []:
+        await db.execute(
+            delete(models_campaign.Sections).where(
+                models_campaign.Sections.id == section_id
+            )
         )
-    )
-    lists = result.scalars().all()
-    return lists
+        await db.commit()
+    else:
+        raise ValueError("This section still has lists")
 
 
 async def get_lists(db: AsyncSession) -> list[models_campaign.Lists]:

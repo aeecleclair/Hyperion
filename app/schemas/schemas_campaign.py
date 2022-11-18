@@ -22,7 +22,7 @@ class SectionReturn(BaseModel):
     name: str
     description: str
     id: str
-    lists: list["ListReturn"]
+    lists: list["ListComplete"]
 
     class Config:
         orm_mode = True
