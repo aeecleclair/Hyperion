@@ -100,26 +100,6 @@ async def delete_section(
 
 
 @router.get(
-    "/campaign/sections/{section_id}/lists",
-    response_model=list[schemas_campaign.ListReturn],
-    status_code=200,
-    tags=[Tags.campaign],
-)
-async def get_lists_from_section(
-    section_id: str,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
-):
-    """
-    Return lists for the given section.
-    """
-    campaign_lists = await cruds_campaign.get_lists_from_section(
-        section_id=section_id, db=db
-    )
-    return campaign_lists
-
-
-@router.get(
     "/campaign/lists",
     response_model=list[schemas_campaign.ListReturn],
     status_code=200,
@@ -199,6 +179,30 @@ async def delete_list(
     if status.status == StatusType.waiting:
         try:
             await cruds_campaign.delete_list(list_id=list_id, db=db)
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail=str(error))
+    else:
+        raise HTTPException(
+            status_code=403,
+            detail="You can't delete a list if the vote has already begun",
+        )
+
+
+@router.delete(
+    "/campaign/sections/{section_id}/lists", status_code=204, tags=[Tags.campaign]
+)
+async def delete_lists_from_section(
+    section_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """Allow an admin to delete the list with the given id.
+
+    **Only for admin.**"""
+    status = await cruds_campaign.get_status(db=db)
+    if status.status == StatusType.waiting:
+        try:
+            await cruds_campaign.delete_lists_from_section(section_id=section_id, db=db)
         except ValueError as error:
             raise HTTPException(status_code=422, detail=str(error))
     else:
@@ -304,7 +308,7 @@ async def vote(
             else:
                 raise ValueError("This list doesn't exist.")
         else:
-            raise ValueError("Votes are closed.")
+            raise HTTPException(status_code=403, detail="Votes are closed")
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
@@ -353,7 +357,7 @@ async def get_results_by_section(
     **Only for admin.**
     """
     status = await cruds_campaign.get_status(db=db)
-    if status.status == StatusType.closed or status == StatusType.counted:
+    if status.status == StatusType.closed or status.status == StatusType.counted:
         if status.status == StatusType.closed:
             await cruds_campaign.set_status(
                 db=db, new_status=schemas_campaign.VoteStatus(status=StatusType.counted)
