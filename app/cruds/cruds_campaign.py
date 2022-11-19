@@ -25,14 +25,8 @@ async def get_status(db: AsyncSession) -> models_campaign.Status:
 
 
 async def set_status(db: AsyncSession, new_status: schemas_campaign.VoteStatus):
-    current_status = await db.execute(select(models_campaign.Status))
-    await db.execute(
-        update(models_campaign.Status)
-        .where(
-            models_campaign.Status.status == current_status.scalars().all()[0].status
-        )
-        .values(status=new_status.status)
-    )
+    await db.execute(update(models_campaign.Status).values(status=new_status.status))
+    await db.commit()
 
 
 async def add_blank_option(db: AsyncSession):
@@ -67,16 +61,20 @@ async def add_blank_option(db: AsyncSession):
 async def get_sections(db: AsyncSession) -> list[models_campaign.Sections]:
     """Return all users from database."""
 
-    result = await db.execute(select(models_campaign.Sections))
+    result = await db.execute(
+        select(models_campaign.Sections).options(
+            selectinload(models_campaign.Sections.lists)
+        )
+    )
     return result.scalars().all()
 
 
 async def get_section_by_id(db: AsyncSession, section_id: str):
     """Return section with the given name."""
     result = await db.execute(
-        select(models_campaign.Sections).where(
-            models_campaign.Sections.id == section_id
-        )
+        select(models_campaign.Sections)
+        .where(models_campaign.Sections.id == section_id)
+        .options(selectinload(models_campaign.Sections.lists))
     )
     return result.scalars().first()
 
@@ -94,12 +92,19 @@ async def add_section(db: AsyncSession, section: models_campaign.Sections) -> No
 async def delete_section(db: AsyncSession, section_id: str) -> None:
     """Delete a section."""
     result = await db.execute(
-        select(models_campaign.Sections).where(
-            models_campaign.Sections.id == section_id
-        )
+        select(models_campaign.Sections)
+        .where(models_campaign.Sections.id == section_id)
+        .options(selectinload(models_campaign.Sections.lists))
     )
     section = result.scalars().all()
-    if section[0].lists == []:
+    if section[0].lists == [] or (
+        len(section[0].lists) == 1 and section[0].lists[0].id[:4] == "blank"
+    ):
+        await db.execute(
+            delete(models_campaign.Lists).where(
+                models_campaign.Lists.section_id == section_id
+            )
+        )
         await db.execute(
             delete(models_campaign.Sections).where(
                 models_campaign.Sections.id == section_id
@@ -108,6 +113,15 @@ async def delete_section(db: AsyncSession, section_id: str) -> None:
         await db.commit()
     else:
         raise ValueError("This section still has lists")
+
+
+async def delete_lists_from_section(db: AsyncSession, section_id: str) -> None:
+    await db.execute(
+        delete(models_campaign.Lists).where(
+            models_campaign.Lists.section_id == section_id
+        )
+    )
+    await db.commit()
 
 
 async def get_lists(db: AsyncSession) -> list[models_campaign.Lists]:
@@ -247,7 +261,7 @@ async def get_votes_for_section(
             models_campaign.Lists,
             onclause=models_campaign.Lists.id == models_campaign.Votes.list_id,
         )
-        .where(models_campaign.Lists.section == section_id)
+        .where(models_campaign.Lists.section_id == section_id)
     )
     return result.scalars().all()
 
@@ -256,3 +270,4 @@ async def delete_votes(db: AsyncSession) -> None:
     """Delete all votes in the db."""
     await db.execute(delete(models_campaign.Votes))
     await db.execute(delete(models_campaign.HasVoted))
+    await db.commit()

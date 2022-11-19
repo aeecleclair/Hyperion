@@ -28,7 +28,7 @@ class Lists(Base):
     __tablename__ = "campaign_lists"
 
     id: str = Column(String, primary_key=True)
-    name: str = Column(String, unique=True)
+    name: str = Column(String)
     description: str = Column(String)
     section_id: str = Column(ForeignKey("campaign_sections.id"))
     section: Sections = relationship("Sections", back_populates="lists")
