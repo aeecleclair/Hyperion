@@ -18,16 +18,6 @@ class SectionComplete(SectionBase):
         orm_mode = True
 
 
-class SectionReturn(BaseModel):
-    name: str
-    description: str
-    id: str
-    lists: list["ListComplete"]
-
-    class Config:
-        orm_mode = True
-
-
 class ListMemberBase(BaseModel):
     user_id: str
     role: str
@@ -55,6 +45,16 @@ class ListBase(BaseModel):
 
 class ListComplete(ListBase):
     id: str
+
+    class Config:
+        orm_mode = True
+
+
+class SectionReturn(BaseModel):
+    name: str
+    description: str
+    id: str
+    lists: list[ListComplete]
 
     class Config:
         orm_mode = True
