@@ -1,17 +1,18 @@
-from datetime import datetime
+from datetime import date
 
 from pydantic import BaseModel
 
 
 class TodosItemBase(BaseModel):
-    user_id: str
     name: str
-    deadline: datetime | None = None
+    deadline: date | None = None
+    done: bool = False
 
     class Config:
         orm_mode = True
 
 
-class TodosItemInDB(TodosItemBase):
-    todo_id: str
-    creation_time: datetime
+class TodosItemComplete(TodosItemBase):
+    id: str
+    user_id: str
+    creation: date
