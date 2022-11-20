@@ -424,33 +424,46 @@ async def get_sections_already_voted(
 
 
 @router.get(
-    "/campaign/votes/{section_id}",
-    response_model=list[schemas_campaign.VoteBase],
+    "/campaign/results",
+    response_model=list[schemas_campaign.Result],
     status_code=200,
     tags=[Tags.campaign],
 )
 async def get_results_by_section(
-    section_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
-    """Get all votes for a sections.
+    """
+    Return the results of the vote.
 
-    **Only for admin.**
+    **This endpoint is only usable by administrators**
     """
     status = await cruds_campaign.get_status(db=db)
-    if status.status == StatusType.closed or status.status == StatusType.counted:
-        if status.status == StatusType.closed:
-            await cruds_campaign.set_status(
-                db=db, new_status=schemas_campaign.VoteStatus(status=StatusType.counted)
-            )
-        votes = await cruds_campaign.get_votes_for_section(db=db, section_id=section_id)
-        return votes
-    else:
+    if status != StatusType.counting:
         raise HTTPException(
-            status_code=403,
-            detail="You must close the vote before counting it",
+            status_code=400,
+            detail=f"Results can only be acceded in counting mode. The current status is {status}",
         )
+
+    votes = await cruds_campaign.get_votes(db=db)
+
+    count_by_list = {}
+    for vote in votes:
+        if vote.list_id not in count_by_list:
+            count_by_list[vote.list_id] = 0
+
+        count_by_list[vote.list_id] += 1
+
+    results = []
+
+    for list_id, count in count_by_list.items():
+        results.append(
+            schemas_campaign.Result(
+                list_id=list_id,
+                count=count,
+            )
+        )
+    return results
 
 
 @router.get(
@@ -464,31 +477,8 @@ async def get_status_vote(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
 
-    return await cruds_campaign.get_status(db=db)
-
-
-@router.delete("/campaign/votes", status_code=204, tags=[Tags.campaign])
-async def reset_vote(
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
-):
-    """Delete all vote in the database."""
     status = await cruds_campaign.get_status(db=db)
-    if status.status == StatusType.counted:
-        try:
-            await cruds_campaign.delete_votes(
-                db=db,
-            )
-            await cruds_campaign.set_status(
-                db=db, new_status=schemas_campaign.VoteStatus(status=StatusType.waiting)
-            )
-        except ValueError as error:
-            raise HTTPException(status_code=422, detail=str(error))
-    else:
-        raise HTTPException(
-            status_code=403,
-            detail="You must count the votes before erasing it.",
-        )
+    return schemas_campaign.VoteStatus(status=status)
 
 
 @router.post(

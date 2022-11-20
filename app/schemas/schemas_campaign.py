@@ -93,3 +93,8 @@ class VoteStatus(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class Result(BaseModel):
+    list_id: str
+    count: int

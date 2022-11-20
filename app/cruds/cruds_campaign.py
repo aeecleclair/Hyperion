@@ -242,9 +242,9 @@ async def add_vote(db: AsyncSession, vote: models_campaign.Votes) -> None:
     db.add(vote)
     try:
         await db.commit()
-    except IntegrityError:
+    except IntegrityError as error:
         await db.rollback()
-        raise ValueError("Error occured when adding a vote.")
+        raise ValueError(error)
 
 
 async def has_user_voted_for_section(
@@ -271,22 +271,21 @@ async def mark_has_voted(db: AsyncSession, user_id: str, section_id: str) -> Non
         raise ValueError("The user has already voted.")
 
 
-async def get_votes(db: AsyncSession) -> list[models_campaign.Votes]:
-    result = await db.execute(select(models_campaign.Votes))
+async def get_has_voted(
+    db: AsyncSession,
+    user_id: str,
+) -> list[models_campaign.HasVoted]:
+    """Return all the sections the user has voted for."""
+    result = await db.execute(
+        select(models_campaign.HasVoted).where(
+            models_campaign.HasVoted.user_id == user_id
+        )
+    )
     return result.scalars().all()
 
 
-async def get_votes_for_section(
-    db: AsyncSession, section_id: str
-) -> list[models_campaign.Votes]:
-    result = await db.execute(
-        select(models_campaign.Votes)
-        .join(
-            models_campaign.Lists,
-            onclause=models_campaign.Lists.id == models_campaign.Votes.list_id,
-        )
-        .where(models_campaign.Lists.section_id == section_id)
-    )
+async def get_votes(db: AsyncSession) -> list[models_campaign.Votes]:
+    result = await db.execute(select(models_campaign.Votes))
     return result.scalars().all()
 
 
