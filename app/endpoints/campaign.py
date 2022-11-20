@@ -8,17 +8,12 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.cruds import cruds_campaign
-from app.dependencies import (
-    get_db,
-    get_request_id,
-    is_user_a_member,
-    is_user_a_member_of,
-)
+from app.cruds import cruds_campaign, cruds_users
+from app.dependencies import get_db, get_request_id, is_user_a_member_of
 from app.models import models_campaign, models_core
 from app.schemas import schemas_campaign
 from app.utils.types import standard_responses
-from app.utils.types.campaign_type import StatusType
+from app.utils.types.campaign_type import ListType, StatusType
 from app.utils.types.groups_type import GroupType
 from app.utils.types.tags import Tags
 
@@ -35,7 +30,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 )
 async def get_sections(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.student)),
 ):
     """
     Return sections in the database as a list of `schemas_campaign.SectionBase`
@@ -61,21 +56,29 @@ async def add_section(
     **This endpoint is only usable by administrators**
     """
     status = await cruds_campaign.get_status(db=db)
-    if status.status == StatusType.waiting:
-        db_section = models_campaign.Sections(id=str(uuid.uuid4()), **section.dict())
-        try:
-            await cruds_campaign.add_section(section=db_section, db=db)
-            return db_section
-        except ValueError as error:
-            raise HTTPException(status_code=422, detail=str(error))
-    else:
+    if status.status != StatusType.waiting:
         raise HTTPException(
             status_code=403,
-            detail="You can't add a section if the vote has already begun",
+            detail=f"You can't add a section if the vote has already begun. The module status is {status} but should be 'waiting'",
         )
 
+    db_section = models_campaign.Sections(
+        id=str(uuid.uuid4()),
+        name=section.name,
+        description=section.description,
+    )
+    try:
+        await cruds_campaign.add_section(section=db_section, db=db)
+        return db_section
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))
 
-@router.delete("/campaign/sections/{section_id}", status_code=204, tags=[Tags.campaign])
+
+@router.delete(
+    "/campaign/sections/{section_id}",
+    status_code=204,
+    tags=[Tags.campaign],
+)
 async def delete_section(
     section_id: str,
     db: AsyncSession = Depends(get_db),
@@ -86,17 +89,20 @@ async def delete_section(
 
     **This endpoint is only usable by administrators**
     """
+    # TODO: remove lists and members
+
     status = await cruds_campaign.get_status(db=db)
-    if status.status == StatusType.waiting:
-        try:
-            await cruds_campaign.delete_section(section_id=section_id, db=db)
-        except ValueError as error:
-            raise HTTPException(status_code=422, detail=str(error))
-    else:
+    if status.status != StatusType.waiting:
         raise HTTPException(
             status_code=403,
-            detail="You can't delete a section if the vote has already begun",
+            detail=f"You can't delete a section if the vote has already begun. The module status is {status} but should be 'waiting'",
         )
+
+    # TODO: Check if the section has some lists before deleting it
+    try:
+        await cruds_campaign.delete_section(section_id=section_id, db=db)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))
 
 
 @router.get(
@@ -107,9 +113,9 @@ async def delete_section(
 )
 async def get_lists(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.student)),
 ):
-    """Return list of campaing lists"""
+    """Return lists"""
     lists = await cruds_campaign.get_lists(db=db)
     return lists
 
@@ -125,48 +131,67 @@ async def add_list(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
-    """Allow an admin to add a campaign list.
+    """Allow an admin to add a campaign list to a section.
 
-    **Only for admin users.**
+    **This endpoint is only usable by administrators**
     """
     status = await cruds_campaign.get_status(db=db)
-    if status.status == StatusType.waiting:
-        try:
-            # Check if the section given exists in the DB.
-            # Check if the section given exists in the DB.
-            section = await cruds_campaign.get_section_by_id(
-                db=db, section_id=list.section_id
-            )
-            print("12345")
-            print(section)
-            if section is not None:
-                model_campaign_list = schemas_campaign.ListComplete(
-                    id=str(uuid.uuid4()),
-                    **list.dict(),
-                )
-                try:
-                    await cruds_campaign.add_list(
-                        campaign_list=model_campaign_list, db=db
-                    )
-                    return await cruds_campaign.get_list_by_id(
-                        db=db, list_id=model_campaign_list.id
-                    )
-                except ValueError as error:
-                    raise HTTPException(status_code=422, detail=str(error))
-            else:
-                raise HTTPException(
-                    status_code=404, detail="Given section doesn't exist."
-                )
-        except ValueError as error:
-            raise HTTPException(status_code=422, detail=str(error))
-    else:
+    if status.status != StatusType.waiting:
         raise HTTPException(
             status_code=403,
-            detail="You can't add a list if the vote has already begun",
+            detail=f"You can't add a list if the vote has already begun. The module status is {status} but should be 'waiting'",
         )
 
+    # Check if the section given exists in the DB.
+    section = await cruds_campaign.get_section_by_id(db=db, section_id=list.section_id)
+    if section is None:
+        raise HTTPException(status_code=404, detail="Given section doesn't exist.")
 
-@router.delete("/campaign/lists/{list_id}", status_code=204, tags=[Tags.campaign])
+    if list.type == ListType.blank:
+        raise HTTPException(
+            status_code=400,
+            detail="Blank list should not be added by an user. They will be created before the vote start.",
+        )
+
+    list_id = str(uuid.uuid4())
+
+    # We don't need to add membership for list members by hand
+    # SQLAlchemy will do it for us if we provide a `members` list
+    members = []
+    for member in list.members:
+        if await cruds_users.get_user_by_id(db=db, user_id=member.user_id) is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"User with id {member.user_id} doesn't exist.",
+            )
+        members.append(
+            models_campaign.ListMemberships(
+                user_id=member.user_id,
+                role=member.role,
+            )
+        )
+
+    model_list = models_campaign.Lists(
+        id=list_id,
+        name=list.name,
+        description=list.description,
+        section_id=list.section_id,
+        type=list.type,
+        members=members,
+    )
+    try:
+        await cruds_campaign.add_list(campaign_list=model_list, db=db)
+        # We can't directly return the model_list because it doesn't have the relationships loaded
+        return await cruds_campaign.get_list_by_id(db=db, list_id=list_id)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+@router.delete(
+    "/campaign/lists/{list_id}",
+    status_code=204,
+    tags=[Tags.campaign],
+)
 async def delete_list(
     list_id: str,
     db: AsyncSession = Depends(get_db),
@@ -174,45 +199,28 @@ async def delete_list(
 ):
     """Allow an admin to delete the list with the given id.
 
-    **Only for admin.**"""
+    **This endpoint is only usable by administrators**"""
+
+    # TODO: remove members
+
     status = await cruds_campaign.get_status(db=db)
-    if status.status == StatusType.waiting:
-        try:
-            await cruds_campaign.delete_list(list_id=list_id, db=db)
-        except ValueError as error:
-            raise HTTPException(status_code=422, detail=str(error))
-    else:
+    if status.status != StatusType.waiting:
         raise HTTPException(
             status_code=403,
-            detail="You can't delete a list if the vote has already begun",
+            detail=f"You can't delete a list if the vote has already begun. The module status is {status} but should be 'waiting'",
         )
 
+    try:
+        await cruds_campaign.delete_list(list_id=list_id, db=db)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
 
-@router.delete(
-    "/campaign/sections/{section_id}/lists", status_code=204, tags=[Tags.campaign]
+
+@router.patch(
+    "/campaign/lists/{list_id}",
+    status_code=204,
+    tags=[Tags.campaign],
 )
-async def delete_lists_from_section(
-    section_id: str,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
-):
-    """Allow an admin to delete the list with the given id.
-
-    **Only for admin.**"""
-    status = await cruds_campaign.get_status(db=db)
-    if status.status == StatusType.waiting:
-        try:
-            await cruds_campaign.delete_lists_from_section(section_id=section_id, db=db)
-        except ValueError as error:
-            raise HTTPException(status_code=422, detail=str(error))
-    else:
-        raise HTTPException(
-            status_code=403,
-            detail="You can't delete a list if the vote has already begun",
-        )
-
-
-@router.patch("/campaign/lists/{list_id}", status_code=201, tags=[Tags.campaign])
 async def update_list(
     list_id: str,
     campaign_list: schemas_campaign.ListEdit,
@@ -221,43 +229,122 @@ async def update_list(
 ):
     """Allow an admin to update the list with the given id.
 
-    **Only for admins.**
+    **This endpoint is only usable by administrators**
     """
     status = await cruds_campaign.get_status(db=db)
-    if status.status == StatusType.waiting:
-        try:
-            await cruds_campaign.update_list(
-                list_id=list_id,
-                campaign_list=campaign_list,
-                db=db,
-            )
-        except ValueError as error:
-            raise HTTPException(status_code=422, detail=str(error))
-    else:
+    if status.status != StatusType.waiting:
         raise HTTPException(
             status_code=403,
-            detail="You can't edit a list if the vote has already begun",
+            detail=f"You can't edit a list if the vote has already begun. The module status is {status} but should be 'waiting'",
         )
 
+    list = await cruds_campaign.get_list_by_id(db=db, list_id=list_id)
+    if list is None:
+        raise HTTPException(status_code=404, detail="List not found.")
 
-@router.post("/campaign/votes/open", status_code=201, tags=[Tags.campaign])
+    if campaign_list.members is not None:
+        # We need to make sure the new list of members is valid
+        for member in campaign_list.members:
+            if await cruds_users.get_user_by_id(db=db, user_id=member.user_id) is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"User with id {member.user_id} doesn't exist.",
+                )
+
+    try:
+        await cruds_campaign.update_list(
+            list_id=list_id,
+            campaign_list=campaign_list,
+            db=db,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+@router.post(
+    "/campaign/votes/open",
+    status_code=204,
+    tags=[Tags.campaign],
+)
 async def open_voting(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
+    """
+    If the status is 'waiting', change it to 'voting' and create the blank lists.
+
+    When the status is 'open', all users can vote and sections and lists can no longer be edited.
+
+    **This endpoint is only usable by administrators**
+    """
+    status = await cruds_campaign.get_status(db=db)
+    if status.status != StatusType.waiting:
+        raise HTTPException(
+            status_code=400,
+            detail=f"The vote can only be open if it is waiting. The current status is {status}",
+        )
+
+    # Create the blank lists
     await cruds_campaign.add_blank_option(db=db)
+    # Set the status to open
     await cruds_campaign.set_status(
-        db=db, new_status=schemas_campaign.VoteStatus(status=StatusType.opened)
+        db=db, new_status=schemas_campaign.VoteStatus(status=StatusType.open)
     )
 
 
-@router.post("/campaign/votes/close", status_code=201, tags=[Tags.campaign])
+@router.post(
+    "/campaign/votes/close",
+    status_code=204,
+    tags=[Tags.campaign],
+)
 async def close_voting(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
+    """
+    If the status is 'open', change it to 'closed'.
+
+    When the status is 'closed', users are no longer able to vote.
+
+    **This endpoint is only usable by administrators**
+    """
+    status = await cruds_campaign.get_status(db=db)
+    if status.status != StatusType.open:
+        raise HTTPException(
+            status_code=400,
+            detail=f"The vote can only be closed if it is open. The current status is {status}",
+        )
+
     await cruds_campaign.set_status(
         db=db, new_status=schemas_campaign.VoteStatus(status=StatusType.closed)
+    )
+
+
+@router.post(
+    "/campaign/votes/counting",
+    status_code=204,
+    tags=[Tags.campaign],
+)
+async def count_voting(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    If the status is 'closed', change it to 'counting'.
+
+    When the status is 'counting', administrators can see the results of the vote.
+
+    **This endpoint is only usable by administrators**
+    """
+    status = await cruds_campaign.get_status(db=db)
+    if status.status != StatusType.closed:
+        raise HTTPException(
+            status_code=400,
+            detail=f"The vote can only be set to counting if it is closed. The current status is {status}",
+        )
+
+    await cruds_campaign.set_status(
+        db=db, new_status=schemas_campaign.VoteStatus(status=StatusType.counting)
     )
 
 
@@ -269,12 +356,16 @@ async def close_voting(
 async def vote(
     vote: schemas_campaign.VoteBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.student)),
 ):
-    """Add a vote."""
+    """
+    Add a vote
+
+    An user can only vote for one list per section.
+    """
     try:
         status = await cruds_campaign.get_status(db=db)
-        if status.status == StatusType.opened:
+        if status.status == StatusType.open:
             campaign_list = await cruds_campaign.get_list_by_id(
                 db=db, list_id=vote.list_id
             )
@@ -471,7 +562,7 @@ async def create_campaigns_logo(
 async def read_campaigns_logo(
     object_id: str,
     # TODO: we may want to remove this user requirement to be able to display images easily in html code
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.student)),
 ):
 
     if not exists(f"data/campaigns_logo/{object_id}.png"):
@@ -544,7 +635,7 @@ async def create_list_group_pictures(
 async def read_list_group_photo(
     list_id: str,
     # TODO: we may want to remove this user requirement to be able to display images easily in html code
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.student)),
 ):
 
     if not exists(f"data/campaigns_logo/list_group_pictures/{list_id}.png"):

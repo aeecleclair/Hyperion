@@ -3,7 +3,7 @@ from enum import Enum
 
 class ListType(str, Enum):
     """
-    A list can be "Serios" or "Pipo"
+    A list can be "Serios" or "Pipo". There will also be one "Blank" list by section that will be automatically added when the vote is open.
     """
 
     serio = "Serio"
@@ -17,6 +17,6 @@ class StatusType(str, Enum):
     """
 
     waiting = "waiting"  # Lists and sections can be added and modified
-    opened = "opened"  # No modification possible, votes possible
+    open = "open"  # No modification possible, votes possible
     closed = "closed"  # Nothing possible except for the counting
-    counted = "counted"  # Consult the results or delete every votes
+    counting = "counting"  # Consult the results or delete every votes

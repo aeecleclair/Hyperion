@@ -75,9 +75,7 @@ class ListReturn(BaseModel):
 class ListEdit(BaseModel):
     name: str | None = None
     description: str | None = None
-    logo_path: str | None = None
     type: ListType | None = None
-    section: str | None = None
     members: list[ListMemberBase] | None = None
 
 
