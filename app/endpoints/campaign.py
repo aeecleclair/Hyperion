@@ -344,7 +344,7 @@ async def count_voting(
 
 @router.post(
     "/campaign/votes",
-    status_code=201,
+    status_code=204,
     tags=[Tags.campaign],
 )
 async def vote(
@@ -357,73 +357,70 @@ async def vote(
 
     An user can only vote for one list per section.
     """
-    try:
-        status = await cruds_campaign.get_status(db=db)
-        if status.status == StatusType.open:
-            campaign_list = await cruds_campaign.get_list_by_id(
-                db=db, list_id=vote.list_id
-            )
+    status = await cruds_campaign.get_status(db=db)
+    if status != StatusType.open:
+        raise HTTPException(
+            status_code=400,
+            detail=f"You can only vote if the vote is open. The current status is {status}",
+        )
 
-            # Check if the campaign list exist.
-            if campaign_list is not None:
-                # Check if the user has already vote for a list in the section.
-                has_voted = await cruds_campaign.get_has_voted(
-                    db=db, user_id=user.id, section_id=campaign_list.section_id
-                )
-                if has_voted is None:
-                    # Mark user has voted for the given section.
-                    await cruds_campaign.mark_has_voted(
-                        db=db, user_id=user.id, section_id=campaign_list.section_id
-                    )
-                    # Add the vote to the db
-                    model_vote = models_campaign.Votes(
-                        id=str(uuid.uuid4()), **vote.dict()
-                    )
-                    try:
-                        await cruds_campaign.add_vote(
-                            db=db,
-                            vote=model_vote,
-                        )
-                    except ValueError as error:
-                        raise HTTPException(status_code=422, detail=str(error))
-                else:
-                    raise ValueError(
-                        "User has already vote for a list in this section."
-                    )
-            else:
-                raise ValueError("This list doesn't exist.")
-        else:
-            raise HTTPException(status_code=403, detail="Votes are closed")
+    campaign_list = await cruds_campaign.get_list_by_id(db=db, list_id=vote.list_id)
+
+    # Check if the campaign list exist.
+    if campaign_list is None:
+        raise HTTPException(status_code=404, detail="The list does not exist.")
+
+    # Check if the user has already voted for this section.
+    has_voted = await cruds_campaign.has_user_voted_for_section(
+        db=db, user_id=user.id, section_id=campaign_list.section_id
+    )
+    if has_voted:
+        raise HTTPException(
+            status_code=400, detail="You have already voted for this section."
+        )
+
+    # Add the vote to the db
+    model_vote = models_campaign.Votes(
+        id=str(uuid.uuid4()),
+        list_id=vote.list_id,
+    )
+    try:
+        # Mark user has voted for the given section.
+        await cruds_campaign.mark_has_voted(
+            db=db, user_id=user.id, section_id=campaign_list.section_id
+        )
+        await cruds_campaign.add_vote(
+            db=db,
+            vote=model_vote,
+        )
     except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @router.get(
     "/campaign/votes",
-    response_model=list[schemas_campaign.VoteBase],
+    response_model=list[str],
     status_code=200,
     tags=[Tags.campaign],
 )
-async def get_results(
+async def get_sections_already_voted(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.student)),
 ):
-    """Get all votes
+    """
+    Return the list of id of sections an user has already voted for.
+    """
 
-    **Only for admin.**"""
     status = await cruds_campaign.get_status(db=db)
-    if status.status == StatusType.closed or status == StatusType.counted:
-        if status.status == StatusType.closed:
-            await cruds_campaign.set_status(
-                db=db, new_status=schemas_campaign.VoteStatus(status=StatusType.counted)
-            )
-        votes = await cruds_campaign.get_votes(db=db)
-        return votes
-    else:
+    if status != StatusType.open:
         raise HTTPException(
-            status_code=403,
-            detail="You must close the vote before counting it",
+            status_code=400,
+            detail=f"You can only vote if the vote is open. The current status is {status}",
         )
+
+    has_voted = await cruds_campaign.get_has_voted(db=db, user_id=user.id)
+    sections_ids = [section.section_id for section in has_voted]
+    return sections_ids
 
 
 @router.get(
