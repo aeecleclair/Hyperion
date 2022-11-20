@@ -10,24 +10,36 @@ from app.schemas import schemas_campaign
 from app.utils.types.campaign_type import ListType, StatusType
 
 
-async def get_status(db: AsyncSession) -> models_campaign.Status:
+async def get_status(
+    db: AsyncSession,
+) -> StatusType:
     result = await db.execute(select(models_campaign.Status))
     status = result.scalars().all()
-    if status == []:
-        db_status = models_campaign.Status(id="status", status=StatusType.waiting)
-        db.add(db_status)
+    if len(status) > 1:
+        raise ValueError(
+            "There is more than one status in the database, this should never happen"
+        )
+    if len(status) == 0:
+        # The status was never set in the database, we can create a default status in the database and return it
+        # Since this is the only place a row can be added to the status table, there should never be more than one row in the table
+        status_model = models_campaign.Status(status=StatusType.waiting)
+        db.add(status_model)
         try:
             await db.commit()
-            return db_status
-        except IntegrityError:
+        except IntegrityError as err:
             await db.rollback()
-            raise ValueError("Error in status creation")
-    else:
-        return status[0]
+            raise ValueError(err)
+        return StatusType.waiting
+
+    # The status is contained in the only result returned by the database
+    return status[0].status
 
 
-async def set_status(db: AsyncSession, new_status: schemas_campaign.VoteStatus):
-    await db.execute(update(models_campaign.Status).values(status=new_status.status))
+async def set_status(
+    db: AsyncSession,
+    new_status: StatusType,
+):
+    await db.execute(update(models_campaign.Status).values(status=new_status))
     await db.commit()
 
 
