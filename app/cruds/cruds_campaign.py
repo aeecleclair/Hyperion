@@ -247,16 +247,17 @@ async def add_vote(db: AsyncSession, vote: models_campaign.Votes) -> None:
         raise ValueError("Error occured when adding a vote.")
 
 
-async def get_has_voted(
+async def has_user_voted_for_section(
     db: AsyncSession, user_id: str, section_id: str
-) -> models_campaign.HasVoted | None:
+) -> bool:
     """Return HasVoted object from the db."""
     result = await db.execute(
         select(models_campaign.HasVoted)
         .where(models_campaign.HasVoted.user_id == user_id)
         .where(models_campaign.HasVoted.section_id == section_id)
     )
-    return result.scalars().first()
+    has_voted: models_campaign.HasVoted | None = result.scalars().first()
+    return has_voted is not None
 
 
 async def mark_has_voted(db: AsyncSession, user_id: str, section_id: str) -> None:
