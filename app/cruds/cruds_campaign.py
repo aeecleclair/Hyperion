@@ -294,3 +294,13 @@ async def delete_votes(db: AsyncSession) -> None:
     await db.execute(delete(models_campaign.Votes))
     await db.execute(delete(models_campaign.HasVoted))
     await db.commit()
+
+
+async def reset_campaign(db: AsyncSession) -> None:
+    """Reset the campaign."""
+    await db.execute(delete(models_campaign.ListMemberships))
+    await db.execute(delete(models_campaign.Sections))
+    await db.execute(delete(models_campaign.Lists))
+    await db.execute(delete(models_campaign.Votes))
+    await db.execute(delete(models_campaign.HasVoted))
+    await db.commit()

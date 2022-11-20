@@ -343,6 +343,39 @@ async def count_voting(
 
 
 @router.post(
+    "/campaign/status/reset",
+    status_code=204,
+    tags=[Tags.campaign],
+)
+async def reset_vote(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Reset the vote.
+
+    WARNING: This will delete all votes, lists and sections. This will put the module to Waiting status.
+
+    **This endpoint is only usable by administrators**
+    """
+    status = await cruds_campaign.get_status(db=db)
+    if status != StatusType.counting:
+        raise HTTPException(
+            status_code=400,
+            detail=f"The vote can only be reset in Counting status. The current status is {status}",
+        )
+
+    try:
+        await cruds_campaign.reset_campaign(db=db)
+        await cruds_campaign.set_status(
+            db=db,
+            new_status=StatusType.waiting,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))
+
+
+@router.post(
     "/campaign/votes",
     status_code=204,
     tags=[Tags.campaign],
