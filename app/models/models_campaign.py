@@ -9,9 +9,9 @@ class ListMemberships(Base):
     __tablename__ = "campaign_lists_membership"
 
     user_id: str = Column(ForeignKey("core_user.id"), primary_key=True)
-    group_id: str = Column(ForeignKey("campaign_lists.id"), primary_key=True)
+    list_id: str = Column(ForeignKey("campaign_lists.id"), primary_key=True)
     user: models_core.CoreUser = relationship("CoreUser")
-    group: "Lists" = relationship("Lists", back_populates="members")
+    lists: "Lists" = relationship("Lists", back_populates="members")
     role: str = Column(String)
 
 
@@ -34,7 +34,7 @@ class Lists(Base):
     section: Sections = relationship("Sections", back_populates="lists")
     type: str = Column(String, nullable=False)
     members: list[ListMemberships] = relationship(
-        "ListMemberships", back_populates="group"
+        "ListMemberships", back_populates="lists"
     )
 
 

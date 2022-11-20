@@ -1,3 +1,5 @@
+import uuid
+
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,24 +35,17 @@ async def add_blank_option(db: AsyncSession):
     result = await db.execute(select(models_campaign.Sections.id))
     sections_ids = result.scalars().all()
 
-    result = await db.execute(
-        select(models_campaign.Lists.section_id).where(
-            models_campaign.Lists.type == ListType.blank
-        )
-    )
-    blank_lists = result.scalars().all()
-    for sid in sections_ids:
-        if sid not in blank_lists:
-            db.add(
-                models_campaign.Lists(
-                    id="blank" + sid,
-                    name="Vote Blanc",
-                    description="",
-                    section_id=sid,
-                    type=ListType.blank,
-                    members=[],
-                )
+    for section_id in sections_ids:
+        db.add(
+            models_campaign.Lists(
+                id=str(uuid.uuid4()),
+                name="Vote Blanc",
+                description="",
+                section_id=section_id,
+                type=ListType.blank,
+                members=[],
             )
+        )
     try:
         await db.commit()
     except IntegrityError as err:
@@ -157,23 +152,30 @@ async def get_list_by_id(
 
 async def add_list(
     db: AsyncSession,
-    campaign_list: schemas_campaign.ListComplete,
+    campaign_list: models_campaign.Lists,
 ) -> None:
-    """Add a list of AEECL."""
-    db.add(
-        models_campaign.Lists(
-            members=[
-                models_campaign.ListMemberships(**member.dict())
-                for member in campaign_list.members
-            ],
-            **campaign_list.dict(exclude={"members"}),
-        )
-    )
+    """Add a list to a section then add the members to the list."""
+    db.add(campaign_list)
     try:
         await db.commit()
     except IntegrityError:
         await db.rollback()
-        raise ValueError("This list alreay exist.")
+        raise ValueError("This list already exist.")
+
+
+async def remove_members_from_list(
+    db: AsyncSession,
+    list_id: str,
+) -> None:
+    """
+    Remove all members from a given list. The list nor users won't be deleted.
+    """
+    await db.execute(
+        delete(models_campaign.ListMemberships).where(
+            models_campaign.ListMemberships.list_id == list_id
+        )
+    )
+    await db.commit()
 
 
 async def delete_list(db: AsyncSession, list_id: str) -> None:
@@ -188,23 +190,32 @@ async def update_list(
     db: AsyncSession, list_id: str, campaign_list: schemas_campaign.ListEdit
 ) -> None:
     """Update a campaign list."""
+    await db.execute(
+        update(models_campaign.Lists)
+        .where(models_campaign.Lists.id == list_id)
+        .values(**campaign_list.dict(exclude={"members"}, exclude_none=True))
+    )
+
+    # We may need to recreate the list of members
     if campaign_list.members is not None:
+        # First we remove all the members
+        await remove_members_from_list(list_id=list_id, db=db)
+        # Then we add the new members
+        for member in campaign_list.members:
+            members_db = models_campaign.ListMemberships(
+                user_id=member.user_id,
+                role=member.role,
+                list_id=list_id,
+            )
+
+            db.add(members_db)
+
         await db.execute(
             update(models_campaign.Lists)
             .where(models_campaign.Lists.id == list_id)
             .values(
-                members=[
-                    models_campaign.ListMemberships(**member.dict())
-                    for member in campaign_list.members
-                ],
                 **campaign_list.dict(exclude={"members"}, exclude_none=True),
             )
-        )
-    else:
-        await db.execute(
-            update(models_campaign.Lists)
-            .where(models_campaign.Lists.id == list_id)
-            .values(**campaign_list.dict(exclude_none=True))
         )
 
     try:
