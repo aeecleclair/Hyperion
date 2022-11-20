@@ -86,3 +86,10 @@ class VoteBase(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class VoteStatus(BaseModel):
+    status: StatusType
+
+    class Config:
+        orm_mode = True
