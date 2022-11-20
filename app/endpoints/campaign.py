@@ -262,7 +262,7 @@ async def update_list(
 
 
 @router.post(
-    "/campaign/votes/open",
+    "/campaign/status/open",
     status_code=204,
     tags=[Tags.campaign],
 )
@@ -291,7 +291,7 @@ async def open_voting(
 
 
 @router.post(
-    "/campaign/votes/close",
+    "/campaign/status/close",
     status_code=204,
     tags=[Tags.campaign],
 )
@@ -317,7 +317,7 @@ async def close_voting(
 
 
 @router.post(
-    "/campaign/votes/counting",
+    "/campaign/status/counting",
     status_code=204,
     tags=[Tags.campaign],
 )
