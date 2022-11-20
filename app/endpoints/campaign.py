@@ -56,7 +56,7 @@ async def add_section(
     **This endpoint is only usable by administrators**
     """
     status = await cruds_campaign.get_status(db=db)
-    if status.status != StatusType.waiting:
+    if status != StatusType.waiting:
         raise HTTPException(
             status_code=403,
             detail=f"You can't add a section if the vote has already begun. The module status is {status} but should be 'waiting'",
@@ -92,7 +92,7 @@ async def delete_section(
     # TODO: remove lists and members
 
     status = await cruds_campaign.get_status(db=db)
-    if status.status != StatusType.waiting:
+    if status != StatusType.waiting:
         raise HTTPException(
             status_code=403,
             detail=f"You can't delete a section if the vote has already begun. The module status is {status} but should be 'waiting'",
@@ -136,7 +136,7 @@ async def add_list(
     **This endpoint is only usable by administrators**
     """
     status = await cruds_campaign.get_status(db=db)
-    if status.status != StatusType.waiting:
+    if status != StatusType.waiting:
         raise HTTPException(
             status_code=403,
             detail=f"You can't add a list if the vote has already begun. The module status is {status} but should be 'waiting'",
@@ -204,7 +204,7 @@ async def delete_list(
     # TODO: remove members
 
     status = await cruds_campaign.get_status(db=db)
-    if status.status != StatusType.waiting:
+    if status != StatusType.waiting:
         raise HTTPException(
             status_code=403,
             detail=f"You can't delete a list if the vote has already begun. The module status is {status} but should be 'waiting'",
@@ -232,7 +232,7 @@ async def update_list(
     **This endpoint is only usable by administrators**
     """
     status = await cruds_campaign.get_status(db=db)
-    if status.status != StatusType.waiting:
+    if status != StatusType.waiting:
         raise HTTPException(
             status_code=403,
             detail=f"You can't edit a list if the vote has already begun. The module status is {status} but should be 'waiting'",
@@ -278,7 +278,7 @@ async def open_voting(
     **This endpoint is only usable by administrators**
     """
     status = await cruds_campaign.get_status(db=db)
-    if status.status != StatusType.waiting:
+    if status != StatusType.waiting:
         raise HTTPException(
             status_code=400,
             detail=f"The vote can only be open if it is waiting. The current status is {status}",
@@ -287,9 +287,7 @@ async def open_voting(
     # Create the blank lists
     await cruds_campaign.add_blank_option(db=db)
     # Set the status to open
-    await cruds_campaign.set_status(
-        db=db, new_status=schemas_campaign.VoteStatus(status=StatusType.open)
-    )
+    await cruds_campaign.set_status(db=db, new_status=StatusType.open)
 
 
 @router.post(
@@ -309,15 +307,13 @@ async def close_voting(
     **This endpoint is only usable by administrators**
     """
     status = await cruds_campaign.get_status(db=db)
-    if status.status != StatusType.open:
+    if status != StatusType.open:
         raise HTTPException(
             status_code=400,
             detail=f"The vote can only be closed if it is open. The current status is {status}",
         )
 
-    await cruds_campaign.set_status(
-        db=db, new_status=schemas_campaign.VoteStatus(status=StatusType.closed)
-    )
+    await cruds_campaign.set_status(db=db, new_status=StatusType.closed)
 
 
 @router.post(
@@ -337,15 +333,13 @@ async def count_voting(
     **This endpoint is only usable by administrators**
     """
     status = await cruds_campaign.get_status(db=db)
-    if status.status != StatusType.closed:
+    if status != StatusType.closed:
         raise HTTPException(
             status_code=400,
             detail=f"The vote can only be set to counting if it is closed. The current status is {status}",
         )
 
-    await cruds_campaign.set_status(
-        db=db, new_status=schemas_campaign.VoteStatus(status=StatusType.counting)
-    )
+    await cruds_campaign.set_status(db=db, new_status=StatusType.counting)
 
 
 @router.post(
