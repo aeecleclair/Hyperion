@@ -22,7 +22,7 @@ async def get_status(
     if len(status) == 0:
         # The status was never set in the database, we can create a default status in the database and return it
         # Since this is the only place a row can be added to the status table, there should never be more than one row in the table
-        status_model = models_campaign.Status(status=StatusType.waiting)
+        status_model = models_campaign.Status(status=StatusType.waiting, id="id")
         db.add(status_model)
         try:
             await db.commit()
