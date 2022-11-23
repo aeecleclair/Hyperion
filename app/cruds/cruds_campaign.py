@@ -104,22 +104,23 @@ async def delete_section(db: AsyncSession, section_id: str) -> None:
         .options(selectinload(models_campaign.Sections.lists))
     )
     section = result.scalars().all()
-    if section[0].lists == [] or (
-        len(section[0].lists) == 1 and section[0].lists[0].id[:4] == "blank"
-    ):
-        await db.execute(
-            delete(models_campaign.Lists).where(
-                models_campaign.Lists.section_id == section_id
+    if section != []:
+        if section[0].lists == [] or (
+            len(section[0].lists) == 1 and "blank" in (section[0].lists)[0].id
+        ):
+            await db.execute(
+                delete(models_campaign.Lists).where(
+                    models_campaign.Lists.section_id == section_id
+                )
             )
-        )
-        await db.execute(
-            delete(models_campaign.Sections).where(
-                models_campaign.Sections.id == section_id
+            await db.execute(
+                delete(models_campaign.Sections).where(
+                    models_campaign.Sections.id == section_id
+                )
             )
-        )
-        await db.commit()
-    else:
-        raise ValueError("This section still has lists")
+            await db.commit()
+        else:
+            raise ValueError("This section still has lists")
 
 
 async def delete_lists_from_section(db: AsyncSession, section_id: str) -> None:

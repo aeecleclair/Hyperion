@@ -46,10 +46,10 @@ async def startuptest():
             type=ListType.serio,
             members=[
                 models_campaign.ListMemberships(
-                    user_id=admin_user.id, group_id=list_id, role="Prez"
+                    user_id=admin_user.id, list_id=list_id, role="Prez"
                 ),
                 models_campaign.ListMemberships(
-                    user_id=student_user.id, group_id=list_id, role="SG"
+                    user_id=student_user.id, list_id=list_id, role="SG"
                 ),
             ],
         )
@@ -111,15 +111,15 @@ def test_vote_if_not_opened():
         headers={"Authorization": f"Bearer {token}"},
         json={"list_id": list.id},
     )
-    assert response.status_code == 403
+    assert response.status_code == 400
 
 
 def test_open_vote():
     token = create_api_access_token(admin_user)
     response = client.post(
-        "/campaign/votes/open", headers={"Authorization": f"Bearer {token}"}
+        "/campaign/status/open", headers={"Authorization": f"Bearer {token}"}
     )
-    assert response.status_code == 201
+    assert response.status_code == 204
 
 
 def test_vote_if_opened():
@@ -129,19 +129,11 @@ def test_vote_if_opened():
         headers={"Authorization": f"Bearer {token}"},
         json={"list_id": list.id},
     )
-    assert response.status_code == 201
+    assert response.status_code == 204
 
 
-def test_close_vote():
-    token = create_api_access_token(admin_user)
-    response = client.post(
-        "/campaign/votes/close", headers={"Authorization": f"Bearer {token}"}
-    )
-    assert response.status_code == 201
-
-
-def test_get_votes():
-    token = create_api_access_token(admin_user)
+def test_get_section_voted_of_user():
+    token = create_api_access_token(student_user)
     response = client.get(
         "/campaign/votes",
         headers={"Authorization": f"Bearer {token}"},
@@ -149,10 +141,26 @@ def test_get_votes():
     assert response.status_code == 200
 
 
-def test_get_votes_from_section():
+def test_close_vote():
+    token = create_api_access_token(admin_user)
+    response = client.post(
+        "/campaign/status/close", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert response.status_code == 204
+
+
+def test_counting_vote():
+    token = create_api_access_token(admin_user)
+    response = client.post(
+        "/campaign/status/counting", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert response.status_code == 204
+
+
+def test_get_votes():
     token = create_api_access_token(admin_user)
     response = client.get(
-        f"/campaign/votes/{section.id}",
+        "/campaign/results",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
@@ -160,8 +168,8 @@ def test_get_votes_from_section():
 
 def test_reset_votes():
     token = create_api_access_token(admin_user)
-    response = client.delete(
-        "/campaign/votes",
+    response = client.post(
+        "/campaign/status/reset",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 204
@@ -171,15 +179,6 @@ def test_delete_list():
     token = create_api_access_token(admin_user)
     response = client.delete(
         f"/campaign/lists/{list.id}",
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert response.status_code == 204
-
-
-def test_delete_lists_from_section():
-    token = create_api_access_token(admin_user)
-    response = client.delete(
-        f"/campaign/sections/{section.id}/lists",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 204

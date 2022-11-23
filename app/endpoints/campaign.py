@@ -529,7 +529,7 @@ async def create_campaigns_logo(
 ):
     """Upload a logo for the campaign module. Can either be a section or a list logo."""
     status = await cruds_campaign.get_status(db=db)
-    if status.status == StatusType.waiting:
+    if status == StatusType.waiting:
         if image.content_type not in ["image/jpeg", "image/png", "image/webp"]:
             raise HTTPException(
                 status_code=400,
@@ -600,7 +600,7 @@ async def create_list_group_pictures(
 ):
     """Upload a list group photo."""
     status = await cruds_campaign.get_status(db=db)
-    if status.status == StatusType.waiting:
+    if status == StatusType.waiting:
         if image.content_type not in ["image/jpeg", "image/png", "image/webp"]:
             raise HTTPException(
                 status_code=400,
