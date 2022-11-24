@@ -3,10 +3,13 @@ from datetime import datetime
 from pydantic import BaseModel
 
 
-class CineSessionBase(BaseModel):
-    name: str
+class CineSessionTime(BaseModel):
     start: datetime
     duration: int
+
+
+class CineSessionBase(CineSessionTime):
+    name: str
     overview: str | None = None
     poster_url: str | None = None
     genre: str | None = None
