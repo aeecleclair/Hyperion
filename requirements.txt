@@ -12,3 +12,4 @@ unidecode==1.3.6
 uvicorn[standard]==0.20.0
 redis==4.3.5
 icalendar == 4.1.0
+cinemagoer==2022.2.11
