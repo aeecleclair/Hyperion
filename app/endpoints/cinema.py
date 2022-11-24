@@ -1,6 +1,7 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
+from imdb import Cinemagoer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cruds import cruds_cinema
@@ -11,6 +12,7 @@ from app.utils.types.groups_type import GroupType
 from app.utils.types.tags import Tags
 
 router = APIRouter()
+moviedb = Cinemagoer()
 
 
 @router.get(
@@ -40,6 +42,34 @@ async def create_session(
 ):
     db_session = schemas_cinema.CineSessionComplete(
         id=str(uuid.uuid4()), **session.dict()
+    )
+    try:
+        result = await cruds_cinema.create_session(session=db_session, db=db)
+        return result
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))
+
+
+@router.post(
+    "cinema/sessions/{imdb_id}",
+    response_model=schemas_cinema.CineSessionComplete,
+    status_code=201,
+    tags=[Tags.cinema],
+)
+async def create_session_with_id(
+    imdb_id: str,
+    session: schemas_cinema.CineSessionTime,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.cinema)),
+):
+    movie = moviedb.get_movie(imdb_id)
+    db_session = schemas_cinema.CineSessionComplete(
+        id=str(uuid.uuid4()),
+        name=movie["localized title"],
+        overview=movie["plot outline"],
+        poster_url=movie["full size poster url"],
+        genre=movie["genres"],
+        **session.dict(),
     )
     try:
         result = await cruds_cinema.create_session(session=db_session, db=db)
