@@ -17,6 +17,9 @@ student_user: models_core.CoreUser | None = None
 section: models_campaign.Sections | None = None
 list: models_campaign.Lists | None = None
 
+section2id: str = ""
+list2id: str = ""
+
 
 @app.on_event("startup")  # create the datas needed in the tests
 async def startuptest():
@@ -77,6 +80,8 @@ def test_add_sections():
         },
     )
     assert response.status_code == 201
+    global section2id
+    section2id = response.json()["id"]
 
 
 def test_get_lists():
@@ -102,6 +107,26 @@ def test_add_list():
         },
     )
     assert response.status_code == 201
+    global list2id
+    list2id = response.json()["id"]
+
+
+def test_delete_list():
+    token = create_api_access_token(admin_user)
+    response = client.delete(
+        f"/campaign/lists/{list2id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 204
+
+
+def test_delete_section():
+    token = create_api_access_token(admin_user)
+    response = client.delete(
+        f"/campaign/sections/{section2id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 204
 
 
 def test_vote_if_not_opened():
@@ -170,24 +195,6 @@ def test_reset_votes():
     token = create_api_access_token(admin_user)
     response = client.post(
         "/campaign/status/reset",
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert response.status_code == 204
-
-
-def test_delete_list():
-    token = create_api_access_token(admin_user)
-    response = client.delete(
-        f"/campaign/lists/{list.id}",
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert response.status_code == 204
-
-
-def test_delete_section():
-    token = create_api_access_token(admin_user)
-    response = client.delete(
-        f"/campaign/sections/{section.id}",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 204
