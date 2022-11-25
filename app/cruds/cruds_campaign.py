@@ -193,6 +193,7 @@ async def remove_members_from_list(
 
 async def delete_list(db: AsyncSession, list_id: str) -> None:
     """Delete a campaign list."""
+    await remove_members_from_list(list_id=list_id, db=db)
     await db.execute(
         delete(models_campaign.Lists).where(models_campaign.Lists.id == list_id)
     )
