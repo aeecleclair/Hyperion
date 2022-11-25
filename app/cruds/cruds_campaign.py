@@ -121,6 +121,8 @@ async def delete_section(db: AsyncSession, section_id: str) -> None:
             await db.commit()
         else:
             raise ValueError("This section still has lists")
+    else:
+        raise ValueError("Section not found")
 
 
 async def delete_lists_from_section(db: AsyncSession, section_id: str) -> None:

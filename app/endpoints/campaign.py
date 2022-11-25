@@ -89,7 +89,6 @@ async def delete_section(
 
     **This endpoint is only usable by administrators**
     """
-    # TODO: remove lists and members
 
     status = await cruds_campaign.get_status(db=db)
     if status != StatusType.waiting:
@@ -98,7 +97,6 @@ async def delete_section(
             detail=f"You can't delete a section if the vote has already begun. The module status is {status} but should be 'waiting'",
         )
 
-    # TODO: Check if the section has some lists before deleting it
     try:
         await cruds_campaign.delete_section(section_id=section_id, db=db)
     except ValueError as error:
@@ -200,8 +198,6 @@ async def delete_list(
     """Allow an admin to delete the list with the given id.
 
     **This endpoint is only usable by administrators**"""
-
-    # TODO: remove members
 
     status = await cruds_campaign.get_status(db=db)
     if status != StatusType.waiting:
