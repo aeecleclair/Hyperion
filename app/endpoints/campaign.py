@@ -507,7 +507,7 @@ async def get_results_by_section(
 )
 async def get_status_vote(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.student)),
 ):
 
     status = await cruds_campaign.get_status(db=db)
