@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from imdb import Cinemagoer
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -50,6 +50,26 @@ async def create_session(
         raise HTTPException(status_code=422, detail=str(error))
 
 
+async def add_movie(
+    imdb_id: str,
+    session_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    movie = moviedb.get_movie(imdb_id)
+    db_session = schemas_cinema.CineSessionUpdate(
+        name=movie["localized title"],
+        overview=movie["plot outline"],
+        poster_url=movie["full size poster url"],
+        genre=movie["genres"],
+    )
+    try:
+        await cruds_cinema.update_session(
+            session_id=session_id, session_update=db_session, db=db
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))
+
+
 @router.post(
     "cinema/sessions/{imdb_id}",
     response_model=schemas_cinema.CineSessionComplete,
@@ -59,21 +79,17 @@ async def create_session(
 async def create_session_with_id(
     imdb_id: str,
     session: schemas_cinema.CineSessionTime,
+    background_task: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.cinema)),
 ):
-    movie = moviedb.get_movie(imdb_id)
+    session_id = str(uuid.uuid4())
     db_session = schemas_cinema.CineSessionComplete(
-        id=str(uuid.uuid4()),
-        name=movie["localized title"],
-        overview=movie["plot outline"],
-        poster_url=movie["full size poster url"],
-        genre=movie["genres"],
-        **session.dict(),
+        id=session_id, name="Recovering informations", **session.dict()
     )
     try:
-        result = await cruds_cinema.create_session(session=db_session, db=db)
-        return result
+        await cruds_cinema.create_session(session=db_session, db=db)
+        background_task.add_task(add_movie, imdb_id, session_id)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
