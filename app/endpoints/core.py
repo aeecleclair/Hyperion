@@ -45,6 +45,34 @@ async def read_security_txt():
 
 
 @router.get(
+    "/privacy.txt",
+    response_class=FileResponse,
+    status_code=200,
+    tags=[Tags.core],
+)
+async def read_privacy():
+    """
+    Return Hyperion privacy
+    """
+
+    return FileResponse("assets/privacy.txt")
+
+
+@router.get(
+    "/terms-and-conditions.txt",
+    response_class=FileResponse,
+    status_code=200,
+    tags=[Tags.core],
+)
+async def read_terms_and_conditions():
+    """
+    Return Hyperion terms and conditions pages
+    """
+
+    return FileResponse("assets/terms-and-conditions.txt")
+
+
+@router.get(
     "/.well-known/security.txt",
     response_class=FileResponse,
     status_code=200,

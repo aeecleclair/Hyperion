@@ -1,0 +1,92 @@
+**Privacy Policy**
+
+ÉCLAIR built the MyECL app as open source app. This SERVICE is provided by ÉCLAIR at no cost and is intended for use as is.
+
+This page is used to inform visitors regarding our policies with the collection, use, and disclosure of Personal Information if anyone decided to use our Service.
+
+If you choose to use our Service, then you agree to the collection and use of information in relation to this policy. The Personal Information that we collect is used for providing and improving the Service. We will not use or share your information with anyone except as described in this Privacy Policy.
+
+The terms used in this Privacy Policy have the same meanings as in our Terms and Conditions, which is accessible at MyECL unless otherwise defined in this Privacy Policy.
+
+**Information Collection and Use**
+
+For a better experience, while using our Service, we may require you to provide us with certain personally identifiable information, including but not limited to:
+
+- names
+- hashed password 
+- phone numbers
+- email addresses
+- usernames 
+- passwords
+- birthday
+- promotion
+- floor 
+- account creation date
+
+We do not process sensitive information We may request to send you push notifications regarding your account or certain features of the application(s). If you wish to opt out from receiving these types of communications, you may turn them off in your device's settings. The information that we request will be retained by us and used as described in this privacy policy.
+
+**Log Data**
+
+We want to inform you that whenever you use our Service, in a case of an error in the app we collect data and information (through third party products) on your phone called Log Data. This Log Data may include information such as your device Internet Protocol (“IP”) address, device name, operating system version, the configuration of the app when utilizing our Service, the time and date of your use of the Service, and other statistics.
+
+***Service Providers*** --> Je pense que faut retirer ça
+
+*We may employ third-party companies and individuals due to the following reasons:*
+
+*   *To facilitate our Service;*
+*   *To provide the Service on our behalf;*
+*   *To perform Service-related services; or*
+*   *To assist us in analyzing how our Service is used.*
+
+*We want to inform users of this Service that these third parties have access to your Personal Information. The reason is to perform the tasks assigned to them on our behalf. However, they are obligated not to disclose or use the information for any other purpose.*
+
+**Security**
+
+We value your trust in providing us your Personal Information, thus we are striving to use commercially acceptable means of protecting it. But remember that no method of transmission over the internet, or method of electronic storage is 100% secure and reliable, and we cannot guarantee its absolute security.
+
+**What legal bases do we rely on to process your information**
+
+The General Data Protection Regulation (GDPR) and UK GDPR require us to explain the valid legal bases we rely on in order to process your personal information. As such, we may rely on the following legal bases to process your personal information:
+
+- **Consent.** We may process your information if you have given us permission (i.e., consent) to use your personal information for a specific purpose. You can withdraw your consent at any time.
+
+- **Legal Obligations.** We may process your information where we believe it is necessary for compliance with our legal obligations, such as to cooperate with a law enforcement body or regulatory agency, exercise or defend our legal rights, or disclose your information as evidence in litigation in which we are involved.
+
+- **Vital Interests.** We may process your information where we believe it is necessary to protect your vital interests or the vital interests of a third party, such as situations involving potential threats to the safety of any person.
+
+**Links to Other Sites**
+
+This Service contain links to other sites including: 
+
+* All payment data is stored by Lydia. You may find their privacy notice link(s) here: https://support.lydia-app.com/l/en/article/6ogzqxbjos-lydia-personal-data-protection-policy.
+
+If you click on a third-party link, you will be directed to that site. Note that these external sites are not operated by us. Therefore, we strongly advise you to review the Privacy Policy of these websites. We have no control over and assume no responsibility for the content, privacy policies, or practices of any third-party sites or services. 
+
+**Children’s Privacy**
+
+These Services do not address anyone under the age of 13. We do not knowingly collect personally identifiable information from children under 13 years of age. In the case we discover that a child under 13 has provided us with personal information, we immediately delete this from our servers. If you are a parent or guardian and you are aware that your child has provided us with personal information, please contact us so that we will be able to do necessary actions.
+
+**How long do we keep your information**
+
+We will only keep your personal information for as long as it is necessary for the purposes set out in this privacy notice, unless a longer retention period is required or permitted by law (such as tax, accounting, or other legal requirements). No purpose in this notice will require us keeping your personal information for longer than the period of time in which users have an account with us.
+
+When we have no ongoing legitimate business need to process your personal information, we will either delete or anonymize such information, or, if this is not possible (for example, because your personal information has been stored in backup archives), then we will securely store your personal information and isolate it from any further processing until deletion is possible.
+
+**Changes to This Privacy Policy**
+
+We may update our Privacy Policy from time to time. Thus, you are advised to review this page periodically for any changes. We will notify you of any changes by posting the new Privacy Policy on this page.
+
+This policy is effective as of 2022-09-26
+
+**Contact Us**
+
+If you have any questions or suggestions about our Privacy Policy, do not hesitate to contact us at eclair@myecl.fr or by post to:
+
+ÉCLAIR
+
+36 avenue Guy de Collongue
+
+Écully, Auvergne-Rhône-Alpes, 69130
+
+France
+
