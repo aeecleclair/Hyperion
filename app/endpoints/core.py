@@ -45,7 +45,7 @@ async def read_security_txt():
 
 
 @router.get(
-    "/privacy.txt",
+    "/privacy",
     response_class=FileResponse,
     status_code=200,
     tags=[Tags.core],
@@ -59,7 +59,7 @@ async def read_privacy():
 
 
 @router.get(
-    "/terms-and-conditions.txt",
+    "/terms-and-conditions",
     response_class=FileResponse,
     status_code=200,
     tags=[Tags.core],
