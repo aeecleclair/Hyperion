@@ -347,18 +347,11 @@ async def get_orders_from_delivery(
 
     **The user must be a member of the group AMAP to use this endpoint**
     """
-    # TODO: should we use a relation ship to load orders when querying the delivery?
-    # We are currently making 2+N database calls.
-
-    delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
-    if delivery is None:
+    delivery = await cruds_amap.get_delivery_by_id(delivery_id=delivery_id, db=db)
+    if delivery is not None:
+        return delivery.orders
+    else:
         raise HTTPException(status_code=404, detail="Delivery not found")
-
-    orders = await cruds_amap.get_orders_from_delivery(delivery_id=delivery_id, db=db)
-    return [
-        await get_order_by_id(delivery_id=delivery_id, order_id=order.order_id, db=db)
-        for order in orders
-    ]
 
 
 @router.get(
