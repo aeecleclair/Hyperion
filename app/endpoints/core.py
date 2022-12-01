@@ -73,6 +73,20 @@ async def read_terms_and_conditions():
 
 
 @router.get(
+    "/support",
+    response_class=FileResponse,
+    status_code=200,
+    tags=[Tags.core],
+)
+async def read_terms_and_conditions():
+    """
+    Return Hyperion terms and conditions pages
+    """
+
+    return FileResponse("assets/support.txt")
+
+
+@router.get(
     "/.well-known/security.txt",
     response_class=FileResponse,
     status_code=200,
