@@ -79,4 +79,5 @@ class Cash(Base):
     __tablename__ = "amap_cash"
 
     user_id: str = Column(String, ForeignKey("core_user.id"), primary_key=True)
+    user: CoreUser = relationship("CoreUser")
     balance: float = Column(Float, nullable=False)

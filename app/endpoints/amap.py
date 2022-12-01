@@ -487,7 +487,7 @@ async def add_order_to_delievery(
                     await cruds_amap.edit_cash_by_id(
                         db=db,
                         user_id=order.user_id,
-                        balance=schemas_amap.CashBase(balance=balance.balance - amount),
+                        balance=schemas_amap.CashEdit(balance=balance.balance - amount),
                     )
                     return await get_order_by_id(
                         delivery_id=delivery_id, order_id=db_order.order_id, db=db
@@ -559,7 +559,7 @@ async def edit_orders_from_delieveries(
                             await cruds_amap.edit_cash_by_id(
                                 db=db,
                                 user_id=order.user_id,
-                                balance=schemas_amap.CashBase(
+                                balance=schemas_amap.CashEdit(
                                     balance=balance.balance + previous_amount - amount
                                 ),
                             )
@@ -612,7 +612,7 @@ async def remove_order(
                 await cruds_amap.edit_cash_by_id(
                     db=db,
                     user_id=order.user_id,
-                    balance=schemas_amap.CashBase(balance=balance.balance + amount),
+                    balance=schemas_amap.CashEdit(balance=balance.balance + amount),
                 )
                 await cruds_amap.remove_order(db=db, order_id=order_id)
             else:
@@ -638,11 +638,7 @@ async def get_users_cash(
     **The user must be a member of the group AMAP to use this endpoint**
     """
     cash = await cruds_amap.get_users_cash(db)
-    res = []
-    for c in cash:
-        user = await read_user(user_id=c.user_id, db=db)
-        res.append(schemas_amap.CashComplete(user=user, balance=c.balance))
-    return res
+    return cash
 
 
 @router.get(
@@ -668,10 +664,12 @@ async def get_cash_by_id(
     if user_id == user.id or is_user_member_of_an_allowed_group(user, [GroupType.amap]):
         cash = await cruds_amap.get_cash_by_id(user_id=user_id, db=db)
         if cash is not None:
-            user = await read_user(user_id=cash.user_id, db=db)
-            return schemas_amap.CashComplete(balance=cash.balance, user=user)
+            return cash
         else:
-            return schemas_amap.CashComplete(balance=0, user=user)
+            # We want to return a balance of 0 but we don't want to add it to the database
+            # An admin AMAP has indeed to add a cash to the user the first time
+            # TODO: this is a strange behaviour
+            return schemas_amap.CashComplete(balance=0, user_id=user_id, user=user_db)
     else:
         raise HTTPException(
             status_code=403,
@@ -681,13 +679,13 @@ async def get_cash_by_id(
 
 @router.post(
     "/amap/users/{user_id}/cash",
-    response_model=schemas_amap.CashBase,
+    response_model=schemas_amap.CashComplete,
     status_code=201,
     tags=[Tags.amap],
 )
 async def create_cash_of_user(
     user_id: str,
-    cash_base: schemas_amap.CashBase,
+    cash: schemas_amap.CashEdit,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
@@ -701,19 +699,26 @@ async def create_cash_of_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    cash = await cruds_amap.get_cash_by_id(db=db, user_id=user_id)
-    if cash is not None:
+    existing_cash = await cruds_amap.get_cash_by_id(db=db, user_id=user_id)
+    if existing_cash is not None:
         raise HTTPException(
             status_code=400,
             detail="This user already has a cash.",
         )
-    cash_db = models_amap.Cash(user_id=user_id, balance=cash_base.balance)
 
-    result = await cruds_amap.create_cash_of_user(
+    cash_db = models_amap.Cash(user_id=user_id, balance=cash.balance)
+
+    await cruds_amap.create_cash_of_user(
         cash=cash_db,
         db=db,
     )
-    return result
+
+    # We can not directly return the cash_db because it does not contain the user.
+    # Calling get_cash_by_id will return the cash with the user loaded as it's a relationship.
+    return await cruds_amap.get_cash_by_id(
+        user_id=user_id,
+        db=db,
+    )
 
 
 @router.patch(
@@ -723,7 +728,7 @@ async def create_cash_of_user(
 )
 async def edit_cash_by_id(
     user_id: str,
-    balance: schemas_amap.CashBase,
+    balance: schemas_amap.CashEdit,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):

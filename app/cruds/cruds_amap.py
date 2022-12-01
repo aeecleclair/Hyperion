@@ -309,13 +309,17 @@ async def remove_order(db: AsyncSession, order_id: str):
 
 
 async def get_users_cash(db: AsyncSession) -> list[models_amap.Cash]:
-    result = await db.execute(select(models_amap.Cash))
+    result = await db.execute(
+        select(models_amap.Cash).options(selectinload(models_amap.Cash.user))
+    )
     return result.scalars().all()
 
 
 async def get_cash_by_id(db: AsyncSession, user_id: str) -> models_amap.Cash | None:
     result = await db.execute(
-        select(models_amap.Cash).where(models_amap.Cash.user_id == user_id)
+        select(models_amap.Cash)
+        .where(models_amap.Cash.user_id == user_id)
+        .options(selectinload(models_amap.Cash.user))
     )
     return result.scalars().first()
 
@@ -327,13 +331,13 @@ async def create_cash_of_user(
     try:
         await db.commit()
         return cash
-    except IntegrityError:
+    except IntegrityError as err:
         await db.rollback()
-        raise ValueError("This user already has a balance")
+        raise ValueError(err)
 
 
 async def edit_cash_by_id(
-    db: AsyncSession, user_id: str, balance: schemas_amap.CashBase
+    db: AsyncSession, user_id: str, balance: schemas_amap.CashEdit
 ):
     await db.execute(
         update(models_amap.Cash)
