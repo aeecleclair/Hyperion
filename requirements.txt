@@ -9,5 +9,5 @@ SQLAlchemy[asyncio, mypy]==1.4.44   # [asyncio] allows greenlet to be installed 
 rapidfuzz                           # Fuzzy String Matching
 requests==2.28.1
 uvicorn[standard]==0.18.3
-redis==4.3.4
+redis==4.3.5
 icalendar == 4.1.0
