@@ -51,7 +51,6 @@ class CoreUserUnconfirmed(Base):
     # for example after losing the previously received confirmation email.
     # For each user creation request, a row will be added in this table with a new token
     email: str = Column(String, nullable=False)
-    password_hash: str | None = Column(String)
     account_type: str = Column(String, nullable=False)
     activation_token: str = Column(String, nullable=False)
     created_on: datetime = Column(DateTime, nullable=False)

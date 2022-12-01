@@ -3,8 +3,9 @@
 from datetime import datetime
 
 from fastapi import Form
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 
+from app.utils import validators
 from app.utils.examples import examples_auth
 
 
@@ -34,6 +35,10 @@ class AuthorizeValidation(Authorize):
 
     email: str
     password: str
+
+    # Email normalization, this will modify the email variable
+    # https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
+    _normalize_email = validator("email", allow_reuse=True)(validators.email_normalizer)
 
     class config:
         schema_extra = {"example": examples_auth.example_AuthorizeValidation}
