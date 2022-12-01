@@ -427,7 +427,7 @@ async def get_current_user_loaners(
         ):
             user_loaners.append(loaner)
 
-    return existing_loaners
+    return user_loaners
 
 
 @router.post(
