@@ -50,6 +50,7 @@ class Delivery(Base):
         "Product",
         secondary="amap_delivery_content",
     )
+    orders: list["Order"] = relationship("Order", back_populates="delivery")
     locked: bool = Column(Boolean, nullable=False)
 
 
@@ -63,7 +64,7 @@ class Order(Base):
     delivery_id: str = Column(
         String, ForeignKey("amap_delivery.id"), index=True, nullable=True
     )
-    delivery: Delivery = relationship("Delivery")
+    delivery: Delivery = relationship("Delivery", back_populates="orders")
     order_id: str = Column(String, primary_key=True, index=True)
     products: list[Product] = relationship(
         "Product",

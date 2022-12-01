@@ -86,7 +86,8 @@ async def get_deliveries(
     """Return all deliveries from database"""
     result = await db.execute(
         select(models_amap.Delivery).options(
-            selectinload(models_amap.Delivery.products)
+            selectinload(models_amap.Delivery.products),
+            selectinload(models_amap.Delivery.orders),
         )
     )
     return result.scalars().all()
@@ -99,7 +100,10 @@ async def get_delivery_by_id(
     result = await db.execute(
         select(models_amap.Delivery)
         .where(models_amap.Delivery.id == delivery_id)
-        .options(selectinload(models_amap.Delivery.products))
+        .options(
+            selectinload(models_amap.Delivery.products),
+            selectinload(models_amap.Delivery.orders),
+        )
     )
     return result.scalars().first()
 
@@ -123,6 +127,7 @@ async def create_delivery(
         delivery_date=delivery.delivery_date,
         products=products,
         locked=delivery.locked,
+        orders=[],
     )
     db.add(db_delivery)
     try:
@@ -180,17 +185,6 @@ async def edit_delivery(
         .values(**delivery.dict(exclude_none=True))
     )
     await db.commit()
-
-
-async def get_orders_from_delivery(
-    db: AsyncSession, delivery_id: str
-) -> list[models_amap.Order]:
-    result = await db.execute(
-        select(models_amap.Order)
-        .where(models_amap.Order.delivery_id == delivery_id)
-        .options(selectinload(models_amap.Order.products))
-    )
-    return result.scalars().all()
 
 
 async def get_order_by_id(db: AsyncSession, order_id: str) -> models_amap.Order | None:

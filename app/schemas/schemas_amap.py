@@ -64,16 +64,6 @@ class DeliveryComplete(DeliveryBase):
         orm_mode = True
 
 
-class DeliveryReturn(BaseModel):
-    delivery_date: date
-    products: list[ProductComplete] = []
-    id: str
-    locked: bool
-
-    class Config:
-        orm_mode = True
-
-
 class DeliveryUpdate(BaseModel):
     delivery_date: date | None = None
     locked: bool | None = None
@@ -113,6 +103,17 @@ class OrderReturn(BaseModel):
 
 class OrderEdit(OrderBase):
     order_id: str
+
+    class Config:
+        orm_mode = True
+
+
+class DeliveryReturn(BaseModel):
+    delivery_date: date
+    products: list[ProductComplete] = []
+    id: str
+    locked: bool
+    orders: list[OrderReturn]
 
     class Config:
         orm_mode = True
