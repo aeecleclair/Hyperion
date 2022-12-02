@@ -615,6 +615,32 @@ async def read_user(
 #    await cruds_users.delete_user(db=db, user_id=user_id)
 
 
+@router.post(
+    "/users/me/ask-deletion",
+    status_code=204,
+    tags=[Tags.users],
+)
+async def delete_user(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    settings: Settings = Depends(get_settings),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
+):
+    """
+    This endpoint will ask administrators to process to the user deletion.
+    This manual verification is needed to prevent data from being deleting for other users
+    """
+    if settings.SMTP_ACTIVE:
+        background_tasks.add_task(
+            send_email,
+            recipient=settings.SMTP_USERNAME,
+            subject="Account deletion request",
+            content=f"User {user.email} - {user.id} has requested to delete their account.",
+            settings=settings,
+        )
+
+
 @router.patch(
     "/users/me",
     status_code=204,
