@@ -31,20 +31,6 @@ async def read_information(settings: Settings = Depends(get_settings)):
 
 
 @router.get(
-    "/security.txt",
-    response_class=FileResponse,
-    status_code=200,
-    tags=[Tags.core],
-)
-async def read_security_txt():
-    """
-    Return Hyperion security.txt file
-    """
-
-    return FileResponse("assets/security.txt")
-
-
-@router.get(
     "/privacy",
     response_class=FileResponse,
     status_code=200,
@@ -84,6 +70,20 @@ async def read_support():
     """
 
     return FileResponse("assets/support.txt")
+
+
+@router.get(
+    "/security.txt",
+    response_class=FileResponse,
+    status_code=200,
+    tags=[Tags.core],
+)
+async def read_security_txt():
+    """
+    Return Hyperion security.txt file
+    """
+
+    return FileResponse("assets/security.txt")
 
 
 @router.get(
