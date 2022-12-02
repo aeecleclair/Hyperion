@@ -12,3 +12,6 @@ class ScopeType(str, Enum):
     auth = "auth"
     # openid only allows the user to access the userinfos auth endpoint
     openid = "openid"
+    # profile allows the user to access the userinfos auth endpoint
+    # The profile scope is introduced beacause some clients may want to access the user's profile without doing oidc
+    profile = "profile"

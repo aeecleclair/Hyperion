@@ -906,6 +906,10 @@ def create_response_body(
 
     id_token = None  # Will change if oidc is asked in scopes
 
+    if ScopeType.profile in granted_scopes_set:
+        # We add the cid in the access token to be able to access the userinfo endpoint (openid norm)
+        access_token_data.cid = client_id
+
     # Perform specifics steps for openid connect
     if ScopeType.openid in granted_scopes_set:
         # It's an openid connect request, we also need to return an `id_token`
@@ -958,7 +962,7 @@ def create_response_body(
 )
 async def auth_get_userinfo(
     user: models_core.CoreUser = Depends(
-        get_user_from_token_with_scopes([ScopeType.openid])
+        get_user_from_token_with_scopes([[ScopeType.openid], [ScopeType.profile]])
     ),
     token_data: schemas_auth.TokenData = Depends(get_token_data),
     settings: Settings = Depends(get_settings),
