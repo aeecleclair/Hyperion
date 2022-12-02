@@ -78,7 +78,7 @@ async def read_terms_and_conditions():
     status_code=200,
     tags=[Tags.core],
 )
-async def read_terms_and_conditions():
+async def read_support():
     """
     Return Hyperion terms and conditions pages
     """
