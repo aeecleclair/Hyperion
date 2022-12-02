@@ -1,7 +1,7 @@
 import uuid
 
+import tmdbsimple
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
-from imdb import Cinemagoer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cruds import cruds_cinema
@@ -12,7 +12,8 @@ from app.utils.types.groups_type import GroupType
 from app.utils.types.tags import Tags
 
 router = APIRouter()
-moviedb = Cinemagoer()
+
+tmdbsimple.API_KEY = "e84baa25b0bcce5b7146736be9c6dc96"
 
 
 @router.get(
@@ -51,16 +52,33 @@ async def create_session(
 
 
 async def add_movie(
-    imdb_id: str,
+    tmdb_id: str,
     session_id: str,
     db: AsyncSession = Depends(get_db),
 ):
-    movie = moviedb.get_movie(imdb_id)
+    movie = tmdbsimple.Movie(int(tmdb_id))
+    movie.info()
+    data = {
+        "title": movie.title,
+        "overview": movie.overview,
+        "tagline": movie.tagline,
+        "genres": [g["name"] for g in movie.genres],
+    }
+    tr = next(
+        item
+        for item in movie.translations()["translations"]
+        if item["iso_3166_1"] == "FR"
+    )["data"]
+    for c in ["title", "overview", "tagline"]:
+        if tr[c] != "":
+            data[c] = tr[c]
+
     db_session = schemas_cinema.CineSessionUpdate(
-        name=movie["localized title"],
-        overview=movie["plot outline"],
+        name=data["title"],
+        overview=data["overview"],
         poster_url=movie["full size poster url"],
-        genre=movie["genres"],
+        tagline=data["tagline"],
+        genre=data["genres"],
     )
     try:
         await cruds_cinema.update_session(

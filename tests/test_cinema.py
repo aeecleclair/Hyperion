@@ -73,6 +73,18 @@ def test_post_session():
     assert response.status_code == 201
 
 
+def test_post_tmdb_session():
+    response = client.post(
+        "/cinema/sessions/603",
+        json={
+            "start": "2022-10-23T14:00:00Z",
+            "duration": 90,
+        },
+        headers={"Authorization": f"Bearer {token_cinema}"},
+    )
+    assert response.status_code == 201
+
+
 def test_edit_session():
     response = client.patch(
         f"/cinema/sessions/{session.id}",
