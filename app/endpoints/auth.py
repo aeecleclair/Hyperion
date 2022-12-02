@@ -297,6 +297,14 @@ async def authorize_validation(
 
     # Special characters like `:` or `/` may be encoded as `%3A` and `%2F`, we need to decode them before returning the redirection object
     redirect_uri = urllib.parse.unquote(redirect_uri)
+    # if "://" not in redirect_uri:
+    #     logger.warning(
+    #         f"Authorize-validation: Invalid redirect_uri {redirect_uri} ({request_id})"
+    #     )
+    #     raise HTTPException(
+    #         status_code=422,
+    #         detail="Invalid redirect_uri, please make sure it starts with http or https",
+    #     )
 
     # Currently, `code` is the only flow supported
     if authorizereq.response_type != "code":
@@ -958,7 +966,7 @@ def create_response_body(
 )
 async def auth_get_userinfo(
     user: models_core.CoreUser = Depends(
-        get_user_from_token_with_scopes([ScopeType.openid])
+        get_user_from_token_with_scopes([[ScopeType.openid], [ScopeType.profile]])
     ),
     token_data: schemas_auth.TokenData = Depends(get_token_data),
     settings: Settings = Depends(get_settings),
