@@ -48,8 +48,9 @@ class Votes(Base):
 class HasVoted(Base):
     __tablename__ = "campaign_has_voted"
 
+    # There are two primary keys, has each user_id and section_id will be used multiple times but the combinaison of the two should always be unique
     user_id: str = Column(ForeignKey("core_user.id"), primary_key=True)
-    section_id: str = Column(ForeignKey("campaign_sections.id"))
+    section_id: str = Column(ForeignKey("campaign_sections.id"), primary_key=True)
 
 
 class Status(Base):

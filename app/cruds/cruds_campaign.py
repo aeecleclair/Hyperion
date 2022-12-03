@@ -271,9 +271,9 @@ async def mark_has_voted(db: AsyncSession, user_id: str, section_id: str) -> Non
     db.add(has_voted)
     try:
         await db.commit()
-    except IntegrityError:
+    except IntegrityError as error:
         await db.rollback()
-        raise ValueError("The user has already voted.")
+        raise ValueError(error)
 
 
 async def get_has_voted(
