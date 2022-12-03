@@ -98,3 +98,8 @@ class VoteStatus(BaseModel):
 class Result(BaseModel):
     list_id: str
     count: int
+
+
+class VoteStats(BaseModel):
+    section_id: str
+    has_voted: int

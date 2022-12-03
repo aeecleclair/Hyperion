@@ -510,6 +510,27 @@ async def get_status_vote(
     return schemas_campaign.VoteStatus(status=status)
 
 
+@router.get(
+    "/campaign/stats/{section_id}",
+    response_model=schemas_campaign.VoteStats,
+    status_code=200,
+    tags=[Tags.campaign],
+)
+async def get_vote_count(
+    section_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    status = await cruds_campaign.get_status(db=db)
+    if status != StatusType.open:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Stats can only be acceded during the vote. The current status is {status}",
+        )
+    count = await cruds_campaign.get_vote_count(db=db, section_id=section_id)
+    return schemas_campaign.VoteStats(section_id=section_id, count=count)
+
+
 @router.post(
     "/campaign/{object_id}/logo",
     response_model=standard_responses.Result,

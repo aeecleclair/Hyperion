@@ -157,6 +157,14 @@ def test_vote_if_opened():
     assert response.status_code == 204
 
 
+def test_get_stats():
+    token = create_api_access_token(admin_user)
+    response = client.get(
+        f"/campaign/stats/{section.id}", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert response.status_code == 200
+
+
 def test_get_section_voted_of_user():
     token = create_api_access_token(student_user)
     response = client.get(
