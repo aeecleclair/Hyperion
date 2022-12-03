@@ -130,7 +130,7 @@ class LogConfig:
                     "filename": "logs/security.log",
                     "maxBytes": 1024 * 1024 * 40,  # ~ 40 MB
                     "backupCount": 50,
-                    "level": "INFO",
+                    "level": "WARNING",
                 },
             },
             # We define various loggers which can be used by Hyperion.
@@ -143,8 +143,6 @@ class LogConfig:
                 "hyperion.access": {
                     "handlers": [
                         "file_access",
-                        "file_errors",
-                        "matrix_errors",
                         "debug_console",
                     ],
                     "level": MINIMUM_LOG_LEVEL,
@@ -152,7 +150,6 @@ class LogConfig:
                 "hyperion.security": {
                     "handlers": [
                         "file_security",
-                        "file_errors",
                         "matrix_errors",
                         "debug_console",
                     ],

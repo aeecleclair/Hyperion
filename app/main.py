@@ -1,7 +1,6 @@
 """Basic functions creating the database tables and calling the router"""
 
 import logging
-import logging.config
 import os
 import uuid
 from typing import Literal
