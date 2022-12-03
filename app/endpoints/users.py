@@ -1,7 +1,5 @@
 import logging
-import os
 import re
-import shutil
 import uuid
 from datetime import datetime, timedelta
 from os.path import exists
@@ -33,7 +31,7 @@ from app.dependencies import (
 from app.models import models_core
 from app.schemas import schemas_core
 from app.utils.mail.mailworker import send_email
-from app.utils.tools import fuzzy_search_user
+from app.utils.tools import fuzzy_search_user, save_file_to_the_disk
 from app.utils.types import standard_responses
 from app.utils.types.groups_type import AccountType, GroupType
 from app.utils.types.tags import Tags
@@ -675,33 +673,13 @@ async def create_current_user_profile_picture(
     **The user must be authenticated to use this endpoint**
     """
 
-    if image.content_type not in ["image/jpeg", "image/png", "image/webp"]:
-        raise HTTPException(
-            status_code=400, detail="Invalid file format, supported jpeg, png and webp"
-        )
-
-    # We need to go to the end of the file to be able to get the size of the file
-    image.file.seek(0, os.SEEK_END)
-    # Use file.tell() to retrieve the cursor's current position
-    file_size = image.file.tell()  # Bytes
-    print(file_size)
-    if file_size > 1024 * 1024 * 4:  # 4 MB
-        raise HTTPException(
-            status_code=413,
-            detail="File size is too big. Limit is 4 MB",
-        )
-    # We go back to the beginning of the file to save it on the disk
-    await image.seek(0)
-
-    try:
-        with open(f"data/profile-pictures/{user.id}.png", "wb") as buffer:
-            shutil.copyfileobj(image.file, buffer)
-
-    except Exception as error:
-        hyperion_error_logger.error(
-            f"Create_current_user_profile_picture: could not save profile picture: {error} ({request_id})"
-        )
-        raise HTTPException(status_code=422, detail="Could not save profile picture")
+    await save_file_to_the_disk(
+        image=image,
+        filename=f"profile-pictures/{user.id}.png",
+        request_id=request_id,
+        max_file_size=4 * 1024 * 1024,
+        accepted_content_types=["image/jpeg", "image/png", "image/webp"],
+    )
 
     return standard_responses.Result(success=True)
 

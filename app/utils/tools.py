@@ -1,3 +1,8 @@
+import logging
+import os
+import shutil
+
+from fastapi import HTTPException, UploadFile
 from rapidfuzz import process
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -5,6 +10,8 @@ from app.cruds import cruds_groups, cruds_users
 from app.models import models_core
 from app.models.models_core import CoreUser
 from app.utils.types.groups_type import GroupType
+
+hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 def is_user_member_of_an_allowed_group(
@@ -76,3 +83,53 @@ async def is_user_id_valid(user_id: str, db: AsyncSession) -> bool:
     Test if the provided user_id is a valid user.
     """
     return await cruds_users.get_user_by_id(db=db, user_id=user_id) is not None
+
+
+async def save_file_to_the_disk(
+    image: UploadFile,
+    filename: str,
+    request_id: str,
+    max_file_size: int = 1024 * 1024 * 2,  # 2 MB
+    accepted_content_types: list[str] = [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+    ],  # images only
+):
+    """
+    Save an image file to the disk.
+
+    - The file will be saved in the `data` folder: "data/{filename}"
+    - Maximum size is 2MB by default, it can be changed using `max_file_size` (in bytes) parameter.
+    - `accepted_content_types` is a list of accepted content types. By default, only images are accepted.
+        Use: `["image/jpeg", "image/png", "image/webp"]` to accept only images.
+
+    An HTTP Exception will be raised if an error occurres.
+    """
+    if image.content_type not in accepted_content_types:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid file format, supported {accepted_content_types}",
+        )
+
+    # We need to go to the end of the file to be able to get the size of the file
+    image.file.seek(0, os.SEEK_END)
+    # Use file.tell() to retrieve the cursor's current position
+    file_size = image.file.tell()  # Bytes
+    if file_size > max_file_size:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File size is too big. Limit is {max_file_size} MB",
+        )
+    # We go back to the beginning of the file to save it on the disk
+    await image.seek(0)
+
+    try:
+        with open(f"data/{filename}", "wb") as buffer:
+            shutil.copyfileobj(image.file, buffer)
+
+    except Exception as error:
+        hyperion_error_logger.error(
+            f"save_file_to_the_disk: could not save file to {filename}: {error} ({request_id})"
+        )
+        raise HTTPException(status_code=400, detail="Could not save file")
