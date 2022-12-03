@@ -457,7 +457,7 @@ async def get_sections_already_voted(
     status_code=200,
     tags=[Tags.campaign],
 )
-async def get_results_by_section(
+async def get_results(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
