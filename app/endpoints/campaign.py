@@ -1,6 +1,4 @@
 import logging
-import os
-import shutil
 import uuid
 from os.path import exists
 
@@ -12,6 +10,7 @@ from app.cruds import cruds_campaign, cruds_users
 from app.dependencies import get_db, get_request_id, is_user_a_member_of
 from app.models import models_campaign, models_core
 from app.schemas import schemas_campaign
+from app.utils.tools import save_file_to_the_disk
 from app.utils.types import standard_responses
 from app.utils.types.campaign_type import ListType, StatusType
 from app.utils.types.groups_type import GroupType
@@ -511,144 +510,62 @@ async def get_status_vote(
 
 
 @router.post(
-    "/campaign/{object_id}/logo",
+    "/campaign/lists/{list_id}/logo",
     response_model=standard_responses.Result,
     status_code=201,
     tags=[Tags.users],
 )
 async def create_campaigns_logo(
-    object_id: str,
+    list_id: str,
     image: UploadFile = File(...),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
     request_id: str = Depends(get_request_id),
     db: AsyncSession = Depends(get_db),
 ):
-    """Upload a logo for the campaign module. Can either be a section or a list logo."""
+    """
+    Upload a logo for a list.
+
+    **This endpoint is only usable by administrators**
+    """
+
     status = await cruds_campaign.get_status(db=db)
-    if status == StatusType.waiting:
-        if image.content_type not in ["image/jpeg", "image/png", "image/webp"]:
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid file format, supported jpeg, png and webp",
-            )
-
-        # We need to go to the end of the file to be able to get the size of the file
-        image.file.seek(0, os.SEEK_END)
-        # Use file.tell() to retrieve the cursor's current position
-        file_size = image.file.tell()  # Bytes
-        print(file_size)
-        if file_size > 1024 * 1024 * 4:  # 4 MB
-            raise HTTPException(
-                status_code=413,
-                detail="File size is too big. Limit is 4 MB",
-            )
-        # We go back to the beginning of the file to save it on the disk
-        await image.seek(0)
-
-        try:
-            with open(f"data/campaigns_logo/{object_id}.png", "wb") as buffer:
-                shutil.copyfileobj(image.file, buffer)
-
-        except Exception as error:
-            hyperion_error_logger.error(
-                f"Create_campaigns_logo: could not save logo: {error} ({request_id})"
-            )
-            raise HTTPException(status_code=422, detail="Could not save logo")
-
-        return standard_responses.Result(success=True)
-    else:
+    if status != StatusType.waiting:
         raise HTTPException(
-            status_code=403,
-            detail="You can't edit this if the vote has already begun",
+            status_code=400,
+            detail=f"Results can only be acceded in waiting mode. The current status is {status}",
         )
+
+    list = await cruds_campaign.get_list_by_id(db=db, list_id=list_id)
+    if list is None:
+        raise HTTPException(
+            status_code=404,
+            detail="The list does not exist.",
+        )
+
+    await save_file_to_the_disk(
+        image=image,
+        filename=f"campaigns/{list_id}.png",
+        request_id=request_id,
+        max_file_size=4 * 1024 * 1024,
+        accepted_content_types=["image/jpeg", "image/png", "image/webp"],
+    )
+
+    return standard_responses.Result(success=True)
 
 
 @router.get(
-    "/campaign/{object_id}/logo",
+    "/campaign/lists/{list_id}/logo",
     response_class=FileResponse,
     status_code=200,
     tags=[Tags.users],
 )
 async def read_campaigns_logo(
-    object_id: str,
-    # TODO: we may want to remove this user requirement to be able to display images easily in html code
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.student)),
-):
-
-    if not exists(f"data/campaigns_logo/{object_id}.png"):
-        return FileResponse("assets/images/default_campaigns_logo.png")
-
-    return FileResponse(f"data/campaigns_logo/{object_id}.png")
-
-
-@router.post(
-    "/campaign/{list_id}/group_photo",
-    response_model=standard_responses.Result,
-    status_code=201,
-    tags=[Tags.users],
-)
-async def create_list_group_pictures(
-    list_id: str,
-    image: UploadFile = File(...),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
-    request_id: str = Depends(get_request_id),
-    db: AsyncSession = Depends(get_db),
-):
-    """Upload a list group photo."""
-    status = await cruds_campaign.get_status(db=db)
-    if status == StatusType.waiting:
-        if image.content_type not in ["image/jpeg", "image/png", "image/webp"]:
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid file format, supported jpeg, png and webp",
-            )
-
-        # We need to go to the end of the file to be able to get the size of the file
-        image.file.seek(0, os.SEEK_END)
-        # Use file.tell() to retrieve the cursor's current position
-        file_size = image.file.tell()  # Bytes
-        print(file_size)
-        if file_size > 1024 * 1024 * 4:  # 4 MB
-            raise HTTPException(
-                status_code=413,
-                detail="File size is too big. Limit is 4 MB",
-            )
-        # We go back to the beginning of the file to save it on the disk
-        await image.seek(0)
-
-        try:
-            with open(
-                f"data/campaigns_logo/list_group_pictures/{list_id}.png", "wb"
-            ) as buffer:
-                shutil.copyfileobj(image.file, buffer)
-
-        except Exception as error:
-            hyperion_error_logger.error(
-                f"Create_campaigns_list_group_pictures: could not save logo: {error} ({request_id})"
-            )
-            raise HTTPException(status_code=422, detail="Could not save logo")
-
-        return standard_responses.Result(success=True)
-    else:
-        raise HTTPException(
-            status_code=403,
-            detail="You can't edit this if the vote has already begun",
-        )
-
-
-@router.get(
-    "/campaign/{list_id}/group_photo",
-    response_class=FileResponse,
-    status_code=200,
-    tags=[Tags.users],
-)
-async def read_list_group_photo(
     list_id: str,
     # TODO: we may want to remove this user requirement to be able to display images easily in html code
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.student)),
 ):
 
-    if not exists(f"data/campaigns_logo/list_group_pictures/{list_id}.png"):
+    if not exists(f"data/campaigns/{list_id}.png"):
         return FileResponse("assets/images/default_campaigns_logo.png")
 
-    return FileResponse(f"data/campaigns_logo/list_group_pictures/{list_id}.png")
+    return FileResponse(f"data/campaigns/{list_id}.png")
