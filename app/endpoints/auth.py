@@ -895,6 +895,11 @@ def create_response_body(
     granted_scopes_set: Set[ScopeType] = auth_client.filter_scopes(
         requested_scopes=requested_scopes_set
     )
+    refused_scopes = requested_scopes_set - granted_scopes_set
+    if refused_scopes:
+        hyperion_security_logger.warning(
+            f"Token authorization_code_grant: Refused scopes {refused_scopes} for client {client_id} ({request_id})"
+        )
 
     granted_scopes = " ".join(granted_scopes_set)
 
