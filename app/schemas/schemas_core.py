@@ -6,6 +6,7 @@ from pydantic import BaseModel, validator
 
 from app.utils import validators
 from app.utils.examples import examples_core
+from app.utils.types.floors_type import FloorsType
 from app.utils.types.groups_type import AccountType
 
 
@@ -59,7 +60,7 @@ class CoreUser(CoreUserSimple):
     email: str
     birthday: date | None = None
     promo: int | None = None
-    floor: str
+    floor: FloorsType
     created_on: datetime | None = None
     groups: list[CoreGroupSimple] = []
 
@@ -72,7 +73,7 @@ class CoreUserUpdate(BaseModel):
     nickname: str | None = None
     birthday: date | None = None
     promo: int | None = None
-    floor: str | None = None
+    floor: FloorsType | None = None
 
     class Config:
         schema_extra = examples_core.example_CoreUserUpdate
@@ -119,7 +120,7 @@ class CoreUserActivateRequest(CoreUserBase):
     birthday: date | None = None
     phone: str | None = None
     promo: int | None = None
-    floor: str
+    floor: FloorsType
 
     # Password validator
     # https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
