@@ -256,9 +256,10 @@ async def has_user_voted_for_section(
 ) -> bool:
     """Return HasVoted object from the db."""
     result = await db.execute(
-        select(models_campaign.HasVoted)
-        .where(models_campaign.HasVoted.user_id == user_id)
-        .where(models_campaign.HasVoted.section_id == section_id)
+        select(models_campaign.HasVoted).where(
+            models_campaign.HasVoted.user_id == user_id,
+            models_campaign.HasVoted.section_id == section_id,
+        )
     )
     has_voted: models_campaign.HasVoted | None = result.scalars().first()
     return has_voted is not None
