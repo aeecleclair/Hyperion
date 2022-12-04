@@ -289,8 +289,11 @@ async def open_voting(
 
     # Archive all changes to a json file
     lists = await cruds_campaign.get_lists(db=db)
-    with open(f"data/campaigns/lists-{datetime.now()}.json", "w") as file:
-        json.dump(lists, file)
+    with open(
+        rf"data\campaigns\lists-{str(datetime.now()).replace(' ','-').replace(':','-')}.json",
+        "w",
+    ) as file:
+        json.dump([liste.as_dict() for liste in lists], file)
 
 
 @router.post(
@@ -371,8 +374,13 @@ async def reset_vote(
     try:
         # Archive results to a json file
         results = await get_results(db=db, user=user)
-        with open(f"data/campaigns/results-{datetime.now()}.json", "w") as file:
-            json.dump(results, file)
+        with open(
+            rf"data\campaigns\results-{str(datetime.now()).replace(' ','-').replace(':','-')}.json",
+            "w",
+        ) as file:
+            json.dump(
+                [{"list_id": res.list_id, "count": res.count} for res in results], file
+            )
 
         await cruds_campaign.reset_campaign(db=db)
         await cruds_campaign.set_status(

@@ -99,6 +99,9 @@ class Result(BaseModel):
     list_id: str
     count: int
 
+    class Config:
+        orm_mode = True
+
 
 class VoteStats(BaseModel):
     section_id: str

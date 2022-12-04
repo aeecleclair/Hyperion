@@ -37,6 +37,9 @@ class Lists(Base):
         "ListMemberships", back_populates="lists"
     )
 
+    def as_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
 
 class Votes(Base):
     __tablename__ = "campaign_votes"
