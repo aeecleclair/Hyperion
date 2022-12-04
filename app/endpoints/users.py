@@ -621,7 +621,6 @@ async def read_user(
     tags=[Tags.users],
 )
 async def delete_user(
-    user_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
     settings: Settings = Depends(get_settings),
