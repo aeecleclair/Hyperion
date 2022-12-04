@@ -137,12 +137,14 @@ async def delete_lists_from_section(db: AsyncSession, section_id: str) -> None:
 async def get_lists(db: AsyncSession) -> list[models_campaign.Lists]:
     """Return all the campaign lists."""
     result = await db.execute(
-        select(models_campaign.Lists).options(
+        select(models_campaign.Lists)
+        .options(
             selectinload(models_campaign.Lists.members).selectinload(
                 models_campaign.ListMemberships.user
             ),
             selectinload(models_campaign.Lists.section),
         )
+        .order_by(models_campaign.Lists.type)
     )
     lists = result.scalars().all()
     return lists
@@ -303,9 +305,11 @@ async def delete_votes(db: AsyncSession) -> None:
 
 async def reset_campaign(db: AsyncSession) -> None:
     """Reset the campaign."""
-    await db.execute(delete(models_campaign.ListMemberships))
-    await db.execute(delete(models_campaign.Sections))
-    await db.execute(delete(models_campaign.Lists))
+    await db.execute(
+        delete(models_campaign.Lists).where(
+            models_campaign.Lists.type == ListType.blank
+        )
+    )
     await db.execute(delete(models_campaign.Votes))
     await db.execute(delete(models_campaign.HasVoted))
     await db.commit()
