@@ -1,5 +1,7 @@
+import json
 import logging
 import uuid
+from datetime import datetime
 from os.path import exists
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
@@ -17,6 +19,7 @@ from app.utils.types.groups_type import GroupType
 from app.utils.types.tags import Tags
 
 router = APIRouter()
+
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
@@ -284,6 +287,11 @@ async def open_voting(
     # Set the status to open
     await cruds_campaign.set_status(db=db, new_status=StatusType.open)
 
+    # Archive all changes to a json file
+    lists = await cruds_campaign.get_lists(db=db)
+    with open(f"data/campaigns/lists-{datetime.now()}.json", "w") as file:
+        json.dump(lists, file)
+
 
 @router.post(
     "/campaign/status/close",
@@ -361,13 +369,18 @@ async def reset_vote(
         )
 
     try:
+        # Archive results to a json file
+        results = await get_results(db=db, user=user)
+        with open(f"data/campaigns/results-{datetime.now()}.json", "w") as file:
+            json.dump(results, file)
+
         await cruds_campaign.reset_campaign(db=db)
         await cruds_campaign.set_status(
             db=db,
             new_status=StatusType.waiting,
         )
     except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @router.post(
