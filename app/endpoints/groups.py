@@ -20,6 +20,8 @@ from app.utils.types.tags import Tags
 
 router = APIRouter()
 
+hyperion_security_logger = logging.getLogger("hyperion.security")
+
 
 hyperion_security_logger = logging.getLogger("hyperion.security")
 
@@ -144,6 +146,7 @@ async def create_membership(
     membership: schemas_core.CoreMembership,
     db: AsyncSession = Depends(get_db),
     user=Depends(is_user_a_member_of(GroupType.admin)),
+    request_id: str = Depends(get_request_id),
 ):
     """
     Create a new membership in database and return the group. This allows to "add a user to a group".
@@ -153,10 +156,16 @@ async def create_membership(
 
     # We need to check provided ids are valid
     # TODO: use tools function
-    if not await cruds_groups.get_group_by_id(group_id=membership.group_id, db=db):
+    group_db = await cruds_groups.get_group_by_id(group_id=membership.group_id, db=db)
+    if group_db is None:
         raise HTTPException(status_code=400, detail="Invalid group_id")
-    if not await cruds_users.get_user_by_id(user_id=membership.user_id, db=db):
+    user_db = await cruds_users.get_user_by_id(user_id=membership.user_id, db=db)
+    if user_db is None:
         raise HTTPException(status_code=400, detail="Invalid user_id")
+
+    hyperion_security_logger.warning(
+        f"Create_membership: Admin user {user.id} ({user.name}) added user {user_db.id} ({user_db.email}) to group {group_db.id} ({group_db.name}) ({request_id})"
+    )
 
     try:
         membership_db = models_core.CoreMembership(
@@ -224,12 +233,17 @@ async def delete_membership(
     membership: schemas_core.CoreMembershipDelete,
     db: AsyncSession = Depends(get_db),
     user=Depends(is_user_a_member_of(GroupType.admin)),
+    request_id: str = Depends(get_request_id),
 ):
     """
     Delete a membership using the user and group ids.
 
     **This endpoint is only usable by administrators**
     """
+
+    hyperion_security_logger.warning(
+        f"Create_membership: Admin user {user.id} ({user.name}) removed user {membership.user_id} from group {membership.group_id} ({request_id})"
+    )
 
     await cruds_groups.delete_membership_by_group_and_user_id(
         group_id=membership.group_id, user_id=membership.user_id, db=db
