@@ -625,11 +625,16 @@ async def delete_user(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
     settings: Settings = Depends(get_settings),
     background_tasks: BackgroundTasks = BackgroundTasks(),
+    request_id: str = Depends(get_request_id),
 ):
     """
     This endpoint will ask administrators to process to the user deletion.
     This manual verification is needed to prevent data from being deleting for other users
     """
+    hyperion_security_logger.warning(
+        f"Delete_user: User {user.email} - {user.id} has requested to delete their account ({request_id})"
+    )
+
     if settings.SMTP_ACTIVE:
         background_tasks.add_task(
             send_email,
