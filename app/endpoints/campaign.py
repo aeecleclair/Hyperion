@@ -32,7 +32,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 )
 async def get_sections(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.student)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.AE)),
 ):
     """
     Return sections in the database as a list of `schemas_campaign.SectionBase`
@@ -113,7 +113,7 @@ async def delete_section(
 )
 async def get_lists(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.student)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.AE)),
 ):
     """Return lists"""
     lists = await cruds_campaign.get_lists(db=db)
@@ -399,7 +399,7 @@ async def reset_vote(
 async def vote(
     vote: schemas_campaign.VoteBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.student)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.AE)),
 ):
     """
     Add a vote
@@ -454,7 +454,7 @@ async def vote(
 )
 async def get_sections_already_voted(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.student)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.AE)),
 ):
     """
     Return the list of id of sections an user has already voted for.
@@ -523,7 +523,7 @@ async def get_results(
 )
 async def get_status_vote(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.student)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.AE)),
 ):
 
     status = await cruds_campaign.get_status(db=db)
@@ -583,7 +583,7 @@ async def create_campaigns_logo(
 async def read_campaigns_logo(
     list_id: str,
     # TODO: we may want to remove this user requirement to be able to display images easily in html code
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.student)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.AE)),
 ):
 
     if not exists(f"data/campaigns/{list_id}.png"):
