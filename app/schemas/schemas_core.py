@@ -200,6 +200,16 @@ class CoreMembership(BaseModel):
     description: str | None = None
 
 
+class CoreBatchMembership(BaseModel):
+    """
+    Schema for batch membership creation
+    """
+
+    user_emails: list[str]
+    group_id: str
+    description: str | None = None
+
+
 class CoreMembershipDelete(BaseModel):
 
     user_id: str
