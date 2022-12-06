@@ -281,7 +281,7 @@ async def create_user(
             send_email,
             recipient=email,
             subject="MyECL - confirm your email",
-            content=f"Please confirm your MyECL account with the token {activation_token} : https://hyperion.myecl.fr/users/activate?activation_token={activation_token}",
+            content=f"Please confirm your MyECL account by using the following token in the application : {activation_token}",
             settings=settings,
         )
     hyperion_security_logger.info(
