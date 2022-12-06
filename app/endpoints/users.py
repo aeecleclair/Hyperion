@@ -257,7 +257,7 @@ async def create_user(
         raise ValueError(f"An account with the email {email} already exist")
     # There might be an unconfirmed user in the database but its not an issue. We will generate a second activation token.
 
-    activation_token = security.generate_token()
+    activation_token = security.generate_token(nbytes=8)
 
     # Add the unconfirmed user to the unconfirmed_user table
 
@@ -281,7 +281,7 @@ async def create_user(
             send_email,
             recipient=email,
             subject="MyECL - confirm your email",
-            content=f"Please confirm your MyECL account with the token {activation_token} : https://hyperion.myecl.fr/users/activate?activation_token={activation_token}",
+            content=f"Please confirm your MyECL account by using the following token in the application : {activation_token}",
             settings=settings,
         )
     hyperion_security_logger.info(
