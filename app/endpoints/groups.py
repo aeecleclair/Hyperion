@@ -167,8 +167,7 @@ async def create_membership(
 
 @router.post(
     "/groups/batch-membership",
-    response_model=schemas_core.CoreGroup,
-    status_code=201,
+    status_code=204,
     tags=[Tags.groups],
 )
 async def create_batch_membership(
@@ -204,7 +203,11 @@ async def create_batch_membership(
                 group_id=batch_membership.group_id,
                 description=batch_membership.description,
             )
-            return await cruds_groups.create_membership(db=db, membership=membership_db)
+            try:
+                await cruds_groups.create_membership(db=db, membership=membership_db)
+            except ValueError:
+                pass
+
         # If the user does not exist, we will pass silently
 
 
