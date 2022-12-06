@@ -5,19 +5,23 @@ Group management is part of the core of Hyperion. These endpoints allow managing
 """
 
 
+import logging
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cruds import cruds_groups, cruds_users
-from app.dependencies import get_db, is_user_a_member_of
+from app.dependencies import get_db, get_request_id, is_user_a_member_of
 from app.models import models_core
 from app.schemas import schemas_core
 from app.utils.types.groups_type import GroupType
 from app.utils.types.tags import Tags
 
 router = APIRouter()
+
+
+hyperion_security_logger = logging.getLogger("hyperion.security")
 
 
 @router.get(
