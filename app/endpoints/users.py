@@ -147,7 +147,7 @@ async def create_user_by_user(
         # Its a staff email address
         account_type = AccountType.staff
     elif re.match(
-        r"^[\w\-.]*@(ecl\d{2})|(alternance\d{4})|(auditeur)?.ec-lyon.fr$",
+        r"^[\w\-.]*@((ecl\d{2})|(alternance\d{4})|(auditeur)).ec-lyon.fr$",
         user_create.email,
     ):
         # Its a student email address
