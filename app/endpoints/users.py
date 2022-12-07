@@ -631,18 +631,9 @@ async def delete_user(
     This endpoint will ask administrators to process to the user deletion.
     This manual verification is needed to prevent data from being deleting for other users
     """
-    hyperion_security_logger.warning(
-        f"Delete_user: User {user.email} - {user.id} has requested to delete their account ({request_id})"
+    hyperion_security_logger.info(
+        f"User {user.email} - {user.id} has requested to delete their account."
     )
-
-    if settings.SMTP_ACTIVE:
-        background_tasks.add_task(
-            send_email,
-            recipient=settings.SMTP_USERNAME,
-            subject="Account deletion request",
-            content=f"User {user.email} - {user.id} has requested to delete their account.",
-            settings=settings,
-        )
 
 
 @router.patch(
