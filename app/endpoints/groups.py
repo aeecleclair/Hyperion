@@ -205,7 +205,7 @@ async def delete_group(
     **This endpoint is only usable by administrators**
     """
 
-    if group_id in GroupType:
+    if group_id in set(item.value for item in GroupType):
         raise HTTPException(
             status_code=400, detail="GroupTypes groups can not be deleted"
         )
