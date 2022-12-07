@@ -12,7 +12,7 @@ from tests.commons import (
 )
 
 admin_user: models_core.CoreUser | None = None
-student_user: models_core.CoreUser | None = None
+ae_user: models_core.CoreUser | None = None
 
 section: models_campaign.Sections | None = None
 list: models_campaign.Lists | None = None
@@ -23,11 +23,11 @@ list2id: str = ""
 
 @app.on_event("startup")  # create the datas needed in the tests
 async def startuptest():
-    global admin_user, student_user
+    global admin_user, ae_user
 
     async with TestingSessionLocal() as db:
         admin_user = await create_user_with_groups([GroupType.admin], db=db)
-        student_user = await create_user_with_groups([GroupType.student], db=db)
+        ae_user = await create_user_with_groups([GroupType.AE], db=db)
 
         await db.commit()
 
@@ -52,7 +52,7 @@ async def startuptest():
                     user_id=admin_user.id, list_id=list_id, role="Prez"
                 ),
                 models_campaign.ListMemberships(
-                    user_id=student_user.id, list_id=list_id, role="SG"
+                    user_id=ae_user.id, list_id=list_id, role="SG"
                 ),
             ],
         )
@@ -62,7 +62,7 @@ async def startuptest():
 
 
 def test_get_sections():
-    token = create_api_access_token(student_user)
+    token = create_api_access_token(ae_user)
     response = client.get(
         "/campaign/sections", headers={"Authorization": f"Bearer {token}"}
     )
@@ -85,7 +85,7 @@ def test_add_sections():
 
 
 def test_get_lists():
-    token = create_api_access_token(student_user)
+    token = create_api_access_token(ae_user)
     response = client.get(
         "/campaign/lists",
         headers={"Authorization": f"Bearer {token}"},
@@ -130,7 +130,7 @@ def test_delete_section():
 
 
 def test_vote_if_not_opened():
-    token = create_api_access_token(student_user)
+    token = create_api_access_token(ae_user)
     response = client.post(
         "/campaign/votes",
         headers={"Authorization": f"Bearer {token}"},
@@ -148,7 +148,7 @@ def test_open_vote():
 
 
 def test_vote_if_opened():
-    token = create_api_access_token(student_user)
+    token = create_api_access_token(ae_user)
     response = client.post(
         "/campaign/votes",
         headers={"Authorization": f"Bearer {token}"},
@@ -158,7 +158,7 @@ def test_vote_if_opened():
 
 
 def test_get_section_voted_of_user():
-    token = create_api_access_token(student_user)
+    token = create_api_access_token(ae_user)
     response = client.get(
         "/campaign/votes",
         headers={"Authorization": f"Bearer {token}"},

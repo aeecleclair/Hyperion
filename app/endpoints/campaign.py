@@ -290,7 +290,7 @@ async def open_voting(
     # Archive all changes to a json file
     lists = await cruds_campaign.get_lists(db=db)
     with open(
-        rf"data\campaigns\lists-{str(datetime.now()).replace(' ','-').replace(':','-')}.json",
+        f"data/campaigns/lists-{datetime.now().isoformat(sep='-',timespec='minutes').replace(':','-')}.json",
         "w",
     ) as file:
         json.dump([liste.as_dict() for liste in lists], file)
@@ -375,7 +375,7 @@ async def reset_vote(
         # Archive results to a json file
         results = await get_results(db=db, user=user)
         with open(
-            rf"data\campaigns\results-{str(datetime.now()).replace(' ','-').replace(':','-')}.json",
+            f"data/campaigns/results-{datetime.now().isoformat(sep='-',timespec='minutes').replace(':','-')}.json",
             "w",
         ) as file:
             json.dump(
