@@ -622,7 +622,7 @@ async def read_user(
 )
 async def delete_user(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
     settings: Settings = Depends(get_settings),
     background_tasks: BackgroundTasks = BackgroundTasks(),
     request_id: str = Depends(get_request_id),
