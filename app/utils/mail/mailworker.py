@@ -19,7 +19,7 @@ def send_email(recipient: str, subject: str, content: str, settings: Settings):
     context = ssl.create_default_context()
 
     msg = EmailMessage()
-    msg.set_content(content, subtype="plain", charset="us-ascii")
+    msg.set_content(content, subtype="plain", charset="utf-8")
     msg["From"] = settings.SMTP_EMAIL
     msg["To"] = recipient
     msg["Subject"] = subject

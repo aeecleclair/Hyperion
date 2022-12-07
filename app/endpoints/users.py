@@ -197,7 +197,7 @@ async def create_user_by_user(
 
 @router.post(
     "/users/batch-creation",
-    response_model=standard_responses.Result,
+    response_model=standard_responses.BatchResult,
     status_code=201,
     tags=[Tags.users],
 )
@@ -233,7 +233,7 @@ async def batch_create_users(
                 request_id=request_id,
             )
         except Exception as error:
-            failed[user_create.email] = error
+            failed[user_create.email] = str(error)
 
     return standard_responses.BatchResult(failed=failed)
 
