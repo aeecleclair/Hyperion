@@ -43,6 +43,15 @@ async def set_status(
     await db.commit()
 
 
+async def get_vote_count(db: AsyncSession, section_id: str):
+    count = await db.execute(
+        select(models_campaign.HasVoted).where(
+            models_campaign.Sections.id == section_id
+        )
+    )
+    return len(count.scalars().all())
+
+
 async def add_blank_option(db: AsyncSession):
     result = await db.execute(select(models_campaign.Sections.id))
     sections_ids = result.scalars().all()
