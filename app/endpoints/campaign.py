@@ -12,7 +12,7 @@ from app.cruds import cruds_campaign, cruds_users
 from app.dependencies import get_db, get_request_id, is_user_a_member_of
 from app.models import models_campaign, models_core
 from app.schemas import schemas_campaign
-from app.utils.tools import save_file_to_the_disk
+from app.utils.tools import is_user_member_of_an_allowed_group, save_file_to_the_disk
 from app.utils.types import standard_responses
 from app.utils.types.campaign_type import ListType, StatusType
 from app.utils.types.groups_type import GroupType
@@ -349,6 +349,32 @@ async def count_voting(
 
 
 @router.post(
+    "/campaign/status/published",
+    status_code=204,
+    tags=[Tags.campaign],
+)
+async def publish_voting(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    If the status is 'counting', change it to 'published'.
+
+    When the status is 'published', everyone can see the results of the vote.
+
+    **This endpoint is only usable by administrators**
+    """
+    status = await cruds_campaign.get_status(db=db)
+    if status != StatusType.counting:
+        raise HTTPException(
+            status_code=400,
+            detail=f"The vote can only be set to counting if it is closed. The current status is {status}",
+        )
+
+    await cruds_campaign.set_status(db=db, new_status=StatusType.published)
+
+
+@router.post(
     "/campaign/status/reset",
     status_code=204,
     tags=[Tags.campaign],
@@ -360,7 +386,7 @@ async def reset_vote(
     """
     Reset the vote.
 
-    WARNING: This will delete all votes, lists and sections. This will put the module to Waiting status.
+    WARNING: This will delete all votes. This will put the module to Waiting status.
 
     **This endpoint is only usable by administrators**
     """
@@ -480,39 +506,41 @@ async def get_sections_already_voted(
 )
 async def get_results(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.AE)),
 ):
     """
     Return the results of the vote.
 
-    **This endpoint is only usable by administrators**
     """
     status = await cruds_campaign.get_status(db=db)
-    if status != StatusType.counting:
+    if (
+        status == StatusType.counting
+        and is_user_member_of_an_allowed_group(user, [GroupType.admin])
+    ) or status == StatusType.published:
+        votes = await cruds_campaign.get_votes(db=db)
+
+        count_by_list = {}
+        for vote in votes:
+            if vote.list_id not in count_by_list:
+                count_by_list[vote.list_id] = 0
+
+            count_by_list[vote.list_id] += 1
+
+        results = []
+
+        for list_id, count in count_by_list.items():
+            results.append(
+                schemas_campaign.Result(
+                    list_id=list_id,
+                    count=count,
+                )
+            )
+        return results
+    else:
         raise HTTPException(
             status_code=400,
-            detail=f"Results can only be acceded in counting mode. The current status is {status}",
+            detail=f"Results can only be acceded by admins in counting mode or by everyone in published mode. The current status is {status}",
         )
-
-    votes = await cruds_campaign.get_votes(db=db)
-
-    count_by_list = {}
-    for vote in votes:
-        if vote.list_id not in count_by_list:
-            count_by_list[vote.list_id] = 0
-
-        count_by_list[vote.list_id] += 1
-
-    results = []
-
-    for list_id, count in count_by_list.items():
-        results.append(
-            schemas_campaign.Result(
-                list_id=list_id,
-                count=count,
-            )
-        )
-    return results
 
 
 @router.get(

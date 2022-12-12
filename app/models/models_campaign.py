@@ -36,6 +36,7 @@ class Lists(Base):
     members: list[ListMemberships] = relationship(
         "ListMemberships", back_populates="lists"
     )
+    program: str = Column(String)
 
     def as_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}

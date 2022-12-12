@@ -20,3 +20,4 @@ class StatusType(str, Enum):
     open = "open"  # No modification possible, votes possible
     closed = "closed"  # Nothing possible except for the counting
     counting = "counting"  # Consult the results or delete every votes
+    published = "published"
