@@ -50,10 +50,10 @@ async def get_sections(
 async def add_section(
     section: schemas_campaign.SectionBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """
-    Allow an admin to add a section of AEECL to the database.
+    Allow an CAA to add a section of AEECL to the database.
 
     **This endpoint is only usable by administrators**
     """
@@ -84,10 +84,10 @@ async def add_section(
 async def delete_section(
     section_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """
-    Allow an admin to delete a section of AEECL from the database.
+    Allow an CAA to delete a section of AEECL from the database.
 
     **This endpoint is only usable by administrators**
     """
@@ -129,9 +129,9 @@ async def get_lists(
 async def add_list(
     list: schemas_campaign.ListBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
-    """Allow an admin to add a campaign list to a section.
+    """Allow an CAA to add a campaign list to a section.
 
     **This endpoint is only usable by administrators**
     """
@@ -178,6 +178,7 @@ async def add_list(
         section_id=list.section_id,
         type=list.type,
         members=members,
+        program=list.program,
     )
     try:
         await cruds_campaign.add_list(campaign_list=model_list, db=db)
@@ -195,9 +196,9 @@ async def add_list(
 async def delete_list(
     list_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
-    """Allow an admin to delete the list with the given id.
+    """Allow an CAA to delete the list with the given id.
 
     **This endpoint is only usable by administrators**"""
 
@@ -223,9 +224,9 @@ async def update_list(
     list_id: str,
     campaign_list: schemas_campaign.ListEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
-    """Allow an admin to update the list with the given id.
+    """Allow an CAA to update the list with the given id.
 
     **This endpoint is only usable by administrators**
     """
@@ -266,7 +267,7 @@ async def update_list(
 )
 async def open_voting(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """
     If the status is 'waiting', change it to 'voting' and create the blank lists.
@@ -303,7 +304,7 @@ async def open_voting(
 )
 async def close_voting(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """
     If the status is 'open', change it to 'closed'.
@@ -329,7 +330,7 @@ async def close_voting(
 )
 async def count_voting(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """
     If the status is 'closed', change it to 'counting'.
@@ -355,7 +356,7 @@ async def count_voting(
 )
 async def publish_voting(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """
     If the status is 'counting', change it to 'published'.
@@ -381,7 +382,7 @@ async def publish_voting(
 )
 async def reset_vote(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """
     Reset the vote.
@@ -515,7 +516,7 @@ async def get_results(
     status = await cruds_campaign.get_status(db=db)
     if (
         status == StatusType.counting
-        and is_user_member_of_an_allowed_group(user, [GroupType.admin])
+        and is_user_member_of_an_allowed_group(user, [GroupType.CAA])
     ) or status == StatusType.published:
         votes = await cruds_campaign.get_votes(db=db)
 
@@ -558,8 +559,29 @@ async def get_status_vote(
     return schemas_campaign.VoteStatus(status=status)
 
 
+@router.get(
+    "/campaign/stats/{section_id}",
+    response_model=schemas_campaign.VoteStats,
+    status_code=200,
+    tags=[Tags.campaign],
+)
+async def get_vote_count(
+    section_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
+):
+    status = await cruds_campaign.get_status(db=db)
+    if status != StatusType.open:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Stats can only be acceded during the vote. The current status is {status}",
+        )
+    count = await cruds_campaign.get_vote_count(db=db, section_id=section_id)
+    return schemas_campaign.VoteStats(section_id=section_id, count=count)
+
+
 @router.post(
-    "/campaign/lists/{list_id}/logo",
+    "/campaign/{object_id}/logo",
     response_model=standard_responses.Result,
     status_code=201,
     tags=[Tags.users],
@@ -567,7 +589,7 @@ async def get_status_vote(
 async def create_campaigns_logo(
     list_id: str,
     image: UploadFile = File(...),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
     request_id: str = Depends(get_request_id),
     db: AsyncSession = Depends(get_db),
 ):

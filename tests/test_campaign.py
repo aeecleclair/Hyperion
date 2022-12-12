@@ -26,7 +26,7 @@ async def startuptest():
     global admin_user, ae_user
 
     async with TestingSessionLocal() as db:
-        admin_user = await create_user_with_groups([GroupType.admin], db=db)
+        admin_user = await create_user_with_groups([GroupType.CAA, GroupType.AE], db=db)
         ae_user = await create_user_with_groups([GroupType.AE], db=db)
 
         await db.commit()
@@ -55,6 +55,7 @@ async def startuptest():
                     user_id=ae_user.id, list_id=list_id, role="SG"
                 ),
             ],
+            program="Mon program",
         )
         db.add(section)
         db.add(list)
@@ -104,6 +105,7 @@ def test_add_list():
             "type": "Serio",
             "section_id": section.id,
             "members": [{"user_id": admin_user.id, "role": "Prez"}],
+            "program": "Contacter la DSI",
         },
     )
     assert response.status_code == 201
