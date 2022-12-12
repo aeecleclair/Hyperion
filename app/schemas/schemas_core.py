@@ -210,6 +210,14 @@ class CoreBatchMembership(BaseModel):
     description: str | None = None
 
 
+class CoreBatchDeleteMembership(BaseModel):
+    """
+    Schema for batch membership deletion
+    """
+
+    group_id: str
+
+
 class CoreMembershipDelete(BaseModel):
 
     user_id: str

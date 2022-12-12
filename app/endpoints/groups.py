@@ -237,6 +237,38 @@ async def delete_membership(
 
 
 @router.delete(
+    "/groups/batch-membership",
+    status_code=204,
+    tags=[Tags.groups],
+)
+async def delete_batch_membership(
+    batch_membership: schemas_core.CoreBatchDeleteMembership,
+    db: AsyncSession = Depends(get_db),
+    user=Depends(is_user_a_member_of(GroupType.admin)),
+    request_id: str = Depends(get_request_id),
+):
+    """
+    This endpoint removes all users from a given group.
+
+    **This endpoint is only usable by administrators**
+    """
+
+    group_db = await cruds_groups.get_group_by_id(
+        group_id=batch_membership.group_id, db=db
+    )
+    if group_db is None:
+        raise HTTPException(status_code=400, detail="Invalid group_id")
+
+    hyperion_security_logger.warning(
+        f"Create_batch_membership: Admin user {user.id} ({user.name}) removed all users from group {group_db.id} ({group_db.name}) in batch ({request_id})"
+    )
+
+    await cruds_groups.delete_membership_by_group_id(
+        group_id=batch_membership.group_id, db=db
+    )
+
+
+@router.delete(
     "/groups/{group_id}",
     status_code=204,
     tags=[Tags.groups],
