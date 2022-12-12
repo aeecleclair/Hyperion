@@ -392,7 +392,7 @@ async def reset_vote(
     **This endpoint is only usable by administrators**
     """
     status = await cruds_campaign.get_status(db=db)
-    if status != StatusType.published:
+    if status not in [StatusType.published, StatusType.counting]:
         raise HTTPException(
             status_code=400,
             detail=f"The vote can only be reset in Counting Published. The current status is {status}",
