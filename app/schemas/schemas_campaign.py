@@ -41,7 +41,7 @@ class ListBase(BaseModel):
     type: ListType
     section_id: str
     members: list[ListMemberBase]
-    program: str
+    program: str | None
 
 
 class ListComplete(ListBase):
@@ -68,7 +68,7 @@ class ListReturn(BaseModel):
     type: ListType
     section: SectionComplete
     members: list[ListMemberComplete]
-    program: str
+    program: str | None
 
     class Config:
         orm_mode = True
