@@ -111,16 +111,14 @@ class NextcloudAuthClient(BaseAuthClient):
 
         return {
             "sub": user.id,
-            "name": user.firstname,
-            "given_name": user.nickname,
-            "family_name": user.name,
-            "preferred_username": user.nickname,
+            "name": f"{user.firstname} {user.name} ({user.nickname})",
             # TODO: should we use group ids instead of names? It would be less human readable but would guarantee uniqueness. Question: are group names unique?
-            "ownCloudGroups": [
+            "groups": [
                 group.name for group in user.groups
-            ],  # ["pixels"], # We may want to filter which groups are provided as they won't always all be useful
+            ],  # We may want to filter which groups are provided as they won't always all be useful
             "email": user.email,
-            "picture": "",  # TODO: add a PFP
+            "picture": f"https://hyperion.myecl.fr/users/{user.id}/profile-picture/",
+            "is_admin": True,
         }
 
 
