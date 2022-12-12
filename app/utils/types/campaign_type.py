@@ -19,5 +19,5 @@ class StatusType(str, Enum):
     waiting = "waiting"  # Lists and sections can be added and modified
     open = "open"  # No modification possible, votes possible
     closed = "closed"  # Nothing possible except for the counting
-    counting = "counting"  # Consult the results or delete every votes
-    published = "published"
+    counting = "counting"  # Admin can consult the results before making them public
+    published = "published"  # All results are public
