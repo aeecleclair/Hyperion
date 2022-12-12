@@ -714,8 +714,6 @@ async def create_current_user_profile_picture(
 )
 async def read_user_profile_picture(
     user_id: str,
-    # TODO: we may want to remove this user requirement to be able to display images easily in html code
-    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Get the profile picture of an user.
