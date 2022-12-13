@@ -14,6 +14,9 @@ class CoreInformation(BaseModel):
 
     ready: bool
     version: str
+    minimal_titan_version_code: int
+
+    # Depreciated, minimal_titan_version_code should be used
     minimal_titan_version: str
 
 
