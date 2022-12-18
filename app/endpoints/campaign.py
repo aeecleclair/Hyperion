@@ -36,6 +36,8 @@ async def get_sections(
 ):
     """
     Return sections in the database as a list of `schemas_campaign.SectionBase`
+
+    **The user must be a member of the group AE to use this endpoint**
     """
     sections = await cruds_campaign.get_sections(db)
     return sections
@@ -53,9 +55,11 @@ async def add_section(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """
-    Allow an CAA to add a section of AEECL to the database.
+    Add a section of AEECL.
 
-    **This endpoint is only usable by administrators**
+    This endpoint can only be used in 'waiting' status.
+
+    **The user must be a member of the group CAA to use this endpoint**
     """
     status = await cruds_campaign.get_status(db=db)
     if status != StatusType.waiting:
@@ -87,9 +91,11 @@ async def delete_section(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """
-    Allow an CAA to delete a section of AEECL from the database.
+    Delete a section of AEECL.
 
-    **This endpoint is only usable by administrators**
+    This endpoint can only be used in 'waiting' status.
+
+    **The user must be a member of the group CAA to use this endpoint**
     """
 
     status = await cruds_campaign.get_status(db=db)
@@ -115,7 +121,11 @@ async def get_lists(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.AE)),
 ):
-    """Return lists"""
+    """
+    Return campaign lists registered for the vote.
+
+    **The user must be a member of the group AE to use this endpoint**
+    """
     lists = await cruds_campaign.get_lists(db=db)
     return lists
 
@@ -131,9 +141,12 @@ async def add_list(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
-    """Allow an CAA to add a campaign list to a section.
+    """
+    Add a campaign list to a section.
 
-    **This endpoint is only usable by administrators**
+    This endpoint can only be used in 'waiting' status.
+
+    **The user must be a member of the group CAA to use this endpoint**
     """
     status = await cruds_campaign.get_status(db=db)
     if status != StatusType.waiting:
@@ -198,9 +211,13 @@ async def delete_list(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
-    """Allow an CAA to delete the list with the given id.
+    """
+    Delete the campaign list with the given id.
 
-    **This endpoint is only usable by administrators**"""
+    This endpoint can only be used in 'waiting' status.
+
+    **The user must be a member of the group CAA to use this endpoint**
+    """
 
     status = await cruds_campaign.get_status(db=db)
     if status != StatusType.waiting:
@@ -226,9 +243,12 @@ async def update_list(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
-    """Allow an CAA to update the list with the given id.
+    """
+    Update the campaign list with the given id.
 
-    **This endpoint is only usable by administrators**
+    This endpoint can only be used in 'waiting' status.
+
+    **The user must be a member of the group CAA to use this endpoint**
     """
     status = await cruds_campaign.get_status(db=db)
     if status != StatusType.waiting:
@@ -272,9 +292,10 @@ async def open_voting(
     """
     If the status is 'waiting', change it to 'voting' and create the blank lists.
 
-    When the status is 'open', all users can vote and sections and lists can no longer be edited.
+    > WARNING: this operation can not be reversed.
+    > When the status is 'open', all users can vote and sections and lists can no longer be edited.
 
-    **This endpoint is only usable by administrators**
+    **The user must be a member of the group CAA to use this endpoint**
     """
     status = await cruds_campaign.get_status(db=db)
     if status != StatusType.waiting:
@@ -309,9 +330,10 @@ async def close_voting(
     """
     If the status is 'open', change it to 'closed'.
 
-    When the status is 'closed', users are no longer able to vote.
+    > WARNING: this operation can not be reversed.
+    > When the status is 'closed', users are no longer able to vote.
 
-    **This endpoint is only usable by administrators**
+    **The user must be a member of the group CAA to use this endpoint**
     """
     status = await cruds_campaign.get_status(db=db)
     if status != StatusType.open:
@@ -335,9 +357,10 @@ async def count_voting(
     """
     If the status is 'closed', change it to 'counting'.
 
-    When the status is 'counting', administrators can see the results of the vote.
+    > WARNING: this operation can not be reversed.
+    > When the status is 'counting', administrators can see the results of the vote.
 
-    **This endpoint is only usable by administrators**
+    **The user must be a member of the group CAA to use this endpoint**
     """
     status = await cruds_campaign.get_status(db=db)
     if status != StatusType.closed:
@@ -361,9 +384,10 @@ async def publish_voting(
     """
     If the status is 'counting', change it to 'published'.
 
-    When the status is 'published', everyone can see the results of the vote.
+    > WARNING: this operation can not be reversed.
+    > When the status is 'published', everyone can see the results of the vote.
 
-    **This endpoint is only usable by administrators**
+    **The user must be a member of the group CAA to use this endpoint**
     """
     status = await cruds_campaign.get_status(db=db)
     if status != StatusType.counting:
@@ -385,17 +409,17 @@ async def reset_vote(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """
-    Reset the vote.
+    Reset the vote. Can only be used if the current status is counting ou published.
 
-    WARNING: This will delete all votes. This will put the module to Waiting status.
+    > WARNING: This will delete all votes then put the module to Waiting status.
 
-    **This endpoint is only usable by administrators**
+    **The user must be a member of the group CAA to use this endpoint**
     """
     status = await cruds_campaign.get_status(db=db)
     if status not in [StatusType.published, StatusType.counting]:
         raise HTTPException(
             status_code=400,
-            detail=f"The vote can only be reset in Counting Published. The current status is {status}",
+            detail=f"The vote can only be reset in Counting Published or Counting. The current status is {status}",
         )
 
     try:
@@ -429,9 +453,11 @@ async def vote(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.AE)),
 ):
     """
-    Add a vote
+    Add a vote for a given campaign list.
 
     An user can only vote for one list per section.
+
+    **The user must be a member of the group AE to use this endpoint**
     """
     status = await cruds_campaign.get_status(db=db)
     if status != StatusType.open:
@@ -485,6 +511,8 @@ async def get_sections_already_voted(
 ):
     """
     Return the list of id of sections an user has already voted for.
+
+    **The user must be a member of the group AE to use this endpoint**
     """
 
     status = await cruds_campaign.get_status(db=db)
@@ -512,8 +540,12 @@ async def get_results(
     """
     Return the results of the vote.
 
+    **The user must be a member of the group CAA and AE to use this endpoint in 'counting' status**
+    **The user must be a member of the group AE to use this endpoint in 'published' status**
     """
     status = await cruds_campaign.get_status(db=db)
+
+    # There may be an edge case where user is member of CAA but not AE. In this case, the user may not be able to access the results.
     if (
         status == StatusType.counting
         and is_user_member_of_an_allowed_group(user, [GroupType.CAA])
@@ -554,7 +586,11 @@ async def get_status_vote(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.AE)),
 ):
+    """
+    Get the current status of the vote.
 
+    **The user must be a member of the group AE to use this endpoint**
+    """
     status = await cruds_campaign.get_status(db=db)
     return schemas_campaign.VoteStatus(status=status)
 
@@ -570,6 +606,11 @@ async def get_vote_count(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
+    """
+    Get stats about a given section.
+
+    **The user must be a member of the group CAA to use this endpoint**
+    """
     status = await cruds_campaign.get_status(db=db)
     if status != StatusType.open:
         raise HTTPException(
@@ -594,16 +635,16 @@ async def create_campaigns_logo(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Upload a logo for a list.
+    Upload a logo for a campaign list.
 
-    **This endpoint is only usable by administrators**
+    **The user must be a member of the group CAA to use this endpoint**
     """
 
     status = await cruds_campaign.get_status(db=db)
     if status != StatusType.waiting:
         raise HTTPException(
             status_code=400,
-            detail=f"Results can only be acceded in waiting mode. The current status is {status}",
+            detail=f"Lists can only be edited in waiting mode. The current status is {status}",
         )
 
     list = await cruds_campaign.get_list_by_id(db=db, list_id=list_id)
@@ -632,10 +673,10 @@ async def create_campaigns_logo(
 )
 async def read_campaigns_logo(
     list_id: str,
-    # TODO: we may want to remove this user requirement to be able to display images easily in html code
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.AE)),
 ):
-
+    """
+    Get the logo of a campaign list.
+    """
     if not exists(f"data/campaigns/{list_id}.png"):
         return FileResponse("assets/images/default_campaigns_logo.png")
 
