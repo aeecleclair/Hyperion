@@ -235,6 +235,37 @@ async def delete_list(
         raise HTTPException(status_code=400, detail=str(error))
 
 
+@router.delete(
+    "/campaign/lists/",
+    status_code=204,
+    tags=[Tags.campaign],
+)
+async def delete_lists_by_type(
+    list_type: ListType,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
+):
+    """
+    Delete the all lists by type.
+
+    This endpoint can only be used in 'waiting' status.
+
+    **The user must be a member of the group CAA to use this endpoint**
+    """
+
+    status = await cruds_campaign.get_status(db=db)
+    if status != StatusType.waiting:
+        raise HTTPException(
+            status_code=403,
+            detail=f"You can't delete a list if the vote has already begun. The module status is {status} but should be 'waiting'",
+        )
+
+    try:
+        await cruds_campaign.delete_list_by_type(list_type=list_type, db=db)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
 @router.patch(
     "/campaign/lists/{list_id}",
     status_code=204,

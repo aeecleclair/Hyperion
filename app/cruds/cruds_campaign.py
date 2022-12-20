@@ -213,6 +213,20 @@ async def delete_list(db: AsyncSession, list_id: str) -> None:
     await db.commit()
 
 
+async def delete_list_by_type(list_type: ListType, db: AsyncSession) -> None:
+    """Delete all campaign list by type."""
+
+    lists = await get_lists(db)
+    for list in lists:
+        if list.type == list_type:
+            await remove_members_from_list(list_id=list.id, db=db)
+
+    await db.execute(
+        delete(models_campaign.Lists).where(models_campaign.Lists.type == list_type)
+    )
+    await db.commit()
+
+
 async def update_list(
     db: AsyncSession, list_id: str, campaign_list: schemas_campaign.ListEdit
 ) -> None:
