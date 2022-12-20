@@ -288,7 +288,7 @@ async def update_list(
     status_code=204,
     tags=[Tags.campaign],
 )
-async def open_voting(
+async def open_vote(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
@@ -326,7 +326,7 @@ async def open_voting(
     status_code=204,
     tags=[Tags.campaign],
 )
-async def close_voting(
+async def close_vote(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
@@ -380,7 +380,7 @@ async def count_voting(
     status_code=204,
     tags=[Tags.campaign],
 )
-async def publish_voting(
+async def publish_vote(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
@@ -604,7 +604,7 @@ async def get_status_vote(
     status_code=200,
     tags=[Tags.campaign],
 )
-async def get_vote_count(
+async def get_stats_for_section(
     section_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
