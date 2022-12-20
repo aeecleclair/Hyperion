@@ -2,7 +2,6 @@ import json
 import logging
 import uuid
 from datetime import datetime
-from os.path import exists
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
