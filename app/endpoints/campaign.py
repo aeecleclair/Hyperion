@@ -625,7 +625,7 @@ async def get_vote_count(
 
 
 @router.post(
-    "/campaign/{object_id}/logo",
+    "/campaign/lists/{list_id}/logo",
     response_model=standard_responses.Result,
     status_code=201,
     tags=[Tags.users],
