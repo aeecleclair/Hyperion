@@ -31,7 +31,7 @@ from app.dependencies import (
 from app.models import models_core
 from app.schemas import schemas_core
 from app.utils.mail.mailworker import send_email
-from app.utils.tools import fuzzy_search_user, save_file_to_the_disk
+from app.utils.tools import fuzzy_search_user, get_file_from_data, save_file_as_data
 from app.utils.types import standard_responses
 from app.utils.types.groups_type import AccountType, GroupType
 from app.utils.types.tags import Tags
@@ -673,9 +673,10 @@ async def create_current_user_profile_picture(
     **The user must be authenticated to use this endpoint**
     """
 
-    await save_file_to_the_disk(
+    await save_file_as_data(
         image=image,
-        filename=f"profile-pictures/{user.id}.png",
+        directory="profile-pictures",
+        filename=str(user.id),
         request_id=request_id,
         max_file_size=4 * 1024 * 1024,
         accepted_content_types=["image/jpeg", "image/png", "image/webp"],
@@ -701,7 +702,8 @@ async def read_user_profile_picture(
     **The user must be authenticated to use this endpoint**
     """
 
-    if not exists(f"data/profile-pictures/{user_id}.png"):
-        return FileResponse("assets/images/default_profile_picture.png")
-
-    return FileResponse(f"data/profile-pictures/{user_id}.png")
+    return get_file_from_data(
+        directory="profile-pictures",
+        filename=str(user_id),
+        default_asset="assets/images/default_profile_picture.png",
+    )

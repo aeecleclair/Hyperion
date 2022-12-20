@@ -12,7 +12,11 @@ from app.cruds import cruds_campaign, cruds_users
 from app.dependencies import get_db, get_request_id, is_user_a_member_of
 from app.models import models_campaign, models_core
 from app.schemas import schemas_campaign
-from app.utils.tools import is_user_member_of_an_allowed_group, save_file_to_the_disk
+from app.utils.tools import (
+    get_file_from_data,
+    is_user_member_of_an_allowed_group,
+    save_file_as_data,
+)
 from app.utils.types import standard_responses
 from app.utils.types.campaign_type import ListType, StatusType
 from app.utils.types.groups_type import GroupType
@@ -654,9 +658,10 @@ async def create_campaigns_logo(
             detail="The list does not exist.",
         )
 
-    await save_file_to_the_disk(
+    await save_file_as_data(
         image=image,
-        filename=f"campaigns/{list_id}.png",
+        directory="campaigns",
+        filename=str(list_id),
         request_id=request_id,
         max_file_size=4 * 1024 * 1024,
         accepted_content_types=["image/jpeg", "image/png", "image/webp"],
@@ -677,7 +682,9 @@ async def read_campaigns_logo(
     """
     Get the logo of a campaign list.
     """
-    if not exists(f"data/campaigns/{list_id}.png"):
-        return FileResponse("assets/images/default_campaigns_logo.png")
 
-    return FileResponse(f"data/campaigns/{list_id}.png")
+    return get_file_from_data(
+        directory="campaigns",
+        filename=str(list_id),
+        default_asset="assets/images/default_campaigns_logo.png",
+    )

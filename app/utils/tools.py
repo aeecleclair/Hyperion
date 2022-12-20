@@ -1,8 +1,10 @@
+import glob
 import logging
 import os
 import shutil
 
 from fastapi import HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from rapidfuzz import process
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -85,8 +87,9 @@ async def is_user_id_valid(user_id: str, db: AsyncSession) -> bool:
     return await cruds_users.get_user_by_id(db=db, user_id=user_id) is not None
 
 
-async def save_file_to_the_disk(
+async def save_file_as_data(
     image: UploadFile,
+    directory: str,
     filename: str,
     request_id: str,
     max_file_size: int = 1024 * 1024 * 2,  # 2 MB
@@ -97,12 +100,19 @@ async def save_file_to_the_disk(
     ],  # images only
 ):
     """
-    Save an image file to the disk.
+    Save an image file to the data folder.
 
-    - The file will be saved in the `data` folder: "data/{filename}"
+    - The file will be saved in the `data` folder: "data/{directory}/{filename}.ext"
     - Maximum size is 2MB by default, it can be changed using `max_file_size` (in bytes) parameter.
     - `accepted_content_types` is a list of accepted content types. By default, only images are accepted.
         Use: `["image/jpeg", "image/png", "image/webp"]` to accept only images.
+
+    The file extension will be inferred from the provided content file.
+    There should only be one file with the same filename, thus, saving a new file will remove the existing even if its extension was different.
+    Currently, compatible extensions are :
+     - png
+     - jpg
+     - webp
 
     An HTTP Exception will be raised if an error occurres.
     """
@@ -124,8 +134,18 @@ async def save_file_to_the_disk(
     # We go back to the beginning of the file to save it on the disk
     await image.seek(0)
 
+    extensions_mapping = {
+        "image/jpeg": "jpg",
+        "image/png": "png",
+        "image/webp": "webp",
+    }
+    extension = extensions_mapping.get(image.content_type, "")
+    # Remove the existing file if any and create the new one
     try:
-        with open(f"data/{filename}", "wb") as buffer:
+        for filePath in glob.glob(f"data/{directory}/{filename}.*"):
+            os.remove(filePath)
+
+        with open(f"data/{directory}/{filename}.{extension}", "wb") as buffer:
             shutil.copyfileobj(image.file, buffer)
 
     except Exception as error:
@@ -133,3 +153,19 @@ async def save_file_to_the_disk(
             f"save_file_to_the_disk: could not save file to {filename}: {error} ({request_id})"
         )
         raise HTTPException(status_code=400, detail="Could not save file")
+
+
+async def get_file_from_data(
+    directory: str,
+    filename: str,
+    default_asset: str,
+):
+    """
+    If there is a file with the provided filename in the data folder, return it. The file extension will be inferred from the provided content file.
+    > "data/{directory}/{filename}.ext"
+    Otherwise, return the default asset.
+    """
+    for filePath in glob.glob(f"data/{directory}/{filename}.*"):
+        return FileResponse(filePath)
+
+    return FileResponse(default_asset)
