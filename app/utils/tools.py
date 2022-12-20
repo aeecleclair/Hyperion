@@ -155,7 +155,7 @@ async def save_file_as_data(
         raise HTTPException(status_code=400, detail="Could not save file")
 
 
-async def get_file_from_data(
+def get_file_from_data(
     directory: str,
     filename: str,
     default_asset: str,
