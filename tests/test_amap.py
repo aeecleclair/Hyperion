@@ -3,6 +3,7 @@ from datetime import datetime
 
 from app.main import app
 from app.models import models_amap, models_core
+from app.utils.types.amap_types import DeliveryStatusType
 from app.utils.types.groups_type import GroupType
 from tests.commons import (
     TestingSessionLocal,
@@ -42,14 +43,14 @@ async def startuptest():
             id=str(uuid.uuid4()),
             delivery_date=datetime(2022, 8, 15),
             # products=[],
-            locked=False,
+            status=DeliveryStatusType.creation,
         )
         db.add(delivery)
         deletable_delivery = models_amap.Delivery(
             id=str(uuid.uuid4()),
             delivery_date=datetime(2022, 8, 16),
             # products=[],
-            locked=False,
+            status=DeliveryStatusType.creation,
         )
         db.add(deletable_delivery)
 

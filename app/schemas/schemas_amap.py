@@ -54,7 +54,6 @@ class DeliveryBase(BaseModel):
 
     delivery_date: date
     products_ids: list[str] = []
-    locked: bool = False
 
 
 class DeliveryComplete(DeliveryBase):
@@ -67,7 +66,6 @@ class DeliveryComplete(DeliveryBase):
 
 class DeliveryUpdate(BaseModel):
     delivery_date: date | None = None
-    locked: bool | None = None
 
 
 class DeliveryProductsUpdate(BaseModel):
@@ -119,7 +117,7 @@ class DeliveryReturn(BaseModel):
     delivery_date: date
     products: list[ProductComplete] = []
     id: str
-    locked: bool
+    status: DeliveryStatusType
 
     class Config:
         orm_mode = True
