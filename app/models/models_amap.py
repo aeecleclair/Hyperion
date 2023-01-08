@@ -41,22 +41,19 @@ class Delivery(Base):
         "Product",
         secondary="amap_delivery_content",
     )
-    orders: list["Order"] = relationship("Order")
+    orders: list["Order"] = relationship("Order", back_populates="delivery")
     status: DeliveryStatusType = Column(String, nullable=False)
 
 
 class Order(Base):
     __tablename__ = "amap_order"
 
-    user_id: str = Column(String, ForeignKey("core_user.id"), nullable=False)
+    user_id: str = Column(String, ForeignKey("core_user.id"), primary_key=True)
     user: CoreUser = relationship(
         "CoreUser",
     )
     delivery_id: str = Column(
-        String,
-        ForeignKey("amap_delivery.id"),
-        index=True,
-        nullable=False,
+        String, ForeignKey("amap_delivery.id"), index=True, nullable=True
     )
     order_id: str = Column(String, primary_key=True, index=True)
     products: list[Product] = relationship(
