@@ -608,7 +608,7 @@ async def remove_order(
 )
 async def open_ordering_of_delivery(
     delivery_id: str,
-    db: AsyncSession,
+    db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
@@ -627,7 +627,7 @@ async def open_ordering_of_delivery(
 @router.post("amap/deliveries/{delivery_id}/lock", status_code=204, tags=[Tags.amap])
 async def lock_delivery(
     delivery_id: str,
-    db: AsyncSession,
+    db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
@@ -648,7 +648,7 @@ async def lock_delivery(
 )
 async def mark_delivery_as_delivered(
     delivery_id: str,
-    db: AsyncSession,
+    db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
@@ -667,7 +667,7 @@ async def mark_delivery_as_delivered(
 @router.post("amap/deliveries/{delivery_id}/archive", status_code=204, tags=[Tags.amap])
 async def archive_of_delivery(
     delivery_id: str,
-    db: AsyncSession,
+    db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)

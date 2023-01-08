@@ -41,7 +41,7 @@ class Delivery(Base):
         "Product",
         secondary="amap_delivery_content",
     )
-    orders: list["Order"] = relationship("Order", back_populates="delivery")
+    orders: list["Order"] = relationship("Order")
     status: DeliveryStatusType = Column(String, nullable=False)
 
 
