@@ -4,7 +4,7 @@
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import noload, selectinload
+from sqlalchemy.orm import selectinload
 
 from app.models import models_amap
 from app.schemas import schemas_amap
@@ -94,9 +94,7 @@ async def get_deliveries(
 ) -> list[models_amap.Delivery]:
     """Return all deliveries from database"""
     result = await db.execute(
-        select(models_amap.Delivery)
-        .where(models_amap.Delivery.status != DeliveryStatusType.archived)
-        .options(
+        select(models_amap.Delivery).options(
             selectinload(models_amap.Delivery.products),
             selectinload(models_amap.Delivery.orders),
         )
@@ -113,7 +111,7 @@ async def get_delivery_by_id(
         .where(models_amap.Delivery.id == delivery_id)
         .options(
             selectinload(models_amap.Delivery.products),
-            noload(models_amap.Delivery.orders),
+            selectinload(models_amap.Delivery.orders),
         )
     )
     return result.scalars().first()
@@ -124,7 +122,7 @@ async def create_delivery(
     db: AsyncSession,
 ) -> models_amap.Delivery | None:
     """Create a new delivery in database and return it"""
-    db.add(models_amap.Delivery(**delivery.dict(exclude={"products_ids"})))
+    db.add(models_amap.Delivery(**delivery.dict()))
     for id in delivery.products_ids:
         db.add(models_amap.AmapDeliveryContent(product_id=id, delivery_id=delivery.id))
     try:
@@ -167,12 +165,13 @@ async def remove_product_from_delivery(
     delivery_id: str,
 ):
     """Remove a product from a delivery products list"""
-    await db.execute(
-        delete(models_amap.AmapDeliveryContent).where(
-            models_amap.AmapDeliveryContent.product_id.in_(products_ids.products_ids),
-            models_amap.AmapDeliveryContent.delivery_id == delivery_id,
+    for id in products_ids.products_ids:
+        await db.execute(
+            delete(models_amap.AmapDeliveryContent).where(
+                models_amap.AmapDeliveryContent.product_id == id
+                and models_amap.AmapDeliveryContent.delivery_id == delivery_id
+            )
         )
-    )
 
     await db.commit()
 
@@ -192,25 +191,9 @@ async def get_order_by_id(db: AsyncSession, order_id: str) -> models_amap.Order 
     result = await db.execute(
         select(models_amap.Order)
         .where(models_amap.Order.order_id == order_id)
-        .options(
-            selectinload(models_amap.Order.user),
-            noload(models_amap.Order.products),
-        )
+        .options(selectinload(models_amap.Order.products))
     )
     return result.scalars().first()
-
-
-async def get_orders_from_delivery(
-    db: AsyncSession, delivery_id: str
-) -> list[models_amap.Order]:
-    result = await db.execute(
-        select(models_amap.Order)
-        .where(models_amap.Order.delivery_id == delivery_id)
-        .options(
-            noload(models_amap.Order.products), selectinload(models_amap.Order.user)
-        )
-    )
-    return result.scalars().all()
 
 
 async def get_products_of_order(
@@ -234,12 +217,13 @@ async def add_order_to_delivery(
     try:
         await db.commit()
         for i in range(len(order.products_ids)):
-            db.add(
-                models_amap.AmapOrderContent(
-                    order_id=order.order_id,
-                    product_id=order.products_ids[i],
-                    quantity=order.products_quantity[i],
+            await db.execute(
+                update(models_amap.AmapOrderContent)
+                .where(
+                    models_amap.AmapOrderContent.order_id == order.order_id,
+                    models_amap.AmapOrderContent.product_id == order.products_ids[i],
                 )
+                .values(quantity=order.products_quantity[i])
             )
             await db.commit()
     except IntegrityError as err:
@@ -273,6 +257,7 @@ async def edit_order(db: AsyncSession, order: schemas_amap.OrderComplete):
             amount=order.amount,
             collection_slot=order.collection_slot,
             ordering_date=order.ordering_date,
+            delivery_date=order.delivery_date,
         )
     )
     await db.commit()
@@ -328,10 +313,7 @@ async def get_orders_of_user(db: AsyncSession, user_id: str) -> list[models_amap
     result = await db.execute(
         select(models_amap.Order)
         .where(models_amap.Order.user_id == user_id)
-        .options(
-            noload(models_amap.Order.products),
-            selectinload(models_amap.Order.user),
-        )
+        .options(selectinload(models_amap.Order.products))
     )
     return result.scalars().all()
 
@@ -342,7 +324,6 @@ async def open_ordering_of_delivery(db: AsyncSession, delivery_id: str):
         .where(models_amap.Delivery.id == delivery_id)
         .values(status=DeliveryStatusType.orderable)
     )
-    await db.commit()
 
 
 async def lock_delivery(db: AsyncSession, delivery_id: str):
@@ -351,7 +332,6 @@ async def lock_delivery(db: AsyncSession, delivery_id: str):
         .where(models_amap.Delivery.id == delivery_id)
         .values(status=DeliveryStatusType.locked)
     )
-    await db.commit()
 
 
 async def mark_delivery_as_delivered(db: AsyncSession, delivery_id: str):
@@ -360,13 +340,3 @@ async def mark_delivery_as_delivered(db: AsyncSession, delivery_id: str):
         .where(models_amap.Delivery.id == delivery_id)
         .values(status=DeliveryStatusType.delivered)
     )
-    await db.commit()
-
-
-async def mark_delivery_as_archived(db: AsyncSession, delivery_id: str):
-    await db.execute(
-        update(models_amap.Delivery)
-        .where(models_amap.Delivery.id == delivery_id)
-        .values(status=DeliveryStatusType.archived)
-    )
-    await db.commit()

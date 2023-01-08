@@ -1,3 +1,4 @@
+import json
 import uuid
 from datetime import datetime
 
@@ -245,6 +246,7 @@ async def edit_delivery(
 
 @router.post(
     "/amap/deliveries/{delivery_id}/products",
+    response_model=list[schemas_amap.ProductComplete],
     status_code=201,
     tags=[Tags.amap],
 )
@@ -320,21 +322,18 @@ async def remove_product_from_delivery(
 async def get_orders_from_delivery(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
-    user_req: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
     """
     Get orders from a delivery.
 
     **The user must be a member of the group AMAP to use this endpoint**
     """
-    orders = await cruds_amap.get_orders_from_delivery(db=db, delivery_id=delivery_id)
-    res = []
-    for order in orders:
-        products = await cruds_amap.get_products_of_order(
-            db=db, order_id=order.order_id
-        )
-        res.append(schemas_amap.OrderReturn(productsdetail=products, **order.__dict__))
-    return res
+    delivery = await cruds_amap.get_delivery_by_id(delivery_id=delivery_id, db=db)
+    if delivery is not None:
+        return delivery.orders
+    else:
+        raise HTTPException(status_code=404, detail="Delivery not found")
 
 
 @router.get(
@@ -405,7 +404,6 @@ async def add_order_to_delievery(
                     order_id=order_id,
                     amount=amount,
                     ordering_date=ordering_date,
-                    delivery_date=delivery.delivery_date,
                     **order.dict(),
                 )
                 balance: models_amap.Cash | None = await cruds_amap.get_cash_by_id(
@@ -437,14 +435,8 @@ async def add_order_to_delievery(
                                 balance=balance.balance - amount
                             ),
                         )
-                        orderret = await cruds_amap.get_order_by_id(
-                            order_id=db_order.order_id, db=db
-                        )
-                        productsret = await cruds_amap.get_products_of_order(
-                            db=db, order_id=order_id
-                        )
-                        return schemas_amap.OrderReturn(
-                            productsdetail=productsret, **orderret.__dict__
+                        return await get_order_by_id(
+                            delivery_id=delivery_id, order_id=db_order.order_id, db=db
                         )
                     except ValueError as error:
                         raise HTTPException(status_code=422, detail=str(error))
@@ -612,11 +604,11 @@ async def remove_order(
 
 
 @router.post(
-    "/amap/deliveries/{delivery_id}/openordering", status_code=204, tags=[Tags.amap]
+    "amap/deliveries/{delivery_id}/openordering", status_code=204, tags=[Tags.amap]
 )
 async def open_ordering_of_delivery(
     delivery_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
@@ -632,10 +624,10 @@ async def open_ordering_of_delivery(
         raise HTTPException(status_code=404, detail="Delivery not found.")
 
 
-@router.post("/amap/deliveries/{delivery_id}/lock", status_code=204, tags=[Tags.amap])
+@router.post("amap/deliveries/{delivery_id}/lock", status_code=204, tags=[Tags.amap])
 async def lock_delivery(
     delivery_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
@@ -652,11 +644,11 @@ async def lock_delivery(
 
 
 @router.post(
-    "/amap/deliveries/{delivery_id}/delivered", status_code=204, tags=[Tags.amap]
+    "amap/deliveries/{delivery_id}/delivered", status_code=204, tags=[Tags.amap]
 )
 async def mark_delivery_as_delivered(
     delivery_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
@@ -672,18 +664,33 @@ async def mark_delivery_as_delivered(
         raise HTTPException(status_code=404, detail="Delivery not found.")
 
 
-@router.post(
-    "/amap/deliveries/{delivery_id}/archive", status_code=204, tags=[Tags.amap]
-)
+@router.post("amap/deliveries/{delivery_id}/archive", status_code=204, tags=[Tags.amap])
 async def archive_of_delivery(
     delivery_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
     if delivery is not None:
         if delivery.status == DeliveryStatusType.delivered:
-            await cruds_amap.mark_delivery_as_archived(db=db, delivery_id=delivery_id)
+            orders = await get_orders_from_delivery(
+                delivery_id=delivery_id, db=db, user=user
+            )
+            with open(
+                f"data/amap/delivery-{delivery_id}.json",
+                "w",
+            ) as file:
+                json.dump(
+                    {
+                        "delivery": schemas_amap.DeliveryReturn(**delivery.__dict__),
+                        "orders": [
+                            schemas_amap.OrderReturn(**order.__dict__)
+                            for order in orders
+                        ],
+                    },
+                    file,
+                )
+            await cruds_amap.delete_delivery(db=db, delivery_id=delivery_id)
         else:
             raise HTTPException(
                 status_code=403,
@@ -766,8 +773,8 @@ async def create_cash_of_user(
     **The user must be a member of the group AMAP to use this endpoint**
     """
 
-    user_db = await read_user(user_id=user_id, db=db)
-    if not user_db:
+    user = await read_user(user_id=user_id, db=db)
+    if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
     existing_cash = await cruds_amap.get_cash_by_id(db=db, user_id=user_id)
@@ -809,8 +816,8 @@ async def edit_cash_by_id(
 
     **The user must be a member of the group AMAP to use this endpoint**
     """
-    user_db = await read_user(user_id=user_id, db=db)
-    if not user_db:
+    user = await read_user(user_id=user_id, db=db)
+    if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
     cash = await cruds_amap.get_cash_by_id(db=db, user_id=user_id)
@@ -839,8 +846,8 @@ async def get_orders_of_user(
 
     **The user must be a member of the group AMAP to use this endpoint or can only access the endpoint for its own user_id**
     """
-    user_requested = await read_user(user_id=user_id, db=db)
-    if not user_requested:
+    user = await read_user(user_id=user_id, db=db)
+    if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
     if user_id == user.id or is_user_member_of_an_allowed_group(user, [GroupType.amap]):

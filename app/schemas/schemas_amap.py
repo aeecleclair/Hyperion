@@ -41,7 +41,7 @@ class ProductComplete(ProductSimple):
         orm_mode = True
 
 
-class ProductQuantity(BaseModel):
+class ProductQuantity(ProductSimple):
     quantity: int
     product: ProductComplete
 
@@ -54,6 +54,7 @@ class DeliveryBase(BaseModel):
 
     delivery_date: date
     products_ids: list[str] = []
+    locked: bool = False
 
 
 class DeliveryComplete(DeliveryBase):
@@ -66,6 +67,7 @@ class DeliveryComplete(DeliveryBase):
 
 class DeliveryUpdate(BaseModel):
     delivery_date: date | None = None
+    locked: bool | None = None
 
 
 class DeliveryProductsUpdate(BaseModel):
@@ -77,6 +79,7 @@ class OrderBase(BaseModel):
     delivery_id: str
     products_ids: list[str]
     collection_slot: AmapSlotType
+    delivery_date: date
     products_quantity: list[int]
 
 
@@ -84,7 +87,6 @@ class OrderComplete(OrderBase):
     order_id: str
     amount: float
     ordering_date: datetime
-    delivery_date: date
 
     class Config:
         orm_mode = True
@@ -95,10 +97,10 @@ class OrderReturn(BaseModel):
     delivery_id: str
     productsdetail: list[ProductQuantity]
     collection_slot: AmapSlotType
+    delivery_date: date
     order_id: str
     amount: float
     ordering_date: datetime
-    delivery_date: date
 
     class Config:
         orm_mode = True
@@ -117,7 +119,7 @@ class DeliveryReturn(BaseModel):
     delivery_date: date
     products: list[ProductComplete] = []
     id: str
-    status: DeliveryStatusType
+    locked: bool
 
     class Config:
         orm_mode = True
