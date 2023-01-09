@@ -2,7 +2,6 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-from app.schemas.schemas_bdebooking import RoomComplete
 from app.schemas.schemas_core import CoreUserSimple
 from app.utils.types.bdebooking_type import Decision
 from app.utils.types.calendar_types import CalendarEventType
@@ -20,43 +19,21 @@ class EventBase(BaseModel):
     description: str
     recurrence_rule: str | None
     applicant_id: str
-    room_id: str | None
 
 
 class EventComplete(EventBase):
     id: str
     decision: Decision
 
-    class Config:
-        orm_mode = True
 
-
-class EventEdit(BaseModel):
-    name: str | None = None
-    organizer: str | None = None
-    start: datetime | None = None
-    end: datetime | None = None
-    all_day: bool | None = None
-    location: str | None = None
-    type: CalendarEventType | None = None
-    description: str | None = None
-    recurrence_rule: str | None = None
-    applicant_id: str | None = None
-    room_id: str | None = None
-
-    class Config:
-        orm_mode = True
-
-
-class EventApplicant(CoreUserSimple):
+class Applicant(CoreUserSimple):
     email: str
     promo: int | None = None
     phone: str | None = None
 
 
 class EventReturn(EventComplete):
-    applicant: EventApplicant
-    room: RoomComplete | None = None
+    applicant: Applicant
 
     class Config:
         orm_mode = True
