@@ -49,10 +49,13 @@ class Applicant(CoreUserSimple):
 
 class BookingReturn(BookingComplete):
     room: RoomComplete
-    applicant: Applicant
 
     class Config:
         orm_mode = True
+
+
+class BookingReturnApplicant(BookingReturn):
+    applicant: Applicant
 
 
 class BookingEdit(BaseModel):
