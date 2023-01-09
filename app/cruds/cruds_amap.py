@@ -122,7 +122,7 @@ async def create_delivery(
     db: AsyncSession,
 ) -> models_amap.Delivery | None:
     """Create a new delivery in database and return it"""
-    db.add(models_amap.Delivery(**delivery.dict()))
+    db.add(models_amap.Delivery(**delivery.dict(exclude={"products_ids"})))
     for id in delivery.products_ids:
         db.add(models_amap.AmapDeliveryContent(product_id=id, delivery_id=delivery.id))
     try:
