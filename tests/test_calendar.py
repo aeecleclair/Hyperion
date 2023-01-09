@@ -3,6 +3,7 @@ import uuid
 
 from app.main import app
 from app.models import models_calendar, models_core
+from app.utils.types.bdebooking_type import Decision
 from app.utils.types.groups_type import GroupType
 from tests.commons import (
     TestingSessionLocal,
@@ -42,12 +43,14 @@ async def startuptest():
             id=str(uuid.uuid4()),
             name="Dojo",
             organizer="Eclair",
+            applicant_id=calendar_user_simple.id,
             start=datetime.datetime.fromisoformat("2022-09-22T20:00:00"),
             end=datetime.datetime.fromisoformat("2022-09-22T23:00:00"),
             all_day=False,
             location="Skylab",
             type="Event AE",
             description="Apprendre à coder !",
+            decision=Decision.pending,
         )
         db.add(calendar_event)
         await db.commit()
@@ -89,6 +92,7 @@ def test_add_event():
         json={
             "name": "Dojo",
             "organizer": "Eclair",
+            "applicant_id": calendar_user_simple.id,
             "start": "2019-08-24T14:15:22Z",
             "end": "2019-08-24T14:15:22Z",
             "all_day": False,

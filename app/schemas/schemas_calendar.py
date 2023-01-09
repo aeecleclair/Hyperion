@@ -25,6 +25,9 @@ class EventComplete(EventBase):
     id: str
     decision: Decision
 
+    class Config:
+        orm_mode = True
+
 
 class EventEdit(BaseModel):
     name: str | None = None
@@ -37,6 +40,9 @@ class EventEdit(BaseModel):
     description: str | None = None
     recurrence_rule: str | None = None
     applicant_id: str | None = None
+
+    class Config:
+        orm_mode = True
 
 
 class EventApplicant(CoreUserSimple):
