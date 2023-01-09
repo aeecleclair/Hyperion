@@ -53,7 +53,7 @@ async def get_confirmed_events(
 
 
 @router.get(
-    "/calendar/events/{applicant_id}",
+    "/calendar/events/user/{applicant_id}",
     response_model=list[schemas_calendar.EventReturn],
     status_code=200,
     tags=[Tags.calendar],
@@ -81,7 +81,7 @@ async def get_applicant_bookings(
 
 @router.get(
     "/calendar/events/{event_id}",
-    response_model=schemas_calendar.EventBase,
+    response_model=schemas_calendar.EventComplete,
     status_code=200,
     tags=[Tags.calendar],
 )
@@ -95,6 +95,24 @@ async def get_event_by_id(
     event = await cruds_calendar.get_event(db=db, event_id=event_id)
     if event is not None:
         return event
+    else:
+        raise HTTPException(status_code=404)
+
+
+@router.get(
+    "calendar/events/{event_id}/applicant",
+    response_model=schemas_calendar.EventApplicant,
+    status_code=200,
+    tags=[Tags.calendar],
+)
+async def get_event_applicant(
+    event_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
+):
+    event = await cruds_calendar.get_event(db=db, event_id=event_id)
+    if event is not None:
+        return event.applicant
     else:
         raise HTTPException(status_code=404)
 
