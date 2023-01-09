@@ -2,6 +2,8 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
+from app.schemas.schemas_core import CoreUserSimple
+from app.utils.types.bdebooking_type import Decision
 from app.utils.types.calendar_types import CalendarEventType
 
 
@@ -16,10 +18,22 @@ class EventBase(BaseModel):
     type: CalendarEventType
     description: str
     recurrence_rule: str | None
-
-    class Config:
-        orm_mode = True
+    applicant_id: str
 
 
 class EventComplete(EventBase):
     id: str
+    decision: Decision
+
+
+class Applicant(CoreUserSimple):
+    email: str
+    promo: int | None = None
+    phone: str | None = None
+
+
+class EventReturn(EventComplete):
+    applicant: Applicant
+
+    class Config:
+        orm_mode = True
