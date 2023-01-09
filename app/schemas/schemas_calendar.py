@@ -26,14 +26,27 @@ class EventComplete(EventBase):
     decision: Decision
 
 
-class Applicant(CoreUserSimple):
+class EventEdit(BaseModel):
+    name: str | None = None
+    organizer: str | None = None
+    start: datetime | None = None
+    end: datetime | None = None
+    all_day: bool | None = None
+    location: str | None = None
+    type: CalendarEventType | None = None
+    description: str | None = None
+    recurrence_rule: str | None = None
+    applicant_id: str | None = None
+
+
+class EventApplicant(CoreUserSimple):
     email: str
     promo: int | None = None
     phone: str | None = None
 
 
 class EventReturn(EventComplete):
-    applicant: Applicant
+    applicant: EventApplicant
 
     class Config:
         orm_mode = True
