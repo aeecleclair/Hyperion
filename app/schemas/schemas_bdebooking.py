@@ -40,9 +40,15 @@ class BookingComplete(BookingBase):
     applicant_id: str
 
 
+class Applicant(CoreUserSimple):
+    email: str
+    promo: int | None = None
+    phone: str
+
+
 class BookingReturn(BookingComplete):
     room: RoomComplete
-    applicant: CoreUserSimple
+    applicant: Applicant
 
     class Config:
         orm_mode = True
