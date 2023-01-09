@@ -4,6 +4,7 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
+from app.schemas.schemas_core import CoreUserSimple
 from app.utils.types.bdebooking_type import Decision
 
 
@@ -41,6 +42,7 @@ class BookingComplete(BookingBase):
 
 class BookingReturn(BookingComplete):
     room: RoomComplete
+    applicant: CoreUserSimple
 
     class Config:
         orm_mode = True
