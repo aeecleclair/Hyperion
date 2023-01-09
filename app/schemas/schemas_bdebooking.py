@@ -32,6 +32,7 @@ class BookingBase(BaseModel):
     room_id: str
     key: bool
     recurrence_rule: str | None = None
+    entity: str
 
 
 class BookingComplete(BookingBase):
@@ -43,7 +44,7 @@ class BookingComplete(BookingBase):
 class Applicant(CoreUserSimple):
     email: str
     promo: int | None = None
-    phone: str
+    phone: str | None = None
 
 
 class BookingReturn(BookingComplete):
@@ -62,3 +63,4 @@ class BookingEdit(BaseModel):
     room: str | None = None
     key: bool | None = None
     recurrence_rule: str | None = None
+    entity: str | None = None

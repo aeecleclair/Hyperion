@@ -28,3 +28,4 @@ class Booking(Base):
     recurrence_rule: str | None = Column(String)
     applicant_id: str = Column(ForeignKey("core_user.id"), nullable=False)
     applicant: CoreUser = relationship("CoreUser")
+    entity: str = Column(String)
