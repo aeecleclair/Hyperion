@@ -9,12 +9,9 @@ async def get_flappybird_score_leaderboard(
     db: AsyncSession, skip: int, limit: int
 ) -> list[models_flappybird.FlappyBirdScore]:
 
-    # On récupère tous les éléments FlappyBirdScore entre begin et end ordonnés par leur valeur
     result = await db.execute(
         select(models_flappybird.FlappyBirdScore)
-        .order_by(
-            models_flappybird.FlappyBirdScore.value.desc(),
-        )
+        .order_by(models_flappybird.FlappyBirdScore.value.desc())
         .offset(skip)
         .limit(limit)
     )

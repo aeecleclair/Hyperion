@@ -1,14 +1,22 @@
 from datetime import datetime
 
 from app.main import app
-from app.models import models_flappybird
-from tests.commons import TestingSessionLocal, client
+from app.models import models_calendar, models_core, models_flappybird
+from app.utils.types.groups_type import GroupType
+from tests.commons import (
+    TestingSessionLocal,
+    client,
+    create_api_access_token,
+    create_user_with_groups,
+)
 
 user_id = "2e10a287-5e5d-4151-bfa5-bcfffa325433"
+user: models_core.CoreUser | None = None
 
 
 @app.on_event("startup")  # create the datas needed in the tests
 async def startuptest():
+    global user
     async with TestingSessionLocal() as db:
 
         # We add a todo item to be able to try the endpoint
@@ -19,6 +27,9 @@ async def startuptest():
             creation_time=datetime.now(),
         )
         db.add(flappybird_score)
+
+        user = await create_user_with_groups([GroupType.student], db=db)
+
         await db.commit()
 
 
