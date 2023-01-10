@@ -2,6 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
+from app.schemas.schemas_bdebooking import RoomComplete
 from app.schemas.schemas_core import CoreUserSimple
 from app.utils.types.bdebooking_type import Decision
 from app.utils.types.calendar_types import CalendarEventType
@@ -55,6 +56,7 @@ class EventApplicant(CoreUserSimple):
 
 class EventReturn(EventComplete):
     applicant: EventApplicant
+    room: RoomComplete | None
 
     class Config:
         orm_mode = True
