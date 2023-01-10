@@ -604,7 +604,7 @@ async def remove_order(
 
 
 @router.post(
-    "amap/deliveries/{delivery_id}/openordering", status_code=204, tags=[Tags.amap]
+    "/amap/deliveries/{delivery_id}/openordering", status_code=204, tags=[Tags.amap]
 )
 async def open_ordering_of_delivery(
     delivery_id: str,
@@ -624,7 +624,7 @@ async def open_ordering_of_delivery(
         raise HTTPException(status_code=404, detail="Delivery not found.")
 
 
-@router.post("amap/deliveries/{delivery_id}/lock", status_code=204, tags=[Tags.amap])
+@router.post("/amap/deliveries/{delivery_id}/lock", status_code=204, tags=[Tags.amap])
 async def lock_delivery(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
@@ -644,7 +644,7 @@ async def lock_delivery(
 
 
 @router.post(
-    "amap/deliveries/{delivery_id}/delivered", status_code=204, tags=[Tags.amap]
+    "/amap/deliveries/{delivery_id}/delivered", status_code=204, tags=[Tags.amap]
 )
 async def mark_delivery_as_delivered(
     delivery_id: str,
@@ -664,7 +664,9 @@ async def mark_delivery_as_delivered(
         raise HTTPException(status_code=404, detail="Delivery not found.")
 
 
-@router.post("amap/deliveries/{delivery_id}/archive", status_code=204, tags=[Tags.amap])
+@router.post(
+    "/amap/deliveries/{delivery_id}/archive", status_code=204, tags=[Tags.amap]
+)
 async def archive_of_delivery(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
