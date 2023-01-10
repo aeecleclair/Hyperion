@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from app.main import app
-from app.models import models_calendar, models_core, models_flappybird
+from app.models import models_core, models_flappybird
 from app.utils.types.groups_type import GroupType
 from tests.commons import (
     TestingSessionLocal,
@@ -38,29 +38,35 @@ def test_create_rows():  # A first test is needed to run startuptest once and cr
         pass
 
 
-def test_get_flappybird_score_by_user():
-    response = client.get(f"/flappybird/scores/{user_id}")
+def test_create_flappybird_score():
+    token = create_api_access_token(user=user)
+    response = client.post(
+        "/flappybird/scores/me?value=25",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 201
+    json = response.json()
+    assert "value" in json
+    assert json["value"] == 25
+
+
+def test_get_flappybird_user_score():
+    token = create_api_access_token(user=user)
+    response = client.get(
+        "/flappybird/scores/me",
+        headers={"Authorization": f"Bearer {token}"},
+    )
     assert response.status_code == 200
     data = response.json()
     assert len(data) > 0
 
 
 def test_get_flappybird_score():
-    response = client.get("/flappybird/scores/")
+    token = create_api_access_token(user=user)
+    response = client.get(
+        "/flappybird/scores/",
+        headers={"Authorization": f"Bearer {token}"},
+    )
     assert response.status_code == 200
     data = response.json()
     assert len(data) > 0
-
-
-def test_create_flappybird_score():
-    response = client.post(
-        "/flappybird/scores",
-        json={
-            "user_id": user_id,
-            "value": 25,
-        },
-    )
-    assert response.status_code == 201
-    json = response.json()
-    assert "value" in json
-    assert json["value"] == 25
