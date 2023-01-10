@@ -19,6 +19,7 @@ class EventBase(BaseModel):
     description: str
     recurrence_rule: str | None
     applicant_id: str
+    room_id: str | None
 
 
 class EventComplete(EventBase):
@@ -40,6 +41,7 @@ class EventEdit(BaseModel):
     description: str | None = None
     recurrence_rule: str | None = None
     applicant_id: str | None = None
+    room_id: str | None = None
 
     class Config:
         orm_mode = True

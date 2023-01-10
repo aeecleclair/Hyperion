@@ -4,6 +4,7 @@ from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, String
 from sqlalchemy.orm import relationship
 
 from app.database import Base
+from app.models.models_bdebooking import Room
 from app.models.models_core import CoreUser
 from app.utils.types.calendar_types import CalendarEventType
 
@@ -29,3 +30,7 @@ class Event(Base):
     description: str = Column(String, nullable=False)
     decision: str = Column(String, nullable=False)
     recurrence_rule: str | None = Column(String)
+    room_id: str = Column(
+        ForeignKey("bde_booking_room.id"), nullable=True
+    )  # If a room is specified, will create a confirmed booking with the validation of the event
+    room: Room = relationship("Room")
