@@ -6,8 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cruds import cruds_flappybird
 from app.cruds.cruds_users import get_user_by_id
-from app.dependencies import get_db
-from app.models import models_flappybird
+from app.dependencies import get_db, is_user_a_member
+from app.models import models_core, models_flappybird
 from app.schemas import schemas_flappybird
 from app.utils.types.tags import Tags
 
@@ -30,13 +30,31 @@ async def get_flappybird_score(
 
 
 @router.get(
+    "/flappybird/scores/me",
+    response_model=list[schemas_flappybird.FlappyBirdScoreInDB],
+    status_code=200,
+    tags=[Tags.flappybird],
+)
+async def get_current_user_flappybird_scores(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    user_scores = await cruds_flappybird.get_flappybird_score_by_user_id(
+        db=db, user_id=user.id
+    )
+    return user_scores
+
+
+@router.get(
     "/flappybird/scores/{user_id}",
     response_model=list[schemas_flappybird.FlappyBirdScoreInDB],
     status_code=200,
     tags=[Tags.flappybird],
 )
-async def get_flappybird_score_by_user(
-    user_id: str, db: AsyncSession = Depends(get_db)
+async def get_flappybird_scores_by_user_id(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     user_scores = await cruds_flappybird.get_flappybird_score_by_user_id(
         db=db, user_id=user_id
@@ -53,11 +71,12 @@ async def get_flappybird_score_by_user(
 async def create_flappybird_score(
     flappybird_score: schemas_flappybird.FlappyBirdScoreBase,
     db: AsyncSession = Depends(get_db),
+    current_user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     # Currently, flappybird_score is a schema instance
     # To add it to the database, we need to create a model
 
-    # Add the user
+    # Get the user
     user = await get_user_by_id(db, user_id=flappybird_score.user_id)
 
     if user is not None:
