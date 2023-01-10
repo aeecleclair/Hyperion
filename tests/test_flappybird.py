@@ -15,7 +15,7 @@ async def startuptest():
         flappybird_score = models_flappybird.FlappyBirdScore(
             id="0b7dc7bf-0ab4-421a-bbe7-7ec064fcec8d",
             user_id=user_id,
-            value="25",
+            value=25,
             creation_time=datetime.now(),
         )
         db.add(flappybird_score)
@@ -46,10 +46,10 @@ def test_create_flappybird_score():
         "/flappybird/scores",
         json={
             "user_id": user_id,
-            "value": "25",
+            "value": 25,
         },
     )
     assert response.status_code == 201
     json = response.json()
     assert "value" in json
-    assert json["value"] == "25"
+    assert json["value"] == 25
