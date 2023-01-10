@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime
 
 from icalendar import Calendar, Event
@@ -6,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import models_calendar
+from app.models import models_bdebooking, models_calendar
 from app.schemas import schemas_calendar
 from app.utils.types.bdebooking_type import Decision
 
@@ -115,6 +116,29 @@ async def confirm_event(db: AsyncSession, decision: Decision, event_id: str):
     )
     try:
         await db.commit()
+        if decision == Decision.approved:
+            req = await db.execute(
+                select(models_calendar.Event).where(
+                    models_calendar.Event.id == event_id
+                )
+            )
+            event = req.scalars().first()
+            if event is not None:
+                if event.room_id is not None:
+                    db.add(
+                        models_bdebooking.Booking(
+                            id=str(uuid.uuid4()),
+                            reason=event.name,
+                            start=event.start,
+                            end=event.end,
+                            room_id=event.room_id,
+                            key=True,
+                            decision=Decision.approved,
+                            recurrence_rule=event.recurrence_rule,
+                            applicant_id=event.applicant_id,
+                        )
+                    )
+                    await db.commit()
     except IntegrityError:
         await db.rollback()
         raise ValueError()
