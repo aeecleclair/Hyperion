@@ -324,6 +324,7 @@ async def open_ordering_of_delivery(db: AsyncSession, delivery_id: str):
         .where(models_amap.Delivery.id == delivery_id)
         .values(status=DeliveryStatusType.orderable)
     )
+    await db.commit()
 
 
 async def lock_delivery(db: AsyncSession, delivery_id: str):
@@ -332,6 +333,7 @@ async def lock_delivery(db: AsyncSession, delivery_id: str):
         .where(models_amap.Delivery.id == delivery_id)
         .values(status=DeliveryStatusType.locked)
     )
+    await db.commit()
 
 
 async def mark_delivery_as_delivered(db: AsyncSession, delivery_id: str):
@@ -340,3 +342,4 @@ async def mark_delivery_as_delivered(db: AsyncSession, delivery_id: str):
         .where(models_amap.Delivery.id == delivery_id)
         .values(status=DeliveryStatusType.delivered)
     )
+    await db.commit()
