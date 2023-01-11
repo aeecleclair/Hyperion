@@ -1,5 +1,5 @@
 -r requirements.txt
-aiosqlite==0.17.0
+aiosqlite==0.18.0
 black==22.10.0
 flake8==6.0.0
 isort[requirements_deprecated_finder]==5.10.1
