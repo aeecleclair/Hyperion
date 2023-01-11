@@ -616,6 +616,27 @@ async def read_user(
 #    await cruds_users.delete_user(db=db, user_id=user_id)
 
 
+@router.post(
+    "/users/me/ask-deletion",
+    status_code=204,
+    tags=[Tags.users],
+)
+async def delete_user(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+    settings: Settings = Depends(get_settings),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
+    request_id: str = Depends(get_request_id),
+):
+    """
+    This endpoint will ask administrators to process to the user deletion.
+    This manual verification is needed to prevent data from being deleting for other users
+    """
+    hyperion_security_logger.info(
+        f"User {user.email} - {user.id} has requested to delete their account."
+    )
+
+
 @router.patch(
     "/users/me",
     status_code=204,
