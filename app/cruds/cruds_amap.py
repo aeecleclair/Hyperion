@@ -189,7 +189,9 @@ async def edit_delivery(
 
 async def get_order_by_id(db: AsyncSession, order_id: str) -> models_amap.Order | None:
     result = await db.execute(
-        select(models_amap.Order).where(models_amap.Order.order_id == order_id)
+        select(models_amap.Order)
+        .where(models_amap.Order.order_id == order_id)
+        .options(selectinload(models_amap.Order.user))
     )
     return result.scalars().first()
 
