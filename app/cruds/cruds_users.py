@@ -10,6 +10,13 @@ from app.models import models_core
 # from app.schemas.schemas_core import CoreUserUpdate
 
 
+async def count_users(db: AsyncSession) -> int:
+    """Return the number of users in the database"""
+
+    result = await db.execute(select(models_core.CoreUser))
+    return len(result.scalars().all())
+
+
 async def get_users(
     db: AsyncSession,
     includedGroups: list[str] = [],

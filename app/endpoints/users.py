@@ -67,6 +67,26 @@ async def read_users(
 
 
 @router.get(
+    "/users/count",
+    response_model=int,
+    status_code=200,
+    tags=[Tags.users],
+)
+async def count_users(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Return all users from database as a list of `CoreUserSimple`
+
+    **This endpoint is only usable by administrators**
+    """
+
+    count = await cruds_users.count_users(db)
+    return count
+
+
+@router.get(
     "/users/search",
     response_model=list[schemas_core.CoreUserSimple],
     status_code=200,
