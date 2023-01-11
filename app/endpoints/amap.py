@@ -435,8 +435,14 @@ async def add_order_to_delievery(
                                 balance=balance.balance - amount
                             ),
                         )
-                        return await get_order_by_id(
-                            delivery_id=delivery_id, order_id=db_order.order_id, db=db
+                        orderret = await cruds_amap.get_order_by_id(
+                            order_id=db_order.order_id, db=db
+                        )
+                        productsret = await cruds_amap.get_products_of_order(
+                            db=db, order_id=order_id
+                        )
+                        return schemas_amap.OrderReturn(
+                            productsdetail=productsret, **orderret.__dict__
                         )
                     except ValueError as error:
                         raise HTTPException(status_code=422, detail=str(error))
