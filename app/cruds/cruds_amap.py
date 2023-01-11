@@ -217,13 +217,12 @@ async def add_order_to_delivery(
     try:
         await db.commit()
         for i in range(len(order.products_ids)):
-            await db.execute(
-                update(models_amap.AmapOrderContent)
-                .where(
-                    models_amap.AmapOrderContent.order_id == order.order_id,
-                    models_amap.AmapOrderContent.product_id == order.products_ids[i],
+            db.add(
+                models_amap.AmapOrderContent(
+                    order_id=order.order_id,
+                    product_id=order.products_ids[i],
+                    quantity=order.products_quantity[i],
                 )
-                .values(quantity=order.products_quantity[i])
             )
             await db.commit()
     except IntegrityError as err:
