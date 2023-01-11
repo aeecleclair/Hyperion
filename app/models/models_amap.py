@@ -48,7 +48,7 @@ class Delivery(Base):
 class Order(Base):
     __tablename__ = "amap_order"
 
-    user_id: str = Column(String, ForeignKey("core_user.id"), primary_key=True)
+    user_id: str = Column(String, ForeignKey("core_user.id"), nullable=False)
     user: CoreUser = relationship(
         "CoreUser",
     )
