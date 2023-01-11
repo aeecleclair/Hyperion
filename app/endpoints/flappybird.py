@@ -15,7 +15,7 @@ router = APIRouter()
 
 @router.get(
     "/flappybird/scores",
-    response_model=list[schemas_flappybird.FlappyBirdScoreInDB],
+    response_model=list[schemas_flappybird.FlappyBirdScoreFeedback],
     status_code=200,
     tags=[Tags.flappybird],
 )
@@ -33,7 +33,7 @@ async def get_flappybird_score(
 
 @router.get(
     "/flappybird/scores/me",
-    response_model=list[schemas_flappybird.FlappyBirdScoreInDB],
+    response_model=list[schemas_flappybird.FlappyBirdScoreFeedback],
     status_code=200,
     tags=[Tags.flappybird],
 )
@@ -49,7 +49,7 @@ async def get_current_user_flappybird_scores(
 
 @router.post(
     "/flappybird/scores/me",
-    response_model=schemas_flappybird.FlappyBirdScoreInDB,
+    response_model=schemas_flappybird.FlappyBirdScoreFeedback,
     status_code=201,
     tags=[Tags.flappybird],
 )
