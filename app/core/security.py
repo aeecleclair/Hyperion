@@ -58,7 +58,7 @@ def generate_token(nbytes=32) -> str:
     By default, a 32 bytes token is generated.
     """
     # We use https://docs.python.org/3/library/secrets.html#secrets.token_urlsafe to generate the activation secret token
-    return secrets.token_urlsafe(32)
+    return secrets.token_urlsafe(nbytes)
 
 
 async def authenticate_user(

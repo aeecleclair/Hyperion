@@ -137,7 +137,7 @@ async def create_user_by_user(
     # Check the account type
 
     # For staff and student
-    # ^[\w\-.]*@(ecl\d{2})|(alternance\d{4})?.ec-lyon.fr$
+    # ^[\w\-.]*@(ecl\d{2})|(alternance\d{4})|(auditeur)?.ec-lyon.fr$
     # For staff
     # ^[\w\-.]*@ec-lyon.fr$
     # For student
@@ -147,7 +147,8 @@ async def create_user_by_user(
         # Its a staff email address
         account_type = AccountType.staff
     elif re.match(
-        r"^[\w\-.]*@(ecl\d{2})|(alternance\d{4}).ec-lyon.fr$", user_create.email
+        r"^[\w\-.]*@((ecl\d{2})|(alternance\d{4})|(auditeur)).ec-lyon.fr$",
+        user_create.email,
     ):
         # Its a student email address
         account_type = AccountType.student
@@ -196,7 +197,7 @@ async def create_user_by_user(
 
 @router.post(
     "/users/batch-creation",
-    response_model=standard_responses.Result,
+    response_model=standard_responses.BatchResult,
     status_code=201,
     tags=[Tags.users],
 )
@@ -232,7 +233,7 @@ async def batch_create_users(
                 request_id=request_id,
             )
         except Exception as error:
-            failed[user_create.email] = error
+            failed[user_create.email] = str(error)
 
     return standard_responses.BatchResult(failed=failed)
 
@@ -256,7 +257,7 @@ async def create_user(
         raise ValueError(f"An account with the email {email} already exist")
     # There might be an unconfirmed user in the database but its not an issue. We will generate a second activation token.
 
-    activation_token = security.generate_token()
+    activation_token = security.generate_token(nbytes=8)
 
     # Add the unconfirmed user to the unconfirmed_user table
 
@@ -280,7 +281,7 @@ async def create_user(
             send_email,
             recipient=email,
             subject="MyECL - confirm your email",
-            content=f"Please confirm your MyECL account with the token {activation_token} : https://hyperion.myecl.fr/users/activate?activation_token={activation_token}",
+            content=f"Please confirm your MyECL account by using the following token in the application : {activation_token}",
             settings=settings,
         )
     hyperion_security_logger.info(
@@ -734,8 +735,6 @@ async def create_current_user_profile_picture(
 )
 async def read_user_profile_picture(
     user_id: str,
-    # TODO: we may want to remove this user requirement to be able to display images easily in html code
-    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Get the profile picture of an user.

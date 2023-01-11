@@ -65,6 +65,8 @@ class Settings(BaseSettings):
     # Hyperion follows Semantic Versioning
     # https://semver.org/
     HYPERION_VERSION: str = "0.0.1"  # This value should never be modified by hand. See [Hyperion release] documentation
+    MINIMAL_TITAN_VERSION_CODE: int = 28
+    # Depreciated, minimal_titan_version_code should be used
     MINIMAL_TITAN_VERSION: str = "0.0.1"
 
     # Origins for the CORS middleware. `["http://localhost"]` can be used for development.
