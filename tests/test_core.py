@@ -11,6 +11,30 @@ def test_get_information():
     assert data["ready"] is True
 
 
+def test_get_privacy():
+
+    response = client.get(
+        "/privacy",
+    )
+    assert response.status_code == 200
+
+
+def test_get_terms_and_conditions():
+
+    response = client.get(
+        "/terms-and-conditions",
+    )
+    assert response.status_code == 200
+
+
+def test_get_support():
+
+    response = client.get(
+        "/support",
+    )
+    assert response.status_code == 200
+
+
 def test_get_security_txt():
 
     response = client.get(
