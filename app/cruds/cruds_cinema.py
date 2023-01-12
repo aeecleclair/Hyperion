@@ -11,6 +11,15 @@ async def get_sessions(db: AsyncSession) -> list[models_cinema.Session]:
     return result.scalars().all()
 
 
+async def get_session_by_id(
+    db: AsyncSession, session_id: str
+) -> models_cinema.Session | None:
+    result = await db.execute(
+        select(models_cinema.Session).where(models_cinema.Session.id == session_id)
+    )
+    return result.scalars().first()
+
+
 async def create_session(
     session: schemas_cinema.CineSessionComplete, db: AsyncSession
 ) -> models_cinema.Session:
