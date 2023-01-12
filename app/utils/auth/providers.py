@@ -228,3 +228,20 @@ class SynapseAuthClient(BaseAuthClient):
             ),
             "email": user.email,
         }
+
+
+class MinecraftAuthClient(BaseAuthClient):
+    # If no redirect_uri are hardcoded, the client will need to provide one in its request
+    redirect_uri: str | None = None
+    # Set of scopes the auth client is authorized to grant when issuing an access token.
+    # See app.utils.types.scopes_type.ScopeType for possible values
+    allowed_scopes: Set[ScopeType] = {ScopeType.profile}
+
+    @classmethod
+    def get_userinfo(cls, user: models_core.CoreUser):
+        return {
+            "id": user.id,
+            "nickname": user.nickname,
+            "promo": user.promo,
+            "floor": user.floor,
+        }
