@@ -326,7 +326,10 @@ async def get_orders_of_user(db: AsyncSession, user_id: str) -> list[models_amap
     result = await db.execute(
         select(models_amap.Order)
         .where(models_amap.Order.user_id == user_id)
-        .options(selectinload(models_amap.Order.products))
+        .options(
+            selectinload(models_amap.Order.products),
+            selectinload(models_amap.Order.user),
+        )
     )
     return result.scalars().all()
 
