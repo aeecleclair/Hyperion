@@ -77,7 +77,6 @@ class OrderBase(BaseModel):
     delivery_id: str
     products_ids: list[str]
     collection_slot: AmapSlotType
-    delivery_date: date
     products_quantity: list[int]
 
 
@@ -95,7 +94,6 @@ class OrderReturn(BaseModel):
     delivery_id: str
     productsdetail: list[ProductQuantity]
     collection_slot: AmapSlotType
-    delivery_date: date
     order_id: str
     amount: float
     ordering_date: datetime

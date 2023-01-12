@@ -4,7 +4,7 @@
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import noload, selectinload
 
 from app.models import models_amap
 from app.schemas import schemas_amap
@@ -111,7 +111,7 @@ async def get_delivery_by_id(
         .where(models_amap.Delivery.id == delivery_id)
         .options(
             selectinload(models_amap.Delivery.products),
-            selectinload(models_amap.Delivery.orders),
+            noload(models_amap.Delivery.orders),
         )
     )
     return result.scalars().first()
@@ -191,9 +191,25 @@ async def get_order_by_id(db: AsyncSession, order_id: str) -> models_amap.Order 
     result = await db.execute(
         select(models_amap.Order)
         .where(models_amap.Order.order_id == order_id)
-        .options(selectinload(models_amap.Order.user))
+        .options(
+            selectinload(models_amap.Order.user),
+            noload(models_amap.Order.products),
+        )
     )
     return result.scalars().first()
+
+
+async def get_orders_from_delivery(
+    db: AsyncSession, delivery_id: str
+) -> list[models_amap.Order]:
+    result = await db.execute(
+        select(models_amap.Order)
+        .where(models_amap.Order.delivery_id == delivery_id)
+        .options(
+            noload(models_amap.Order.products), selectinload(models_amap.Order.user)
+        )
+    )
+    return result.scalars().all()
 
 
 async def get_products_of_order(
@@ -256,7 +272,6 @@ async def edit_order(db: AsyncSession, order: schemas_amap.OrderComplete):
             amount=order.amount,
             collection_slot=order.collection_slot,
             ordering_date=order.ordering_date,
-            delivery_date=order.delivery_date,
         )
     )
     await db.commit()
