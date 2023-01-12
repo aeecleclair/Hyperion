@@ -5,7 +5,6 @@ from pydantic import BaseModel
 from app.schemas.schemas_core import CoreUserSimple
 
 
-# Schema de base. Contiens toutes les données communes à tous les schemas
 class FlappyBirdScoreBase(BaseModel):
     user_id: str
     value: int
@@ -15,7 +14,6 @@ class FlappyBirdScoreBase(BaseModel):
         orm_mode = True
 
 
-# Format des données présente dans la base de donnée
 class FlappyBirdScoreInDB(FlappyBirdScoreBase):
     id: str
     user: CoreUserSimple

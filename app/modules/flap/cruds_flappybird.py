@@ -8,7 +8,7 @@ from app.modules.flap import models_flappybird
 async def get_flappybird_score_leaderboard(
     db: AsyncSession, skip: int, limit: int
 ) -> list[models_flappybird.FlappyBirdScore]:
-
+    """Return the flappybird leaderboard scores from postion skip to skip+limit"""
     result = await db.execute(
         select(models_flappybird.FlappyBirdScore)
         .order_by(models_flappybird.FlappyBirdScore.value.desc())
@@ -21,8 +21,8 @@ async def get_flappybird_score_leaderboard(
 async def get_flappybird_score_by_user_id(
     db: AsyncSession, user_id: str
 ) -> list[models_flappybird.FlappyBirdScore]:
+    """Return all the flappybird scores by user_id"""
 
-    # On récupère tous les éléments FlappyBirdScore dont le user_id correspond à celui que l'on recherche
     result = await db.execute(
         select(models_flappybird.FlappyBirdScore).where(
             models_flappybird.FlappyBirdScore.user_id == user_id
@@ -34,10 +34,7 @@ async def get_flappybird_score_by_user_id(
 async def create_flappybird_score(
     db: AsyncSession, flappybird_score: models_flappybird.FlappyBirdScore
 ) -> models_flappybird.FlappyBirdScore:
-
-    # L'élément est placé tout seul dans la bonne table.
-    # flappybird_score est en effet une instance du model : models_flappybird.FlappyBirdScore
-    # qui contient le nom de la table
+    """Add a FlappyBirdScore in database"""
     db.add(flappybird_score)
     try:
         await db.commit()
