@@ -3,7 +3,7 @@ from datetime import datetime
 
 from app.main import app
 from app.models import models_amap, models_core
-from app.utils.types.amap_types import DeliveryStatusType
+from app.utils.types.amap_types import AmapSlotType, DeliveryStatusType
 from app.utils.types.groups_type import GroupType
 from tests.commons import (
     TestingSessionLocal,
@@ -54,6 +54,15 @@ async def startuptest():
         )
         db.add(deletable_delivery)
 
+        order = models_amap.Order(
+            order_id=str(uuid.uuid4()),
+            user_id=student_user.id,
+            delivery_id=delivery.id,
+            amount=0.0,
+            collection_slot=AmapSlotType.midi,
+            ordering_date=datetime(2022, 8, 10, 12, 16, 26),
+        )
+        db.add(order)
         await db.commit()
 
 

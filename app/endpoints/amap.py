@@ -329,11 +329,14 @@ async def get_orders_from_delivery(
 
     **The user must be a member of the group AMAP to use this endpoint**
     """
-    delivery = await cruds_amap.get_delivery_by_id(delivery_id=delivery_id, db=db)
-    if delivery is not None:
-        return delivery.orders
-    else:
-        raise HTTPException(status_code=404, detail="Delivery not found")
+    orders = await cruds_amap.get_orders_from_delivery(db=db, delivery_id=delivery_id)
+    res = []
+    for order in orders:
+        products = await cruds_amap.get_products_of_order(
+            db=db, order_id=order.order_id
+        )
+        res.append(schemas_amap.OrderReturn(productsdetail=products, **order.__dict__))
+    return res
 
 
 @router.get(
