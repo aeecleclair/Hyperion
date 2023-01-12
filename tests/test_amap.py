@@ -23,7 +23,7 @@ order: models_amap.Order | None = None
 
 @app.on_event("startup")  # create the data needed in the tests
 async def startuptest():
-    global amap_user, student_user, product, deletable_product, delivery, deletable_delivery
+    global amap_user, student_user, product, deletable_product, delivery, deletable_delivery, order
 
     async with TestingSessionLocal() as db:
         amap_user = await create_user_with_groups([GroupType.amap], db=db)
@@ -66,15 +66,6 @@ async def startuptest():
         await db.commit()
 
 
-def test_get_rights():
-    token = create_api_access_token(amap_user)
-    response = client.get(
-        "/amap/rights",
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert response.status_code == 200
-
-
 def test_get_products():
     token = create_api_access_token(amap_user)
 
@@ -97,7 +88,7 @@ def test_create_product():
 
 
 def test_get_product_by_id():
-    # The user don't need to be part of group amap to get a product
+    # The user doesn't need to be part of group amap to get a product
     student_token = create_api_access_token(student_user)
 
     response = client.get(
@@ -175,22 +166,12 @@ def test_edit_delivery():
     assert response.status_code == 204
 
 
-def test_get_products_from_delivery():
-    # The user don't need to be part of group amap to get a product
-    student_token = create_api_access_token(student_user)
-
-    response = client.get(
-        f"/amap/deliveries/{delivery.id}/products",
-        headers={"Authorization": f"Bearer {student_token}"},
-    )
-    assert response.status_code == 200
-
-
 def test_add_product_to_delivery():
     token = create_api_access_token(amap_user)
 
     response = client.post(
-        f"/amap/deliveries/{delivery.id}/products/{product.id}",
+        f"/amap/deliveries/{delivery.id}/products",
+        json={"products_ids": [product.id]},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 201
@@ -198,10 +179,9 @@ def test_add_product_to_delivery():
 
 def test_remove_product_from_delivery():
     token = create_api_access_token(amap_user)
-
-    # TODO: may this break if the product is still not in the delivery?
     response = client.delete(
-        f"/amap/deliveries/{delivery.id}/products/{product.id}",
+        f"/amap/deliveries/{delivery.id}/products",
+        json={"products_ids": [product.id, "notaproduct"]},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 204
@@ -217,7 +197,22 @@ def test_get_orders_from_delivery():
     assert response.status_code == 200
 
 
-# TODO: test get_order_by_id
+def test_get_order_by_id():
+    token = create_api_access_token(amap_user)
+    response = client.get(
+        f"/amap/deliveries/{delivery.id}/orders/{order.order_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+
+
+def test_make_delivery_orderable():
+    token = create_api_access_token(amap_user)
+    response = client.post(
+        f"/amap/deliveries/{delivery.id}/openordering",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 204
 
 
 def test_add_order_to_delivery():

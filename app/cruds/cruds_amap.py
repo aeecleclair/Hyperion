@@ -165,13 +165,12 @@ async def remove_product_from_delivery(
     delivery_id: str,
 ):
     """Remove a product from a delivery products list"""
-    for id in products_ids.products_ids:
-        await db.execute(
-            delete(models_amap.AmapDeliveryContent).where(
-                models_amap.AmapDeliveryContent.product_id == id
-                and models_amap.AmapDeliveryContent.delivery_id == delivery_id
-            )
+    await db.execute(
+        delete(models_amap.AmapDeliveryContent).where(
+            models_amap.AmapDeliveryContent.product_id.in_(products_ids.products_ids),
+            models_amap.AmapDeliveryContent.delivery_id == delivery_id,
         )
+    )
 
     await db.commit()
 
