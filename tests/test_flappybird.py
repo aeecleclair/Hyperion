@@ -19,7 +19,6 @@ async def startuptest():
     global user
     async with TestingSessionLocal() as db:
 
-        # We add a todo item to be able to try the endpoint
         user = await create_user_with_groups([GroupType.student], db=db)
 
         flappybird_score = models_flappybird.FlappyBirdScore(
