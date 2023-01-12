@@ -246,7 +246,6 @@ async def edit_delivery(
 
 @router.post(
     "/amap/deliveries/{delivery_id}/products",
-    response_model=list[schemas_amap.ProductComplete],
     status_code=201,
     tags=[Tags.amap],
 )
