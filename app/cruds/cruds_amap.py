@@ -327,7 +327,7 @@ async def get_orders_of_user(db: AsyncSession, user_id: str) -> list[models_amap
         select(models_amap.Order)
         .where(models_amap.Order.user_id == user_id)
         .options(
-            selectinload(models_amap.Order.products),
+            noload(models_amap.Order.products),
             selectinload(models_amap.Order.user),
         )
     )
