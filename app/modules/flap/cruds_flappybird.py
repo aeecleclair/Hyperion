@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,6 +29,41 @@ async def get_flappybird_score_by_user_id(
         )
     )
     return result.scalars().all()
+
+
+async def get_flappybird_PB_by_user_id(
+    db: AsyncSession, user_id: str
+) -> models_flappybird.FlappyBirdScore | None:
+    """Return the flappybird PB in the leaderboard by user_id"""
+
+    pb_result = await db.execute(
+        select(models_flappybird.FlappyBirdScore)
+        .where(models_flappybird.FlappyBirdScore.user_id == user_id)
+        .order_by(models_flappybird.FlappyBirdScore.value.desc())
+        .limit(1)
+    )
+
+    return pb_result.scalar()
+
+
+async def get_flappybird_position_by_user_id(
+    db: AsyncSession, user_id: str
+) -> int | None:
+    """Return the flappybird position in the leaderboard by user_id"""
+
+    pb = await get_flappybird_PB_by_user_id(db=db, user_id=user_id)
+
+    if pb is not None:
+        result = await db.execute(
+            select([func.count()])
+            .select_from(models_flappybird.FlappyBirdScore)
+            .order_by(models_flappybird.FlappyBirdScore.value.desc())
+            .where(models_flappybird.FlappyBirdScore.value >= pb.value)
+        )
+
+        return result.scalar()
+    else:
+        return None
 
 
 async def create_flappybird_score(
