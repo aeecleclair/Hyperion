@@ -31,6 +31,48 @@ async def read_information(settings: Settings = Depends(get_settings)):
 
 
 @router.get(
+    "/privacy",
+    response_class=FileResponse,
+    status_code=200,
+    tags=[Tags.core],
+)
+async def read_privacy():
+    """
+    Return Hyperion privacy
+    """
+
+    return FileResponse("assets/privacy.txt")
+
+
+@router.get(
+    "/terms-and-conditions",
+    response_class=FileResponse,
+    status_code=200,
+    tags=[Tags.core],
+)
+async def read_terms_and_conditions():
+    """
+    Return Hyperion terms and conditions pages
+    """
+
+    return FileResponse("assets/terms-and-conditions.txt")
+
+
+@router.get(
+    "/support",
+    response_class=FileResponse,
+    status_code=200,
+    tags=[Tags.core],
+)
+async def read_support():
+    """
+    Return Hyperion terms and conditions pages
+    """
+
+    return FileResponse("assets/support.txt")
+
+
+@router.get(
     "/security.txt",
     response_class=FileResponse,
     status_code=200,
