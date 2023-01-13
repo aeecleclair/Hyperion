@@ -406,6 +406,7 @@ async def add_order_to_delievery(
                     order_id=order_id,
                     amount=amount,
                     ordering_date=ordering_date,
+                    delivery_date=delivery.delivery_date,
                     **order.dict(),
                 )
                 balance: models_amap.Cash | None = await cruds_amap.get_cash_by_id(

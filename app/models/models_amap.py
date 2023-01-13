@@ -53,16 +53,17 @@ class Order(Base):
         "CoreUser",
     )
     delivery_id: str = Column(
-        String, ForeignKey("amap_delivery.id"), index=True, nullable=False
+        String,
+        ForeignKey("amap_delivery.id"),
+        index=True,
+        nullable=False,
     )
     order_id: str = Column(String, primary_key=True, index=True)
-    products: list[Product] = relationship(
-        "Product",
-        secondary="amap_order_content",
-    )
+    products: list[Product] = relationship("Product", secondary="amap_order_content")
     amount: float = Column(Float, nullable=False)
     collection_slot: AmapSlotType = Column(Enum(AmapSlotType), nullable=False)
     ordering_date: datetime = Column(DateTime, nullable=False)
+    delivery_date: date = Column(Date, nullable=False)
 
 
 class Cash(Base):

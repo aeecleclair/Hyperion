@@ -84,6 +84,7 @@ class OrderComplete(OrderBase):
     order_id: str
     amount: float
     ordering_date: datetime
+    delivery_date: date
 
     class Config:
         orm_mode = True
@@ -97,6 +98,7 @@ class OrderReturn(BaseModel):
     order_id: str
     amount: float
     ordering_date: datetime
+    dalivery_date: date
 
     class Config:
         orm_mode = True
