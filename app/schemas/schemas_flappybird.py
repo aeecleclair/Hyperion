@@ -28,3 +28,7 @@ class FlappyBirdScoreFeedback(BaseModel):
     # Required latter to initiate schema using models
     class Config:
         orm_mode = True
+
+
+class FlappyBirdScoreCompleteFeedBack(FlappyBirdScoreFeedback):
+    position: int
