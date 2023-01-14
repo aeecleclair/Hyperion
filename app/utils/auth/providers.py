@@ -1,5 +1,7 @@
 from typing import Any, Set
 
+import unidecode
+
 from app.models import models_core
 from app.utils.tools import is_user_member_of_an_allowed_group
 from app.utils.types.groups_type import GroupType
@@ -195,4 +197,29 @@ class WikijsAuthClient(BaseAuthClient):
             "name": f"{user.firstname} {user.name} ({user.nickname})",
             "email": user.email,
             "groups": [group.name for group in user.groups],
+        }
+
+
+class SynapseAuthClient(BaseAuthClient):
+
+    # If no redirect_uri are hardcoded, the client will need to provide one in its request
+    redirect_uri: str | None = None
+    # Set of scopes the auth client is authorized to grant when issuing an access token.
+    # See app.utils.types.scopes_type.ScopeType for possible values
+    allowed_scopes: Set[ScopeType] = {ScopeType.openid, ScopeType.profile}
+
+    @classmethod
+    def get_userinfo(cls, user: models_core.CoreUser):
+
+        return {
+            "sub": user.id,
+            "picture": f"https://hyperion.myecl.fr/users/{user.id}/profile-picture/",
+            # Matrix does not support special characters in username
+            "username": unidecode.unidecode(f"{user.firstname}.{user.name}"),
+            "displayname": (
+                user.nickname
+                if user.nickname != ""
+                else f"{user.firstname} {user.name}"
+            ),  # TODO: make an utility function to get the display name
+            "email": user.email,
         }
