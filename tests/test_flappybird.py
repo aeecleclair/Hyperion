@@ -63,6 +63,17 @@ def test_get_flappybird_user_score():
     assert len(data) > 0
 
 
+def test_get_flappybird_position_score():
+    token = create_api_access_token(user=user)
+    response = client.get(
+        "/flappybird/scores/me",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) > 0
+
+
 def test_get_flappybird_score():
     token = create_api_access_token(user=user)
     response = client.get(

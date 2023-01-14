@@ -46,25 +46,20 @@ async def get_flappybird_PB_by_user_id(
     return pb_result.scalar()
 
 
-async def get_flappybird_position_by_user_id(
-    db: AsyncSession, user_id: str
+async def get_flappybird_score_position(
+    db: AsyncSession, score: models_flappybird.FlappyBirdScore
 ) -> int | None:
     """Return the flappybird position in the leaderboard by user_id"""
 
-    pb = await get_flappybird_PB_by_user_id(db=db, user_id=user_id)
+    result = await db.execute(
+        select([func.count()])
+        .select_from(models_flappybird.FlappyBirdScore)
+        .order_by(models_flappybird.FlappyBirdScore.value.desc())
+        .distinct(models_flappybird.FlappyBirdScore.user_id)
+        .where(models_flappybird.FlappyBirdScore.value >= score.value)
+    )
 
-    if pb is not None:
-        result = await db.execute(
-            select([func.count()])
-            .select_from(models_flappybird.FlappyBirdScore)
-            .order_by(models_flappybird.FlappyBirdScore.value.desc())
-            .distinct(user_id)
-            .where(models_flappybird.FlappyBirdScore.value >= pb.value)
-        )
-
-        return result.scalar()
-    else:
-        return None
+    return result.scalar()
 
 
 async def create_flappybird_score(
