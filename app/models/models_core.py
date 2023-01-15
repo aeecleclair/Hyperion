@@ -2,10 +2,11 @@
 
 from datetime import date, datetime
 
-from sqlalchemy import Column, Date, DateTime, ForeignKey, Integer, String
+from sqlalchemy import Column, Date, DateTime, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
 from app.database import Base
+from app.utils.types.floors_type import FloorsType
 
 
 class CoreMembership(Base):
@@ -30,7 +31,7 @@ class CoreUser(Base):
     birthday: date | None = Column(Date)
     promo: int | None = Column(Integer)
     phone: str | None = Column(String)
-    floor: str = Column(String, nullable=False)
+    floor: FloorsType = Column(Enum(FloorsType), nullable=False)
     created_on: datetime | None = Column(DateTime)
 
     # We use list["CoreGroup"] with quotes as CoreGroup is only defined after this class

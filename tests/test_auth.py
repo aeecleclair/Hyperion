@@ -19,7 +19,7 @@ async def startuptest():
             firstname="Antoine",
             nickname="Nickname",
             birthday=date.fromisoformat("2000-01-01"),
-            floor="M16",
+            floor="Autre",
             created_on=date.fromisoformat("2000-01-01"),
         )
         db.add(user)

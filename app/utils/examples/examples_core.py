@@ -31,6 +31,6 @@ example_CoreUserActivateRequest = {
         "nickname": "Antoine",
         "activation_token": "62D-QJI5IYrjuywH8IWnuBo0xHrbTCfw_18HP4mdRrA",
         "password": "areallycomplexpassword",
-        "floor": "A",
+        "floor": "Autre",
     }
 }
