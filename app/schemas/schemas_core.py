@@ -61,6 +61,7 @@ class CoreUser(CoreUserSimple):
     birthday: date | None = None
     promo: int | None = None
     floor: FloorsType
+    phone: str | None = None
     created_on: datetime | None = None
     groups: list[CoreGroupSimple] = []
 
@@ -70,6 +71,7 @@ class CoreUserUpdate(BaseModel):
 
     nickname: str | None = None
     birthday: date | None = None
+    phone: str | None = None
     floor: FloorsType | None = None
 
     class Config:
