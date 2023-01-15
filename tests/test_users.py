@@ -63,7 +63,7 @@ def test_update_current_user():
     token = create_api_access_token(admin_user)
     response = client.patch(
         "/users/me",
-        json={"name": "NewName2"},
+        json={"nickname": "NewNickName2"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 204
@@ -75,7 +75,7 @@ def test_update_user():
     token = create_api_access_token(student_user)
     response = client.patch(
         f"/users/{student_user.id}",
-        json={"name": "NewName"},
+        json={"nickname": "NewNickName2"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 403
@@ -84,7 +84,7 @@ def test_update_user():
     token = create_api_access_token(admin_user)
     response = client.patch(
         f"/users/{student_user.id}",
-        json={"name": "NewName"},
+        json={"nickname": "NewNickName"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 204

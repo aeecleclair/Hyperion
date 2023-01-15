@@ -68,8 +68,6 @@ class CoreUser(CoreUserSimple):
 class CoreUserUpdate(BaseModel):
     """Schema for user update"""
 
-    name: str | None = None
-    firstname: str | None = None
     nickname: str | None = None
     birthday: date | None = None
     floor: FloorsType | None = None
