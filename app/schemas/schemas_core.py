@@ -72,7 +72,6 @@ class CoreUserUpdate(BaseModel):
     firstname: str | None = None
     nickname: str | None = None
     birthday: date | None = None
-    promo: int | None = None
     floor: FloorsType | None = None
 
     class Config:
@@ -119,7 +118,6 @@ class CoreUserActivateRequest(CoreUserBase):
     password: str
     birthday: date | None = None
     phone: str | None = None
-    promo: int | None = None
     floor: FloorsType
 
     # Password validator
