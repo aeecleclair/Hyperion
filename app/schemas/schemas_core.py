@@ -28,12 +28,26 @@ class CoreUserBase(BaseModel):
     firstname: str
     nickname: str | None = None
 
+    _normalize_name = validator("name", allow_reuse=True)(
+        validators.trailing_spaces_remover
+    )
+    _normalize_firstname = validator("firstname", allow_reuse=True)(
+        validators.trailing_spaces_remover
+    )
+    _normalize_nickname = validator("nickname", allow_reuse=True)(
+        validators.trailing_spaces_remover
+    )
+
 
 class CoreGroupBase(BaseModel):
     """Base schema for group's model"""
 
     name: str
     description: str | None = None
+
+    _normalize_name = validator("name", allow_reuse=True)(
+        validators.trailing_spaces_remover
+    )
 
 
 class CoreUserSimple(CoreUserBase):
@@ -73,6 +87,10 @@ class CoreUserUpdate(BaseModel):
     birthday: date | None = None
     phone: str | None = None
     floor: FloorsType | None = None
+
+    _normalize_nickname = validator("nickname", allow_reuse=True)(
+        validators.trailing_spaces_remover
+    )
 
     class Config:
         schema_extra = examples_core.example_CoreUserUpdate
@@ -159,6 +177,10 @@ class CoreGroupUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
 
+    _normalize_name = validator("name", allow_reuse=True)(
+        validators.trailing_spaces_remover
+    )
+
 
 class CoreUserRecoverRequest(BaseModel):
     email: str
@@ -166,6 +188,8 @@ class CoreUserRecoverRequest(BaseModel):
     reset_token: str
     created_on: datetime
     expire_on: datetime
+
+    _normalize_email = validator("email", allow_reuse=True)(validators.email_normalizer)
 
     class Config:
         orm_mode = True
