@@ -28,12 +28,17 @@ services:
     image: hyperion-app
     container_name: hyperion-app
     restart: unless-stopped
-    command: ./wait-for-it.sh ${POSTGRES_HOST}:5432 -- uvicorn app.main:app --host 0.0.0.0 --port 80
+    command: uvicorn app.main:app --host 0.0.0.0 --port 80
     depends_on:
       - hyperion-db
       - hyperion-redis
+    environment:
+      # - LOG_LEVEL=debug
+      # - APP_MODULE=app.main:app
+      # - MAX_WORKERS=4
     ports:
       - 8000:80
     volumes:
+      - ./logs:/code/logs:Z
       - ./.env:/code/.env:Z
       - ./migrations/versions:/code/migrations/versions:Z
