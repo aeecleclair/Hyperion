@@ -56,7 +56,7 @@ class EventApplicant(CoreUserSimple):
 
 class EventReturn(EventComplete):
     applicant: EventApplicant
-    room: RoomComplete | None
+    room: RoomComplete | None = None
 
     class Config:
         orm_mode = True
