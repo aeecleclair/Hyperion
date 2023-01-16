@@ -320,7 +320,7 @@ async def remove_product_from_delivery(
 async def get_orders_from_delivery(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
+    user_req: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
     """
     Get orders from a delivery.
