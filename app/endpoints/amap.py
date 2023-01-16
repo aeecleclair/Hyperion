@@ -839,6 +839,9 @@ async def get_orders_of_user(
 
     **The user must be a member of the group AMAP to use this endpoint or can only access the endpoint for its own user_id**
     """
+    user_requested = await read_user(user_id=user_id, db=db)
+    if not user_requested:
+        raise HTTPException(status_code=404, detail="User not found")
 
     if user_id == user.id or is_user_member_of_an_allowed_group(user, [GroupType.amap]):
         orders = await cruds_amap.get_orders_of_user(user_id=user_id, db=db)
