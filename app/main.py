@@ -77,7 +77,7 @@ async def logging_middleware(
     settings: Settings = app.dependency_overrides.get(get_settings, get_settings)()
     redis_client: redis.Redis | Literal[False] | None = app.dependency_overrides.get(
         get_redis_client, get_redis_client
-    )(settings=settings)
+    )()
 
     # We test the ip address with the redis limiter
     process = True
@@ -122,8 +122,11 @@ async def startup():
     # Initialize loggers
     LogConfig().initialize_loggers(settings=settings)
 
-    if not app.dependency_overrides.get(get_redis_client, get_redis_client)(
-        settings=settings
+    if (
+        app.dependency_overrides.get(get_redis_client, get_redis_client)(
+            settings=settings
+        )
+        is False
     ):
         hyperion_error_logger.info("Redis client not configured")
 
@@ -135,7 +138,12 @@ async def startup():
 
     # create db tables
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        try:
+            await conn.run_sync(Base.metadata.create_all)
+        except Exception as error:
+            hyperion_error_logger.fatal(
+                f"Startup: Could not create tables in the database: {error}"
+            )
 
     SessionLocal = app.dependency_overrides.get(get_session_maker, get_session_maker)()
     # Add the necessary groups for account types

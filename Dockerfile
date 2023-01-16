@@ -1,17 +1,14 @@
 # PROD
-FROM python:3.11-rc-bullseye
+FROM tiangolo/uvicorn-gunicorn-fastapi:python3.11
 # Image running several instances of uvicorn in parallel with gunicorn, listens on port 80
-# See https://github.com/tiangolo/uvicorn-gunicorn-docker
+# See https://github.com/tiangolo/uvicorn-gunicorn-fastapi-docker
 
 COPY ./requirements.txt /requirements.txt
 
 RUN pip install --no-cache-dir --upgrade -r /requirements.txt
-RUN pip install --no-cache-dir --upgrade gunicorn
 
-WORKDIR code
-COPY ./assets /code/assets
-COPY ./alembic.ini /code/alembic.ini
-COPY ./migrations /code/migrations
-COPY ./wait-for-it.sh /code/wait-for-it.sh
+COPY ./assets /app/assets
+COPY ./alembic.ini /app/alembic.ini
+COPY ./migrations /app/migrations
 
-COPY ./app/ /code/app/
+COPY ./app/ /app/app/
