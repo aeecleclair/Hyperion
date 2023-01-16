@@ -14,7 +14,7 @@ class AmapOrderContent(Base):
     product_id: str = Column(ForeignKey("amap_product.id"), primary_key=True)
     order_id: str = Column(ForeignKey("amap_order.order_id"), primary_key=True)
     quantity: int = Column(Integer)
-    product: "Product" = relationship("Product")
+    product: "Product" = relationship("Product", viewonly=True)
 
 
 class AmapDeliveryContent(Base):
