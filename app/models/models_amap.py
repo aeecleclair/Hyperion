@@ -60,7 +60,8 @@ class Order(Base):
     )
     order_id: str = Column(String, primary_key=True, index=True)
     products: list[Product] = relationship(
-        "Product", secondary="amap_order_content", viewonly=True
+        "Product",
+        secondary="amap_order_content",
     )
     amount: float = Column(Float, nullable=False)
     collection_slot: AmapSlotType = Column(Enum(AmapSlotType), nullable=False)
