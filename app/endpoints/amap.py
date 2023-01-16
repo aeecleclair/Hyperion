@@ -1,4 +1,3 @@
-import json
 import uuid
 from datetime import datetime
 
@@ -684,24 +683,7 @@ async def archive_of_delivery(
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
     if delivery is not None:
         if delivery.status == DeliveryStatusType.delivered:
-            orders = await get_orders_from_delivery(
-                delivery_id=delivery_id, db=db, user=user
-            )
-            with open(
-                f"data/amap/delivery-{delivery_id}.json",
-                "w",
-            ) as file:
-                json.dump(
-                    {
-                        "delivery": schemas_amap.DeliveryReturn(**delivery.__dict__),
-                        "orders": [
-                            schemas_amap.OrderReturn(**order.__dict__)
-                            for order in orders
-                        ],
-                    },
-                    file,
-                )
-            await cruds_amap.delete_delivery(db=db, delivery_id=delivery_id)
+            await cruds_amap.mark_delivery_as_archived(db=db, delivery_id=delivery_id)
         else:
             raise HTTPException(
                 status_code=403,
@@ -857,9 +839,6 @@ async def get_orders_of_user(
 
     **The user must be a member of the group AMAP to use this endpoint or can only access the endpoint for its own user_id**
     """
-    user = await read_user(user_id=user_id, db=db)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
 
     if user_id == user.id or is_user_member_of_an_allowed_group(user, [GroupType.amap]):
         orders = await cruds_amap.get_orders_of_user(user_id=user_id, db=db)
