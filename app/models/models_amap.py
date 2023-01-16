@@ -14,7 +14,7 @@ class AmapOrderContent(Base):
     product_id: str = Column(ForeignKey("amap_product.id"), primary_key=True)
     order_id: str = Column(ForeignKey("amap_order.order_id"), primary_key=True)
     quantity: int = Column(Integer)
-    product: "Product" = relationship("Product", viewonly=True)
+    product: "Product" = relationship("Product")
 
 
 class AmapDeliveryContent(Base):
@@ -59,7 +59,9 @@ class Order(Base):
         nullable=False,
     )
     order_id: str = Column(String, primary_key=True, index=True)
-    products: list[Product] = relationship("Product", secondary="amap_order_content")
+    products: list[Product] = relationship(
+        "Product", secondary="amap_order_content", viewonly=True
+    )
     amount: float = Column(Float, nullable=False)
     collection_slot: AmapSlotType = Column(Enum(AmapSlotType), nullable=False)
     ordering_date: datetime = Column(DateTime, nullable=False)
