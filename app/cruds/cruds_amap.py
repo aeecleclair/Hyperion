@@ -94,7 +94,9 @@ async def get_deliveries(
 ) -> list[models_amap.Delivery]:
     """Return all deliveries from database"""
     result = await db.execute(
-        select(models_amap.Delivery).options(
+        select(models_amap.Delivery)
+        .where(models_amap.Delivery.status != DeliveryStatusType.archived)
+        .options(
             selectinload(models_amap.Delivery.products),
             selectinload(models_amap.Delivery.orders),
         )
@@ -357,5 +359,14 @@ async def mark_delivery_as_delivered(db: AsyncSession, delivery_id: str):
         update(models_amap.Delivery)
         .where(models_amap.Delivery.id == delivery_id)
         .values(status=DeliveryStatusType.delivered)
+    )
+    await db.commit()
+
+
+async def mark_delivery_as_archived(db: AsyncSession, delivery_id: str):
+    await db.execute(
+        update(models_amap.Delivery)
+        .where(models_amap.Delivery.id == delivery_id)
+        .values(status=DeliveryStatusType.archived)
     )
     await db.commit()
