@@ -41,7 +41,7 @@ class ProductComplete(ProductSimple):
         orm_mode = True
 
 
-class ProductQuantity(ProductSimple):
+class ProductQuantity(BaseModel):
     quantity: int
     product: ProductComplete
 
