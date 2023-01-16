@@ -308,7 +308,7 @@ def test_get_orders_of_user():
     token = create_api_access_token(student_user)
 
     response = client.get(
-        f"/amap/users/{amap_user.id}/orders",
+        f"/amap/users/{student_user.id}/orders",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
