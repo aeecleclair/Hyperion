@@ -3,7 +3,7 @@ from typing import Any, Set
 import unidecode
 
 from app.models import models_core
-from app.utils.tools import is_user_member_of_an_allowed_group
+from app.utils.tools import get_display_name, is_user_member_of_an_allowed_group
 from app.utils.types.groups_type import GroupType
 from app.utils.types.scopes_type import ScopeType
 
@@ -194,7 +194,9 @@ class WikijsAuthClient(BaseAuthClient):
 
         return {
             "sub": user.id,
-            "name": f"{user.firstname} {user.name} ({user.nickname})",
+            "name": get_display_name(
+                firstname=user.firstname, name=user.name, nickname=user.nickname
+            ),
             "email": user.email,
             "groups": [group.name for group in user.groups],
         }
@@ -216,10 +218,8 @@ class SynapseAuthClient(BaseAuthClient):
             "picture": f"https://hyperion.myecl.fr/users/{user.id}/profile-picture/",
             # Matrix does not support special characters in username
             "username": unidecode.unidecode(f"{user.firstname}.{user.name}"),
-            "displayname": (
-                user.nickname
-                if user.nickname != ""
-                else f"{user.firstname} {user.name}"
-            ),  # TODO: make an utility function to get the display name
+            "displayname": get_display_name(
+                firstname=user.firstname, name=user.name, nickname=user.nickname
+            ),
             "email": user.email,
         }

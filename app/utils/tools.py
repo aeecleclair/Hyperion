@@ -169,3 +169,13 @@ def get_file_from_data(
         return FileResponse(filePath)
 
     return FileResponse(default_asset)
+
+
+def get_display_name(
+    firstname: str,
+    name: str,
+    nickname: str | None,
+) -> str:
+    if nickname:
+        return f"{firstname} {name} ({nickname})"
+    return f"{firstname} {name}"
