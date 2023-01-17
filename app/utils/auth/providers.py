@@ -1,3 +1,4 @@
+import re
 from typing import Any, Set
 
 import unidecode
@@ -213,15 +214,19 @@ class SynapseAuthClient(BaseAuthClient):
     @classmethod
     def get_userinfo(cls, user: models_core.CoreUser):
 
+        # Accepted characters are [a-z] [0-9] `.` and `-`. Spaces are replaced by `-` and accents are removed.
+        username = (
+            unidecode.unidecode(f"{user.firstname.strip()}.{user.name.strip()}")
+            .lower()
+            .replace(" ", "-")
+        )
+        username = re.sub(r"[^a-z0-9.-\\]", "", username)
+
         return {
             "sub": user.id,
             "picture": f"https://hyperion.myecl.fr/users/{user.id}/profile-picture/",
             # Matrix does not support special characters in username
-            "username": unidecode.unidecode(
-                f"{user.firstname.strip()}.{user.name.strip()}"
-            )
-            .lower()
-            .replace(" ", "-"),
+            "username": username,
             "displayname": get_display_name(
                 firstname=user.firstname, name=user.name, nickname=user.nickname
             ),
