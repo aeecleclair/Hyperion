@@ -217,7 +217,11 @@ class SynapseAuthClient(BaseAuthClient):
             "sub": user.id,
             "picture": f"https://hyperion.myecl.fr/users/{user.id}/profile-picture/",
             # Matrix does not support special characters in username
-            "username": unidecode.unidecode(f"{user.firstname}.{user.name}"),
+            "username": unidecode.unidecode(
+                f"{user.firstname.strip()}.{user.name.strip()}"
+            )
+            .lower()
+            .replace(" ", "-"),
             "displayname": get_display_name(
                 firstname=user.firstname, name=user.name, nickname=user.nickname
             ),
