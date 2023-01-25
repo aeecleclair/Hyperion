@@ -13,6 +13,5 @@ class Session(Base):
     start: datetime = Column(DateTime, nullable=False)
     duration: int = Column(Integer, nullable=False)
     overview: str = Column(String, nullable=True)
-    poster_url: str = Column(String, nullable=True)
     genre: str = Column(String, nullable=True)
     tagline: str = Column(String, nullable=True)

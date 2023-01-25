@@ -44,7 +44,6 @@ async def startuptest():
             start=datetime.datetime.fromisoformat("2022-10-22T20:00:00"),
             duration=194,
             overview="Southampton, 10 avril 1912. Le paquebot le plus grand et le plus moderne du monde, réputé pour son insubmersibilité, le « Titanic », appareille pour son premier voyage. Quatre jours plus tard, il heurte un iceberg. À son bord, un artiste pauvre et une grande bourgeoise tombent amoureux.",
-            poster_url="https://www.themoviedb.org/t/p/w1280/8MFJ4aAr85B5lVCecxGSd9iX6FX.jpg",
             genre="Drame, Romance",
             tagline="Rien sur cette terre ne saurait les séparer.",
         )
@@ -65,18 +64,6 @@ def test_post_session():
         "/cinema/sessions",
         json={
             "name": "Les Tuches",
-            "start": "2022-10-23T14:00:00Z",
-            "duration": 90,
-        },
-        headers={"Authorization": f"Bearer {token_cinema}"},
-    )
-    assert response.status_code == 201
-
-
-def test_post_tmdb_session():
-    response = client.post(
-        "/cinema/sessions/603",
-        json={
             "start": "2022-10-23T14:00:00Z",
             "duration": 90,
         },

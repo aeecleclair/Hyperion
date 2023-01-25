@@ -11,7 +11,6 @@ class CineSessionTime(BaseModel):
 class CineSessionBase(CineSessionTime):
     name: str
     overview: str | None = None
-    poster_url: str | None = None
     genre: str | None = None
     tagline: str | None = None
 
@@ -28,6 +27,5 @@ class CineSessionUpdate(BaseModel):
     start: datetime | None = None
     duration: int | None = None
     overview: str | None = None
-    poster_url: str | None = None
     genre: str | None = None
     tagline: str | None = None

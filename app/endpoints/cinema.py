@@ -121,6 +121,7 @@ async def read_session_poster(
 ):
 
     return get_file_from_data(
+        default_asset="assets/images/default_movie.png",
         directory="cinemasessions",
         filename=str(session_id),
     )
