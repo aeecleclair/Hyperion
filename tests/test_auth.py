@@ -5,6 +5,7 @@ from urllib.parse import parse_qs, urlparse
 from app.main import app
 from app.models import models_core
 from app.utils.examples import examples_auth
+from app.utils.types.floors_type import FloorsType
 from tests.commons import TestingSessionLocal, client
 
 
@@ -19,7 +20,7 @@ async def startuptest():
             firstname="Antoine",
             nickname="Nickname",
             birthday=date.fromisoformat("2000-01-01"),
-            floor="Autre",
+            floor=FloorsType.Autre,
             created_on=date.fromisoformat("2000-01-01"),
         )
         db.add(user)
