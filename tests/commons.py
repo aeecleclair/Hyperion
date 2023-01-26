@@ -17,6 +17,7 @@ from app.main import app
 from app.models import models_core
 from app.schemas import schemas_auth
 from app.utils.redis import connect, disconnect
+from app.utils.types.floors_type import FloorsType
 from app.utils.types.groups_type import GroupType
 
 SQLALCHEMY_DATABASE_URL = (
@@ -112,7 +113,7 @@ async def create_user_with_groups(
         password_hash=password_hash,
         name=user_id,
         firstname=user_id,
-        floor=user_id,
+        floor=FloorsType.Autre,
     )
 
     await cruds_users.create_user(db=db, user=user)
