@@ -4,6 +4,7 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
+from app.schemas.schemas_core import CoreUserSimple
 from app.utils.types.bdebooking_type import Decision
 
 
@@ -31,6 +32,7 @@ class BookingBase(BaseModel):
     room_id: str
     key: bool
     recurrence_rule: str | None = None
+    entity: str
 
 
 class BookingComplete(BookingBase):
@@ -39,11 +41,21 @@ class BookingComplete(BookingBase):
     applicant_id: str
 
 
+class Applicant(CoreUserSimple):
+    email: str
+    promo: int | None = None
+    phone: str | None = None
+
+
 class BookingReturn(BookingComplete):
     room: RoomComplete
 
     class Config:
         orm_mode = True
+
+
+class BookingReturnApplicant(BookingReturn):
+    applicant: Applicant
 
 
 class BookingEdit(BaseModel):
@@ -54,3 +66,4 @@ class BookingEdit(BaseModel):
     room: str | None = None
     key: bool | None = None
     recurrence_rule: str | None = None
+    entity: str | None = None

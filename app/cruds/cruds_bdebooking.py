@@ -1,6 +1,7 @@
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models import models_bdebooking
 from app.schemas import schemas_bdebooking
@@ -10,7 +11,11 @@ from app.utils.types.bdebooking_type import Decision
 async def get_bookings(
     db: AsyncSession,
 ) -> list[models_bdebooking.Booking]:
-    result = await db.execute(select(models_bdebooking.Booking))
+    result = await db.execute(
+        select(models_bdebooking.Booking).options(
+            selectinload(models_bdebooking.Booking.applicant)
+        )
+    )
     return result.scalars().all()
 
 
@@ -18,9 +23,9 @@ async def get_confirmed_bookings(
     db: AsyncSession,
 ) -> list[models_bdebooking.Booking]:
     result = await db.execute(
-        select(models_bdebooking.Booking).where(
-            models_bdebooking.Booking.decision == Decision.approved
-        )
+        select(models_bdebooking.Booking)
+        .where(models_bdebooking.Booking.decision == Decision.approved)
+        .options(selectinload(models_bdebooking.Booking.applicant))
     )
     return result.scalars().all()
 
@@ -29,9 +34,9 @@ async def get_applicant_bookings(
     db: AsyncSession, applicant_id: str
 ) -> list[models_bdebooking.Booking]:
     result = await db.execute(
-        select(models_bdebooking.Booking).where(
-            models_bdebooking.Booking.applicant_id == applicant_id
-        )
+        select(models_bdebooking.Booking)
+        .where(models_bdebooking.Booking.applicant_id == applicant_id)
+        .options(selectinload(models_bdebooking.Booking.applicant))
     )
     return result.scalars().all()
 
@@ -40,9 +45,9 @@ async def get_booking_by_id(
     db: AsyncSession, booking_id: str
 ) -> models_bdebooking.Booking | None:
     result = await db.execute(
-        select(models_bdebooking.Booking).where(
-            models_bdebooking.Booking.id == booking_id
-        )
+        select(models_bdebooking.Booking)
+        .where(models_bdebooking.Booking.id == booking_id)
+        .options(selectinload(models_bdebooking.Booking.applicant))
     )
     return result.scalars().first()
 

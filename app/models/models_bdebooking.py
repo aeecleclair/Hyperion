@@ -5,6 +5,7 @@ from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String
 from sqlalchemy.orm import relationship
 
 from app.database import Base
+from app.models.models_core import CoreUser
 
 
 class Room(Base):
@@ -26,3 +27,5 @@ class Booking(Base):
     decision: str = Column(String, nullable=False)
     recurrence_rule: str | None = Column(String)
     applicant_id: str = Column(ForeignKey("core_user.id"), nullable=False)
+    applicant: CoreUser = relationship("CoreUser")
+    entity: str = Column(String)
