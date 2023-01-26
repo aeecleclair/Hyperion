@@ -10,6 +10,7 @@ from app.endpoints import (
     bdebooking,
     calendar,
     campaign,
+    cinema,
     core,
     groups,
     loans,
@@ -28,3 +29,4 @@ api_router.include_router(groups.router)
 api_router.include_router(core.router)
 api_router.include_router(users.router)
 api_router.include_router(loans.router)
+api_router.include_router(cinema.router)
