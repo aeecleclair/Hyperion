@@ -229,7 +229,9 @@ async def add_order_to_delivery(
     order: schemas_amap.OrderComplete,
 ):
     db.add(
-        models_amap.Order(**order.dict(exclude={"products_ids", "products_quantity"}))
+        models_amap.Order(
+            locked=False, **order.dict(exclude={"products_ids", "products_quantity"})
+        )
     )
     try:
         await db.commit()
@@ -245,6 +247,22 @@ async def add_order_to_delivery(
     except IntegrityError as err:
         await db.rollback()
         raise ValueError(err)
+
+
+async def lock_order(db: AsyncSession, order_id: str):
+    await db.execute(
+        update(models_amap.Order)
+        .where(models_amap.Order.order_id == order_id)
+        .values(locked=True)
+    )
+
+
+async def unlock_order(db: AsyncSession, order_id: str):
+    await db.execute(
+        update(models_amap.Order)
+        .where(models_amap.Order.order_id == order_id)
+        .values(locked=False)
+    )
 
 
 async def edit_order(db: AsyncSession, order: schemas_amap.OrderComplete):
@@ -313,15 +331,40 @@ async def create_cash_of_user(
         raise ValueError(err)
 
 
-async def edit_cash_by_id(
-    db: AsyncSession, user_id: str, balance: schemas_amap.CashEdit
-):
-    await db.execute(
-        update(models_amap.Cash)
-        .where(models_amap.Cash.user_id == user_id)
-        .values(**balance.dict())
+async def add_cash(db: AsyncSession, user_id: str, amount: float):
+    result = await db.execute(
+        select(models_amap.Cash).where(models_amap.Cash.user_id == user_id)
     )
-    await db.commit()
+    balance = result.scalars().first()
+    if balance is not None:
+        await db.execute(
+            update(models_amap.Cash)
+            .where(models_amap.Cash.user_id == user_id)
+            .values(user_id=balance.user_id, balance=balance.balance + amount)
+        )
+        try:
+            await db.commit()
+        except IntegrityError:
+            await db.rollback()
+            raise ValueError("Error during cash edition")
+
+
+async def remove_cash(db: AsyncSession, user_id: str, amount: float):
+    result = await db.execute(
+        select(models_amap.Cash).where(models_amap.Cash.user_id == user_id)
+    )
+    balance = result.scalars().first()
+    if balance is not None:
+        await db.execute(
+            update(models_amap.Cash)
+            .where(models_amap.Cash.user_id == user_id)
+            .values(user_id=balance.user_id, balance=balance.balance - amount)
+        )
+        try:
+            await db.commit()
+        except IntegrityError:
+            await db.rollback()
+            raise ValueError("Error during cash edition")
 
 
 async def get_orders_of_user(db: AsyncSession, user_id: str) -> list[models_amap.Order]:

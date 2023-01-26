@@ -430,12 +430,8 @@ async def add_order_to_delievery(
                             order=db_order,
                             db=db,
                         )
-                        await cruds_amap.edit_cash_by_id(
-                            db=db,
-                            user_id=order.user_id,
-                            balance=schemas_amap.CashEdit(
-                                balance=balance.balance - amount
-                            ),
+                        await cruds_amap.remove_cash(
+                            db=db, user_id=order.user_id, amount=amount
                         )
                         orderret = await cruds_amap.get_order_by_id(
                             order_id=db_order.order_id, db=db
@@ -480,73 +476,83 @@ async def edit_order_from_delievery(
         if delivery.status == DeliveryStatusType.orderable:
             previous_order = await cruds_amap.get_order_by_id(db=db, order_id=order_id)
             if previous_order is not None:
-                if (
-                    user.id == previous_order.user_id
-                    or is_user_member_of_an_allowed_group(user, [GroupType.amap])
-                ):
-                    if order.products_ids is not None:  # Products edition
-                        if order.products_quantity is not None:
-                            if len(order.products_quantity) == len(order.products_ids):
-                                amount = 0.0
-                                for i in range(len(order.products_ids)):
-                                    prod = await cruds_amap.get_product_by_id(
-                                        product_id=order.products_ids[i], db=db
+                if not previous_order.locked:
+                    await cruds_amap.lock_order(db=db, order_id=order_id)
+                    if (
+                        user.id == previous_order.user_id
+                        or is_user_member_of_an_allowed_group(user, [GroupType.amap])
+                    ):
+                        if order.products_ids is not None:  # Products edition
+                            if order.products_quantity is not None:
+                                if len(order.products_quantity) == len(
+                                    order.products_ids
+                                ):
+                                    amount = 0.0
+                                    for i in range(len(order.products_ids)):
+                                        prod = await cruds_amap.get_product_by_id(
+                                            product_id=order.products_ids[i], db=db
+                                        )
+                                        if prod is not None:
+                                            amount += (
+                                                prod.price * order.products_quantity[i]
+                                            )
+                                    ordering_date = datetime.now()
+                                    db_order = schemas_amap.OrderComplete(
+                                        amount=amount,
+                                        ordering_date=ordering_date,
+                                        **order.dict(),
                                     )
-                                    if prod is not None:
-                                        amount += (
-                                            prod.price * order.products_quantity[i]
-                                        )
-                                ordering_date = datetime.now()
-                                db_order = schemas_amap.OrderComplete(
-                                    amount=amount,
-                                    ordering_date=ordering_date,
-                                    **order.dict(),
-                                )
-                                previous_amount = previous_order.amount
-                                balance = await cruds_amap.get_cash_by_id(
-                                    db=db, user_id=previous_order.user_id
-                                )
-                                if balance is not None:
-                                    if balance.balance + previous_amount < amount:
-                                        raise HTTPException(
-                                            status_code=403, detail="Not enough money"
-                                        )
-                                    else:
-                                        try:
-                                            await cruds_amap.edit_order(
-                                                order=db_order,
-                                                db=db,
-                                            )
-                                            await cruds_amap.edit_cash_by_id(
-                                                db=db,
-                                                user_id=previous_order.user_id,
-                                                balance=schemas_amap.CashEdit(
-                                                    balance=balance.balance
-                                                    + previous_amount
-                                                    - amount
-                                                ),
-                                            )
-                                        except ValueError as error:
+                                    previous_amount = previous_order.amount
+                                    balance = await cruds_amap.get_cash_by_id(
+                                        db=db, user_id=previous_order.user_id
+                                    )
+                                    if balance is not None:
+                                        if balance.balance + previous_amount < amount:
                                             raise HTTPException(
-                                                status_code=422, detail=str(error)
+                                                status_code=403,
+                                                detail="Not enough money",
                                             )
+                                        else:
+                                            try:
+                                                await cruds_amap.edit_order(
+                                                    order=db_order,
+                                                    db=db,
+                                                )
+                                                await cruds_amap.remove_cash(
+                                                    db=db,
+                                                    user_id=previous_order.user_id,
+                                                    amount=previous_amount,
+                                                )
+                                                await cruds_amap.add_cash(
+                                                    db=db,
+                                                    user_id=previous_order.user_id,
+                                                    amount=amount,
+                                                ),
+
+                                            except ValueError as error:
+                                                raise HTTPException(
+                                                    status_code=422, detail=str(error)
+                                                )
+                                    else:
+                                        raise HTTPException(
+                                            status_code=404, detail="No cash found"
+                                        )
                                 else:
                                     raise HTTPException(
-                                        status_code=404, detail="No cash found"
+                                        status_code=400,
+                                        detail="Error in products and quantities list",
                                     )
-                            else:
-                                raise HTTPException(
-                                    status_code=400,
-                                    detail="Error in products and quantities list",
-                                )
-                    else:
-                        await cruds_amap.edit_order(
-                            order=db_order,
-                            db=db,
-                        )
+                        else:
+                            await cruds_amap.edit_order(
+                                order=db_order,
+                                db=db,
+                            )
 
+                    else:
+                        raise HTTPException(status_code=403)
+                    await cruds_amap.unlock_order(db=db, order_id=order_id)
                 else:
-                    raise HTTPException(status_code=403)
+                    raise HTTPException(status_code=403, detail="Too fast !")
             else:
                 raise HTTPException(status_code=404, detail="Order not found")
         else:
@@ -584,24 +590,29 @@ async def remove_order(
                 raise HTTPException(
                     status_code=404, detail="The order is not in this delivery"
                 )
-
-            if user.id == order.user_id or is_user_member_of_an_allowed_group(
-                user, [GroupType.amap]
-            ):
-                amount = order.amount
-                balance = await cruds_amap.get_cash_by_id(db=db, user_id=order.user_id)
-                if balance is not None:
-                    await cruds_amap.edit_cash_by_id(
-                        db=db,
-                        user_id=order.user_id,
-                        balance=schemas_amap.CashEdit(balance=balance.balance + amount),
+            if not order.locked:
+                await cruds_amap.lock_order(db=db, order_id=order_id)
+                if user.id == order.user_id or is_user_member_of_an_allowed_group(
+                    user, [GroupType.amap]
+                ):
+                    amount = order.amount
+                    balance = await cruds_amap.get_cash_by_id(
+                        db=db, user_id=order.user_id
                     )
-                    await cruds_amap.remove_order(db=db, order_id=order_id)
+                    if balance is not None:
+                        await cruds_amap.add_cash(
+                            db=db, user_id=order.user_id, amount=amount
+                        )
+                        await cruds_amap.remove_order(db=db, order_id=order_id)
+                    else:
+                        await cruds_amap.unlock_order(db=db, order_id=order_id)
+                        raise HTTPException(status_code=404, detail="No cash found")
+                    return Response(status_code=204)
                 else:
-                    raise HTTPException(status_code=404, detail="No cash found")
-                return Response(status_code=204)
+                    await cruds_amap.unlock_order(db=db, order_id=order_id)
+                    raise HTTPException(status_code=403)
             else:
-                raise HTTPException(status_code=403)
+                raise HTTPException(status_code=403, detail="Too Fast !")
         else:
             raise HTTPException(
                 status_code=403,
@@ -820,7 +831,7 @@ async def edit_cash_by_id(
             detail="The user don't have a cash.",
         )
 
-    await cruds_amap.edit_cash_by_id(user_id=user_id, balance=balance, db=db)
+    await cruds_amap.add_cash(user_id=user_id, amount=balance.balance, db=db)
 
 
 @router.get(

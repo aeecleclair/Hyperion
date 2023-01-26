@@ -1,7 +1,17 @@
 """Models file for amap"""
 from datetime import date, datetime
 
-from sqlalchemy import Column, Date, DateTime, Enum, Float, ForeignKey, Integer, String
+from sqlalchemy import (
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+)
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -67,6 +77,7 @@ class Order(Base):
     collection_slot: AmapSlotType = Column(Enum(AmapSlotType), nullable=False)
     ordering_date: datetime = Column(DateTime, nullable=False)
     delivery_date: date = Column(Date, nullable=False)
+    locked: bool = Column(Boolean, nullable=False)
 
 
 class Cash(Base):
