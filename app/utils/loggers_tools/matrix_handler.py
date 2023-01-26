@@ -31,8 +31,7 @@ class MatrixHandler(StreamHandler):
 
         self.room_id = room_id
         self.enabled = enabled
-
-        if enabled:
+        if self.enabled:
             try:
                 self.matrix = Matrix(
                     user_name=user_name,
@@ -44,6 +43,10 @@ class MatrixHandler(StreamHandler):
                     f"MatrixHandler: Matrix configuration failed, disabling the handler: {err}"
                 )
                 self.enabled = False
+        else:
+            hyperion_error_logger.warning(
+                "MatrixHandler isn't configured in the .env file, disabling the handler"
+            )
 
     def emit(self, record):
         if self.enabled:
