@@ -62,6 +62,7 @@ async def startuptest():
             collection_slot=AmapSlotType.midi,
             ordering_date=datetime(2022, 8, 10, 12, 16, 26),
             delivery_date=delivery.delivery_date,
+            locked=False,
         )
         db.add(order)
         await db.commit()
