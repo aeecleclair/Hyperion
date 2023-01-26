@@ -1,7 +1,10 @@
+import re
 from typing import Any, Set
 
+import unidecode
+
 from app.models import models_core
-from app.utils.tools import is_user_member_of_an_allowed_group
+from app.utils.tools import get_display_name, is_user_member_of_an_allowed_group
 from app.utils.types.groups_type import GroupType
 from app.utils.types.scopes_type import ScopeType
 
@@ -192,7 +195,40 @@ class WikijsAuthClient(BaseAuthClient):
 
         return {
             "sub": user.id,
-            "name": f"{user.firstname} {user.name} ({user.nickname})",
+            "name": get_display_name(
+                firstname=user.firstname, name=user.name, nickname=user.nickname
+            ),
             "email": user.email,
             "groups": [group.name for group in user.groups],
+        }
+
+
+class SynapseAuthClient(BaseAuthClient):
+
+    # If no redirect_uri are hardcoded, the client will need to provide one in its request
+    redirect_uri: str | None = None
+    # Set of scopes the auth client is authorized to grant when issuing an access token.
+    # See app.utils.types.scopes_type.ScopeType for possible values
+    allowed_scopes: Set[ScopeType] = {ScopeType.openid, ScopeType.profile}
+
+    @classmethod
+    def get_userinfo(cls, user: models_core.CoreUser):
+
+        # Accepted characters are [a-z] [0-9] `.` and `-`. Spaces are replaced by `-` and accents are removed.
+        username = (
+            unidecode.unidecode(f"{user.firstname.strip()}.{user.name.strip()}")
+            .lower()
+            .replace(" ", "-")
+        )
+        username = re.sub(r"[^a-z0-9.-\\]", "", username)
+
+        return {
+            "sub": user.id,
+            "picture": f"https://hyperion.myecl.fr/users/{user.id}/profile-picture/",
+            # Matrix does not support special characters in username
+            "username": username,
+            "displayname": get_display_name(
+                firstname=user.firstname, name=user.name, nickname=user.nickname
+            ),
+            "email": user.email,
         }
