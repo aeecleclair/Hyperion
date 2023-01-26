@@ -98,7 +98,8 @@ async def logging_middleware(
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    hyperion_error_logger.error(
+    # We use a Debug logger to log the error as personal data may be present in the request
+    hyperion_error_logger.debug(
         f"Validation error: {exc.errors()} ({request.state.request_id})"
     )
 

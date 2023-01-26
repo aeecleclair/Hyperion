@@ -35,7 +35,7 @@ class CoreUser(Base):
     created_on: datetime | None = Column(DateTime)
 
     # We use list["CoreGroup"] with quotes as CoreGroup is only defined after this class
-    # Defining CoreUser after CoreGroup would a similar issue
+    # Defining CoreUser after CoreGroup would cause a similar issue
     groups: list["CoreGroup"] = relationship(
         "CoreGroup",
         secondary="core_membership",
