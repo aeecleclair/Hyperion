@@ -130,7 +130,7 @@ class LogConfig:
                     "filename": "logs/security.log",
                     "maxBytes": 1024 * 1024 * 40,  # ~ 40 MB
                     "backupCount": 50,
-                    "level": "WARNING",
+                    "level": "INFO",
                 },
             },
             # We define various loggers which can be used by Hyperion.
