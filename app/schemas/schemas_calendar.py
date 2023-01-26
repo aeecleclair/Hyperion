@@ -3,8 +3,7 @@ from datetime import datetime
 from pydantic import BaseModel
 
 from app.schemas.schemas_core import CoreUserSimple
-from app.utils.types.bdebooking_type import Decision
-from app.utils.types.calendar_types import CalendarEventType
+from app.utils.types.calendar_types import CalendarEventType, Decision
 
 
 # Schema de base. Contiens toutes les données communes à tous les schemas
@@ -19,7 +18,6 @@ class EventBase(BaseModel):
     description: str
     recurrence_rule: str | None
     applicant_id: str
-    room_id: str | None
 
 
 class EventComplete(EventBase):
@@ -41,7 +39,6 @@ class EventEdit(BaseModel):
     description: str | None = None
     recurrence_rule: str | None = None
     applicant_id: str | None = None
-    room_id: str | None = None
 
     class Config:
         orm_mode = True

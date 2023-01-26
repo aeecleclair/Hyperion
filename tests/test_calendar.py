@@ -167,3 +167,11 @@ def test_delete_event_unauthorized_user():
         headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response.status_code == 403
+
+
+def test_decline_event():
+    response = client.patch(
+        f"/calendar/events/{calendar_event.id}/reply/declined",
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 204
