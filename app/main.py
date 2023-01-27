@@ -120,12 +120,6 @@ async def startup():
     ):
         hyperion_error_logger.info("Redis client not configured")
 
-    # Create the data folders if it does not exist
-    if not os.path.exists("data/profile-pictures/"):
-        os.makedirs("data/profile-pictures/")
-    if not os.path.exists("data/campaigns/"):
-        os.makedirs("data/campaigns/")
-
     # Create folder for calendars
     if not os.path.exists("data/ics/"):
         os.makedirs("data/ics/")
