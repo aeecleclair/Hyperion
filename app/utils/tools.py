@@ -142,6 +142,9 @@ async def save_file_as_data(
     extension = extensions_mapping.get(image.content_type, "")
     # Remove the existing file if any and create the new one
     try:
+        if not os.path.exists(f"data/{directory}/"):
+            os.makedirs(f"data/{directory}/")
+
         for filePath in glob.glob(f"data/{directory}/{filename}.*"):
             os.remove(filePath)
 
