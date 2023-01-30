@@ -58,6 +58,8 @@ def test_authorization_code_flow_PKCE():
     response = client.post(
         "/auth/authorization-flow/authorize-validation",
         data=data,
+        follow_redirects=True,
+
     )
     assert response.status_code == 302
 
