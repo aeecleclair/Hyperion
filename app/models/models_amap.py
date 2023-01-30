@@ -16,7 +16,7 @@ from sqlalchemy.orm import relationship
 
 from app.database import Base
 from app.models.models_core import CoreUser
-from app.utils.types.amap_types import AmapSlotType
+from app.utils.types.amap_types import AmapSlotType, DeliveryStatusType
 
 
 class AmapOrderContent(Base):
@@ -24,6 +24,7 @@ class AmapOrderContent(Base):
     product_id: str = Column(ForeignKey("amap_product.id"), primary_key=True)
     order_id: str = Column(ForeignKey("amap_order.order_id"), primary_key=True)
     quantity: int = Column(Integer)
+    product: "Product" = relationship("Product")
 
 
 class AmapDeliveryContent(Base):
@@ -50,21 +51,23 @@ class Delivery(Base):
         "Product",
         secondary="amap_delivery_content",
     )
-    orders: list["Order"] = relationship("Order", back_populates="delivery")
-    locked: bool = Column(Boolean, nullable=False)
+    orders: list["Order"] = relationship("Order")
+    status: DeliveryStatusType = Column(String, nullable=False)
 
 
 class Order(Base):
     __tablename__ = "amap_order"
 
-    user_id: str = Column(String, ForeignKey("core_user.id"), primary_key=True)
+    user_id: str = Column(String, ForeignKey("core_user.id"), nullable=False)
     user: CoreUser = relationship(
         "CoreUser",
     )
     delivery_id: str = Column(
-        String, ForeignKey("amap_delivery.id"), index=True, nullable=True
+        String,
+        ForeignKey("amap_delivery.id"),
+        index=True,
+        nullable=False,
     )
-    delivery: Delivery = relationship("Delivery", back_populates="orders")
     order_id: str = Column(String, primary_key=True, index=True)
     products: list[Product] = relationship(
         "Product",
@@ -74,6 +77,7 @@ class Order(Base):
     collection_slot: AmapSlotType = Column(Enum(AmapSlotType), nullable=False)
     ordering_date: datetime = Column(DateTime, nullable=False)
     delivery_date: date = Column(Date, nullable=False)
+    locked: bool = Column(Boolean, nullable=False)
 
 
 class Cash(Base):

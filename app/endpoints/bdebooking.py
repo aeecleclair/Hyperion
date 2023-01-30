@@ -34,7 +34,7 @@ async def get_rights(
 
 @router.get(
     "/bdebooking/bookings",
-    response_model=list[schemas_bdebooking.BookingReturn],
+    response_model=list[schemas_bdebooking.BookingReturnApplicant],
     status_code=200,
     tags=[Tags.bdebooking],
 )
@@ -121,6 +121,29 @@ async def get_booking_by_id(
             return booking
         else:
             raise HTTPException(status_code=403)
+    else:
+        raise HTTPException(status_code=404)
+
+
+@router.get(
+    "/bdebooking/bookings/{booking_id}/applicant",
+    response_model=schemas_bdebooking.Applicant,
+    status_code=200,
+    tags=[Tags.bdebooking],
+)
+async def get_booking_applicant(
+    booking_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
+):
+    """
+    Get one booking's applicant.
+
+    **Usable by admins**
+    """
+    booking = await cruds_bdebooking.get_booking_by_id(db=db, booking_id=booking_id)
+    if booking is not None:
+        return booking.applicant
     else:
         raise HTTPException(status_code=404)
 

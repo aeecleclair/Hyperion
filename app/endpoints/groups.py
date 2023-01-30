@@ -5,19 +5,25 @@ Group management is part of the core of Hyperion. These endpoints allow managing
 """
 
 
+import logging
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cruds import cruds_groups, cruds_users
-from app.dependencies import get_db, is_user_a_member_of
+from app.dependencies import get_db, get_request_id, is_user_a_member_of
 from app.models import models_core
 from app.schemas import schemas_core
 from app.utils.types.groups_type import GroupType
 from app.utils.types.tags import Tags
 
 router = APIRouter()
+
+hyperion_security_logger = logging.getLogger("hyperion.security")
+
+
+hyperion_security_logger = logging.getLogger("hyperion.security")
 
 
 @router.get(
@@ -140,6 +146,7 @@ async def create_membership(
     membership: schemas_core.CoreMembership,
     db: AsyncSession = Depends(get_db),
     user=Depends(is_user_a_member_of(GroupType.admin)),
+    request_id: str = Depends(get_request_id),
 ):
     """
     Create a new membership in database and return the group. This allows to "add a user to a group".
@@ -149,10 +156,16 @@ async def create_membership(
 
     # We need to check provided ids are valid
     # TODO: use tools function
-    if not await cruds_groups.get_group_by_id(group_id=membership.group_id, db=db):
+    group_db = await cruds_groups.get_group_by_id(group_id=membership.group_id, db=db)
+    if group_db is None:
         raise HTTPException(status_code=400, detail="Invalid group_id")
-    if not await cruds_users.get_user_by_id(user_id=membership.user_id, db=db):
+    user_db = await cruds_users.get_user_by_id(user_id=membership.user_id, db=db)
+    if user_db is None:
         raise HTTPException(status_code=400, detail="Invalid user_id")
+
+    hyperion_security_logger.warning(
+        f"Create_membership: Admin user {user.id} ({user.name}) added user {user_db.id} ({user_db.email}) to group {group_db.id} ({group_db.name}) ({request_id})"
+    )
 
     try:
         membership_db = models_core.CoreMembership(
@@ -165,6 +178,52 @@ async def create_membership(
         raise HTTPException(status_code=422, detail=str(error))
 
 
+@router.post(
+    "/groups/batch-membership",
+    status_code=204,
+    tags=[Tags.groups],
+)
+async def create_batch_membership(
+    batch_membership: schemas_core.CoreBatchMembership,
+    db: AsyncSession = Depends(get_db),
+    user=Depends(is_user_a_member_of(GroupType.admin)),
+    request_id: str = Depends(get_request_id),
+):
+    """
+    Add a list of user to a group, using a list of email.
+    If an user does not exist it will be ignored.
+
+    **This endpoint is only usable by administrators**
+    """
+
+    group_db = await cruds_groups.get_group_by_id(
+        group_id=batch_membership.group_id, db=db
+    )
+    if group_db is None:
+        raise HTTPException(status_code=400, detail="Invalid group_id")
+
+    hyperion_security_logger.warning(
+        f"Create_batch_membership: Admin user {user.id} ({user.name}) added users to group {group_db.id} ({group_db.name}) in batch ({request_id})"
+    )
+
+    for email in batch_membership.user_emails:
+        user_db = await cruds_users.get_user_by_email(db=db, email=email)
+
+        # We only want to add existing users to the group
+        if user_db is not None:
+            membership_db = models_core.CoreMembership(
+                user_id=user_db.id,
+                group_id=batch_membership.group_id,
+                description=batch_membership.description,
+            )
+            try:
+                await cruds_groups.create_membership(db=db, membership=membership_db)
+            except ValueError:
+                pass
+
+        # If the user does not exist, we will pass silently
+
+
 @router.delete(
     "/groups/membership",
     status_code=204,
@@ -174,6 +233,7 @@ async def delete_membership(
     membership: schemas_core.CoreMembershipDelete,
     db: AsyncSession = Depends(get_db),
     user=Depends(is_user_a_member_of(GroupType.admin)),
+    request_id: str = Depends(get_request_id),
 ):
     """
     Delete a membership using the user and group ids.
@@ -181,8 +241,44 @@ async def delete_membership(
     **This endpoint is only usable by administrators**
     """
 
+    hyperion_security_logger.warning(
+        f"Create_membership: Admin user {user.id} ({user.name}) removed user {membership.user_id} from group {membership.group_id} ({request_id})"
+    )
+
     await cruds_groups.delete_membership_by_group_and_user_id(
         group_id=membership.group_id, user_id=membership.user_id, db=db
+    )
+
+
+@router.delete(
+    "/groups/batch-membership",
+    status_code=204,
+    tags=[Tags.groups],
+)
+async def delete_batch_membership(
+    batch_membership: schemas_core.CoreBatchDeleteMembership,
+    db: AsyncSession = Depends(get_db),
+    user=Depends(is_user_a_member_of(GroupType.admin)),
+    request_id: str = Depends(get_request_id),
+):
+    """
+    This endpoint removes all users from a given group.
+
+    **This endpoint is only usable by administrators**
+    """
+
+    group_db = await cruds_groups.get_group_by_id(
+        group_id=batch_membership.group_id, db=db
+    )
+    if group_db is None:
+        raise HTTPException(status_code=400, detail="Invalid group_id")
+
+    hyperion_security_logger.warning(
+        f"Create_batch_membership: Admin user {user.id} ({user.name}) removed all users from group {group_db.id} ({group_db.name}) in batch ({request_id})"
+    )
+
+    await cruds_groups.delete_membership_by_group_id(
+        group_id=batch_membership.group_id, db=db
     )
 
 

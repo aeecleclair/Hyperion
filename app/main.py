@@ -1,7 +1,6 @@
 """Basic functions creating the database tables and calling the router"""
 
 import logging
-import logging.config
 import os
 import uuid
 from typing import Literal
@@ -98,7 +97,8 @@ async def logging_middleware(
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    hyperion_error_logger.error(
+    # We use a Debug logger to log the error as personal data may be present in the request
+    hyperion_error_logger.debug(
         f"Validation error: {exc.errors()} ({request.state.request_id})"
     )
 
@@ -123,6 +123,8 @@ async def startup():
     # Create the data folders if it does not exist
     if not os.path.exists("data/profile-pictures/"):
         os.makedirs("data/profile-pictures/")
+    if not os.path.exists("data/campaigns/"):
+        os.makedirs("data/campaigns/")
 
     # Create folder for calendars
     if not os.path.exists("data/ics/"):

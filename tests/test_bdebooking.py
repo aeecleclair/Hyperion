@@ -54,6 +54,7 @@ async def startuptest():
             key=True,
             decision="approved",
             applicant_id=booking_user_simple.id,
+            entity="ECLAIR",
         )
         db.add(booking)
         await db.commit()
@@ -96,6 +97,7 @@ def test_post_bookings():
             "key": True,
             "multipleDay": False,
             "recurring": False,
+            "entity": "TEST",
         },
         headers={"Authorization": f"Bearer {token_simple}"},
     )

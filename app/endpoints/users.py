@@ -1,10 +1,7 @@
 import logging
-import os
 import re
-import shutil
 import uuid
 from datetime import datetime, timedelta
-from os.path import exists
 
 from fastapi import (
     APIRouter,
@@ -33,7 +30,7 @@ from app.dependencies import (
 from app.models import models_core
 from app.schemas import schemas_core
 from app.utils.mail.mailworker import send_email
-from app.utils.tools import fuzzy_search_user
+from app.utils.tools import fuzzy_search_user, get_file_from_data, save_file_as_data
 from app.utils.types import standard_responses
 from app.utils.types.groups_type import AccountType, GroupType
 from app.utils.types.tags import Tags
@@ -64,6 +61,26 @@ async def read_users(
 
     users = await cruds_users.get_users(db)
     return users
+
+
+@router.get(
+    "/users/count",
+    response_model=int,
+    status_code=200,
+    tags=[Tags.users],
+)
+async def count_users(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Return all users from database as a list of `CoreUserSimple`
+
+    **This endpoint is only usable by administrators**
+    """
+
+    count = await cruds_users.count_users(db)
+    return count
 
 
 @router.get(
@@ -137,17 +154,17 @@ async def create_user_by_user(
     # Check the account type
 
     # For staff and student
-    # ^[\w\-.]*@(ecl\d{2})|(alternance\d{4})|(auditeur)?.ec-lyon.fr$
+    # ^[\w\-.]*@(ecl\d{2})|(alternance\d{4})|(auditeur)|(master)?.ec-lyon.fr$
     # For staff
-    # ^[\w\-.]*@ec-lyon.fr$
+    # ^[\w\-.]*@(auditeur.)?ec-lyon.fr$
     # For student
-    # ^[\w\-.]*@(ecl\d{2})|(alternance\d{4}).ec-lyon.fr$
+    # ^[\w\-.]*@((ecl\d{2})|(alternance\d{4})|(master)).ec-lyon.fr$
 
-    if re.match(r"^[a-zA-Z0-9_\-.]*@ec-lyon.fr", user_create.email):
+    if re.match(r"^[\w\-.]*@(auditeur.)?ec-lyon.fr", user_create.email):
         # Its a staff email address
         account_type = AccountType.staff
     elif re.match(
-        r"^[\w\-.]*@((ecl\d{2})|(alternance\d{4})|(auditeur)).ec-lyon.fr$",
+        r"^[\w\-.]*@((ecl\d{2})|(alternance\d{4})|(master)).ec-lyon.fr$",
         user_create.email,
     ):
         # Its a student email address
@@ -382,6 +399,16 @@ async def activate_user(
     # A password should have been provided
     password_hash = security.get_password_hash(user.password)
 
+    # For student users, we try to deduce a promo from the email address
+    if re.match(
+        r"^[\w\-.]*@(ecl\d{2})|(alternance\d{4}).ec-lyon.fr$",
+        unconfirmed_user.email,
+    ):
+        promo = int(unconfirmed_user.email[-13:-11])
+    else:
+        # For other users, we set the promo to None
+        promo = None
+
     confirmed_user = models_core.CoreUser(
         id=unconfirmed_user.id,
         email=unconfirmed_user.email,
@@ -390,7 +417,7 @@ async def activate_user(
         firstname=user.firstname,
         nickname=user.nickname,
         birthday=user.birthday,
-        promo=user.promo,
+        promo=promo,
         phone=user.phone,
         floor=user.floor,
         created_on=datetime.now(),
@@ -616,6 +643,27 @@ async def read_user(
 #    await cruds_users.delete_user(db=db, user_id=user_id)
 
 
+@router.post(
+    "/users/me/ask-deletion",
+    status_code=204,
+    tags=[Tags.users],
+)
+async def delete_user(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+    settings: Settings = Depends(get_settings),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
+    request_id: str = Depends(get_request_id),
+):
+    """
+    This endpoint will ask administrators to process to the user deletion.
+    This manual verification is needed to prevent data from being deleting for other users
+    """
+    hyperion_security_logger.info(
+        f"User {user.email} - {user.id} has requested to delete their account."
+    )
+
+
 @router.patch(
     "/users/me",
     status_code=204,
@@ -675,33 +723,14 @@ async def create_current_user_profile_picture(
     **The user must be authenticated to use this endpoint**
     """
 
-    if image.content_type not in ["image/jpeg", "image/png", "image/webp"]:
-        raise HTTPException(
-            status_code=400, detail="Invalid file format, supported jpeg, png and webp"
-        )
-
-    # We need to go to the end of the file to be able to get the size of the file
-    image.file.seek(0, os.SEEK_END)
-    # Use file.tell() to retrieve the cursor's current position
-    file_size = image.file.tell()  # Bytes
-    print(file_size)
-    if file_size > 1024 * 1024 * 4:  # 4 MB
-        raise HTTPException(
-            status_code=413,
-            detail="File size is too big. Limit is 4 MB",
-        )
-    # We go back to the beginning of the file to save it on the disk
-    await image.seek(0)
-
-    try:
-        with open(f"data/profile-pictures/{user.id}.png", "wb") as buffer:
-            shutil.copyfileobj(image.file, buffer)
-
-    except Exception as error:
-        hyperion_error_logger.error(
-            f"Create_current_user_profile_picture: could not save profile picture: {error} ({request_id})"
-        )
-        raise HTTPException(status_code=422, detail="Could not save profile picture")
+    await save_file_as_data(
+        image=image,
+        directory="profile-pictures",
+        filename=str(user.id),
+        request_id=request_id,
+        max_file_size=4 * 1024 * 1024,
+        accepted_content_types=["image/jpeg", "image/png", "image/webp"],
+    )
 
     return standard_responses.Result(success=True)
 
@@ -714,8 +743,6 @@ async def create_current_user_profile_picture(
 )
 async def read_user_profile_picture(
     user_id: str,
-    # TODO: we may want to remove this user requirement to be able to display images easily in html code
-    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Get the profile picture of an user.
@@ -723,7 +750,8 @@ async def read_user_profile_picture(
     **The user must be authenticated to use this endpoint**
     """
 
-    if not exists(f"data/profile-pictures/{user_id}.png"):
-        return FileResponse("assets/images/default_profile_picture.png")
-
-    return FileResponse(f"data/profile-pictures/{user_id}.png")
+    return get_file_from_data(
+        directory="profile-pictures",
+        filename=str(user_id),
+        default_asset="assets/images/default_profile_picture.png",
+    )

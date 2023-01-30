@@ -5,7 +5,7 @@ from datetime import date, datetime
 from pydantic import BaseModel
 
 from app.schemas.schemas_core import CoreUserSimple
-from app.utils.types.amap_types import AmapSlotType
+from app.utils.types.amap_types import AmapSlotType, DeliveryStatusType
 
 
 class Rights(BaseModel):
@@ -41,9 +41,9 @@ class ProductComplete(ProductSimple):
         orm_mode = True
 
 
-class ProductQuantity(ProductSimple):
+class ProductQuantity(BaseModel):
     quantity: int
-    id: str
+    product: ProductComplete
 
     class Config:
         orm_mode = True
@@ -54,11 +54,11 @@ class DeliveryBase(BaseModel):
 
     delivery_date: date
     products_ids: list[str] = []
-    locked: bool = False
 
 
 class DeliveryComplete(DeliveryBase):
     id: str
+    status: DeliveryStatusType
 
     class Config:
         orm_mode = True
@@ -66,7 +66,10 @@ class DeliveryComplete(DeliveryBase):
 
 class DeliveryUpdate(BaseModel):
     delivery_date: date | None = None
-    locked: bool | None = None
+
+
+class DeliveryProductsUpdate(BaseModel):
+    products_ids: list[str]
 
 
 class OrderBase(BaseModel):
@@ -74,7 +77,6 @@ class OrderBase(BaseModel):
     delivery_id: str
     products_ids: list[str]
     collection_slot: AmapSlotType
-    delivery_date: date
     products_quantity: list[int]
 
 
@@ -82,6 +84,7 @@ class OrderComplete(OrderBase):
     order_id: str
     amount: float
     ordering_date: datetime
+    delivery_date: date
 
     class Config:
         orm_mode = True
@@ -90,19 +93,21 @@ class OrderComplete(OrderBase):
 class OrderReturn(BaseModel):
     user: CoreUserSimple
     delivery_id: str
-    products: list[ProductQuantity]
+    productsdetail: list[ProductQuantity]
     collection_slot: AmapSlotType
-    delivery_date: date
     order_id: str
     amount: float
     ordering_date: datetime
+    delivery_date: date
 
     class Config:
         orm_mode = True
 
 
-class OrderEdit(OrderBase):
-    order_id: str
+class OrderEdit(BaseModel):
+    products_ids: list[str] | None = None
+    collection_slot: AmapSlotType | None = None
+    products_quantity: list[int] | None = None
 
     class Config:
         orm_mode = True
@@ -112,8 +117,7 @@ class DeliveryReturn(BaseModel):
     delivery_date: date
     products: list[ProductComplete] = []
     id: str
-    locked: bool
-    orders: list[OrderReturn]
+    status: DeliveryStatusType
 
     class Config:
         orm_mode = True

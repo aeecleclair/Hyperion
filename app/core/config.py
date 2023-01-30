@@ -156,7 +156,7 @@ class Settings(BaseSettings):
             except AttributeError:
                 # logger.error()
                 raise ValueError(
-                    ".env AUTH_CLIENTS is invalid: {auth_client_name} is not an auth_client from app.utils.auth.providers"
+                    f".env AUTH_CLIENTS is invalid: {auth_client_name} is not an auth_client from app.utils.auth.providers"
                 )
             # If the secret is empty, this mean the client is expected to use PKCE
             # We need to pass a None value to the auth_client_class

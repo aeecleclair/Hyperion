@@ -143,8 +143,6 @@ class LogConfig:
                 "hyperion.access": {
                     "handlers": [
                         "file_access",
-                        "file_errors",
-                        "matrix_errors",
                         "debug_console",
                     ],
                     "level": MINIMUM_LOG_LEVEL,
@@ -152,7 +150,6 @@ class LogConfig:
                 "hyperion.security": {
                     "handlers": [
                         "file_security",
-                        "file_errors",
                         "matrix_errors",
                         "debug_console",
                     ],
