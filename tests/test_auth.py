@@ -59,7 +59,6 @@ def test_authorization_code_flow_PKCE():
         "/auth/authorization-flow/authorize-validation",
         data=data,
         follow_redirects=False,
-
     )
     assert response.status_code == 302
 
