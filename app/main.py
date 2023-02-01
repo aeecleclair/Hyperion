@@ -140,7 +140,6 @@ async def startup():
             exists = await cruds_groups.get_group_by_id(group_id=id, db=db)
             # We don't want to recreate the groups if they already exist
             if not exists:
-
                 group = models_core.CoreGroup(
                     id=id, name=id.name, description="Group type"
                 )
