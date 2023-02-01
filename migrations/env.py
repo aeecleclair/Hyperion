@@ -7,7 +7,18 @@ from logging.config import fileConfig
 
 from alembic import context
 
-from app.database import SQLALCHEMY_DATABASE_URL, Base, engine
+from app.database import Base
+from app.dependencies import get_settings, get_db_engine
+
+settings = get_settings()
+engine = get_db_engine(settings=settings)
+
+if settings.SQLITE_DB:
+    SQLALCHEMY_DATABASE_URL = (
+        f"sqlite+aiosqlite:///./{settings.SQLITE_DB}"  # Connect to the test's database
+    )
+else:
+    SQLALCHEMY_DATABASE_URL = f"postgresql+asyncpg://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}/{settings.POSTGRES_DB}"
 
 # from sqlalchemy import engine_from_config, pool
 # from sqlalchemy.ext.asyncio import AsyncEngine
