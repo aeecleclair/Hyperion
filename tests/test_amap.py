@@ -181,8 +181,9 @@ def test_add_product_to_delivery():
 
 def test_remove_product_from_delivery():
     token = create_api_access_token(amap_user)
-    response = client.delete(
-        f"/amap/deliveries/{delivery.id}/products",
+    response = client.request(
+        method="DELETE",
+        url=f"/amap/deliveries/{delivery.id}/products",
         json={"products_ids": [product.id, "notaproduct"]},
         headers={"Authorization": f"Bearer {token}"},
     )
