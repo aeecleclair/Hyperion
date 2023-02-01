@@ -245,6 +245,5 @@ class CoreBatchDeleteMembership(BaseModel):
 
 
 class CoreMembershipDelete(BaseModel):
-
     user_id: str
     group_id: str

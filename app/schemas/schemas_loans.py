@@ -40,7 +40,6 @@ class ItemBase(BaseModel):
 
 
 class ItemUpdate(BaseModel):
-
     name: str | None = None
     suggested_caution: int | None = None
     multiple: bool | None = None
@@ -114,7 +113,6 @@ class Loan(LoanBase):
 
 
 class LoanExtend(BaseModel):
-
     # The client can either provide a new end date or a timedelta to be added to the old end date.
     end: date | None = Field(None, description="A new return date for the Loan")
     duration: timedelta | None = Field(

@@ -478,7 +478,6 @@ async def authorization_code_grant(  # noqa: C901 # The function is too complex 
     response: Response,
     request_id: str,
 ):
-
     if tokenreq.code is None:
         hyperion_access_logger.warning(
             f"Token authorization_code_grant: Unprovided authorization code ({request_id})"

@@ -173,7 +173,6 @@ class HedgeDocAuthClient(BaseAuthClient):
 
     @classmethod
     def get_userinfo(cls, user: models_core.CoreUser):
-
         return {
             "sub": user.id,
             "name": user.firstname,
@@ -192,7 +191,6 @@ class WikijsAuthClient(BaseAuthClient):
 
     @classmethod
     def get_userinfo(cls, user: models_core.CoreUser):
-
         return {
             "sub": user.id,
             "name": get_display_name(
@@ -204,7 +202,6 @@ class WikijsAuthClient(BaseAuthClient):
 
 
 class SynapseAuthClient(BaseAuthClient):
-
     # If no redirect_uri are hardcoded, the client will need to provide one in its request
     redirect_uri: str | None = None
     # Set of scopes the auth client is authorized to grant when issuing an access token.
@@ -213,7 +210,6 @@ class SynapseAuthClient(BaseAuthClient):
 
     @classmethod
     def get_userinfo(cls, user: models_core.CoreUser):
-
         # Accepted characters are [a-z] [0-9] `.` and `-`. Spaces are replaced by `-` and accents are removed.
         username = (
             unidecode.unidecode(f"{user.firstname.strip()}.{user.name.strip()}")

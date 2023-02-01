@@ -2,7 +2,6 @@ from tests.commons import client
 
 
 def test_get_information():
-
     response = client.get(
         "/information",
     )
@@ -12,7 +11,6 @@ def test_get_information():
 
 
 def test_get_privacy():
-
     response = client.get(
         "/privacy",
     )
@@ -20,7 +18,6 @@ def test_get_privacy():
 
 
 def test_get_terms_and_conditions():
-
     response = client.get(
         "/terms-and-conditions",
     )
@@ -28,7 +25,6 @@ def test_get_terms_and_conditions():
 
 
 def test_get_support():
-
     response = client.get(
         "/support",
     )
@@ -36,7 +32,6 @@ def test_get_support():
 
 
 def test_get_security_txt():
-
     response = client.get(
         "/security.txt",
     )
@@ -44,7 +39,6 @@ def test_get_security_txt():
 
 
 def test_get_wellknown_security_txt():
-
     response = client.get(
         "/.well-known/security.txt",
     )
@@ -52,7 +46,6 @@ def test_get_wellknown_security_txt():
 
 
 def test_get_stylesheet():
-
     response = client.get(
         "/style/connexion.css",
     )
@@ -66,7 +59,6 @@ def test_get_stylesheet():
 
 
 def test_get_favicon():
-
     response = client.get(
         "/favicon.ico",
     )

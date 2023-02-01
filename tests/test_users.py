@@ -59,7 +59,6 @@ def test_read_user():
 
 
 def test_update_current_user():
-
     token = create_api_access_token(admin_user)
     response = client.patch(
         "/users/me",
@@ -70,7 +69,6 @@ def test_update_current_user():
 
 
 def test_update_user():
-
     # A non admin user should not be allowed to use this endpoint
     token = create_api_access_token(student_user)
     response = client.patch(
@@ -91,7 +89,6 @@ def test_update_user():
 
 
 def test_create_current_user_profile_picture():
-
     token = create_api_access_token(student_user)
 
     with open("assets/images/default_profile_picture.png", "rb") as image:
@@ -105,7 +102,6 @@ def test_create_current_user_profile_picture():
 
 
 def test_read_user_profile_picture():
-
     token = create_api_access_token(student_user)
 
     response = client.get(

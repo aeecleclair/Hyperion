@@ -90,7 +90,6 @@ async def create_campaigns_logo(
     request_id: str = Depends(get_request_id),
     db: AsyncSession = Depends(get_db),
 ):
-
     session = await cruds_cinema.get_session_by_id(db=db, session_id=session_id)
     if session is None:
         raise HTTPException(
@@ -119,7 +118,6 @@ async def create_campaigns_logo(
 async def read_session_poster(
     session_id: str,
 ):
-
     return get_file_from_data(
         default_asset="assets/images/default_movie.png",
         directory="cinemasessions",
