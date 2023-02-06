@@ -21,8 +21,6 @@ class Settings(BaseSettings):
 
     # NOTE: Variables without a value should not be configured in this class, but added to the dotenv .env file
 
-    SQLITE_DB: str | None = None  # If set, the application use a SQLite database instead of PostgreSQL, for testing or development purposes (should not be used if possible)
-
     #####################################
     # SMTP configuration using starttls #
     #####################################
@@ -63,6 +61,7 @@ class Settings(BaseSettings):
     # PostgreSQL configuration #
     ############################
     # PostgreSQL configuration is needed to use the database
+    SQLITE_DB: str | None = None  # If set, the application use a SQLite database instead of PostgreSQL, for testing or development purposes (should not be used if possible)
     POSTGRES_HOST: str
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str
@@ -72,6 +71,9 @@ class Settings(BaseSettings):
     #####################
     # Hyperion settings #
     #####################
+
+    # Timezone used to compare dates
+    TIMEZONE: str = "Europe/Paris"
 
     # By default, only production's records are logged
     LOG_DEBUG_MESSAGES: bool | None

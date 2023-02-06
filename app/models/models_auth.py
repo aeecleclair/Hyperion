@@ -9,7 +9,7 @@ class AuthorizationCode(Base):
     __tablename__ = "authorization_code"
 
     code: str = Column(String, primary_key=True, index=True)
-    expire_on: datetime = Column(DateTime, nullable=False)
+    expire_on: datetime = Column(DateTime(timezone=True), nullable=False)
     scope: str | None = Column(String)
     redirect_uri: str | None = Column(String)
     user_id: str = Column(String, nullable=False)

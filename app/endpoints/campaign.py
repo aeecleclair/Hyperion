@@ -5,10 +5,12 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
+from pytz import timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import Settings
 from app.cruds import cruds_campaign, cruds_users
-from app.dependencies import get_db, get_request_id, is_user_a_member_of
+from app.dependencies import get_db, get_request_id, get_settings, is_user_a_member_of
 from app.models import models_campaign, models_core
 from app.schemas import schemas_campaign
 from app.utils.tools import (
@@ -322,6 +324,7 @@ async def update_list(
 async def open_vote(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
+    settings: Settings = Depends(get_settings),
 ):
     """
     If the status is 'waiting', change it to 'voting' and create the blank lists.
@@ -346,7 +349,7 @@ async def open_vote(
     # Archive all changes to a json file
     lists = await cruds_campaign.get_lists(db=db)
     with open(
-        f"data/campaigns/lists-{datetime.now().isoformat(sep='-',timespec='minutes').replace(':','-')}.json",
+        f"data/campaigns/lists-{datetime.now(timezone(settings.TIMEZONE)).isoformat(sep='-',timespec='minutes').replace(':','-')}.json",
         "w",
     ) as file:
         json.dump([liste.as_dict() for liste in lists], file)
@@ -441,6 +444,7 @@ async def publish_vote(
 async def reset_vote(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Reset the vote. Can only be used if the current status is counting ou published.
@@ -460,7 +464,7 @@ async def reset_vote(
         # Archive results to a json file
         results = await get_results(db=db, user=user)
         with open(
-            f"data/campaigns/results-{datetime.now().isoformat(sep='-',timespec='minutes').replace(':','-')}.json",
+            f"data/campaigns/results-{datetime.now(timezone(settings.TIMEZONE)).isoformat(sep='-',timespec='minutes').replace(':','-')}.json",
             "w",
         ) as file:
             json.dump(
