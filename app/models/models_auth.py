@@ -22,9 +22,9 @@ class RefreshToken(Base):
     __tablename__ = "refresh_token"
 
     client_id: str = Column(String, index=True, nullable=False)
-    created_on: datetime = Column(DateTime, nullable=False)
-    expire_on: datetime = Column(DateTime, nullable=False)
-    revoked_on: datetime | None = Column(DateTime)
+    created_on: datetime = Column(DateTime(timezone=True), nullable=False)
+    expire_on: datetime = Column(DateTime(timezone=True), nullable=False)
+    revoked_on: datetime | None = Column(DateTime(timezone=True))
     token: str = Column(
         String, index=True, primary_key=True, unique=True, nullable=False
     )

@@ -32,7 +32,7 @@ class CoreUser(Base):
     promo: int | None = Column(Integer)
     phone: str | None = Column(String)
     floor: FloorsType = Column(Enum(FloorsType), nullable=False)
-    created_on: datetime | None = Column(DateTime)
+    created_on: datetime | None = Column(DateTime(timezone=True))
 
     # We use list["CoreGroup"] with quotes as CoreGroup is only defined after this class
     # Defining CoreUser after CoreGroup would cause a similar issue
@@ -54,8 +54,8 @@ class CoreUserUnconfirmed(Base):
     email: str = Column(String, nullable=False)
     account_type: str = Column(String, nullable=False)
     activation_token: str = Column(String, nullable=False)
-    created_on: datetime = Column(DateTime, nullable=False)
-    expire_on: datetime = Column(DateTime, nullable=False)
+    created_on: datetime = Column(DateTime(timezone=True), nullable=False)
+    expire_on: datetime = Column(DateTime(timezone=True), nullable=False)
 
 
 class CoreUserRecoverRequest(Base):
@@ -66,8 +66,8 @@ class CoreUserRecoverRequest(Base):
     email: str = Column(String, nullable=False)
     user_id: str = Column(String, nullable=False)
     reset_token: str = Column(String, nullable=False, primary_key=True)
-    created_on: datetime = Column(DateTime, nullable=False)
-    expire_on: datetime = Column(DateTime, nullable=False)
+    created_on: datetime = Column(DateTime(timezone=True), nullable=False)
+    expire_on: datetime = Column(DateTime(timezone=True), nullable=False)
 
 
 class CoreGroup(Base):
