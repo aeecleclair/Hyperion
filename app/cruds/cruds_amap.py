@@ -1,6 +1,8 @@
 """File defining the functions called by the endpoints, making queries to the table using the models"""
 
 
+import logging
+
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,6 +11,8 @@ from sqlalchemy.orm import noload, selectinload
 from app.models import models_amap
 from app.schemas import schemas_amap
 from app.utils.types.amap_types import DeliveryStatusType
+
+hyperion_error_logger = logging.getLogger("hyperion_error")
 
 
 async def get_products(db: AsyncSession) -> list[models_amap.Product]:
@@ -129,12 +133,18 @@ async def create_delivery(
         db.add(models_amap.AmapDeliveryContent(product_id=id, delivery_id=delivery.id))
     try:
         await db.commit()
-        return await get_delivery_by_id(db=db, delivery_id=delivery.id)
     except IntegrityError:
         await db.rollback()
         raise ValueError(
             "A Delivery is already planned on that day. Consider editing this one."
         )
+    try:
+        await db.commit()
+        return await get_delivery_by_id(db=db, delivery_id=delivery.id)
+    except IntegrityError as error:
+        await db.rollback()
+        hyperion_error_logger.error(error)
+        raise ValueError("An error as occured server side while creating the delivery")
 
 
 async def delete_delivery(db: AsyncSession, delivery_id: str):
