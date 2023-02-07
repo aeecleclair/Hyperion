@@ -175,11 +175,15 @@ async def create_delivery(
         status=DeliveryStatusType.creation,
         **delivery.dict(),
     )
-    try:
+    if await cruds_amap.is_there_a_delivery_on(
+        db=db, delivery_date=db_delivery.delivery_date
+    ):
+        return HTTPException(
+            status_code=403, detail="There is already a delivery planned that day."
+        )
+    else:
         result = await cruds_amap.create_delivery(delivery=db_delivery, db=db)
         return result
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
 
 
 @router.delete(
@@ -498,6 +502,9 @@ async def edit_order_from_delievery(
                                             )
                                     ordering_date = datetime.now()
                                     db_order = schemas_amap.OrderComplete(
+                                        order_id=order_id,
+                                        ordering_date=previous_order.ordering_date,
+                                        delivery_date=delivery.delivery_date,
                                         amount=amount,
                                         ordering_date=ordering_date,
                                         **order.dict(),
@@ -514,7 +521,7 @@ async def edit_order_from_delievery(
                                             )
                                         else:
                                             try:
-                                                await cruds_amap.edit_order(
+                                                await cruds_amap.edit_order_with_products(
                                                     order=db_order,
                                                     db=db,
                                                 )
@@ -543,9 +550,8 @@ async def edit_order_from_delievery(
                                         detail="Error in products and quantities list",
                                     )
                         else:
-                            await cruds_amap.edit_order(
-                                order=db_order,
-                                db=db,
+                            await cruds_amap.edit_order_without_products(
+                                order=order, db=db, order_id=order_id
                             )
 
                     else:
