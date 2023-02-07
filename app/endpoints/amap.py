@@ -500,13 +500,11 @@ async def edit_order_from_delievery(
                                             amount += (
                                                 prod.price * order.products_quantity[i]
                                             )
-                                    ordering_date = datetime.now()
                                     db_order = schemas_amap.OrderComplete(
                                         order_id=order_id,
                                         ordering_date=previous_order.ordering_date,
                                         delivery_date=delivery.delivery_date,
                                         amount=amount,
-                                        ordering_date=ordering_date,
                                         **order.dict(),
                                     )
                                     previous_amount = previous_order.amount
