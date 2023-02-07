@@ -504,6 +504,8 @@ async def edit_order_from_delievery(
                                         order_id=order_id,
                                         ordering_date=previous_order.ordering_date,
                                         delivery_date=delivery.delivery_date,
+                                        delivery_id=delivery_id,
+                                        user_id=previous_order.user_id,
                                         amount=amount,
                                         **order.dict(),
                                     )
