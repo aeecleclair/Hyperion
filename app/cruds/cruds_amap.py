@@ -2,7 +2,6 @@
 
 
 import logging
-from datetime import date
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
@@ -147,6 +146,13 @@ async def create_delivery(
 
     for id in delivery.products_ids:
         db.add(models_amap.AmapDeliveryContent(product_id=id, delivery_id=delivery.id))
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise ValueError(
+            "A Delivery is already planned on that day. Consider editing this one."
+        )
     try:
         await db.commit()
         return await get_delivery_by_id(db=db, delivery_id=delivery.id)
