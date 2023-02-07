@@ -274,6 +274,7 @@ async def lock_order(db: AsyncSession, order_id: str):
         .where(models_amap.Order.order_id == order_id)
         .values(locked=True)
     )
+    await db.commit()
 
 
 async def unlock_order(db: AsyncSession, order_id: str):
@@ -282,6 +283,7 @@ async def unlock_order(db: AsyncSession, order_id: str):
         .where(models_amap.Order.order_id == order_id)
         .values(locked=False)
     )
+    await db.commit()
 
 
 async def edit_order_without_products(
@@ -292,6 +294,11 @@ async def edit_order_without_products(
         .where(models_amap.Order.order_id == order_id)
         .values(**order.dict(exclude_none=True))
     )
+    try:
+        await db.commit()
+    except IntegrityError as err:
+        await db.rollback()
+        raise ValueError(err)
 
 
 async def edit_order_with_products(db: AsyncSession, order: schemas_amap.OrderComplete):

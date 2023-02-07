@@ -550,9 +550,12 @@ async def edit_order_from_delievery(
                                         detail="Error in products and quantities list",
                                     )
                         else:
-                            await cruds_amap.edit_order_without_products(
-                                order=order, db=db, order_id=order_id
-                            )
+                            try:
+                                await cruds_amap.edit_order_without_products(
+                                    order=order, db=db, order_id=order_id
+                                )
+                            except ValueError as error:
+                                raise HTTPException(status_code=422, detail=str(error))
 
                     else:
                         raise HTTPException(status_code=403)
