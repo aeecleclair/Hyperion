@@ -16,6 +16,7 @@ from app.endpoints import (
     loans,
     raffle,
     users,
+    threads,
 )
 
 api_router = APIRouter()
@@ -32,3 +33,4 @@ api_router.include_router(users.router)
 api_router.include_router(loans.router)
 api_router.include_router(cinema.router)
 api_router.include_router(raffle.router)
+api_router.include_router(threads.router)
