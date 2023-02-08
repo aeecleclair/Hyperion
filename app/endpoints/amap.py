@@ -175,11 +175,15 @@ async def create_delivery(
         status=DeliveryStatusType.creation,
         **delivery.dict(),
     )
-    try:
+    if await cruds_amap.is_there_a_delivery_on(
+        db=db, delivery_date=db_delivery.delivery_date
+    ):
+        return HTTPException(
+            status_code=403, detail="There is already a delivery planned that day."
+        )
+    else:
         result = await cruds_amap.create_delivery(delivery=db_delivery, db=db)
         return result
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
 
 
 @router.delete(
@@ -422,6 +426,10 @@ async def add_order_to_delievery(
                     balance = models_amap.Cash(
                         **new_cash_db.dict(),
                     )
+                if amount == 0.0:
+                    raise HTTPException(
+                        status_code=403, detail="You can't order nothing"
+                    )
                 if balance.balance < amount:
                     raise HTTPException(status_code=403, detail="Not enough money")
                 else:
@@ -496,10 +504,13 @@ async def edit_order_from_delievery(
                                             amount += (
                                                 prod.price * order.products_quantity[i]
                                             )
-                                    ordering_date = datetime.now()
                                     db_order = schemas_amap.OrderComplete(
+                                        order_id=order_id,
+                                        ordering_date=previous_order.ordering_date,
+                                        delivery_date=delivery.delivery_date,
+                                        delivery_id=delivery_id,
+                                        user_id=previous_order.user_id,
                                         amount=amount,
-                                        ordering_date=ordering_date,
                                         **order.dict(),
                                     )
                                     previous_amount = previous_order.amount
@@ -508,13 +519,16 @@ async def edit_order_from_delievery(
                                     )
                                     if balance is not None:
                                         if balance.balance + previous_amount < amount:
+                                            await cruds_amap.unlock_order(
+                                                db=db, order_id=order_id
+                                            )
                                             raise HTTPException(
                                                 status_code=403,
                                                 detail="Not enough money",
                                             )
                                         else:
                                             try:
-                                                await cruds_amap.edit_order(
+                                                await cruds_amap.edit_order_with_products(
                                                     order=db_order,
                                                     db=db,
                                                 )
@@ -530,25 +544,38 @@ async def edit_order_from_delievery(
                                                 ),
 
                                             except ValueError as error:
+                                                await cruds_amap.unlock_order(
+                                                    db=db, order_id=order_id
+                                                )
                                                 raise HTTPException(
                                                     status_code=422, detail=str(error)
                                                 )
                                     else:
+                                        await cruds_amap.unlock_order(
+                                            db=db, order_id=order_id
+                                        )
                                         raise HTTPException(
                                             status_code=404, detail="No cash found"
                                         )
                                 else:
+                                    await cruds_amap.unlock_order(
+                                        db=db, order_id=order_id
+                                    )
                                     raise HTTPException(
                                         status_code=400,
                                         detail="Error in products and quantities list",
                                     )
                         else:
-                            await cruds_amap.edit_order(
-                                order=db_order,
-                                db=db,
-                            )
+                            try:
+                                await cruds_amap.edit_order_without_products(
+                                    order=order, db=db, order_id=order_id
+                                )
+                            except ValueError as error:
+                                await cruds_amap.unlock_order(db=db, order_id=order_id)
+                                raise HTTPException(status_code=422, detail=str(error))
 
                     else:
+                        await cruds_amap.unlock_order(db=db, order_id=order_id)
                         raise HTTPException(status_code=403)
                     await cruds_amap.unlock_order(db=db, order_id=order_id)
                 else:
@@ -607,6 +634,7 @@ async def remove_order(
                     else:
                         await cruds_amap.unlock_order(db=db, order_id=order_id)
                         raise HTTPException(status_code=404, detail="No cash found")
+                    await cruds_amap.unlock_order(db=db, order_id=order_id)
                     return Response(status_code=204)
                 else:
                     await cruds_amap.unlock_order(db=db, order_id=order_id)

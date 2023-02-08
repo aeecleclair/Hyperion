@@ -1,6 +1,9 @@
 """File defining the functions called by the endpoints, making queries to the table using the models"""
 
 
+import logging
+from datetime import date
+
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,6 +12,8 @@ from sqlalchemy.orm import noload, selectinload
 from app.models import models_amap
 from app.schemas import schemas_amap
 from app.utils.types.amap_types import DeliveryStatusType
+
+hyperion_error_logger = logging.getLogger("hyperion_error")
 
 
 async def get_products(db: AsyncSession) -> list[models_amap.Product]:
@@ -119,22 +124,36 @@ async def get_delivery_by_id(
     return result.scalars().first()
 
 
+async def is_there_a_delivery_on(db: AsyncSession, delivery_date: date) -> bool:
+    result = await db.execute(
+        select(models_amap.Delivery).where(
+            models_amap.Delivery.delivery_date == delivery_date
+        )
+    )
+    return result.scalars().all() != []
+
+
 async def create_delivery(
     delivery: schemas_amap.DeliveryComplete,
     db: AsyncSession,
 ) -> models_amap.Delivery | None:
     """Create a new delivery in database and return it"""
     db.add(models_amap.Delivery(**delivery.dict(exclude={"products_ids"})))
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise ValueError("An error as occured server side while creating the delivery")
+
     for id in delivery.products_ids:
         db.add(models_amap.AmapDeliveryContent(product_id=id, delivery_id=delivery.id))
     try:
         await db.commit()
         return await get_delivery_by_id(db=db, delivery_id=delivery.id)
-    except IntegrityError:
+    except IntegrityError as error:
         await db.rollback()
-        raise ValueError(
-            "A Delivery is already planned on that day. Consider editing this one."
-        )
+        hyperion_error_logger.error(error)
+        raise ValueError("An error as occured server side while creating the delivery")
 
 
 async def delete_delivery(db: AsyncSession, delivery_id: str):
@@ -255,6 +274,7 @@ async def lock_order(db: AsyncSession, order_id: str):
         .where(models_amap.Order.order_id == order_id)
         .values(locked=True)
     )
+    await db.commit()
 
 
 async def unlock_order(db: AsyncSession, order_id: str):
@@ -263,9 +283,25 @@ async def unlock_order(db: AsyncSession, order_id: str):
         .where(models_amap.Order.order_id == order_id)
         .values(locked=False)
     )
+    await db.commit()
 
 
-async def edit_order(db: AsyncSession, order: schemas_amap.OrderComplete):
+async def edit_order_without_products(
+    db: AsyncSession, order: schemas_amap.OrderEdit, order_id: str
+):
+    await db.execute(
+        update(models_amap.Order)
+        .where(models_amap.Order.order_id == order_id)
+        .values(**order.dict(exclude_none=True))
+    )
+    try:
+        await db.commit()
+    except IntegrityError as err:
+        await db.rollback()
+        raise ValueError(err)
+
+
+async def edit_order_with_products(db: AsyncSession, order: schemas_amap.OrderComplete):
     await db.execute(
         delete(models_amap.AmapOrderContent).where(
             models_amap.AmapOrderContent.order_id == order.order_id
