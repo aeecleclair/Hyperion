@@ -23,7 +23,7 @@ order: models_amap.Order | None = None
 
 @app.on_event("startup")  # create the data needed in the tests
 async def startuptest():
-    global amap_user, student_user, product, deletable_product, delivery, deletable_delivery, order
+    global amap_user, student_user, product, deletable_product, delivery, deletable_delivery, order, cash
 
     async with TestingSessionLocal() as db:
         amap_user = await create_user_with_groups([GroupType.amap], db=db)
@@ -65,6 +65,10 @@ async def startuptest():
             locked=False,
         )
         db.add(order)
+        await db.commit()
+
+        cash = models_amap.Cash(user_id=student_user.id, balance=666)
+        db.add(cash)
         await db.commit()
 
 
@@ -226,10 +230,10 @@ def test_add_order_to_delivery():
         json={
             "user_id": student_user.id,
             "delivery_id": delivery.id,
-            "products_ids": [],
+            "products_ids": [product.id],
             "collection_slot": "midi",
             "delivery_date": "2022-08-16",
-            "products_quantity": [],
+            "products_quantity": [1],
         },
         headers={"Authorization": f"Bearer {token}"},
     )
@@ -282,8 +286,8 @@ def test_create_cash_of_user():
     token = create_api_access_token(amap_user)
 
     response = client.post(
-        f"/amap/users/{student_user.id}/cash",
-        json={"balance": 50, "user_id": student_user.id},
+        f"/amap/users/{amap_user.id}/cash",
+        json={"balance": 50, "user_id": amap_user.id},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 201
