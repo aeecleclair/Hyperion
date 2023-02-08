@@ -515,6 +515,9 @@ async def edit_order_from_delievery(
                                     )
                                     if balance is not None:
                                         if balance.balance + previous_amount < amount:
+                                            await cruds_amap.unlock_order(
+                                                db=db, order_id=order_id
+                                            )
                                             raise HTTPException(
                                                 status_code=403,
                                                 detail="Not enough money",
@@ -537,14 +540,23 @@ async def edit_order_from_delievery(
                                                 ),
 
                                             except ValueError as error:
+                                                await cruds_amap.unlock_order(
+                                                    db=db, order_id=order_id
+                                                )
                                                 raise HTTPException(
                                                     status_code=422, detail=str(error)
                                                 )
                                     else:
+                                        await cruds_amap.unlock_order(
+                                            db=db, order_id=order_id
+                                        )
                                         raise HTTPException(
                                             status_code=404, detail="No cash found"
                                         )
                                 else:
+                                    await cruds_amap.unlock_order(
+                                        db=db, order_id=order_id
+                                    )
                                     raise HTTPException(
                                         status_code=400,
                                         detail="Error in products and quantities list",
@@ -555,9 +567,11 @@ async def edit_order_from_delievery(
                                     order=order, db=db, order_id=order_id
                                 )
                             except ValueError as error:
+                                await cruds_amap.unlock_order(db=db, order_id=order_id)
                                 raise HTTPException(status_code=422, detail=str(error))
 
                     else:
+                        await cruds_amap.unlock_order(db=db, order_id=order_id)
                         raise HTTPException(status_code=403)
                     await cruds_amap.unlock_order(db=db, order_id=order_id)
                 else:
@@ -616,6 +630,7 @@ async def remove_order(
                     else:
                         await cruds_amap.unlock_order(db=db, order_id=order_id)
                         raise HTTPException(status_code=404, detail="No cash found")
+                    await cruds_amap.unlock_order(db=db, order_id=order_id)
                     return Response(status_code=204)
                 else:
                     await cruds_amap.unlock_order(db=db, order_id=order_id)
