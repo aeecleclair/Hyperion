@@ -95,9 +95,8 @@ class Settings(BaseSettings):
 
     # Host or url of the API, used for Openid connect discovery endpoint
     # NOTE: A trailing / is required
-    CLIENT_URL = "http://127.0.0.1:8000/"
-    # TODO: remove
-    DOCKER_URL = "http://host.docker.internal:8000/"  # During dev, docker container can not directly access the client url
+    CLIENT_URL: str
+    DOCKER_URL: str  # During dev, docker container can not directly access the client url
 
     # Openid connect issuer name
     AUTH_ISSUER = "hyperion"
