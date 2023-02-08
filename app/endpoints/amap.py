@@ -426,6 +426,10 @@ async def add_order_to_delievery(
                     balance = models_amap.Cash(
                         **new_cash_db.dict(),
                     )
+                if amount == 0.0:
+                    raise HTTPException(
+                        status_code=403, detail="You can't order nothing"
+                    )
                 if balance.balance < amount:
                     raise HTTPException(status_code=403, detail="Not enough money")
                 else:
