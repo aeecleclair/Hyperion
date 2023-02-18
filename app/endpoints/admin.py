@@ -18,7 +18,5 @@ def send_email_backgroundtasks(
     settings: Settings = Depends(get_settings),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
-    # TODO: WARNING this endpoint should be removed or restricted
-
     send_email(email, subject, content, settings=settings)
     return JSONResponse(status_code=200, content={"message": "email has been sent"})
