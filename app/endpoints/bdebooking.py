@@ -183,7 +183,7 @@ async def edit_bookings_id(
     booking_id: str,
     booking_edit: schemas_bdebooking.BookingEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Edit a booking.
@@ -236,7 +236,7 @@ async def confirm_booking(
 async def delete_bookings_id(
     booking_id,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Remove a booking.
