@@ -110,3 +110,32 @@ def test_read_user_profile_picture():
     )
 
     assert response.status_code == 200
+
+
+def test_search_users():
+    group = GroupType.student.value
+
+    token = create_api_access_token(admin_user)
+    response = client.get(
+        f"/groups/{group}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    group_users = set(member["id"] for member in response.json()["members"])
+
+    token = create_api_access_token(student_user)
+
+    response = client.get(
+        f"/users/search?query=&includedGroups={group}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    data_users = set(user["id"] for user in response.json())
+    assert data_users == group_users
+
+    response = client.get(
+        f"/users/search?query=&excludedGroups={group}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert all([user["id"] not in group_users for user in data])
