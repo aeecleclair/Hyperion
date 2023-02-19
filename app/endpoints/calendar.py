@@ -155,7 +155,7 @@ async def edit_bookings_id(
     event_id: str,
     event_edit: schemas_calendar.EventEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Edit an event.
