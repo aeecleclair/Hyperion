@@ -62,6 +62,7 @@ class Order(Base):
     products: list[Product] = relationship(
         "Product",
         secondary="amap_order_content",
+        viewonly=True,
     )
     amount: float = Column(Float, nullable=False)
     collection_slot: AmapSlotType = Column(Enum(AmapSlotType), nullable=False)
