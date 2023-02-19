@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime
 
+from app.dependencies import get_redis_client, get_settings
 from app.main import app
 from app.models import models_amap, models_core
 from app.utils.types.amap_types import AmapSlotType, DeliveryStatusType
@@ -19,6 +20,8 @@ deletable_product: models_amap.Product | None = None
 delivery: models_amap.Delivery | None = None
 deletable_delivery: models_amap.Delivery | None = None
 order: models_amap.Order | None = None
+
+settings = app.dependency_overrides.get(get_settings, get_settings)()
 
 
 @app.on_event("startup")  # create the data needed in the tests
@@ -220,6 +223,11 @@ def test_make_delivery_orderable():
 
 
 def test_add_order_to_delivery():
+    # Enable Redis client for locker
+    app.dependency_overrides.get(get_redis_client, get_redis_client)(
+        settings, activate=True
+    )
+
     token = create_api_access_token(student_user)
 
     response = client.post(
@@ -234,10 +242,19 @@ def test_add_order_to_delivery():
         },
         headers={"Authorization": f"Bearer {token}"},
     )
+
+    # Disable Redis client (to avoid rate-limit)
+    app.dependency_overrides.get(get_redis_client, get_redis_client)(deactivate=True)
+
     assert response.status_code == 201
 
 
 def test_edit_order():
+    # Enable Redis client for locker
+    app.dependency_overrides.get(get_redis_client, get_redis_client)(
+        settings, activate=True
+    )
+
     token = create_api_access_token(student_user)
 
     response = client.patch(
@@ -253,16 +270,29 @@ def test_edit_order():
         },
         headers={"Authorization": f"Bearer {token}"},
     )
+
+    # Disable Redis client (to avoid rate-limit)
+    app.dependency_overrides.get(get_redis_client, get_redis_client)(deactivate=True)
+
     assert response.status_code == 204
 
 
 def test_remove_order():
+    # Enable Redis client for locker
+    app.dependency_overrides.get(get_redis_client, get_redis_client)(
+        settings, activate=True
+    )
+
     token = create_api_access_token(student_user)
 
     response = client.delete(
         f"/amap/deliveries/{delivery.id}/orders/{order.order_id}",
         headers={"Authorization": f"Bearer {token}"},
     )
+
+    # Disable Redis client (to avoid rate-limit)
+    app.dependency_overrides.get(get_redis_client, get_redis_client)(deactivate=True)
+
     assert response.status_code == 204
 
 

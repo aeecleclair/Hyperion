@@ -1,16 +1,24 @@
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pytz import timezone
+from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
 from app.cruds import cruds_amap, cruds_users
-from app.dependencies import get_db, get_settings, is_user_a_member, is_user_a_member_of
+from app.dependencies import (
+    get_db,
+    get_redis_client,
+    get_settings,
+    is_user_a_member,
+    is_user_a_member_of,
+)
 from app.endpoints.users import read_user
 from app.models import models_amap, models_core
 from app.schemas import schemas_amap
+from app.utils.redis import locker_get, locker_set
 from app.utils.tools import is_user_member_of_an_allowed_group
 from app.utils.types.amap_types import DeliveryStatusType
 from app.utils.types.groups_type import GroupType
@@ -382,6 +390,7 @@ async def get_order_by_id(
 async def add_order_to_delievery(
     order: schemas_amap.OrderBase,
     delivery_id: str,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
     settings: Settings = Depends(get_settings),
@@ -451,17 +460,39 @@ async def add_order_to_delievery(
     if balance.balance < amount:
         raise HTTPException(status_code=403, detail="Not enough money")
 
+    app = request.app
+    settings = app.dependency_overrides.get(get_settings, get_settings)()
+    redis_client = app.dependency_overrides.get(get_redis_client, get_redis_client)(
+        settings=settings
+    )
+    redis_key = "amap_" + order.user_id
+
+    if not isinstance(redis_client, Redis) or locker_get(
+        redis_client=redis_client, key=redis_key
+    ):
+        raise HTTPException(status_code=403, detail="Too fast !")
+    locker_set(redis_client=redis_client, key=redis_key, lock=True)
+
     try:
         await cruds_amap.add_order_to_delivery(
             order=db_order,
             db=db,
         )
-        await cruds_amap.remove_cash(db=db, user_id=order.user_id, amount=amount)
+        await cruds_amap.remove_cash(
+            db=db,
+            user_id=order.user_id,
+            amount=amount,
+        )
+
         orderret = await cruds_amap.get_order_by_id(order_id=db_order.order_id, db=db)
         productsret = await cruds_amap.get_products_of_order(db=db, order_id=order_id)
         return schemas_amap.OrderReturn(productsdetail=productsret, **orderret.__dict__)
+
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
+
+    finally:
+        locker_set(redis_client=redis_client, key=redis_key, lock=False)
 
 
 @router.patch(
@@ -473,6 +504,7 @@ async def edit_order_from_delievery(
     order_id: str,
     delivery_id: str,
     order: schemas_amap.OrderEdit,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
     settings: Settings = Depends(get_settings),
@@ -549,6 +581,19 @@ async def edit_order_from_delievery(
                 detail="Not enough money",
             )
 
+        app = request.app
+        settings = app.dependency_overrides.get(get_settings, get_settings)()
+        redis_client = app.dependency_overrides.get(get_redis_client, get_redis_client)(
+            settings=settings
+        )
+        redis_key = "amap_" + previous_order.user_id
+
+        if not isinstance(redis_client, Redis) or locker_get(
+            redis_client=redis_client, key=redis_key
+        ):
+            raise HTTPException(status_code=403, detail="Too fast !")
+        locker_set(redis_client=redis_client, key=redis_key, lock=True)
+
         try:
             await cruds_amap.edit_order_with_products(
                 order=db_order,
@@ -564,8 +609,12 @@ async def edit_order_from_delievery(
                 user_id=previous_order.user_id,
                 amount=amount,
             )
+
         except ValueError as error:
             raise HTTPException(status_code=422, detail=str(error))
+
+        finally:
+            locker_set(redis_client=redis_client, key=redis_key, lock=False)
 
 
 @router.delete(
@@ -576,6 +625,7 @@ async def edit_order_from_delievery(
 async def remove_order(
     order_id: str,
     delivery_id: str,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
@@ -615,9 +665,37 @@ async def remove_order(
     if not balance:
         raise HTTPException(status_code=404, detail="No cash found")
 
-    await cruds_amap.remove_order(db=db, order_id=order_id)
-    await cruds_amap.add_cash(db=db, user_id=order.user_id, amount=amount)
-    return Response(status_code=204)
+    app = request.app
+    settings = app.dependency_overrides.get(get_settings, get_settings)()
+    redis_client = app.dependency_overrides.get(get_redis_client, get_redis_client)(
+        settings=settings
+    )
+    redis_key = "amap_" + order.user_id
+
+    if not isinstance(redis_client, Redis) or locker_get(
+        redis_client=redis_client, key=redis_key
+    ):
+        raise HTTPException(status_code=403, detail="Too fast !")
+    locker_set(redis_client=redis_client, key=redis_key, lock=True)
+
+    try:
+        await cruds_amap.remove_order(
+            db=db,
+            order_id=order_id,
+        )
+        await cruds_amap.add_cash(
+            db=db,
+            user_id=order.user_id,
+            amount=amount,
+        )
+
+        return Response(status_code=204)
+
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))
+
+    finally:
+        locker_set(redis_client=redis_client, key=redis_key, lock=False)
 
 
 @router.post(
