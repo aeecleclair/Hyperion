@@ -248,9 +248,7 @@ async def add_order_to_delivery(
     order: schemas_amap.OrderComplete,
 ):
     db.add(
-        models_amap.Order(
-            locked=False, **order.dict(exclude={"products_ids", "products_quantity"})
-        )
+        models_amap.Order(**order.dict(exclude={"products_ids", "products_quantity"}))
     )
     try:
         await db.commit()
@@ -266,24 +264,6 @@ async def add_order_to_delivery(
     except IntegrityError as err:
         await db.rollback()
         raise ValueError(err)
-
-
-async def lock_order(db: AsyncSession, order_id: str):
-    await db.execute(
-        update(models_amap.Order)
-        .where(models_amap.Order.order_id == order_id)
-        .values(locked=True)
-    )
-    await db.commit()
-
-
-async def unlock_order(db: AsyncSession, order_id: str):
-    await db.execute(
-        update(models_amap.Order)
-        .where(models_amap.Order.order_id == order_id)
-        .values(locked=False)
-    )
-    await db.commit()
 
 
 async def edit_order_without_products(
