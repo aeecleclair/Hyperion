@@ -32,3 +32,15 @@ def limiter(redis_client: redis.Redis, key: str, limit: int, window: int):
     elif nb > limit:
         return False, False
     return True, False
+
+
+def locker_get(redis_client: redis.Redis, key: str):
+    value = redis_client.get(key)
+    if value is None:
+        return False
+    return bool(int(value))
+
+
+def locker_set(redis_client: redis.Redis, key: str, lock: bool):
+    redis_client.set(key, int(lock))
+    redis_client.set(key, int(lock))

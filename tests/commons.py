@@ -77,6 +77,7 @@ def override_get_redis_client(
                 )
     elif deactivate:
         if type(redis_client) == redis.Redis:
+            redis_client.flushdb()
             disconnect(redis_client)
         redis_client = None
     return redis_client
