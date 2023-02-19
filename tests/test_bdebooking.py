@@ -88,7 +88,6 @@ def test_post_bookings():
     response = client.post(
         "/bdebooking/bookings",
         json={
-            "url": booking_user_simple.id,
             "reason": "Test",
             "start": "2022-09-15T08:00:00Z",
             "end": "2022-09-15T09:00:00Z",

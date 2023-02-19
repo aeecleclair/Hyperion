@@ -137,6 +137,7 @@ async def add_event(
     db_event = models_calendar.Event(
         id=event_id,
         decision=Decision.pending,
+        applicant_id=user.id,
         **event.dict(),
     )
     try:
