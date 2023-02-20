@@ -193,6 +193,14 @@ def test_remove_product_from_delivery():
     )
     assert response.status_code == 204
 
+    # Recreate product for future tests
+    response = client.post(
+        f"/amap/deliveries/{delivery.id}/products",
+        json={"products_ids": [product.id]},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 201
+
 
 def test_get_orders_from_delivery():
     token = create_api_access_token(amap_user)
