@@ -43,4 +43,3 @@ def locker_get(redis_client: redis.Redis, key: str):
 
 def locker_set(redis_client: redis.Redis, key: str, lock: bool):
     redis_client.set(key, int(lock))
-    redis_client.set(key, int(lock))

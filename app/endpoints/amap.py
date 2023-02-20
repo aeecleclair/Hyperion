@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pytz import timezone
 from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -390,8 +390,8 @@ async def get_order_by_id(
 async def add_order_to_delievery(
     order: schemas_amap.OrderBase,
     delivery_id: str,
-    request: Request,
     db: AsyncSession = Depends(get_db),
+    redis_client: Redis | None = Depends(get_redis_client),
     user: models_core.CoreUser = Depends(is_user_a_member),
     settings: Settings = Depends(get_settings),
 ):
@@ -460,11 +460,6 @@ async def add_order_to_delievery(
     if balance.balance < amount:
         raise HTTPException(status_code=403, detail="Not enough money")
 
-    app = request.app
-    settings = app.dependency_overrides.get(get_settings, get_settings)()
-    redis_client = app.dependency_overrides.get(get_redis_client, get_redis_client)(
-        settings=settings
-    )
     redis_key = "amap_" + order.user_id
 
     if not isinstance(redis_client, Redis) or locker_get(
@@ -504,8 +499,8 @@ async def edit_order_from_delievery(
     order_id: str,
     delivery_id: str,
     order: schemas_amap.OrderEdit,
-    request: Request,
     db: AsyncSession = Depends(get_db),
+    redis_client: Redis | None = Depends(get_redis_client),
     user: models_core.CoreUser = Depends(is_user_a_member),
     settings: Settings = Depends(get_settings),
 ):
@@ -581,11 +576,6 @@ async def edit_order_from_delievery(
                 detail="Not enough money",
             )
 
-        app = request.app
-        settings = app.dependency_overrides.get(get_settings, get_settings)()
-        redis_client = app.dependency_overrides.get(get_redis_client, get_redis_client)(
-            settings=settings
-        )
         redis_key = "amap_" + previous_order.user_id
 
         if not isinstance(redis_client, Redis) or locker_get(
@@ -625,8 +615,8 @@ async def edit_order_from_delievery(
 async def remove_order(
     order_id: str,
     delivery_id: str,
-    request: Request,
     db: AsyncSession = Depends(get_db),
+    redis_client: Redis | None = Depends(get_redis_client),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
@@ -665,11 +655,6 @@ async def remove_order(
     if not balance:
         raise HTTPException(status_code=404, detail="No cash found")
 
-    app = request.app
-    settings = app.dependency_overrides.get(get_settings, get_settings)()
-    redis_client = app.dependency_overrides.get(get_redis_client, get_redis_client)(
-        settings=settings
-    )
     redis_key = "amap_" + order.user_id
 
     if not isinstance(redis_client, Redis) or locker_get(
