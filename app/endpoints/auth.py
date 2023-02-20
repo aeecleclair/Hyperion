@@ -18,6 +18,7 @@ from fastapi import (
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.templating import Jinja2Templates
+from pytz import timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
@@ -354,7 +355,7 @@ async def authorize_validation(
     # maximum authorization code lifetime of 10 minutes is
     # RECOMMENDED. The client MUST NOT use the authorization code more than once.
     authorization_code = generate_token()
-    expire_on = datetime.now() + timedelta(
+    expire_on = datetime.now(timezone(settings.TIMEZONE)) + timedelta(
         minutes=settings.AUTHORIZATION_CODE_EXPIRE_MINUTES
     )
     # We save this authorization_code to the database
@@ -623,7 +624,9 @@ async def authorization_code_grant(  # noqa: C901 # The function is too complex 
         )
 
     # We can check the authorization code
-    if db_authorization_code.expire_on < datetime.now():
+    if db_authorization_code.expire_on.astimezone(
+        timezone(settings.TIMEZONE)
+    ) < datetime.now(timezone(settings.TIMEZONE)):
         hyperion_access_logger.warning(
             f"Token authorization_code_grant: Expired authorization code ({request_id})"
         )
@@ -694,9 +697,9 @@ async def authorization_code_grant(  # noqa: C901 # The function is too complex 
     new_db_refresh_token = models_auth.RefreshToken(
         token=refresh_token,
         client_id=tokenreq.client_id,
-        created_on=datetime.now(),
+        created_on=datetime.now(timezone(settings.TIMEZONE)),
         user_id=db_authorization_code.user_id,
-        expire_on=datetime.now()
+        expire_on=datetime.now(timezone(settings.TIMEZONE))
         + timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES),
         scope=db_authorization_code.scope,
         nonce=db_authorization_code.nonce,
@@ -760,6 +763,7 @@ async def refresh_token_grant(
             db=db,
             client_id=db_refresh_token.client_id,
             user_id=db_refresh_token.user_id,
+            settings=settings,
         )
         hyperion_security_logger.warning(
             f"Tentative to use a revoked refresh token ({request_id})"
@@ -772,11 +776,15 @@ async def refresh_token_grant(
             },
         )
 
-    await cruds_auth.revoke_refresh_token_by_token(db=db, token=tokenreq.refresh_token)
+    await cruds_auth.revoke_refresh_token_by_token(
+        db=db, token=tokenreq.refresh_token, settings=settings
+    )
 
-    if db_refresh_token.expire_on < datetime.now():
+    if db_refresh_token.expire_on.astimezone(
+        timezone(settings.TIMEZONE)
+    ) < datetime.now(timezone(settings.TIMEZONE)):
         await cruds_auth.revoke_refresh_token_by_token(
-            db=db, token=db_refresh_token.token
+            db=db, token=db_refresh_token.token, settings=settings
         )
         return JSONResponse(
             status_code=400,
@@ -850,9 +858,9 @@ async def refresh_token_grant(
     new_db_refresh_token = models_auth.RefreshToken(
         token=refresh_token,
         client_id=db_refresh_token.client_id,
-        created_on=datetime.now(),
+        created_on=datetime.now(timezone(settings.TIMEZONE)),
         user_id=db_refresh_token.user_id,
-        expire_on=datetime.now()
+        expire_on=datetime.now(timezone(settings.TIMEZONE))
         + timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES),
         scope=db_refresh_token.scope,
     )

@@ -15,6 +15,7 @@ from fastapi import (
 )
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
+from pytz import timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import security
@@ -283,8 +284,8 @@ async def create_user(
         email=email,
         account_type=account_type,
         activation_token=activation_token,
-        created_on=datetime.now(),
-        expire_on=datetime.now()
+        created_on=datetime.now(timezone(settings.TIMEZONE)),
+        expire_on=datetime.now(timezone(settings.TIMEZONE))
         + timedelta(hours=settings.USER_ACTIVATION_TOKEN_EXPIRE_HOURS),
     )
 
@@ -317,6 +318,7 @@ async def get_user_activation_page(
     request: Request,
     activation_token: str,
     db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Return a HTML page to activate an account. The activation token is passed as a query string.
@@ -336,7 +338,9 @@ async def get_user_activation_page(
                 "message": "The activation token is invalid",
             },
         )
-    if unconfirmed_user.expire_on < datetime.now():
+    if unconfirmed_user.expire_on.astimezone(
+        timezone(settings.TIMEZONE)
+    ) < datetime.now(timezone(settings.TIMEZONE)):
         return templates.TemplateResponse(
             "error.html",
             {
@@ -364,6 +368,7 @@ async def get_user_activation_page(
 async def activate_user(
     user: schemas_core.CoreUserActivateRequest,
     db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
     request_id: str = Depends(get_request_id),
 ):
     """
@@ -381,7 +386,9 @@ async def activate_user(
         raise HTTPException(status_code=404, detail="Invalid activation token")
 
     # We need to make sure the unconfirmed user is still valid
-    if unconfirmed_user.expire_on < datetime.now():
+    if unconfirmed_user.expire_on.astimezone(
+        timezone(settings.TIMEZONE)
+    ) < datetime.now(timezone(settings.TIMEZONE)):
         raise HTTPException(status_code=400, detail="Expired activation token")
 
     # An account with the same email may exist if:
@@ -420,7 +427,7 @@ async def activate_user(
         promo=promo,
         phone=user.phone,
         floor=user.floor,
-        created_on=datetime.now(),
+        created_on=datetime.now(timezone(settings.TIMEZONE)),
     )
     # We add the new user to the database
     try:
@@ -511,8 +518,8 @@ async def recover_user(
             email=email,
             user_id=db_user.id,
             reset_token=reset_token,
-            created_on=datetime.now(),
-            expire_on=datetime.now()
+            created_on=datetime.now(timezone(settings.TIMEZONE)),
+            expire_on=datetime.now(timezone(settings.TIMEZONE))
             + timedelta(hours=settings.PASSWORD_RESET_TOKEN_EXPIRE_HOURS),
         )
 
@@ -541,6 +548,7 @@ async def recover_user(
 async def reset_password(
     reset_password_request: schemas_core.ResetPasswordRequest,
     db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Reset the user password, using a **reset_token** provided by `/users/recover` endpoint.
@@ -552,7 +560,9 @@ async def reset_password(
         raise HTTPException(status_code=404, detail="Invalid reset token")
 
     # We need to make sure the unconfirmed user is still valid
-    if recover_request.expire_on < datetime.now():
+    if recover_request.expire_on.astimezone(timezone(settings.TIMEZONE)) < datetime.now(
+        timezone(settings.TIMEZONE)
+    ):
         raise HTTPException(status_code=400, detail="Expired reset token")
 
     new_password_hash = security.get_password_hash(reset_password_request.new_password)

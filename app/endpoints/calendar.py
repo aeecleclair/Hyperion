@@ -5,8 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import Settings
 from app.cruds import cruds_calendar
-from app.dependencies import get_db, is_user_a_member, is_user_a_member_of
+from app.dependencies import get_db, get_settings, is_user_a_member, is_user_a_member_of
 from app.models import models_calendar, models_core
 from app.schemas import schemas_calendar
 from app.utils.tools import is_user_member_of_an_allowed_group
@@ -127,6 +128,7 @@ async def add_event(
     event: schemas_calendar.EventBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
+    settings: Settings = Depends(get_settings),
 ):
     """Add an event to the calendar."""
 
@@ -139,7 +141,7 @@ async def add_event(
         **event.dict(),  # We add all informations contained in the schema
     )
     try:
-        return await cruds_calendar.add_event(event=db_event, db=db)
+        return await cruds_calendar.add_event(event=db_event, db=db, settings=settings)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
@@ -190,8 +192,9 @@ async def delete_bookings_id(
     event_id,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
+    settings: Settings = Depends(get_settings),
 ):
-    await cruds_calendar.delete_event(event_id=event_id, db=db)
+    await cruds_calendar.delete_event(event_id=event_id, db=db, settings=settings)
 
 
 @router.get(

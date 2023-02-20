@@ -75,7 +75,7 @@ class Order(Base):
     )
     amount: float = Column(Float, nullable=False)
     collection_slot: AmapSlotType = Column(Enum(AmapSlotType), nullable=False)
-    ordering_date: datetime = Column(DateTime, nullable=False)
+    ordering_date: datetime = Column(DateTime(timezone=True), nullable=False)
     delivery_date: date = Column(Date, nullable=False)
     locked: bool = Column(Boolean, nullable=False)
 

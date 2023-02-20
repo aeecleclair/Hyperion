@@ -18,8 +18,8 @@ class Event(Base):
     organizer: str = Column(String, nullable=False)
     applicant_id: str = Column(ForeignKey("core_user.id"), nullable=False)
     applicant: CoreUser = relationship("CoreUser")
-    start: datetime = Column(DateTime, nullable=False)
-    end: datetime = Column(DateTime, nullable=False)
+    start: datetime = Column(DateTime(timezone=True), nullable=False)
+    end: datetime = Column(DateTime(timezone=True), nullable=False)
     all_day: bool = Column(Boolean, nullable=False)
     location: str = Column(String, nullable=False)
     type: CalendarEventType = Column(

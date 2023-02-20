@@ -17,8 +17,13 @@ from app import api
 from app.core.config import Settings
 from app.core.log import LogConfig
 from app.cruds import cruds_groups
-from app.database import Base, SessionLocal, engine
-from app.dependencies import get_redis_client, get_settings
+from app.database import Base
+from app.dependencies import (
+    get_db_engine,
+    get_redis_client,
+    get_session_maker,
+    get_settings,
+)
 from app.models import models_core
 from app.utils.redis import limiter
 from app.utils.types.groups_type import GroupType
@@ -72,7 +77,7 @@ async def logging_middleware(
     settings: Settings = app.dependency_overrides.get(get_settings, get_settings)()
     redis_client: redis.Redis | Literal[False] | None = app.dependency_overrides.get(
         get_redis_client, get_redis_client
-    )(settings=settings)
+    )()
 
     # We test the ip address with the redis limiter
     process = True
@@ -111,12 +116,17 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 # Alembic should be used for any migration, this function can only create new tables and ensure that the necessary groups are available
 @app.on_event("startup")
 async def startup():
-    # Initialize loggers
+    # We reproduce FastAPI logic to access settings. See https://github.com/tiangolo/fastapi/issues/425#issuecomment-954963966
+    settings = app.dependency_overrides.get(get_settings, get_settings)()
 
+    # Initialize loggers
     LogConfig().initialize_loggers(settings=settings)
 
-    if not app.dependency_overrides.get(get_redis_client, get_redis_client)(
-        settings=settings
+    if (
+        app.dependency_overrides.get(get_redis_client, get_redis_client)(
+            settings=settings
+        )
+        is False
     ):
         hyperion_error_logger.info("Redis client not configured")
 
@@ -124,10 +134,18 @@ async def startup():
     if not os.path.exists("data/ics/"):
         os.makedirs("data/ics/")
 
+    engine = get_db_engine(settings=settings)
+
     # create db tables
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        try:
+            await conn.run_sync(Base.metadata.create_all)
+        except Exception as error:
+            hyperion_error_logger.fatal(
+                f"Startup: Could not create tables in the database: {error}"
+            )
 
+    SessionLocal = app.dependency_overrides.get(get_session_maker, get_session_maker)()
     # Add the necessary groups for account types
     async with SessionLocal() as db:
         for id in GroupType:

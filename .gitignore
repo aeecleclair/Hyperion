@@ -16,6 +16,10 @@ data/
 
 # Virtual environment
 .venv
+.python-version
 
 # Logs
 logs/
+
+# Migrations scripts
+migrations/versions/*.py

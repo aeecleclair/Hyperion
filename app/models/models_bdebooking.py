@@ -18,8 +18,8 @@ class Booking(Base):
     __tablename__ = "bde_booking"
     id: str = Column(String, primary_key=True, index=True)
     reason: str = Column(String, nullable=False)
-    start: datetime = Column(DateTime, nullable=False)
-    end: datetime = Column(DateTime, nullable=False)
+    start: datetime = Column(DateTime(timezone=True), nullable=False)
+    end: datetime = Column(DateTime(timezone=True), nullable=False)
     note: str = Column(String, nullable=True)
     room_id: str = Column(ForeignKey("bde_booking_room.id"), nullable=False, index=True)
     room: Room = relationship(Room, lazy="joined")

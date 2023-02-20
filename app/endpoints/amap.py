@@ -2,10 +2,12 @@ import uuid
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Response
+from pytz import timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import Settings
 from app.cruds import cruds_amap, cruds_users
-from app.dependencies import get_db, is_user_a_member, is_user_a_member_of
+from app.dependencies import get_db, get_settings, is_user_a_member, is_user_a_member_of
 from app.endpoints.users import read_user
 from app.models import models_amap, models_core
 from app.schemas import schemas_amap
@@ -382,6 +384,7 @@ async def add_order_to_delievery(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Get orders from a delivery.
@@ -403,7 +406,7 @@ async def add_order_to_delievery(
                     if prod is not None:
                         amount += prod.price * order.products_quantity[i]
 
-                ordering_date = datetime.now()
+                ordering_date = datetime.now(timezone(settings.TIMEZONE))
                 order_id = str(uuid.uuid4())
                 db_order = schemas_amap.OrderComplete(
                     order_id=order_id,
@@ -472,6 +475,7 @@ async def edit_order_from_delievery(
     order: schemas_amap.OrderEdit,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Edit an order.

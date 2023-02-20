@@ -53,12 +53,27 @@ class Settings(BaseSettings):
     # If you want to use a custom configuration, a password and a specific binds should be used to avoid security issues
     REDIS_HOST: str
     REDIS_PORT: int
+    REDIS_PASSWORD: str | None
     REDIS_LIMIT: int
     REDIS_WINDOW: int
+
+    ############################
+    # PostgreSQL configuration #
+    ############################
+    # PostgreSQL configuration is needed to use the database
+    SQLITE_DB: str | None = None  # If set, the application use a SQLite database instead of PostgreSQL, for testing or development purposes (should not be used if possible)
+    POSTGRES_HOST: str
+    POSTGRES_USER: str
+    POSTGRES_PASSWORD: str
+    POSTGRES_DB: str
+    DATABASE_DEBUG: bool  # If True, the database will log all queries
 
     #####################
     # Hyperion settings #
     #####################
+
+    # Timezone used to compare dates
+    TIMEZONE: str = "Europe/Paris"
 
     # By default, only production's records are logged
     LOG_DEBUG_MESSAGES: bool | None

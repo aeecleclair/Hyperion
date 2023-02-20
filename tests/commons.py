@@ -5,6 +5,7 @@ from typing import AsyncGenerator
 
 import redis
 from fastapi.testclient import TestClient
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -20,9 +21,16 @@ from app.utils.redis import connect, disconnect
 from app.utils.types.floors_type import FloorsType
 from app.utils.types.groups_type import GroupType
 
-SQLALCHEMY_DATABASE_URL = (
-    "sqlite+aiosqlite:///./test.db"  # Connect to the test's database
-)
+settings = Settings(
+    _env_file=".env.test"
+)  # Load the test's settings to configure the database
+if settings.SQLITE_DB:
+    SQLALCHEMY_DATABASE_URL = (
+        f"sqlite+aiosqlite:///./{settings.SQLITE_DB}"  # Connect to the test's database
+    )
+else:
+    SQLALCHEMY_DATABASE_URL = f"postgresql+asyncpg://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}/{settings.POSTGRES_DB}"
+
 
 engine = create_async_engine(SQLALCHEMY_DATABASE_URL, echo=True)
 
@@ -49,6 +57,8 @@ def override_get_settings() -> Settings:
 
 redis_client = None
 
+hyperion_error_logger = logging.getLogger("hyperion.error")
+
 
 def override_get_redis_client(
     settings=None, activate=False, deactivate=False
@@ -58,8 +68,13 @@ def override_get_redis_client(
     """Override the get_redis_client function to use the testing session"""
     global redis_client
     if activate:
-        if redis_client is None:
-            redis_client = connect(settings)
+        if settings.REDIS_HOST != "":
+            try:
+                redis_client = connect(settings)
+            except redis.exceptions.ConnectionError:
+                hyperion_error_logger.warning(
+                    "Redis connection error: Check the Redis configuration  or the Redis server"
+                )
     elif deactivate:
         if type(redis_client) == redis.Redis:
             disconnect(redis_client)
@@ -80,19 +95,20 @@ async def commonstartuptest():
         await conn.run_sync(Base.metadata.create_all)
 
     # Add the necessary groups for account types
-    description = "Account type"
+    description = "Group type"
     account_types = [
         models_core.CoreGroup(id=id, name=id.name, description=description)
         for id in GroupType
     ]
     async with TestingSessionLocal() as db:
-        db.add_all(account_types)
-        await db.commit()
+        try:
+            db.add_all(account_types)
+            await db.commit()
+        except IntegrityError:
+            await db.rollback()
 
 
 client = TestClient(app)  # Create a client to execute tests
-
-logger = logging.getLogger("hyperion.access")
 
 
 async def create_user_with_groups(
