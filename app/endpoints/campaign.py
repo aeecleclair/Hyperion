@@ -243,7 +243,7 @@ async def delete_list(
     tags=[Tags.campaign],
 )
 async def delete_lists_by_type(
-    list_type: ListType,
+    list_type: ListType | None,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
@@ -263,7 +263,11 @@ async def delete_lists_by_type(
         )
 
     try:
-        await cruds_campaign.delete_list_by_type(list_type=list_type, db=db)
+        if list_type is None:
+            for type in ListType:
+                await cruds_campaign.delete_list_by_type(list_type=type, db=db)
+        else:
+            await cruds_campaign.delete_list_by_type(list_type=list_type, db=db)
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error))
 
@@ -449,7 +453,7 @@ async def reset_vote(
     """
     Reset the vote. Can only be used if the current status is counting ou published.
 
-    > WARNING: This will delete all votes then put the module to Waiting status.
+    > WARNING: This will delete all votes then put the module to Waiting status. This will also delete blank lists.
 
     **The user must be a member of the group CAA to use this endpoint**
     """
