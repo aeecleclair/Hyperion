@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime
 
+from app.dependencies import get_redis_client, get_settings
 from app.main import app
 from app.models import models_amap, models_core
 from app.utils.types.amap_types import AmapSlotType, DeliveryStatusType
@@ -19,6 +20,8 @@ deletable_product: models_amap.Product | None = None
 delivery: models_amap.Delivery | None = None
 deletable_delivery: models_amap.Delivery | None = None
 order: models_amap.Order | None = None
+
+settings = app.dependency_overrides.get(get_settings, get_settings)()
 
 
 @app.on_event("startup")  # create the data needed in the tests
@@ -42,14 +45,12 @@ async def startuptest():
         delivery = models_amap.Delivery(
             id=str(uuid.uuid4()),
             delivery_date=datetime(2022, 8, 15),
-            # products=[],
             status=DeliveryStatusType.creation,
         )
         db.add(delivery)
         deletable_delivery = models_amap.Delivery(
             id=str(uuid.uuid4()),
             delivery_date=datetime(2022, 8, 16),
-            # products=[],
             status=DeliveryStatusType.creation,
         )
         db.add(deletable_delivery)
@@ -62,7 +63,6 @@ async def startuptest():
             collection_slot=AmapSlotType.midi,
             ordering_date=datetime(2022, 8, 10, 12, 16, 26),
             delivery_date=delivery.delivery_date,
-            locked=False,
         )
         db.add(order)
         await db.commit()
@@ -193,6 +193,14 @@ def test_remove_product_from_delivery():
     )
     assert response.status_code == 204
 
+    # Recreate product for future tests
+    response = client.post(
+        f"/amap/deliveries/{delivery.id}/products",
+        json={"products_ids": [product.id]},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 201
+
 
 def test_get_orders_from_delivery():
     token = create_api_access_token(amap_user)
@@ -223,6 +231,11 @@ def test_make_delivery_orderable():
 
 
 def test_add_order_to_delivery():
+    # Enable Redis client for locker
+    app.dependency_overrides.get(get_redis_client, get_redis_client)(
+        settings, activate=True
+    )
+
     token = create_api_access_token(student_user)
 
     response = client.post(
@@ -237,11 +250,58 @@ def test_add_order_to_delivery():
         },
         headers={"Authorization": f"Bearer {token}"},
     )
+
+    # Disable Redis client (to avoid rate-limit)
+    app.dependency_overrides.get(get_redis_client, get_redis_client)(deactivate=True)
+
     assert response.status_code == 201
 
 
-# TODO: test edit_orders_from_delieveries
-# TODO: test remove_order
+def test_edit_order():
+    # Enable Redis client for locker
+    app.dependency_overrides.get(get_redis_client, get_redis_client)(
+        settings, activate=True
+    )
+
+    token = create_api_access_token(student_user)
+
+    response = client.patch(
+        f"/amap/deliveries/{delivery.id}/orders/{order.order_id}",
+        json={
+            "user_id": student_user.id,
+            "delivery_id": delivery.id,
+            "products_ids": [],
+            "collection_slot": "soir",
+            "delivery_date": "2022-08-16",
+            "products_quantity": [],
+            "order_id": order.order_id,
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    # Disable Redis client (to avoid rate-limit)
+    app.dependency_overrides.get(get_redis_client, get_redis_client)(deactivate=True)
+
+    assert response.status_code == 204
+
+
+def test_remove_order():
+    # Enable Redis client for locker
+    app.dependency_overrides.get(get_redis_client, get_redis_client)(
+        settings, activate=True
+    )
+
+    token = create_api_access_token(student_user)
+
+    response = client.delete(
+        f"/amap/deliveries/{delivery.id}/orders/{order.order_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    # Disable Redis client (to avoid rate-limit)
+    app.dependency_overrides.get(get_redis_client, get_redis_client)(deactivate=True)
+
+    assert response.status_code == 204
 
 
 def test_get_users_cash():
@@ -318,33 +378,3 @@ def test_get_orders_of_user():
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
-
-
-"""
-    response = client.patch(
-        f"/amap/deliveries/{id}/orders",
-        json={
-            "user_id": amap_user.id,
-            "delivery_id": id,
-            "products_ids": [],
-            "collection_slot": "soir",
-            "delivery_date": "2022-08-16",
-            "products_quantity": [],
-            "order_id": order_id,
-        },
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert response.status_code == 204
-
-    response = client.get(
-        f"/amap/deliveries/{id}/orders/{order_id}",
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert response.status_code == 200
-
-    response = client.delete(
-        f"/amap/deliveries/{id}/orders/{order_id}",
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert response.status_code == 204
-"""

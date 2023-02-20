@@ -31,6 +31,7 @@ async def get_users(
     result = await db.execute(
         select(models_core.CoreUser).where(
             and_(
+                True,
                 # We want, for each group that should be included check if
                 # - at least one of the user's groups match the expected group
                 *[

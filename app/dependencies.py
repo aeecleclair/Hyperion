@@ -41,27 +41,6 @@ SessionLocal: Callable[
 ] | None = None  # Create a global variable for the database session, so that it can be instancied in the startup event
 
 
-def get_redis_client(
-    settings: Settings | None = None,
-) -> redis.Redis | None | bool:
-    """
-    Dependency that returns the redis client
-
-    Settings can be None if the redis client is already instanced, so that we don't need to pass the settings to the function.
-    Is None if the redis client is not instantiated, is False if the redis client is instantiated but not connected, is a redis.Redis object if the redis client is connected
-    """
-    global redis_client
-    if redis_client is None and settings is not None:
-        if settings.REDIS_HOST != "":
-            try:
-                redis_client = connect(settings)
-            except redis.exceptions.ConnectionError:
-                hyperion_error_logger.warning(
-                    "Redis connection error: Check the Redis configuration or the Redis server"
-                )
-    return redis_client
-
-
 async def get_request_id(request: Request) -> str:
     """
     The request identifier is a unique UUID which is used to associate logs saved during the same request
@@ -126,6 +105,27 @@ def get_settings() -> Settings:
     # `lru_cache()` decorator is here to prevent the class to be instantiated multiple times.
     # See https://fastapi.tiangolo.com/advanced/settings/#lru_cache-technical-details
     return Settings(_env_file=".env")
+
+
+def get_redis_client(
+    settings: Settings = Depends(get_settings),
+) -> redis.Redis | None | bool:
+    """
+    Dependency that returns the redis client
+
+    Settings can be None if the redis client is already instanced, so that we don't need to pass the settings to the function.
+    Is None if the redis client is not instantiated, is False if the redis client is instantiated but not connected, is a redis.Redis object if the redis client is connected
+    """
+    global redis_client
+    if redis_client is None and settings is not None:
+        if settings.REDIS_HOST != "":
+            try:
+                redis_client = connect(settings)
+            except redis.exceptions.ConnectionError:
+                hyperion_error_logger.warning(
+                    "Redis connection error: Check the Redis configuration or the Redis server"
+                )
+    return redis_client
 
 
 def get_user_from_token_with_scopes(

@@ -127,18 +127,18 @@ async def get_event_applicant(
 async def add_event(
     event: schemas_calendar.EventBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
     settings: Settings = Depends(get_settings),
 ):
     """Add an event to the calendar."""
 
-    # We need to generate a new UUID for the todo
     event_id = str(uuid.uuid4())
 
     db_event = models_calendar.Event(
         id=event_id,
         decision=Decision.pending,
-        **event.dict(),  # We add all informations contained in the schema
+        applicant_id=user.id,
+        **event.dict(),
     )
     try:
         return await cruds_calendar.add_event(event=db_event, db=db, settings=settings)
@@ -153,17 +153,28 @@ async def add_event(
 )
 async def edit_bookings_id(
     event_id: str,
-    event: schemas_calendar.EventEdit,
+    event_edit: schemas_calendar.EventEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Edit an event.
 
-    **Only usable by admins**
+    **Only usable by admins or applicant before decision**
     """
+    event = await cruds_calendar.get_event(db=db, event_id=event_id)
+
+    if event is not None and not (
+        (user.id == event.applicant_id and event.decision == Decision.pending)
+        or is_user_member_of_an_allowed_group(user, [GroupType.BDE])
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="You are not allowed to edit this event",
+        )
+
     try:
-        await cruds_calendar.edit_event(event_id=event_id, event=event, db=db)
+        await cruds_calendar.edit_event(event_id=event_id, event=event_edit, db=db)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
@@ -191,10 +202,27 @@ async def confirm_booking(
 async def delete_bookings_id(
     event_id,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
     settings: Settings = Depends(get_settings),
 ):
-    await cruds_calendar.delete_event(event_id=event_id, db=db, settings=settings)
+    """
+    Remove an event.
+
+    **Only usable by admins or applicant before decision**
+    """
+    event = await cruds_calendar.get_event(db=db, event_id=event_id)
+
+    if event is not None and (
+        (user.id == event.applicant_id and event.decision == Decision.pending)
+        or is_user_member_of_an_allowed_group(user, [GroupType.BDE])
+    ):
+        await cruds_calendar.delete_event(event_id=event_id, db=db, settings=settings)
+
+    else:
+        raise HTTPException(
+            status_code=403,
+            detail="You are not allowed to delete this event",
+        )
 
 
 @router.get(

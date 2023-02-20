@@ -17,12 +17,12 @@ class EventBase(BaseModel):
     type: CalendarEventType
     description: str
     recurrence_rule: str | None
-    applicant_id: str
 
 
 class EventComplete(EventBase):
     id: str
     decision: Decision
+    applicant_id: str
 
     class Config:
         orm_mode = True
@@ -38,7 +38,6 @@ class EventEdit(BaseModel):
     type: CalendarEventType | None = None
     description: str | None = None
     recurrence_rule: str | None = None
-    applicant_id: str | None = None
 
     class Config:
         orm_mode = True

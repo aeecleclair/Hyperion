@@ -4,6 +4,7 @@ from functools import lru_cache
 from typing import AsyncGenerator
 
 import redis
+from fastapi import Depends
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
@@ -61,7 +62,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 def override_get_redis_client(
-    settings=None, activate=False, deactivate=False
+    settings: Settings = Depends(get_settings), activate=False, deactivate=False
 ) -> (
     redis.Redis | None | bool
 ):  # As we don't want the limiter to be activated, except during the designed test, we add an "activate"/"deactivate" option
@@ -77,6 +78,7 @@ def override_get_redis_client(
                 )
     elif deactivate:
         if type(redis_client) == redis.Redis:
+            redis_client.flushdb()
             disconnect(redis_client)
         redis_client = None
     return redis_client

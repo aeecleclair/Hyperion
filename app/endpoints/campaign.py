@@ -457,7 +457,7 @@ async def reset_vote(
     if status not in [StatusType.published, StatusType.counting]:
         raise HTTPException(
             status_code=400,
-            detail=f"The vote can only be reset in Counting Published or Counting. The current status is {status}",
+            detail=f"The vote can only be reset in Published or Counting. The current status is {status}",
         )
 
     try:

@@ -10,6 +10,7 @@ from fastapi import (
     Depends,
     File,
     HTTPException,
+    Query,
     Request,
     UploadFile,
 )
@@ -92,8 +93,8 @@ async def count_users(
 )
 async def search_users(
     query: str,
-    includedGroups: list[str] = [],
-    excludedGroups: list[str] = [],
+    includedGroups: list[str] = Query(default=[]),
+    excludedGroups: list[str] = Query(default=[]),
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):

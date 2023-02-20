@@ -92,7 +92,6 @@ def test_add_event():
         json={
             "name": "Dojo",
             "organizer": "Eclair",
-            "applicant_id": calendar_user_simple.id,
             "start": "2019-08-24T14:15:22Z",
             "end": "2019-08-24T14:15:22Z",
             "all_day": False,
@@ -124,25 +123,13 @@ def test_add_event_missing_parameter():
     assert response.status_code == 422
 
 
-def test_add_event_unauthorized_user():
-    """Test if a non-admin user can add an event."""
-    global token_simple
-
-    response = client.post(
-        "/calendar/events/",
-        json={
-            "name": "Dojo",
-            "organizer": "Eclair",
-            "start": "2019-08-24T14:15:22Z",
-            "end": "2019-08-24T14:15:22Z",
-            "all_day": False,
-            "location": "Skylab",
-            "type": "Event AE",
-            "description": "Apprendre à coder !",
-        },
-        headers={"Authorization": f"Bearer {token_simple}"},
+def test_edit_event():
+    response = client.patch(
+        f"/calendar/events/{calendar_event.id}",
+        json={"description": "Apprendre à programmer"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
-    assert response.status_code == 403
+    assert response.status_code == 204
 
 
 def test_delete_event():
