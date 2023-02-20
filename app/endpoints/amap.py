@@ -427,8 +427,9 @@ async def add_order_to_delievery(
         order.products_ids, order.products_quantity
     ):
         prod = await cruds_amap.get_product_by_id(product_id=product_id, db=db)
-        if prod is not None:
-            amount += prod.price * product_quantity
+        if prod is None or prod not in delivery.products:
+            raise HTTPException(status_code=403, detail="Invalid product")
+        amount += prod.price * product_quantity
 
     ordering_date = datetime.now(timezone(settings.TIMEZONE))
     order_id = str(uuid.uuid4())
@@ -512,7 +513,7 @@ async def edit_order_from_delievery(
 
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
     if not delivery:
-        raise HTTPException(status_code=404, detail="Delivery not found.")
+        raise HTTPException(status_code=404, detail="Delivery not found")
 
     if delivery.status != DeliveryStatusType.orderable:
         raise HTTPException(
@@ -552,8 +553,9 @@ async def edit_order_from_delievery(
             order.products_ids, order.products_quantity
         ):
             prod = await cruds_amap.get_product_by_id(product_id=product_id, db=db)
-            if prod is not None:
-                amount += prod.price * product_quantity
+            if prod is None or prod not in delivery.products:
+                raise HTTPException(status_code=403, detail="Invalid product")
+            amount += prod.price * product_quantity
 
         db_order = schemas_amap.OrderComplete(
             order_id=order_id,
@@ -592,12 +594,12 @@ async def edit_order_from_delievery(
             await cruds_amap.remove_cash(
                 db=db,
                 user_id=previous_order.user_id,
-                amount=previous_amount,
+                amount=amount,
             )
             await cruds_amap.add_cash(
                 db=db,
                 user_id=previous_order.user_id,
-                amount=amount,
+                amount=previous_amount,
             )
 
         except ValueError as error:
