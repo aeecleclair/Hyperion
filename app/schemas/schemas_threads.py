@@ -7,13 +7,13 @@ from pydantic import BaseModel
 
 class ThreadBase(BaseModel):
     name: str
-    image: str
+    image: str | None
+    is_public: bool
 
 
 class Thread(ThreadBase):
     creation_date: datetime
     id: str
-    is_public: bool
     member_ids: list[str]
     messages: list[ThreadMessage]
 
@@ -21,6 +21,11 @@ class Thread(ThreadBase):
 class ThreadMemberBase(BaseModel):
     thread_id: str
     core_user_id: str
+
+
+class UserWithPermissions(BaseModel):
+    core_user_id: str
+    permissions: int
 
 
 class ThreadMember(ThreadMemberBase):
