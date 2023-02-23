@@ -1,6 +1,7 @@
 from sqlalchemy import delete, select, update, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models import models_thread
 from app.schemas import schemas_threads
@@ -37,15 +38,20 @@ async def create_thread(
         raise ValueError(error)
 
 
+async def get_public_threads(db: AsyncSession) -> set[models_thread.Thread]:
+    result = await db.execute(select(models_thread.Thread).where(models_thread.Thread.is_public))
+    return set(result.scalars().all())
+
+
 async def get_user_threads(
-    db: AsyncSession, core_user_id: str
-) -> list[models_thread.Thread]:
+    db: AsyncSession, user_id: str
+) -> set[models_thread.Thread]:
     result = await db.execute(
-        select(models_thread.ThreadMember.thread)
-        .where(models_thread.ThreadMember.core_user_id == core_user_id)
-        .union(select(models_thread.Thread).where(models_thread.Thread.is_public))
+        select(models_thread.ThreadMember)
+        .where(models_thread.ThreadMember.user_id == user_id)
+        .options(selectinload(models_thread.ThreadMember.thread))
     )
-    return result.scalars().all()
+    return set(i.thread for i in result.scalars().all())
 
 
 async def get_thread_by_id(
@@ -68,7 +74,7 @@ async def add_user_to_thread(
 ) -> models_thread.ThreadMember:
     member = models_thread.ThreadMember(
         thread_id=thread_id,
-        core_user_id=member_params.core_user_id,
+        user_id=member_params.user_id,
         permissions=member_params.permissions,
     )
     db.add(member)
@@ -87,7 +93,7 @@ async def add_users_to_thread(
 ) -> list[models_thread.ThreadMember]:
     members = [
         models_thread.ThreadMember(
-            thread_id=thread_id, core_user_id=i.core_user_id, permissions=i.permissions
+            thread_id=thread_id, user_id=i.user_id, permissions=i.permissions
         )
         for i in members_params
     ]
@@ -101,24 +107,24 @@ async def add_users_to_thread(
 
 
 async def remove_user_from_thread(
-    db: AsyncSession, thread_id: str, core_user_id: str
+    db: AsyncSession, thread_id: str, user_id: str
 ) -> None:
     await db.execute(
         delete(models_thread.ThreadMember).where(
             (models_thread.ThreadMember.thread_id == thread_id)
-            & (models_thread.ThreadMember.core_user_id == core_user_id)
+            & (models_thread.ThreadMember.user_id == user_id)
         )
     )
     await db.commit()
 
 
 async def remove_users_from_thread(
-    db: AsyncSession, thread_id: str, core_user_ids: list[str]
+    db: AsyncSession, thread_id: str, user_ids: list[str]
 ) -> None:
     await db.execute(
         delete(models_thread.ThreadMember).where(
             (models_thread.ThreadMember.thread_id == thread_id)
-            & (models_thread.ThreadMember.core_user_id in core_user_ids)
+            & (models_thread.ThreadMember.user_id in user_ids)
         )
     )
     await db.commit()
@@ -132,10 +138,7 @@ async def get_thread_member_from_base(
             await db.execute(
                 select(models_thread.ThreadMember).where(
                     (models_thread.ThreadMember.thread_id == member_base.thread_id)
-                    & (
-                        models_thread.ThreadMember.core_user_id
-                        == member_base.core_user_id
-                    )
+                    & (models_thread.ThreadMember.user_id == member_base.user_id)
                 )
             )
         )
@@ -156,7 +159,10 @@ async def create_message(
     if not member.has_permission(ThreadPermission.SEND_MESSAGES):
         raise ValueError("Missing permissions")
     created_message = models_thread.ThreadMessage(
-        thread_member_id=member.id, content=message.content, image=message.image
+        thread_id=author.thread_id,
+        author_id=author.user_id,
+        content=message.content,
+        image=message.image,
     )
     db.add(message)
     try:

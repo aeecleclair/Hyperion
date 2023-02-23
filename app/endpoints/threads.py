@@ -13,7 +13,7 @@ router = APIRouter()
 
 @router.get(
     "/threads",
-    response_model=list[schemas_threads.Thread],
+    response_model=list[schemas_threads.ThreadBase],
     status_code=200,
     tags=[Tags.threads],
 )
@@ -21,7 +21,7 @@ async def get_user_threads(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    await cruds_threads.get_user_threads(db, user.id)
+    return list((await cruds_threads.get_user_threads(db, user.id)).union(await cruds_threads.get_public_threads(db)))
 
 
 @router.post(
@@ -40,7 +40,7 @@ async def create_thread(
             db,
             thread.id,
             schemas_threads.UserWithPermissions(
-                core_user_id=user.id, permissions=ThreadPermission.ADMINISTRATOR
+                user_id=user.id, permissions=ThreadPermission.ADMINISTRATOR
             ),
         )
     except ValueError as e:
@@ -76,7 +76,7 @@ async def add_user_to_thread(
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     adder = await cruds_threads.get_thread_member_from_base(
-        db, schemas_threads.ThreadMemberBase(thread_id=thread_id, core_user_id=user.id)
+        db, schemas_threads.ThreadMemberBase(thread_id=thread_id, user_id=user.id)
     )
     if adder is None:
         raise HTTPException(403, "The thread does not exist or you are not part of it")
@@ -86,7 +86,7 @@ async def add_user_to_thread(
         db,
         thread_id,
         schemas_threads.UserWithPermissions(
-            core_user_id=member_params.core_user_id,
+            user_id=member_params.user_id,
             permissions=member_params.permissions,
         ),
     )
@@ -104,7 +104,7 @@ async def get_thread_messages(
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     thread_member = await cruds_threads.get_thread_member_from_base(
-        db, schemas_threads.ThreadMemberBase(thread_id=thread_id, core_user_id=user.id)
+        db, schemas_threads.ThreadMemberBase(thread_id=thread_id, user_id=user.id)
     )
     if thread_member is None:
         raise HTTPException(404, "This member is not from that thread")
@@ -126,5 +126,5 @@ async def send_message(
     await cruds_threads.create_message(
         db,
         message,
-        schemas_threads.ThreadMemberBase(thread_id=thread_id, core_user_id=user.id),
+        schemas_threads.ThreadMemberBase(thread_id=thread_id, user_id=user.id),
     )

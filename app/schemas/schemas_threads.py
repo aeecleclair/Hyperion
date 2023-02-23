@@ -4,41 +4,63 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
+from app.schemas.schemas_core import CoreUser
+
 
 class ThreadBase(BaseModel):
     name: str
     image: str | None
     is_public: bool
 
+    class Config:
+        orm_mode = True
+
 
 class Thread(ThreadBase):
     creation_date: datetime
     id: str
-    member_ids: list[str]
+    members: list[CoreUser]
     messages: list[ThreadMessage]
+
+    class Config:
+        orm_mode = True
 
 
 class ThreadMemberBase(BaseModel):
     thread_id: str
-    core_user_id: str
+    user_id: str
+
+    class Config:
+        orm_mode = True
 
 
 class UserWithPermissions(BaseModel):
-    core_user_id: str
+    user_id: str
     permissions: int
+
+    class Config:
+        orm_mode = True
 
 
 class ThreadMember(ThreadMemberBase):
-    id: str
-    messages: list[str]
+    permissions: int
+
+    class Config:
+        orm_mode = True
 
 
 class ThreadMessageBase(BaseModel):
     content: str
     image: str
 
+    class Config:
+        orm_mode = True
+
 
 class ThreadMessage(ThreadMessageBase):
     author_id: str
     timestamp: datetime
     id: str
+
+    class Config:
+        orm_mode = True

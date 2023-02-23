@@ -21,26 +21,23 @@ class Thread(Base):
     creation_time: datetime = Column(DateTime(timezone=True), default=func.now())
     image: str | None = Column(String)
 
-    members: list[ThreadMember] = relationship(
-        "ThreadMember", lazy="joined", back_populates="thread"
+    members: list[models_core.CoreUser] = relationship(
+        "CoreUser", secondary="thread_member"
     )
-    # TODO : Put something there
-    # messages: list[ThreadMessage] = ...
+    messages: list[ThreadMessage] = relationship(
+        "ThreadMessage", back_populates="thread"
+    )
 
 
 class ThreadMember(Base):
     __tablename__ = "thread_member"
 
-    id: str = Column(String, primary_key=True, index=True, default=lambda: str(uuid4()))
-    core_user_id: str = Column(String, ForeignKey("core_user.id"), index=True)
-    thread_id: str = Column(String, ForeignKey("thread.id"), index=True)
+    user_id: str = Column(String, ForeignKey("core_user.id"), primary_key=True)
+    thread_id: str = Column(String, ForeignKey("thread.id"), primary_key=True)
     permissions: int = Column(Integer)
 
-    user: models_core.CoreUser = relationship("CoreUser", lazy="joined")
-    thread: Thread = relationship("Thread", lazy="joined")
-    messages: list[ThreadMessage] = relationship(
-        "ThreadMessage", lazy="joined", back_populates="thread_member"
-    )
+    user: models_core.CoreUser = relationship("CoreUser", viewonly=True)
+    thread: Thread = relationship("Thread")
 
     @hybrid_method
     def has_permission(self, permission: int) -> bool:
@@ -52,9 +49,10 @@ class ThreadMessage(Base):
 
     id: str = Column(String, primary_key=True, index=True, default=lambda: str(uuid4()))
     thread_id: str = Column(String, ForeignKey("thread.id"), index=True)
-    thread_member_id: str = Column(String, ForeignKey("thread_member.id"), index=True)
+    author_id: str = Column(String, ForeignKey("core_user.id"), index=True)
     content: str = Column(String)
     image: str = Column(String)
     timestamp: datetime = Column(DateTime(timezone=True), default=func.now())
 
-    thread_member: ThreadMember = relationship("ThreadMember", lazy="joined")
+    author: models_core.CoreUser = relationship("CoreUser")
+    thread: Thread = relationship("Thread", back_populates="messages")

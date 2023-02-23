@@ -11,8 +11,8 @@ from tests.commons import (
     create_user_with_groups,
 )
 
-TestUser = TypedDict("TestUser", {"user": models_core.CoreUser, "token": str})
-users: list[TestUser] = []
+UserTest = TypedDict("UserTest", {"user": models_core.CoreUser, "token": str})
+users: list[UserTest] = []
 test_threads: list[models_thread.Thread] = []
 
 
@@ -29,24 +29,30 @@ async def startup_test():
                 models_thread.Thread(name="Test Thread 2", is_public=False),
             ]
         )
+        db.add_all(test_threads)
+        await db.commit()
         db.add(
             models_thread.ThreadMember(
-                core_user_id=users[0]["user"].id,
+                user_id=users[0]["user"].id,
                 thread_id=test_threads[1].id,
                 permissions=ThreadPermission.ADMINISTRATOR,
             )
         )
-        db.add_all(test_threads)
         await db.commit()
 
 
 def test_get_threads():
-    response = client.get(
+    response1 = client.get(
         "/threads",
         headers={"Authorization": f"Bearer {users[0]['token']}"},
     )
-    assert len(response.json()) == 7
-    assert response.status_code == 200
+    response2 = client.get(
+        "/threads",
+        headers={"Authorization": f"Bearer {users[1]['token']}"},
+    )
+    assert response1.status_code == response2.status_code == 200
+    assert len(response1.json()) == 2
+    assert len(response2.json()) == 1
 
 
 def test_create_thread():
@@ -58,7 +64,7 @@ def test_create_thread():
     assert response1.status_code == 400
     response2 = client.post(
         "/threads",
-        json={"name": "Test Thread (unique)", "is_public": True},
+        json={"name": "Test Thread (unique)", "is_public": False},
         headers={"Authorization": f"Bearer {users[0]['token']}"},
     )
     assert response2.status_code == 204
@@ -69,9 +75,15 @@ def test_add_thread_user():
         f"/threads/{test_threads[1].id}/users",
         json={
             "thread_id": test_threads[1].id,
-            "core_user_id": users[1]["user"].id,
+            "user_id": users[1]["user"].id,
             "permissions": 0,
         },
         headers={"Authorization": f"Bearer {users[0]['token']}"},
     )
     assert response.status_code == 204
+    response = client.get(
+        "/threads",
+        headers={"Authorization": f"Bearer {users[1]['token']}"},
+    )
+    assert response.status_code == 200
+    assert len(response.json()) == 2
