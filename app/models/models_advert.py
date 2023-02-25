@@ -6,17 +6,31 @@ from sqlalchemy.orm import relationship
 from app.database import Base
 
 
+class Advertiser(Base):
+    __tablename__ = "advertiser"
+
+    id: str = Column(String, primary_key=True, index=True)
+    name: str = Column(String, nullable=False, unique=True)
+    group_manager_id: str = Column(String, nullable=False)
+
+    adverts: list["Advert"] = relationship(
+        "Advert", lazy="joined", back_populates="advertiser"
+    )
+
+
 class Advert(Base):
-    __tablename__ = "advert"
+    __tablename__ = "adverts"
 
     id: str = Column(String, primary_key=True, nullable=False)
     title: str = Column(String, nullable=False)
     content: str = Column(String, nullable=False)
     date: datetime = Column(DateTime(timezone=True), nullable=False)
-    author: int = Column(String, nullable=False)
-    groupe: int = Column(String, nullable=False)
-    tags: str = Column(list, nullable=True)
-    lists: list["Tags"] = relationship("Tags", back_populates="advert")
+    tags: list["Tags"] = relationship("Tags", back_populates="adverts")
+    advertiser: Advertiser = relationship(
+        "Advertiser",
+        lazy="joined",
+        back_populates="adverts",
+    )
 
 
 class Tags(Base):
