@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import datetime
 
@@ -11,6 +12,7 @@ from app.cruds import cruds_amap, cruds_users
 from app.dependencies import (
     get_db,
     get_redis_client,
+    get_request_id,
     get_settings,
     is_user_a_member,
     is_user_a_member_of,
@@ -25,6 +27,8 @@ from app.utils.types.groups_type import GroupType
 from app.utils.types.tags import Tags
 
 router = APIRouter()
+
+hyperion_security_logger = logging.getLogger("hyperion.security")
 
 
 @router.get(
@@ -392,6 +396,7 @@ async def add_order_to_delievery(
     redis_client: Redis | None = Depends(get_redis_client),
     user: models_core.CoreUser = Depends(is_user_a_member),
     settings: Settings = Depends(get_settings),
+    request_id: str = Depends(get_request_id),
 ):
     """
     Add an order to a delivery.
@@ -480,6 +485,10 @@ async def add_order_to_delievery(
 
         orderret = await cruds_amap.get_order_by_id(order_id=db_order.order_id, db=db)
         productsret = await cruds_amap.get_products_of_order(db=db, order_id=order_id)
+
+        hyperion_security_logger.info(
+            f"Add_order_to_delivery: An order has been created for user {order.user_id} for an amount of {amount}€. ({request_id})"
+        )
         return schemas_amap.OrderReturn(productsdetail=productsret, **orderret.__dict__)
 
     except ValueError as error:
@@ -501,6 +510,7 @@ async def edit_order_from_delievery(
     redis_client: Redis | None = Depends(get_redis_client),
     user: models_core.CoreUser = Depends(is_user_a_member),
     settings: Settings = Depends(get_settings),
+    request_id: str = Depends(get_request_id),
 ):
     """
     Edit an order.
@@ -600,6 +610,9 @@ async def edit_order_from_delievery(
                 user_id=previous_order.user_id,
                 amount=previous_amount,
             )
+            hyperion_security_logger.info(
+                f"Edit_order: Order {order_id} has been edited for user {db_order.user_id}. Amount was {previous_amount}€, is now {amount}€. ({request_id})"
+            )
 
         except ValueError as error:
             raise HTTPException(status_code=422, detail=str(error))
@@ -618,6 +631,7 @@ async def remove_order(
     db: AsyncSession = Depends(get_db),
     redis_client: Redis | None = Depends(get_redis_client),
     user: models_core.CoreUser = Depends(is_user_a_member),
+    request_id: str = Depends(get_request_id),
 ):
     """
     Delete an order.
@@ -670,7 +684,9 @@ async def remove_order(
             user_id=order.user_id,
             amount=amount,
         )
-
+        hyperion_security_logger.info(
+            f"Delete_order: Order {order_id} by {order.user_id} was deleted. {amount}€ were refunded. ({request_id})"
+        )
         return Response(status_code=204)
 
     except ValueError as error:
