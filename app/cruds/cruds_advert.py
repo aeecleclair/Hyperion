@@ -98,6 +98,18 @@ async def delete_advert(advert_id: str, db: AsyncSession):
     await db.commit()
 
 
+async def get_tag(db: AsyncSession) -> list[models_advert.Tags]:
+    result = await db.execute(select(models_advert.Tags))
+    return result.scalars().all()
+
+
+async def get_tag_by_id(db: AsyncSession, tag_id: str) -> models_advert.Tags | None:
+    result = await db.execute(
+        select(models_advert.Tags).where(models_advert.Tags.id == tag_id)
+    )
+    return result.scalars().first()
+
+
 async def create_tag(tag: models_advert.Tags, db: AsyncSession) -> models_advert.Tags:
     db_tag = models_advert.Tags(**tag.dict())
     db.add(db_tag)
