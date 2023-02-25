@@ -25,6 +25,9 @@ class Advert(Base):
     title: str = Column(String, nullable=False)
     content: str = Column(String, nullable=False)
     date: datetime = Column(DateTime(timezone=True), nullable=False)
+    co_advertisers: list["Advertiser"] = relationship(
+        "Advertiser", back_populates="adverts"
+    )
     tags: list["Tags"] = relationship("Tags", back_populates="adverts")
     advertiser: Advertiser = relationship(
         "Advertiser",

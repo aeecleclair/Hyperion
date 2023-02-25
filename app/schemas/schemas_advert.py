@@ -24,8 +24,9 @@ class AdvertiserUpdate(BaseModel):
 
 class AdvertBase(BaseModel):
     name: str
-    content: str | None = None
-    groups_id: list[str] | None = None
+    content: str
+    advertiser_id: str
+    co_advertisers_id: list[str] | None = None
     tags: list[str] | None = None
 
 
