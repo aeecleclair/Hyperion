@@ -125,6 +125,8 @@ def get_redis_client(
                 hyperion_error_logger.warning(
                     "Redis connection error: Check the Redis configuration or the Redis server"
                 )
+        else:
+            redis_client = False
     return redis_client
 
 

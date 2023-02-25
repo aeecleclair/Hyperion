@@ -77,7 +77,7 @@ async def logging_middleware(
     settings: Settings = app.dependency_overrides.get(get_settings, get_settings)()
     redis_client: redis.Redis | Literal[False] | None = app.dependency_overrides.get(
         get_redis_client, get_redis_client
-    )()
+    )(settings=settings)
 
     # We test the ip address with the redis limiter
     process = True
