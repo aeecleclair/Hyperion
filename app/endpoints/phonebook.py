@@ -22,7 +22,7 @@ from app.dependencies import (
 )
 from app.endpoints.users import read_user
 from app.models import models_amap, models_core, models_phonebook
-from app.schemas import schemas_amap, schemas_calendar
+from app.schemas import schemas_phonebook
 from app.utils.redis import locker_get, locker_set
 from app.utils.tools import (
     fuzzy_search_user,
@@ -43,14 +43,12 @@ router = APIRouter()
     "/research/",
     response_model=list[schemas_phonebook.Member],
     status_code=200,
-    tags=[Tags.phonebook],
-)
+    tags=[Tags.phonebook],)
 async def request_users(
     query: str,
     db: AsyncSession = Depends(get_db),
     query_type: QueryType = QueryType.person,
-    user: models_core.CoreUser = Depends(is_user_a_member),
-):
+    user: models_core.CoreUser = Depends(is_user_a_member),):
     """Research users in the database by name, role or association."""
     if query_type == QueryType.person:
         return await cruds_phonebook.get_member_by_name(db, query)
@@ -61,14 +59,14 @@ async def request_users(
     if query_type == QueryType.association:
         return await cruds_phonebook.get_member_by_association(db, query)
 
-
 # -------------------------------- Association ------------------------------- #
 @router.post(
     "/phonebook/associations/",
-    response_model=list[schemas_phonebook.Association],
+    response_model=,
     status_code=200,
     tags=[Tags.phonebook],
 )
+
 async def create_association(
     name: str,
     db: AsyncSession = Depends(get_db),
@@ -82,13 +80,11 @@ async def create_association(
     association = models_phonebook.Association(name=name)
     return await cruds_phonebook.create_association(db=db, association=association)
 
-
-@router.post(
+@router.delete(
     "phonebook/associations/",
     response_model=schemas_phonebook.Association,
     status_code=200,
-    tags=[Tags.phonebook],
-)
+    tags=[Tags.phonebook])
 async def delete_association(
     association_id: str,
     db: AsyncSession = Depends(get_db),
@@ -105,13 +101,11 @@ async def delete_association(
 
     return await cruds_phonebook.delete_association(db=db, association=association)
 
-
-@router.post(
+@router.patch(
     "/phonebook/associations/",
     response_model=schemas_phonebook.Association,
     status_code=200,
-    tags=[Tags.phonebook],
-)
+    tags=[Tags.phonebook])
 async def update_association(
     association_id: str,
     db: AsyncSession = Depends(get_db),
@@ -129,9 +123,17 @@ async def update_association(
 
     return await cruds_phonebook.edit_association(db=db, association_update=update)
 
-
 # ---------------------------------- Member ---------------------------------- #
 @router.post(
+    "/phonebook/members/",
+    response_model=schemas_phonebook.Member,
+    status_code=200,
+    tags=[Tags.phonebook],)
+async def create_member(member: models_phonebook.Member, db: AsyncSession = Depends(get_db)):
+    """Create a member."""
+    return await cruds_phonebook.create_member(db=db, member=member)
+
+@router.patch(
     "/phonebook/members/",
     response_model=list[schemas_phonebook.Member],
     status_code=200,
@@ -150,10 +152,9 @@ async def update_member(
 
     return await cruds_phonebook.update_members(db=db)
 
-
-@router.post(
+@router.delete(
     "/phonebook/members/",
-    resopnse_model=schemas_phonebook.Member,
+    response_model=schemas_phonebook.Member,
     status_code=200,
     Tags=[Tags.phonebook],
 )
@@ -169,10 +170,35 @@ async def delete_member(
 
     return await cruds_phonebook.delete_member(db=db, member=member)
 
-
 # ----------------------------------- Role ----------------------------------- #
-# ----------------------------------- Logos ---------------------------------- #
+@router.post(
+    "/phonebook/roles/",
+    response_model=schemas_phonebook.Role,
+    status_code=200,
+    tags=[Tags.phonebook],)
+async def create_role(role: models_phonebook.Role, db: AsyncSession = Depends(get_db)):
+    """Create a role."""
+    return await cruds_phonebook.create_role(db=db, role=role)
 
+@router.patch(
+    "/phonebook/roles/",
+    response_model=list[schemas_phonebook.Role],
+    status_code=200,
+    tags=[Tags.phonebook],)
+async def update_role(role_update: schemas_phonebook.RoleUpdate, db: AsyncSession = Depends(get_db)):
+    """Update a role."""
+    return await cruds_phonebook.update_role(db=db, role_update=role_update)
+
+@router.delete(
+    "/phonebook/roles/",
+    response_model=schemas_phonebook.Role,
+    status_code=200,
+    tags=[Tags.phonebook],)
+async def delete_role(role_id: str, db: AsyncSession):
+    """Delete a role."""
+    return await cruds_phonebook.delete_role(db=db, id=role_id)
+
+# ----------------------------------- Logos ---------------------------------- #
 
 @router.post(
     "/phonebook/associations/{association_id}/logo/",
@@ -210,7 +236,6 @@ async def create_campaigns_logo(
     )
 
     return standard_responses.Result(success=True)
-
 
 @router.get(
     "/phonebook/associations/{association_id}/logo/",
