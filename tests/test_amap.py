@@ -215,7 +215,7 @@ def test_get_orders_from_delivery():
 def test_get_order_by_id():
     token = create_api_access_token(amap_user)
     response = client.get(
-        f"/amap/deliveries/{delivery.id}/orders/{order.order_id}",
+        f"/amap/orders/{order.order_id}",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
@@ -239,7 +239,7 @@ def test_add_order_to_delivery():
     token = create_api_access_token(student_user)
 
     response = client.post(
-        f"/amap/deliveries/{delivery.id}/orders",
+        "/amap/orders",
         json={
             "user_id": student_user.id,
             "delivery_id": delivery.id,
@@ -266,7 +266,7 @@ def test_edit_order():
     token = create_api_access_token(student_user)
 
     response = client.patch(
-        f"/amap/deliveries/{delivery.id}/orders/{order.order_id}",
+        f"/amap/orders/{order.order_id}",
         json={
             "user_id": student_user.id,
             "delivery_id": delivery.id,
@@ -294,7 +294,7 @@ def test_remove_order():
     token = create_api_access_token(student_user)
 
     response = client.delete(
-        f"/amap/deliveries/{delivery.id}/orders/{order.order_id}",
+        f"/amap/orders/{order.order_id}",
         headers={"Authorization": f"Bearer {token}"},
     )
 

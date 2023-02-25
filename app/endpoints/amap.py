@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import datetime
 
@@ -11,6 +12,7 @@ from app.cruds import cruds_amap, cruds_users
 from app.dependencies import (
     get_db,
     get_redis_client,
+    get_request_id,
     get_settings,
     is_user_a_member,
     is_user_a_member_of,
@@ -25,6 +27,8 @@ from app.utils.types.groups_type import GroupType
 from app.utils.types.tags import Tags
 
 router = APIRouter()
+
+hyperion_security_logger = logging.getLogger("hyperion.security")
 
 
 @router.get(
@@ -188,7 +192,7 @@ async def create_delivery(
     if await cruds_amap.is_there_a_delivery_on(
         db=db, delivery_date=db_delivery.delivery_date
     ):
-        return HTTPException(
+        raise HTTPException(
             status_code=403, detail="There is already a delivery planned that day."
         )
     else:
@@ -341,6 +345,10 @@ async def get_orders_from_delivery(
 
     **The user must be a member of the group AMAP to use this endpoint**
     """
+    delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
+    if delivery is None:
+        raise HTTPException(status_code=404, detail="Delivery not found")
+
     orders = await cruds_amap.get_orders_from_delivery(db=db, delivery_id=delivery_id)
     res = []
     for order in orders:
@@ -352,13 +360,12 @@ async def get_orders_from_delivery(
 
 
 @router.get(
-    "/amap/deliveries/{delivery_id}/orders/{order_id}",
+    "/amap/orders/{order_id}",
     response_model=schemas_amap.OrderReturn,
     status_code=200,
     tags=[Tags.amap],
 )
 async def get_order_by_id(
-    delivery_id: str,
     order_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
@@ -372,35 +379,31 @@ async def get_order_by_id(
     order = await cruds_amap.get_order_by_id(order_id=order_id, db=db)
     if order is None:
         raise HTTPException(status_code=404, detail="Delivery not found")
-    if delivery_id != order.delivery_id:
-        raise HTTPException(
-            status_code=404, detail="The order does not belong to this delivery"
-        )
 
     products = await cruds_amap.get_products_of_order(db=db, order_id=order_id)
     return schemas_amap.OrderReturn(productsdetail=products, **order.__dict__)
 
 
 @router.post(
-    "/amap/deliveries/{delivery_id}/orders",
+    "/amap/orders",
     response_model=schemas_amap.OrderReturn,
     status_code=201,
     tags=[Tags.amap],
 )
 async def add_order_to_delievery(
     order: schemas_amap.OrderBase,
-    delivery_id: str,
     db: AsyncSession = Depends(get_db),
     redis_client: Redis | None = Depends(get_redis_client),
     user: models_core.CoreUser = Depends(is_user_a_member),
     settings: Settings = Depends(get_settings),
+    request_id: str = Depends(get_request_id),
 ):
     """
     Add an order to a delivery.
 
     **A member of the group AMAP can create an order for every user**
     """
-    delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
+    delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=order.delivery_id)
 
     if not delivery:
         raise HTTPException(status_code=404, detail="Delivery not found")
@@ -482,6 +485,10 @@ async def add_order_to_delievery(
 
         orderret = await cruds_amap.get_order_by_id(order_id=db_order.order_id, db=db)
         productsret = await cruds_amap.get_products_of_order(db=db, order_id=order_id)
+
+        hyperion_security_logger.info(
+            f"Add_order_to_delivery: An order has been created for user {order.user_id} for an amount of {amount}€. ({request_id})"
+        )
         return schemas_amap.OrderReturn(productsdetail=productsret, **orderret.__dict__)
 
     except ValueError as error:
@@ -492,18 +499,18 @@ async def add_order_to_delievery(
 
 
 @router.patch(
-    "/amap/deliveries/{delivery_id}/orders/{order_id}",
+    "/amap/orders/{order_id}",
     status_code=204,
     tags=[Tags.amap],
 )
 async def edit_order_from_delievery(
     order_id: str,
-    delivery_id: str,
     order: schemas_amap.OrderEdit,
     db: AsyncSession = Depends(get_db),
     redis_client: Redis | None = Depends(get_redis_client),
     user: models_core.CoreUser = Depends(is_user_a_member),
     settings: Settings = Depends(get_settings),
+    request_id: str = Depends(get_request_id),
 ):
     """
     Edit an order.
@@ -511,7 +518,13 @@ async def edit_order_from_delievery(
     **A member of the group AMAP can edit orders of other users**
     """
 
-    delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
+    previous_order = await cruds_amap.get_order_by_id(db=db, order_id=order_id)
+    if not previous_order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    delivery = await cruds_amap.get_delivery_by_id(
+        db=db, delivery_id=previous_order.delivery_id
+    )
     if not delivery:
         raise HTTPException(status_code=404, detail="Delivery not found")
 
@@ -520,10 +533,6 @@ async def edit_order_from_delievery(
             status_code=403,
             detail=f"You can't edit an order if the delivery is not in orderable mode. The current mode is {delivery.status}s",
         )
-
-    previous_order = await cruds_amap.get_order_by_id(db=db, order_id=order_id)
-    if not previous_order:
-        raise HTTPException(status_code=404, detail="Order not found")
 
     if not (
         user.id == previous_order.user_id
@@ -561,7 +570,7 @@ async def edit_order_from_delievery(
             order_id=order_id,
             ordering_date=previous_order.ordering_date,
             delivery_date=delivery.delivery_date,
-            delivery_id=delivery_id,
+            delivery_id=previous_order.delivery_id,
             user_id=previous_order.user_id,
             amount=amount,
             **order.dict(),
@@ -601,6 +610,9 @@ async def edit_order_from_delievery(
                 user_id=previous_order.user_id,
                 amount=previous_amount,
             )
+            hyperion_security_logger.info(
+                f"Edit_order: Order {order_id} has been edited for user {db_order.user_id}. Amount was {previous_amount}€, is now {amount}€. ({request_id})"
+            )
 
         except ValueError as error:
             raise HTTPException(status_code=422, detail=str(error))
@@ -610,23 +622,27 @@ async def edit_order_from_delievery(
 
 
 @router.delete(
-    "/amap/deliveries/{delivery_id}/orders/{order_id}",
+    "/amap/orders/{order_id}",
     status_code=204,
     tags=[Tags.amap],
 )
 async def remove_order(
     order_id: str,
-    delivery_id: str,
     db: AsyncSession = Depends(get_db),
     redis_client: Redis | None = Depends(get_redis_client),
     user: models_core.CoreUser = Depends(is_user_a_member),
+    request_id: str = Depends(get_request_id),
 ):
     """
     Delete an order.
 
     **A member of the group AMAP can delete orders of other users**
     """
-    delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
+    order = await cruds_amap.get_order_by_id(db=db, order_id=order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="No order found")
+
+    delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=order.delivery_id)
     if not delivery:
         raise HTTPException(status_code=404, detail="Delivery not found")
 
@@ -635,13 +651,6 @@ async def remove_order(
             status_code=403,
             detail=f"You can't remove an order if the delivery is not in orderable mode. The current mode is {delivery.status}",
         )
-
-    order = await cruds_amap.get_order_by_id(db=db, order_id=order_id)
-    if not order:
-        raise HTTPException(status_code=404, detail="No order found")
-
-    if order.delivery_id != delivery_id:
-        raise HTTPException(status_code=404, detail="The order is not in this delivery")
 
     if not (
         user.id == order.user_id
@@ -675,7 +684,9 @@ async def remove_order(
             user_id=order.user_id,
             amount=amount,
         )
-
+        hyperion_security_logger.info(
+            f"Delete_order: Order {order_id} by {order.user_id} was deleted. {amount}€ were refunded. ({request_id})"
+        )
         return Response(status_code=204)
 
     except ValueError as error:
