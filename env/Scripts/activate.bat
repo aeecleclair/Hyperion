@@ -8,7 +8,11 @@ if defined _OLD_CODEPAGE (
     "%SystemRoot%\System32\chcp.com" 65001 > nul
 )
 
+<<<<<<< HEAD
+set VIRTUAL_ENV=C:\Users\broca\Documents\GitHub\aeecleclair\myecl\Hyperion\env
+=======
 set VIRTUAL_ENV=C:\Users\franc\OneDrive\Documents\GitHub\Hyperion\env
+>>>>>>> f460bfdab0d90e5d0186016be510c4dd69c23ebf
 
 if not defined PROMPT set PROMPT=$P$G
 
