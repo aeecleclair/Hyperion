@@ -96,3 +96,29 @@ async def delete_advert(advert_id: str, db: AsyncSession):
         delete(models_advert.Advert).where(models_advert.Advert.id == advert_id)
     )
     await db.commit()
+
+
+async def create_tag(tag: models_advert.Tags, db: AsyncSession) -> models_advert.Tags:
+    db_tag = models_advert.Tags(**tag.dict())
+    db.add(db_tag)
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+    return db_tag
+
+
+async def update_tag(
+    tag_id: str, tag_update: schemas_advert.TagUpdate, db: AsyncSession
+):
+    await db.execute(
+        update(models_advert.Tags)
+        .where(models_advert.Tags.id == tag_id)
+        .values(**tag_update.dict(exclude_none=True))
+    )
+    await db.commit()
+
+
+async def delete_tag(tag_id: str, db: AsyncSession):
+    await db.execute(delete(models_advert.Tags).where(models_advert.Tags.id == tag_id))
+    await db.commit()
