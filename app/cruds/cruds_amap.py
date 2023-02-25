@@ -127,7 +127,8 @@ async def get_delivery_by_id(
 async def is_there_a_delivery_on(db: AsyncSession, delivery_date: date) -> bool:
     result = await db.execute(
         select(models_amap.Delivery).where(
-            models_amap.Delivery.delivery_date == delivery_date
+            models_amap.Delivery.delivery_date == delivery_date,
+            models_amap.Delivery.status != DeliveryStatusType.archived,
         )
     )
     return result.scalars().all() != []
@@ -313,6 +314,12 @@ async def edit_order_with_products(db: AsyncSession, order: schemas_amap.OrderCo
 
 
 async def remove_order(db: AsyncSession, order_id: str):
+    await db.execute(
+        delete(models_amap.AmapOrderContent).where(
+            models_amap.AmapOrderContent.order_id == order_id
+        )
+    )
+    await db.commit()
     await db.execute(
         delete(models_amap.Order).where(models_amap.Order.order_id == order_id)
     )
