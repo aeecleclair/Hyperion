@@ -1,4 +1,4 @@
-from sqlalchemy import Column, ForeignKey, String
+from sqlalchemy import Column, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -29,5 +29,7 @@ class Member(Base):
         String, ForeignKey("phonebook_association.id"), primary_key=True
     )
     role_id: str = Column(String, ForeignKey("phonebook_role.id"))
+
+    mandate_year: int = Column(Integer, primary_key=True, nullable=False)
 
     user: CoreUser = relationship("CoreUser")
