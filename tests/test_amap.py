@@ -239,7 +239,7 @@ def test_add_order_to_delivery():
     token = create_api_access_token(student_user)
 
     response = client.post(
-        f"/amap/orders",
+        "/amap/orders",
         json={
             "user_id": student_user.id,
             "delivery_id": delivery.id,
