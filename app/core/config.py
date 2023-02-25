@@ -44,6 +44,7 @@ class Settings(BaseSettings):
     MATRIX_USER_NAME: str | None
     MATRIX_USER_PASSWORD: str | None
     MATRIX_LOG_ERROR_ROOM_ID: str | None
+    SYNAPSE_USER_MAPPER_SECRET: str | None
 
     ########################
     # Redis configuration #

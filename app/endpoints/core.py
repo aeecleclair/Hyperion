@@ -1,6 +1,6 @@
 from os import path
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
 from fastapi.responses import FileResponse
 
 from app.core.config import Settings
@@ -127,3 +127,47 @@ async def get_style_file(
 )
 async def get_favicon():
     return FileResponse("assets/images/favicon.ico")
+
+
+@router.get(
+    "/users_mapper",
+    status_code=200,
+    tags=[Tags.core],
+)
+async def get_users_mapper(
+    authorization: str | None = Header(default=None),
+    settings: Settings = Depends(get_settings),
+):
+    print(authorization)
+    print(f"Bearer {settings.SYNAPSE_USER_MAPPER_SECRET}")
+    if authorization != f"Bearer {settings.SYNAPSE_USER_MAPPER_SECRET}":
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    return {
+        "userMapping": {
+            "@user1:127.0.0.1": {
+                "displayName": "MyUser1",
+                "rooms": [
+                    "!nEXBNJxjiTbHcJJitj:127.0.0.1",
+                    "!hNxsHcIuWVhUAHvYUw:127.0.0.1",
+                    "!SzJapSTLoRWDUiuNfH:127.0.0.1",
+                    "!krLbAAMPEBhOpuHKEM:127.0.0.1",
+                ],
+            },
+            "@user10:127.0.0.1": {
+                "displayName": "MyUser10",
+                "rooms": [
+                    "!nEXBNJxjiTbHcJJitj:127.0.0.1",
+                    "!hNxsHcIuWVhUAHvYUw:127.0.0.1",
+                    "!SzJapSTLoRWDUiuNfH:127.0.0.1",
+                    "!krLbAAMPEBhOpuHKEM:127.0.0.1",
+                ],
+            },
+        },
+        "roomModerators": {
+            "!nEXBNJxjiTbHcJJitj:127.0.0.1": "@armand:127.0.0.1",
+            "!hNxsHcIuWVhUAHvYUw:127.0.0.1": "@armand:127.0.0.1",
+            "!SzJapSTLoRWDUiuNfH:127.0.0.1": "@armand:127.0.0.1",
+            "!krLbAAMPEBhOpuHKEM:127.0.0.1": "@armand:127.0.0.1",
+        },
+    }
