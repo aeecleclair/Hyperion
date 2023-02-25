@@ -46,6 +46,9 @@ class AdvertUpdate(BaseModel):
 class TagBase(BaseModel):
     name: str | None = None
     color: str | None = None
+    group_manager_id: str = Field(
+        description="The group manager id should by a group identifier"
+    )
 
 
 class TagComplete(TagBase):
