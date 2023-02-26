@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.cruds import cruds_phonebook
+from app.cruds import cruds_phonebook, cruds_users
 from app.dependencies import (
     get_db,
     get_request_id,
@@ -12,8 +12,8 @@ from app.dependencies import (
     is_user_a_member_of,
 )
 from app.models import models_core, models_phonebook
-from app.schemas import schemas_phonebook
-from app.utils.tools import get_file_from_data, save_file_as_data
+from app.schemas import schemas_core, schemas_phonebook
+from app.utils.tools import fuzzy_search_user, get_file_from_data, save_file_as_data
 from app.utils.types import standard_responses
 from app.utils.types.groups_type import GroupType
 from app.utils.types.phonebook_type import QueryType
@@ -25,7 +25,7 @@ router = APIRouter()
 # --------------------------------- Research --------------------------------- #
 @router.get(
     "/phonebook/research/",
-    response_model=list[schemas_phonebook.RequestUserReturn],
+    response_model=list[list[schemas_phonebook.UserReturn]],
     status_code=200,
     tags=[Tags.phonebook],
 )
@@ -34,11 +34,45 @@ async def request_users(
     db: AsyncSession = Depends(get_db),
     query_type: QueryType = QueryType.person,
     user: models_core.CoreUser = Depends(is_user_a_member),
-) -> list[schemas_phonebook.RequestUserReturn] | None:
+) -> list[schemas_phonebook.UserReturn] | list[schemas_core.CoreUser] | None:
     """Research users in the database by name, role or association."""
     print(f"---> {query_type} : {query}")
     if query_type == QueryType.person:
-        return await cruds_phonebook.get_member_by_name(db, query)
+        users = await cruds_users.get_users(db)
+        found_users = fuzzy_search_user(query, users)
+
+        ret = []
+        for user in found_users:
+            # get [association, role] for each user
+            entries = await cruds_phonebook.get_member_by_user(db, user)
+            associations, roles = [], []
+
+            for entrie in entries:
+                print(">>>>> Entry : ", entrie.association_id, entrie.role_id)
+                association = await cruds_phonebook.get_association_by_id(
+                    db, entrie.association_id
+                )
+                association_schema = schemas_phonebook.AssociationComplete.from_orm(
+                    association
+                )
+                associations.append(association_schema)
+
+                role = await cruds_phonebook.get_role_by_id(db, entrie.role_id)
+                print(type(role))
+                role_schema = schemas_phonebook.RoleComplete.from_orm(role)
+                roles.append(role_schema)
+
+                print(">>>> Associations : ", associations, type(associations[0]))
+                print(">>>> Roles : ", roles, type(roles[0]))
+
+            user_return = schemas_phonebook.UserReturn(
+                user=schemas_phonebook.Member.from_orm(user),
+                associations=associations,
+                roles=roles,
+            )
+
+            ret.append(user_return)
+        return ret
 
     if query_type == QueryType.role:
         return await cruds_phonebook.get_member_by_role(db, query)

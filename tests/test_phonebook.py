@@ -1,7 +1,7 @@
 import uuid
-from datetime import datetime
 
-from app.dependencies import get_redis_client, get_settings
+from app.cruds import cruds_phonebook
+from app.dependencies import get_settings
 from app.main import app
 from app.models import models_core, models_phonebook
 from app.utils.types.groups_type import GroupType
@@ -33,18 +33,26 @@ async def startuptest():
             id=str(uuid.uuid4()),
             name="Association1",
         )
+        association2 = models_phonebook.Association(
+            id="b5c99d5b-bc48-4f9c-9e41-c69049d89bf3",
+            name="Association2",
+        )
+
         role = models_phonebook.Role(id=str(uuid.uuid4()), name="Role1")
+        role2 = models_phonebook.Role(id=str(uuid.uuid4()), name="Role2")
 
         user.name = "Nom"
-        user.first_name = "Prénom"
+        user.firstname = "Prénom"
         user.nickname = "Pseudo"
+        user.id = str(uuid.uuid4())
+        user.email = "test.rate@ecl21.ec-lyon.fr"
 
         member = models_phonebook.Member(
             user_id=user.id,
-            role_id=str(uuid.uuid4()),
+            role_id=role.id,
             mandate_year=2021,
             member_id=str(uuid.uuid4()),
-            association_id=str(uuid.uuid4()),
+            association_id=association.id,
         )
 
         db.add(association)
@@ -52,6 +60,60 @@ async def startuptest():
         db.add(member)
         await db.commit()
 
+
+def test_create_association_by_student():
+    token = create_api_access_token(user)
+
+    response = client.post(
+        "/phonebook/associations/?name=Fablab",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 403
+
+
+def test_create_association_by_CAA():
+    token = create_api_access_token(CAA_user)
+
+    response = client.post(
+        "/phonebook/associations/?name=Fablab",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+
+
+def test_update_association():
+    token = create_api_access_token(CAA_user)
+    response = client.patch(
+        "/phonebook/associations/?name=Usine à Gaz",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+
+
+def test_delete_association():
+    token = create_api_access_token(CAA_user)
+
+    response = client.delete(
+        "/phonebook/associations/?id=b5c99d5b-bc48-4f9c-9e41-c69049d89bf3",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+
+
+def test_create_member():
+    token = create_api_access_token(CAA_user)
+
+    response = client.post(
+        "/phonebook/members/?association_id=b5c99d5b-bc48-4f9c-9e41-c69049d89bf3&mandate_year=2022&role_id=10&user_id=15",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+
+def test_update_member():
+    token = create_api_access_token(CAA_user)
+    
+    response = client.patch(
+        "/phonebook/members/?association_id=b5c99d5b-bc48-4f9c-9e41-c69049d89bf3&mandate_year=2020&role_id=15&user_id=10",
 
 def test_request_by_person():
     token = create_api_access_token(user)

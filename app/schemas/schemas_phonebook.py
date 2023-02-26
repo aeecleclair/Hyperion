@@ -6,6 +6,9 @@ from app.schemas import schemas_core
 class Member(schemas_core.CoreUserSimple):
     email: str
 
+    class Config:
+        orm_mode = True
+
 
 class RoleBase(BaseModel):
     name: str
@@ -33,13 +36,6 @@ class UserReturn(BaseModel):
     user: Member
     roles: list[RoleComplete]
     associations: list[AssociationComplete]
-
-    class Config:
-        orm_mode = True
-
-
-class RequestUserReturn(BaseModel):
-    response: list[UserReturn]
 
     class Config:
         orm_mode = True
