@@ -106,8 +106,8 @@ class TypeTicketComplete(TypeTicketBase):
 
 class TicketEdit(BaseModel):
     type_id: str
-    # user_id: str
-    winning_lot: int
+    user_id: str
+    winning_lot: str
 
     class Config:
         orm_mode = True
@@ -115,12 +115,32 @@ class TicketEdit(BaseModel):
 
 class TicketBase(BaseModel):
     type_id: str
-    # user_id: str
-    winning_lot: int
+    user_id: str
+    winning_lot: str
 
 
-class TicketComplete(BaseModel):
+class TicketComplete(TicketBase):
     id: str
 
     class Config:
         orm_mode = True
+
+
+class CashBase(BaseModel):
+    balance: float
+    user_id: str
+
+    class Config:
+        orm_mode = True
+
+
+class CashComplete(CashBase):
+    user: CoreUserSimple
+
+
+class CashDB(CashBase):
+    user_id: str
+
+
+class CashEdit(BaseModel):
+    balance: float
