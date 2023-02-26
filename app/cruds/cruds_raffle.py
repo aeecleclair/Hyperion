@@ -51,7 +51,7 @@ async def get_raffle_by_groupid(
 
 
 async def get_raffle_by_id(
-    id: str,
+    riffle_id: str,
     db: AsyncSession,
 ) -> models_raffle.Raffle | None:
     result = await db.execute(
