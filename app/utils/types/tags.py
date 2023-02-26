@@ -14,3 +14,4 @@ class Tags(str, Enum):
     calendar = "Calendar"
     campaign = "Campaign"
     cinema = "Cinema"
+    raffle = "Raffle"
