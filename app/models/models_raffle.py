@@ -2,8 +2,10 @@
 from datetime import datetime
 
 from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String
+from sqlalchemy.orm import relationship
 
 from app.database import Base
+from app.models.models_core import CoreUser
 
 
 class Raffle(Base):
@@ -38,5 +40,13 @@ class Tickets(Base):
 
     id: str = Column(String, primary_key=True, index=True, nullable=False)
     type_id: str = Column(ForeignKey("type_ticket.id"), nullable=False)
-    user_id: str = Column(Integer, nullable=False)  # --> Récupérer sur hyperion
+    user_id: str = Column(String, nullable=False)  # --> Récupérer sur hyperion
     winning_lot: str = Column(String, nullable=True, index=True)
+
+
+class Cash(Base):
+    __tablename__ = "raffle_cash"
+
+    user_id: str = Column(String, ForeignKey("core_user.id"), primary_key=True)
+    user: CoreUser = relationship("CoreUser")
+    balance: float = Column(Float, nullable=False)
