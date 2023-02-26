@@ -18,7 +18,6 @@ class Raffle(Base):
 
 class TypeTicket(Base):
     __tablename__ = "type_ticket"
-
     price: float = Column(Float)
     id: str = Column(String, primary_key=True, index=True)
     nb_ticket: int = Column(Integer)
@@ -29,7 +28,7 @@ class Lots(Base):
     __tablename__ = "lots"
 
     id: str = Column(String, primary_key=True, index=True)
-    raffle_id: int = Column(ForeignKey("raffle.id"), index=True)
+    raffle_id: str = Column(ForeignKey("raffle.id"), index=True)
     description: str = Column(String)
     quantity: int = Column(Integer)
 
@@ -38,6 +37,6 @@ class Tickets(Base):
     __tablename__ = "tickets"
 
     id: str = Column(String, primary_key=True, index=True)
-    type_id: int = Column(ForeignKey("type_ticket.id"))
+    type_id: str = Column(ForeignKey("type_ticket.id"))
     # user_id: string --> Récupérer sur hyperion
-    winning_lot: int = Column(Integer, nullable=True, index=True)
+    winning_lot: str = Column(String, nullable=True, index=True)
