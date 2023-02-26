@@ -1,21 +1,12 @@
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from fastapi.responses import FileResponse
-from pytz import timezone
+from fastapi import APIRouter
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
-from app.core.config import Settings
-from app.cruds import cruds_groups, cruds_users
-from app.dependencies import get_db, get_request_id, get_settings, is_user_a_member_of
+from app.cruds import cruds_users
 from app.models import models_core, models_phonebook
-from app.schemas import schemas_calendar
-from app.utils.tools import fuzzy_search_user, get_file_from_data, save_file_as_data
-from app.utils.types import standard_responses
-from app.utils.types.groups_type import GroupType
-from app.utils.types.phonebook_type import QueryType
-from app.utils.types.tags import Tags
+from app.schemas import schemas_phonebook
+from app.utils.tools import fuzzy_search_user
 
 router = APIRouter()
 
@@ -24,7 +15,7 @@ router = APIRouter()
 async def get_member_by_name(
     db: AsyncSession,
     query: str,
-) -> models_phonebook.Member | None:
+) -> list[models_core.CoreUser] | None:
     """Retrieve all the members corresponding to the query by their name/firstname/nickname from the database."""
     users = await cruds_users.get_users(db)
     return fuzzy_search_user(query, users)
@@ -32,22 +23,34 @@ async def get_member_by_name(
 
 async def get_member_by_role(
     db: AsyncSession, query: str
-) -> models_phonebook.Member | None:
+) -> list[models_phonebook.Member] | None:
     """Retrieve all the members corresponding to the query by their role"""
-    return await db.execute(
-        select(models_phonebook.Member).where(query in models_phonebook.Member.role)
+    role_id = db.execute(
+        select(models_phonebook.Role.id).where(query in models_phonebook.Role.name)
     )
+    result = await db.execute(
+        select(models_phonebook.Member).where(
+            models_phonebook.Member.role_id == role_id
+        )
+    )
+    return result.scalars().all()
 
 
 async def get_member_by_association(
     db: AsyncSession, query: str
-) -> models_member.Member | None:
+) -> list[models_phonebook.Member] | None:
     """Retrieve all the members corresponding to the query by their associations"""
-    return await db.execute(
-        select(models_phonebook.Member).where(
-            query in models_phonebook.Member.association
+    association_id = db.execute(
+        select(models_phonebook.Association.id).where(
+            query in models_phonebook.Association.name
         )
     )
+    result = await db.execute(
+        select(models_phonebook.Member).where(
+            association_id == models_phonebook.Member.association_id
+        )
+    )
+    return result.scalars().all()
 
 
 # ------------------------------- Associations ------------------------------- #
@@ -64,16 +67,17 @@ async def add_association(db: AsyncSession, association: models_phonebook.Associ
 
 async def get_association_by_id(
     db: AsyncSession, id: str
-) -> models_phonebook.Association:
-    return await db.execute(
+) -> models_phonebook.Association | None:
+    association_id = await db.execute(
         select(models_phonebook.Association).where(
             id == models_phonebook.Association.id
         )
     )
+    return association_id.scalars().first()
 
 
 async def edit_association(
-    association_update: schema_phonebook.Association, db: AsyncSession, id: str
+    association_update: schemas_phonebook.AssociationComplete, db: AsyncSession, id: str
 ):
     await db.execute(
         update(models_phonebook.Association)
@@ -102,24 +106,45 @@ async def add_member(db: AsyncSession, member: models_phonebook.Member):
         raise error
 
 
-async def get_member_by_id(db: AsyncSession, id: str) -> models_phonebook.Member:
-    return await db.execute(
-        select(models_phonebook.Member).where(id == models_phonebook.Member.id)
+async def get_member_by_id(
+    db: AsyncSession, association_id: str, mandate_year: int, user_id: str
+) -> models_phonebook.Member | None:
+    result = await db.execute(
+        select(models_phonebook.Member).where(
+            association_id == models_phonebook.Member.association_id
+            and mandate_year == models_phonebook.Member.mandate_year
+            and user_id == models_phonebook.Member.user_id
+        )
     )
+    return result.scalars().first()
 
 
-async def delete_member(db: AsyncSession, id: str):
+async def delete_member(
+    db: AsyncSession, association_id: str, mandate_year: int, user_id: str
+):
     await db.execute(
-        delete(models_phonebook.Member).where(id == models_phonebook.Member.id)
+        delete(models_phonebook.Member).where(
+            association_id == models_phonebook.Member.association_id
+            and mandate_year == models_phonebook.Member.mandate_year
+            and user_id == models_phonebook.Member.user_id
+        )
     )
 
 
 async def edit_member(
-    db: AsyncSession, member_update: schemas_phonebook.MemberUpdate, id: str
+    db: AsyncSession,
+    member_update: schemas_phonebook.AssociationMemberComplete,
+    association_id: str,
+    mandate_year: int,
+    user_id: str,
 ):
     await db.execute(
         update(models_phonebook.Member)
-        .where(id == models_phonebook.Member.id)
+        .where(
+            association_id == models_phonebook.Member.association_id
+            and mandate_year == models_phonebook.Member.mandate_year
+            and user_id == models_phonebook.Member.user_id
+        )
         .values(member_update)
     )
     await db.commit()
@@ -143,21 +168,16 @@ async def delete_role(db: AsyncSession, id: str):
     )
 
 
-async def get_role_by_id(db: AsyncSession) -> models_phonebook.Role:
-    return await db.execute(select(models_phonebook.Role))
+async def get_role_by_id(db: AsyncSession, role_id: str) -> str | None:
+    role = await db.execute(select(models_phonebook.Role).where(role_id == id))
+    return role.scalars().first()
 
 
 async def edit_role(
-    role_update: schemas_phonebook.RoleUpdate, db: AsyncSession, id: str
+    role_update: schemas_phonebook.RoleComplete, db: AsyncSession, id: str
 ):
-    role = await get_role_by_id(db)
-    if role is None:
-        raise HTTPException(status_code=404, detail="Role not found")
     await db.execute(
         update(models_phonebook.Role)
         .where(models_phonebook.Role.id == id)
         .values(role_update)
     )
-
-
-# ----------------------------------- Logos ---------------------------------- #

@@ -23,7 +23,7 @@ class AssociationBase(BaseModel):
     name: str
 
 
-class AssociationComplete(RoleBase):
+class AssociationComplete(AssociationBase):
     id: str
 
     class Config:
@@ -35,14 +35,6 @@ class RequestUserReturn(BaseModel):
     id: str
     roles: list[RoleComplete]
     associations: list[AssociationComplete]
-
-
-class RoleReturn(BaseModel):
-    name: str
-    id: str
-
-    class Config:
-        orm_mode = True
 
 
 class AssociationMemberBase(BaseModel):
