@@ -40,18 +40,28 @@ async def create_raffle(
         raise ValueError("This name is already used")
 
 
-async def get_raffle_by_id(
-    raffle_id: int,
+async def get_raffle_by_groupid(
+    group_id: str,
     db: AsyncSession,
 ) -> models_raffle.Raffle | None:
     result = await db.execute(
-        select(models_raffle.Raffle).where(models_raffle.Raffle.id == raffle_id)
+        select(models_raffle.Raffle).where(models_raffle.Raffle.group_id == group_id)
+    )
+    return result.scalars().first()
+
+
+async def get_raffle_by_id(
+    id: str,
+    db: AsyncSession,
+) -> models_raffle.Raffle | None:
+    result = await db.execute(
+        select(models_raffle.Raffle).where(models_raffle.Raffle.id == id)
     )
     return result.scalars().first()
 
 
 async def edit_raffle(
-    raffle_id: int,
+    raffle_id: str,
     raffle_update: schemas_raffle.RaffleEdit,
     db: AsyncSession,
 ):
@@ -100,12 +110,22 @@ async def create_lot(
         raise ValueError("This name is already used")
 
 
-async def get_lot_by_id(
-    lot_id: int,
+async def get_lot_by_raffleid(
+    id: str,
     db: AsyncSession,
 ) -> models_raffle.Lots | None:
     result = await db.execute(
-        select(models_raffle.Lots).where(models_raffle.Lots.id == lot_id)
+        select(models_raffle.Lots).where(models_raffle.Lots.raffle_id == id)
+    )
+    return result.scalars().first()
+
+
+async def get_lot_by_id(
+    id: str,
+    db: AsyncSession,
+) -> models_raffle.Lots | None:
+    result = await db.execute(
+        select(models_raffle.Lots).where(models_raffle.Lots.id == id)
     )
     return result.scalars().first()
 
@@ -158,12 +178,24 @@ async def create_typeticket(
         raise ValueError("This name is already used")
 
 
-async def get_typeticket_by_id(
-    typeticket_id: int,
+async def get_typeticket_by_raffleid(
+    raffle_id: int,
     db: AsyncSession,
 ) -> models_raffle.TypeTicket | None:
     result = await db.execute(
-        select(models_raffle.Lots).where(models_raffle.TypeTicket.id == typeticket_id)
+        select(models_raffle.Lots).where(
+            models_raffle.TypeTicket.raffle_id == raffle_id
+        )
+    )
+    return result.scalars().first()
+
+
+async def get_typeticket_by_id(
+    id: int,
+    db: AsyncSession,
+) -> models_raffle.TypeTicket | None:
+    result = await db.execute(
+        select(models_raffle.Lots).where(models_raffle.TypeTicket.id == id)
     )
     return result.scalars().first()
 
@@ -220,12 +252,32 @@ async def create_ticket(
         raise ValueError("This name is already used")
 
 
-async def get_ticket_by_id(
-    ticket_id: int,
+async def get_ticket_by_groupid(
+    group_id: int,
     db: AsyncSession,
 ) -> models_raffle.Tickets | None:
     result = await db.execute(
-        select(models_raffle.Tickets).where(models_raffle.Tickets.id == ticket_id)
+        select(models_raffle.Tickets).where(models_raffle.Tickets.group_id == group_id)
+    )
+    return result.scalars().first()
+
+
+async def get_ticket_by_id(
+    id: int,
+    db: AsyncSession,
+) -> models_raffle.Tickets | None:
+    result = await db.execute(
+        select(models_raffle.Tickets).where(models_raffle.Tickets.id == id)
+    )
+    return result.scalars().first()
+
+
+async def get_ticket_by_userid(
+    user_id: int,
+    db: AsyncSession,
+) -> models_raffle.Tickets | None:
+    result = await db.execute(
+        select(models_raffle.Tickets).where(models_raffle.Tickets.user_id == user_id)
     )
     return result.scalars().first()
 
