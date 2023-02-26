@@ -11,9 +11,15 @@ class PlayerBase(BaseModel):
     elo: int
     mode: CapsMode
 
+    class Config:
+        orm_mode = True
+
 
 class GameBase(BaseModel):
     mode: CapsMode
+
+    class Config:
+        orm_mode = True
 
 
 class GameCreateRequest(GameBase):
@@ -24,6 +30,7 @@ class Game(GameBase):
     timestamp: datetime
     id: str
     players: list[GamePlayer]
+    is_confirmed: bool
 
 
 class GamePlayerBase(BaseModel):
@@ -31,6 +38,13 @@ class GamePlayerBase(BaseModel):
     team: int
     quarters: int
 
+    class Config:
+        orm_mode = True
+
 
 class GamePlayer(GamePlayerBase):
     user: CoreUserSimple
+
+
+Game.update_forward_refs()
+GameCreateRequest.update_forward_refs()
