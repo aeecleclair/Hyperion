@@ -39,7 +39,7 @@ class UserReturn(BaseModel):
 
 
 class RequestUserReturn(BaseModel):
-    reponse: list[UserReturn]
+    response: list[UserReturn]
 
     class Config:
         orm_mode = True

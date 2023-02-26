@@ -4,7 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cruds import cruds_users
-from app.models import models_core, models_phonebook
+from app.models import models_phonebook
 from app.schemas import schemas_phonebook
 from app.utils.tools import fuzzy_search_user
 
@@ -15,15 +15,44 @@ router = APIRouter()
 async def get_member_by_name(
     db: AsyncSession,
     query: str,
-) -> list[models_core.CoreUser] | None:
+) -> schemas_phonebook.RequestUserReturn | None:
     """Retrieve all the members corresponding to the query by their name/firstname/nickname from the database."""
     users = await cruds_users.get_users(db)
-    return fuzzy_search_user(query, users)
+    found_users = fuzzy_search_user(query, users)
+    temp = []
+    for user in found_users:
+        member_request = await db.execute(
+            select(models_phonebook.Member).where(
+                user.id == models_phonebook.Member.member_id
+            )
+        )
+        member = member_request.scalars().first()
+
+        associations_request = await db.execute(
+            select(models_phonebook.Association).where(
+                models_phonebook.Association.id == member.association_id
+            )
+        )
+        associations = associations_request.scalars().all()
+
+        roles_request = await db.execute(
+            select(models_phonebook.Role).where(
+                models_phonebook.Role.id == member.role_id
+            )
+        )
+        roles = roles_request.scalars().all()
+
+        temp.append(
+            schemas_phonebook.UserReturn(
+                user=member, associations=associations, roles=roles
+            )
+        )
+    return schemas_phonebook.RequestUserReturn(response=temp)
 
 
 async def get_member_by_role(
     db: AsyncSession, query: str
-) -> list[models_phonebook.Member] | None:
+) -> list[schemas_phonebook.RequestUserReturn] | None:
     """Retrieve all the members corresponding to the query by their role"""
     role_id = db.execute(
         select(models_phonebook.Role.id).where(query in models_phonebook.Role.name)
@@ -38,7 +67,7 @@ async def get_member_by_role(
 
 async def get_member_by_association(
     db: AsyncSession, query: str
-) -> list[models_phonebook.Member] | None:
+) -> list[schemas_phonebook.RequestUserReturn] | None:
     """Retrieve all the members corresponding to the query by their associations"""
     association_id = db.execute(
         select(models_phonebook.Association.id).where(
@@ -161,9 +190,7 @@ async def get_role_by_id(db: AsyncSession, role_id: str) -> str | None:
     return role.scalars().first()
 
 
-async def edit_role(
-    role_update: schemas_phonebook.RoleComplete, db: AsyncSession, id: str
-):
+async def edit_role(role_update: schemas_phonebook.RoleEdit, db: AsyncSession, id: str):
     await db.execute(
         update(models_phonebook.Role)
         .where(models_phonebook.Role.id == id)

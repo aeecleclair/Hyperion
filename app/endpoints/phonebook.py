@@ -24,7 +24,7 @@ router = APIRouter()
 
 # --------------------------------- Research --------------------------------- #
 @router.get(
-    "/research/",
+    "/phonebook/research/",
     response_model=list[schemas_phonebook.RequestUserReturn],
     status_code=200,
     tags=[Tags.phonebook],
@@ -34,8 +34,9 @@ async def request_users(
     db: AsyncSession = Depends(get_db),
     query_type: QueryType = QueryType.person,
     user: models_core.CoreUser = Depends(is_user_a_member),
-):
+) -> list[schemas_phonebook.RequestUserReturn] | None:
     """Research users in the database by name, role or association."""
+    print(f"---> {query_type} : {query}")
     if query_type == QueryType.person:
         return await cruds_phonebook.get_member_by_name(db, query)
 
@@ -44,6 +45,8 @@ async def request_users(
 
     if query_type == QueryType.association:
         return await cruds_phonebook.get_member_by_association(db, query)
+    print("Error: query_type not found")
+    return None
 
 
 # -------------------------------- Association ------------------------------- #
@@ -136,6 +139,7 @@ async def create_member(
         association_id=association_id,
         role_id=role_id,
         mandate_year=mandate_year,
+        member_id=str(uuid.uuid4()),
     )
     return await cruds_phonebook.add_member(db=db, member=member_model)
 
@@ -203,7 +207,7 @@ async def create_role(
 )
 async def update_role(
     role_id: str,
-    role_update: schemas_phonebook.RoleComplete,
+    role_update: schemas_phonebook.RoleEdit,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
@@ -218,7 +222,7 @@ async def update_role(
 )
 async def delete_role(
     role_id: str,
-    db: AsyncSession,
+    db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """Delete a role."""
@@ -234,7 +238,7 @@ async def delete_role(
     status_code=201,
     tags=[Tags.phonebook],
 )
-async def create_campaigns_logo(
+async def create_association_logo(
     association_id: str,
     image: UploadFile = File(...),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
@@ -276,7 +280,7 @@ async def read_association_logo(
     association_id: str,
 ) -> FileResponse:
     """
-    Get the logo of a campaign list.
+    Get the logo of an association.
     """
 
     return get_file_from_data(
