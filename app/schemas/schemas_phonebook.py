@@ -3,6 +3,10 @@ from pydantic import BaseModel
 from app.schemas import schemas_core
 
 
+class Member(schemas_core.CoreUserSimple):
+    email: str
+
+
 class RoleBase(BaseModel):
     name: str
 
@@ -26,7 +30,7 @@ class AssociationComplete(AssociationBase):
 
 
 class UserReturn(BaseModel):
-    user: schemas_core.CoreUserSimple
+    user: Member
     roles: list[RoleComplete]
     associations: list[AssociationComplete]
 
