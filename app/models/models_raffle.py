@@ -41,6 +41,7 @@ class Tickets(Base):
     id: str = Column(String, primary_key=True, index=True, nullable=False)
     type_id: str = Column(ForeignKey("type_ticket.id"), nullable=False)
     user_id: str = Column(String, nullable=False)  # --> Récupérer sur hyperion
+    group_id: str = Column(String, index=True, nullable=False)
     winning_lot: str = Column(String, nullable=True, index=True)
 
 
