@@ -70,11 +70,13 @@ async def edit_raffle(
     **The user must be an admin to use this endpoint**
     """
 
-    raffle = await cruds_raffle.get_raffle_by_id(db=db, id=raffle_id)
+    raffle = await cruds_raffle.get_raffle_by_id(db=db, raffle_id=raffle_id)
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
 
-    await cruds_raffle.edit_raffle(db=db, raffle_id=id, raffle_update=raffle_update)
+    await cruds_raffle.edit_raffle(
+        db=db, raffle_id=raffle_id, raffle_update=raffle_update
+    )
 
 
 async def delete_raffle(
