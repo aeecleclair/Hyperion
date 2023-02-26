@@ -106,7 +106,7 @@ class TypeTicketComplete(TypeTicketBase):
 
 class TicketEdit(BaseModel):
     type_id: str
-    user_id: str
+    # user_id: str
     winning_lot: int
 
     class Config:
@@ -115,7 +115,7 @@ class TicketEdit(BaseModel):
 
 class TicketBase(BaseModel):
     type_id: str
-    user_id: str
+    # user_id: str
     winning_lot: int
 
 
