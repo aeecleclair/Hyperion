@@ -9,28 +9,29 @@ from app.database import Base
 class Raffle(Base):
     __tablename__ = "raffle"
     id: str = Column(String, primary_key=True, index=True)
-    raffle_name: str = Column(String)
+    name: str = Column(String)
     start_date: datetime = Column(DateTime, nullable=False)
     end_date: datetime = Column(DateTime, nullable=False)
-    group_id: int = Column(Integer)
-    rules: str = Column(String, index=True)
+    group_id: str = Column(String, index=True)
+    description: str = Column(String, index=True)
 
 
 class TypeTicket(Base):
     __tablename__ = "type_ticket"
 
+    price: float = Column(Float)
     id: str = Column(String, primary_key=True, index=True)
-    raffle_id: int = Column(ForeignKey("raffle.id"))
-    rate: float = Column(Float)
     nb_ticket: int = Column(Integer)
+    raffle_id: str = Column(ForeignKey("raffle.id"), index=True)
 
 
 class Lots(Base):
     __tablename__ = "lots"
 
     id: str = Column(String, primary_key=True, index=True)
-    raffle_id: int = Column(ForeignKey("raffle.id"))
+    raffle_id: int = Column(ForeignKey("raffle.id"), index=True)
     description: str = Column(String)
+    quantity: int = Column(Integer)
 
 
 class Tickets(Base):
@@ -38,5 +39,5 @@ class Tickets(Base):
 
     id: str = Column(String, primary_key=True, index=True)
     type_id: int = Column(ForeignKey("type_ticket.id"))
-    # player_id: string --> Récupérer sur hyperion
-    lot_gagnant: int = Column(Integer, nullable=True)
+    # user_id: string --> Récupérer sur hyperion
+    winning_lot: int = Column(Integer, nullable=True, index=True)
