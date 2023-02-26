@@ -78,12 +78,10 @@ async def delete_raffle(
 # Lots
 
 
-async def get_lots(db: AsyncSession, raffle_id: str) -> list[models_raffle.Lots]:
-    """Return all lots from database where raffle ID == raffle_id"""
+async def get_lots(db: AsyncSession) -> list[models_raffle.Lots]:
+    """Return all lots from database"""
 
-    result = await db.execute(select(models_raffle.Lots)).where(
-        models_raffle.Raffle.id == raffle_id
-    )
+    result = await db.execute(select(models_raffle.Lots))
     return result.scalars().all()
 
 
@@ -138,14 +136,10 @@ async def delete_lot(
 # TypeTickets
 
 
-async def get_typeticket(
-    db: AsyncSession, raffle_id: str
-) -> list[models_raffle.TypeTicket]:
-    """Return all typetickets from database where raffle ID == raffle_id"""
+async def get_typeticket(db: AsyncSession) -> list[models_raffle.TypeTicket]:
+    """Return all typetickets from database"""
 
-    result = await db.execute(select(models_raffle.TypeTicket)).where(
-        models_raffle.Raffle.id == raffle_id
-    )
+    result = await db.execute(select(models_raffle.TypeTicket))
     return result.scalars().all()
 
 
@@ -204,12 +198,10 @@ async def delete_typeticket(
 # Tickets
 
 
-async def get_tickets(db: AsyncSession, raffle_id: str) -> list[models_raffle.Lots]:
+async def get_tickets(db: AsyncSession) -> list[models_raffle.Tickets]:
     """Return all tickets from database where raffle ID == raffle_id"""
 
-    result = await db.execute(select(models_raffle.Tickets)).where(
-        models_raffle.Raffle.id == raffle_id
-    )
+    result = await db.execute(select(models_raffle.Tickets))
     return result.scalars().all()
 
 
@@ -261,3 +253,70 @@ async def delete_ticket(
         delete(models_raffle.Tickets).where(models_raffle.Tickets.id == ticket_id)
     )
     await db.commit()
+
+
+# Cash management
+
+
+async def get_users_cash(db: AsyncSession) -> list[models_raffle.Cash]:
+    result = await db.execute(
+        select(models_raffle.Cash).options(selectinload(models_raffle.Cash.user))
+    )
+    return result.scalars().all()
+
+
+async def get_cash_by_id(db: AsyncSession, user_id: str) -> models_raffle.Cash | None:
+    result = await db.execute(
+        select(models_raffle.Cash)
+        .where(models_raffle.Cash.user_id == user_id)
+        .options(selectinload(models_raffle.Cash.user))
+    )
+    return result.scalars().first()
+
+
+async def create_cash_of_user(
+    db: AsyncSession, cash: models_raffle.Cash
+) -> models_raffle.Cash:
+    db.add(cash)
+    try:
+        await db.commit()
+        return cash
+    except IntegrityError as err:
+        await db.rollback()
+        raise ValueError(err)
+
+
+async def add_cash(db: AsyncSession, user_id: str, amount: float):
+    result = await db.execute(
+        select(models_raffle.Cash).where(models_raffle.Cash.user_id == user_id)
+    )
+    balance = result.scalars().first()
+    if balance is not None:
+        await db.execute(
+            update(models_raffle.Cash)
+            .where(models_raffle.Cash.user_id == user_id)
+            .values(user_id=balance.user_id, balance=balance.balance + amount)
+        )
+        try:
+            await db.commit()
+        except IntegrityError:
+            await db.rollback()
+            raise ValueError("Error during cash edition")
+
+
+async def remove_cash(db: AsyncSession, user_id: str, amount: float):
+    result = await db.execute(
+        select(models_raffle.Cash).where(models_raffle.Cash.user_id == user_id)
+    )
+    balance = result.scalars().first()
+    if balance is not None:
+        await db.execute(
+            update(models_raffle.Cash)
+            .where(models_raffle.Cash.user_id == user_id)
+            .values(user_id=balance.user_id, balance=balance.balance - amount)
+        )
+        try:
+            await db.commit()
+        except IntegrityError:
+            await db.rollback()
+            raise ValueError("Error during cash edition")
