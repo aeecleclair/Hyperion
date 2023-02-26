@@ -49,7 +49,9 @@ async def update_advertiser(
 
 async def delete_advertiser(advertiser_id: str, db: AsyncSession):
     await db.execute(
-        delete(models_advert.Advertiser).where(models_advert.Advertiser.id == advertiser_id)
+        delete(models_advert.Advertiser).where(
+            models_advert.Advertiser.id == advertiser_id
+        )
     )
     await db.commit()
 
@@ -98,27 +100,27 @@ async def delete_advert(advert_id: str, db: AsyncSession):
     await db.commit()
 
 
-async def get_tag(db: AsyncSession) -> list[models_advert.Tags]:
-    result = await db.execute(select(models_advert.Tags))
+async def get_tag(db: AsyncSession) -> list[models_advert.Tag]:
+    result = await db.execute(select(models_advert.Tag))
     return result.scalars().all()
 
 
-async def get_tag_by_id(db: AsyncSession, tag_id: str) -> models_advert.Tags | None:
+async def get_tag_by_id(db: AsyncSession, tag_id: str) -> models_advert.Tag | None:
     result = await db.execute(
-        select(models_advert.Tags).where(models_advert.Tags.id == tag_id)
+        select(models_advert.Tag).where(models_advert.Tag.id == tag_id)
     )
     return result.scalars().first()
 
 
-async def get_tag_by_name(db: AsyncSession, tag_name: str) -> models_advert.Tags | None:
+async def get_tag_by_name(db: AsyncSession, tag_name: str) -> models_advert.Tag | None:
     result = await db.execute(
-        select(models_advert.Tags).where(models_advert.Tags.name == tag_name)
+        select(models_advert.Tag).where(models_advert.Tag.name == tag_name)
     )
     return result.scalars().first()
 
 
-async def create_tag(tag: models_advert.Tags, db: AsyncSession) -> models_advert.Tags:
-    db_tag = models_advert.Tags(**tag.dict())
+async def create_tag(tag: models_advert.Tag, db: AsyncSession) -> models_advert.Tag:
+    db_tag = models_advert.Tag(**tag.dict())
     db.add(db_tag)
     try:
         await db.commit()
@@ -131,13 +133,13 @@ async def update_tag(
     tag_id: str, tag_update: schemas_advert.TagUpdate, db: AsyncSession
 ):
     await db.execute(
-        update(models_advert.Tags)
-        .where(models_advert.Tags.id == tag_id)
+        update(models_advert.Tag)
+        .where(models_advert.Tag.id == tag_id)
         .values(**tag_update.dict(exclude_none=True))
     )
     await db.commit()
 
 
 async def delete_tag(tag_id: str, db: AsyncSession):
-    await db.execute(delete(models_advert.Tags).where(models_advert.Tags.id == tag_id))
+    await db.execute(delete(models_advert.Tag).where(models_advert.Tag.id == tag_id))
     await db.commit()

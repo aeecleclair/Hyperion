@@ -114,7 +114,7 @@ client = TestClient(app)  # Create a client to execute tests
 
 
 async def create_user_with_groups(
-    groups: list[GroupType],
+    groups: list[GroupType] | list[str],
     db: AsyncSession,
 ) -> models_core.CoreUser:
     """
@@ -139,10 +139,14 @@ async def create_user_with_groups(
     await cruds_users.create_user(db=db, user=user)
 
     for group in groups:
+        if isinstance(group, GroupType):
+            group_id = group.value
+        else:
+            group_id = group
         await cruds_groups.create_membership(
             db=db,
             membership=models_core.CoreMembership(
-                group_id=group.value,
+                group_id=group_id,
                 user_id=user_id,
             ),
         )

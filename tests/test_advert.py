@@ -11,6 +11,7 @@ from tests.commons import (
     create_user_with_groups,
 )
 
+tag: models_advert.Tag | None = None
 advert: models_advert.Advert | None = None
 advertiser: models_advert.Advertiser | None = None
 group_advertiser: models_core.CoreGroup | None = None
@@ -31,7 +32,6 @@ async def startuptest():
 
     global advertiser
     global group_advertiser
-    global user_advertiser
     async with TestingSessionLocal() as db:
         group_advertiser = models_core.CoreGroup(
             id=str(uuid.uuid4()),
@@ -39,13 +39,15 @@ async def startuptest():
             description="",
         )
         db.add(group_advertiser)
-
         advertiser = models_advert.Advertiser(
             id=str(uuid.uuid4()),
             name=group_advertiser.name,
             group_manager_id=group_advertiser.id,
         )
+        await db.commit()
 
+    global user_advertiser
+    async with TestingSessionLocal() as db:
         user_advertiser = await create_user_with_groups([group_advertiser.id], db=db)
         await db.commit()
 
@@ -61,17 +63,25 @@ async def startuptest():
     token_simple = create_api_access_token(user_simple)
 
     global advert
+    global tag
     async with TestingSessionLocal() as db:
         advert = models_advert.Advert(
             id=str(uuid.uuid4()),
+            advertiser_id=advertiser.id,
             title="Advert",
             content="Example of advert",
             date=datetime.datetime.now(),
-            co_advertisers=[],
-            tags=["Tag1", "Tag2"],
-            advertiser=advertiser,
         )
+
+        tag = models_advert.Tag(id=str(uuid.uuid4()), name="Tag", couleur="Couleur")
+
+        adverts_tags_link = models_advert.AdvertsTagsLink(
+            id=str(uuid.uuid4()), advert_id=advert.id, tag_id=tag.id
+        )
+
         db.add(advert)
+        db.add(tag)
+        db.add(adverts_tags_link)
         await db.commit()
 
 
@@ -85,12 +95,12 @@ def test_get_adverts():
 
 def test_post_advert():
     response = client.post(
-        "/adverts/advertisers/{advertiser_id}",
+        "/advert/adverts",
         json={
-            "name": "Advert2",
-            "content": "2022-10-23T14:00:00Z",
-            "co_advertisers_id": [],
-            "tags": ["Tag1", "Tag2"],
+            "title": "Advert2",
+            "content": "2nd example of advert",
+            "advertiser_id": advertiser.id,
+            "tags": ["Tag"],
         },
         headers={"Authorization": f"Bearer {token_advertiser}"},
     )

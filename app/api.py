@@ -4,6 +4,7 @@ from fastapi import APIRouter
 
 from app.endpoints import (
     admin,
+    advert,
     amap,
     associations,
     auth,
@@ -20,6 +21,7 @@ from app.endpoints import (
 
 api_router = APIRouter()
 api_router.include_router(admin.router)
+api_router.include_router(advert.router)
 api_router.include_router(amap.router)
 api_router.include_router(associations.router)
 api_router.include_router(auth.router)
