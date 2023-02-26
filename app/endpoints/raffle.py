@@ -113,7 +113,7 @@ async def create_lot(
     tags=[Tags.raffle],
 )
 async def create_ticket(
-    lot: schemas_raffle.TicketBase,
+    ticket: schemas_raffle.TicketBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
@@ -122,7 +122,7 @@ async def create_ticket(
 
     **The user must be an admin to use this endpoint**
     """
-    db_ticket = models_raffle.Tickets(id=str(uuid.uuid4()), **lot.dict())
+    db_ticket = models_raffle.Tickets(id=str(uuid.uuid4()), **ticket.dict())
 
     try:
         result = await cruds_raffle.create_ticket(ticket=db_ticket, db=db)
@@ -148,3 +148,79 @@ async def get_raffle(
     """
     raffle = await cruds_raffle.get_raffles(db)
     return raffle
+
+
+@router.get(
+    "/tombola/tickets",
+    response_model=list[schemas_raffle.TicketComplete],
+    status_code=200,
+    tags=[Tags.raffle],
+)
+async def get_tickets(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Return all tickets
+
+    **The user must be an admin to use this endpoint**
+    """
+    tickets = await cruds_raffle.get_tickets(db)
+    return tickets
+
+
+@router.get(
+    "/tombola/type_tickets",
+    response_model=list[schemas_raffle.TypeTicketComplete],
+    status_code=200,
+    tags=[Tags.raffle],
+)
+async def get_type_tickets(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Return all tickets
+
+    **The user must be an admin to use this endpoint**
+    """
+    tickets = await cruds_raffle.get_typeticket(db)
+    return tickets
+
+
+@router.get(
+    "/tombola/lots",
+    response_model=list[schemas_raffle.LotComplete],
+    status_code=200,
+    tags=[Tags.raffle],
+)
+async def get_lots(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Return all lots
+
+    **The user must be an admin to use this endpoint**
+    """
+    lots = await cruds_raffle.get_lots(db)
+    return lots
+
+
+@router.get(
+    "/amap/users/cash",
+    response_model=list[schemas_raffle.CashComplete],
+    status_code=200,
+    tags=[Tags.raffle],
+)
+async def get_users_cash(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Get cash from all users.
+
+    **The user must be a member of the group AMAP to use this endpoint**
+    """
+    cash = await cruds_raffle.get_users_cash(db)
+    return cash
