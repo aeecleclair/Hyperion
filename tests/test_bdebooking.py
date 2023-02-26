@@ -171,8 +171,17 @@ def test_edit_room():
 
 
 def test_delete_room():
+    # create a room to delete
+    response = client.post(
+        "/bdebooking/rooms",
+        json={"name": "Local JE"},
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 201
+    room_id = response.json()["id"]
+
     response = client.delete(
-        f"/bdebooking/rooms/{room.id}",
+        f"/bdebooking/rooms/{room_id}",
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 204
