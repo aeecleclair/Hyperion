@@ -40,10 +40,39 @@ class RequestUserReturn(BaseModel):
     class Config:
         orm_mode = True
 
-
-class RoleReturn(BaseModel):
     name: str
+
+
+class AssociationBase(BaseModel):
+    """Base schema for  association"""
+
+    name: str
+
+
+class AssociationComplete(AssociationBase):
     id: str
+
+    class Config:
+        orm_mode = True
+
+
+class RequestUserReturn(BaseModel):
+    user: schemas_core.CoreUserSimple
+    id: str
+    roles: list[RoleComplete]
+    associations: list[AssociationComplete]
+
+
+class AssociationMemberBase(BaseModel):
+    user_id: str
+    role: str
+
+    class Config:
+        orm_mode = True
+
+
+class AssociationMemberComplete(AssociationMemberBase):
+    user: schemas_core.CoreUserSimple
 
     class Config:
         orm_mode = True
