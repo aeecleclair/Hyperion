@@ -79,53 +79,53 @@ async def create_typeticket(
         raise HTTPException(status_code=422, detail=str(error))
 
 
-# création d'un nouveau lot
+# create a lot
 @router.post(
-    "/tombola/type_ticket",
-    response_model=schemas_raffle.LotComplete,
+    "/tombola/lot",
+    response_model=schemas_raffle.LotEdit,
     status_code=201,
     tags=[Tags.raffle],
 )
-async def create_type_ticket(
+async def create_lot(
     lot: schemas_raffle.LotBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.association)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
-    Create a new lot
+    Create a new raffle
 
     **The user must be a member of a association to use this endpoint**
     """
     db_lot = models_raffle.Lots(id=str(uuid.uuid4()), **lot.dict())
 
     try:
-        result = await cruds_raffle.create_lot(product=db_lot, db=db)
+        result = await cruds_raffle.create_lot(lot=db_lot, db=db)
         return result
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
 
-# création d'un nouveau type_ticket
+# create a ticket
 @router.post(
-    "/tombola/type_ticket",
-    response_model=schemas_raffle.TypeTicketComplete,
+    "/tombola/ticket",
+    response_model=schemas_raffle.TicketEdit,
     status_code=201,
-    tags=[Tags.amap],
+    tags=[Tags.raffle],
 )
-async def create_typeticket(
-    typeticket: schemas_raffle.TypeTicketBase,
+async def create_ticket(
+    lot: schemas_raffle.LotBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.association)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
-    Create a new typeticket
+    Create a new raffle
 
-    **The user must be a member of the group AMAP to use this endpoint**
+    **The user must be a member of a association to use this endpoint**
     """
-    db_typeticket = models_raffle.TypeTicket(id=str(uuid.uuid4()), **typeticket.dict())
+    db_ticket = models_raffle.Tickets(id=str(uuid.uuid4()), **lot.dict())
 
     try:
-        result = await cruds_raffle.create_typeticket(product=db_typeticket, db=db)
+        result = await cruds_raffle.create_ticket(ticket=db_ticket, db=db)
         return result
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
