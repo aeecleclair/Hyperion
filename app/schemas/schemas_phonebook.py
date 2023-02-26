@@ -40,35 +40,10 @@ class RequestUserReturn(BaseModel):
     class Config:
         orm_mode = True
 
-    name: str
-
-
-class AssociationBase(BaseModel):
-    """Base schema for  association"""
-
-    name: str
-
-
-class AssociationComplete(AssociationBase):
-    id: str
-
-    class Config:
-        orm_mode = True
-
-
-class RequestUserReturn(BaseModel):
-    user: schemas_core.CoreUserSimple
-    id: str
-    roles: list[RoleComplete]
-    associations: list[AssociationComplete]
-
 
 class AssociationMemberBase(BaseModel):
     user_id: str
     role: str
-
-    class Config:
-        orm_mode = True
 
 
 class AssociationMemberComplete(AssociationMemberBase):
@@ -78,24 +53,15 @@ class AssociationMemberComplete(AssociationMemberBase):
         orm_mode = True
 
 
-class MemberEdit(BaseModel):
+class AssociationMemberEdit(BaseModel):
     role_id: str | None = None
     association_id: str | None = None
     mandate_year: int | None = None
-
-    class Config:
-        orm_mode = True
 
 
 class RoleEdit(BaseModel):
     name: str | None = None
 
-    class Config:
-        orm_mode = True
-
 
 class AssociationEdit(BaseModel):
     name: str | None = None
-
-    class Config:
-        orm_mode = True

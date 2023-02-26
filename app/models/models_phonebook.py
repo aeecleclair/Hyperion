@@ -22,14 +22,14 @@ class Association(Base):
 class Member(Base):
     __tablename__ = "phonebook_member"
 
-    user_id: str = Column(
-        String, ForeignKey("core_user.id"), primary_key=True, index=True
-    )
+    user_id: str = Column(String, ForeignKey("core_user.id"), nullable=False)
     association_id: str = Column(
-        String, ForeignKey("phonebook_association.id"), primary_key=True
+        String, ForeignKey("phonebook_association.id"), nullable=False
     )
     role_id: str = Column(String, ForeignKey("phonebook_role.id"))
 
-    mandate_year: int = Column(Integer, primary_key=True, nullable=False)
+    mandate_year: int = Column(Integer, nullable=False)
 
     user: CoreUser = relationship("CoreUser")
+
+    member_id: str = Column(String, primary_key=True, index=True)

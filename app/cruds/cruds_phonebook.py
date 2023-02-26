@@ -77,7 +77,7 @@ async def get_association_by_id(
 
 
 async def edit_association(
-    association_update: schemas_phonebook.AssociationComplete, db: AsyncSession, id: str
+    association_update: schemas_phonebook.AssociationEdit, db: AsyncSession, id: str
 ):
     await db.execute(
         update(models_phonebook.Association)
@@ -107,44 +107,32 @@ async def add_member(db: AsyncSession, member: models_phonebook.Member):
 
 
 async def get_member_by_id(
-    db: AsyncSession, association_id: str, mandate_year: int, user_id: str
+    db: AsyncSession, member_id: str
 ) -> models_phonebook.Member | None:
     result = await db.execute(
         select(models_phonebook.Member).where(
-            association_id == models_phonebook.Member.association_id
-            and mandate_year == models_phonebook.Member.mandate_year
-            and user_id == models_phonebook.Member.user_id
+            member_id == models_phonebook.Member.member_id
         )
     )
     return result.scalars().first()
 
 
-async def delete_member(
-    db: AsyncSession, association_id: str, mandate_year: int, user_id: str
-):
+async def delete_member(db: AsyncSession, member_id: str):
     await db.execute(
         delete(models_phonebook.Member).where(
-            association_id == models_phonebook.Member.association_id
-            and mandate_year == models_phonebook.Member.mandate_year
-            and user_id == models_phonebook.Member.user_id
+            member_id == models_phonebook.Member.member_id
         )
     )
 
 
 async def edit_member(
     db: AsyncSession,
-    member_update: schemas_phonebook.AssociationMemberComplete,
-    association_id: str,
-    mandate_year: int,
-    user_id: str,
+    member_update: schemas_phonebook.AssociationMemberEdit,
+    member_id: str,
 ):
     await db.execute(
         update(models_phonebook.Member)
-        .where(
-            association_id == models_phonebook.Member.association_id
-            and mandate_year == models_phonebook.Member.mandate_year
-            and user_id == models_phonebook.Member.user_id
-        )
+        .where(member_id == models_phonebook.Member.member_id)
         .values(member_update)
     )
     await db.commit()

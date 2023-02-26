@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -61,7 +63,7 @@ async def create_association(
     **The user must be a member of the group CAA to use this endpoint**
 
     """
-    association = models_phonebook.Association(name=name)
+    association = models_phonebook.Association(name=name, id=str(uuid.uuid4()))
     return await cruds_phonebook.add_association(db=db, association=association)
 
 
@@ -95,7 +97,7 @@ async def delete_association(
 )
 async def update_association(
     association_id: str,
-    association_update: schemas_phonebook.AssociationComplete,
+    association_update: schemas_phonebook.AssociationEdit,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
@@ -116,38 +118,46 @@ async def update_association(
 # ---------------------------------- Member ---------------------------------- #
 @router.post(
     "/phonebook/members/",
-    response_model=schemas_phonebook.RoleComplete,
+    response_model=schemas_phonebook.AssociationMemberComplete,
     status_code=200,
     tags=[Tags.phonebook],
 )
 async def create_member(
-    member: models_phonebook.Member, db: AsyncSession = Depends(get_db)
+    association_id: str,
+    mandate_year: int,
+    role_id: str,
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    requesting_user=Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """Create a member."""
-    return await cruds_phonebook.add_member(db=db, member=member)
+    member_model = models_phonebook.Member(
+        user_id=user_id,
+        association_id=association_id,
+        role_id=role_id,
+        mandate_year=mandate_year,
+    )
+    return await cruds_phonebook.add_member(db=db, member=member_model)
 
 
 @router.patch(
     "/phonebook/members/",
-    response_model=list[schemas_phonebook.RoleComplete],
+    response_model=list[schemas_phonebook.AssociationMemberComplete],
     status_code=200,
     tags=[Tags.phonebook],
 )
 async def update_member(
-    member_update: schemas_phonebook.AssociationMemberComplete,
-    mandate_year: int,
-    association_id: str,
+    member_update: schemas_phonebook.AssociationMemberEdit,
+    member_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """Update the members of the phonebook."""
-    member = cruds_phonebook.get_member_by_id(db, association_id, mandate_year, user.id)
+    member = cruds_phonebook.get_member_by_id(db, member_id)
     if member is None:
         raise HTTPException(status_code=404, detail="Member not found")
 
-    return await cruds_phonebook.edit_member(
-        db, member_update, association_id, mandate_year, user.id
-    )
+    return await cruds_phonebook.edit_member(db, member_update, member_id)
 
 
 @router.delete(
@@ -156,19 +166,16 @@ async def update_member(
     tags=[Tags.phonebook],
 )
 async def delete_member(
-    mandate_year: int,
-    association_id: str,
+    member_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """Delete a member from the phonebook."""
-    member = cruds_phonebook.get_member_by_id(db, association_id, mandate_year, user.id)
+    member = cruds_phonebook.get_member_by_id(db, member_id)
     if member is None:
         raise HTTPException(status_code=404, detail="Member not found")
 
-    return await cruds_phonebook.delete_member(
-        db, association_id, mandate_year, user.id
-    )
+    return await cruds_phonebook.delete_member(db, member_id)
 
 
 # ----------------------------------- Role ----------------------------------- #
@@ -179,11 +186,12 @@ async def delete_member(
     tags=[Tags.phonebook],
 )
 async def create_role(
-    role: models_phonebook.Role,
+    role_name: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """Create a role."""
+    role = models_phonebook.Role(name=role_name, id=str(uuid.uuid4()))
     return await cruds_phonebook.create_role(db=db, role=role)
 
 
