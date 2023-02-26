@@ -42,7 +42,7 @@ async def create_raffle(
     """
     Create a new raffle
 
-    **The user must be a member of a association to use this endpoint**
+    **The user must be an admin to use this endpoint**
     """
     db_raffle = models_raffle.Raffle(id=str(uuid.uuid4()), **raffle.dict())
 
@@ -68,7 +68,7 @@ async def create_typeticket(
     """
     Create a new typeticket
 
-    **The user must be a member of a association to use this endpoint**
+    **The user must be a member of an admin to use this endpoint**
     """
     db_typeticket = models_raffle.TypeTicket(id=str(uuid.uuid4()), **typeticket.dict())
 
@@ -92,9 +92,9 @@ async def create_lot(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
-    Create a new raffle
+    Create a new lot
 
-    **The user must be a member of a association to use this endpoint**
+    **The user must be an admin to use this endpoint**
     """
     db_lot = models_raffle.Lots(id=str(uuid.uuid4()), **lot.dict())
 
@@ -113,14 +113,14 @@ async def create_lot(
     tags=[Tags.raffle],
 )
 async def create_ticket(
-    lot: schemas_raffle.LotBase,
+    lot: schemas_raffle.TicketBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
-    Create a new raffle
+    Create a new ticket
 
-    **The user must be a member of a association to use this endpoint**
+    **The user must be an admin to use this endpoint**
     """
     db_ticket = models_raffle.Tickets(id=str(uuid.uuid4()), **lot.dict())
 
@@ -129,3 +129,22 @@ async def create_ticket(
         return result
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
+
+
+@router.get(
+    "/tombola/raffle",
+    response_model=list[schemas_raffle.RaffleComplete],
+    status_code=200,
+    tags=[Tags.raffle],
+)
+async def get_raffle(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Return all raffles
+
+    **The user must be an admin to use this endpoint**
+    """
+    raffle = await cruds_raffle.get_raffles(db)
+    return raffle
