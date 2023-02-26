@@ -56,14 +56,20 @@ class WinnerComplete(UserComplete):
 
 class LotBase(BaseModel):
     description: str
-    raffle_name: str
+    raffle_id: str
+    quantity: int
+
+    class Config:
+        orm_mode = True
 
 
 class LotEdit(BaseModel):
-    id: str
     raffle_id: str
     description: str
     quantity: int
+
+    class Config:
+        orm_mode = True
 
 
 class LotComplete(LotBase):
@@ -78,11 +84,17 @@ class TypeTicketBase(BaseModel):
     nb_ticket: int
     raffle_id: str
 
+    class Config:
+        orm_mode = True
+
 
 class TypeTicketEdit(BaseModel):
     raffle_id: str
     price: float
     nb_ticket: int
+
+    class Config:
+        orm_mode = True
 
 
 class TypeTicketComplete(TypeTicketBase):
@@ -93,7 +105,22 @@ class TypeTicketComplete(TypeTicketBase):
 
 
 class TicketEdit(BaseModel):
-    id: str
     type_id: str
     user_id: str
     winning_lot: int
+
+    class Config:
+        orm_mode = True
+
+
+class TicketBase(BaseModel):
+    type_id: str
+    user_id: str
+    winning_lot: int
+
+
+class TicketComplete(BaseModel):
+    id: str
+
+    class Config:
+        orm_mode = True
