@@ -178,7 +178,11 @@ async def delete_member(
     status_code=200,
     tags=[Tags.phonebook],
 )
-async def create_role(role: models_phonebook.Role, db: AsyncSession = Depends(get_db)):
+async def create_role(
+    role: models_phonebook.Role,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
+):
     """Create a role."""
     return await cruds_phonebook.create_role(db=db, role=role)
 
@@ -193,6 +197,7 @@ async def update_role(
     role_id: str,
     role_update: schemas_phonebook.RoleComplete,
     db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """Update a role."""
     return await cruds_phonebook.edit_role(db=db, role_update=role_update, id=role_id)
@@ -203,7 +208,11 @@ async def update_role(
     status_code=200,
     tags=[Tags.phonebook],
 )
-async def delete_role(role_id: str, db: AsyncSession):
+async def delete_role(
+    role_id: str,
+    db: AsyncSession,
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
+):
     """Delete a role."""
     return await cruds_phonebook.delete_role(db=db, id=role_id)
 
