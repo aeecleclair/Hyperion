@@ -17,6 +17,26 @@ class RoleComplete(RoleBase):
         orm_mode = True
 
 
+class AssociationBase(BaseModel):
+    """Base schema for  association"""
+
+    name: str
+
+
+class AssociationComplete(RoleBase):
+    id: str
+
+    class Config:
+        orm_mode = True
+
+
+class RequestUserReturn(BaseModel):
+    user: schemas_core.CoreUserSimple
+    id: str
+    roles: list[RoleComplete]
+    associations: list[AssociationComplete]
+
+
 class RoleReturn(BaseModel):
     name: str
     id: str
@@ -40,7 +60,7 @@ class AssociationMemberComplete(AssociationMemberBase):
         orm_mode = True
 
 
-class AssociationBase(BaseModel):
+class AssociationMembersBase(BaseModel):
     """Base schema for a list."""
 
     name: str
