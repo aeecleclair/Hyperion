@@ -3,10 +3,8 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.cruds import cruds_users
 from app.models import models_phonebook
 from app.schemas import schemas_phonebook
-from app.utils.tools import fuzzy_search_user
 
 router = APIRouter()
 

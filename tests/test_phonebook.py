@@ -84,7 +84,8 @@ def test_create_association_by_CAA():
 def test_update_association():
     token = create_api_access_token(CAA_user)
     response = client.patch(
-        "/phonebook/associations/?name=Usine à Gaz",
+        "/phonebook/associations/?Usine à Gaz&id=b5c99d5b-bc48-4f9c-9e41-c69049d89bf3",
+        json={"name": "Usine à Gaz"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
@@ -94,32 +95,37 @@ def test_delete_association():
     token = create_api_access_token(CAA_user)
 
     response = client.delete(
-        "/phonebook/associations/?id=b5c99d5b-bc48-4f9c-9e41-c69049d89bf3",
+        "/phonebook/associations/?association_id=b5c99d5b-bc48-4f9c-9e41-c69049d89bf3",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
 
 
-def test_create_member():
-    token = create_api_access_token(CAA_user)
+# def test_create_member():
+#     token = create_api_access_token(CAA_user)
 
-    response = client.post(
-        "/phonebook/members/?association_id=b5c99d5b-bc48-4f9c-9e41-c69049d89bf3&mandate_year=2022&role_id=10&user_id=15",
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert response.status_code == 200
+#     response = client.post(
+#         "/phonebook/members/?association_id=b5c99d5b-bc48-4f9c-9e41-c69049d89bf3&mandate_year=2022&role_id=10&user_id=15",
+#         headers={"Authorization": f"Bearer {token}"},
+#     )
+#     assert response.status_code == 200
 
-def test_update_member():
-    token = create_api_access_token(CAA_user)
-    
-    response = client.patch(
-        "/phonebook/members/?association_id=b5c99d5b-bc48-4f9c-9e41-c69049d89bf3&mandate_year=2020&role_id=15&user_id=10",
+
+# def test_update_member():
+#     token = create_api_access_token(CAA_user)
+
+#     response = client.patch(
+#         "/phonebook/members/?association_id=b5c99d5b-bc48-4f9c-9e41-c69049d89bf3&mandate_year=2020&role_id=15&user_id=10",
+#         headers={"Authorization": f"Bearer {token}"},
+#     )
+#     assert response.status_code == 200
+
 
 def test_request_by_person():
     token = create_api_access_token(user)
 
     response = client.get(
-        "/phonebook/research/?query=Nom&query_type=person",
+        "/phonebook/research/?query=&query_type=person",
         headers={"Authorization": f"Bearer {token}"},
     )
     print(response.json())

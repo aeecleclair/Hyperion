@@ -12,7 +12,7 @@ from app.dependencies import (
     is_user_a_member_of,
 )
 from app.models import models_core, models_phonebook
-from app.schemas import schemas_core, schemas_phonebook
+from app.schemas import schemas_phonebook
 from app.utils.tools import fuzzy_search_user, get_file_from_data, save_file_as_data
 from app.utils.types import standard_responses
 from app.utils.types.groups_type import GroupType
@@ -25,7 +25,7 @@ router = APIRouter()
 # --------------------------------- Research --------------------------------- #
 @router.get(
     "/phonebook/research/",
-    response_model=list[list[schemas_phonebook.UserReturn]],
+    response_model=list[schemas_phonebook.UserReturn],
     status_code=200,
     tags=[Tags.phonebook],
 )
@@ -34,11 +34,13 @@ async def request_users(
     db: AsyncSession = Depends(get_db),
     query_type: QueryType = QueryType.person,
     user: models_core.CoreUser = Depends(is_user_a_member),
-) -> list[schemas_phonebook.UserReturn] | list[schemas_core.CoreUser] | None:
+):
     """Research users in the database by name, role or association."""
     print(f"---> {query_type} : {query}")
     if query_type == QueryType.person:
+        print("---> {jsfdjnscdnjsdonqcsnoqcson}")
         users = await cruds_users.get_users(db)
+        print(type(users[0]))
         found_users = fuzzy_search_user(query, users)
 
         ret = []
@@ -86,7 +88,6 @@ async def request_users(
 # -------------------------------- Association ------------------------------- #
 @router.post(
     "/phonebook/associations/",
-    response_model=list[schemas_phonebook.AssociationComplete],
     status_code=200,
     tags=[Tags.phonebook],
 )
@@ -128,7 +129,6 @@ async def delete_association(
 
 @router.patch(
     "/phonebook/associations/",
-    response_model=schemas_phonebook.AssociationComplete,
     status_code=200,
     tags=[Tags.phonebook],
 )
