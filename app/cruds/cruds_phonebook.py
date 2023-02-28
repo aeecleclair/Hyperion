@@ -37,7 +37,7 @@ async def edit_association(
     await db.execute(
         update(models_phonebook.Association)
         .where(id == models_phonebook.Association.id)
-        .values(association_update)
+        .values(**association_update.dict(exclude_none=True))
     )
 
 

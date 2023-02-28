@@ -105,30 +105,8 @@ async def create_association(
     return await cruds_phonebook.add_association(db=db, association=association)
 
 
-@router.delete(
-    "phonebook/associations/",
-    status_code=200,
-    tags=[Tags.phonebook],
-)
-async def delete_association(
-    association_id: str,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
-):
-    """Delete an association.
-
-    **The user must be a member of the group CAA to use this endpoint**
-
-    """
-    association = cruds_phonebook.get_association_by_id(db, association_id)
-    if association is None:
-        raise HTTPException(status_code=404, detail="Association not found")
-
-    return await cruds_phonebook.delete_association(db=db, id=association_id)
-
-
 @router.patch(
-    "/phonebook/associations/",
+    "/phonebook/associations/{association_id}",
     status_code=200,
     tags=[Tags.phonebook],
 )
@@ -143,7 +121,8 @@ async def update_association(
     **The user must be a member of the group CAA to use this endpoint**
 
     """
-    association = cruds_phonebook.get_association_by_id(db, association_id)
+    association = await cruds_phonebook.get_association_by_id(db, association_id)
+    print("Association : ", association)
     if association is None:
         raise HTTPException(status_code=404, detail="Association not found")
 
@@ -152,10 +131,32 @@ async def update_association(
     )
 
 
+@router.delete(
+    "/phonebook/associations/{association_id}",
+    status_code=200,
+    tags=[Tags.phonebook],
+)
+async def delete_association(
+    association_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
+):
+    """Delete an association.
+
+    **The user must be a member of the group CAA to use this endpoint**
+
+    """
+    association = await cruds_phonebook.get_association_by_id(db, association_id)
+    if association is None:
+        raise HTTPException(status_code=404, detail="Association not found")
+
+    return await cruds_phonebook.delete_association(db=db, id=association_id)
+
+
 # ---------------------------------- Member ---------------------------------- #
 @router.post(
     "/phonebook/members/",
-    response_model=schemas_phonebook.AssociationMemberComplete,
+    # response_model=schemas_phonebook.AssociationMemberComplete,
     status_code=200,
     tags=[Tags.phonebook],
 )
@@ -179,19 +180,19 @@ async def create_member(
 
 
 @router.patch(
-    "/phonebook/members/",
-    response_model=list[schemas_phonebook.AssociationMemberComplete],
+    "/phonebook/members/{member_id}",
+    # response_model=list[schemas_phonebook.AssociationMemberComplete],
     status_code=200,
     tags=[Tags.phonebook],
 )
 async def update_member(
-    member_update: schemas_phonebook.AssociationMemberEdit,
     member_id: str,
+    member_update: schemas_phonebook.AssociationMemberEdit,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """Update the members of the phonebook."""
-    member = cruds_phonebook.get_member_by_id(db, member_id)
+    member = await cruds_phonebook.get_member_by_id(db, member_id)
     if member is None:
         raise HTTPException(status_code=404, detail="Member not found")
 
@@ -199,7 +200,7 @@ async def update_member(
 
 
 @router.delete(
-    "/phonebook/members/",
+    "/phonebook/members/{member_id}",
     status_code=200,
     tags=[Tags.phonebook],
 )
@@ -209,7 +210,7 @@ async def delete_member(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """Delete a member from the phonebook."""
-    member = cruds_phonebook.get_member_by_id(db, member_id)
+    member = await cruds_phonebook.get_member_by_id(db, member_id)
     if member is None:
         raise HTTPException(status_code=404, detail="Member not found")
 

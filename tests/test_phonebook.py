@@ -1,6 +1,5 @@
 import uuid
 
-from app.cruds import cruds_phonebook
 from app.dependencies import get_settings
 from app.main import app
 from app.models import models_core, models_phonebook
@@ -17,6 +16,32 @@ CAA_user: models_core.CoreUser | None = None
 association: models_phonebook.Association | None = None
 role: models_phonebook.Role | None = None
 member: models_phonebook.Member | None = None
+member2: models_phonebook.Member | None = None
+
+id_asso_1 = str(uuid.uuid4())
+id_asso_2 = str(uuid.uuid4())
+id_asso_3 = str(uuid.uuid4())
+
+name_asso_1 = "Association1"
+name_asso_2 = "Association2"
+name_asso_3 = "Association3"
+
+id_role_1 = str(uuid.uuid4())
+id_role_2 = str(uuid.uuid4())
+name_role_1 = "Role1"
+name_role_2 = "Role2"
+
+id_member_1 = str(uuid.uuid4())
+id_member_2 = str(uuid.uuid4())
+name_member_1 = "Member1"
+name_member_2 = "Member2"
+first_name_role_1 = "Prénom1"
+first_name_role_2 = "Prénom2"
+email_member_1 = "mail1"
+email_member_2 = "mail2"
+nickname_member_1 = "pseudo1"
+nickname_member_2 = "pseudo2"
+
 
 settings = app.dependency_overrides.get(get_settings, get_settings)()
 
@@ -27,37 +52,61 @@ async def startuptest():
 
     async with TestingSessionLocal() as db:
         user = await create_user_with_groups([GroupType.student], db=db)
+        user_2 = await create_user_with_groups([GroupType.student], db=db)
+
         CAA_user = await create_user_with_groups([GroupType.CAA], db=db)
 
         association = models_phonebook.Association(
-            id=str(uuid.uuid4()),
-            name="Association1",
+            id=id_asso_1,
+            name=name_asso_1,
         )
         association2 = models_phonebook.Association(
-            id="b5c99d5b-bc48-4f9c-9e41-c69049d89bf3",
-            name="Association2",
+            id=id_asso_2,
+            name=name_asso_2,
+        )
+        association3 = models_phonebook.Association(
+            id=id_asso_3,
+            name=name_asso_3,
         )
 
-        role = models_phonebook.Role(id=str(uuid.uuid4()), name="Role1")
-        role2 = models_phonebook.Role(id=str(uuid.uuid4()), name="Role2")
+        role = models_phonebook.Role(id=id_role_1, name=name_role_1)
+        role2 = models_phonebook.Role(id=id_role_2, name=name_role_2)
 
-        user.name = "Nom"
-        user.firstname = "Prénom"
-        user.nickname = "Pseudo"
-        user.id = str(uuid.uuid4())
-        user.email = "test.rate@ecl21.ec-lyon.fr"
+        user.name = name_member_1
+        user_2.name = name_member_2
+
+        user.firstname = first_name_role_1
+        user_2.firstname = first_name_role_2
+
+        user.nickname = nickname_member_1
+        user_2.nickname = nickname_member_2
+
+        user.email = email_member_1
+        user_2.email = email_member_2
 
         member = models_phonebook.Member(
             user_id=user.id,
             role_id=role.id,
             mandate_year=2021,
-            member_id=str(uuid.uuid4()),
-            association_id=association.id,
+            member_id=id_member_1,
+            association_id=id_asso_1,
+        )
+
+        member2 = models_phonebook.Member(
+            user_id=user_2.id,
+            role_id=role2.id,
+            mandate_year=2021,
+            member_id=id_member_2,
+            association_id=id_asso_1,
         )
 
         db.add(association)
+        db.add(association2)
+        db.add(association3)
         db.add(role)
+        db.add(role2)
         db.add(member)
+        db.add(member2)
         await db.commit()
 
 
@@ -83,8 +132,9 @@ def test_create_association_by_CAA():
 
 def test_update_association():
     token = create_api_access_token(CAA_user)
+
     response = client.patch(
-        "/phonebook/associations/?Usine à Gaz&id=b5c99d5b-bc48-4f9c-9e41-c69049d89bf3",
+        f"/phonebook/associations/{id_asso_2}",
         json={"name": "Usine à Gaz"},
         headers={"Authorization": f"Bearer {token}"},
     )
@@ -95,30 +145,32 @@ def test_delete_association():
     token = create_api_access_token(CAA_user)
 
     response = client.delete(
-        "/phonebook/associations/?association_id=b5c99d5b-bc48-4f9c-9e41-c69049d89bf3",
+        f"/phonebook/associations/{id_asso_2}",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
 
 
-# def test_create_member():
-#     token = create_api_access_token(CAA_user)
+def test_create_member():
+    token = create_api_access_token(CAA_user)
 
-#     response = client.post(
-#         "/phonebook/members/?association_id=b5c99d5b-bc48-4f9c-9e41-c69049d89bf3&mandate_year=2022&role_id=10&user_id=15",
-#         headers={"Authorization": f"Bearer {token}"},
-#     )
-#     assert response.status_code == 200
+    response = client.post(
+        f"/phonebook/members/?association_id={id_asso_1}&mandate_year=2022&role_id={id_role_1}&user_id={str(uuid.uuid4())}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
 
 
-# def test_update_member():
-#     token = create_api_access_token(CAA_user)
+def test_update_member():
+    print("-->", id_member_1)
+    token = create_api_access_token(CAA_user)
 
-#     response = client.patch(
-#         "/phonebook/members/?association_id=b5c99d5b-bc48-4f9c-9e41-c69049d89bf3&mandate_year=2020&role_id=15&user_id=10",
-#         headers={"Authorization": f"Bearer {token}"},
-#     )
-#     assert response.status_code == 200
+    response = client.patch(
+        "/phonebook/members/{id_member_1}",
+        json={"role_id": id_role_2},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
 
 
 def test_request_by_person():
@@ -129,4 +181,5 @@ def test_request_by_person():
         headers={"Authorization": f"Bearer {token}"},
     )
     print(response.json())
+    assert response.status_code == 200
     assert response.status_code == 200
