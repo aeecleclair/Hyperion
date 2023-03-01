@@ -76,3 +76,13 @@ class Cash(Base):
     user_id: str = Column(String, ForeignKey("core_user.id"), primary_key=True)
     user: CoreUser = relationship("CoreUser")
     balance: float = Column(Float, nullable=False)
+
+
+class AmapInformation(Base):
+    __tablename__ = "amap_information"
+
+    # unique_id should always be `information`
+    unique_id: str = Column(String, primary_key=True, index=True)
+    manager: str = Column(String, nullable=False)
+    link: str = Column(String, nullable=False)
+    description: str = Column(String, nullable=False)
