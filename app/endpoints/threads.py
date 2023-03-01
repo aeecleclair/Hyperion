@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.cruds import cruds_threads
 from app.dependencies import get_db, is_user_a_member
 from app.models import models_core
-from app.schemas import schemas_threads
+from app.schemas import schemas_threads, schemas_core
 from app.utils.types.tags import Tags
 from app.utils.types.thread_permissions_types import ThreadPermission
 
@@ -21,7 +21,11 @@ async def get_user_threads(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    return list((await cruds_threads.get_user_threads(db, user.id)).union(await cruds_threads.get_public_threads(db)))
+    return list(
+        (await cruds_threads.get_user_threads(db, user.id)).union(
+            await cruds_threads.get_public_threads(db)
+        )
+    )
 
 
 @router.post(
@@ -92,6 +96,25 @@ async def add_user_to_thread(
     )
 
 
+@router.delete(
+    "/threads/{thread_id}/users/{user_id}", status_code=204, tags=[Tags.threads]
+)
+async def remove_user_from_thread(
+    thread_id: str,
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    thread_member = await cruds_threads.get_thread_member_from_base(
+        db, schemas_threads.ThreadMemberBase(thread_id=thread_id, user_id=user.id)
+    )
+    if thread_member is None or not thread_member.has_permission(
+        ThreadPermission.REMOVE_MEMBERS
+    ):
+        raise HTTPException(403, "You cannot do that")
+    await cruds_threads.remove_user_from_thread(db, thread_id, user_id)
+
+
 @router.get(
     "/threads/{thread_id}/messages",
     response_model=list[schemas_threads.ThreadMessage],
@@ -103,13 +126,14 @@ async def get_thread_messages(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    thread_member = await cruds_threads.get_thread_member_from_base(
-        db, schemas_threads.ThreadMemberBase(thread_id=thread_id, user_id=user.id)
-    )
-    if thread_member is None:
-        raise HTTPException(404, "This member is not from that thread")
-    # TODO : uncomment the line
-    # return thread_member.thread.messages
+    thread = await cruds_threads.get_thread_by_id(db, thread_id)
+    if not thread.is_public:
+        thread_member = await cruds_threads.get_thread_member_from_base(
+            db, schemas_threads.ThreadMemberBase(thread_id=thread_id, user_id=user.id)
+        )
+        if thread_member is None:
+            raise HTTPException(403, "This member is not from that thread")
+    return await cruds_threads.get_messages_from_thread(db, thread_id)
 
 
 @router.post(

@@ -21,12 +21,10 @@ class Thread(Base):
     creation_time: datetime = Column(DateTime(timezone=True), default=func.now())
     image: str | None = Column(String)
 
-    members: list[models_core.CoreUser] = relationship(
-        "CoreUser", secondary="thread_member"
-    )
-    messages: list[ThreadMessage] = relationship(
+    members: list[ThreadMember] = relationship("ThreadMember", back_populates="thread")
+    """messages: list[ThreadMessage] = relationship(
         "ThreadMessage", back_populates="thread"
-    )
+    )"""
 
 
 class ThreadMember(Base):
@@ -37,7 +35,7 @@ class ThreadMember(Base):
     permissions: int = Column(Integer)
 
     user: models_core.CoreUser = relationship("CoreUser", viewonly=True)
-    thread: Thread = relationship("Thread")
+    thread: Thread = relationship("Thread", viewonly=True)
 
     @hybrid_method
     def has_permission(self, permission: int) -> bool:
@@ -55,4 +53,4 @@ class ThreadMessage(Base):
     timestamp: datetime = Column(DateTime(timezone=True), default=func.now())
 
     author: models_core.CoreUser = relationship("CoreUser")
-    thread: Thread = relationship("Thread", back_populates="messages")
+    # thread: Thread = relationship("Thread", back_populates="messages")

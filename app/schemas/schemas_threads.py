@@ -4,7 +4,7 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-from app.schemas.schemas_core import CoreUser
+from app.schemas.schemas_core import CoreUser, CoreUserSimple
 
 
 class ThreadBase(BaseModel):
@@ -44,14 +44,15 @@ class UserWithPermissions(BaseModel):
 
 class ThreadMember(ThreadMemberBase):
     permissions: int
+    user: CoreUserSimple
 
     class Config:
         orm_mode = True
 
 
 class ThreadMessageBase(BaseModel):
-    content: str
-    image: str
+    content: str | None
+    image: str | None
 
     class Config:
         orm_mode = True

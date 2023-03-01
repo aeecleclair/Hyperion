@@ -39,13 +39,13 @@ async def create_thread(
 
 
 async def get_public_threads(db: AsyncSession) -> set[models_thread.Thread]:
-    result = await db.execute(select(models_thread.Thread).where(models_thread.Thread.is_public))
+    result = await db.execute(
+        select(models_thread.Thread).where(models_thread.Thread.is_public)
+    )
     return set(result.scalars().all())
 
 
-async def get_user_threads(
-    db: AsyncSession, user_id: str
-) -> set[models_thread.Thread]:
+async def get_user_threads(db: AsyncSession, user_id: str) -> set[models_thread.Thread]:
     result = await db.execute(
         select(models_thread.ThreadMember)
         .where(models_thread.ThreadMember.user_id == user_id)
@@ -60,13 +60,33 @@ async def get_thread_by_id(
     result = (
         (
             await db.execute(
-                select(models_thread.Thread).where(models_thread.Thread.id == thread_id)
+                select(models_thread.Thread)
+                .where(models_thread.Thread.id == thread_id)
+                .options(
+                    selectinload(models_thread.Thread.members).selectinload(
+                        models_thread.ThreadMember.user
+                    )
+                )
             )
         )
         .scalars()
         .first()
     )
     return result
+
+
+async def get_messages_from_thread(db: AsyncSession, thread_id: str):
+    return (
+        (
+            await db.execute(
+                select(models_thread.ThreadMessage).where(
+                    models_thread.ThreadMessage.thread_id == thread_id
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
 
 
 async def add_user_to_thread(
@@ -136,10 +156,12 @@ async def get_thread_member_from_base(
     result = (
         (
             await db.execute(
-                select(models_thread.ThreadMember).where(
+                select(models_thread.ThreadMember)
+                .where(
                     (models_thread.ThreadMember.thread_id == member_base.thread_id)
                     & (models_thread.ThreadMember.user_id == member_base.user_id)
                 )
+                .options(selectinload(models_thread.ThreadMember.thread))
             )
         )
         .scalars()
@@ -164,7 +186,7 @@ async def create_message(
         content=message.content,
         image=message.image,
     )
-    db.add(message)
+    db.add(created_message)
     try:
         await db.commit()
         return created_message

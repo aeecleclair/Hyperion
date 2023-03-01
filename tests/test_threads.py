@@ -27,15 +27,40 @@ async def startup_test():
             [
                 models_thread.Thread(name="Test Thread", is_public=True),
                 models_thread.Thread(name="Test Thread 2", is_public=False),
+                models_thread.Thread(name="Test Thread 3", is_public=False),
             ]
         )
         db.add_all(test_threads)
         await db.commit()
+        db.add_all(
+            [
+                models_thread.ThreadMember(
+                    user_id=users[0]["user"].id,
+                    thread_id=test_threads[1].id,
+                    permissions=ThreadPermission.ADMINISTRATOR,
+                ),
+                models_thread.ThreadMember(
+                    user_id=users[2]["user"].id,
+                    thread_id=test_threads[0].id,
+                    permissions=ThreadPermission.ADMINISTRATOR,
+                ),
+                models_thread.ThreadMember(
+                    user_id=users[2]["user"].id,
+                    thread_id=test_threads[2].id,
+                    permissions=ThreadPermission.ADMINISTRATOR,
+                ),
+                models_thread.ThreadMember(
+                    user_id=users[0]["user"].id,
+                    thread_id=test_threads[2].id,
+                    permissions=0,
+                ),
+            ]
+        )
         db.add(
-            models_thread.ThreadMember(
-                user_id=users[0]["user"].id,
-                thread_id=test_threads[1].id,
-                permissions=ThreadPermission.ADMINISTRATOR,
+            models_thread.ThreadMessage(
+                thread_id=test_threads[0].id,
+                author_id=users[2]["user"].id,
+                content="Test !",
             )
         )
         await db.commit()
@@ -51,7 +76,7 @@ def test_get_threads():
         headers={"Authorization": f"Bearer {users[1]['token']}"},
     )
     assert response1.status_code == response2.status_code == 200
-    assert len(response1.json()) == 2
+    assert len(response1.json()) == 3
     assert len(response2.json()) == 1
 
 
@@ -68,6 +93,43 @@ def test_create_thread():
         headers={"Authorization": f"Bearer {users[0]['token']}"},
     )
     assert response2.status_code == 204
+
+
+def test_get_thread_users():
+    response = client.get(
+        f"/threads/{test_threads[0].id}/users",
+        headers={"Authorization": f"Bearer {users[0]['token']}"},
+    )
+    assert response.status_code == 200 and len(response.json()) == 1
+    response = client.get(
+        f"/threads/{test_threads[1].id}/users",
+        headers={"Authorization": f"Bearer {users[0]['token']}"},
+    )
+    assert response.status_code == 200 and len(response.json()) == 1
+
+
+def test_read_messages():
+    response = client.get(
+        f"/threads/{test_threads[0].id}/messages",
+        headers={"Authorization": f"Bearer {users[0]['token']}"},
+    )
+    assert response.status_code == 200 and len(response.json()) == 1
+    response = client.get(
+        f"/threads/{test_threads[1].id}/messages",
+        headers={"Authorization": f"Bearer {users[1]['token']}"},
+    )
+    assert response.status_code == 403
+
+
+def test_send_message():
+    response = client.post(
+        f"/threads/{test_threads[1].id}/messages",
+        json={
+            "content": "Yay"
+        },
+        headers={"Authorization": f"Bearer {users[0]['token']}"},
+    )
+    assert response.status_code == 204
 
 
 def test_add_thread_user():
@@ -87,3 +149,26 @@ def test_add_thread_user():
     )
     assert response.status_code == 200
     assert len(response.json()) == 2
+    response = client.post(
+        f"/threads/{test_threads[1].id}/users",
+        json={
+            "thread_id": test_threads[1].id,
+            "user_id": users[1]["user"].id,
+            "permissions": 0,
+        },
+        headers={"Authorization": f"Bearer {users[2]['token']}"},
+    )
+    assert response.status_code == 403
+
+
+def test_remove_thread_user():
+    response = client.delete(
+        f"/threads/{test_threads[2].id}/users/{users[2]['user'].id}",
+        headers={"Authorization": f"Bearer {users[0]['token']}"},
+    )
+    assert response.status_code == 403
+    response = client.delete(
+        f"/threads/{test_threads[2].id}/users/{users[0]['user'].id}",
+        headers={"Authorization": f"Bearer {users[2]['token']}"},
+    )
+    assert response.status_code == 204
