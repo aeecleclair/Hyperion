@@ -1,4 +1,4 @@
-alembic==1.8.1                      # database migrations
+alembic==1.9.4                      # database migrations
 fastapi==0.88.0
 Jinja2==3.1.2                       # template engine for html files
 passlib[bcrypt]==1.7.4              # password hashing using bcrypt
