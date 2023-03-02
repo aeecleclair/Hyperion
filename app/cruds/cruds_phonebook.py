@@ -3,7 +3,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import models_phonebook
+from app.models import models_core, models_phonebook
 from app.schemas import schemas_phonebook
 
 router = APIRouter()
@@ -39,6 +39,7 @@ async def edit_association(
         .where(id == models_phonebook.Association.id)
         .values(**association_update.dict(exclude_none=True))
     )
+    await db.commit()
 
 
 async def delete_association(db: AsyncSession, id: str):
@@ -47,12 +48,13 @@ async def delete_association(db: AsyncSession, id: str):
             id == models_phonebook.Association.id
         )
     )
+    await db.commit()
 
 
 # ---------------------------------- Members --------------------------------- #
 
 
-async def get_member_by_user(db, user):
+async def get_member_by_user(db: AsyncSession, user: models_core.CoreUser):
     member_request = await db.execute(
         select(models_phonebook.Member).where(
             models_phonebook.Member.user_id == user.id
@@ -61,11 +63,26 @@ async def get_member_by_user(db, user):
     return member_request.scalars().all()
 
 
+async def get_association_id_by_name(db: AsyncSession, name: str) -> str | None:
+    """Retrieve all the associations corresponding to the query by their name"""
+    result = await db.execute(
+        select(models_phonebook.Association.id).where(
+            models_phonebook.Association.name.contains(name)
+        )
+    )
+    return result.scalars().first()
+
+
 async def get_member_by_association(
-    db: AsyncSession, query: str
+    db: AsyncSession, association_id: str
 ) -> list[schemas_phonebook.UserReturn] | None:
     """Retrieve all the members corresponding to the query by their associations"""
-    return None
+    result = await db.execute(
+        select(models_phonebook.Member).where(
+            models_phonebook.Member.association_id == association_id
+        )
+    )
+    return result.scalars().all()
 
 
 async def get_member_by_id(
@@ -80,24 +97,20 @@ async def get_member_by_id(
 
 
 async def get_member_by_role(
-    db: AsyncSession, query: str
+    db: AsyncSession, role_id: str
 ) -> list[schemas_phonebook.UserReturn] | None:
     """Retrieve all the members corresponding to the query by their role"""
-    role_id = db.execute(
-        select(models_phonebook.Role.id).where(query in models_phonebook.Role.name)
-    )
     result = await db.execute(
         select(models_phonebook.Member).where(
-            models_phonebook.Member.role_id == role_id
+            models_phonebook.Member.role_id.contains(role_id)
         )
     )
-
     return result.scalars().all()
 
 
 async def add_member(db: AsyncSession, member: models_phonebook.Member):
-    db.add(member)
     try:
+        db.add(member)
         await db.commit()
     except IntegrityError as error:
         await db.rollback()
@@ -110,6 +123,7 @@ async def delete_member(db: AsyncSession, member_id: str):
             member_id == models_phonebook.Member.member_id
         )
     )
+    await db.commit()
 
 
 async def edit_member(
@@ -126,6 +140,11 @@ async def edit_member(
 
 
 # ----------------------------------- Role ----------------------------------- #
+async def get_role_id_by_name(db: AsyncSession, name: str) -> str | None:
+    result = await db.execute(
+        select(models_phonebook.Role.id).where(name == models_phonebook.Role.name)
+    )
+    return result.scalars().first()
 
 
 async def create_role(db: AsyncSession, role: models_phonebook.Role):
@@ -141,6 +160,7 @@ async def delete_role(db: AsyncSession, id: str):
     await db.execute(
         delete(models_phonebook.Role).where(id == models_phonebook.Role.id)
     )
+    await db.commit()
 
 
 async def get_role_by_id(db: AsyncSession, role_id: str) -> str | None:
@@ -156,3 +176,4 @@ async def edit_role(role_update: schemas_phonebook.RoleEdit, db: AsyncSession, i
         .where(models_phonebook.Role.id == id)
         .values(role_update)
     )
+    await db.commit()

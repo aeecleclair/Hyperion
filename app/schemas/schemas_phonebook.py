@@ -57,11 +57,14 @@ class AssociationMemberEdit(BaseModel):
     role_id: str | None = None
     association_id: str | None = None
     mandate_year: int | None = None
+    member_id: str | None = None
 
 
 class RoleEdit(BaseModel):
     name: str | None = None
+    id: str | None = None
 
 
 class AssociationEdit(BaseModel):
     name: str | None = None
+    id: str | None = None

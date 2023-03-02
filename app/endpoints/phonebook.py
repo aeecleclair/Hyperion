@@ -25,7 +25,7 @@ router = APIRouter()
 # --------------------------------- Research --------------------------------- #
 @router.get(
     "/phonebook/research/",
-    response_model=list[schemas_phonebook.UserReturn],
+    response_model=list[schemas_phonebook.UserReturn] | None,
     status_code=200,
     tags=[Tags.phonebook],
 )
@@ -44,40 +44,46 @@ async def request_users(
         found_users = fuzzy_search_user(query, users)
 
         ret = []
-        for user in found_users:
-            # get [association, role] for each user
-            entries = await cruds_phonebook.get_member_by_user(db, user)
-            associations, roles = [], []
+        if found_users is not None:
+            for user in found_users:
+                # get [association, role] for each user
+                entries = await cruds_phonebook.get_member_by_user(db, user)
+                associations, roles = [], []
+                if entries is not None:
+                    for entrie in entries:
+                        print(">>>>> Entry : ", entrie.association_id, entrie.role_id)
+                        association = await cruds_phonebook.get_association_by_id(
+                            db, entrie.association_id
+                        )
+                        association_schema = (
+                            schemas_phonebook.AssociationComplete.from_orm(association)
+                        )
+                        associations.append(association_schema)
 
-            for entrie in entries:
-                print(">>>>> Entry : ", entrie.association_id, entrie.role_id)
-                association = await cruds_phonebook.get_association_by_id(
-                    db, entrie.association_id
-                )
-                association_schema = schemas_phonebook.AssociationComplete.from_orm(
-                    association
-                )
-                associations.append(association_schema)
+                        role = await cruds_phonebook.get_role_by_id(db, entrie.role_id)
+                        print(type(role))
+                        role_schema = schemas_phonebook.RoleComplete.from_orm(role)
+                        roles.append(role_schema)
 
-                role = await cruds_phonebook.get_role_by_id(db, entrie.role_id)
-                print(type(role))
-                role_schema = schemas_phonebook.RoleComplete.from_orm(role)
-                roles.append(role_schema)
+                        print(
+                            ">>>> Associations : ", associations, type(associations[0])
+                        )
+                        print(">>>> Roles : ", roles, type(roles[0]))
 
-                print(">>>> Associations : ", associations, type(associations[0]))
-                print(">>>> Roles : ", roles, type(roles[0]))
+                    user_return = schemas_phonebook.UserReturn(
+                        user=schemas_phonebook.Member.from_orm(user),
+                        associations=associations,
+                        roles=roles,
+                    )
 
-            user_return = schemas_phonebook.UserReturn(
-                user=schemas_phonebook.Member.from_orm(user),
-                associations=associations,
-                roles=roles,
-            )
-
-            ret.append(user_return)
-        return ret
+                    ret.append(user_return)
+            return ret
 
     if query_type == QueryType.role:
-        return await cruds_phonebook.get_member_by_role(db, query)
+        role_id = await cruds_phonebook.get_role_id_by_name(db, query)
+        if role_id is None:
+            return None
+        return await cruds_phonebook.get_member_by_role(db, role_id)
 
     if query_type == QueryType.association:
         return await cruds_phonebook.get_member_by_association(db, query)
@@ -220,7 +226,7 @@ async def delete_member(
 # ----------------------------------- Role ----------------------------------- #
 @router.post(
     "/phonebook/roles/",
-    response_model=schemas_phonebook.RoleComplete,
+    # response_model=schemas_phonebook.RoleComplete,
     status_code=200,
     tags=[Tags.phonebook],
 )
@@ -235,7 +241,7 @@ async def create_role(
 
 
 @router.patch(
-    "/phonebook/roles/",
+    "/phonebook/roles/{role_id}",
     response_model=list[schemas_phonebook.RoleComplete],
     status_code=200,
     tags=[Tags.phonebook],
@@ -247,11 +253,11 @@ async def update_role(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """Update a role."""
-    return await cruds_phonebook.edit_role(db=db, role_update=role_update, id=role_id)
+    return await cruds_phonebook.edit_role(role_update=role_update, db=db, id=role_id)
 
 
 @router.delete(
-    "/phonebook/roles/",
+    "/phonebook/roles/{role_id}",
     status_code=200,
     tags=[Tags.phonebook],
 )
@@ -269,7 +275,7 @@ async def delete_role(
 
 @router.post(
     "/phonebook/associations/{association_id}/logo/",
-    response_model=standard_responses.Result,
+    # response_model=standard_responses.Result,
     status_code=201,
     tags=[Tags.phonebook],
 )

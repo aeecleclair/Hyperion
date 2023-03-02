@@ -46,6 +46,7 @@ nickname_member_2 = "pseudo2"
 settings = app.dependency_overrides.get(get_settings, get_settings)()
 
 
+# ---------------------------------- Startup --------------------------------- #
 @app.on_event("startup")
 async def startuptest():
     global user, association, role, member, CAA_user
@@ -56,6 +57,7 @@ async def startuptest():
 
         CAA_user = await create_user_with_groups([GroupType.CAA], db=db)
 
+        global association
         association = models_phonebook.Association(
             id=id_asso_1,
             name=name_asso_1,
@@ -110,6 +112,7 @@ async def startuptest():
         await db.commit()
 
 
+# -------------------------------- Association ------------------------------- #
 def test_create_association_by_student():
     token = create_api_access_token(user)
 
@@ -151,6 +154,7 @@ def test_delete_association():
     assert response.status_code == 200
 
 
+# ---------------------------------- Member ---------------------------------- #
 def test_create_member():
     token = create_api_access_token(CAA_user)
 
@@ -173,6 +177,78 @@ def test_update_member():
     assert response.status_code == 200
 
 
+def test_delete_member():
+    token = create_api_access_token(CAA_user)
+
+    response = client.request(
+        method="DELETE",
+        url=f"/phonebook/members/{id_member_1}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+
+
+# ----------------------------------- Role ----------------------------------- #
+def test_create_role():
+    token = create_api_access_token(CAA_user)
+
+    response = client.post(
+        "/phonebook/roles/?role_name=AutreRole",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+
+
+def test_update_role():
+    token = create_api_access_token(CAA_user)
+
+    response = client.patch(
+        "/phonebook/roles/{id_role_1}",
+        json={"role_name": "Role1Modifie"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+
+
+def test_delete_role():
+    token = create_api_access_token(CAA_user)
+
+    response = client.delete(
+        "/phonebook/roles/{id_role_2}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+
+
+# ----------------------------- Association Logo ----------------------------- #
+def test_create_association_logo():
+    token = create_api_access_token(CAA_user)
+
+    with open("assets/images/default_profile_picture.png", "rb") as image:
+        response = client.post(
+            f"/phonebook/associations/{id_asso_1}/logo/",
+            files={"image": ("logo.png", image, "image/png")},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+    assert response.status_code == 201
+
+
+def test_read_association_logo():
+    token = create_api_access_token(user)
+
+    response = client.get(
+        f"/phonebook/associations/{id_asso_1}/logo",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+
+
+# --------------------------------- Research --------------------------------- #
 def test_request_by_person():
     token = create_api_access_token(user)
 
@@ -182,4 +258,24 @@ def test_request_by_person():
     )
     print(response.json())
     assert response.status_code == 200
+
+
+def test_request_by_role():
+    token = create_api_access_token(user)
+
+    response = client.get(
+        f"/phonebook/research/?query={name_role_1}&query_type=role",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+
+
+def test_request_by_association():
+    token = create_api_access_token(user)
+
+    response = client.get(
+        f"/phonebook/research/?query={name_asso_1}&query_type=association",
+        headers={"Authorization": f"Bearer {token}"},
+    )
     assert response.status_code == 200
