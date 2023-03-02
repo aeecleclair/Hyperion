@@ -134,8 +134,9 @@ async def edit_member(
     await db.execute(
         update(models_phonebook.Member)
         .where(member_id == models_phonebook.Member.member_id)
-        .values(member_update)
+        .values(**member_update.dict(exclude_none=True))
     )
+
     await db.commit()
 
 
@@ -173,7 +174,7 @@ async def get_role_by_id(db: AsyncSession, role_id: str) -> str | None:
 async def edit_role(role_update: schemas_phonebook.RoleEdit, db: AsyncSession, id: str):
     await db.execute(
         update(models_phonebook.Role)
-        .where(models_phonebook.Role.id == id)
-        .values(role_update)
+        .where(id == models_phonebook.Role.id)
+        .values(**role_update.dict(exclude_none=True))
     )
     await db.commit()
