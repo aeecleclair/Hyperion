@@ -14,7 +14,7 @@ class Raffle(Base):
     name: str = Column(String, nullable=False)
     start_date: datetime = Column(DateTime, nullable=False)
     end_date: datetime = Column(DateTime, nullable=False)
-    group_id: str = Column(String, index=True, nullable=False)
+    group_id: str = Column(ForeignKey("core_group.id"), index=True, nullable=False)
     description: str = Column(String, index=True, nullable=True)
 
 
@@ -40,8 +40,10 @@ class Tickets(Base):
 
     id: str = Column(String, primary_key=True, index=True, nullable=False)
     type_id: str = Column(ForeignKey("type_ticket.id"), nullable=False)
-    user_id: str = Column(String, nullable=False)  # --> Récupérer sur hyperion
-    group_id: str = Column(String, index=True, nullable=False)
+    user_id: str = Column(
+        ForeignKey("raffle_cash.user_id"), nullable=False
+    )  # --> Récupérer sur hyperion
+    group_id: str = Column(ForeignKey("core_group.id"), index=True, nullable=False)
     winning_lot: str = Column(String, nullable=True, index=True)
 
 
