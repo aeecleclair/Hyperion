@@ -159,7 +159,12 @@ async def create_delivery(
 
 async def delete_delivery(db: AsyncSession, delivery_id: str):
     """Delete a delivery from database by id"""
-
+    await db.execute(
+        delete(models_amap.AmapDeliveryContent).where(
+            models_amap.AmapDeliveryContent.delivery_id == delivery_id
+        )
+    )
+    await db.commit()
     await db.execute(
         delete(models_amap.Delivery).where(models_amap.Delivery.id == delivery_id)
     )
