@@ -186,7 +186,7 @@ class LogConfig:
                     "level": MINIMUM_LOG_LEVEL,
                 },
                 "hyperion.amap": {
-                    "handlers": ["file_amap"],
+                    "handlers": ["file_amap", "matrix_amap", "debug_console"],
                     "level": MINIMUM_LOG_LEVEL,
                 },
                 # We disable "uvicorn.access" to replace it with our custom "hyperion.access" which add custom information like the request_id
