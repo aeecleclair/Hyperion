@@ -28,7 +28,7 @@ from app.utils.types.tags import Tags
 
 router = APIRouter()
 
-hyperion_security_logger = logging.getLogger("hyperion.security")
+hyperion_amap_logger = logging.getLogger("hyperion.amap")
 
 
 @router.get(
@@ -486,7 +486,7 @@ async def add_order_to_delievery(
         orderret = await cruds_amap.get_order_by_id(order_id=db_order.order_id, db=db)
         productsret = await cruds_amap.get_products_of_order(db=db, order_id=order_id)
 
-        hyperion_security_logger.info(
+        hyperion_amap_logger.info(
             f"Add_order_to_delivery: An order has been created for user {order.user_id} for an amount of {amount}€. ({request_id})"
         )
         return schemas_amap.OrderReturn(productsdetail=productsret, **orderret.__dict__)
@@ -610,7 +610,7 @@ async def edit_order_from_delievery(
                 user_id=previous_order.user_id,
                 amount=previous_amount,
             )
-            hyperion_security_logger.info(
+            hyperion_amap_logger.info(
                 f"Edit_order: Order {order_id} has been edited for user {db_order.user_id}. Amount was {previous_amount}€, is now {amount}€. ({request_id})"
             )
 
@@ -684,7 +684,7 @@ async def remove_order(
             user_id=order.user_id,
             amount=amount,
         )
-        hyperion_security_logger.info(
+        hyperion_amap_logger.info(
             f"Delete_order: Order {order_id} by {order.user_id} was deleted. {amount}€ were refunded. ({request_id})"
         )
         return Response(status_code=204)
