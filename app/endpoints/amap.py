@@ -941,3 +941,68 @@ async def get_orders_of_user(
         return res
     else:
         raise HTTPException(status_code=403)
+
+
+@router.get(
+    "/amap/information",
+    response_model=schemas_amap.Information,
+    status_code=200,
+    tags=[Tags.amap],
+)
+async def get_information(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Return all information
+    """
+    information = await cruds_amap.get_information(db)
+
+    if information is None:
+        return schemas_amap.Information(
+            manager="",
+            link="",
+            description="",
+        )
+
+    return information
+
+
+@router.patch(
+    "/amap/information",
+    status_code=204,
+    tags=[Tags.amap],
+)
+async def edit_information(
+    edit_information: schemas_amap.InformationEdit,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
+):
+    """
+    Update information
+
+    **The user must be a member of the group AMAP to use this endpoint**
+    """
+
+    # We need to check if informations are already in the database
+    information = await cruds_amap.get_information(db)
+
+    if information is None:
+        empty_information = models_amap.AmapInformation(
+            unique_id="information",
+            manager="",
+            link="",
+            description="",
+        )
+        try:
+            await cruds_amap.add_information(empty_information, db)
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail=str(error))
+
+    else:
+        try:
+            await cruds_amap.edit_information(
+                information_update=edit_information, db=db
+            )
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail=str(error))
