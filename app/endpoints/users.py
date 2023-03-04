@@ -747,7 +747,27 @@ async def create_current_user_profile_picture(
 
 
 @router.get(
-    "/users/{user_id}/profile-picture/",
+    "/users/me/profile-picture",
+    response_class=FileResponse,
+    status_code=200,
+    tags=[Tags.users],
+)
+async def read_own_profile_picture(
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Get the profile picture of the authenticated user.
+    """
+
+    return get_file_from_data(
+        directory="profile-pictures",
+        filename=str(user.id),
+        default_asset="assets/images/default_profile_picture.png",
+    )
+
+
+@router.get(
+    "/users/{user_id}/profile-picture",
     response_class=FileResponse,
     status_code=200,
     tags=[Tags.users],
@@ -757,8 +777,6 @@ async def read_user_profile_picture(
 ):
     """
     Get the profile picture of an user.
-
-    **The user must be authenticated to use this endpoint**
     """
 
     return get_file_from_data(
