@@ -461,9 +461,6 @@ async def add_order_to_delievery(
     if not amount:
         raise HTTPException(status_code=403, detail="You can't order nothing")
 
-    if balance.balance < amount:
-        raise HTTPException(status_code=403, detail="Not enough money")
-
     redis_key = "amap_" + order.user_id
 
     if not isinstance(redis_client, Redis) or locker_get(
@@ -580,12 +577,6 @@ async def edit_order_from_delievery(
         balance = await cruds_amap.get_cash_by_id(db=db, user_id=previous_order.user_id)
         if not balance:
             raise HTTPException(status_code=404, detail="No cash found")
-
-        if balance.balance + previous_amount < amount:
-            raise HTTPException(
-                status_code=403,
-                detail="Not enough money",
-            )
 
         redis_key = "amap_" + previous_order.user_id
 
