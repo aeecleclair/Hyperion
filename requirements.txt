@@ -4,7 +4,7 @@ Jinja2==3.1.2                       # template engine for html files
 passlib[bcrypt]==1.7.4              # password hashing using bcrypt
 python-dotenv==0.21.0               # load environment variables from .env file
 python-jose[cryptography]==3.3.0    # generate and verify the JWT tokens
-python-multipart==0.0.5             # a form data parser, as oauth flow requires form-data parameters
+python-multipart==0.0.6             # a form data parser, as oauth flow requires form-data parameters
 SQLAlchemy[asyncio, mypy]==1.4.44   # [asyncio] allows greenlet to be installed on Apple M1 devices. The my[py] plugin is required in devellopment but Dependabot fails to manage two versions of the same module.
 rapidfuzz                           # Fuzzy String Matching
 requests==2.28.2
