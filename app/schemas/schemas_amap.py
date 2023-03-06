@@ -146,3 +146,18 @@ class CashDB(CashBase):
 
 class CashEdit(BaseModel):
     balance: float
+
+
+class Information(BaseModel):
+    manager: str
+    link: str
+    description: str
+
+    class Config:
+        orm_mode = True
+
+
+class InformationEdit(BaseModel):
+    manager: str | None = None
+    link: str | None = None
+    description: str | None = None

@@ -28,7 +28,7 @@ from app.utils.types.tags import Tags
 
 router = APIRouter()
 
-hyperion_security_logger = logging.getLogger("hyperion.security")
+hyperion_amap_logger = logging.getLogger("hyperion.amap")
 
 
 @router.get(
@@ -486,7 +486,7 @@ async def add_order_to_delievery(
         orderret = await cruds_amap.get_order_by_id(order_id=db_order.order_id, db=db)
         productsret = await cruds_amap.get_products_of_order(db=db, order_id=order_id)
 
-        hyperion_security_logger.info(
+        hyperion_amap_logger.info(
             f"Add_order_to_delivery: An order has been created for user {order.user_id} for an amount of {amount}€. ({request_id})"
         )
         return schemas_amap.OrderReturn(productsdetail=productsret, **orderret.__dict__)
@@ -610,7 +610,7 @@ async def edit_order_from_delievery(
                 user_id=previous_order.user_id,
                 amount=previous_amount,
             )
-            hyperion_security_logger.info(
+            hyperion_amap_logger.info(
                 f"Edit_order: Order {order_id} has been edited for user {db_order.user_id}. Amount was {previous_amount}€, is now {amount}€. ({request_id})"
             )
 
@@ -684,7 +684,7 @@ async def remove_order(
             user_id=order.user_id,
             amount=amount,
         )
-        hyperion_security_logger.info(
+        hyperion_amap_logger.info(
             f"Delete_order: Order {order_id} by {order.user_id} was deleted. {amount}€ were refunded. ({request_id})"
         )
         return Response(status_code=204)
@@ -941,3 +941,68 @@ async def get_orders_of_user(
         return res
     else:
         raise HTTPException(status_code=403)
+
+
+@router.get(
+    "/amap/information",
+    response_model=schemas_amap.Information,
+    status_code=200,
+    tags=[Tags.amap],
+)
+async def get_information(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Return all information
+    """
+    information = await cruds_amap.get_information(db)
+
+    if information is None:
+        return schemas_amap.Information(
+            manager="",
+            link="",
+            description="",
+        )
+
+    return information
+
+
+@router.patch(
+    "/amap/information",
+    status_code=204,
+    tags=[Tags.amap],
+)
+async def edit_information(
+    edit_information: schemas_amap.InformationEdit,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
+):
+    """
+    Update information
+
+    **The user must be a member of the group AMAP to use this endpoint**
+    """
+
+    # We need to check if informations are already in the database
+    information = await cruds_amap.get_information(db)
+
+    if information is None:
+        empty_information = models_amap.AmapInformation(
+            unique_id="information",
+            manager="",
+            link="",
+            description="",
+        )
+        try:
+            await cruds_amap.add_information(empty_information, db)
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail=str(error))
+
+    else:
+        try:
+            await cruds_amap.edit_information(
+                information_update=edit_information, db=db
+            )
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail=str(error))

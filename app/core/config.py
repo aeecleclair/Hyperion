@@ -44,6 +44,7 @@ class Settings(BaseSettings):
     MATRIX_USER_NAME: str | None
     MATRIX_USER_PASSWORD: str | None
     MATRIX_LOG_ERROR_ROOM_ID: str | None
+    MATRIX_LOG_AMAP_ROOM_ID: str | None
 
     ########################
     # Redis configuration #
@@ -79,8 +80,8 @@ class Settings(BaseSettings):
     LOG_DEBUG_MESSAGES: bool | None
     # Hyperion follows Semantic Versioning
     # https://semver.org/
-    HYPERION_VERSION: str = "0.0.1"  # This value should never be modified by hand. See [Hyperion release] documentation
-    MINIMAL_TITAN_VERSION_CODE: int = 28
+    HYPERION_VERSION: str = "1.0.0"  # This value should never be modified by hand. See [Hyperion release] documentation
+    MINIMAL_TITAN_VERSION_CODE: int = 44
     # Depreciated, minimal_titan_version_code should be used
     MINIMAL_TITAN_VERSION: str = "0.0.1"
 

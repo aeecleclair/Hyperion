@@ -101,6 +101,21 @@ class LogConfig:
                     ),
                     "level": "ERROR",
                 },
+                "matrix_amap": {
+                    # Send error to a Matrix server. If credentials are not set in settings, the handler will be disabled
+                    "formatter": "matrix",
+                    "class": "app.utils.loggers_tools.matrix_handler.MatrixHandler",
+                    "room_id": settings.MATRIX_LOG_AMAP_ROOM_ID,
+                    "user_name": settings.MATRIX_USER_NAME,
+                    "user_password": settings.MATRIX_USER_PASSWORD,
+                    "server_base_url": settings.MATRIX_SERVER_BASE_URL,
+                    "enabled": (
+                        settings.MATRIX_USER_NAME is not None
+                        and settings.MATRIX_USER_PASSWORD is not None
+                        and settings.MATRIX_LOG_AMAP_ROOM_ID is not None
+                    ),
+                    "level": "ERROR",
+                },
                 # There is a handler per log file #
                 # They are based on RotatingFileHandler to logs in multiple 1024 bytes files
                 # https://docs.python.org/3/library/logging.handlers.html#logging.handlers.RotatingFileHandler
@@ -132,6 +147,15 @@ class LogConfig:
                     "backupCount": 50,
                     "level": "INFO",
                 },
+                "file_amap": {
+                    # file_amap should receive informations about amap operation, every operation involving a cash modification.
+                    "formatter": "default",
+                    "class": "logging.handlers.RotatingFileHandler",
+                    "filename": "logs/amap.log",
+                    "maxBytes": 1024 * 1024 * 10,  # ~ 10 MB
+                    "backupCount": 20,
+                    "level": "INFO",
+                },
             },
             # We define various loggers which can be used by Hyperion.
             # Each logger has:
@@ -159,6 +183,10 @@ class LogConfig:
                 # Other loggers can process error messages and may be more appropriated than hyperion.error
                 "hyperion.error": {
                     "handlers": ["file_errors", "matrix_errors", "console"],
+                    "level": MINIMUM_LOG_LEVEL,
+                },
+                "hyperion.amap": {
+                    "handlers": ["file_amap", "matrix_amap", "debug_console"],
                     "level": MINIMUM_LOG_LEVEL,
                 },
                 # We disable "uvicorn.access" to replace it with our custom "hyperion.access" which add custom information like the request_id

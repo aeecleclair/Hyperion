@@ -159,7 +159,12 @@ async def create_delivery(
 
 async def delete_delivery(db: AsyncSession, delivery_id: str):
     """Delete a delivery from database by id"""
-
+    await db.execute(
+        delete(models_amap.AmapDeliveryContent).where(
+            models_amap.AmapDeliveryContent.delivery_id == delivery_id
+        )
+    )
+    await db.commit()
     await db.execute(
         delete(models_amap.Delivery).where(models_amap.Delivery.id == delivery_id)
     )
@@ -434,5 +439,42 @@ async def mark_delivery_as_archived(db: AsyncSession, delivery_id: str):
         update(models_amap.Delivery)
         .where(models_amap.Delivery.id == delivery_id)
         .values(status=DeliveryStatusType.archived)
+    )
+    await db.commit()
+
+
+async def get_information(
+    db: AsyncSession,
+) -> models_amap.AmapInformation | None:
+    result = await db.execute(
+        select(models_amap.AmapInformation).where(
+            models_amap.AmapInformation.unique_id == "information"
+        )
+    )
+
+    information = result.scalars().first()
+    return information
+
+
+async def add_information(
+    information: models_amap.AmapInformation,
+    db: AsyncSession,
+) -> None:
+    db.add(information)
+    try:
+        await db.commit()
+    except IntegrityError as err:
+        await db.rollback()
+        raise ValueError(f"Could not add information {err}")
+
+
+async def edit_information(
+    information_update: schemas_amap.InformationEdit,
+    db: AsyncSession,
+):
+    await db.execute(
+        update(models_amap.AmapInformation)
+        .where(models_amap.AmapInformation.unique_id == "information")
+        .values(**information_update.dict(exclude_none=True))
     )
     await db.commit()
