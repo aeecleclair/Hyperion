@@ -101,6 +101,17 @@ def test_create_current_user_profile_picture():
     assert response.status_code == 201
 
 
+def test_read_own_profile_picture():
+    token = create_api_access_token(student_user)
+
+    response = client.get(
+        "/users/me/profile-picture",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+
+
 def test_read_user_profile_picture():
     token = create_api_access_token(student_user)
 
