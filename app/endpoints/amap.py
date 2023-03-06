@@ -629,6 +629,7 @@ async def remove_order(
 
     **A member of the group AMAP can delete orders of other users**
     """
+    is_user_admin = is_user_member_of_an_allowed_group(user, [GroupType.amap])
     order = await cruds_amap.get_order_by_id(db=db, order_id=order_id)
     if not order:
         raise HTTPException(status_code=404, detail="No order found")
@@ -637,16 +638,15 @@ async def remove_order(
     if not delivery:
         raise HTTPException(status_code=404, detail="Delivery not found")
 
-    if delivery.status != DeliveryStatusType.orderable:
+    if delivery.status != DeliveryStatusType.orderable and not (
+        is_user_admin and delivery.status == DeliveryStatusType.locked
+    ):
         raise HTTPException(
             status_code=403,
             detail=f"You can't remove an order if the delivery is not in orderable mode. The current mode is {delivery.status}",
         )
 
-    if not (
-        user.id == order.user_id
-        or is_user_member_of_an_allowed_group(user, [GroupType.amap])
-    ):
+    if not (user.id == order.user_id or is_user_admin):
         raise HTTPException(
             status_code=403,
             detail="You are not allowed to delete this order",
