@@ -19,14 +19,16 @@ product: models_amap.Product | None = None
 deletable_product: models_amap.Product | None = None
 delivery: models_amap.Delivery | None = None
 deletable_delivery: models_amap.Delivery | None = None
+locked_delivery: models_amap.Delivery | None = None
 order: models_amap.Order | None = None
+deletable_order_by_admin: models_amap.Order | None = None
 
 settings = app.dependency_overrides.get(get_settings, get_settings)()
 
 
 @app.on_event("startup")  # create the data needed in the tests
 async def startuptest():
-    global amap_user, student_user, product, deletable_product, delivery, deletable_delivery, order, cash
+    global amap_user, student_user, product, deletable_product, delivery, deletable_delivery, locked_delivery, order, deletable_order_by_admin, cash
 
     async with TestingSessionLocal() as db:
         amap_user = await create_user_with_groups([GroupType.amap], db=db)
@@ -55,6 +57,13 @@ async def startuptest():
         )
         db.add(deletable_delivery)
 
+        locked_delivery = models_amap.Delivery(
+            id=str(uuid.uuid4()),
+            delivery_date=datetime(2022, 8, 17),
+            status=DeliveryStatusType.locked,
+        )
+        db.add(locked_delivery)
+
         order = models_amap.Order(
             order_id=str(uuid.uuid4()),
             user_id=student_user.id,
@@ -65,6 +74,18 @@ async def startuptest():
             delivery_date=delivery.delivery_date,
         )
         db.add(order)
+        await db.commit()
+
+        deletable_order_by_admin = models_amap.Order(
+            order_id=str(uuid.uuid4()),
+            user_id=student_user.id,
+            delivery_id=locked_delivery.id,
+            amount=0.0,
+            collection_slot=AmapSlotType.midi,
+            ordering_date=datetime(2022, 8, 18, 12, 16, 26),
+            delivery_date=locked_delivery.delivery_date,
+        )
+        db.add(deletable_order_by_admin)
         await db.commit()
 
         cash = models_amap.Cash(user_id=student_user.id, balance=666)
@@ -142,7 +163,7 @@ def test_create_delivery():
     response = client.post(
         "/amap/deliveries",
         json={
-            "delivery_date": "2022-08-17",
+            "delivery_date": "2022-08-18",
             "products_ids": [product.id],
             "locked": False,
         },
@@ -302,6 +323,31 @@ def test_remove_order():
     app.dependency_overrides.get(get_redis_client, get_redis_client)(deactivate=True)
 
     assert response.status_code == 204
+
+
+def test_remove_order_by_admin():
+    # Enable Redis client for locker
+    app.dependency_overrides.get(get_redis_client, get_redis_client)(
+        settings, activate=True
+    )
+
+    token = create_api_access_token(student_user)
+    token_amap = create_api_access_token(amap_user)
+
+    response = client.delete(
+        f"/amap/orders/{deletable_order_by_admin.order_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 403
+
+    response = client.delete(
+        f"/amap/orders/{deletable_order_by_admin.order_id}",
+        headers={"Authorization": f"Bearer {token_amap}"},
+    )
+    assert response.status_code == 204
+
+    # Disable Redis client (to avoid rate-limit)
+    app.dependency_overrides.get(get_redis_client, get_redis_client)(deactivate=True)
 
 
 def test_get_users_cash():
