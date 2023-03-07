@@ -18,18 +18,35 @@ from app.dependencies import (
 from app.endpoints.users import read_user
 from app.models import models_core, models_raffle
 from app.schemas import schemas_raffle
-from app.utils.redis import locker_get, locker_set
 from app.utils.tools import is_user_member_of_an_allowed_group
-from app.utils.types.amap_types import DeliveryStatusType
 from app.utils.types.groups_type import GroupType
 from app.utils.types.tags import Tags
 
 router = APIRouter()
 
 
-# create a raffle
+# raffles
+@router.get(
+    "/tombola/raffles",
+    response_model=list[schemas_raffle.RaffleComplete],
+    status_code=200,
+    tags=[Tags.raffle],
+)
+async def get_raffle(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Return all raffles
+
+    **The user must be an admin to use this endpoint**
+    """
+    raffle = await cruds_raffle.get_raffles(db)
+    return raffle
+
+
 @router.post(
-    "/tombola/raffle",
+    "/tombola/raffles",
     response_model=schemas_raffle.RaffleComplete,
     status_code=201,
     tags=[Tags.raffle],
@@ -54,7 +71,7 @@ async def create_raffle(
 
 
 @router.patch(
-    "/tombola/raffle/{raffle_id}",
+    "/tombola/raffles/{raffle_id}",
     status_code=204,
     tags=[Tags.raffle],
 )
@@ -79,9 +96,71 @@ async def edit_raffle(
     )
 
 
-# create a typeticket
+@router.delete(
+    "/tombola/raffles/{raffle_id}",
+    status_code=204,
+    tags=[Tags.raffle],
+)
+async def delete_raffle(
+    raffle_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Delete a raffle.
+
+    **The user must be a member of the group admin to use this endpoint**
+    """
+
+    raffle = await cruds_raffle.get_raffle_by_id(raffle_id=raffle_id, db=db)
+    if not raffle:
+        raise HTTPException(status_code=404, detail="Raffle not found")
+
+    await cruds_raffle.delete_raffle(raffle_id=raffle_id, db=db)
+
+
+@router.get(
+    "/tombola/group/{group_id}/raffles",
+    response_model=list[schemas_raffle.RaffleComplete],
+    status_code=200,
+    tags=[Tags.raffle],
+)
+async def get_raffle_by_group_id(
+    group_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Return all raffles
+
+    **The user must be an admin to use this endpoint**
+    """
+    raffle = await cruds_raffle.get_raffle_by_groupid(group_id, db)
+    return raffle
+
+
+# type tickets
+@router.get(
+    "/tombola/type_tickets",
+    response_model=list[schemas_raffle.TypeTicketComplete],
+    status_code=200,
+    tags=[Tags.raffle],
+)
+async def get_type_tickets(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Return all tickets
+
+    **The user must be an admin to use this endpoint**
+    """
+    type_tickets = await cruds_raffle.get_typeticket(db)
+    return type_tickets
+
+
 @router.post(
-    "/tombola/type_ticket",
+    "/tombola/type_tickets",
     response_model=schemas_raffle.TypeTicketComplete,
     status_code=201,
     tags=[Tags.raffle],
@@ -106,14 +185,13 @@ async def create_typeticket(
 
 
 @router.patch(
-    "/tombola/type_ticket/{raffle_id}",
+    "/tombola/type_tickets/{typeticket_id}",
     status_code=204,
     tags=[Tags.raffle],
 )
 async def edit_typeticket(
     typeticket_id: str,
-    raffle_update: schemas_raffle.TypeTicketEdit,
-    raffle_id: str,
+    typeticket_update: schemas_raffle.TypeTicketEdit,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
@@ -123,44 +201,86 @@ async def edit_typeticket(
     **The user must be an admin to use this endpoint**
     """
 
-    raffle = await cruds_raffle.get_typeticket_by_id(id=typeticket_id, db=db)
-    if not raffle:
-        raise HTTPException(status_code=404, detail="Raffle not found")
+    typeticket = await cruds_raffle.get_typeticket_by_id(
+        typeticket_id=typeticket_id, db=db
+    )
+    if not typeticket:
+        raise HTTPException(status_code=404, detail="TypeTicket not found")
 
     await cruds_raffle.edit_typeticket(
-        db=db, raffle_id=raffle_id, raffle_update=raffle_update
+        typeticket_id=typeticket_id, typeticket_update=typeticket_update, db=db
     )
 
 
-# create a lot
-@router.post(
-    "/tombola/lot",
-    response_model=schemas_raffle.LotEdit,
-    status_code=201,
+@router.delete(
+    "/tombola/type_tickets/{typeticket_id}",
+    status_code=204,
     tags=[Tags.raffle],
 )
-async def create_lot(
-    lot: schemas_raffle.LotBase,
+async def delete_typeticket(
+    typeticket_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
-    Create a new lot
+    Delete a typeticket.
+
+    **The user must be a member of the group admin to use this endpoint**
+    """
+
+    typeticket = await cruds_raffle.get_typeticket_by_id(
+        typeticket_id=typeticket_id, db=db
+    )
+    if not typeticket:
+        raise HTTPException(status_code=404, detail="Typeticket not found")
+
+    await cruds_raffle.delete_typeticket(typeticket_id=typeticket_id, db=db)
+
+
+@router.get(
+    "/tombola/raffle/{raffle_id}/type_tickets",
+    response_model=list[schemas_raffle.TypeTicketComplete],
+    status_code=200,
+    tags=[Tags.raffle],
+)
+async def get_type_tickets_by_raffle_id(
+    raffle_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Return all tickets
 
     **The user must be an admin to use this endpoint**
     """
-    db_lot = models_raffle.Lots(id=str(uuid.uuid4()), **lot.dict())
-
-    try:
-        result = await cruds_raffle.create_lot(lot=db_lot, db=db)
-        return result
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+    type_tickets = await cruds_raffle.get_typeticket_by_raffleid(raffle_id, db)
+    return type_tickets
 
 
-# create a ticket
+# ticket
+
+
+@router.get(
+    "/tombola/tickets",
+    response_model=list[schemas_raffle.TicketComplete],
+    status_code=200,
+    tags=[Tags.raffle],
+)
+async def get_tickets(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Return all tickets
+
+    **The user must be an admin to use this endpoint**
+    """
+    tickets = await cruds_raffle.get_tickets(db)
+    return tickets
+
+
 @router.post(
-    "/tombola/ticket",
+    "/tombola/tickets",
     response_model=schemas_raffle.TicketEdit,
     status_code=201,
     tags=[Tags.raffle],
@@ -184,99 +304,53 @@ async def create_ticket(
         raise HTTPException(status_code=422, detail=str(error))
 
 
-@router.get(
-    "/tombola/raffle",
-    response_model=list[schemas_raffle.RaffleComplete],
-    status_code=200,
+@router.patch(
+    "/tombola/tickets/{ticket_id}",
+    status_code=204,
     tags=[Tags.raffle],
 )
-async def get_raffle(
+async def edit_ticket(
+    ticket_id: str,
+    ticket_update: schemas_raffle.TicketEdit,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
-    Return all raffles
+    Edit a ticket
 
     **The user must be an admin to use this endpoint**
     """
-    raffle = await cruds_raffle.get_raffles(db)
-    return raffle
+
+    ticket = await cruds_raffle.get_ticket_by_id(id=ticket_id, db=db)
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    await cruds_raffle.edit_ticket(
+        ticket_id=ticket_id, ticket_update=ticket_update, db=db
+    )
 
 
-@router.get(
-    "/tombola/tickets",
-    response_model=list[schemas_raffle.TicketComplete],
-    status_code=200,
+@router.delete(
+    "/tombola/tickets/{ticket_id}",
+    status_code=204,
     tags=[Tags.raffle],
 )
-async def get_tickets(
+async def delete_ticket(
+    ticket_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
-    Return all tickets
+    Delete a ticket.
 
-    **The user must be an admin to use this endpoint**
+    **The user must be a member of the group admin to use this endpoint**
     """
-    tickets = await cruds_raffle.get_tickets(db)
-    return tickets
 
+    ticket = await cruds_raffle.get_ticket_by_id(ticket_id=ticket_id, db=db)
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
 
-@router.get(
-    "/tombola/type_tickets",
-    response_model=list[schemas_raffle.TypeTicketComplete],
-    status_code=200,
-    tags=[Tags.raffle],
-)
-async def get_type_tickets(
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
-):
-    """
-    Return all tickets
-
-    **The user must be an admin to use this endpoint**
-    """
-    tickets = await cruds_raffle.get_typeticket(db)
-    return tickets
-
-
-@router.get(
-    "/tombola/lots",
-    response_model=list[schemas_raffle.LotComplete],
-    status_code=200,
-    tags=[Tags.raffle],
-)
-async def get_lots(
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
-):
-    """
-    Return all lots
-
-    **The user must be an admin to use this endpoint**
-    """
-    lots = await cruds_raffle.get_lots(db)
-    return lots
-
-
-@router.get(
-    "/tombola/users/cash",
-    response_model=list[schemas_raffle.CashComplete],
-    status_code=200,
-    tags=[Tags.raffle],
-)
-async def get_users_cash(
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
-):
-    """
-    Get cash from all users.
-
-    **The user must be a member of the group AMAP to use this endpoint**
-    """
-    cash = await cruds_raffle.get_users_cash(db)
-    return cash
+    await cruds_raffle.delete_ticket(db=db, ticket_id=ticket_id)
 
 
 @router.get(
@@ -310,6 +384,156 @@ async def get_tickets_by_userid(
             status_code=403,
             detail="Users that are not member of the group admin can only access the endpoint for their own user_id.",
         )
+
+
+@router.get(
+    "/tombola/raffle/{raffle_id}/tickets",
+    response_model=schemas_raffle.TicketComplete,
+    status_code=200,
+    tags=[Tags.raffle],
+)
+async def get_tickets_by_raffleid(raffle_id: str, db: AsyncSession = Depends(get_db)):
+    """
+    Get tickets from a specific raffle.
+
+    """
+
+    ticket = await cruds_raffle.get_ticket_by_raffleid(raffle_id=raffle_id, db=db)
+    if ticket is not None:
+        return ticket
+
+
+# lots
+
+
+@router.get(
+    "/tombola/lots",
+    response_model=list[schemas_raffle.LotComplete],
+    status_code=200,
+    tags=[Tags.raffle],
+)
+async def get_lots(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Return all lots
+
+    **The user must be an admin to use this endpoint**
+    """
+    lots = await cruds_raffle.get_lots(db)
+    return lots
+
+
+@router.post(
+    "/tombola/lots",
+    response_model=schemas_raffle.LotEdit,
+    status_code=201,
+    tags=[Tags.raffle],
+)
+async def create_lot(
+    lot: schemas_raffle.LotBase,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Create a new lot
+
+    **The user must be an admin to use this endpoint**
+    """
+    db_lot = models_raffle.Lots(id=str(uuid.uuid4()), **lot.dict())
+
+    try:
+        result = await cruds_raffle.create_lot(lot=db_lot, db=db)
+        return result
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))
+
+
+@router.patch(
+    "/tombola/lots/{lot_id}",
+    status_code=204,
+    tags=[Tags.raffle],
+)
+async def edit_lot(
+    lot_id: str,
+    lot_update: schemas_raffle.LotEdit,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Edit a lot
+
+    **The user must be an admin to use this endpoint**
+    """
+
+    lot = await cruds_raffle.get_lot_by_id(lot_id=lot_id, db=db)
+    if not lot:
+        raise HTTPException(status_code=404, detail="Lot not found")
+
+    await cruds_raffle.edit_lot(lot_id=lot_id, lot_update=lot_update, db=db)
+
+
+@router.delete(
+    "/tombola/lots/{lot_id}",
+    status_code=204,
+    tags=[Tags.raffle],
+)
+async def delete_lot(
+    lot_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Delete a lot.
+
+    **The user must be a member of the group admin to use this endpoint**
+    """
+
+    lot = await cruds_raffle.get_lot_by_id(lot_id=lot_id, db=db)
+    if not lot:
+        raise HTTPException(status_code=404, detail="Lot not found")
+
+    await cruds_raffle.delete_lot(db=db, lot_id=lot_id)
+
+
+@router.get(
+    "/tombola/raffle/{raffle_id}/lots",
+    response_model=schemas_raffle.LotComplete,
+    status_code=200,
+    tags=[Tags.raffle],
+)
+async def get_lots_by_raffleid(raffle_id: str, db: AsyncSession = Depends(get_db)):
+    """
+    Get lots from a specific raffle.
+
+    """
+
+    lot = await cruds_raffle.get_lot_by_raffleid(raffle_id=raffle_id, db=db)
+    if lot is not None:
+        return lot
+
+
+# cash
+
+
+@router.get(
+    "/tombola/users/cash",
+    response_model=list[schemas_raffle.CashComplete],
+    status_code=200,
+    tags=[Tags.raffle],
+)
+async def get_users_cash(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Get cash from all users.
+
+    **The user must be a member of the group AMAP to use this endpoint**
+    """
+    cash = await cruds_raffle.get_users_cash(db)
+    return cash
 
 
 @router.get(
