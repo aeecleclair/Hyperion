@@ -60,7 +60,7 @@ async def create_raffle(
 )
 async def edit_raffle(
     raffle_id: str,
-    raffle_update: schemas_raffle.RaffleSimple,
+    raffle_update: schemas_raffle.RaffleEdit,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
@@ -70,25 +70,13 @@ async def edit_raffle(
     **The user must be an admin to use this endpoint**
     """
 
-    raffle = await cruds_raffle.get_raffle_by_id(db=db, raffle_id=raffle_id)
+    raffle = await cruds_raffle.get_raffle_by_id(raffle_id=raffle_id, db=db)
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
 
     await cruds_raffle.edit_raffle(
-        db=db, raffle_id=raffle_id, raffle_update=raffle_update
+        raffle_id=raffle_id, raffle_update=raffle_update, db=db
     )
-
-
-async def delete_raffle(
-    db: AsyncSession,
-    raffle_id: str,
-):
-    """Delete a raffle from database by id"""
-
-    await db.execute(
-        delete(models_raffle.Raffle).where(models_raffle.Raffle.id == raffle_id)
-    )
-    await db.commit()
 
 
 # create a typeticket
@@ -124,7 +112,8 @@ async def create_typeticket(
 )
 async def edit_typeticket(
     typeticket_id: str,
-    raffle_update: schemas_raffle.TypeTicketBase,
+    raffle_update: schemas_raffle.TypeTicketEdit,
+    raffle_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
@@ -134,25 +123,13 @@ async def edit_typeticket(
     **The user must be an admin to use this endpoint**
     """
 
-    raffle = await cruds_raffle.get_typeticket_by_id(db=db, id=typeticket_id)
+    raffle = await cruds_raffle.get_typeticket_by_id(id=typeticket_id, db=db)
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
 
-    await cruds_raffle.edit_raffle(
+    await cruds_raffle.edit_typeticket(
         db=db, raffle_id=raffle_id, raffle_update=raffle_update
     )
-
-
-async def delete_raffle(
-    db: AsyncSession,
-    raffle_id: str,
-):
-    """Delete a raffle from database by id"""
-
-    await db.execute(
-        delete(models_raffle.Raffle).where(models_raffle.Raffle.id == raffle_id)
-    )
-    await db.commit()
 
 
 # create a lot
@@ -446,36 +423,3 @@ async def edit_cash_by_id(
         )
 
     await cruds_raffle.add_cash(user_id=user_id, amount=balance.balance, db=db)
-
-
-@router.get(
-    "/tombola/users/{user_id}/tickets",
-    response_model=schemas_raffle.TicketComplete,
-    status_code=200,
-    tags=[Tags.raffle],
-)
-async def get_tickets_by_userid(
-    user_id: str,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
-):
-    """
-    Get tickets from a specific user.
-
-    """
-    user_db = await cruds_users.get_user_by_id(db=db, user_id=user_id)
-    if user_db is None:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    if user_id == user.id or is_user_member_of_an_allowed_group(
-        user, [GroupType.admin]
-    ):
-        ticket = await cruds_raffle.get_ticket_by_userid(user_id=user_id, db=db)
-        if ticket is not None:
-            return ticket
-
-    else:
-        raise HTTPException(
-            status_code=403,
-            detail="Users that are not member of the group admin can only access the endpoint for their own user_id.",
-        )
