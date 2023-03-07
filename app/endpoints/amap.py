@@ -457,6 +457,10 @@ async def add_order_to_delievery(
         balance = models_amap.Cash(
             **new_cash_db.dict(),
         )
+        await cruds_amap.create_cash_of_user(
+            cash=balance,
+            db=db,
+        )
 
     if not amount:
         raise HTTPException(status_code=403, detail="You can't order nothing")
