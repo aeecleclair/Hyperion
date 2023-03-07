@@ -39,10 +39,13 @@ class Tickets(Base):
     __tablename__ = "tickets"
 
     id: str = Column(String, primary_key=True, index=True, nullable=False)
+    raffle_id: str = Column(ForeignKey("raffle.id"), index=True, nullable=False)
     type_id: str = Column(ForeignKey("type_ticket.id"), nullable=False)
     user_id: str = Column(
         ForeignKey("raffle_cash.user_id"), nullable=False
     )  # --> Récupérer sur hyperion
+    unit_price: float = Column(Float, nullable=False)
+    nb_tickets: int = Column(Integer, nullable=False)
     group_id: str = Column(ForeignKey("core_group.id"), index=True, nullable=False)
     winning_lot: str = Column(String, nullable=True, index=True)
 
