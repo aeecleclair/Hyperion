@@ -55,7 +55,7 @@ async def get_raffle_by_id(
     db: AsyncSession,
 ) -> models_raffle.Raffle | None:
     result = await db.execute(
-        select(models_raffle.Raffle).where(models_raffle.Raffle.id == id)
+        select(models_raffle.Raffle).where(models_raffle.Raffle.id == raffle_id)
     )
     return result.scalars().first()
 
@@ -111,7 +111,7 @@ async def create_lot(
 
 
 async def get_lot_by_raffleid(
-    id: str,
+    raffle_id: str,
     db: AsyncSession,
 ) -> models_raffle.Lots | None:
     result = await db.execute(
@@ -121,17 +121,17 @@ async def get_lot_by_raffleid(
 
 
 async def get_lot_by_id(
-    id: str,
+    lot_id: str,
     db: AsyncSession,
 ) -> models_raffle.Lots | None:
     result = await db.execute(
-        select(models_raffle.Lots).where(models_raffle.Lots.id == id)
+        select(models_raffle.Lots).where(models_raffle.Lots.id == lot_id)
     )
     return result.scalars().first()
 
 
 async def edit_lot(
-    lot_id: int,
+    lot_id: str,
     lot_update: schemas_raffle.LotEdit,
     db: AsyncSession,
 ):
@@ -147,7 +147,7 @@ async def delete_lot(
     db: AsyncSession,
     lot_id: str,
 ):
-    """Delete a raffle from database by id"""
+    """Delete a lot from database by id"""
 
     await db.execute(delete(models_raffle.Lots).where(models_raffle.Lots.id == lot_id))
     await db.commit()
@@ -179,7 +179,7 @@ async def create_typeticket(
 
 
 async def get_typeticket_by_raffleid(
-    raffle_id: int,
+    raffle_id: str,
     db: AsyncSession,
 ) -> models_raffle.TypeTicket | None:
     result = await db.execute(
@@ -191,18 +191,20 @@ async def get_typeticket_by_raffleid(
 
 
 async def get_typeticket_by_id(
-    id: str,
+    typeticket_id: str,
     db: AsyncSession,
 ) -> models_raffle.TypeTicket | None:
     result = await db.execute(
-        select(models_raffle.Lots).where(models_raffle.TypeTicket.id == id)
+        select(models_raffle.TypeTicket).where(
+            models_raffle.TypeTicket.id == typeticket_id
+        )
     )
     return result.scalars().first()
 
 
 async def edit_typeticket(
-    typeticket_id: int,
-    typeticket_update: schemas_raffle.LotEdit,
+    typeticket_id: str,
+    typeticket_update: schemas_raffle.TypeTicketEdit,
     db: AsyncSession,
 ):
     await db.execute(
@@ -262,18 +264,30 @@ async def get_ticket_by_groupid(
     return result.scalars().first()
 
 
-async def get_ticket_by_id(
-    id: int,
+async def get_ticket_by_raffleid(
+    raffle_id: str,
     db: AsyncSession,
 ) -> models_raffle.Tickets | None:
     result = await db.execute(
-        select(models_raffle.Tickets).where(models_raffle.Tickets.id == id)
+        select(models_raffle.Tickets).where(
+            models_raffle.Tickets.raffle_id == raffle_id
+        )
+    )
+    return result.scalars().first()
+
+
+async def get_ticket_by_id(
+    ticket_id: str,
+    db: AsyncSession,
+) -> models_raffle.Tickets | None:
+    result = await db.execute(
+        select(models_raffle.Tickets).where(models_raffle.Tickets.id == ticket_id)
     )
     return result.scalars().first()
 
 
 async def get_ticket_by_userid(
-    user_id: int,
+    user_id: str,
     db: AsyncSession,
 ) -> models_raffle.Tickets | None:
     result = await db.execute(
@@ -283,7 +297,7 @@ async def get_ticket_by_userid(
 
 
 async def edit_ticket(
-    ticket_id: int,
+    ticket_id: str,
     ticket_update: schemas_raffle.TicketEdit,
     db: AsyncSession,
 ):
