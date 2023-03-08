@@ -134,14 +134,14 @@ class TicketComplete(TicketBase):
 
 class CashBase(BaseModel):
     balance: float
-    user_id: str
+    user: CoreUserSimple
 
     class Config:
         orm_mode = True
 
 
 class CashComplete(CashBase):
-    user: CoreUserSimple
+    user_id: str
 
 
 class CashDB(CashBase):

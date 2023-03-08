@@ -1,7 +1,7 @@
 """Models file for module_tombola"""
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -15,6 +15,8 @@ class Raffle(Base):
     start_date: datetime = Column(DateTime, nullable=False)
     end_date: datetime = Column(DateTime, nullable=False)
     group_id: str = Column(ForeignKey("core_group.id"), index=True, nullable=False)
+    # ajout de la fonction valide
+    valid: bool = Column(Boolean, index=True)
     description: str = Column(String, index=True, nullable=True)
 
 
@@ -56,3 +58,8 @@ class Cash(Base):
     user_id: str = Column(String, ForeignKey("core_user.id"), primary_key=True)
     user: CoreUser = relationship("CoreUser")
     balance: float = Column(Float, nullable=False)
+
+
+class Admins(Base):
+    __tablename__ = "admin_raffle"
+    user_id: str = Column(String, ForeignKey("core_user.id"), primary_key=True)
