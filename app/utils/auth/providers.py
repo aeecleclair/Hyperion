@@ -162,9 +162,8 @@ class PiwigoAuthClient(BaseAuthClient):
             "name": get_display_name(
                 firstname=user.firstname, name=user.name, nickname=user.nickname
             ),
-            "groups": [
-                group.name for group in user.groups
-            ],  # TODO: We may want to filter which groups are provided as they won't not always all be useful. For example returning only Student, ECLAIR and Pixels
+            "groups": [group.name for group in user.groups],
+            "email": user.email,
         }
 
 
