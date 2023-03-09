@@ -55,6 +55,7 @@ class WinnerComplete(UserComplete):
 
 
 class LotBase(BaseModel):
+    name: str
     description: str
     raffle_id: str
     quantity: int
@@ -66,6 +67,7 @@ class LotBase(BaseModel):
 class LotEdit(BaseModel):
     raffle_id: str
     description: str
+    name: str
     quantity: int
 
     class Config:
