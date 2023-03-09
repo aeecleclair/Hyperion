@@ -159,8 +159,11 @@ class PiwigoAuthClient(BaseAuthClient):
         # A modified Piwigo oidc plugin allows managing groups from the oidc provider
         return {
             "sub": user.id,
-            "name": user.firstname,
-            "piwigo_groups": user.groups,  # TODO: We may want to filter which groups are provided as they won't not always all be useful. For example returning only Student, ECLAIR and Pixels
+            "name": get_display_name(
+                firstname=user.firstname, name=user.name, nickname=user.nickname
+            ),
+            "groups": [group.name for group in user.groups],
+            "email": user.email,
         }
 
 
