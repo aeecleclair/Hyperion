@@ -32,6 +32,7 @@ class Lots(Base):
     id: str = Column(String, primary_key=True, index=True, nullable=False)
     raffle_id: str = Column(ForeignKey("raffle.id"), index=True, nullable=False)
     description: str = Column(String, nullable=True)
+    name: str = Column(String, nullable=True)
     quantity: int = Column(Integer)
 
 
