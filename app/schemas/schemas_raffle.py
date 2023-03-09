@@ -11,8 +11,7 @@ class RaffleBase(BaseModel):
     """Base schema for raffles"""
 
     name: str
-    start_date: datetime
-    end_date: datetime
+    state: str
 
 
 class RaffleEdit(BaseModel):
