@@ -839,6 +839,7 @@ async def create_cash_of_user(
     cash: schemas_amap.CashEdit,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
+    request_id: str = Depends(get_request_id),
 ):
     """
     Create cash for an user.
@@ -864,6 +865,10 @@ async def create_cash_of_user(
         db=db,
     )
 
+    hyperion_amap_logger.info(
+        f"Create_cash_of_user: A cash has been created for user {cash_db.user_id} for an amount of {cash_db.balance}€. ({request_id})"
+    )
+
     # We can not directly return the cash_db because it does not contain the user.
     # Calling get_cash_by_id will return the cash with the user loaded as it's a relationship.
     return await cruds_amap.get_cash_by_id(
@@ -882,6 +887,7 @@ async def edit_cash_by_id(
     balance: schemas_amap.CashEdit,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
+    request_id: str = Depends(get_request_id),
 ):
     """
     Edit cash for an user. This will add the balance to the current balance.
@@ -901,6 +907,10 @@ async def edit_cash_by_id(
         )
 
     await cruds_amap.add_cash(user_id=user_id, amount=balance.balance, db=db)
+
+    hyperion_amap_logger.info(
+        f"Edit_cash_by_id: Cash has been updated for user {cash.user_id} from an amount of {cash.balance}€ to an amount of {balance.balance}€. ({request_id})"
+    )
 
 
 @router.get(
