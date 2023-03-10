@@ -11,6 +11,7 @@ from sqlalchemy.orm import noload, selectinload
 
 from app.models import models_raffle
 from app.schemas import schemas_raffle
+from app.utils.types.raffle_types import RaffleStatusType
 
 hyperion_error_logger = logging.getLogger("hyperion_error")
 

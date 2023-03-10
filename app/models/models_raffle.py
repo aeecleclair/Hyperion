@@ -6,13 +6,14 @@ from sqlalchemy.orm import relationship
 
 from app.database import Base
 from app.models.models_core import CoreUser
+from app.utils.types.raffle_types import RaffleStatusType
 
 
 class Raffle(Base):
     __tablename__ = "raffle"
     id: str = Column(String, primary_key=True, index=True, nullable=False)
     name: str = Column(String, nullable=False)
-    state: str = Column(String, nullable=False)
+    status: RaffleStatusType = Column(String, nullable=False)
     group_id: str = Column(ForeignKey("core_group.id"), index=True, nullable=False)
     description: str = Column(String, index=True, nullable=True)
 

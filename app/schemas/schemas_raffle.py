@@ -5,13 +5,14 @@ from datetime import date, datetime
 from pydantic import BaseModel
 
 from app.schemas.schemas_core import CoreUserSimple
+from app.utils.types.raffle_types import RaffleStatusType
 
 
 class RaffleBase(BaseModel):
     """Base schema for raffles"""
 
     name: str
-    state: str
+    status: RaffleStatusType
 
 
 class RaffleEdit(BaseModel):
