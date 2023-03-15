@@ -1,7 +1,6 @@
 """File defining the functions called by the endpoints, making queries to the table using the models"""
 
 import logging
-import random
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
@@ -10,6 +9,9 @@ from sqlalchemy.orm import selectinload
 
 from app.models import models_raffle
 from app.schemas import schemas_raffle
+
+# import random
+
 
 hyperion_error_logger = logging.getLogger("hyperion_error")
 

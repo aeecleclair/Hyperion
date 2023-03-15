@@ -311,7 +311,7 @@ async def edit_ticket(
     **The user must be an admin to use this endpoint**
     """
 
-    ticket = await cruds_raffle.get_ticket_by_id(id=ticket_id, db=db)
+    ticket = await cruds_raffle.get_ticket_by_id(ticket_id=ticket_id, db=db)
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
 
