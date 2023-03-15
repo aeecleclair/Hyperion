@@ -1,7 +1,5 @@
 """Schemas file for endpoint /amap"""
 
-from datetime import date, datetime
-
 from pydantic import BaseModel
 
 from app.schemas.schemas_core import CoreUserSimple
