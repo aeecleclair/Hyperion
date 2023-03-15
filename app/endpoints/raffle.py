@@ -1,20 +1,10 @@
 import uuid
-from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Response
-from pytz import timezone
-from redis import Redis
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import Settings
 from app.cruds import cruds_raffle, cruds_users
-from app.dependencies import (
-    get_db,
-    get_redis_client,
-    get_settings,
-    is_user_a_member,
-    is_user_a_member_of,
-)
+from app.dependencies import get_db, is_user_a_member, is_user_a_member_of
 from app.endpoints.users import read_user
 from app.models import models_core, models_raffle
 from app.schemas import schemas_raffle
