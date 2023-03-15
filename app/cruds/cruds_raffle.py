@@ -2,16 +2,14 @@
 
 import logging
 import random
-from datetime import date
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import noload, selectinload
+from sqlalchemy.orm import selectinload
 
 from app.models import models_raffle
 from app.schemas import schemas_raffle
-from app.utils.types.raffle_types import RaffleStatusType
 
 hyperion_error_logger = logging.getLogger("hyperion_error")
 
