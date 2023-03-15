@@ -387,6 +387,7 @@ async def remove_cash(db: AsyncSession, user_id: str, amount: float):
             raise ValueError("Error during cash edition")
 
 
+"""
 async def draw_winner_by_lot_raffle(
     lot_id: str, raffle_id: str, db: AsyncSession
 ) -> models_raffle.User:
@@ -398,6 +399,6 @@ async def draw_winner_by_lot_raffle(
     result = random.choices(tickets, weights=values)
 
     return result.scalars().first()
-
+"""
 
 # Il faut à présent modifier le ticket pour l'associer au lot
