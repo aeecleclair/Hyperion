@@ -1,7 +1,7 @@
 """File defining the functions called by the endpoints, making queries to the table using the models"""
 
-
 import logging
+import random
 from datetime import date
 
 from sqlalchemy import delete, select, update
@@ -182,13 +182,13 @@ async def create_typeticket(
 async def get_typeticket_by_raffleid(
     raffle_id: str,
     db: AsyncSession,
-) -> models_raffle.TypeTicket | None:
+) -> list[models_raffle.TypeTicket] | None:
     result = await db.execute(
         select(models_raffle.Lots).where(
             models_raffle.TypeTicket.raffle_id == raffle_id
         )
     )
-    return result.scalars().first()
+    return result.scalars().all()
 
 
 async def get_typeticket_by_id(
@@ -258,23 +258,23 @@ async def create_ticket(
 async def get_ticket_by_groupid(
     group_id: int,
     db: AsyncSession,
-) -> models_raffle.Tickets | None:
+) -> list[models_raffle.Tickets] | None:
     result = await db.execute(
         select(models_raffle.Tickets).where(models_raffle.Tickets.group_id == group_id)
     )
-    return result.scalars().first()
+    return result.scalars().all()
 
 
 async def get_ticket_by_raffleid(
     raffle_id: str,
     db: AsyncSession,
-) -> models_raffle.Tickets | None:
+) -> list[models_raffle.Tickets] | None:
     result = await db.execute(
         select(models_raffle.Tickets).where(
             models_raffle.Tickets.raffle_id == raffle_id
         )
     )
-    return result.scalars().first()
+    return result.scalars().all()
 
 
 async def get_ticket_by_id(
@@ -290,11 +290,11 @@ async def get_ticket_by_id(
 async def get_ticket_by_userid(
     user_id: str,
     db: AsyncSession,
-) -> models_raffle.Tickets | None:
+) -> list[models_raffle.Tickets] | None:
     result = await db.execute(
         select(models_raffle.Tickets).where(models_raffle.Tickets.user_id == user_id)
     )
-    return result.scalars().first()
+    return result.scalars().all()
 
 
 async def edit_ticket(
@@ -387,3 +387,19 @@ async def remove_cash(db: AsyncSession, user_id: str, amount: float):
         except IntegrityError:
             await db.rollback()
             raise ValueError("Error during cash edition")
+
+
+async def draw_winner_by_lot_raffle(
+    lot_id: str, raffle_id: str, db: AsyncSession
+) -> models_raffle.User:
+    tickets = await get_ticket_by_raffleid(raffle_id=raffle_id, db=db)
+    values = [
+        (await get_typeticket_by_id(typeticket_id=t.type_id, db=db)).nb_ticket
+        for t in tickets
+    ]
+    result = random.choices(tickets, weights=values)
+
+    return result.scalars().first()
+
+
+# Il faut à présent modifier le ticket pour l'associer au lot

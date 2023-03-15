@@ -13,7 +13,9 @@ class Raffle(Base):
     __tablename__ = "raffle"
     id: str = Column(String, primary_key=True, index=True, nullable=False)
     name: str = Column(String, nullable=False)
-    status: RaffleStatusType = Column(String, nullable=False)
+    status: RaffleStatusType = Column(
+        String, nullable=False, default=RaffleStatusType.creation
+    )
     group_id: str = Column(ForeignKey("core_group.id"), index=True, nullable=False)
     description: str = Column(String, index=True, nullable=True)
 
