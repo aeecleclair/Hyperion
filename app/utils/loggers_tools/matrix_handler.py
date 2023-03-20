@@ -20,8 +20,7 @@ class MatrixHandler(StreamHandler):
     def __init__(
         self,
         room_id: str,
-        user_name: str,
-        user_password: str,
+        token: str,
         server_base_url: str | None,
         level: str = "INFO",
         enabled: bool = True,
@@ -32,17 +31,10 @@ class MatrixHandler(StreamHandler):
         self.room_id = room_id
         self.enabled = enabled
         if self.enabled:
-            try:
-                self.matrix = Matrix(
-                    user_name=user_name,
-                    user_password=user_password,
-                    server_base_url=server_base_url,
-                )
-            except ValueError as err:
-                hyperion_error_logger.warning(
-                    f"MatrixHandler: Matrix configuration failed, disabling the handler: {err}"
-                )
-                self.enabled = False
+            self.matrix = Matrix(
+                token=token,
+                server_base_url=server_base_url,
+            )
         else:
             hyperion_error_logger.warning(
                 "MatrixHandler isn't configured in the .env file, disabling the handler"
@@ -56,6 +48,5 @@ class MatrixHandler(StreamHandler):
                 self.matrix.send_message(self.room_id, msg)
             except ValueError as err:
                 hyperion_error_logger.warning(
-                    f"MatrixHandler: Unable to send message to Matrix server, disabling the handler: {err}"
+                    f"MatrixHandler: Unable to send message to Matrix server: {err}"
                 )
-                self.enabled = False

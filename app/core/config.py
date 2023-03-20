@@ -41,8 +41,7 @@ class Settings(BaseSettings):
     # MATRIX_SERVER_BASE_URL is optional, the official Matrix server will be used if not configured
     # Advanced note: Username and password will be used to ask for an access token. A Matrix custom client `Hyperion` is used to make all requests
     MATRIX_SERVER_BASE_URL: str | None
-    MATRIX_USER_NAME: str | None
-    MATRIX_USER_PASSWORD: str | None
+    MATRIX_TOKEN: str | None
     MATRIX_LOG_ERROR_ROOM_ID: str | None
     MATRIX_LOG_AMAP_ROOM_ID: str | None
 
