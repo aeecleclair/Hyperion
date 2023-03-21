@@ -637,3 +637,18 @@ async def edit_cash_by_id(
         )
 
     await cruds_raffle.add_cash(user_id=user_id, amount=balance.balance, db=db)
+
+
+@router.post(
+    "/tombola/lots/{lot_id}/draw",
+    response_model=schemas_raffle.TicketComplete,
+    status_code=201,
+    tags=[Tags.raffle],
+)
+async def draw_winner(
+    lot_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    winning_ticket = await cruds_raffle.draw_winner_by_lot_raffle(lot_id=lot_id, db=db)
+    return winning_ticket

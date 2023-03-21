@@ -1,6 +1,7 @@
 """File defining the functions called by the endpoints, making queries to the table using the models"""
 
 import logging
+import random
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
@@ -384,3 +385,26 @@ async def remove_cash(db: AsyncSession, user_id: str, amount: float):
         except IntegrityError:
             await db.rollback()
             raise ValueError("Error during cash edition")
+
+
+async def draw_winner_by_lot_raffle(
+    lot_id: str, db: AsyncSession
+) -> models_raffle.Tickets:
+    raffle_id = (await get_lot_by_id(lot_id=lot_id, db=db)).raffle_id
+    tickets = await get_ticket_by_raffleid(raffle_id=raffle_id, db=db)
+    values = [
+        (await get_typeticket_by_id(typeticket_id=t.type_id, db=db)).nb_ticket
+        for t in tickets
+    ]
+    [result] = [random.choices(tickets, weights=values)]
+    await db.execute(
+        update(models_raffle.Tickets)
+        .where(models_raffle.Tickets.id == result.id)
+        .values(winning_lot=lot_id)
+    )
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise ValueError("Error during edition of the winning ticket")
+    return result.scalars().first()
