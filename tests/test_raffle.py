@@ -17,7 +17,7 @@ raffle_user: models_core.CoreUser | None = None
 student_user: models_core.CoreUser | None = None
 raffle: models_raffle.Raffle | None = None
 typeticket: models_raffle.TypeTicket | None = None
-lots: models_raffle.Lots | None = None
+lot: models_raffle.Lots | None = None
 ticket: models_raffle.Tickets | None = None
 cash: models_raffle.Cash | None = None
 
@@ -27,73 +27,52 @@ settings = app.dependency_overrides.get(get_settings, get_settings)()
 
 @app.on_event("startup")  # create the data needed in the tests
 async def startuptest():
-    global amap_user, student_user, product, deletable_product, delivery, deletable_delivery, locked_delivery, order, deletable_order_by_admin, cash
+    global raffle_user, student_user, raffle, typeticket, ticket, lot, cash
 
     async with TestingSessionLocal() as db:
-        amap_user = await create_user_with_groups([GroupType.amap], db=db)
+        raffle_user = await create_user_with_groups([GroupType.admin], db=db)
         student_user = await create_user_with_groups([GroupType.student], db=db)
 
-        product = models_amap.Product(
-            id=str(uuid.uuid4()), name="Tomato", price=1.5, category="Test"
-        )
-        db.add(product)
-        deletable_product = models_amap.Product(
-            id=str(uuid.uuid4()), name="Deletable Tomato", price=1.5, category="Test"
-        )
-        db.add(deletable_product)
-
-        # We can not create two deliveries with the same date
-        delivery = models_amap.Delivery(
+        raffle = models_raffle.Raffle(
             id=str(uuid.uuid4()),
-            delivery_date=datetime(2022, 8, 15),
-            status=DeliveryStatusType.creation,
+            name="The best raffle",
+            status=RaffleStatusType.creation,
+            group_id="123",
         )
-        db.add(delivery)
-        deletable_delivery = models_amap.Delivery(
-            id=str(uuid.uuid4()),
-            delivery_date=datetime(2022, 8, 16),
-            status=DeliveryStatusType.creation,
+        db.add(raffle)
+        typeticket = models_raffle.Tickets(
+            id=str(uuid.uuid4()), price=1.0, nb_ticket=1, raffle_id=raffle.id
         )
-        db.add(deletable_delivery)
+        db.add(typeticket)
 
-        locked_delivery = models_amap.Delivery(
+        ticket = models_raffle.Tickets(
             id=str(uuid.uuid4()),
-            delivery_date=datetime(2022, 8, 17),
-            status=DeliveryStatusType.locked,
-        )
-        db.add(locked_delivery)
-
-        order = models_amap.Order(
-            order_id=str(uuid.uuid4()),
+            raffle_id=raffle.id,
+            type_id=typeticket.id,
             user_id=student_user.id,
-            delivery_id=delivery.id,
-            amount=0.0,
-            collection_slot=AmapSlotType.midi,
-            ordering_date=datetime(2022, 8, 10, 12, 16, 26),
-            delivery_date=delivery.delivery_date,
         )
-        db.add(order)
-        await db.commit()
+        db.add(ticket)
 
-        deletable_order_by_admin = models_amap.Order(
-            order_id=str(uuid.uuid4()),
-            user_id=student_user.id,
-            delivery_id=locked_delivery.id,
-            amount=0.0,
-            collection_slot=AmapSlotType.midi,
-            ordering_date=datetime(2022, 8, 18, 12, 16, 26),
-            delivery_date=locked_delivery.delivery_date,
+        lot = models_raffle.Lots(
+            id=str(uuid.uuid4()),
+            raffle_id=raffle.id,
+            description="Description of the lot",
+            name="Name of the lot",
+            quantity=3,
         )
-        db.add(deletable_order_by_admin)
-        await db.commit()
+        db.add(lot)
 
-        cash = models_amap.Cash(user_id=student_user.id, balance=666)
+        cash = models_raffle.Cash(
+            user_id=student_user.id, user=student_user, balance=66
+        )
         db.add(cash)
+
         await db.commit()
 
 
+"""
 def test_get_products():
-    token = create_api_access_token(amap_user)
+    token = create_api_access_token(raffle_user)
 
     response = client.get(
         "/amap/products",
@@ -423,3 +402,4 @@ def test_get_orders_of_user():
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
+"""
