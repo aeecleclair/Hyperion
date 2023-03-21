@@ -20,8 +20,8 @@ class Raffle(Base):
 
 class TypeTicket(Base):
     __tablename__ = "raffle_type_ticket"
-    price: float = Column(Float, nullable=False)
     id: str = Column(String, primary_key=True, index=True, nullable=False)
+    price: float = Column(Float, nullable=False)
     nb_ticket: int = Column(Integer)
     raffle_id: str = Column(ForeignKey("raffle.id"), index=True, nullable=False)
 
