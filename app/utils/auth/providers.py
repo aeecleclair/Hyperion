@@ -115,7 +115,7 @@ class NextcloudAuthClient(BaseAuthClient):
 
         return {
             "sub": user.id,
-            "name": f"{user.firstname} {user.name} {user.nickname})",
+            "name": f"{user.firstname} {user.name} ({user.nickname})",
             # TODO: should we use group ids instead of names? It would be less human readable but would guarantee uniqueness. Question: are group names unique?
             "groups": [
                 group.name for group in user.groups
