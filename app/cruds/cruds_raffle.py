@@ -10,9 +10,6 @@ from sqlalchemy.orm import selectinload
 from app.models import models_raffle
 from app.schemas import schemas_raffle
 
-# import random
-
-
 hyperion_error_logger = logging.getLogger("hyperion_error")
 
 
@@ -36,9 +33,9 @@ async def create_raffle(
     try:
         await db.commit()
         return raffle
-    except IntegrityError:
+    except IntegrityError as err:
         await db.rollback()
-        raise ValueError("This name is already used")
+        raise ValueError(err)
 
 
 async def get_raffle_by_groupid(
@@ -387,20 +384,3 @@ async def remove_cash(db: AsyncSession, user_id: str, amount: float):
         except IntegrityError:
             await db.rollback()
             raise ValueError("Error during cash edition")
-
-
-"""
-async def draw_winner_by_lot_raffle(
-    lot_id: str, raffle_id: str, db: AsyncSession
-) -> models_raffle.User:
-    tickets = await get_ticket_by_raffleid(raffle_id=raffle_id, db=db)
-    values = [
-        (await get_typeticket_by_id(typeticket_id=t.type_id, db=db)).nb_ticket
-        for t in tickets
-    ]
-    result = random.choices(tickets, weights=values)
-
-    return result.scalars().first()
-"""
-
-# Il faut à présent modifier le ticket pour l'associer au lot
