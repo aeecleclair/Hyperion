@@ -34,7 +34,7 @@ async def get_rights(
 
 @router.get(
     "/bdebooking/bookings",
-    response_model=list[schemas_bdebooking.BookingReturn],
+    response_model=list[schemas_bdebooking.BookingReturnApplicant],
     status_code=200,
     tags=[Tags.bdebooking],
 )
@@ -125,6 +125,29 @@ async def get_booking_by_id(
         raise HTTPException(status_code=404)
 
 
+@router.get(
+    "/bdebooking/bookings/{booking_id}/applicant",
+    response_model=schemas_bdebooking.Applicant,
+    status_code=200,
+    tags=[Tags.bdebooking],
+)
+async def get_booking_applicant(
+    booking_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
+):
+    """
+    Get one booking's applicant.
+
+    **Usable by admins**
+    """
+    booking = await cruds_bdebooking.get_booking_by_id(db=db, booking_id=booking_id)
+    if booking is not None:
+        return booking.applicant
+    else:
+        raise HTTPException(status_code=404)
+
+
 @router.post(
     "/bdebooking/bookings",
     response_model=schemas_bdebooking.BookingReturn,
@@ -158,18 +181,29 @@ async def create_bookings(
 )
 async def edit_bookings_id(
     booking_id: str,
-    booking: schemas_bdebooking.BookingEdit,
+    booking_edit: schemas_bdebooking.BookingEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Edit a booking.
 
-    **Only usable by admins**
+    **Only usable by admins or applicant before decision**
     """
+    booking = await cruds_bdebooking.get_booking_by_id(db=db, booking_id=booking_id)
+
+    if booking is not None and not (
+        (user.id == booking.applicant_id and booking.decision == Decision.pending)
+        or is_user_member_of_an_allowed_group(user, [GroupType.BDE])
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="You are not allowed to edit this booking",
+        )
+
     try:
         await cruds_bdebooking.edit_booking(
-            booking_id=booking_id, booking=booking, db=db
+            booking_id=booking_id, booking=booking_edit, db=db
         )
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
@@ -202,14 +236,26 @@ async def confirm_booking(
 async def delete_bookings_id(
     booking_id,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Remove a booking.
 
-    **Only usable by admins**
+    **Only usable by admins or applicant before decision**
     """
-    await cruds_bdebooking.delete_booking(booking_id=booking_id, db=db)
+    booking = await cruds_bdebooking.get_booking_by_id(db=db, booking_id=booking_id)
+
+    if booking is not None and (
+        (user.id == booking.applicant_id and booking.decision == Decision.pending)
+        or is_user_member_of_an_allowed_group(user, [GroupType.BDE])
+    ):
+        await cruds_bdebooking.delete_booking(booking_id=booking_id, db=db)
+
+    else:
+        raise HTTPException(
+            status_code=403,
+            detail="You are not allowed to delete this booking",
+        )
 
 
 @router.get(

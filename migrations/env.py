@@ -1,14 +1,32 @@
 """Environment file defining the required functions for the alembic migration to work"""
 
 import asyncio
+import os
+import re
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import engine_from_config, pool
-from sqlalchemy.ext.asyncio import AsyncEngine
 
 from app.database import Base
+from app.dependencies import get_settings, get_db_engine
 
+settings = get_settings()
+engine = get_db_engine(settings=settings)
+
+if settings.SQLITE_DB:
+    SQLALCHEMY_DATABASE_URL = (
+        f"sqlite+aiosqlite:///./{settings.SQLITE_DB}"  # Connect to the test's database
+    )
+else:
+    SQLALCHEMY_DATABASE_URL = f"postgresql+asyncpg://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}/{settings.POSTGRES_DB}"
+
+# from sqlalchemy import engine_from_config, pool
+# from sqlalchemy.ext.asyncio import AsyncEngine
+
+
+models_files = [x for x in os.listdir("./app/models") if re.match("models*", x)]
+for models_file in models_files:
+    __import__(f"app.models.{models_file[:-3]}")
 # from app.models import models_core
 
 # this is the Alembic Config object, which provides
@@ -44,12 +62,13 @@ def run_migrations_offline():
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
+    url = SQLALCHEMY_DATABASE_URL
     context.configure(
         url=url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        compare_type=True,
     )
 
     with context.begin_transaction():
@@ -57,7 +76,9 @@ def run_migrations_offline():
 
 
 def do_run_migrations(connection):
-    context.configure(connection=connection, target_metadata=target_metadata)
+    context.configure(
+        connection=connection, target_metadata=target_metadata, compare_type=True
+    )
 
     with context.begin_transaction():
         context.run_migrations()
@@ -70,14 +91,7 @@ async def run_migrations_online():
     and associate a connection with the context.
 
     """
-    connectable = AsyncEngine(
-        engine_from_config(
-            config.get_section(config.config_ini_section),
-            prefix="sqlalchemy.",
-            poolclass=pool.NullPool,
-            future=True,
-        )
-    )
+    connectable = engine
 
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)

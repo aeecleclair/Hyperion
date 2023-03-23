@@ -1,14 +1,19 @@
 """File defining the functions called by the endpoints, making queries to the table using the models"""
 
 
+import logging
+from datetime import date
+
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import noload, selectinload
 
-from app.cruds import cruds_users
 from app.models import models_amap
 from app.schemas import schemas_amap
+from app.utils.types.amap_types import DeliveryStatusType
+
+hyperion_error_logger = logging.getLogger("hyperion_error")
 
 
 async def get_products(db: AsyncSession) -> list[models_amap.Product]:
@@ -68,6 +73,15 @@ async def is_product_used(
     return result.scalars().all() != []
 
 
+async def is_product_used_in_order(db: AsyncSession, product_id: str) -> bool:
+    result = await db.execute(
+        select(models_amap.AmapOrderContent).where(
+            models_amap.AmapDeliveryContent.product_id == product_id
+        )
+    )
+    return result.scalars().all() != []
+
+
 async def delete_product(
     db: AsyncSession,
     product_id: str,
@@ -85,7 +99,9 @@ async def get_deliveries(
 ) -> list[models_amap.Delivery]:
     """Return all deliveries from database"""
     result = await db.execute(
-        select(models_amap.Delivery).options(
+        select(models_amap.Delivery)
+        .where(models_amap.Delivery.status != DeliveryStatusType.archived)
+        .options(
             selectinload(models_amap.Delivery.products),
             selectinload(models_amap.Delivery.orders),
         )
@@ -102,47 +118,53 @@ async def get_delivery_by_id(
         .where(models_amap.Delivery.id == delivery_id)
         .options(
             selectinload(models_amap.Delivery.products),
-            selectinload(models_amap.Delivery.orders),
+            noload(models_amap.Delivery.orders),
         )
     )
     return result.scalars().first()
 
 
+async def is_there_a_delivery_on(db: AsyncSession, delivery_date: date) -> bool:
+    result = await db.execute(
+        select(models_amap.Delivery).where(
+            models_amap.Delivery.delivery_date == delivery_date,
+            models_amap.Delivery.status != DeliveryStatusType.archived,
+        )
+    )
+    return result.scalars().all() != []
+
+
 async def create_delivery(
     delivery: schemas_amap.DeliveryComplete,
     db: AsyncSession,
-) -> models_amap.Delivery:
+) -> models_amap.Delivery | None:
     """Create a new delivery in database and return it"""
-    products_ids = delivery.products_ids
-    products = []
-    for id in products_ids:
-        res = await db.execute(
-            select(models_amap.Product).where(models_amap.Product.id == id)
-        )
-        p = res.scalars().first()
-        if p is not None:
-            products.append(p)
-    db_delivery = models_amap.Delivery(
-        id=delivery.id,
-        delivery_date=delivery.delivery_date,
-        products=products,
-        locked=delivery.locked,
-        orders=[],
-    )
-    db.add(db_delivery)
+    db.add(models_amap.Delivery(**delivery.dict(exclude={"products_ids"})))
     try:
         await db.commit()
-        return db_delivery
     except IntegrityError:
         await db.rollback()
-        raise ValueError(
-            "A Delivery is already planned on that day. Consider editing this one."
-        )
+        raise ValueError("An error as occured server side while creating the delivery")
+
+    for id in delivery.products_ids:
+        db.add(models_amap.AmapDeliveryContent(product_id=id, delivery_id=delivery.id))
+    try:
+        await db.commit()
+        return await get_delivery_by_id(db=db, delivery_id=delivery.id)
+    except IntegrityError as error:
+        await db.rollback()
+        hyperion_error_logger.error(error)
+        raise ValueError("An error as occured server side while creating the delivery")
 
 
 async def delete_delivery(db: AsyncSession, delivery_id: str):
     """Delete a delivery from database by id"""
-
+    await db.execute(
+        delete(models_amap.AmapDeliveryContent).where(
+            models_amap.AmapDeliveryContent.delivery_id == delivery_id
+        )
+    )
+    await db.commit()
     await db.execute(
         delete(models_amap.Delivery).where(models_amap.Delivery.id == delivery_id)
     )
@@ -150,11 +172,13 @@ async def delete_delivery(db: AsyncSession, delivery_id: str):
 
 
 async def add_product_to_delivery(
-    db: AsyncSession, link: schemas_amap.AddProductDelivery
+    db: AsyncSession,
+    products_ids: schemas_amap.DeliveryProductsUpdate,
+    delivery_id: str,
 ):
     """Add a product to a delivery products list"""
-    db_add = models_amap.AmapDeliveryContent(**link.dict())
-    db.add(db_add)
+    for id in products_ids.products_ids:
+        db.add(models_amap.AmapDeliveryContent(product_id=id, delivery_id=delivery_id))
     try:
         await db.commit()
     except IntegrityError:
@@ -163,16 +187,18 @@ async def add_product_to_delivery(
 
 
 async def remove_product_from_delivery(
-    db: AsyncSession, product_id: str, delivery_id: str
+    db: AsyncSession,
+    products_ids: schemas_amap.DeliveryProductsUpdate,
+    delivery_id: str,
 ):
     """Remove a product from a delivery products list"""
-
     await db.execute(
         delete(models_amap.AmapDeliveryContent).where(
-            models_amap.AmapDeliveryContent.product_id == product_id
-            and models_amap.AmapDeliveryContent.delivery_id == delivery_id
+            models_amap.AmapDeliveryContent.product_id.in_(products_ids.products_ids),
+            models_amap.AmapDeliveryContent.delivery_id == delivery_id,
         )
     )
+
     await db.commit()
 
 
@@ -191,79 +217,77 @@ async def get_order_by_id(db: AsyncSession, order_id: str) -> models_amap.Order 
     result = await db.execute(
         select(models_amap.Order)
         .where(models_amap.Order.order_id == order_id)
-        .options(selectinload(models_amap.Order.products))
+        .options(
+            selectinload(models_amap.Order.user),
+            noload(models_amap.Order.products),
+        )
     )
     return result.scalars().first()
 
 
-async def get_quantities_of_order(db: AsyncSession, order_id: str) -> dict:
-    result_db = await db.execute(
-        select(models_amap.AmapOrderContent).where(
-            models_amap.AmapOrderContent.order_id == order_id
+async def get_orders_from_delivery(
+    db: AsyncSession, delivery_id: str
+) -> list[models_amap.Order]:
+    result = await db.execute(
+        select(models_amap.Order)
+        .where(models_amap.Order.delivery_id == delivery_id)
+        .options(
+            noload(models_amap.Order.products), selectinload(models_amap.Order.user)
         )
     )
-    result = result_db.scalars().all()
-    result_treated = {}
-    for i in range(len(result)):
-        result_treated[result[i].product_id] = result[i].quantity
-    return result_treated
+    return result.scalars().all()
 
 
-async def checkif_delivery_locked(db: AsyncSession, delivery_id: str) -> bool:
-    delivery = await get_delivery_by_id(db=db, delivery_id=delivery_id)
-    if delivery is not None:
-        return delivery.locked
-    else:
-        return True
+async def get_products_of_order(
+    db: AsyncSession, order_id: str
+) -> list[models_amap.AmapOrderContent]:
+    result_db = await db.execute(
+        select(models_amap.AmapOrderContent)
+        .where(models_amap.AmapOrderContent.order_id == order_id)
+        .options(selectinload(models_amap.AmapOrderContent.product))
+    )
+    return result_db.scalars().all()
 
 
 async def add_order_to_delivery(
     db: AsyncSession,
     order: schemas_amap.OrderComplete,
 ):
-    delivery = await get_delivery_by_id(db=db, delivery_id=order.delivery_id)
-    user = await cruds_users.get_user_by_id(db=db, user_id=order.user_id)
-    products = []
-    for p in order.products_ids:
-        product = await get_product_by_id(db=db, product_id=p)
-        if product is not None:
-            products.append(product)
-    if delivery is not None and user is not None:
-        db_add = models_amap.Order(
-            delivery=delivery,
-            user=user,
-            products=products,
-            user_id=order.user_id,
-            delivery_id=order.delivery_id,
-            order_id=order.order_id,
-            amount=order.amount,
-            collection_slot=order.collection_slot,
-            ordering_date=order.ordering_date,
-            delivery_date=order.delivery_date,
-        )
-
-        db.add(db_add)
-        try:
-            await db.commit()
-            for i in range(len(order.products_ids)):
-                await db.execute(
-                    update(models_amap.AmapOrderContent)
-                    .where(
-                        models_amap.AmapOrderContent.order_id == order.order_id,
-                        models_amap.AmapOrderContent.product_id
-                        == order.products_ids[i],
-                    )
-                    .values(quantity=order.products_quantity[i])
+    db.add(
+        models_amap.Order(**order.dict(exclude={"products_ids", "products_quantity"}))
+    )
+    try:
+        await db.commit()
+        for i in range(len(order.products_ids)):
+            db.add(
+                models_amap.AmapOrderContent(
+                    order_id=order.order_id,
+                    product_id=order.products_ids[i],
+                    quantity=order.products_quantity[i],
                 )
-                await db.commit()
-        except IntegrityError:
-            await db.rollback()
-            raise ValueError("This product is already in this delivery")
-    else:
-        raise ValueError("Delivery or user not found.")
+            )
+            await db.commit()
+    except IntegrityError as err:
+        await db.rollback()
+        raise ValueError(err)
 
 
-async def edit_order(db: AsyncSession, order: schemas_amap.OrderComplete):
+async def edit_order_without_products(
+    db: AsyncSession, order: schemas_amap.OrderEdit, order_id: str
+):
+    await db.execute(
+        update(models_amap.Order)
+        .where(models_amap.Order.order_id == order_id)
+        .values(**order.dict(exclude_none=True))
+    )
+    try:
+        await db.commit()
+    except IntegrityError as err:
+        await db.rollback()
+        raise ValueError(err)
+
+
+async def edit_order_with_products(db: AsyncSession, order: schemas_amap.OrderComplete):
     await db.execute(
         delete(models_amap.AmapOrderContent).where(
             models_amap.AmapOrderContent.order_id == order.order_id
@@ -289,13 +313,18 @@ async def edit_order(db: AsyncSession, order: schemas_amap.OrderComplete):
             amount=order.amount,
             collection_slot=order.collection_slot,
             ordering_date=order.ordering_date,
-            delivery_date=order.delivery_date,
         )
     )
     await db.commit()
 
 
 async def remove_order(db: AsyncSession, order_id: str):
+    await db.execute(
+        delete(models_amap.AmapOrderContent).where(
+            models_amap.AmapOrderContent.order_id == order_id
+        )
+    )
+    await db.commit()
     await db.execute(
         delete(models_amap.Order).where(models_amap.Order.order_id == order_id)
     )
@@ -330,21 +359,122 @@ async def create_cash_of_user(
         raise ValueError(err)
 
 
-async def edit_cash_by_id(
-    db: AsyncSession, user_id: str, balance: schemas_amap.CashEdit
-):
-    await db.execute(
-        update(models_amap.Cash)
-        .where(models_amap.Cash.user_id == user_id)
-        .values(**balance.dict())
+async def add_cash(db: AsyncSession, user_id: str, amount: float):
+    result = await db.execute(
+        select(models_amap.Cash).where(models_amap.Cash.user_id == user_id)
     )
-    await db.commit()
+    balance = result.scalars().first()
+    if balance is not None:
+        await db.execute(
+            update(models_amap.Cash)
+            .where(models_amap.Cash.user_id == user_id)
+            .values(user_id=balance.user_id, balance=balance.balance + amount)
+        )
+        try:
+            await db.commit()
+        except IntegrityError:
+            await db.rollback()
+            raise ValueError("Error during cash edition")
+
+
+async def remove_cash(db: AsyncSession, user_id: str, amount: float):
+    result = await db.execute(
+        select(models_amap.Cash).where(models_amap.Cash.user_id == user_id)
+    )
+    balance = result.scalars().first()
+    if balance is not None:
+        await db.execute(
+            update(models_amap.Cash)
+            .where(models_amap.Cash.user_id == user_id)
+            .values(user_id=balance.user_id, balance=balance.balance - amount)
+        )
+        try:
+            await db.commit()
+        except IntegrityError:
+            await db.rollback()
+            raise ValueError("Error during cash edition")
 
 
 async def get_orders_of_user(db: AsyncSession, user_id: str) -> list[models_amap.Order]:
     result = await db.execute(
         select(models_amap.Order)
         .where(models_amap.Order.user_id == user_id)
-        .options(selectinload(models_amap.Order.products))
+        .options(
+            noload(models_amap.Order.products),
+            selectinload(models_amap.Order.user),
+        )
     )
     return result.scalars().all()
+
+
+async def open_ordering_of_delivery(db: AsyncSession, delivery_id: str):
+    await db.execute(
+        update(models_amap.Delivery)
+        .where(models_amap.Delivery.id == delivery_id)
+        .values(status=DeliveryStatusType.orderable)
+    )
+    await db.commit()
+
+
+async def lock_delivery(db: AsyncSession, delivery_id: str):
+    await db.execute(
+        update(models_amap.Delivery)
+        .where(models_amap.Delivery.id == delivery_id)
+        .values(status=DeliveryStatusType.locked)
+    )
+    await db.commit()
+
+
+async def mark_delivery_as_delivered(db: AsyncSession, delivery_id: str):
+    await db.execute(
+        update(models_amap.Delivery)
+        .where(models_amap.Delivery.id == delivery_id)
+        .values(status=DeliveryStatusType.delivered)
+    )
+    await db.commit()
+
+
+async def mark_delivery_as_archived(db: AsyncSession, delivery_id: str):
+    await db.execute(
+        update(models_amap.Delivery)
+        .where(models_amap.Delivery.id == delivery_id)
+        .values(status=DeliveryStatusType.archived)
+    )
+    await db.commit()
+
+
+async def get_information(
+    db: AsyncSession,
+) -> models_amap.AmapInformation | None:
+    result = await db.execute(
+        select(models_amap.AmapInformation).where(
+            models_amap.AmapInformation.unique_id == "information"
+        )
+    )
+
+    information = result.scalars().first()
+    return information
+
+
+async def add_information(
+    information: models_amap.AmapInformation,
+    db: AsyncSession,
+) -> None:
+    db.add(information)
+    try:
+        await db.commit()
+    except IntegrityError as err:
+        await db.rollback()
+        raise ValueError(f"Could not add information {err}")
+
+
+async def edit_information(
+    information_update: schemas_amap.InformationEdit,
+    db: AsyncSession,
+):
+    await db.execute(
+        update(models_amap.AmapInformation)
+        .where(models_amap.AmapInformation.unique_id == "information")
+        .values(**information_update.dict(exclude_none=True))
+    )
+    await db.commit()

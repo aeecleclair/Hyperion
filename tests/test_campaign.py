@@ -148,7 +148,6 @@ def test_update_list():
 
 
 def test_create_campaigns_logo():
-
     token = create_api_access_token(caa_user)
 
     with open("assets/images/default_campaigns_logo.png", "rb") as image:
@@ -184,7 +183,6 @@ def test_open_vote():
 
 
 def test_read_campaigns_logo():
-
     token = create_api_access_token(ae_user)
 
     response = client.get(

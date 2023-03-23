@@ -119,7 +119,7 @@ async def update_loaner(
     loaner_id: str,
     loaner_update: schemas_loans.LoanerUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
     Update a loaner, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value.
@@ -341,7 +341,7 @@ async def delete_loaner_item(
     loaner_id: str,
     item_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Delete a loaner's item.
@@ -656,7 +656,7 @@ async def update_loan(  # noqa: C901
 async def delete_loan(
     loan_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Delete a loaner's item.

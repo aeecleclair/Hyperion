@@ -41,9 +41,9 @@ class Settings(BaseSettings):
     # MATRIX_SERVER_BASE_URL is optional, the official Matrix server will be used if not configured
     # Advanced note: Username and password will be used to ask for an access token. A Matrix custom client `Hyperion` is used to make all requests
     MATRIX_SERVER_BASE_URL: str | None
-    MATRIX_USER_NAME: str | None
-    MATRIX_USER_PASSWORD: str | None
+    MATRIX_TOKEN: str | None
     MATRIX_LOG_ERROR_ROOM_ID: str | None
+    MATRIX_LOG_AMAP_ROOM_ID: str | None
 
     ########################
     # Redis configuration #
@@ -53,19 +53,34 @@ class Settings(BaseSettings):
     # If you want to use a custom configuration, a password and a specific binds should be used to avoid security issues
     REDIS_HOST: str
     REDIS_PORT: int
+    REDIS_PASSWORD: str | None
     REDIS_LIMIT: int
     REDIS_WINDOW: int
+
+    ############################
+    # PostgreSQL configuration #
+    ############################
+    # PostgreSQL configuration is needed to use the database
+    SQLITE_DB: str | None = None  # If set, the application use a SQLite database instead of PostgreSQL, for testing or development purposes (should not be used if possible)
+    POSTGRES_HOST: str
+    POSTGRES_USER: str
+    POSTGRES_PASSWORD: str
+    POSTGRES_DB: str
+    DATABASE_DEBUG: bool  # If True, the database will log all queries
 
     #####################
     # Hyperion settings #
     #####################
 
+    # Timezone used to compare dates
+    TIMEZONE: str = "Europe/Paris"
+
     # By default, only production's records are logged
     LOG_DEBUG_MESSAGES: bool | None
     # Hyperion follows Semantic Versioning
     # https://semver.org/
-    HYPERION_VERSION: str = "0.0.1"  # This value should never be modified by hand. See [Hyperion release] documentation
-    MINIMAL_TITAN_VERSION_CODE: int = 28
+    HYPERION_VERSION: str = "1.0.0"  # This value should never be modified by hand. See [Hyperion release] documentation
+    MINIMAL_TITAN_VERSION_CODE: int = 44
     # Depreciated, minimal_titan_version_code should be used
     MINIMAL_TITAN_VERSION: str = "0.0.1"
 
@@ -95,9 +110,8 @@ class Settings(BaseSettings):
 
     # Host or url of the API, used for Openid connect discovery endpoint
     # NOTE: A trailing / is required
-    CLIENT_URL = "http://127.0.0.1:8000/"
-    # TODO: remove
-    DOCKER_URL = "http://host.docker.internal:8000/"  # During dev, docker container can not directly access the client url
+    CLIENT_URL: str
+    DOCKER_URL: str  # During dev, docker container can not directly access the client url
 
     # Openid connect issuer name
     AUTH_ISSUER = "hyperion"
@@ -156,7 +170,7 @@ class Settings(BaseSettings):
             except AttributeError:
                 # logger.error()
                 raise ValueError(
-                    ".env AUTH_CLIENTS is invalid: {auth_client_name} is not an auth_client from app.utils.auth.providers"
+                    f".env AUTH_CLIENTS is invalid: {auth_client_name} is not an auth_client from app.utils.auth.providers"
                 )
             # If the secret is empty, this mean the client is expected to use PKCE
             # We need to pass a None value to the auth_client_class

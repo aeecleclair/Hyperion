@@ -31,6 +31,7 @@ async def get_users(
     result = await db.execute(
         select(models_core.CoreUser).where(
             and_(
+                True,
                 # We want, for each group that should be included check if
                 # - at least one of the user's groups match the expected group
                 *[
@@ -109,7 +110,6 @@ async def create_unconfirmed_user(
 async def get_unconfirmed_user_by_activation_token(
     db: AsyncSession, activation_token: str
 ) -> models_core.CoreUserUnconfirmed | None:
-
     result = await db.execute(
         select(models_core.CoreUserUnconfirmed).where(
             models_core.CoreUserUnconfirmed.activation_token == activation_token
@@ -132,7 +132,6 @@ async def delete_unconfirmed_user_by_email(db: AsyncSession, email: str):
 async def create_user(
     db: AsyncSession, user: models_core.CoreUser
 ) -> models_core.CoreUser:
-
     db.add(user)
     try:
         await db.commit()
@@ -154,7 +153,6 @@ async def delete_user(db: AsyncSession, user_id: str):
 async def create_user_recover_request(
     db: AsyncSession, recover_request: models_core.CoreUserRecoverRequest
 ) -> models_core.CoreUserRecoverRequest:
-
     db.add(recover_request)
     try:
         await db.commit()
@@ -167,7 +165,6 @@ async def create_user_recover_request(
 async def get_recover_request_by_reset_token(
     db: AsyncSession, reset_token: str
 ) -> models_core.CoreUserRecoverRequest | None:
-
     result = await db.execute(
         select(models_core.CoreUserRecoverRequest).where(
             models_core.CoreUserRecoverRequest.reset_token == reset_token

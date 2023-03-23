@@ -1,7 +1,6 @@
 """Basic functions creating the database tables and calling the router"""
 
 import logging
-import logging.config
 import os
 import uuid
 from typing import Literal
@@ -18,8 +17,13 @@ from app import api
 from app.core.config import Settings
 from app.core.log import LogConfig
 from app.cruds import cruds_groups
-from app.database import Base, SessionLocal, engine
-from app.dependencies import get_redis_client, get_settings
+from app.database import Base
+from app.dependencies import (
+    get_db_engine,
+    get_redis_client,
+    get_session_maker,
+    get_settings,
+)
 from app.models import models_core
 from app.utils.redis import limiter
 from app.utils.types.groups_type import GroupType
@@ -98,7 +102,8 @@ async def logging_middleware(
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    hyperion_error_logger.error(
+    # We use a Debug logger to log the error as personal data may be present in the request
+    hyperion_error_logger.debug(
         f"Validation error: {exc.errors()} ({request.state.request_id})"
     )
 
@@ -111,36 +116,42 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 # Alembic should be used for any migration, this function can only create new tables and ensure that the necessary groups are available
 @app.on_event("startup")
 async def startup():
-    # Initialize loggers
+    # We reproduce FastAPI logic to access settings. See https://github.com/tiangolo/fastapi/issues/425#issuecomment-954963966
+    settings = app.dependency_overrides.get(get_settings, get_settings)()
 
+    # Initialize loggers
     LogConfig().initialize_loggers(settings=settings)
 
-    if not app.dependency_overrides.get(get_redis_client, get_redis_client)(
-        settings=settings
+    if (
+        app.dependency_overrides.get(get_redis_client, get_redis_client)(
+            settings=settings
+        )
+        is False
     ):
         hyperion_error_logger.info("Redis client not configured")
-
-    # Create the data folders if it does not exist
-    if not os.path.exists("data/profile-pictures/"):
-        os.makedirs("data/profile-pictures/")
-    if not os.path.exists("data/campaigns/"):
-        os.makedirs("data/campaigns/")
 
     # Create folder for calendars
     if not os.path.exists("data/ics/"):
         os.makedirs("data/ics/")
 
+    engine = get_db_engine(settings=settings)
+
     # create db tables
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        try:
+            await conn.run_sync(Base.metadata.create_all)
+        except Exception as error:
+            hyperion_error_logger.fatal(
+                f"Startup: Could not create tables in the database: {error}"
+            )
 
+    SessionLocal = app.dependency_overrides.get(get_session_maker, get_session_maker)()
     # Add the necessary groups for account types
     async with SessionLocal() as db:
         for id in GroupType:
             exists = await cruds_groups.get_group_by_id(group_id=id, db=db)
             # We don't want to recreate the groups if they already exist
             if not exists:
-
                 group = models_core.CoreGroup(
                     id=id, name=id.name, description="Group type"
                 )

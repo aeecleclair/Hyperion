@@ -1,31 +1,64 @@
 from datetime import datetime
 
 from icalendar import Calendar, Event
-from sqlalchemy import delete, select
+from pytz import timezone
+from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
+from app.core.config import Settings
 from app.models import models_calendar
+from app.schemas import schemas_calendar
+from app.utils.types.calendar_types import Decision
 
 calendar_file_path = "data/ics/ae_calendar.ics"
 
 
 async def get_all_events(db: AsyncSession) -> list[models_calendar.Event]:
     """Retriveve all the events in the database."""
-    result = await db.execute(select(models_calendar.Event))
+    result = await db.execute(
+        select(models_calendar.Event).options(
+            selectinload(models_calendar.Event.applicant)
+        )
+    )
+    return result.scalars().all()
+
+
+async def get_confirmed_events(
+    db: AsyncSession,
+) -> list[models_calendar.Event]:
+    result = await db.execute(
+        select(models_calendar.Event).where(
+            models_calendar.Event.decision == Decision.approved
+        )
+    )
     return result.scalars().all()
 
 
 async def get_event(db: AsyncSession, event_id: str) -> models_calendar.Event | None:
     """Retrieve the event corresponding to `event_id` from the database."""
     result = await db.execute(
-        select(models_calendar.Event).where(models_calendar.Event.id == event_id)
+        select(models_calendar.Event)
+        .where(models_calendar.Event.id == event_id)
+        .options(selectinload(models_calendar.Event.applicant))
     )
     return result.scalars().first()
 
 
+async def get_applicant_events(
+    db: AsyncSession, applicant_id: str
+) -> list[models_calendar.Event]:
+    result = await db.execute(
+        select(models_calendar.Event)
+        .where(models_calendar.Event.applicant_id == applicant_id)
+        .options(selectinload(models_calendar.Event.applicant))
+    )
+    return result.scalars().all()
+
+
 async def add_event(
-    db: AsyncSession, event: models_calendar.Event
+    db: AsyncSession, event: models_calendar.Event, settings: Settings
 ) -> models_calendar.Event:
     """Add an event to the database."""
 
@@ -33,7 +66,7 @@ async def add_event(
     try:
         await db.commit()
         try:
-            await create_icalendar_file(db, calendar_file_path)
+            await create_icalendar_file(db, calendar_file_path, settings)
             return event
         except Exception as error:
             await db.rollback()
@@ -44,7 +77,22 @@ async def add_event(
         raise ValueError(error)
 
 
-async def delete_event(db: AsyncSession, event_id: str) -> None:
+async def edit_event(
+    db: AsyncSession, event_id: str, event: schemas_calendar.EventEdit
+):
+    await db.execute(
+        update(models_calendar.Event)
+        .where(models_calendar.Event.id == event_id)
+        .values(**event.dict(exclude_none=True))
+    )
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise ValueError()
+
+
+async def delete_event(db: AsyncSession, event_id: str, settings: Settings) -> None:
     """Delete the event given in the database."""
     await db.execute(
         delete(models_calendar.Event).where(models_calendar.Event.id == event_id)
@@ -52,7 +100,7 @@ async def delete_event(db: AsyncSession, event_id: str) -> None:
     try:
         await db.commit()
         try:
-            await create_icalendar_file(db, calendar_file_path)
+            await create_icalendar_file(db, calendar_file_path, settings)
         except Exception as error:
             await db.rollback()
             raise ValueError(error)
@@ -61,7 +109,22 @@ async def delete_event(db: AsyncSession, event_id: str) -> None:
         raise ValueError()
 
 
-async def create_icalendar_file(db: AsyncSession, calendar_file_path) -> None:
+async def confirm_event(db: AsyncSession, decision: Decision, event_id: str):
+    await db.execute(
+        update(models_calendar.Event)
+        .where(models_calendar.Event.id == event_id)
+        .values(decision=decision)
+    )
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise ValueError()
+
+
+async def create_icalendar_file(
+    db: AsyncSession, calendar_file_path: str, settings: Settings
+) -> None:
     """Create the ics file corresponding to the database. The calendar is entirely recreated each time an event is added or deleted in the db."""
     events = await get_all_events(db)
 
@@ -76,7 +139,7 @@ async def create_icalendar_file(db: AsyncSession, calendar_file_path) -> None:
         ical_event.add("description", event.description)
         ical_event.add("dtstart", event.start)
         ical_event.add("dtend", event.end)
-        ical_event.add("dtstamp", datetime.now())
+        ical_event.add("dtstamp", datetime.now(timezone(settings.TIMEZONE)))
         ical_event.add("class", "public")
         ical_event.add("organizer", event.organizer)
         ical_event.add("location", event.location)

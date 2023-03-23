@@ -6,6 +6,11 @@ Hyperion is the API of an open-source project launched by ÉCLAIR, the computer 
 
 The structure of this project is modular. Hyperion has a core that performs vital functions (authentication, database migration, authorization, etc). The other functions of Hyperion are realized in what we call modules. You can contribute to the project by adding modules if you wish.
 
+## Install docker or an equivalent
+Install docker and the compose plugin (https://docs.docker.com/compose/install/)
+
+> During dev docker is used to run the database, the redis server etc ... If you really want to run the project without docker, you can do it but you will have to install the database, redis, etc ... yourself or disable some features in the .env file (which is not recommended).
+
 ## Creating a virtual environment for Python 3.10.x
 
 ### Windows
@@ -95,6 +100,8 @@ uvicorn app.main:app --reload
 > Hyperion settings are documented in [app/core/config.py](./app/core/config.py).
 > Check this file to know what can and should be set using the dotenv.
 
+`SQLITE_DB` is None by default. If you want to use SQLite (if you don't use docker or don't have a postgres running), set it with the name of the db file (app.db for example).
+
 `ACCESS_TOKEN_SECRET_KEY`
 
 ```python
@@ -111,3 +118,20 @@ openssl req -newkey rsa:2048 -nodes -x509 -days 365 | sed 's/$/\\n/g' | tr -d '\
 # openssl req -newkey rsa:2048 -nodes -keyout key.pem -x509 -days 365 -out certificate.pem
 ```
 
+`REDIS`: Numerical values are example, change it to your needs
+
+```python
+REDIS_HOST = "localhost" #May be left at "" during dev if you don't have a redis server running
+REDIS_PORT = 6379
+#REDIS_PASSWORD = "pass" Should be commented during development to work with docker-compose-dev, and set in production
+REDIS_LIMIT = 1000
+REDIS_WINDOW = 60
+```
+
+`POSTGRES`: This section will be ignored if `SQLITE_DB` is set to True.
+```python
+POSTGRES_HOST = "localhost"
+POSTGRES_USER = "hyperion"
+POSTGRES_PASSWORD = "pass"
+POSTGRES_DB = "hyperion"
+```

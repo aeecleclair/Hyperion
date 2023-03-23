@@ -4,7 +4,11 @@ from app.core.config import Settings
 
 
 def connect(settings: Settings) -> redis.Redis | bool:
-    redis_client = redis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT)
+    redis_client = redis.Redis(
+        host=settings.REDIS_HOST,
+        port=settings.REDIS_PORT,
+        password=settings.REDIS_PASSWORD,
+    )
     redis_client.ping()  # Test the connection
 
     return redis_client
@@ -28,3 +32,14 @@ def limiter(redis_client: redis.Redis, key: str, limit: int, window: int):
     elif nb > limit:
         return False, False
     return True, False
+
+
+def locker_get(redis_client: redis.Redis, key: str):
+    value = redis_client.get(key)
+    if value is None:
+        return False
+    return bool(int(value))
+
+
+def locker_set(redis_client: redis.Redis, key: str, lock: bool):
+    redis_client.set(key, int(lock))

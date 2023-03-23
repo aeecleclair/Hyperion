@@ -142,6 +142,9 @@ async def save_file_as_data(
     extension = extensions_mapping.get(image.content_type, "")
     # Remove the existing file if any and create the new one
     try:
+        if not os.path.exists(f"data/{directory}/"):
+            os.makedirs(f"data/{directory}/")
+
         for filePath in glob.glob(f"data/{directory}/{filename}.*"):
             os.remove(filePath)
 
@@ -169,3 +172,13 @@ def get_file_from_data(
         return FileResponse(filePath)
 
     return FileResponse(default_asset)
+
+
+def get_display_name(
+    firstname: str,
+    name: str,
+    nickname: str | None,
+) -> str:
+    if nickname:
+        return f"{firstname} {name} ({nickname})"
+    return f"{firstname} {name}"

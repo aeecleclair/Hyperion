@@ -65,7 +65,6 @@ async def delete_loaner_by_id(
     loaner_id: str,
     db: AsyncSession,
 ):
-
     await db.execute(
         delete(models_loan.Loaner).where(models_loan.Loaner.id == loaner_id)
     )
@@ -76,7 +75,6 @@ async def create_item(
     item: models_loan.Item,
     db: AsyncSession,
 ) -> models_loan.Item:
-
     db.add(item)
     try:
         await db.commit()
@@ -154,7 +152,6 @@ async def delete_loaner_item_by_id(
     item_id: str,
     db: AsyncSession,
 ):
-
     await db.execute(delete(models_loan.Item).where(models_loan.Item.id == item_id))
     await db.commit()
 
@@ -232,7 +229,6 @@ async def delete_loan_by_id(
     loan_id: str,
     db: AsyncSession,
 ):
-
     await db.execute(delete(models_loan.Loan).where(models_loan.Loan.id == loan_id))
     await db.commit()
 
@@ -257,7 +253,6 @@ async def delete_loan_content_by_loan_id(
     loan_id: str,
     db: AsyncSession,
 ):
-
     await db.execute(
         delete(models_loan.LoanContent).where(
             models_loan.LoanContent.loan_id == loan_id
@@ -270,7 +265,6 @@ async def delete_loan_content_by_item_id(
     item_id: str,
     db: AsyncSession,
 ):
-
     await db.execute(
         delete(models_loan.LoanContent).where(
             models_loan.LoanContent.item_id == item_id

@@ -1,7 +1,10 @@
+import re
 from typing import Any, Set
 
+import unidecode
+
 from app.models import models_core
-from app.utils.tools import is_user_member_of_an_allowed_group
+from app.utils.tools import get_display_name, is_user_member_of_an_allowed_group
 from app.utils.types.groups_type import GroupType
 from app.utils.types.scopes_type import ScopeType
 
@@ -112,7 +115,9 @@ class NextcloudAuthClient(BaseAuthClient):
 
         return {
             "sub": user.id,
-            "name": f"{user.firstname} {user.name} {user.nickname})",
+            "name": get_display_name(
+                firstname=user.firstname, name=user.name, nickname=user.nickname
+            ),
             # TODO: should we use group ids instead of names? It would be less human readable but would guarantee uniqueness. Question: are group names unique?
             "groups": [
                 group.name for group in user.groups
@@ -156,8 +161,11 @@ class PiwigoAuthClient(BaseAuthClient):
         # A modified Piwigo oidc plugin allows managing groups from the oidc provider
         return {
             "sub": user.id,
-            "name": user.firstname,
-            "piwigo_groups": user.groups,  # TODO: We may want to filter which groups are provided as they won't not always all be useful. For example returning only Student, ECLAIR and Pixels
+            "name": get_display_name(
+                firstname=user.firstname, name=user.name, nickname=user.nickname
+            ),
+            "groups": [group.name for group in user.groups],
+            "email": user.email,
         }
 
 
@@ -170,7 +178,6 @@ class HedgeDocAuthClient(BaseAuthClient):
 
     @classmethod
     def get_userinfo(cls, user: models_core.CoreUser):
-
         return {
             "sub": user.id,
             "name": user.firstname,
@@ -189,10 +196,74 @@ class WikijsAuthClient(BaseAuthClient):
 
     @classmethod
     def get_userinfo(cls, user: models_core.CoreUser):
+        return {
+            "sub": user.id,
+            "name": get_display_name(
+                firstname=user.firstname, name=user.name, nickname=user.nickname
+            ),
+            "email": user.email,
+            "groups": [group.name for group in user.groups],
+        }
+
+
+class SynapseAuthClient(BaseAuthClient):
+    # If no redirect_uri are hardcoded, the client will need to provide one in its request
+    redirect_uri: str | None = None
+    # Set of scopes the auth client is authorized to grant when issuing an access token.
+    # See app.utils.types.scopes_type.ScopeType for possible values
+    allowed_scopes: Set[ScopeType] = {ScopeType.openid, ScopeType.profile}
+
+    @classmethod
+    def get_userinfo(cls, user: models_core.CoreUser):
+        # Accepted characters are [a-z] [0-9] `.` and `-`. Spaces are replaced by `-` and accents are removed.
+        username = (
+            unidecode.unidecode(f"{user.firstname.strip()}.{user.name.strip()}")
+            .lower()
+            .replace(" ", "-")
+        )
+        username = re.sub(r"[^a-z0-9.-\\]", "", username)
 
         return {
             "sub": user.id,
-            "name": f"{user.firstname} {user.name} ({user.nickname})",
+            "picture": f"https://hyperion.myecl.fr/users/{user.id}/profile-picture/",
+            # Matrix does not support special characters in username
+            "username": username,
+            "displayname": get_display_name(
+                firstname=user.firstname, name=user.name, nickname=user.nickname
+            ),
             "email": user.email,
-            "groups": [group.name for group in user.groups],
+        }
+
+
+class MinecraftAuthClient(BaseAuthClient):
+    # If no redirect_uri are hardcoded, the client will need to provide one in its request
+    redirect_uri: str | None = None
+    # Set of scopes the auth client is authorized to grant when issuing an access token.
+    # See app.utils.types.scopes_type.ScopeType for possible values
+    allowed_scopes: Set[ScopeType] = {ScopeType.profile}
+
+    @classmethod
+    def get_userinfo(cls, user: models_core.CoreUser):
+        return {
+            "id": user.id,
+            "nickname": user.nickname,
+            "promo": user.promo,
+            "floor": user.floor,
+        }
+
+
+class ChallengerAuthClient(BaseAuthClient):
+    # If no redirect_uri are hardcoded, the client will need to provide one in its request
+    redirect_uri: str | None = None
+    # Set of scopes the auth client is authorized to grant when issuing an access token.
+    # See app.utils.types.scopes_type.ScopeType for possible values
+    allowed_scopes: Set[ScopeType] = {ScopeType.openid, ScopeType.profile}
+
+    @classmethod
+    def get_userinfo(cls, user: models_core.CoreUser):
+        return {
+            "sub": user.id,
+            "name": user.name,
+            "firstname": user.firstname,
+            "email": user.email,
         }

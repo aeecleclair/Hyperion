@@ -15,12 +15,12 @@ import redis
 from fastapi import Depends, HTTPException, Request, status
 from jose import jwt
 from pydantic import ValidationError
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
+from sqlalchemy.orm import sessionmaker
 
 from app.core import security
 from app.core.config import Settings
 from app.cruds import cruds_users
-from app.database import SessionLocal
 from app.models import models_core
 from app.schemas import schemas_auth
 from app.utils.redis import connect
@@ -32,12 +32,83 @@ from app.utils.types.scopes_type import ScopeType
 hyperion_access_logger = logging.getLogger("hyperion.access")
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
-redis_client: redis.Redis | bool | None = None  # Create a global variable for the redis client, so that it can be instantiated in the startup and shutdown events
-# Is None if the redis client is not instantiated, is False if the redis client is instantiated but not connected, is a redis.Redis object if the redis client is connected
+redis_client: redis.Redis | bool | None = None  # Create a global variable for the redis client, so that it can be instancied in the startup event
+# Is None if the redis client is not instantiated, is False if the redis client is instancied but not connected, is a redis.Redis object if the redis client is connected
+
+engine: AsyncEngine | None = None  # Create a global variable for the database engine, so that it can be instancied in the startup event
+SessionLocal: Callable[
+    [], AsyncSession
+] | None = None  # Create a global variable for the database session, so that it can be instancied in the startup event
+
+
+async def get_request_id(request: Request) -> str:
+    """
+    The request identifier is a unique UUID which is used to associate logs saved during the same request
+    """
+    return request.state.request_id
+
+
+def get_db_engine(settings: Settings) -> AsyncEngine:
+    """Return the database engine, if the engine doesn't exit yet it will create one based on the settings"""
+    global engine
+    global SessionLocal
+    if settings.SQLITE_DB:
+        SQLALCHEMY_DATABASE_URL = f"sqlite+aiosqlite:///./{settings.SQLITE_DB}"  # Connect to the test's database
+    else:
+        SQLALCHEMY_DATABASE_URL = f"postgresql+asyncpg://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}/{settings.POSTGRES_DB}"
+
+    if engine is None:
+        engine = create_async_engine(
+            SQLALCHEMY_DATABASE_URL, echo=settings.DATABASE_DEBUG
+        )
+        SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    return engine
+
+
+def get_session_maker() -> Callable[[], AsyncSession]:
+    """
+    Return the session maker
+    """
+    global SessionLocal
+    if SessionLocal is None:
+        hyperion_error_logger.error("Database engine is not initialized")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Database engine is not initialized",
+        )
+    return SessionLocal
+
+
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    """
+    Return a database session
+    """
+    global SessionLocal
+    if SessionLocal is None:
+        hyperion_error_logger.error("Database engine is not initialized")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Database engine is not initialized",
+        )
+    async with SessionLocal() as db:
+        try:
+            yield db
+        finally:
+            await db.close()
+
+
+@lru_cache()
+def get_settings() -> Settings:
+    """
+    Return a settings object, based on `.env` dotenv
+    """
+    # `lru_cache()` decorator is here to prevent the class to be instantiated multiple times.
+    # See https://fastapi.tiangolo.com/advanced/settings/#lru_cache-technical-details
+    return Settings(_env_file=".env")
 
 
 def get_redis_client(
-    settings: Settings | None = None,
+    settings: Settings = Depends(get_settings),
 ) -> redis.Redis | None | bool:
     """
     Dependency that returns the redis client
@@ -54,36 +125,9 @@ def get_redis_client(
                 hyperion_error_logger.warning(
                     "Redis connection error: Check the Redis configuration or the Redis server"
                 )
+        else:
+            redis_client = False
     return redis_client
-
-
-async def get_request_id(request: Request) -> str:
-    """
-    The request identifier is a unique UUID which is used to associate logs saved during the same request
-    """
-    return request.state.request_id
-
-
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    """
-    Return a database session
-    """
-
-    async with SessionLocal() as db:
-        try:
-            yield db
-        finally:
-            await db.close()
-
-
-@lru_cache()
-def get_settings() -> Settings:
-    """
-    Return a settings object, based on `.env` dotenv
-    """
-    # `lru_cache()` decorator is here to prevent the class to be instantiated multiple times.
-    # See https://fastapi.tiangolo.com/advanced/settings/#lru_cache-technical-details
-    return Settings(_env_file=".env")
 
 
 def get_user_from_token_with_scopes(
@@ -188,6 +232,7 @@ def is_user_a_member_of(
         user: models_core.CoreUser = Depends(
             get_user_from_token_with_scopes([[ScopeType.API]])
         ),
+        request_id: str = Depends(get_request_id),
     ) -> models_core.CoreUser:
         """
         A dependency that checks that user is a member of the group with the given id then returns the corresponding user.
@@ -195,6 +240,10 @@ def is_user_a_member_of(
         if is_user_member_of_an_allowed_group(user=user, allowed_groups=[group_id]):
             # We know the user is a member of the group, we don't need to return an error and can return the CoreUser object
             return user
+
+        hyperion_access_logger.warning(
+            f"Is_user_a_member_of: user is not a member of the group {group_id} ({request_id})"
+        )
 
         raise HTTPException(
             status_code=403,

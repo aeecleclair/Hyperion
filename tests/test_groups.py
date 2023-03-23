@@ -98,8 +98,9 @@ def test_create_membership():
 def test_delete_membership():
     token = create_api_access_token(admin_user)
 
-    response = client.delete(
-        "/groups/membership",
+    response = client.request(
+        method="DELETE",
+        url="/groups/membership",
         json={
             "user_id": admin_user.id,
             "group_id": id_eclair,

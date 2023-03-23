@@ -10,11 +10,13 @@ from fastapi import (
     Depends,
     File,
     HTTPException,
+    Query,
     Request,
     UploadFile,
 )
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
+from pytz import timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import security
@@ -91,8 +93,8 @@ async def count_users(
 )
 async def search_users(
     query: str,
-    includedGroups: list[str] = [],
-    excludedGroups: list[str] = [],
+    includedGroups: list[str] = Query(default=[]),
+    excludedGroups: list[str] = Query(default=[]),
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
@@ -154,17 +156,17 @@ async def create_user_by_user(
     # Check the account type
 
     # For staff and student
-    # ^[\w\-.]*@(ecl\d{2})|(alternance\d{4})|(auditeur)?.ec-lyon.fr$
+    # ^[\w\-.]*@(ecl\d{2})|(alternance\d{4})|(auditeur)|(master)?.ec-lyon.fr$
     # For staff
-    # ^[\w\-.]*@ec-lyon.fr$
+    # ^[\w\-.]*@(auditeur.)?ec-lyon.fr$
     # For student
-    # ^[\w\-.]*@(ecl\d{2})|(alternance\d{4}).ec-lyon.fr$
+    # ^[\w\-.]*@((ecl\d{2})|(alternance\d{4})|(master)).ec-lyon.fr$
 
-    if re.match(r"^[a-zA-Z0-9_\-.]*@ec-lyon.fr", user_create.email):
+    if re.match(r"^[\w\-.]*@(auditeur.)?ec-lyon.fr", user_create.email):
         # Its a staff email address
         account_type = AccountType.staff
     elif re.match(
-        r"^[\w\-.]*@((ecl\d{2})|(alternance\d{4})|(auditeur)).ec-lyon.fr$",
+        r"^[\w\-.]*@((ecl\d{2})|(alternance\d{4})|(master)).ec-lyon.fr$",
         user_create.email,
     ):
         # Its a student email address
@@ -283,8 +285,8 @@ async def create_user(
         email=email,
         account_type=account_type,
         activation_token=activation_token,
-        created_on=datetime.now(),
-        expire_on=datetime.now()
+        created_on=datetime.now(timezone(settings.TIMEZONE)),
+        expire_on=datetime.now(timezone(settings.TIMEZONE))
         + timedelta(hours=settings.USER_ACTIVATION_TOKEN_EXPIRE_HOURS),
     )
 
@@ -317,6 +319,7 @@ async def get_user_activation_page(
     request: Request,
     activation_token: str,
     db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Return a HTML page to activate an account. The activation token is passed as a query string.
@@ -336,7 +339,9 @@ async def get_user_activation_page(
                 "message": "The activation token is invalid",
             },
         )
-    if unconfirmed_user.expire_on < datetime.now():
+    if unconfirmed_user.expire_on.astimezone(
+        timezone(settings.TIMEZONE)
+    ) < datetime.now(timezone(settings.TIMEZONE)):
         return templates.TemplateResponse(
             "error.html",
             {
@@ -364,6 +369,7 @@ async def get_user_activation_page(
 async def activate_user(
     user: schemas_core.CoreUserActivateRequest,
     db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
     request_id: str = Depends(get_request_id),
 ):
     """
@@ -381,7 +387,9 @@ async def activate_user(
         raise HTTPException(status_code=404, detail="Invalid activation token")
 
     # We need to make sure the unconfirmed user is still valid
-    if unconfirmed_user.expire_on < datetime.now():
+    if unconfirmed_user.expire_on.astimezone(
+        timezone(settings.TIMEZONE)
+    ) < datetime.now(timezone(settings.TIMEZONE)):
         raise HTTPException(status_code=400, detail="Expired activation token")
 
     # An account with the same email may exist if:
@@ -399,6 +407,16 @@ async def activate_user(
     # A password should have been provided
     password_hash = security.get_password_hash(user.password)
 
+    # For student users, we try to deduce a promo from the email address
+    if re.match(
+        r"^[\w\-.]*@(ecl\d{2})|(alternance\d{4}).ec-lyon.fr$",
+        unconfirmed_user.email,
+    ):
+        promo = int(unconfirmed_user.email[-13:-11])
+    else:
+        # For other users, we set the promo to None
+        promo = None
+
     confirmed_user = models_core.CoreUser(
         id=unconfirmed_user.id,
         email=unconfirmed_user.email,
@@ -407,10 +425,10 @@ async def activate_user(
         firstname=user.firstname,
         nickname=user.nickname,
         birthday=user.birthday,
-        promo=user.promo,
+        promo=promo,
         phone=user.phone,
         floor=user.floor,
-        created_on=datetime.now(),
+        created_on=datetime.now(timezone(settings.TIMEZONE)),
     )
     # We add the new user to the database
     try:
@@ -501,8 +519,8 @@ async def recover_user(
             email=email,
             user_id=db_user.id,
             reset_token=reset_token,
-            created_on=datetime.now(),
-            expire_on=datetime.now()
+            created_on=datetime.now(timezone(settings.TIMEZONE)),
+            expire_on=datetime.now(timezone(settings.TIMEZONE))
             + timedelta(hours=settings.PASSWORD_RESET_TOKEN_EXPIRE_HOURS),
         )
 
@@ -531,6 +549,7 @@ async def recover_user(
 async def reset_password(
     reset_password_request: schemas_core.ResetPasswordRequest,
     db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Reset the user password, using a **reset_token** provided by `/users/recover` endpoint.
@@ -542,7 +561,9 @@ async def reset_password(
         raise HTTPException(status_code=404, detail="Invalid reset token")
 
     # We need to make sure the unconfirmed user is still valid
-    if recover_request.expire_on < datetime.now():
+    if recover_request.expire_on.astimezone(timezone(settings.TIMEZONE)) < datetime.now(
+        timezone(settings.TIMEZONE)
+    ):
         raise HTTPException(status_code=400, detail="Expired reset token")
 
     new_password_hash = security.get_password_hash(reset_password_request.new_password)
@@ -726,13 +747,34 @@ async def create_current_user_profile_picture(
 
 
 @router.get(
-    "/users/{user_id}/profile-picture/",
+    "/users/me/profile-picture",
+    response_class=FileResponse,
+    status_code=200,
+    tags=[Tags.users],
+)
+async def read_own_profile_picture(
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Get the profile picture of the authenticated user.
+    """
+
+    return get_file_from_data(
+        directory="profile-pictures",
+        filename=str(user.id),
+        default_asset="assets/images/default_profile_picture.png",
+    )
+
+
+@router.get(
+    "/users/{user_id}/profile-picture",
     response_class=FileResponse,
     status_code=200,
     tags=[Tags.users],
 )
 async def read_user_profile_picture(
     user_id: str,
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Get the profile picture of an user.

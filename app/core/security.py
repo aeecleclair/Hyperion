@@ -44,9 +44,11 @@ def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
+def verify_password(plain_password: str, hashed_password: str | None) -> bool:
     """
     Compare `plain_password` against its salted hash representation `hashed_password`. The function use a bcrypt based *passlib* CryptContext.
+
+    Pass hashed_password=None to simulate the delay a real verification would have taken. This is useful to limit timing attacks
     """
     return pwd_context.verify(plain_password, hashed_password)
 
@@ -70,6 +72,9 @@ async def authenticate_user(
     """
     user = await cruds_users.get_user_by_email(db=db, email=email)
     if not user:
+        # In order to prevent timing attacks, we simulate the delay the password validation would have taken if the account existed
+        verify_password("", None)
+
         return None
     if not verify_password(password, user.password_hash):
         return None

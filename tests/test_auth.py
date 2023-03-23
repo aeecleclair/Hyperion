@@ -5,6 +5,7 @@ from urllib.parse import parse_qs, urlparse
 from app.main import app
 from app.models import models_core
 from app.utils.examples import examples_auth
+from app.utils.types.floors_type import FloorsType
 from tests.commons import TestingSessionLocal, client
 
 
@@ -19,7 +20,7 @@ async def startuptest():
             firstname="Antoine",
             nickname="Nickname",
             birthday=date.fromisoformat("2000-01-01"),
-            floor="M16",
+            floor=FloorsType.Autre,
             created_on=date.fromisoformat("2000-01-01"),
         )
         db.add(user)
@@ -57,6 +58,7 @@ def test_authorization_code_flow_PKCE():
     response = client.post(
         "/auth/authorization-flow/authorize-validation",
         data=data,
+        follow_redirects=False,
     )
     assert response.status_code == 302
 

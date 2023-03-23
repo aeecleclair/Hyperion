@@ -91,13 +91,24 @@ class LogConfig:
                     "formatter": "matrix",
                     "class": "app.utils.loggers_tools.matrix_handler.MatrixHandler",
                     "room_id": settings.MATRIX_LOG_ERROR_ROOM_ID,
-                    "user_name": settings.MATRIX_USER_NAME,
-                    "user_password": settings.MATRIX_USER_PASSWORD,
+                    "token": settings.MATRIX_TOKEN,
                     "server_base_url": settings.MATRIX_SERVER_BASE_URL,
                     "enabled": (
-                        settings.MATRIX_USER_NAME is not None
-                        and settings.MATRIX_USER_PASSWORD is not None
+                        settings.MATRIX_TOKEN is not None
                         and settings.MATRIX_LOG_ERROR_ROOM_ID is not None
+                    ),
+                    "level": "ERROR",
+                },
+                "matrix_amap": {
+                    # Send error to a Matrix server. If credentials are not set in settings, the handler will be disabled
+                    "formatter": "matrix",
+                    "class": "app.utils.loggers_tools.matrix_handler.MatrixHandler",
+                    "room_id": settings.MATRIX_LOG_AMAP_ROOM_ID,
+                    "token": settings.MATRIX_TOKEN,
+                    "server_base_url": settings.MATRIX_SERVER_BASE_URL,
+                    "enabled": (
+                        settings.MATRIX_TOKEN is not None
+                        and settings.MATRIX_LOG_AMAP_ROOM_ID is not None
                     ),
                     "level": "ERROR",
                 },
@@ -132,6 +143,15 @@ class LogConfig:
                     "backupCount": 50,
                     "level": "INFO",
                 },
+                "file_amap": {
+                    # file_amap should receive informations about amap operation, every operation involving a cash modification.
+                    "formatter": "default",
+                    "class": "logging.handlers.RotatingFileHandler",
+                    "filename": "logs/amap.log",
+                    "maxBytes": 1024 * 1024 * 10,  # ~ 10 MB
+                    "backupCount": 20,
+                    "level": "INFO",
+                },
             },
             # We define various loggers which can be used by Hyperion.
             # Each logger has:
@@ -143,8 +163,6 @@ class LogConfig:
                 "hyperion.access": {
                     "handlers": [
                         "file_access",
-                        "file_errors",
-                        "matrix_errors",
                         "debug_console",
                     ],
                     "level": MINIMUM_LOG_LEVEL,
@@ -152,7 +170,6 @@ class LogConfig:
                 "hyperion.security": {
                     "handlers": [
                         "file_security",
-                        "file_errors",
                         "matrix_errors",
                         "debug_console",
                     ],
@@ -162,6 +179,10 @@ class LogConfig:
                 # Other loggers can process error messages and may be more appropriated than hyperion.error
                 "hyperion.error": {
                     "handlers": ["file_errors", "matrix_errors", "console"],
+                    "level": MINIMUM_LOG_LEVEL,
+                },
+                "hyperion.amap": {
+                    "handlers": ["file_amap", "matrix_amap", "debug_console"],
                     "level": MINIMUM_LOG_LEVEL,
                 },
                 # We disable "uvicorn.access" to replace it with our custom "hyperion.access" which add custom information like the request_id

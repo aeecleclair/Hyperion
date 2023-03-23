@@ -3,6 +3,7 @@ import uuid
 
 from app.main import app
 from app.models import models_calendar, models_core
+from app.utils.types.bdebooking_type import Decision
 from app.utils.types.groups_type import GroupType
 from tests.commons import (
     TestingSessionLocal,
@@ -42,12 +43,14 @@ async def startuptest():
             id=str(uuid.uuid4()),
             name="Dojo",
             organizer="Eclair",
+            applicant_id=calendar_user_simple.id,
             start=datetime.datetime.fromisoformat("2022-09-22T20:00:00"),
             end=datetime.datetime.fromisoformat("2022-09-22T23:00:00"),
             all_day=False,
             location="Skylab",
             type="Event AE",
             description="Apprendre à coder !",
+            decision=Decision.pending,
         )
         db.add(calendar_event)
         await db.commit()
@@ -120,25 +123,13 @@ def test_add_event_missing_parameter():
     assert response.status_code == 422
 
 
-def test_add_event_unauthorized_user():
-    """Test if a non-admin user can add an event."""
-    global token_simple
-
-    response = client.post(
-        "/calendar/events/",
-        json={
-            "name": "Dojo",
-            "organizer": "Eclair",
-            "start": "2019-08-24T14:15:22Z",
-            "end": "2019-08-24T14:15:22Z",
-            "all_day": False,
-            "location": "Skylab",
-            "type": "Event AE",
-            "description": "Apprendre à coder !",
-        },
-        headers={"Authorization": f"Bearer {token_simple}"},
+def test_edit_event():
+    response = client.patch(
+        f"/calendar/events/{calendar_event.id}",
+        json={"description": "Apprendre à programmer"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
-    assert response.status_code == 403
+    assert response.status_code == 204
 
 
 def test_delete_event():
@@ -163,3 +154,11 @@ def test_delete_event_unauthorized_user():
         headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response.status_code == 403
+
+
+def test_decline_event():
+    response = client.patch(
+        f"/calendar/events/{calendar_event.id}/reply/declined",
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 204

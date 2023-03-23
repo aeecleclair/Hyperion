@@ -54,6 +54,7 @@ async def startuptest():
             key=True,
             decision="approved",
             applicant_id=booking_user_simple.id,
+            entity="ECLAIR",
         )
         db.add(booking)
         await db.commit()
@@ -87,7 +88,6 @@ def test_post_bookings():
     response = client.post(
         "/bdebooking/bookings",
         json={
-            "url": booking_user_simple.id,
             "reason": "Test",
             "start": "2022-09-15T08:00:00Z",
             "end": "2022-09-15T09:00:00Z",
@@ -96,6 +96,7 @@ def test_post_bookings():
             "key": True,
             "multipleDay": False,
             "recurring": False,
+            "entity": "TEST",
         },
         headers={"Authorization": f"Bearer {token_simple}"},
     )
@@ -170,8 +171,17 @@ def test_edit_room():
 
 
 def test_delete_room():
+    # create a room to delete
+    response = client.post(
+        "/bdebooking/rooms",
+        json={"name": "Local JE"},
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 201
+    room_id = response.json()["id"]
+
     response = client.delete(
-        f"/bdebooking/rooms/{room.id}",
+        f"/bdebooking/rooms/{room_id}",
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 204
