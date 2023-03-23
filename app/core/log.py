@@ -91,12 +91,10 @@ class LogConfig:
                     "formatter": "matrix",
                     "class": "app.utils.loggers_tools.matrix_handler.MatrixHandler",
                     "room_id": settings.MATRIX_LOG_ERROR_ROOM_ID,
-                    "user_name": settings.MATRIX_USER_NAME,
-                    "user_password": settings.MATRIX_USER_PASSWORD,
+                    "token": settings.MATRIX_TOKEN,
                     "server_base_url": settings.MATRIX_SERVER_BASE_URL,
                     "enabled": (
-                        settings.MATRIX_USER_NAME is not None
-                        and settings.MATRIX_USER_PASSWORD is not None
+                        settings.MATRIX_TOKEN is not None
                         and settings.MATRIX_LOG_ERROR_ROOM_ID is not None
                     ),
                     "level": "ERROR",
@@ -106,12 +104,10 @@ class LogConfig:
                     "formatter": "matrix",
                     "class": "app.utils.loggers_tools.matrix_handler.MatrixHandler",
                     "room_id": settings.MATRIX_LOG_AMAP_ROOM_ID,
-                    "user_name": settings.MATRIX_USER_NAME,
-                    "user_password": settings.MATRIX_USER_PASSWORD,
+                    "token": settings.MATRIX_TOKEN,
                     "server_base_url": settings.MATRIX_SERVER_BASE_URL,
                     "enabled": (
-                        settings.MATRIX_USER_NAME is not None
-                        and settings.MATRIX_USER_PASSWORD is not None
+                        settings.MATRIX_TOKEN is not None
                         and settings.MATRIX_LOG_AMAP_ROOM_ID is not None
                     ),
                     "level": "ERROR",

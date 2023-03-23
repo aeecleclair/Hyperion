@@ -12,8 +12,7 @@ class Matrix:
 
     def __init__(
         self,
-        user_name: str,
-        user_password: str,
+        token: str,
         server_base_url: str | None = None,
     ):
         self.server = server_base_url or "https://matrix.org/"
@@ -21,37 +20,7 @@ class Matrix:
         if self.server[-1] != "/":
             self.server += "/"
 
-        self.access_token = self.login_for_access_token(user_name, user_password)
-
-    def login_for_access_token(self, username: str, password: str) -> str:
-        """
-        https://spec.matrix.org/v1.3/client-server-api/#post_matrixclientv3login
-        """
-        response = requests.post(
-            self.server + "_matrix/client/v3/login",
-            json={
-                "device_id": "hyperion",
-                "identifier": {"type": "m.id.user", "user": username},
-                "initial_device_display_name": "Hyperion",
-                "password": password,
-                "type": "m.login.password",
-            },
-        )
-        try:
-            response.raise_for_status()
-        except requests.exceptions.HTTPError:
-            raise ValueError(
-                "Could not login to Matrix server. "
-                "Check your username and password in settings."
-            )
-        json_response = response.json()
-
-        if "access_token" not in json_response:
-            raise KeyError(
-                "Matrix server login response does not contain an access_token"
-            )
-
-        return json_response["access_token"]
+        self.access_token = token
 
     def post(self, url, json, headers={}) -> Dict[str, Any]:
         """
