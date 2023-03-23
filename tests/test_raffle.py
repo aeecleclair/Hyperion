@@ -5,10 +5,16 @@ from app.main import app
 from app.models import models_core, models_raffle
 from app.utils.types.groups_type import GroupType
 from app.utils.types.raffle_types import RaffleStatusType
-from tests.commons import TestingSessionLocal, create_user_with_groups
+from tests.commons import (
+    TestingSessionLocal,
+    client,
+    create_api_access_token,
+    create_user_with_groups,
+)
 
 raffle_user: models_core.CoreUser | None = None
 student_user: models_core.CoreUser | None = None
+admin_user: models_core.CoreUser | None = None
 raffle: models_raffle.Raffle | None = None
 typeticket: models_raffle.TypeTicket | None = None
 lot: models_raffle.Lots | None = None
@@ -65,3 +71,215 @@ async def startuptest():
         db.add(cash)
 
         await db.commit()
+
+
+# raffles
+def test_create_raffle():
+    token = create_api_access_token(admin_user)
+
+    response = client.post(
+        "/tombola/raffles",
+        json={
+            "name": "test",
+            "status": RaffleStatusType.creation,
+            "group_id": "1234",
+            "description": "Raffle's description",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 201
+
+
+def test_get_raffles():
+    token = create_api_access_token(raffle_user)
+
+    response = client.get(
+        "/tombola/raffles",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+
+
+def test_edit_raffle():
+    token = create_api_access_token(admin_user)
+
+    response = client.patch(
+        f"/tombola/raffles/{raffle.id}",
+        json={
+            "name": "testupdate",
+            "status": RaffleStatusType.creation,
+            "group_id": "1234",
+            "description": "Raffle's description",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 204
+
+
+def test_delete_raffle():
+    token = create_api_access_token(admin_user)
+
+    response = client.delete(
+        f"/tombola/raffles/{raffle.id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 204
+
+
+# type_tickets
+def test_create_typetickets():
+    token = create_api_access_token(admin_user)
+
+    response = client.post(
+        "/tombola/type_tickets",
+        json={
+            "raffle_id": raffle.id,
+            "status": RaffleStatusType.creation,
+            "price": 1.23,
+            "nb_ticket": 5,
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 201
+
+
+def test_get_typetickets():
+    token = create_api_access_token(raffle_user)
+
+    response = client.get(
+        "/tombola/type_tickets",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+
+
+def test_edit_typetickets():
+    token = create_api_access_token(admin_user)
+
+    response = client.patch(
+        f"/tombola/type_tickets/{typeticket.id}",
+        json={
+            "raffle_id": raffle.id,
+            "status": RaffleStatusType.creation,
+            "price": 10.0,
+            "nb_ticket": 5,
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 204
+
+
+def test_delete_typetickets():
+    token = create_api_access_token(admin_user)
+
+    response = client.delete(
+        f"/tombola/type_tickets/{typeticket.id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 204
+
+
+# lots
+def test_create_lots():
+    token = create_api_access_token(admin_user)
+
+    response = client.post(
+        "/tombola/type_tickets",
+        json={
+            "raffle_id": raffle.id,
+            "description": "Lots description",
+            "name": "Lots name",
+            "quantity": 2,
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 201
+
+
+def test_get_lots():
+    token = create_api_access_token(raffle_user)
+
+    response = client.get(
+        "/tombola/lots",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+
+
+def test_edit_lots():
+    token = create_api_access_token(admin_user)
+
+    response = client.patch(
+        f"/tombola/lots/{lot.id}",
+        json={
+            "raffle_id": raffle.id,
+            "description": "Lots description",
+            "name": "Lots name",
+            "quantity": 2,
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 204
+
+
+def test_delete_lots():
+    token = create_api_access_token(admin_user)
+
+    response = client.delete(
+        f"/tombola/lots/{lot.id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 204
+
+
+# tickets
+def test_create_tickets():
+    token = create_api_access_token(admin_user)
+
+    response = client.post(
+        "/tombola/tickets",
+        json={
+            "user_id": raffle_user.id,
+            "winning_lot": None,
+            "nb_tickets": "Lots name",
+            "quantity": 2,
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 201
+
+
+def test_get_tickets():
+    token = create_api_access_token(raffle_user)
+
+    response = client.get(
+        "/tombola/lots",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+
+
+def test_edit_tickets():
+    token = create_api_access_token(admin_user)
+
+    response = client.patch(
+        f"/tombola/lots/{lot.id}",
+        json={
+            "raffle_id": raffle.id,
+            "description": "Lots description",
+            "name": "Lots name",
+            "quantity": 2,
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 204
+
+
+def test_delete_tickets():
+    token = create_api_access_token(admin_user)
+
+    response = client.delete(
+        f"/tombola/lots/{lot.id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 204

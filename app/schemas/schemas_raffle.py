@@ -15,8 +15,7 @@ class RaffleBase(BaseModel):
 
 class RaffleEdit(BaseModel):
     name: str | None = None
-    start_date: str
-    end_date: str
+    status: RaffleStatusType
     group_id: str
     description: str | None = None
 
@@ -89,6 +88,7 @@ class TypeTicketBase(BaseModel):
 
 
 class TypeTicketEdit(BaseModel):
+    id: str
     raffle_id: str
     price: float
     nb_ticket: int
