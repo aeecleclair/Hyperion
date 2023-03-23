@@ -391,12 +391,19 @@ async def draw_winner_by_lot_raffle(
     lot_id: str, db: AsyncSession
 ) -> models_raffle.Tickets:
     raffle_id = (await get_lot_by_id(lot_id=lot_id, db=db)).raffle_id
+    if raffle_id is None:
+        raise ValueError("Invalid raffle_id")
     tickets = await get_ticket_by_raffleid(raffle_id=raffle_id, db=db)
+    if tickets is None:
+        raise ValueError("No tickets")
     values = [
         (await get_typeticket_by_id(typeticket_id=t.type_id, db=db)).nb_ticket
         for t in tickets
     ]
     [result] = [random.choices(tickets, weights=values)]
+    if result is None:
+        raise ValueError("No tickets")
+
     await db.execute(
         update(models_raffle.Tickets)
         .where(models_raffle.Tickets.id == result.id)
