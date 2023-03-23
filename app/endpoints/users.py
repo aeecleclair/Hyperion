@@ -778,7 +778,7 @@ async def read_user_profile_picture(
     """
     Get the profile picture of an user.
 
-    Unauthenticated users can user this endpoint (needed for some OIDC services)
+    Unauthenticated users can use this endpoint (needed for some OIDC services)
     """
 
     return get_file_from_data(
