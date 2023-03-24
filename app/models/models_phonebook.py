@@ -4,7 +4,7 @@ from sqlalchemy import Column, ForeignKey, String
 from sqlalchemy.orm import relationship
 
 from app.database import Base
-from app.models.models_core import CoreGroup, CoreUser
+from app.models.models_core import CoreUser
 
 
 class Membership(Base):
@@ -14,7 +14,15 @@ class Membership(Base):
     association_id: str = Column(
         ForeignKey("phonebook_association.id"), primary_key=True
     )
+
     role_id: str = Column(ForeignKey("phonebook_role.id"), primary_key=True)
+
+
+class Association(Base):
+    __tablename__ = "phonebook_association"
+
+    type: str = Column(String, nullable=False)
+    membership: list[Membership] = relationship("Membership")
 
 
 class Members(CoreUser):
@@ -22,18 +30,11 @@ class Members(CoreUser):
 
     # We use list["CoreGroup"] with quotes as CoreGroup is only defined after this class
     # Defining CoreUser after CoreGroup would cause a similar issue
-    membership: list[Membership] = relationship(
-        "CoreGroup",
+    membership: list[Association] = relationship(
+        "Association",
         secondary="core_membership",
         back_populates="members",
     )
-
-
-class Association(CoreGroup):
-    __tablename__ = "phonebook_association"
-
-    type: str = Column(String, nullable=False)
-    membership: list[Membership] = relationship("Membership")
 
 
 class Role(Base):
