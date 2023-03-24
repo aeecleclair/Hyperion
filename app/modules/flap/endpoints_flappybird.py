@@ -53,7 +53,6 @@ async def get_current_user_flappybird_pb(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-
     user_pb_table = await cruds_flappybird.get_flappybird_PB_by_user_id(
         db=db, user_id=user.id
     )
