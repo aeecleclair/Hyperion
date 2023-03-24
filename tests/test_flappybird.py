@@ -18,7 +18,6 @@ user: models_core.CoreUser | None = None
 async def startuptest():
     global user
     async with TestingSessionLocal() as db:
-
         user = await create_user_with_groups([GroupType.student], db=db)
 
         flappybird_score = models_flappybird.FlappyBirdScore(
