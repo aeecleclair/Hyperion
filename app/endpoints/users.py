@@ -774,12 +774,11 @@ async def read_own_profile_picture(
 )
 async def read_user_profile_picture(
     user_id: str,
-    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Get the profile picture of an user.
 
-    **The user must be authenticated to use this endpoint**
+    Unauthenticated users can use this endpoint (needed for some OIDC services)
     """
 
     return get_file_from_data(
