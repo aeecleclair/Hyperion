@@ -24,7 +24,7 @@ router = APIRouter()
 )
 async def get_raffle(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Return all raffles
@@ -44,7 +44,7 @@ async def get_raffle(
 async def create_raffle(
     raffle: schemas_raffle.RaffleSimple,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
 ):
     """
     Create a new raffle
@@ -69,7 +69,7 @@ async def edit_raffle(
     raffle_id: str,
     raffle_update: schemas_raffle.RaffleEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
 ):
     """
     Edit a raffle
@@ -94,7 +94,7 @@ async def edit_raffle(
 async def delete_raffle(
     raffle_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
 ):
     """
     Delete a raffle.
@@ -118,7 +118,7 @@ async def delete_raffle(
 async def get_raffle_by_group_id(
     group_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Return all raffles
@@ -138,7 +138,7 @@ async def get_raffle_by_group_id(
 )
 async def get_type_tickets(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Return all tickets
@@ -158,7 +158,7 @@ async def get_type_tickets(
 async def create_typeticket(
     typeticket: schemas_raffle.TypeTicketBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
 ):
     """
     Create a new typeticket
@@ -183,7 +183,7 @@ async def edit_typeticket(
     typeticket_id: str,
     typeticket_update: schemas_raffle.TypeTicketEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
 ):
     """
     Edit a typeticket
@@ -210,7 +210,7 @@ async def edit_typeticket(
 async def delete_typeticket(
     typeticket_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
 ):
     """
     Delete a typeticket.
@@ -236,7 +236,7 @@ async def delete_typeticket(
 async def get_type_tickets_by_raffle_id(
     raffle_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
 ):
     """
     Return all tickets
@@ -258,7 +258,7 @@ async def get_type_tickets_by_raffle_id(
 )
 async def get_tickets(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
 ):
     """
     Return all tickets
@@ -278,7 +278,7 @@ async def get_tickets(
 async def create_ticket(
     ticket: schemas_raffle.TicketBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
 ):
     """
     Create a new ticket
@@ -303,7 +303,7 @@ async def edit_ticket(
     ticket_id: str,
     ticket_update: schemas_raffle.TicketEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
 ):
     """
     Edit a ticket
@@ -328,7 +328,7 @@ async def edit_ticket(
 async def delete_ticket(
     ticket_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
 ):
     """
     Delete a ticket.
@@ -404,7 +404,7 @@ async def get_tickets_by_raffleid(raffle_id: str, db: AsyncSession = Depends(get
 )
 async def get_lots(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Return all lots
@@ -424,7 +424,7 @@ async def get_lots(
 async def create_lot(
     lot: schemas_raffle.LotBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
 ):
     """
     Create a new lot
@@ -449,7 +449,7 @@ async def edit_lot(
     lot_id: str,
     lot_update: schemas_raffle.LotEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
 ):
     """
     Edit a lot
@@ -472,7 +472,7 @@ async def edit_lot(
 async def delete_lot(
     lot_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
 ):
     """
     Delete a lot.
@@ -515,12 +515,12 @@ async def get_lots_by_raffleid(raffle_id: str, db: AsyncSession = Depends(get_db
 )
 async def get_users_cash(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
 ):
     """
     Get cash from all users.
 
-    **The user must be a member of the group AMAP to use this endpoint**
+    **The user must be a member of the group SOLI to use this endpoint**
     """
     cash = await cruds_raffle.get_users_cash(db)
     return cash
@@ -574,12 +574,12 @@ async def create_cash_of_user(
     user_id: str,
     cash: schemas_raffle.CashEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
 ):
     """
     Create cash for an user.
 
-    **The user must be a member of the group admin to use this endpoint**
+    **The user must be a member of the group SOLI to use this endpoint**
     """
 
     user_db = await read_user(user_id=user_id, db=db)
@@ -617,7 +617,7 @@ async def edit_cash_by_id(
     user_id: str,
     balance: schemas_raffle.CashEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
 ):
     """
     Edit cash for an user. This will add the balance to the current balance.
@@ -648,7 +648,7 @@ async def edit_cash_by_id(
 async def draw_winner(
     lot_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
 ):
     winning_ticket = await cruds_raffle.draw_winner_by_lot_raffle(lot_id=lot_id, db=db)
     return winning_ticket

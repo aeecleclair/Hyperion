@@ -266,11 +266,11 @@ async def get_ticket_by_groupid(
 async def get_ticket_by_raffleid(
     raffle_id: str,
     db: AsyncSession,
-) -> list[models_raffle.Tickets] | None:
+) -> list[models_raffle.Tickets]:
     result = await db.execute(
-        select(models_raffle.Tickets).where(
-            models_raffle.Tickets.raffle_id == raffle_id
-        )
+        select(models_raffle.Tickets)
+        .where(models_raffle.Tickets.raffle_id == raffle_id)
+        .options(selectinload(models_raffle.Tickets.type_ticket))
     )
     return result.scalars().all()
 
@@ -390,19 +390,19 @@ async def remove_cash(db: AsyncSession, user_id: str, amount: float):
 async def draw_winner_by_lot_raffle(
     lot_id: str, db: AsyncSession
 ) -> models_raffle.Tickets:
-    raffle_id = (await get_lot_by_id(lot_id=lot_id, db=db)).raffle_id
+    lot = await get_lot_by_id(lot_id=lot_id, db=db)
+    if lot is None:
+        raise ValueError("Invalid lot")
+    raffle_id = lot.raffle_id
     if raffle_id is None:
         raise ValueError("Invalid raffle_id")
     tickets = await get_ticket_by_raffleid(raffle_id=raffle_id, db=db)
-    if tickets is None:
-        raise ValueError("No tickets")
-    values = [
-        (await get_typeticket_by_id(typeticket_id=t.type_id, db=db)).nb_ticket
-        for t in tickets
-    ]
-    [result] = [random.choices(tickets, weights=values)]
+    if len(tickets) == 0:
+        raise ValueError("No ticket")
+    values = [t.type_ticket.nb_ticket for t in tickets]
+    [result] = random.choices(tickets, weights=values)
     if result is None:
-        raise ValueError("No tickets")
+        raise ValueError("No ticket")
 
     await db.execute(
         update(models_raffle.Tickets)
@@ -414,4 +414,4 @@ async def draw_winner_by_lot_raffle(
     except IntegrityError:
         await db.rollback()
         raise ValueError("Error during edition of the winning ticket")
-    return result.scalars().first()
+    return result
