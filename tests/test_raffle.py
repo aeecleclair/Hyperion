@@ -12,9 +12,8 @@ from tests.commons import (
     create_user_with_groups,
 )
 
-raffle_user: models_core.CoreUser | None = None
-student_user: models_core.CoreUser | None = None
 soli_user: models_core.CoreUser | None = None
+student_user: models_core.CoreUser | None = None
 raffle: models_raffle.Raffle | None = None
 typeticket: models_raffle.TypeTicket | None = None
 lot: models_raffle.Lots | None = None
@@ -27,10 +26,10 @@ settings = app.dependency_overrides.get(get_settings, get_settings)()
 
 @app.on_event("startup")  # create the data needed in the tests
 async def startuptest():
-    global raffle_user, student_user, raffle, typeticket, ticket, lot, cash
+    global soli_user, student_user, raffle, typeticket, ticket, lot, cash
 
     async with TestingSessionLocal() as db:
-        raffle_user = await create_user_with_groups([GroupType.soli], db=db)
+        soli_user = await create_user_with_groups([GroupType.soli], db=db)
         student_user = await create_user_with_groups([GroupType.student], db=db)
 
         raffle = models_raffle.Raffle(
@@ -144,7 +143,7 @@ def test_create_typetickets():
 
 
 def test_get_typetickets():
-    token = create_api_access_token(raffle_user)
+    token = create_api_access_token(soli_user)
 
     response = client.get(
         "/tombola/type_tickets",
@@ -197,7 +196,7 @@ def test_create_lots():
 
 
 def test_get_lots():
-    token = create_api_access_token(raffle_user)
+    token = create_api_access_token(soli_user)
 
     response = client.get(
         "/tombola/lots",
@@ -239,7 +238,7 @@ def test_create_tickets():
     response = client.post(
         "/tombola/tickets",
         json={
-            "user_id": raffle_user.id,
+            "user_id": soli_user.id,
             "winning_lot": None,
             "nb_tickets": "Lots name",
             "quantity": 2,
@@ -250,7 +249,7 @@ def test_create_tickets():
 
 
 def test_get_tickets():
-    token = create_api_access_token(raffle_user)
+    token = create_api_access_token(soli_user)
 
     response = client.get(
         "/tombola/lots",
