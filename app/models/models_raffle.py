@@ -23,6 +23,7 @@ class TypeTicket(Base):
     id: str = Column(String, primary_key=True, index=True, nullable=False)
     price: float = Column(Float, nullable=False)
     nb_ticket: int = Column(Integer)
+    value: int = Column(Integer, nullable=False)
     raffle_id: str = Column(ForeignKey("raffle.id"), index=True, nullable=False)
 
 
