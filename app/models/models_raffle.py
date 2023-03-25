@@ -48,6 +48,8 @@ class Tickets(Base):
     group_id: str = Column(ForeignKey("core_group.id"), index=True, nullable=False)
     winning_lot: str = Column(String, nullable=True, index=True)
 
+    type_ticket: TypeTicket = relationship("TypeTicket")
+
 
 class Cash(Base):
     __tablename__ = "raffle_cash"
