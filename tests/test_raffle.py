@@ -14,7 +14,7 @@ from tests.commons import (
 
 raffle_user: models_core.CoreUser | None = None
 student_user: models_core.CoreUser | None = None
-admin_user: models_core.CoreUser | None = None
+soli_user: models_core.CoreUser | None = None
 raffle: models_raffle.Raffle | None = None
 typeticket: models_raffle.TypeTicket | None = None
 lot: models_raffle.Lots | None = None
@@ -30,7 +30,7 @@ async def startuptest():
     global raffle_user, student_user, raffle, typeticket, ticket, lot, cash
 
     async with TestingSessionLocal() as db:
-        raffle_user = await create_user_with_groups([GroupType.admin], db=db)
+        raffle_user = await create_user_with_groups([GroupType.soli], db=db)
         student_user = await create_user_with_groups([GroupType.student], db=db)
 
         raffle = models_raffle.Raffle(
@@ -75,7 +75,7 @@ async def startuptest():
 
 # raffles
 def test_create_raffle():
-    token = create_api_access_token(admin_user)
+    token = create_api_access_token(soli_user)
 
     response = client.post(
         "/tombola/raffles",
@@ -91,7 +91,7 @@ def test_create_raffle():
 
 
 def test_get_raffles():
-    token = create_api_access_token(raffle_user)
+    token = create_api_access_token(soli_user)
 
     response = client.get(
         "/tombola/raffles",
@@ -101,7 +101,7 @@ def test_get_raffles():
 
 
 def test_edit_raffle():
-    token = create_api_access_token(admin_user)
+    token = create_api_access_token(soli_user)
 
     response = client.patch(
         f"/tombola/raffles/{raffle.id}",
@@ -117,7 +117,7 @@ def test_edit_raffle():
 
 
 def test_delete_raffle():
-    token = create_api_access_token(admin_user)
+    token = create_api_access_token(soli_user)
 
     response = client.delete(
         f"/tombola/raffles/{raffle.id}",
@@ -128,7 +128,7 @@ def test_delete_raffle():
 
 # type_tickets
 def test_create_typetickets():
-    token = create_api_access_token(admin_user)
+    token = create_api_access_token(soli_user)
 
     response = client.post(
         "/tombola/type_tickets",
@@ -154,7 +154,7 @@ def test_get_typetickets():
 
 
 def test_edit_typetickets():
-    token = create_api_access_token(admin_user)
+    token = create_api_access_token(soli_user)
 
     response = client.patch(
         f"/tombola/type_tickets/{typeticket.id}",
@@ -170,7 +170,7 @@ def test_edit_typetickets():
 
 
 def test_delete_typetickets():
-    token = create_api_access_token(admin_user)
+    token = create_api_access_token(soli_user)
 
     response = client.delete(
         f"/tombola/type_tickets/{typeticket.id}",
@@ -181,7 +181,7 @@ def test_delete_typetickets():
 
 # lots
 def test_create_lots():
-    token = create_api_access_token(admin_user)
+    token = create_api_access_token(soli_user)
 
     response = client.post(
         "/tombola/type_tickets",
@@ -207,7 +207,7 @@ def test_get_lots():
 
 
 def test_edit_lots():
-    token = create_api_access_token(admin_user)
+    token = create_api_access_token(soli_user)
 
     response = client.patch(
         f"/tombola/lots/{lot.id}",
@@ -223,7 +223,7 @@ def test_edit_lots():
 
 
 def test_delete_lots():
-    token = create_api_access_token(admin_user)
+    token = create_api_access_token(soli_user)
 
     response = client.delete(
         f"/tombola/lots/{lot.id}",
@@ -234,7 +234,7 @@ def test_delete_lots():
 
 # tickets
 def test_create_tickets():
-    token = create_api_access_token(admin_user)
+    token = create_api_access_token(soli_user)
 
     response = client.post(
         "/tombola/tickets",
@@ -260,7 +260,7 @@ def test_get_tickets():
 
 
 def test_edit_tickets():
-    token = create_api_access_token(admin_user)
+    token = create_api_access_token(soli_user)
 
     response = client.patch(
         f"/tombola/lots/{lot.id}",
@@ -276,7 +276,7 @@ def test_edit_tickets():
 
 
 def test_delete_tickets():
-    token = create_api_access_token(admin_user)
+    token = create_api_access_token(soli_user)
 
     response = client.delete(
         f"/tombola/lots/{lot.id}",
