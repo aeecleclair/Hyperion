@@ -179,7 +179,7 @@ def test_create_lots():
     token = create_api_access_token(soli_user)
 
     response = client.post(
-        "/tombola/type_tickets",
+        "/tombola/lots",
         json={
             "raffle_id": raffle.id,
             "description": "Lots description",
@@ -208,7 +208,7 @@ def test_edit_lots():
         f"/tombola/lots/{lot.id}",
         json={
             "raffle_id": raffle.id,
-            "description": "Lots description",
+            "description": "Lots description updated",
             "name": "Lots name",
             "quantity": 2,
         },
@@ -237,7 +237,7 @@ def test_create_tickets():
             "user_id": soli_user.id,
             "raffle_id": raffle.id,
             "type_id": typeticket.id,
-            "unit_price": 1,
+            "unit_price": 1.0,
             "winning_lot": None,
             "nb_tickets": 2,
             "group_id": "1234",
@@ -251,7 +251,7 @@ def test_get_tickets():
     token = create_api_access_token(soli_user)
 
     response = client.get(
-        "/tombola/lots",
+        "/tombola/tickets",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
@@ -261,12 +261,15 @@ def test_edit_tickets():
     token = create_api_access_token(soli_user)
 
     response = client.patch(
-        f"/tombola/lots/{lot.id}",
+        f"/tombola/tickets/{ticket.id}",
         json={
+            "user_id": soli_user.id,
             "raffle_id": raffle.id,
-            "description": "Lots description",
-            "name": "Lots name",
-            "quantity": 2,
+            "type_id": typeticket.id,
+            "unit_price": 1.0,
+            "winning_lot": None,
+            "nb_tickets": 10,
+            "group_id": "1234",
         },
         headers={"Authorization": f"Bearer {token}"},
     )
@@ -277,7 +280,7 @@ def test_delete_tickets():
     token = create_api_access_token(soli_user)
 
     response = client.delete(
-        f"/tombola/lots/{lot.id}",
+        f"/tombola/tickets/{ticket.id}",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 204
