@@ -109,7 +109,8 @@ class TicketEdit(BaseModel):
     winning_lot: str
     raffle_id: str
     nb_tickets: int
-    unit_price: int
+    unit_price: float
+    group_id: str
 
     class Config:
         orm_mode = True
@@ -117,11 +118,12 @@ class TicketEdit(BaseModel):
 
 class TicketBase(BaseModel):
     type_id: str
-    raffle_id: str
     user_id: str
     winning_lot: str
+    raffle_id: str
     nb_tickets: int
-    unit_price: int
+    unit_price: float
+    group_id: str
 
 
 class TicketComplete(TicketBase):
