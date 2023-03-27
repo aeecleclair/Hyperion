@@ -40,18 +40,19 @@ class Tickets(Base):
     __tablename__ = "raffle_tickets"
 
     id: str = Column(String, primary_key=True, index=True, nullable=False)
-    raffle_id: str = Column(ForeignKey("raffle.id"), index=True, nullable=False)
     type_id: str = Column(ForeignKey("raffle_type_ticket.id"), nullable=False)
     user_id: str = Column(ForeignKey("raffle_cash.user_id"), nullable=False)
-    nb_tickets: int = Column(Integer, nullable=False)
-    winning_lot: str = Column(String, nullable=True, index=True)
+    winning_lot: str = Column(ForeignKey("raffle_lots.id"), nullable=True, index=True)
+
     raffle: Raffle = relationship("Raffle")
     type_ticket: TypeTicket = relationship("TypeTicket")
+    lot: Lots = relationship("Lots", back_populates="winning_tickets")
 
 
 class Cash(Base):
     __tablename__ = "raffle_cash"
 
     user_id: str = Column(String, ForeignKey("core_user.id"), primary_key=True)
-    user: CoreUser = relationship("CoreUser")
     balance: float = Column(Float, nullable=False)
+
+    user: CoreUser = relationship("CoreUser")

@@ -11,12 +11,12 @@ class RaffleBase(BaseModel):
 
     name: str
     status: RaffleStatusType
+    description: str | None = None
 
 
 class RaffleEdit(BaseModel):
     name: str | None = None
-    status: RaffleStatusType
-    group_id: str
+    status: RaffleStatusType | None = None
     description: str | None = None
 
 
@@ -31,24 +31,24 @@ class RaffleComplete(RaffleSimple):
         orm_mode = True
 
 
-class UserBase(BaseModel):
-    name: str
-    surname: str
-    email: str
-    nb_tickets_bought: int
-    year: int
+# class UserBase(BaseModel):
+#     name: str
+#     surname: str
+#     email: str
+#     nb_tickets_bought: int
+#     year: int
 
 
-class UserComplete(UserBase):
-    id: int
+# class UserComplete(UserBase):
+#     id: int
 
 
-class WinnerComplete(UserComplete):
-    user: UserComplete
-    lot: str
+# class WinnerComplete(UserComplete):
+#     user: UserComplete
+#     lot: str
 
-    class Config:
-        orm_mode = True
+#     class Config:
+#         orm_mode = True
 
 
 class LotBase(BaseModel):
@@ -62,10 +62,10 @@ class LotBase(BaseModel):
 
 
 class LotEdit(BaseModel):
-    raffle_id: str
-    description: str
-    name: str
-    quantity: int
+    raffle_id: str | None = None
+    description: str | None = None
+    name: str | None = None
+    quantity: int | None = None
 
     class Config:
         orm_mode = True
@@ -88,9 +88,9 @@ class TypeTicketBase(BaseModel):
 
 
 class TypeTicketEdit(BaseModel):
-    raffle_id: str
-    price: float
-    value: int
+    raffle_id: str | None = None
+    price: float | None = None
+    value: int | None = None
 
     class Config:
         orm_mode = True
@@ -103,23 +103,10 @@ class TypeTicketComplete(TypeTicketBase):
         orm_mode = True
 
 
-class TicketEdit(BaseModel):
-    type_id: str
-    user_id: str
-    winning_lot: str | None
-    raffle_id: str
-    nb_tickets: int
-
-    class Config:
-        orm_mode = True
-
-
 class TicketBase(BaseModel):
     type_id: str
     user_id: str
-    winning_lot: str | None
-    raffle_id: str
-    nb_tickets: int
+    winning_lot: LotComplete | None = None
 
 
 class TicketComplete(TicketBase):

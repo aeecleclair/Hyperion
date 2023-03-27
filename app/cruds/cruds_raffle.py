@@ -1,8 +1,8 @@
 """File defining the functions called by the endpoints, making queries to the table using the models"""
 
 import logging
-import random
 
+import numpy as np
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -259,7 +259,7 @@ async def get_ticket_by_raffleid(
 ) -> list[models_raffle.Tickets]:
     result = await db.execute(
         select(models_raffle.Tickets)
-        .where(models_raffle.Tickets.raffle_id == raffle_id)
+        .where(models_raffle.Tickets.type_ticket.raffle_id == raffle_id)
         .options(selectinload(models_raffle.Tickets.type_ticket))
     )
     return result.scalars().all()
@@ -283,19 +283,6 @@ async def get_ticket_by_userid(
         select(models_raffle.Tickets).where(models_raffle.Tickets.user_id == user_id)
     )
     return result.scalars().all()
-
-
-async def edit_ticket(
-    ticket_id: str,
-    ticket_update: schemas_raffle.TicketEdit,
-    db: AsyncSession,
-):
-    await db.execute(
-        update(models_raffle.Tickets)
-        .where(models_raffle.Tickets.id == ticket_id)
-        .values(**ticket_update.dict(exclude_none=True))
-    )
-    await db.commit()
 
 
 async def delete_ticket(
@@ -376,34 +363,48 @@ async def remove_cash(db: AsyncSession, user_id: str, amount: float):
 
 async def draw_winner_by_lot_raffle(
     lot_id: str, db: AsyncSession
-) -> models_raffle.Tickets:
+) -> list[models_raffle.Tickets]:
     lot = await get_lot_by_id(lot_id=lot_id, db=db)
     if lot is None:
         raise ValueError("Invalid lot")
     raffle_id = lot.raffle_id
+
     if raffle_id is None:
         raise ValueError("Invalid raffle_id")
+
     gettickets = await get_ticket_by_raffleid(raffle_id=raffle_id, db=db)
-    if len(gettickets) == 0:
-        raise ValueError("No ticket")
-    tickets = []
-    for t in gettickets:
-        if t is not None:
-            for i in range(t.nb_tickets):
-                tickets.append(t)
-    values = [t.type_ticket.value for t in tickets]
-    [result] = random.choices(tickets, weights=values)
-    if result is None:
-        raise ValueError("No ticket")
+    tickets = [t for t in gettickets if t.winning_lot is None]
+
+    if len(tickets) < lot.quantity:
+        raise ValueError("Not enough ticket")
+
+    values = np.array([t.type_ticket.value for t in tickets])
+    probas = values / values.sum()
+    winners_index = np.random.choice(
+        list(range(len(tickets))), size=lot.quantity, p=probas, replace=False
+    )
+    winners = [tickets[i] for i in winners_index]
 
     await db.execute(
         update(models_raffle.Tickets)
-        .where(models_raffle.Tickets.id == result.id)
+        .where(models_raffle.Tickets.id in [w.id for w in winners])
         .values(winning_lot=lot_id)
     )
     try:
         await db.commit()
     except IntegrityError:
         await db.rollback()
-        raise ValueError("Error during edition of the winning ticket")
-    return result
+        raise ValueError("Error during edition of the winning tickets")
+
+    await db.execute(
+        update(models_raffle.Lots)
+        .where(models_raffle.Lots.id == lot_id)
+        .values(quantity=0)
+    )
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise ValueError("Error during edition of the lot")
+
+    return winners
