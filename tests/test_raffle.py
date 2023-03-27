@@ -40,7 +40,7 @@ async def startuptest():
         )
         db.add(raffle)
         typeticket = models_raffle.TypeTicket(
-            id=str(uuid.uuid4()), price=1.0, nb_ticket=1, raffle_id=raffle.id
+            id=str(uuid.uuid4()), price=1.0, value=1, raffle_id=raffle.id
         )
         db.add(typeticket)
 
@@ -64,9 +64,7 @@ async def startuptest():
         )
         db.add(lot)
 
-        cash = models_raffle.Cash(
-            user_id=student_user.id, user=student_user, balance=66
-        )
+        cash = models_raffle.Cash(user_id=student_user.id, balance=66)
         db.add(cash)
 
         await db.commit()
@@ -133,9 +131,8 @@ def test_create_typetickets():
         "/tombola/type_tickets",
         json={
             "raffle_id": raffle.id,
-            "status": RaffleStatusType.creation,
             "price": 1.23,
-            "nb_ticket": 5,
+            "value": 5,
         },
         headers={"Authorization": f"Bearer {token}"},
     )
@@ -159,9 +156,8 @@ def test_edit_typetickets():
         f"/tombola/type_tickets/{typeticket.id}",
         json={
             "raffle_id": raffle.id,
-            "status": RaffleStatusType.creation,
             "price": 10.0,
-            "nb_ticket": 5,
+            "value": 5,
         },
         headers={"Authorization": f"Bearer {token}"},
     )
