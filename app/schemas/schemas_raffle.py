@@ -110,8 +110,6 @@ class TicketEdit(BaseModel):
     winning_lot: str | None
     raffle_id: str
     nb_tickets: int
-    type_ticket: models_raffle.TypeTicket
-    raffle: models_raffle.Raffle
 
     class Config:
         orm_mode = True
