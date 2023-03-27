@@ -88,7 +88,6 @@ class TypeTicketBase(BaseModel):
 
 
 class TypeTicketEdit(BaseModel):
-    id: str
     raffle_id: str
     price: float
     value: int
