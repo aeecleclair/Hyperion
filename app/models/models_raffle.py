@@ -47,7 +47,7 @@ class Tickets(Base):
     nb_tickets: int = Column(Integer, nullable=False)
     group_id: str = Column(ForeignKey("core_group.id"), index=True, nullable=False)
     winning_lot: str = Column(String, nullable=True, index=True)
-
+    raffle: Raffle = relationship("Raffle")
     type_ticket: TypeTicket = relationship("TypeTicket")
 
 
