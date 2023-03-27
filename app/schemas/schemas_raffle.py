@@ -106,7 +106,7 @@ class TypeTicketComplete(TypeTicketBase):
 class TicketEdit(BaseModel):
     type_id: str
     user_id: str
-    winning_lot: str
+    winning_lot: str | None
     raffle_id: str
     nb_tickets: int
     unit_price: float
@@ -119,7 +119,7 @@ class TicketEdit(BaseModel):
 class TicketBase(BaseModel):
     type_id: str
     user_id: str
-    winning_lot: str
+    winning_lot: str | None
     raffle_id: str
     nb_tickets: int
     unit_price: float
