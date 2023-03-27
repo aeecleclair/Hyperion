@@ -3,6 +3,7 @@
 
 import logging
 from datetime import date
+from typing import Sequence
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
@@ -16,7 +17,7 @@ from app.utils.types.amap_types import DeliveryStatusType
 hyperion_error_logger = logging.getLogger("hyperion_error")
 
 
-async def get_products(db: AsyncSession) -> list[models_amap.Product]:
+async def get_products(db: AsyncSession) -> Sequence[models_amap.Product]:
     """Return all products from database"""
 
     result = await db.execute(select(models_amap.Product))
@@ -96,7 +97,7 @@ async def delete_product(
 
 async def get_deliveries(
     db: AsyncSession,
-) -> list[models_amap.Delivery]:
+) -> Sequence[models_amap.Delivery]:
     """Return all deliveries from database"""
     result = await db.execute(
         select(models_amap.Delivery)
@@ -227,7 +228,7 @@ async def get_order_by_id(db: AsyncSession, order_id: str) -> models_amap.Order 
 
 async def get_orders_from_delivery(
     db: AsyncSession, delivery_id: str
-) -> list[models_amap.Order]:
+) -> Sequence[models_amap.Order]:
     result = await db.execute(
         select(models_amap.Order)
         .where(models_amap.Order.delivery_id == delivery_id)
@@ -240,13 +241,17 @@ async def get_orders_from_delivery(
 
 async def get_products_of_order(
     db: AsyncSession, order_id: str
-) -> list[models_amap.AmapOrderContent]:
+) -> Sequence[schemas_amap.ProductQuantity]:
     result_db = await db.execute(
         select(models_amap.AmapOrderContent)
         .where(models_amap.AmapOrderContent.order_id == order_id)
         .options(selectinload(models_amap.AmapOrderContent.product))
     )
-    return result_db.scalars().all()
+    products_schema = [
+        schemas_amap.ProductQuantity(**product.__dict__)
+        for product in result_db.scalars().all()
+    ]
+    return products_schema
 
 
 async def add_order_to_delivery(
@@ -331,7 +336,7 @@ async def remove_order(db: AsyncSession, order_id: str):
     await db.commit()
 
 
-async def get_users_cash(db: AsyncSession) -> list[models_amap.Cash]:
+async def get_users_cash(db: AsyncSession) -> Sequence[models_amap.Cash]:
     result = await db.execute(
         select(models_amap.Cash).options(selectinload(models_amap.Cash.user))
     )
@@ -395,7 +400,9 @@ async def remove_cash(db: AsyncSession, user_id: str, amount: float):
             raise ValueError("Error during cash edition")
 
 
-async def get_orders_of_user(db: AsyncSession, user_id: str) -> list[models_amap.Order]:
+async def get_orders_of_user(
+    db: AsyncSession, user_id: str
+) -> Sequence[models_amap.Order]:
     result = await db.execute(
         select(models_amap.Order)
         .where(models_amap.Order.user_id == user_id)

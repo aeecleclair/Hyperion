@@ -1,5 +1,7 @@
 """File defining the functions called by the endpoints, making queries to the table using the models"""
 
+from typing import Sequence
+
 from sqlalchemy import and_, delete, not_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,7 +23,7 @@ async def get_users(
     db: AsyncSession,
     includedGroups: list[str] = [],
     excludedGroups: list[str] = [],
-) -> list[models_core.CoreUser]:
+) -> Sequence[models_core.CoreUser]:
     """
     Return all users from database.
 

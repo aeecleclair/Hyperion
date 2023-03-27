@@ -1,7 +1,7 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, String
-from sqlalchemy.orm import relationship
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 from app.models.models_core import CoreUser
@@ -13,19 +13,21 @@ class Event(Base):
 
     __tablename__ = "calendar_events"
 
-    id: str = Column(String, primary_key=True, index=True)
-    name: str = Column(String, nullable=False)
-    organizer: str = Column(String, nullable=False)
-    applicant_id: str = Column(ForeignKey("core_user.id"), nullable=False)
-    applicant: CoreUser = relationship("CoreUser")
-    start: datetime = Column(DateTime(timezone=True), nullable=False)
-    end: datetime = Column(DateTime(timezone=True), nullable=False)
-    all_day: bool = Column(Boolean, nullable=False)
-    location: str = Column(String, nullable=False)
-    type: CalendarEventType = Column(
+    id: Mapped[str] = mapped_column(String, primary_key=True, index=True)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    organizer: Mapped[str] = mapped_column(String, nullable=False)
+    applicant_id: Mapped[str] = mapped_column(
+        ForeignKey("core_user.id"), nullable=False
+    )
+    applicant: Mapped[CoreUser] = relationship("CoreUser")
+    start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    all_day: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    location: Mapped[str] = mapped_column(String, nullable=False)
+    type: Mapped[CalendarEventType] = mapped_column(
         Enum(CalendarEventType),
         nullable=False,
     )
-    description: str = Column(String, nullable=False)
-    decision: str = Column(String, nullable=False)
-    recurrence_rule: str | None = Column(String)
+    description: Mapped[str] = mapped_column(String, nullable=False)
+    decision: Mapped[str] = mapped_column(String, nullable=False)
+    recurrence_rule: Mapped[str | None] = mapped_column(String)

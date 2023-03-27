@@ -15,8 +15,12 @@ import redis
 from fastapi import Depends, HTTPException, Request, status
 from jose import jwt
 from pydantic import ValidationError
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 from app.core import security
 from app.core.config import Settings
@@ -61,7 +65,9 @@ def get_db_engine(settings: Settings) -> AsyncEngine:
         engine = create_async_engine(
             SQLALCHEMY_DATABASE_URL, echo=settings.DATABASE_DEBUG
         )
-        SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+        SessionLocal = async_sessionmaker(
+            engine, class_=AsyncSession, expire_on_commit=False
+        )
     return engine
 
 
@@ -104,7 +110,10 @@ def get_settings() -> Settings:
     """
     # `lru_cache()` decorator is here to prevent the class to be instantiated multiple times.
     # See https://fastapi.tiangolo.com/advanced/settings/#lru_cache-technical-details
-    return Settings(_env_file=".env")
+    return Settings(_env_file=".env")  # type:ignore
+
+
+# (issue ouverte sur github: https://github.com/pydantic/pydantic/issues/3072)
 
 
 def get_redis_client(

@@ -2,6 +2,7 @@ import glob
 import logging
 import os
 import shutil
+from typing import Sequence
 
 from fastapi import HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -39,7 +40,7 @@ def is_user_member_of_an_allowed_group(
 
 def fuzzy_search_user(
     query: str,
-    users: list[models_core.CoreUser],
+    users: Sequence[models_core.CoreUser],
     limit: int = 10,
 ) -> list[models_core.CoreUser]:
     """

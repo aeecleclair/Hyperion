@@ -9,8 +9,7 @@ import redis
 from fastapi import Depends
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core import security
 from app.core.config import Settings
@@ -27,7 +26,7 @@ from app.utils.types.groups_type import GroupType
 @lru_cache()
 def override_get_settings() -> Settings:
     """Override the get_settings function to use the testing session"""
-    return Settings(_env_file=".env.test")
+    return Settings(_env_file=".env.test")  # type: ignore[call-arg] # See https://github.com/pydantic/pydantic/issues/3072, TODO: remove when fixes
 
 
 settings = override_get_settings()
@@ -44,7 +43,7 @@ else:
 
 engine = create_async_engine(SQLALCHEMY_DATABASE_URL, echo=True)
 
-TestingSessionLocal = sessionmaker(
+TestingSessionLocal = async_sessionmaker(
     engine, class_=AsyncSession, expire_on_commit=False
 )  # Create a session for testing purposes
 

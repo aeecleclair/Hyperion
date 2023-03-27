@@ -1,4 +1,6 @@
-from sqlalchemy import delete, func, select, update
+from typing import Sequence
+
+from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -9,8 +11,8 @@ from app.schemas import schemas_loan
 
 async def get_loaners(
     db: AsyncSession,
-) -> list[models_loan.Loaner]:
-    """Return the loaners with id"""
+) -> Sequence[models_loan.Loaner]:
+    """Return the loaner with id"""
 
     result = await db.execute(select(models_loan.Loaner))
     # With the `unique()` call, the function raise an error inviting to add `unique()` to `result`.
@@ -147,7 +149,7 @@ async def get_loans_by_borrower(
     db: AsyncSession,
     borrower_id: str,
     returned: bool | None = None,
-) -> list[models_loan.Loan]:
+) -> Sequence[models_loan.Loan]:
     """Return all loans of a borrower from database"""
 
     query = select(models_loan.Loan).where(models_loan.Loan.borrower_id == borrower_id)
