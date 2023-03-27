@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from uuid import uuid4
+from typing import Optional
 
 from sqlalchemy import Column, DateTime, String, ForeignKey, Boolean, Integer, func
 from sqlalchemy.ext.hybrid import hybrid_method
@@ -48,8 +49,8 @@ class ThreadMessage(Base):
     id: str = Column(String, primary_key=True, index=True, default=lambda: str(uuid4()))
     thread_id: str = Column(String, ForeignKey("thread.id"), index=True)
     author_id: str = Column(String, ForeignKey("core_user.id"), index=True)
-    content: str = Column(String)
-    image: str = Column(String)
+    content: Optional[str] = Column(String)
+    image: Optional[str] = Column(String)
     timestamp: datetime = Column(DateTime(timezone=True), default=func.now())
 
     author: models_core.CoreUser = relationship("CoreUser")

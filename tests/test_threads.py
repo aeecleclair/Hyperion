@@ -124,12 +124,16 @@ def test_read_messages():
 def test_send_message():
     response = client.post(
         f"/threads/{test_threads[1].id}/messages",
-        json={
-            "content": "Yay"
-        },
+        json={"content": "Yay"},
         headers={"Authorization": f"Bearer {users[0]['token']}"},
     )
     assert response.status_code == 204
+    response = client.post(
+        f"/threads/{test_threads[1].id}/messages",
+        json={"content": "Meh je veux poster là aussi"},
+        headers={"Authorization": f"Bearer {users[1]['token']}"},
+    )
+    assert response.status_code == 403
 
 
 def test_add_thread_user():

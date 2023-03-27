@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.cruds import cruds_threads
 from app.dependencies import get_db, is_user_a_member
 from app.models import models_core
-from app.schemas import schemas_threads, schemas_core
+from app.schemas import schemas_threads
 from app.utils.types.tags import Tags
 from app.utils.types.thread_permissions_types import ThreadPermission
 
@@ -127,6 +127,8 @@ async def get_thread_messages(
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     thread = await cruds_threads.get_thread_by_id(db, thread_id)
+    if thread is None:
+        raise HTTPException(404, "Thread not found")
     if not thread.is_public:
         thread_member = await cruds_threads.get_thread_member_from_base(
             db, schemas_threads.ThreadMemberBase(thread_id=thread_id, user_id=user.id)
@@ -147,8 +149,11 @@ async def send_message(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    await cruds_threads.create_message(
-        db,
-        message,
-        schemas_threads.ThreadMemberBase(thread_id=thread_id, user_id=user.id),
-    )
+    try:
+        await cruds_threads.create_message(
+            db,
+            message,
+            schemas_threads.ThreadMemberBase(thread_id=thread_id, user_id=user.id),
+        )
+    except ValueError as e:
+        raise HTTPException(403, str(e))
