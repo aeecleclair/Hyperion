@@ -135,7 +135,7 @@ async def edit_lot(
     db: AsyncSession,
 ):
     await db.execute(
-        update(models_raffle.Raffle)
+        update(models_raffle.Lots)
         .where(models_raffle.Lots.id == lot_id)
         .values(**lot_update.dict(exclude_none=True))
     )
