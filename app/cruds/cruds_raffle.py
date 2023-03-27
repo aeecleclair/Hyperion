@@ -258,7 +258,9 @@ async def get_ticket_by_groupid(
     db: AsyncSession,
 ) -> list[models_raffle.Tickets] | None:
     result = await db.execute(
-        select(models_raffle.Tickets).where(models_raffle.Tickets.group_id == group_id)
+        select(models_raffle.Tickets).where(
+            models_raffle.Tickets.raffle.group_id == group_id
+        )
     )
     return result.scalars().all()
 
