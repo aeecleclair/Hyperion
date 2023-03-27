@@ -2,7 +2,6 @@
 
 from pydantic import BaseModel
 
-from app.models import models_raffle
 from app.schemas.schemas_core import CoreUserSimple
 from app.utils.types.raffle_types import RaffleStatusType
 

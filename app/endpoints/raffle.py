@@ -1,18 +1,28 @@
+import logging
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
+from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cruds import cruds_raffle, cruds_users
-from app.dependencies import get_db, is_user_a_member, is_user_a_member_of
+from app.dependencies import (
+    get_db,
+    get_redis_client,
+    get_request_id,
+    is_user_a_member,
+    is_user_a_member_of,
+)
 from app.endpoints.users import read_user
 from app.models import models_core, models_raffle
 from app.schemas import schemas_raffle
+from app.utils.redis import locker_get, locker_set
 from app.utils.tools import is_user_member_of_an_allowed_group
 from app.utils.types.groups_type import GroupType
 from app.utils.types.tags import Tags
 
 router = APIRouter()
+hyperion_raffle_logger = logging.getLogger("hyperion.raffle")
 
 
 # raffles
@@ -278,27 +288,69 @@ async def get_tickets(
 async def buy_ticket(
     ticket: schemas_raffle.TicketBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
+    redis_client: Redis | None = Depends(get_redis_client),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+    request_id: str = Depends(get_request_id),
 ):
     """
     Create a new ticket
 
     **The user must be an admin to use this endpoint**
     """
-    cash_user = await cruds_raffle.get_cash_by_id(db=db, user_id=user.id)
-    total_price = ticket.nb_tickets * ticket.type_ticket.price
-    if cash_user is None:
-        raise ValueError("Not enough cash")
-    if total_price > cash_user.balance:
-        raise ValueError("Not enough cash")
-    await cruds_raffle.add_cash(db=db, user_id=user.id, amount=(-total_price))
+    type_ticket = await cruds_raffle.get_typeticket_by_id(
+        typeticket_id=ticket.type_id, db=db
+    )
+    if type_ticket is None:
+        raise ValueError("Bad typeticket association")
+    amount = ticket.nb_tickets * type_ticket.price
+
+    balance: models_raffle.Cash | None = await cruds_raffle.get_cash_by_id(
+        db=db,
+        user_id=ticket.user_id,
+    )
+
+    # If the balance does not exist, we create a new one with a balance of 0
+    if not balance:
+        new_cash_db = schemas_raffle.CashDB(
+            balance=0,
+            user_id=ticket.user_id,
+        )
+        balance = models_raffle.Cash(
+            **new_cash_db.dict(),
+        )
+        await cruds_raffle.create_cash_of_user(
+            cash=balance,
+            db=db,
+        )
     db_ticket = models_raffle.Tickets(id=str(uuid.uuid4()), **ticket.dict())
+    if not amount:
+        raise HTTPException(status_code=403, detail="You can't buy nothing")
+
+    redis_key = "raffle_" + ticket.user_id
+
+    if not isinstance(redis_client, Redis) or locker_get(
+        redis_client=redis_client, key=redis_key
+    ):
+        raise HTTPException(status_code=403, detail="Too fast !")
+    locker_set(redis_client=redis_client, key=redis_key, lock=True)
 
     try:
-        result = await cruds_raffle.create_ticket(ticket=db_ticket, db=db)
-        return result
+        await cruds_raffle.create_ticket(ticket=db_ticket, db=db)
+        await cruds_raffle.remove_cash(
+            db=db,
+            user_id=ticket.user_id,
+            amount=amount,
+        )
+
+        hyperion_raffle_logger.info(
+            f"Add_ticket_to_user: A ticket has been created for user {ticket.user_id} for an amount of {amount}€. ({request_id})"
+        )
+
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
+
+    finally:
+        locker_set(redis_client=redis_client, key=redis_key, lock=False)
 
 
 @router.post(
