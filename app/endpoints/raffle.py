@@ -270,38 +270,6 @@ async def get_tickets(
 
 
 @router.post(
-    "/tombola/tickets/buy",
-    response_model=schemas_raffle.TicketEdit,
-    status_code=201,
-    tags=[Tags.raffle],
-)
-async def buy_ticket(
-    ticket: schemas_raffle.TicketBase,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
-):
-    """
-    Create a new ticket
-
-    **The user must be an admin to use this endpoint**
-    """
-    cash_user = await cruds_raffle.get_cash_by_id(db=db, user_id=user.id)
-    total_price = ticket.nb_tickets * ticket.type_ticket.price
-    if cash_user is None:
-        raise ValueError("Not enough cash")
-    if total_price > cash_user.balance:
-        raise ValueError("Not enough cash")
-    await cruds_raffle.add_cash(db=db, user_id=user.id, amount=(-total_price))
-    db_ticket = models_raffle.Tickets(id=str(uuid.uuid4()), **ticket.dict())
-
-    try:
-        result = await cruds_raffle.create_ticket(ticket=db_ticket, db=db)
-        return result
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
-
-
-@router.post(
     "/tombola/tickets",
     response_model=schemas_raffle.TicketEdit,
     status_code=201,
