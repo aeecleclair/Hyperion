@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+
 from pydantic import BaseModel
 
 from app.schemas.schemas_core import CoreUserSimple
@@ -29,7 +30,7 @@ class GameCreateRequest(GameBase):
 class Game(GameBase):
     timestamp: datetime
     id: str
-    players: list[GamePlayer]
+    game_players: list[GamePlayer]
     is_confirmed: bool
 
 
@@ -43,6 +44,7 @@ class GamePlayerBase(BaseModel):
 
 
 class GamePlayer(GamePlayerBase):
+    elo_gain: int | None
     user: CoreUserSimple
 
 

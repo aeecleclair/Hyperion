@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cruds import cruds_elocaps
 from app.dependencies import get_db, is_user_a_member
-from app.models import models_elocaps, models_core
+from app.models import models_core, models_elocaps
 from app.schemas import schemas_elocaps
 from app.utils.types.elocaps_types import CapsMode
 from app.utils.types.tags import Tags
@@ -27,8 +27,7 @@ async def register_game(
         raise HTTPException(400, "You must be part of the game")
     game = models_elocaps.Game(mode=game_params.mode)
     try:
-        players = [models_elocaps.GamePlayer(**i.dict()) for i in game_params.players]
-        await cruds_elocaps.register_game(db, game, players)
+        await cruds_elocaps.register_game(db, game, game_params.players)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
@@ -84,9 +83,9 @@ async def get_game_detail(
 async def confirm_game(
     game_id: str,
     db: AsyncSession = Depends(get_db),
-    user_id: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    await cruds_elocaps.confirm_game(db, game_id=game_id, user_id=user_id)
+    await cruds_elocaps.confirm_game(db, game_id=game_id, user_id=user.id)
 
 
 @router.get(

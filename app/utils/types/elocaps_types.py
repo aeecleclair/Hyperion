@@ -1,8 +1,8 @@
-from enum import IntEnum
+from enum import Enum
 
 
-class CapsMode(IntEnum):
-    SINGLE = 1
-    CD = 2
-    CAPACKS = 3
-    SEMI_CAPACKS = 4
+class CapsMode(str, Enum):
+    SINGLE = "single"
+    CD = "cd"
+    CAPACKS = "capacks"
+    SEMI_CAPACKS = "semi_capacks"

@@ -1,11 +1,14 @@
-from typing import TypedDict
-from datetime import datetime, timedelta, date
+from datetime import date, datetime, timedelta
 from random import randint
+from typing import TypedDict
+
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from app.main import app
 from app.models import models_core, models_elocaps
-from app.utils.types.groups_type import GroupType
 from app.utils.types.elocaps_types import CapsMode
+from app.utils.types.groups_type import GroupType
 from tests.commons import (
     TestingSessionLocal,
     client,
@@ -13,13 +16,26 @@ from tests.commons import (
     create_user_with_groups,
 )
 
-UserTest = TypedDict("UserTest", {"user": models_core.CoreUser, "token": str})
+UserTest = TypedDict(
+    "UserTest",
+    {
+        "user": models_core.CoreUser,
+        "token": str,
+        "players": dict[CapsMode, models_elocaps.Player],
+    },
+)
 users: list[UserTest] = []
 game_players: list[models_elocaps.GamePlayer] = []
 games: list[models_elocaps.Game] = []
 
 
 async def create_games(db, n):
+    for mode in CapsMode:
+        for user in users:
+            player = models_elocaps.Player(user_id=user["user"].id, mode=mode)
+            db.add(player)
+            user["players"][mode] = player
+    await db.commit()
     for i in range(n):
         game = models_elocaps.Game(
             mode=CapsMode.CD,
@@ -29,23 +45,35 @@ async def create_games(db, n):
         db.add(game)
         await db.commit()
         quarters = randint(0, 96)
-        players = [
+        one_game_players = [
             models_elocaps.GamePlayer(
                 game_id=game.id,
-                user_id=users[randint(0, 2)]["user"].id,
+                player_id=users[randint(0, 2)]["players"][CapsMode.CD].id,
                 team=1,
                 quarters=quarters,
             ),
             models_elocaps.GamePlayer(
                 game_id=game.id,
-                user_id=users[3]["user"].id,
+                player_id=users[3]["players"][CapsMode.CD].id,
                 team=2,
                 quarters=96 - quarters,
             ),
         ]
-        db.add_all(players)
-        game_players.extend(players)
+        db.add_all(one_game_players)
+        # game_players.extend(one_game_players)
         await db.commit()
+    game_players.clear()
+    game_players.extend(
+        (
+            await db.execute(
+                select(models_elocaps.GamePlayer).options(
+                    selectinload(models_elocaps.GamePlayer.player)
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
 
 
 @app.on_event("startup")  # create the data needed in the tests
@@ -54,7 +82,7 @@ async def startuptest():
         for i in range(4):
             user = await create_user_with_groups([GroupType.student], db)
             token = create_api_access_token(user)
-            users.append({"user": user, "token": token})
+            users.append({"user": user, "token": token, "players": {}})
         await create_games(db, 100)
 
 
@@ -65,7 +93,7 @@ def test_get_latest_games():
     )
     assert response.status_code == 200
     json = response.json()
-    assert len(json) == min(10, len(games)) and len(json[0]["players"]) == 2
+    assert len(json) == min(10, len(games)) and len(json[0]["game_players"]) == 2
 
 
 def test_get_games_played_on():
@@ -99,12 +127,34 @@ def test_get_game():
     assert json["timestamp"] == game.timestamp.isoformat() and json["id"] == game.id
 
 
-def test_validate_game():
+def test_validate_and_end_game():
+    game = games[0]
+    tokens = [
+        u["token"]
+        for i in game_players
+        if i.game_id == game.id
+        for u in users
+        if u["user"].id == i.user_id
+    ]
+    response1 = client.post(
+        f"/elocaps/games/{game.id}/validate",
+        headers={"Authorization": f"Bearer {tokens[0]}"},
+    )
+    assert response1.status_code == 204
+    response2 = client.post(
+        f"/elocaps/games/{game.id}/validate",
+        headers={"Authorization": f"Bearer {tokens[1]}"},
+    )
+    assert response2.status_code == 204
     response = client.get(
-        f"/elocaps/games/{games[0].id}",
+        f"/elocaps/games/{game.id}",
         headers={"Authorization": f"Bearer {users[0]['token']}"},
     )
-    assert response.status_code == 200
+    assert (
+        response.status_code == 200
+        and response.json()["id"] == game.id
+        and response.json()["is_confirmed"]
+    )
 
 
 def test_my_games():
@@ -147,7 +197,7 @@ def test_player_info():
 
 def test_leaderboard():
     response = client.get(
-        "/elocaps/leaderboard?mode=1",
+        "/elocaps/leaderboard?mode=cd",
         headers={"Authorization": f"Bearer {users[0]['token']}"},
     )
     assert response.status_code == 200
@@ -173,6 +223,11 @@ def test_create_game():
     print(response.json()[0])
     assert (
         response.status_code == 200
-        and next(i["quarters"] for i in response.json()[0]["players"] if i["team"] == 2)
+        and (
+            game_player := next(
+                i for i in response.json()[0]["game_players"] if i["team"] == 2
+            )
+        )["quarters"]
         == 95
+        and game_player["elo_gain"] is not None
     )
