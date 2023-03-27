@@ -2,6 +2,7 @@
 
 from pydantic import BaseModel
 
+from app.models import models_raffle
 from app.schemas.schemas_core import CoreUserSimple
 from app.utils.types.raffle_types import RaffleStatusType
 
@@ -109,8 +110,8 @@ class TicketEdit(BaseModel):
     winning_lot: str | None
     raffle_id: str
     nb_tickets: int
-    unit_price: float
-    group_id: str
+    type_ticket: models_raffle.TypeTicket
+    raffle: models_raffle.Raffle
 
     class Config:
         orm_mode = True
@@ -122,8 +123,6 @@ class TicketBase(BaseModel):
     winning_lot: str | None
     raffle_id: str
     nb_tickets: int
-    unit_price: float
-    group_id: str
 
 
 class TicketComplete(TicketBase):
