@@ -396,9 +396,14 @@ async def draw_winner_by_lot_raffle(
     raffle_id = lot.raffle_id
     if raffle_id is None:
         raise ValueError("Invalid raffle_id")
-    tickets = await get_ticket_by_raffleid(raffle_id=raffle_id, db=db)
-    if len(tickets) == 0:
+    gettickets = await get_ticket_by_raffleid(raffle_id=raffle_id, db=db)
+    if len(gettickets) == 0:
         raise ValueError("No ticket")
+    tickets = []
+    for t in gettickets:
+        if t is not None:
+            for i in range(t.nb_tickets):
+                tickets.append(t)
     values = [t.type_ticket.value for t in tickets]
     [result] = random.choices(tickets, weights=values)
     if result is None:

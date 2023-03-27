@@ -235,9 +235,12 @@ def test_create_tickets():
         "/tombola/tickets",
         json={
             "user_id": soli_user.id,
+            "raffle_id": raffle.id,
+            "type_id": typeticket.id,
+            "unit_price": 1,
             "winning_lot": None,
-            "nb_tickets": "Lots name",
-            "quantity": 2,
+            "nb_tickets": 2,
+            "group_id": "1234",
         },
         headers={"Authorization": f"Bearer {token}"},
     )
