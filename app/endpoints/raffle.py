@@ -56,7 +56,7 @@ async def create_raffle(
     """
     Create a new raffle
 
-    **The user must be an admin to use this endpoint**
+    **The user must be a member of the group soli to use this endpoint**
     """
     db_raffle = models_raffle.Raffle(id=str(uuid.uuid4()), **raffle.dict())
 
@@ -81,7 +81,7 @@ async def edit_raffle(
     """
     Edit a raffle
 
-    **The user must be an admin to use this endpoint**
+    **The user must be a member of the group soli to use this endpoint**
     """
 
     raffle = await cruds_raffle.get_raffle_by_id(raffle_id=raffle_id, db=db)
@@ -106,7 +106,7 @@ async def delete_raffle(
     """
     Delete a raffle.
 
-    **The user must be an admin to use this endpoint**
+    **The user must be a member of the group soli to use this endpoint**
     """
 
     raffle = await cruds_raffle.get_raffle_by_id(raffle_id=raffle_id, db=db)
@@ -128,7 +128,7 @@ async def get_raffle_by_group_id(
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
-    Return all raffles
+    Return all raffles from a group
     """
     raffle = await cruds_raffle.get_raffle_by_groupid(group_id, db)
     return raffle
@@ -166,7 +166,7 @@ async def create_typeticket(
     """
     Create a new typeticket
 
-    **The user must be an admin to use this endpoint**
+    **The user must be a member of the group soli to use this endpoint**
     """
     db_typeticket = models_raffle.TypeTicket(id=str(uuid.uuid4()), **typeticket.dict())
 
@@ -191,7 +191,7 @@ async def edit_typeticket(
     """
     Edit a typeticket
 
-    **The user must be an admin to use this endpoint**
+    **The user must be a member of the group soli to use this endpoint**
     """
 
     typeticket = await cruds_raffle.get_typeticket_by_id(
@@ -218,7 +218,7 @@ async def delete_typeticket(
     """
     Delete a typeticket.
 
-    **The user must be a member of the group admin to use this endpoint**
+    **The user must be a member of the group soli to use this endpoint**
     """
 
     typeticket = await cruds_raffle.get_typeticket_by_id(
@@ -239,12 +239,10 @@ async def delete_typeticket(
 async def get_type_tickets_by_raffle_id(
     raffle_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
-    Return all tickets
-
-    **The user must be an admin to use this endpoint**
+    Return all type_tickets associated to a raffle
     """
     type_tickets = await cruds_raffle.get_typeticket_by_raffleid(raffle_id, db)
     return type_tickets
@@ -263,7 +261,7 @@ async def get_tickets(
     """
     Return all tickets
 
-    **The user must be an admin to use this endpoint**
+    **The user must be a member of the group soli to use this endpoint**
     """
     tickets = await cruds_raffle.get_tickets(db)
     return tickets
@@ -271,7 +269,7 @@ async def get_tickets(
 
 @router.post(
     "/tombola/tickets/buy",
-    response_model=schemas_raffle.TicketEdit,
+    response_model=schemas_raffle.TicketComplete,
     status_code=201,
     tags=[Tags.raffle],
 )
@@ -341,78 +339,27 @@ async def buy_ticket(
         locker_set(redis_client=redis_client, key=redis_key, lock=False)
 
 
-@router.post(
-    "/tombola/tickets",
-    response_model=schemas_raffle.TicketEdit,
-    status_code=201,
-    tags=[Tags.raffle],
-)
-async def create_ticket(
-    ticket: schemas_raffle.TicketBase,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
-):
-    """
-    Create a new ticket
+# @router.delete(
+#     "/tombola/tickets/{ticket_id}",
+#     status_code=204,
+#     tags=[Tags.raffle],
+# )
+# async def delete_ticket(
+#     ticket_id: str,
+#     db: AsyncSession = Depends(get_db),
+#     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
+# ):
+#     """
+#     Delete a ticket.
 
-    **The user must be an admin to use this endpoint**
-    """
-    db_ticket = models_raffle.Tickets(id=str(uuid.uuid4()), **ticket.dict())
+#     **The user must be a member of the group soli to use this endpoint**
+#     """
 
-    try:
-        result = await cruds_raffle.create_ticket(ticket=db_ticket, db=db)
-        return result
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+#     ticket = await cruds_raffle.get_ticket_by_id(ticket_id=ticket_id, db=db)
+#     if not ticket:
+#         raise HTTPException(status_code=404, detail="Ticket not found")
 
-
-@router.patch(
-    "/tombola/tickets/{ticket_id}",
-    status_code=204,
-    tags=[Tags.raffle],
-)
-async def edit_ticket(
-    ticket_id: str,
-    ticket_update: schemas_raffle.TicketEdit,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
-):
-    """
-    Edit a ticket
-
-    **The user must be an admin to use this endpoint**
-    """
-
-    ticket = await cruds_raffle.get_ticket_by_id(ticket_id=ticket_id, db=db)
-    if not ticket:
-        raise HTTPException(status_code=404, detail="Ticket not found")
-
-    await cruds_raffle.edit_ticket(
-        ticket_id=ticket_id, ticket_update=ticket_update, db=db
-    )
-
-
-@router.delete(
-    "/tombola/tickets/{ticket_id}",
-    status_code=204,
-    tags=[Tags.raffle],
-)
-async def delete_ticket(
-    ticket_id: str,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
-):
-    """
-    Delete a ticket.
-
-    **The user must be a member of the group admin to use this endpoint**
-    """
-
-    ticket = await cruds_raffle.get_ticket_by_id(ticket_id=ticket_id, db=db)
-    if not ticket:
-        raise HTTPException(status_code=404, detail="Ticket not found")
-
-    await cruds_raffle.delete_ticket(db=db, ticket_id=ticket_id)
+#     await cruds_raffle.delete_ticket(db=db, ticket_id=ticket_id)
 
 
 @router.get(
@@ -428,16 +375,14 @@ async def get_tickets_by_userid(
 ):
     """
     Get tickets of a specific user.
-    
+
     **Only admin users can get tickets of another user**
     """
     user_db = await cruds_users.get_user_by_id(db=db, user_id=user_id)
     if user_db is None:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if user_id == user.id or is_user_member_of_an_allowed_group(
-        user, [GroupType.soli]
-    ):
+    if user_id == user.id or is_user_member_of_an_allowed_group(user, [GroupType.soli]):
         ticket = await cruds_raffle.get_ticket_by_userid(user_id=user_id, db=db)
         if ticket is not None:
             return ticket
@@ -451,22 +396,24 @@ async def get_tickets_by_userid(
 
 @router.get(
     "/tombola/raffle/{raffle_id}/tickets",
-    response_model=schemas_raffle.TicketComplete,
+    response_model=list[schemas_raffle.TicketComplete],
     status_code=200,
     tags=[Tags.raffle],
 )
 async def get_tickets_by_raffleid(
     raffle_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member)
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
 ):
     """
     Get tickets from a specific raffle.
+
+    **The user must be a member of the group soli to use this endpoint
     """
 
-    ticket = await cruds_raffle.get_ticket_by_raffleid(raffle_id=raffle_id, db=db)
-    if ticket is not None:
-        return ticket
+    tickets = await cruds_raffle.get_ticket_by_raffleid(raffle_id=raffle_id, db=db)
+
+    return tickets
 
 
 @router.get(
@@ -500,7 +447,7 @@ async def create_lot(
     """
     Create a new lot
 
-    **The user must be an admin to use this endpoint**
+    **The user must be a member of the group soli to use this endpoint
     """
     db_lot = models_raffle.Lots(id=str(uuid.uuid4()), **lot.dict())
 
@@ -525,7 +472,7 @@ async def edit_lot(
     """
     Edit a lot
 
-    **The user must be an admin to use this endpoint**
+    **The user must be a member of the group soli to use this endpoint
     """
 
     lot = await cruds_raffle.get_lot_by_id(lot_id=lot_id, db=db)
@@ -548,7 +495,7 @@ async def delete_lot(
     """
     Delete a lot.
 
-    **The user must be a member of the group admin to use this endpoint**
+    **The user must be a member of the group soli to use this endpoint
     """
 
     lot = await cruds_raffle.get_lot_by_id(lot_id=lot_id, db=db)
@@ -571,6 +518,8 @@ async def get_lots_by_raffleid(
 ):
     """
     Get lots from a specific raffle.
+
+    **The user must be a member of the group soli to use this endpoint
     """
 
     lot = await cruds_raffle.get_lot_by_raffleid(raffle_id=raffle_id, db=db)
@@ -591,7 +540,7 @@ async def get_users_cash(
     """
     Get cash from all users.
 
-    **The user must be a member of the group SOLI to use this endpoint**
+    **The user must be a member of the group soli to use this endpoint
     """
     cash = await cruds_raffle.get_users_cash(db)
     return cash
@@ -611,7 +560,7 @@ async def get_cash_by_id(
     """
     Get cash from a specific user.
 
-    **The user must be a member of the group admin to use this endpoint or can only access the endpoint for its own user_id**
+    **The user must be a member of the group soli to use this endpoint or can only access the endpoint for its own user_id**
     """
     user_db = await cruds_users.get_user_by_id(db=db, user_id=user_id)
     if user_db is None:
@@ -650,7 +599,7 @@ async def create_cash_of_user(
     """
     Create cash for a user.
 
-    **The user must be a member of the group SOLI to use this endpoint**
+    **The user must be a member of the group soli to use this endpoint**
     """
 
     user_db = await read_user(user_id=user_id, db=db)
@@ -694,7 +643,7 @@ async def edit_cash_by_id(
     Edit cash for an user. This will add the balance to the current balance.
     A negative value can be provided to remove money from the user.
 
-    **The user must be a member of the group AMAP to use this endpoint**
+    **The user must be a member of the group soli to use this endpoint**
     """
     user_db = await read_user(user_id=user_id, db=db)
     if not user_db:
@@ -712,7 +661,7 @@ async def edit_cash_by_id(
 
 @router.post(
     "/tombola/lots/{lot_id}/draw",
-    response_model=schemas_raffle.TicketComplete,
+    response_model=list[schemas_raffle.TicketComplete],
     status_code=201,
     tags=[Tags.raffle],
 )
@@ -721,5 +670,5 @@ async def draw_winner(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
 ):
-    winning_ticket = await cruds_raffle.draw_winner_by_lot_raffle(lot_id=lot_id, db=db)
-    return winning_ticket
+    winning_tickets = await cruds_raffle.draw_winner_by_lot_raffle(lot_id=lot_id, db=db)
+    return winning_tickets
