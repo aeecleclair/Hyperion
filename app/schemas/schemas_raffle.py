@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel
 
-from app.schemas.schemas_core import CoreUserSimple
+from app.schemas.schemas_core import CoreGroupSimple, CoreUserSimple
 from app.utils.types.raffle_types import RaffleStatusType
 
 
@@ -24,8 +24,9 @@ class RaffleSimple(RaffleBase):
     group_id: str
 
 
-class RaffleComplete(RaffleSimple):
+class RaffleComplete(RaffleBase):
     id: str
+    group: CoreGroupSimple
 
     class Config:
         orm_mode = True
@@ -67,12 +68,18 @@ class LotEdit(BaseModel):
     name: str | None = None
     quantity: int | None = None
 
+
+class LotSimple(LotBase):
+    id: str
+
     class Config:
         orm_mode = True
 
 
 class LotComplete(LotBase):
     id: str
+
+    raffle: RaffleComplete
 
     class Config:
         orm_mode = True
@@ -96,8 +103,16 @@ class TypeTicketEdit(BaseModel):
         orm_mode = True
 
 
+class TypeTicketSimple(TypeTicketBase):
+    id: str
+
+    class Config:
+        orm_mode = True
+
+
 class TypeTicketComplete(TypeTicketBase):
     id: str
+    raffle: RaffleComplete
 
     class Config:
         orm_mode = True
@@ -106,11 +121,22 @@ class TypeTicketComplete(TypeTicketBase):
 class TicketBase(BaseModel):
     type_id: str
     user_id: str
-    winning_lot: LotComplete | None = None
+    winning_lot: str | None = None
+
+
+class TicketSimple(TicketBase):
+    id: str
+
+    class Config:
+        orm_mode = True
 
 
 class TicketComplete(TicketBase):
     id: str
+
+    lot: LotSimple | None
+    type_ticket: TypeTicketComplete
+    user: CoreUserSimple
 
     class Config:
         orm_mode = True

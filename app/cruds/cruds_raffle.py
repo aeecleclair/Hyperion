@@ -17,7 +17,9 @@ hyperion_error_logger = logging.getLogger("hyperion_error")
 async def get_raffles(db: AsyncSession) -> list[models_raffle.Raffle]:
     """Return all raffle from database"""
 
-    result = await db.execute(select(models_raffle.Raffle))
+    result = await db.execute(
+        select(models_raffle.Raffle).options(selectinload(models_raffle.Raffle.group))
+    )
     return result.scalars().all()
 
 
@@ -84,7 +86,9 @@ async def delete_raffle(
 async def get_lots(db: AsyncSession) -> list[models_raffle.Lots]:
     """Return all lots from database"""
 
-    result = await db.execute(select(models_raffle.Lots))
+    result = await db.execute(
+        select(models_raffle.Lots).options(selectinload(models_raffle.Lots.raffle))
+    )
     return result.scalars().all()
 
 
@@ -118,7 +122,9 @@ async def get_lot_by_id(
     db: AsyncSession,
 ) -> models_raffle.Lots | None:
     result = await db.execute(
-        select(models_raffle.Lots).where(models_raffle.Lots.id == lot_id)
+        select(models_raffle.Lots)
+        .where(models_raffle.Lots.id == lot_id)
+        .options(selectinload(models_raffle.Lots.raffle))
     )
     return result.scalars().first()
 
@@ -149,7 +155,11 @@ async def delete_lot(
 async def get_typeticket(db: AsyncSession) -> list[models_raffle.TypeTicket]:
     """Return all typetickets from database"""
 
-    result = await db.execute(select(models_raffle.TypeTicket))
+    result = await db.execute(
+        select(models_raffle.TypeTicket).options(
+            selectinload(models_raffle.TypeTicket.raffle)
+        )
+    )
     return result.scalars().all()
 
 
@@ -173,9 +183,9 @@ async def get_typeticket_by_raffleid(
     db: AsyncSession,
 ) -> list[models_raffle.TypeTicket] | None:
     result = await db.execute(
-        select(models_raffle.Lots).where(
-            models_raffle.TypeTicket.raffle_id == raffle_id
-        )
+        select(models_raffle.Lots)
+        .where(models_raffle.TypeTicket.raffle_id == raffle_id)
+        .options(selectinload(models_raffle.TypeTicket.raffle))
     )
     return result.scalars().all()
 
@@ -185,9 +195,9 @@ async def get_typeticket_by_id(
     db: AsyncSession,
 ) -> models_raffle.TypeTicket | None:
     result = await db.execute(
-        select(models_raffle.TypeTicket).where(
-            models_raffle.TypeTicket.id == typeticket_id
-        )
+        select(models_raffle.TypeTicket)
+        .where(models_raffle.TypeTicket.id == typeticket_id)
+        .options(selectinload(models_raffle.TypeTicket.raffle))
     )
     return result.scalars().first()
 
@@ -239,18 +249,6 @@ async def create_ticket(
     except IntegrityError:
         await db.rollback()
         raise ValueError("This name is already used")
-
-
-async def get_ticket_by_groupid(
-    group_id: int,
-    db: AsyncSession,
-) -> list[models_raffle.Tickets] | None:
-    result = await db.execute(
-        select(models_raffle.Tickets).where(
-            models_raffle.Tickets.raffle.group_id == group_id
-        )
-    )
-    return result.scalars().all()
 
 
 async def get_ticket_by_raffleid(
