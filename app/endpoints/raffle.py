@@ -20,6 +20,7 @@ from app.schemas import schemas_raffle
 from app.utils.redis import locker_get, locker_set
 from app.utils.tools import get_display_name, is_user_member_of_an_allowed_group
 from app.utils.types.groups_type import GroupType
+from app.utils.types.raffle_types import RaffleStatusType
 from app.utils.types.tags import Tags
 
 router = APIRouter()
@@ -710,5 +711,15 @@ async def draw_winner(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
 ):
+    lot = await cruds_raffle.get_lot_by_id(db=db, lot_id=lot_id)
+    if lot is None:
+        raise HTTPException(status_code=404, detail="Invalid lot id")
+
+    if lot.raffle.status != RaffleStatusType.open:
+        raise HTTPException(status_code=400, detail="Lot is not open")
+
     winning_tickets = await cruds_raffle.draw_winner_by_lot_raffle(lot_id=lot_id, db=db)
+    for ticket in winning_tickets:
+        ticket.lot = lot
+
     return winning_tickets
