@@ -21,6 +21,7 @@ class Membership(Base):
 class Association(Base):
     __tablename__ = "phonebook_association"
 
+    id: str = Column(String, primary_key=True, index=True, nullable=False)
     type: str = Column(String, nullable=False)
     membership: list[Membership] = relationship("Membership")
 

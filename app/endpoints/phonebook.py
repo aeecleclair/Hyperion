@@ -1,4 +1,4 @@
-# import uuid
+import uuid
 
 from fastapi import APIRouter, Depends  # , File, HTTPException, UploadFile
 
@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.cruds import cruds_phonebook
 from app.dependencies import get_db, is_user_a_member_of  # , get_request_id
 
-# from app.models import models_core
+# from app.models import models_phonebook
 from app.schemas import schemas_phonebook
 
 # from app.utils.tools import (
@@ -72,7 +72,7 @@ async def get_associations_by_query(filter, db: AsyncSession = Depends(get_db)):
 
 @router.post(
     "phonebook/association/",
-    response_model=schemas_phonebook.AssociationComplete,
+    response_model=schemas_phonebook.AssociationBase,
     status_code=200,
     tags=[Tags.phonebook],
 )
@@ -87,6 +87,65 @@ async def create_association(
     **This endpoint is only usable by administrators**
     """
     return await cruds_phonebook.create_association(association, db)
+
+
+router.delete(
+    "phonebook/association/{association_id}",
+    response_model=schemas_phonebook.AssociationBase,
+    status_code=200,
+    tags=[Tags.phonebook],
+)
+
+
+async def delete_association(association_id, db: AsyncSession = Depends(get_db)):
+    """
+    Delete an association
+
+    **This endpoint is only usable by administrators**
+    """
+    return await cruds_phonebook.delete_association(association_id, db)
+
+
+router.patch(
+    "phonebook/association/{association_id}",
+    response_model=schemas_phonebook.AssociationBase,
+    status_code=200,
+    tags=[Tags.phonebook],
+)
+
+
+async def update_association(
+    association_id,
+    association: schemas_phonebook.AssociationBase,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Update an association
+
+    **This endpoint is only usable by administrators**
+    """
+    return await cruds_phonebook.update_association(association_id, association, db)
+
+
+@router.post(
+    "phonebook/role",
+    response_model=schemas_phonebook.Role,
+    status_code=200,
+    tags=[Tags.phonebook],
+)
+async def create_role(
+    role: schemas_phonebook.Role,
+    db: AsyncSession = Depends(get_db),
+    user=Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Create a new role
+
+    **This endpoint is only usable by administrators**
+    """
+    role_id = uuid.uuid4()
+    role = schemas_phonebook.Role(id=role_id, **role.dict())
+    return await cruds_phonebook.create_role(role, db)
 
 
 # @router.get(

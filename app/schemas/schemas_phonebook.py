@@ -29,6 +29,10 @@ class Role(BaseModel):
     name: str
 
 
+class RoleCreate(BaseModel):
+    name: str
+
+
 class Post(BaseModel):
     association: AssociationComplete
     role: Role
