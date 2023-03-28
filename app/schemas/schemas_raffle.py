@@ -113,11 +113,9 @@ class TicketSimple(TicketBase):
         orm_mode = True
 
 
-class TicketComplete(TicketBase):
-    id: str
-
+class TicketComplete(TicketSimple):
     lot: LotSimple | None
-    type_ticket: TypeTicketComplete
+    type_ticket: TypeTicketSimple
     user: CoreUserSimple
 
     class Config:

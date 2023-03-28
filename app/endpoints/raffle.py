@@ -18,7 +18,7 @@ from app.endpoints.users import read_user
 from app.models import models_core, models_raffle
 from app.schemas import schemas_raffle
 from app.utils.redis import locker_get, locker_set
-from app.utils.tools import is_user_member_of_an_allowed_group
+from app.utils.tools import get_display_name, is_user_member_of_an_allowed_group
 from app.utils.types.groups_type import GroupType
 from app.utils.types.tags import Tags
 
@@ -277,13 +277,13 @@ async def get_tickets(
 
 
 @router.post(
-    "/tombola/tickets/buy",
-    response_model=schemas_raffle.TicketSimple,
+    "/tombola/tickets/buy/{type_id}",
+    response_model=schemas_raffle.TicketComplete,
     status_code=201,
     tags=[Tags.raffle],
 )
 async def buy_ticket(
-    ticket: schemas_raffle.TicketBase,
+    type_id: str,
     db: AsyncSession = Depends(get_db),
     redis_client: Redis | None = Depends(get_redis_client),
     user: models_core.CoreUser = Depends(is_user_a_member),
@@ -292,23 +292,20 @@ async def buy_ticket(
     """
     Buy a ticket
     """
-    type_ticket = await cruds_raffle.get_typeticket_by_id(
-        typeticket_id=ticket.type_id, db=db
-    )
+    type_ticket = await cruds_raffle.get_typeticket_by_id(typeticket_id=type_id, db=db)
     if type_ticket is None:
         raise ValueError("Bad typeticket association")
-    amount = type_ticket.price
 
     balance: models_raffle.Cash | None = await cruds_raffle.get_cash_by_id(
         db=db,
-        user_id=ticket.user_id,
+        user_id=user.id,
     )
 
     # If the balance does not exist, we create a new one with a balance of 0
     if not balance:
         new_cash_db = schemas_raffle.CashDB(
             balance=0,
-            user_id=ticket.user_id,
+            user_id=user.id,
         )
         balance = models_raffle.Cash(
             **new_cash_db.dict(),
@@ -317,11 +314,11 @@ async def buy_ticket(
             cash=balance,
             db=db,
         )
-    db_ticket = models_raffle.Tickets(id=str(uuid.uuid4()), **ticket.dict())
-    if not amount:
-        raise HTTPException(status_code=403, detail="You can't buy nothing")
+    db_ticket = models_raffle.Tickets(
+        id=str(uuid.uuid4()), type_id=type_id, user_id=user.id
+    )
 
-    redis_key = "raffle_" + ticket.user_id
+    redis_key = "raffle_" + user.id
 
     if not isinstance(redis_client, Redis) or locker_get(
         redis_client=redis_client, key=redis_key
@@ -330,16 +327,23 @@ async def buy_ticket(
     locker_set(redis_client=redis_client, key=redis_key, lock=True)
 
     try:
-        await cruds_raffle.create_ticket(ticket=db_ticket, db=db)
+        ticket = await cruds_raffle.create_ticket(ticket=db_ticket, db=db)
+        ticket.type_ticket = type_ticket
+        ticket.user = user
         await cruds_raffle.remove_cash(
             db=db,
-            user_id=ticket.user_id,
-            amount=amount,
+            user_id=user.id,
+            amount=type_ticket.price,
         )
 
-        hyperion_raffle_logger.info(
-            f"Add_ticket_to_user: A ticket has been created for user {ticket.user_id} for an amount of {amount}€. ({request_id})"
+        display_name = get_display_name(
+            firstname=user.firstname, name=user.name, nickname=user.nickname
         )
+        hyperion_raffle_logger.info(
+            f"Add_ticket_to_user: A ticket of type {type_id} has been buyed by user {display_name}({user.id}) for an amount of {type_ticket.price}€. ({request_id})"
+        )
+
+        return ticket
 
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))

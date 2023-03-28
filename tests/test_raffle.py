@@ -1,6 +1,6 @@
 import uuid
 
-from app.dependencies import get_settings
+from app.dependencies import get_redis_client, get_settings
 from app.main import app
 from app.models import models_core, models_raffle
 from app.utils.types.groups_type import GroupType
@@ -157,6 +157,24 @@ def test_get_tickets_by_raffle_id():
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
+
+
+def test_buy_tickets():
+    # Enable Redis client for locker
+    app.dependency_overrides.get(get_redis_client, get_redis_client)(
+        settings, activate=True
+    )
+
+    token = create_api_access_token(student_user)
+
+    response = client.post(
+        f"/tombola/tickets/buy/{typeticket.id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    # Disable Redis client (to avoid rate-limit)
+    app.dependency_overrides.get(get_redis_client, get_redis_client)(deactivate=True)
+    assert response.status_code == 201
 
 
 # def test_edit_tickets():
