@@ -35,7 +35,7 @@ async def create_raffle(
         return raffle
     except IntegrityError as err:
         await db.rollback()
-        raise ValueError(err)
+        raise err
 
 
 async def get_raffle_by_groupid(
@@ -102,9 +102,9 @@ async def create_lot(
     try:
         await db.commit()
         return lot
-    except IntegrityError:
+    except IntegrityError as err:
         await db.rollback()
-        raise ValueError("This name is already used")
+        raise err
 
 
 async def get_lot_by_raffleid(
@@ -173,9 +173,9 @@ async def create_typeticket(
     try:
         await db.commit()
         return typeticket
-    except IntegrityError:
+    except IntegrityError as err:
         await db.rollback()
-        raise ValueError("This name is already used")
+        raise err
 
 
 async def get_typeticket_by_raffleid(
@@ -246,9 +246,9 @@ async def create_ticket(
     try:
         await db.commit()
         return ticket
-    except IntegrityError:
+    except IntegrityError as err:
         await db.rollback()
-        raise ValueError("This name is already used")
+        raise err
 
 
 async def get_ticket_by_raffleid(
@@ -331,7 +331,7 @@ async def create_cash_of_user(
         return cash
     except IntegrityError as err:
         await db.rollback()
-        raise ValueError(err)
+        raise err
 
 
 async def add_cash(db: AsyncSession, user_id: str, amount: float):
