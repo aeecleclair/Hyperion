@@ -93,8 +93,7 @@ class TypeTicketSimple(TypeTicketBase):
         orm_mode = True
 
 
-class TypeTicketComplete(TypeTicketBase):
-    id: str
+class TypeTicketComplete(TypeTicketSimple):
     raffle: RaffleSimple
 
     class Config:
@@ -118,7 +117,7 @@ class TicketComplete(TicketBase):
     id: str
 
     lot: LotSimple | None
-    type_ticket: TypeTicketSimple
+    type_ticket: TypeTicketComplete
     user: CoreUserSimple
 
     class Config:

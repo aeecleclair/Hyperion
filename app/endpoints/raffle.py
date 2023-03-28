@@ -123,7 +123,7 @@ async def delete_raffle(
 
 @router.get(
     "/tombola/group/{group_id}/raffles",
-    response_model=list[schemas_raffle.RaffleComplete],
+    response_model=list[schemas_raffle.RaffleSimple],
     status_code=200,
     tags=[Tags.raffle],
 )
@@ -142,7 +142,7 @@ async def get_raffle_by_group_id(
 # type tickets
 @router.get(
     "/tombola/type_tickets",
-    response_model=list[schemas_raffle.TypeTicketComplete],
+    response_model=list[schemas_raffle.TypeTicketSimple],
     status_code=200,
     tags=[Tags.raffle],
 )
@@ -159,7 +159,7 @@ async def get_type_tickets(
 
 @router.post(
     "/tombola/type_tickets",
-    response_model=schemas_raffle.TypeTicketComplete,
+    response_model=schemas_raffle.TypeTicketSimple,
     status_code=201,
     tags=[Tags.raffle],
 )
@@ -181,7 +181,7 @@ async def create_typeticket(
 
     try:
         result = await cruds_raffle.create_typeticket(typeticket=db_typeticket, db=db)
-        return schemas_raffle.TypeTicketComplete(**result.__dict__, raffle=raffle)
+        return result
     except IntegrityError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
@@ -373,7 +373,7 @@ async def buy_ticket(
 
 @router.get(
     "/tombola/users/{user_id}/tickets",
-    response_model=schemas_raffle.TicketComplete,
+    response_model=list[schemas_raffle.TicketComplete],
     status_code=200,
     tags=[Tags.raffle],
 )
@@ -392,9 +392,8 @@ async def get_tickets_by_userid(
         raise HTTPException(status_code=404, detail="User not found")
 
     if user_id == user.id or is_user_member_of_an_allowed_group(user, [GroupType.soli]):
-        ticket = await cruds_raffle.get_ticket_by_userid(user_id=user_id, db=db)
-        if ticket is not None:
-            return ticket
+        tickets = await cruds_raffle.get_ticket_by_userid(user_id=user_id, db=db)
+        return tickets
 
     else:
         raise HTTPException(
@@ -520,7 +519,7 @@ async def delete_lot(
 
 @router.get(
     "/tombola/raffle/{raffle_id}/lots",
-    response_model=schemas_raffle.LotSimple,
+    response_model=list[schemas_raffle.LotSimple],
     status_code=200,
     tags=[Tags.raffle],
 )
@@ -531,13 +530,11 @@ async def get_lots_by_raffleid(
 ):
     """
     Get lots from a specific raffle.
-
-    **The user must be a member of the group soli to use this endpoint
     """
 
-    lot = await cruds_raffle.get_lot_by_raffleid(raffle_id=raffle_id, db=db)
-    if lot is not None:
-        return lot
+    lots = await cruds_raffle.get_lot_by_raffleid(raffle_id=raffle_id, db=db)
+
+    return lots
 
 
 @router.get(

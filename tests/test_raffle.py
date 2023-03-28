@@ -220,8 +220,6 @@ def test_create_typetickets():
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 201
-    json = response.json()
-    assert json["raffle"]["id"] == raffle.id
 
 
 def test_edit_typetickets():
@@ -251,13 +249,24 @@ def test_delete_typetickets():
 
 # # lots
 def test_get_lots():
-    token = create_api_access_token(soli_user)
+    token = create_api_access_token(student_user)
 
     response = client.get(
         "/tombola/lots",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
+
+
+def test_get_lots_by_raffle_id():
+    token = create_api_access_token(student_user)
+
+    response = client.get(
+        f"/tombola/raffle/{raffle.id}/lots",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    assert response.json() != []
 
 
 def test_create_lots():

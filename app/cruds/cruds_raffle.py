@@ -6,7 +6,7 @@ import numpy as np
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload, selectinload
 
 from app.models import models_raffle
 from app.schemas import schemas_raffle
@@ -110,11 +110,11 @@ async def create_lot(
 async def get_lot_by_raffleid(
     raffle_id: str,
     db: AsyncSession,
-) -> models_raffle.Lots | None:
+) -> list[models_raffle.Lots]:
     result = await db.execute(
-        select(models_raffle.Lots).where(models_raffle.Lots.raffle_id == id)
+        select(models_raffle.Lots).where(models_raffle.Lots.raffle_id == raffle_id)
     )
-    return result.scalars().first()
+    return result.scalars().all()
 
 
 async def get_lot_by_id(
@@ -259,9 +259,11 @@ async def get_ticket_by_raffleid(
         (
             await db.execute(
                 select(models_raffle.Tickets).options(
-                    selectinload(models_raffle.Tickets.type_ticket),
-                    selectinload(models_raffle.Tickets.user),
-                    selectinload(models_raffle.Tickets.lot),
+                    joinedload(models_raffle.Tickets.type_ticket).joinedload(
+                        models_raffle.TypeTicket.raffle
+                    ),
+                    joinedload(models_raffle.Tickets.user),
+                    joinedload(models_raffle.Tickets.lot),
                 )
             )
         )
