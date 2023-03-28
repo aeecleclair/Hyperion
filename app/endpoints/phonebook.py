@@ -41,14 +41,13 @@ phonebook/association/[id]/members
 
 # ---------------------------------------------------------------------------- #
 @router.get(
-    "phonebook/research/association/",
+    "phonebook/association/",
     response_model=list[schemas_phonebook.AssociationComplete],
     status_code=200,
     tags=[Tags.phonebook],
 )
 async def get_all_associations(
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
     Return all associations from database as a list of dictionaries
@@ -60,7 +59,7 @@ async def get_all_associations(
 
 
 @router.get(
-    f"phonebook/research/association/?filter={filter}",
+    f"phonebook/association/?filter={filter}",
     response_model=list[schemas_phonebook.AssociationComplete],
     status_code=200,
     tags=[Tags.phonebook],
@@ -70,16 +69,19 @@ async def get_associations_by_query(filter, db: AsyncSession = Depends(get_db)):
     return associations
 
 
+# router get association/id --> infos de l'asso {id}
+
+
 @router.post(
     "phonebook/association/",
-    response_model=schemas_phonebook.AssociationBase,
+    response_model=schemas_phonebook.AssociationComplete,
     status_code=200,
     tags=[Tags.phonebook],
 )
 async def create_association(
     association: schemas_phonebook.AssociationBase,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_a_member_of(GroupType.admin)),
+    user=Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """
     Create a new association
@@ -97,7 +99,11 @@ router.delete(
 )
 
 
-async def delete_association(association_id, db: AsyncSession = Depends(get_db)):
+async def delete_association(
+    association_id,
+    db: AsyncSession = Depends(get_db),
+    user=Depends(is_user_a_member_of(GroupType.CAA)),
+):
     """
     Delete an association
 
