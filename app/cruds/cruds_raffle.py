@@ -365,6 +365,8 @@ async def remove_cash(db: AsyncSession, user_id: str, amount: float):
             .where(models_raffle.Cash.user_id == user_id)
             .values(user_id=balance.user_id, balance=balance.balance - amount)
         )
+        if balance.balance - amount < 0:
+            raise ValueError("Not enough cash")
         try:
             await db.commit()
         except IntegrityError:
