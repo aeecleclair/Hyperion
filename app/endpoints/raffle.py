@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.cruds import cruds_raffle, cruds_users
+from app.cruds import cruds_groups, cruds_raffle, cruds_users
 from app.dependencies import (
     get_db,
     get_redis_client,
@@ -38,8 +38,8 @@ async def get_raffle(
     """
     Return all raffles
     """
-    raffle = await cruds_raffle.get_raffles(db)
-    return raffle
+    raffles = await cruds_raffle.get_raffles(db)
+    return raffles
 
 
 @router.post(
@@ -58,6 +58,10 @@ async def create_raffle(
 
     **The user must be a member of the group soli to use this endpoint**
     """
+    group = await cruds_groups.get_group_by_id(group_id=raffle.group_id, db=db)
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+
     db_raffle = models_raffle.Raffle(id=str(uuid.uuid4()), **raffle.dict())
 
     try:
@@ -154,7 +158,7 @@ async def get_type_tickets(
 
 @router.post(
     "/tombola/type_tickets",
-    response_model=schemas_raffle.TypeTicketComplete,
+    response_model=schemas_raffle.TypeTicketSimple,
     status_code=201,
     tags=[Tags.raffle],
 )
@@ -168,6 +172,10 @@ async def create_typeticket(
 
     **The user must be a member of the group soli to use this endpoint**
     """
+    raffle = await cruds_raffle.get_raffle_by_id(raffle_id=typeticket.raffle_id, db=db)
+    if not raffle:
+        raise HTTPException(status_code=404, detail="Raffle not found")
+
     db_typeticket = models_raffle.TypeTicket(id=str(uuid.uuid4()), **typeticket.dict())
 
     try:
@@ -250,7 +258,7 @@ async def get_type_tickets_by_raffle_id(
 
 @router.get(
     "/tombola/tickets",
-    response_model=list[schemas_raffle.TicketComplete],
+    response_model=list[schemas_raffle.TicketSimple],
     status_code=200,
     tags=[Tags.raffle],
 )
@@ -269,7 +277,7 @@ async def get_tickets(
 
 @router.post(
     "/tombola/tickets/buy",
-    response_model=schemas_raffle.TicketComplete,
+    response_model=schemas_raffle.TicketSimple,
     status_code=201,
     tags=[Tags.raffle],
 )
@@ -418,7 +426,7 @@ async def get_tickets_by_raffleid(
 
 @router.get(
     "/tombola/lots",
-    response_model=list[schemas_raffle.LotComplete],
+    response_model=list[schemas_raffle.LotSimple],
     status_code=200,
     tags=[Tags.raffle],
 )
@@ -435,7 +443,7 @@ async def get_lots(
 
 @router.post(
     "/tombola/lots",
-    response_model=schemas_raffle.LotEdit,
+    response_model=schemas_raffle.LotSimple,
     status_code=201,
     tags=[Tags.raffle],
 )
@@ -507,7 +515,7 @@ async def delete_lot(
 
 @router.get(
     "/tombola/raffle/{raffle_id}/lots",
-    response_model=schemas_raffle.LotComplete,
+    response_model=schemas_raffle.LotSimple,
     status_code=200,
     tags=[Tags.raffle],
 )
