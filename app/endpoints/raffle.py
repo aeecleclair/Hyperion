@@ -3,6 +3,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
 from redis import Redis
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cruds import cruds_groups, cruds_raffle, cruds_users
@@ -67,7 +68,7 @@ async def create_raffle(
     try:
         result = await cruds_raffle.create_raffle(raffle=db_raffle, db=db)
         return result
-    except ValueError as error:
+    except IntegrityError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
 
@@ -181,7 +182,7 @@ async def create_typeticket(
     try:
         result = await cruds_raffle.create_typeticket(typeticket=db_typeticket, db=db)
         return result
-    except ValueError as error:
+    except IntegrityError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
 
@@ -457,12 +458,16 @@ async def create_lot(
 
     **The user must be a member of the group soli to use this endpoint
     """
+    raffle = await cruds_raffle.get_raffle_by_id(raffle_id=lot.raffle_id, db=db)
+    if not raffle:
+        raise HTTPException(status_code=404, detail="Raffle not found")
+
     db_lot = models_raffle.Lots(id=str(uuid.uuid4()), **lot.dict())
 
     try:
         result = await cruds_raffle.create_lot(lot=db_lot, db=db)
         return result
-    except ValueError as error:
+    except IntegrityError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
 
