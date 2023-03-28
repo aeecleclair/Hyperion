@@ -159,7 +159,7 @@ async def get_type_tickets(
 
 @router.post(
     "/tombola/type_tickets",
-    response_model=schemas_raffle.TypeTicketSimple,
+    response_model=schemas_raffle.TypeTicketComplete,
     status_code=201,
     tags=[Tags.raffle],
 )
@@ -181,7 +181,7 @@ async def create_typeticket(
 
     try:
         result = await cruds_raffle.create_typeticket(typeticket=db_typeticket, db=db)
-        return result
+        return schemas_raffle.TypeTicketComplete(**result.__dict__, raffle=raffle)
     except IntegrityError as error:
         raise HTTPException(status_code=422, detail=str(error))
 

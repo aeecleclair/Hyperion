@@ -46,6 +46,7 @@ async def startuptest():
             name="The best raffle",
             status=RaffleStatusType.creation,
             group_id=GroupType.soli,
+            description="Description of the raffle",
         )
         db.add(raffle)
         typeticket = models_raffle.TypeTicket(
@@ -108,7 +109,7 @@ def test_edit_raffle():
     token = create_api_access_token(soli_user)
 
     response = client.patch(
-        f"/tombola/raffles/{raffle.id}",
+        f"/tombola/raffles/{raffle_to_delete.id}",
         json={
             "name": "testupdate",
             "status": RaffleStatusType.open,
@@ -123,7 +124,7 @@ def test_edit_raffle():
         headers={"Authorization": f"Bearer {token}"},
     )
     json = response.json()
-    [modified_raffle] = [entry for entry in json if entry["id"] == raffle.id]
+    [modified_raffle] = [entry for entry in json if entry["id"] == raffle_to_delete.id]
     assert modified_raffle["status"] == RaffleStatusType.open
 
 
@@ -219,6 +220,8 @@ def test_create_typetickets():
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 201
+    json = response.json()
+    assert json["raffle"]["id"] == raffle.id
 
 
 def test_edit_typetickets():

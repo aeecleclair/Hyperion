@@ -95,7 +95,7 @@ class TypeTicketSimple(TypeTicketBase):
 
 class TypeTicketComplete(TypeTicketBase):
     id: str
-    raffle: RaffleComplete
+    raffle: RaffleSimple
 
     class Config:
         orm_mode = True
