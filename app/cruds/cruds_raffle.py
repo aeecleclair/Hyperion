@@ -397,14 +397,15 @@ async def draw_winner_by_lot_raffle(
     tickets = [t for t in gettickets if t.winning_lot is None]
 
     if len(tickets) < lot.quantity:
-        raise ValueError(f"Not enough ticket: {len(tickets)} < {lot.quantity}")
+        winners = tickets
 
-    values = np.array([t.type_ticket.value for t in tickets])
-    probas = values / values.sum()
-    winners_index = np.random.choice(
-        list(range(len(tickets))), size=lot.quantity, p=probas, replace=False
-    )
-    winners = [tickets[i] for i in winners_index]
+    else:
+        values = np.array([t.type_ticket.value for t in tickets])
+        probas = values / values.sum()
+        winners_index = np.random.choice(
+            list(range(len(tickets))), size=lot.quantity, p=probas, replace=False
+        )
+        winners = [tickets[i] for i in winners_index]
 
     await db.execute(
         update(models_raffle.Tickets)
@@ -420,7 +421,7 @@ async def draw_winner_by_lot_raffle(
     await db.execute(
         update(models_raffle.Lots)
         .where(models_raffle.Lots.id == lot_id)
-        .values(quantity=0)
+        .values(quantity=lot.quantity - len(winners))
     )
     try:
         await db.commit()

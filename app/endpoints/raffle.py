@@ -718,7 +718,13 @@ async def draw_winner(
     if lot.raffle.status != RaffleStatusType.open:
         raise HTTPException(status_code=400, detail="Lot is not open")
 
-    winning_tickets = await cruds_raffle.draw_winner_by_lot_raffle(lot_id=lot_id, db=db)
+    try:
+        winning_tickets = await cruds_raffle.draw_winner_by_lot_raffle(
+            lot_id=lot_id, db=db
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
     for ticket in winning_tickets:
         ticket.lot = lot
 
