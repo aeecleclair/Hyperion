@@ -15,12 +15,14 @@ class Member(schemas_core.CoreUserSimple):
 
 class AssociationBase(BaseModel):
     name: str
+    type: str
     description: str | None = None
 
 
 class AssociationComplete(BaseModel):
     id: str
     name: str
+    type: str
     description: str | None = None
 
 
@@ -41,38 +43,6 @@ class Post(BaseModel):
 class CompleteMember(BaseModel):
     member: Member
     posts: list[Post]
-
-
-# class RoleBase(BaseModel):
-#     name: str
-
-
-# class RoleComplete(RoleBase):
-#     id: str
-
-#     class Config:
-#         orm_mode = True
-
-
-# class RoleEdit(BaseModel):
-#     name: str | None = None
-#     id: str | None = None
-
-
-# class AssociationBase(BaseModel):
-#     name: str
-
-
-# class AssociationComplete(AssociationBase):
-#     id: str
-
-#     class Config:
-#         orm_mode = True
-
-
-# class AssociationEdit(BaseModel):
-#     name: str | None = None
-#     id: str | None = None
 
 
 # class AssociationMemberBase(BaseModel):
