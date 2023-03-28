@@ -270,10 +270,10 @@ async def get_ticket_by_raffleid(
         .scalars()
         .all()
     )
-    filtered_result = [
+    filtered_results = [
         result for result in results if result.type_ticket.raffle_id == raffle_id
     ]
-    return filtered_result
+    return filtered_results
 
 
 async def get_ticket_by_id(
@@ -397,7 +397,7 @@ async def draw_winner_by_lot_raffle(
     tickets = [t for t in gettickets if t.winning_lot is None]
 
     if len(tickets) < lot.quantity:
-        raise ValueError("Not enough ticket")
+        raise ValueError(f"Not enough ticket: {len(tickets)} < {lot.quantity}")
 
     values = np.array([t.type_ticket.value for t in tickets])
     probas = values / values.sum()
@@ -408,7 +408,7 @@ async def draw_winner_by_lot_raffle(
 
     await db.execute(
         update(models_raffle.Tickets)
-        .where(models_raffle.Tickets.id in [w.id for w in winners])
+        .where(models_raffle.Tickets.id.in_([w.id for w in winners]))
         .values(winning_lot=lot_id)
     )
     try:
