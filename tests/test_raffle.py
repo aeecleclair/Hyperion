@@ -138,6 +138,17 @@ def test_delete_raffle():
     assert response.status_code == 204
 
 
+def test_get_raffle_stats():
+    token = create_api_access_token(student_user)
+
+    response = client.get(
+        f"/tombola/raffle/{raffle.id}/stats",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    assert response.json()["amount_raised"] == 1.0
+
+
 # # tickets
 def test_get_tickets():
     token = create_api_access_token(soli_user)

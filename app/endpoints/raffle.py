@@ -139,6 +139,32 @@ async def get_raffle_by_group_id(
     return raffle
 
 
+@router.get(
+    "/tombola/raffle/{raffle_id}/stats",
+    response_model=schemas_raffle.RaffleStats,
+    status_code=200,
+    tags=[Tags.raffle],
+)
+async def get_raffle_stats(
+    raffle_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """Return the number of ticket sold and the total amount recollected for a raffle"""
+    raffle = await cruds_raffle.get_raffle_by_id(db=db, raffle_id=raffle_id)
+    if raffle is None:
+        raise HTTPException(status_code=404, detail="Raffle not found")
+
+    tickets = await cruds_raffle.get_ticket_by_raffleid(db=db, raffle_id=raffle_id)
+
+    tickets_sold = len(tickets)
+    amount_raised = sum([ticket.type_ticket.price for ticket in tickets])
+
+    return schemas_raffle.RaffleStats(
+        tickets_sold=tickets_sold, amount_raised=amount_raised
+    )
+
+
 # type tickets
 @router.get(
     "/tombola/type_tickets",
