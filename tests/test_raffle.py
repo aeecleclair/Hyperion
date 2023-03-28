@@ -44,7 +44,7 @@ async def startuptest():
         raffle = models_raffle.Raffle(
             id=str(uuid.uuid4()),
             name="The best raffle",
-            status=RaffleStatusType.creation,
+            status=RaffleStatusType.open,
             group_id=GroupType.soli,
             description="Description of the raffle",
         )
@@ -323,23 +323,8 @@ def test_draw_lots():
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 201
-    assert response.json() != []
-
-
-def test_get_tickets_winning_lot():
-    token = create_api_access_token(soli_user)
-
-    response = client.get(
-        "/tombola/tickets",
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    json = response.json()
-
-    winner_updated = False
-    for ticket in json:
-        if ticket["winning_lot"] is not None:
-            winner_updated = True
-    assert winner_updated
+    tickets = response.json()
+    assert tickets[0]["lot"] is not None
 
 
 def test_create_lots():
