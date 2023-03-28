@@ -157,7 +157,7 @@ async def get_typeticket(db: AsyncSession) -> list[models_raffle.TypeTicket]:
 
     result = await db.execute(
         select(models_raffle.TypeTicket).options(
-            selectinload(models_raffle.TypeTicket.raffle)
+            selectinload(models_raffle.TypeTicket.raffle),
         )
     )
     return result.scalars().all()
@@ -183,9 +183,9 @@ async def get_typeticket_by_raffleid(
     db: AsyncSession,
 ) -> list[models_raffle.TypeTicket] | None:
     result = await db.execute(
-        select(models_raffle.Lots)
-        .where(models_raffle.TypeTicket.raffle_id == raffle_id)
-        .options(selectinload(models_raffle.TypeTicket.raffle))
+        select(models_raffle.TypeTicket).where(
+            models_raffle.TypeTicket.raffle_id == raffle_id
+        )
     )
     return result.scalars().all()
 
@@ -255,12 +255,23 @@ async def get_ticket_by_raffleid(
     raffle_id: str,
     db: AsyncSession,
 ) -> list[models_raffle.Tickets]:
-    result = await db.execute(
-        select(models_raffle.Tickets)
-        .where(models_raffle.Tickets.type_ticket.raffle_id == raffle_id)
-        .options(selectinload(models_raffle.Tickets.type_ticket))
+    results = (
+        (
+            await db.execute(
+                select(models_raffle.Tickets).options(
+                    selectinload(models_raffle.Tickets.type_ticket),
+                    selectinload(models_raffle.Tickets.user),
+                    selectinload(models_raffle.Tickets.lot),
+                )
+            )
+        )
+        .scalars()
+        .all()
     )
-    return result.scalars().all()
+    filtered_result = [
+        result for result in results if result.type_ticket.raffle_id == raffle_id
+    ]
+    return filtered_result
 
 
 async def get_ticket_by_id(

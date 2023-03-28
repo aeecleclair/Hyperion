@@ -12,6 +12,7 @@ class RaffleBase(BaseModel):
     name: str
     status: RaffleStatusType
     description: str | None = None
+    group_id: str
 
 
 class RaffleEdit(BaseModel):
@@ -21,35 +22,17 @@ class RaffleEdit(BaseModel):
 
 
 class RaffleSimple(RaffleBase):
-    group_id: str
-
-
-class RaffleComplete(RaffleBase):
     id: str
-    group: CoreGroupSimple
 
     class Config:
         orm_mode = True
 
 
-# class UserBase(BaseModel):
-#     name: str
-#     surname: str
-#     email: str
-#     nb_tickets_bought: int
-#     year: int
+class RaffleComplete(RaffleSimple):
+    group: CoreGroupSimple
 
-
-# class UserComplete(UserBase):
-#     id: int
-
-
-# class WinnerComplete(UserComplete):
-#     user: UserComplete
-#     lot: str
-
-#     class Config:
-#         orm_mode = True
+    class Config:
+        orm_mode = True
 
 
 class LotBase(BaseModel):
@@ -135,7 +118,7 @@ class TicketComplete(TicketBase):
     id: str
 
     lot: LotSimple | None
-    type_ticket: TypeTicketComplete
+    type_ticket: TypeTicketSimple
     user: CoreUserSimple
 
     class Config:

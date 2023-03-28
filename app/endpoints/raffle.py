@@ -44,12 +44,12 @@ async def get_raffle(
 
 @router.post(
     "/tombola/raffles",
-    response_model=schemas_raffle.RaffleComplete,
+    response_model=schemas_raffle.RaffleSimple,
     status_code=201,
     tags=[Tags.raffle],
 )
 async def create_raffle(
-    raffle: schemas_raffle.RaffleSimple,
+    raffle: schemas_raffle.RaffleBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
 ):
@@ -240,7 +240,7 @@ async def delete_typeticket(
 
 @router.get(
     "/tombola/raffle/{raffle_id}/type_tickets",
-    response_model=list[schemas_raffle.TypeTicketComplete],
+    response_model=list[schemas_raffle.TypeTicketSimple],
     status_code=200,
     tags=[Tags.raffle],
 )
