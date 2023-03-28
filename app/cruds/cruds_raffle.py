@@ -291,7 +291,15 @@ async def get_ticket_by_userid(
     db: AsyncSession,
 ) -> list[models_raffle.Tickets] | None:
     result = await db.execute(
-        select(models_raffle.Tickets).where(models_raffle.Tickets.user_id == user_id)
+        select(models_raffle.Tickets)
+        .where(models_raffle.Tickets.user_id == user_id)
+        .options(
+            joinedload(models_raffle.Tickets.type_ticket).joinedload(
+                models_raffle.TypeTicket.raffle
+            ),
+            joinedload(models_raffle.Tickets.user),
+            joinedload(models_raffle.Tickets.lot),
+        )
     )
     return result.scalars().all()
 
