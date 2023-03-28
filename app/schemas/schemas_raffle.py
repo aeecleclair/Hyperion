@@ -35,6 +35,11 @@ class RaffleComplete(RaffleSimple):
         orm_mode = True
 
 
+class RaffleStats(BaseModel):
+    tickets_sold: int
+    amount_raised: float
+
+
 class LotBase(BaseModel):
     name: str
     description: str
