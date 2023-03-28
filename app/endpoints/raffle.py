@@ -25,7 +25,6 @@ router = APIRouter()
 hyperion_raffle_logger = logging.getLogger("hyperion.raffle")
 
 
-# raffles
 @router.get(
     "/tombola/raffles",
     response_model=list[schemas_raffle.RaffleComplete],
@@ -38,8 +37,6 @@ async def get_raffle(
 ):
     """
     Return all raffles
-
-    **The user must be an admin to use this endpoint**
     """
     raffle = await cruds_raffle.get_raffles(db)
     return raffle
@@ -109,7 +106,7 @@ async def delete_raffle(
     """
     Delete a raffle.
 
-    **The user must be a member of the group admin to use this endpoint**
+    **The user must be an admin to use this endpoint**
     """
 
     raffle = await cruds_raffle.get_raffle_by_id(raffle_id=raffle_id, db=db)
@@ -132,8 +129,6 @@ async def get_raffle_by_group_id(
 ):
     """
     Return all raffles
-
-    **The user must be an admin to use this endpoint**
     """
     raffle = await cruds_raffle.get_raffle_by_groupid(group_id, db)
     return raffle
@@ -152,8 +147,6 @@ async def get_type_tickets(
 ):
     """
     Return all tickets
-
-    **The user must be an admin to use this endpoint**
     """
     type_tickets = await cruds_raffle.get_typeticket(db)
     return type_tickets
@@ -173,7 +166,7 @@ async def create_typeticket(
     """
     Create a new typeticket
 
-    **The user must be a member of an admin to use this endpoint**
+    **The user must be an admin to use this endpoint**
     """
     db_typeticket = models_raffle.TypeTicket(id=str(uuid.uuid4()), **typeticket.dict())
 
@@ -257,9 +250,6 @@ async def get_type_tickets_by_raffle_id(
     return type_tickets
 
 
-# ticket
-
-
 @router.get(
     "/tombola/tickets",
     response_model=list[schemas_raffle.TicketComplete],
@@ -293,9 +283,7 @@ async def buy_ticket(
     request_id: str = Depends(get_request_id),
 ):
     """
-    Create a new ticket
-
-    **The user must be an admin to use this endpoint**
+    Buy a ticket
     """
     type_ticket = await cruds_raffle.get_typeticket_by_id(
         typeticket_id=ticket.type_id, db=db
@@ -439,15 +427,16 @@ async def get_tickets_by_userid(
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
-    Get tickets from a specific user.
-
+    Get tickets of a specific user.
+    
+    **Only admin users can get tickets of another user**
     """
     user_db = await cruds_users.get_user_by_id(db=db, user_id=user_id)
     if user_db is None:
         raise HTTPException(status_code=404, detail="User not found")
 
     if user_id == user.id or is_user_member_of_an_allowed_group(
-        user, [GroupType.admin]
+        user, [GroupType.soli]
     ):
         ticket = await cruds_raffle.get_ticket_by_userid(user_id=user_id, db=db)
         if ticket is not None:
@@ -466,18 +455,18 @@ async def get_tickets_by_userid(
     status_code=200,
     tags=[Tags.raffle],
 )
-async def get_tickets_by_raffleid(raffle_id: str, db: AsyncSession = Depends(get_db)):
+async def get_tickets_by_raffleid(
+    raffle_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member)
+):
     """
     Get tickets from a specific raffle.
-
     """
 
     ticket = await cruds_raffle.get_ticket_by_raffleid(raffle_id=raffle_id, db=db)
     if ticket is not None:
         return ticket
-
-
-# lots
 
 
 @router.get(
@@ -492,8 +481,6 @@ async def get_lots(
 ):
     """
     Return all lots
-
-    **The user must be an admin to use this endpoint**
     """
     lots = await cruds_raffle.get_lots(db)
     return lots
@@ -577,18 +564,18 @@ async def delete_lot(
     status_code=200,
     tags=[Tags.raffle],
 )
-async def get_lots_by_raffleid(raffle_id: str, db: AsyncSession = Depends(get_db)):
+async def get_lots_by_raffleid(
+    raffle_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
     """
     Get lots from a specific raffle.
-
     """
 
     lot = await cruds_raffle.get_lot_by_raffleid(raffle_id=raffle_id, db=db)
     if lot is not None:
         return lot
-
-
-# cash
 
 
 @router.get(
@@ -661,7 +648,7 @@ async def create_cash_of_user(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
 ):
     """
-    Create cash for an user.
+    Create cash for a user.
 
     **The user must be a member of the group SOLI to use this endpoint**
     """

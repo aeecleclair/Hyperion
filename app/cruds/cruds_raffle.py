@@ -14,9 +14,6 @@ from app.schemas import schemas_raffle
 hyperion_error_logger = logging.getLogger("hyperion_error")
 
 
-# Raffles
-
-
 async def get_raffles(db: AsyncSession) -> list[models_raffle.Raffle]:
     """Return all raffle from database"""
 
@@ -84,9 +81,6 @@ async def delete_raffle(
     await db.commit()
 
 
-# Lots
-
-
 async def get_lots(db: AsyncSession) -> list[models_raffle.Lots]:
     """Return all lots from database"""
 
@@ -150,9 +144,6 @@ async def delete_lot(
 
     await db.execute(delete(models_raffle.Lots).where(models_raffle.Lots.id == lot_id))
     await db.commit()
-
-
-# TypeTickets
 
 
 async def get_typeticket(db: AsyncSession) -> list[models_raffle.TypeTicket]:
@@ -226,9 +217,6 @@ async def delete_typeticket(
         )
     )
     await db.commit()
-
-
-# Tickets
 
 
 async def get_tickets(db: AsyncSession) -> list[models_raffle.Tickets]:
@@ -320,9 +308,6 @@ async def delete_ticket(
         delete(models_raffle.Tickets).where(models_raffle.Tickets.id == ticket_id)
     )
     await db.commit()
-
-
-# Cash management
 
 
 async def get_users_cash(db: AsyncSession) -> list[models_raffle.Cash]:
