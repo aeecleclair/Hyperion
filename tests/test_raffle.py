@@ -17,6 +17,7 @@ student_user: models_core.CoreUser | None = None
 raffle: models_raffle.Raffle | None = None
 raffle_to_delete: models_raffle.Raffle | None = None
 typeticket: models_raffle.TypeTicket | None = None
+typeticket_to_delete: models_raffle.TypeTicket | None = None
 lot: models_raffle.Lots | None = None
 ticket: models_raffle.Tickets | None = None
 cash: models_raffle.Cash | None = None
@@ -27,7 +28,7 @@ settings = app.dependency_overrides.get(get_settings, get_settings)()
 
 @app.on_event("startup")  # create the data needed in the tests
 async def startuptest():
-    global soli_user, student_user, raffle, typeticket, ticket, lot, cash, raffle_to_delete
+    global soli_user, student_user, raffle, typeticket, ticket, lot, cash, raffle_to_delete, typeticket_to_delete
 
     async with TestingSessionLocal() as db:
         soli_user = await create_user_with_groups([GroupType.soli], db=db)
@@ -40,7 +41,6 @@ async def startuptest():
             group_id=GroupType.soli,
         )
         db.add(raffle_to_delete)
-
         raffle = models_raffle.Raffle(
             id=str(uuid.uuid4()),
             name="The best raffle",
@@ -49,10 +49,15 @@ async def startuptest():
             description="Description of the raffle",
         )
         db.add(raffle)
+
         typeticket = models_raffle.TypeTicket(
             id=str(uuid.uuid4()), price=1.0, value=1, raffle_id=raffle.id
         )
         db.add(typeticket)
+        typeticket_to_delete = models_raffle.TypeTicket(
+            id=str(uuid.uuid4()), price=1.0, value=1, raffle_id=raffle_to_delete.id
+        )
+        db.add(typeticket_to_delete)
 
         ticket = models_raffle.Tickets(
             id=str(uuid.uuid4()),
@@ -179,7 +184,7 @@ def test_get_tickets_by_user_id():
     )
 
     assert response.status_code == 200
-    assert response.json() != []
+    assert len(response.json()) == 1
 
 
 def test_buy_tickets():
@@ -282,7 +287,7 @@ def test_delete_typetickets():
     token = create_api_access_token(soli_user)
 
     response = client.delete(
-        f"/tombola/type_tickets/{typeticket.id}",
+        f"/tombola/type_tickets/{typeticket_to_delete.id}",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 204
@@ -308,6 +313,33 @@ def test_get_lots_by_raffle_id():
     )
     assert response.status_code == 200
     assert response.json() != []
+
+
+def test_draw_lots():
+    token = create_api_access_token(soli_user)
+
+    response = client.post(
+        f"/tombola/lots/{lot.id}/draw",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 201
+    assert response.json() != []
+
+
+def test_get_tickets_winning_lot():
+    token = create_api_access_token(soli_user)
+
+    response = client.get(
+        "/tombola/tickets",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    json = response.json()
+
+    winner_updated = False
+    for ticket in json:
+        if ticket["winning_lot"] is not None:
+            winner_updated = True
+    assert winner_updated
 
 
 def test_create_lots():
