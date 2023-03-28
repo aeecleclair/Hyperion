@@ -159,6 +159,18 @@ def test_get_tickets_by_raffle_id():
     assert response.status_code == 200
 
 
+def test_get_tickets_by_user_id():
+    token = create_api_access_token(student_user)
+
+    response = client.get(
+        f"/tombola/users/{student_user.id}/tickets",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() != []
+
+
 def test_buy_tickets():
     # Enable Redis client for locker
     app.dependency_overrides.get(get_redis_client, get_redis_client)(
