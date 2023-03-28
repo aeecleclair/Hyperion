@@ -296,7 +296,7 @@ async def buy_ticket(
     )
     if type_ticket is None:
         raise ValueError("Bad typeticket association")
-    amount = ticket.nb_tickets * type_ticket.price
+    amount = type_ticket.price
 
     balance: models_raffle.Cash | None = await cruds_raffle.get_cash_by_id(
         db=db,
