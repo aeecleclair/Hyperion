@@ -1,8 +1,7 @@
 import uuid
 
-
 from app.main import app
-from app.models import models_phonebook, models_core
+from app.models import models_core, models_phonebook
 from app.utils.types.groups_type import GroupType
 from tests.commons import (
     TestingSessionLocal,
@@ -20,6 +19,7 @@ phonebook_user_simple: models_core.CoreUser | None = None
 token_caa: str = ""
 token_simple: str = ""
 
+
 @app.on_event("startup")  # create the datas needed in the tests
 async def startuptest():
     global phonebook_user_caa
@@ -32,7 +32,9 @@ async def startuptest():
 
     global phonebook_user_simple
     async with TestingSessionLocal() as db:
-        phonebook_user_simple = await create_user_with_groups([GroupType.student],db=db)
+        phonebook_user_simple = await create_user_with_groups(
+            [GroupType.student], db=db
+        )
         await db.commit()
 
     global token_simple
@@ -45,16 +47,11 @@ async def startuptest():
     global membership
     async with TestingSessionLocal() as db:
         membership = models_phonebook.Membership(
-            user_id=str(uuid.uuid4())
-            association_id=association.id,
-            role_id=role.id
+            user_id=str(uuid.uuid4()), association_id=association.id, role_id=role.id
         )
 
     global association
     async with TestingSessionLocal() as db:
         association = models_phonebook.Association(
-            id=str(uuid.uuid4()),
-            type="Section",
-            name="ÉCLAIR",
-            membership=[membership]
-            )
+            id=str(uuid.uuid4()), type="Section", name="ÉCLAIR", membership=[membership]
+        )
