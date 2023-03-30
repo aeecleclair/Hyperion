@@ -152,6 +152,15 @@ class LogConfig:
                     "backupCount": 20,
                     "level": "INFO",
                 },
+                "file_raffle": {
+                    # file_amap should receive informations about amap operation, every operation involving a cash modification.
+                    "formatter": "default",
+                    "class": "logging.handlers.RotatingFileHandler",
+                    "filename": "logs/raffle.log",
+                    "maxBytes": 1024 * 1024 * 10,  # ~ 10 MB
+                    "backupCount": 20,
+                    "level": "INFO",
+                },
             },
             # We define various loggers which can be used by Hyperion.
             # Each logger has:
@@ -183,6 +192,10 @@ class LogConfig:
                 },
                 "hyperion.amap": {
                     "handlers": ["file_amap", "matrix_amap", "debug_console"],
+                    "level": MINIMUM_LOG_LEVEL,
+                },
+                "hyperion.raffle": {
+                    "handlers": ["file_raffle", "debug_console"],
                     "level": MINIMUM_LOG_LEVEL,
                 },
                 # We disable "uvicorn.access" to replace it with our custom "hyperion.access" which add custom information like the request_id

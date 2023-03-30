@@ -715,8 +715,10 @@ async def draw_winner(
     if lot is None:
         raise HTTPException(status_code=404, detail="Invalid lot id")
 
-    if lot.raffle.status != RaffleStatusType.open:
-        raise HTTPException(status_code=400, detail="Lot is not open")
+    if lot.raffle.status != RaffleStatusType.locked:
+        raise HTTPException(
+            status_code=400, detail="Raffle must be locked to draw a lot"
+        )
 
     try:
         winning_tickets = await cruds_raffle.draw_winner_by_lot_raffle(
