@@ -44,7 +44,7 @@ async def startuptest():
         raffle = models_raffle.Raffle(
             id=str(uuid.uuid4()),
             name="The best raffle",
-            status=RaffleStatusType.open,
+            status=RaffleStatusType.locked,
             group_id=GroupType.soli,
             description="Description of the raffle",
         )
