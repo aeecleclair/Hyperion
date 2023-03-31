@@ -305,7 +305,7 @@ async def get_tickets(
 
 @router.post(
     "/tombola/tickets/buy/{type_id}",
-    response_model=schemas_raffle.TicketComplete,
+    response_model=list[schemas_raffle.TicketComplete],
     status_code=201,
     tags=[Tags.raffle],
 )
@@ -345,6 +345,10 @@ async def buy_ticket(
         models_raffle.Tickets(id=str(uuid.uuid4()), type_id=type_id, user_id=user.id)
         for i in range(type_ticket.pack_size)
     ]
+
+    for ticket in db_ticket:
+        ticket.user = user
+        ticket.type_ticket = type_ticket
 
     redis_key = "raffle_" + user.id
 
