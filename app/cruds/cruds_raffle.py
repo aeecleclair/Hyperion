@@ -237,15 +237,14 @@ async def get_tickets(db: AsyncSession) -> list[models_raffle.Tickets]:
 
 
 async def create_ticket(
-    ticket: models_raffle.Tickets,
+    tickets: list[models_raffle.Tickets],
     db: AsyncSession,
-) -> models_raffle.Tickets:
+) -> list[models_raffle.Tickets]:
     """Create a new ticket in databasend return it"""
-
-    db.add(ticket)
+    db.add_all(tickets)
     try:
         await db.commit()
-        return ticket
+        return tickets
     except IntegrityError as err:
         await db.rollback()
         raise err
@@ -400,10 +399,8 @@ async def draw_winner_by_lot_raffle(
         winners = tickets
 
     else:
-        values = np.array([t.type_ticket.value for t in tickets])
-        probas = values / values.sum()
         winners_index = np.random.choice(
-            list(range(len(tickets))), size=lot.quantity, p=probas, replace=False
+            list(range(len(tickets))), size=lot.quantity, replace=False
         )
         winners = [tickets[i] for i in winners_index]
 

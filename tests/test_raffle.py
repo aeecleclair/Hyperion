@@ -51,11 +51,11 @@ async def startuptest():
         db.add(raffle)
 
         typeticket = models_raffle.TypeTicket(
-            id=str(uuid.uuid4()), price=1.0, value=1, raffle_id=raffle.id
+            id=str(uuid.uuid4()), price=1.0, pack_size=1, raffle_id=raffle.id
         )
         db.add(typeticket)
         typeticket_to_delete = models_raffle.TypeTicket(
-            id=str(uuid.uuid4()), price=1.0, value=1, raffle_id=raffle_to_delete.id
+            id=str(uuid.uuid4()), price=1.0, pack_size=1, raffle_id=raffle_to_delete.id
         )
         db.add(typeticket_to_delete)
 
@@ -261,7 +261,7 @@ def test_create_typetickets():
         json={
             "raffle_id": raffle.id,
             "price": 1.23,
-            "value": 5,
+            "pack_size": 5,
         },
         headers={"Authorization": f"Bearer {token}"},
     )
@@ -276,7 +276,7 @@ def test_edit_typetickets():
         json={
             "raffle_id": raffle.id,
             "price": 10.0,
-            "value": 5,
+            "pack_size": 5,
         },
         headers={"Authorization": f"Bearer {token}"},
     )

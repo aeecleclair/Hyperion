@@ -75,7 +75,7 @@ class LotComplete(LotBase):
 
 class TypeTicketBase(BaseModel):
     price: float
-    value: int
+    pack_size: int
     raffle_id: str
 
     class Config:
@@ -85,7 +85,7 @@ class TypeTicketBase(BaseModel):
 class TypeTicketEdit(BaseModel):
     raffle_id: str | None = None
     price: float | None = None
-    value: int | None = None
+    pack_size: int | None = None
 
     class Config:
         orm_mode = True

@@ -341,9 +341,10 @@ async def buy_ticket(
             cash=balance,
             db=db,
         )
-    db_ticket = models_raffle.Tickets(
-        id=str(uuid.uuid4()), type_id=type_id, user_id=user.id
-    )
+    db_ticket = [
+        models_raffle.Tickets(id=str(uuid.uuid4()), type_id=type_id, user_id=user.id)
+        for i in range(type_ticket.pack_size)
+    ]
 
     redis_key = "raffle_" + user.id
 
@@ -354,9 +355,7 @@ async def buy_ticket(
     locker_set(redis_client=redis_client, key=redis_key, lock=True)
 
     try:
-        ticket = await cruds_raffle.create_ticket(ticket=db_ticket, db=db)
-        ticket.type_ticket = type_ticket
-        ticket.user = user
+        tickets = await cruds_raffle.create_ticket(tickets=db_ticket, db=db)
         await cruds_raffle.remove_cash(
             db=db,
             user_id=user.id,
@@ -367,10 +366,10 @@ async def buy_ticket(
             firstname=user.firstname, name=user.name, nickname=user.nickname
         )
         hyperion_raffle_logger.info(
-            f"Add_ticket_to_user: A ticket of type {type_id} has been buyed by user {display_name}({user.id}) for an amount of {type_ticket.price}€. ({request_id})"
+            f"Add_ticket_to_user: A pack of {type_ticket.pack_size} tickets of type {type_id} has been buyed by user {display_name}({user.id}) for an amount of {type_ticket.price}€. ({request_id})"
         )
 
-        return ticket
+        return tickets
 
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
