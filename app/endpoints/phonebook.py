@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException  # , File, UploadFile
+from fastapi import APIRouter, Depends  # , HTTPException  # , File, UploadFile
 
 # from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,11 +33,11 @@ async def get_all_associations(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Return all associations from database as a list of dictionaries
+    Return all associations from database as a list of AssociationComplete schemas
 
     **This endpoint is only usable by administrators**
     """
-    associations = await cruds_phonebook.get_associations(db)
+    associations = await cruds_phonebook.get_all_associations(db)
     return associations
 
 
@@ -51,11 +51,11 @@ async def get_all_roles(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Return all roles from database as a list of dictionaries
+    Return all roles from database as a list ofRoleComplete schemas
 
     **This endpoint is only usable by administrators**
     """
-    roles = await cruds_phonebook.get_roles(db)
+    roles = await cruds_phonebook.get_all_roles(db)
     return roles
 
 
@@ -85,6 +85,8 @@ async def create_association(
 
     **This endpoint is only usable by administrators**
     """
+    id = uuid.uuid4()
+    association = schemas_phonebook.AssociationComplete(id=id, **association.dict())
     return await cruds_phonebook.create_association(association, db)
 
 
@@ -94,12 +96,11 @@ router.patch(
     status_code=200,
     tags=[Tags.phonebook],
 )
-
-
 async def update_association(
-    association_id,
+    association_id: str,
     association: schemas_phonebook.AssociationBase,
     db: AsyncSession = Depends(get_db),
+    user=Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """
     Update an association
@@ -114,10 +115,8 @@ router.delete(
     status_code=200,
     tags=[Tags.phonebook],
 )
-
-
 async def delete_association(
-    association_id,
+    association_id: str,
     db: AsyncSession = Depends(get_db),
     user=Depends(is_user_a_member_of(GroupType.CAA)),
 ):
@@ -165,7 +164,6 @@ async def create_role(
     tags=[Tags.phonebook],
 )
 async def update_role(
-    role_id,
     role: schemas_phonebook.RoleComplete,
     db: AsyncSession = Depends(get_db),
 ):
@@ -174,14 +172,8 @@ async def update_role(
 
     **This endpoint is only usable by administrators**
     """
-    try:
-        assert role_id == role.id
-    except AssertionError:
-        raise HTTPException(
-            status_code=400,
-            detail="association_id and association.id are not the same.",
-        )
-    return await cruds_phonebook.update_role(role_id, role, db)
+
+    return await cruds_phonebook.update_role(role, db)
 
 
 router.delete(
@@ -190,15 +182,13 @@ router.delete(
     status_code=200,
     tags=[Tags.phonebook],
 )
-
-
 async def delete_role(
     role_id: str,
     db: AsyncSession = Depends(get_db),
     user=Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
-    Delete a role
+    Delete a role by giving its ID
 
     **This endpoint is only usable by administrators**
     """
