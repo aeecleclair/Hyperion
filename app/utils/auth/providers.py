@@ -123,7 +123,7 @@ class NextcloudAuthClient(BaseAuthClient):
                 group.name for group in user.groups
             ],  # We may want to filter which groups are provided as they won't always all be useful
             "email": user.email,
-            "picture": f"https://hyperion.myecl.fr/users/{user.id}/profile-picture/",
+            "picture": f"https://hyperion.myecl.fr/users/{user.id}/profile-picture",
             "is_admin": is_user_member_of_an_allowed_group(user, [GroupType.admin]),
         }
 
@@ -225,7 +225,7 @@ class SynapseAuthClient(BaseAuthClient):
 
         return {
             "sub": user.id,
-            "picture": f"https://hyperion.myecl.fr/users/{user.id}/profile-picture/",
+            "picture": f"https://hyperion.myecl.fr/users/{user.id}/profile-picture",
             # Matrix does not support special characters in username
             "username": username,
             "displayname": get_display_name(
