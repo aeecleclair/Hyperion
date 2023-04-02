@@ -25,6 +25,7 @@ from app.utils.types.tags import Tags
 
 router = APIRouter()
 hyperion_raffle_logger = logging.getLogger("hyperion.raffle")
+hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 @router.get(
@@ -360,12 +361,16 @@ async def buy_ticket(
         raise HTTPException(status_code=403, detail="Too fast !")
     locker_set(redis_client=redis_client, key=redis_key, lock=True)
 
+    new_amount = balance.balance - type_ticket.price
+    if new_amount < 0:
+        raise HTTPException(status_code=400, detail="Not enough cash")
+
     try:
         tickets = await cruds_raffle.create_ticket(tickets=db_ticket, db=db)
-        await cruds_raffle.remove_cash(
+        await cruds_raffle.edit_cash(
             db=db,
             user_id=user.id,
-            amount=type_ticket.price,
+            amount=new_amount,
         )
 
         display_name = get_display_name(
@@ -503,7 +508,7 @@ async def create_lot(
         result = await cruds_raffle.create_lot(lot=db_lot, db=db)
         return result
     except IntegrityError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @router.patch(
@@ -684,6 +689,7 @@ async def edit_cash_by_id(
     balance: schemas_raffle.CashEdit,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
+    redis_client: Redis = Depends(get_redis_client),
 ):
     """
     Edit cash for an user. This will add the balance to the current balance.
@@ -702,7 +708,24 @@ async def edit_cash_by_id(
             detail="The user don't have a cash.",
         )
 
-    await cruds_raffle.add_cash(user_id=user_id, amount=balance.balance, db=db)
+    redis_key = redis_key = "raffle_" + user_id
+
+    if not isinstance(redis_client, Redis) or locker_get(
+        redis_client=redis_client, key=redis_key
+    ):
+        raise HTTPException(status_code=403, detail="Too fast !")
+    locker_set(redis_client=redis_client, key=redis_key, lock=True)
+
+    try:
+        await cruds_raffle.edit_cash(
+            user_id=user_id, amount=cash.balance + balance.balance, db=db
+        )
+    except ValueError as e:
+        hyperion_error_logger.error(f"Error in tombola edit_cash_by_id: {e}")
+        raise HTTPException(status_code=400, detail="Error while editing cash.")
+
+    finally:
+        locker_set(redis_client=redis_client, key=redis_key, lock=False)
 
 
 @router.post(
