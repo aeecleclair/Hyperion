@@ -431,15 +431,15 @@ async def get_tickets_by_userid(
     if user_db is None:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if user_id == user.id or is_user_member_of_an_allowed_group(user, [GroupType.soli]):
-        tickets = await cruds_raffle.get_ticket_by_userid(user_id=user_id, db=db)
-        return tickets
-
-    else:
+    if not(user_id == user.id or is_user_member_of_an_allowed_group(user, [GroupType.soli])):
         raise HTTPException(
             status_code=403,
             detail="Users that are not member of the group admin can only access the endpoint for their own user_id.",
         )
+
+    else:
+        tickets = await cruds_raffle.get_ticket_by_userid(user_id=user_id, db=db)
+        return tickets
 
 
 @router.get(
