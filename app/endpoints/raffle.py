@@ -382,7 +382,7 @@ async def buy_ticket(
         return tickets
 
     except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+        raise HTTPException(status_code=400, detail=str(error))
 
     finally:
         locker_set(redis_client=redis_client, key=redis_key, lock=False)
