@@ -351,9 +351,9 @@ async def edit_cash(db: AsyncSession, user_id: str, amount: float):
     )
     try:
         await db.commit()
-    except IntegrityError:
+    except IntegrityError as err:
         await db.rollback()
-        raise ValueError("Error during cash edition")
+        raise ValueError(err)
 
 
 async def draw_winner_by_lot_raffle(
