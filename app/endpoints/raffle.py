@@ -503,7 +503,7 @@ async def create_lot(
         result = await cruds_raffle.create_lot(lot=db_lot, db=db)
         return result
     except IntegrityError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @router.patch(
