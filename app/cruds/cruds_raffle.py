@@ -343,42 +343,17 @@ async def create_cash_of_user(
         raise err
 
 
-async def add_cash(db: AsyncSession, user_id: str, amount: float):
-    result = await db.execute(
-        select(models_raffle.Cash).where(models_raffle.Cash.user_id == user_id)
+async def edit_cash(db: AsyncSession, user_id: str, amount: float):
+    await db.execute(
+        update(models_raffle.Cash)
+        .where(models_raffle.Cash.user_id == user_id)
+        .values(user_id=user_id, balance=amount)
     )
-    balance = result.scalars().first()
-    if balance is not None:
-        await db.execute(
-            update(models_raffle.Cash)
-            .where(models_raffle.Cash.user_id == user_id)
-            .values(user_id=balance.user_id, balance=balance.balance + amount)
-        )
-        try:
-            await db.commit()
-        except IntegrityError:
-            await db.rollback()
-            raise ValueError("Error during cash edition")
-
-
-async def remove_cash(db: AsyncSession, user_id: str, amount: float):
-    result = await db.execute(
-        select(models_raffle.Cash).where(models_raffle.Cash.user_id == user_id)
-    )
-    balance = result.scalars().first()
-    if balance is not None:
-        await db.execute(
-            update(models_raffle.Cash)
-            .where(models_raffle.Cash.user_id == user_id)
-            .values(user_id=balance.user_id, balance=balance.balance - amount)
-        )
-        if balance.balance - amount < 0:
-            raise ValueError("Not enough cash")
-        try:
-            await db.commit()
-        except IntegrityError:
-            await db.rollback()
-            raise ValueError("Error during cash edition")
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise ValueError("Error during cash edition")
 
 
 async def draw_winner_by_lot_raffle(
