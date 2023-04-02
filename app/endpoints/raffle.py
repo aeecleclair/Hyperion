@@ -169,7 +169,6 @@ async def get_raffle_stats(
     )
 
 
-# type tickets
 @router.get(
     "/tombola/type_tickets",
     response_model=list[schemas_raffle.TypeTicketSimple],
