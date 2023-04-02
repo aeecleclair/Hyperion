@@ -133,20 +133,21 @@ async def create_icalendar_file(
     calendar.add("proid", "myecl.fr")  # Required field
 
     for event in events:
-        ical_event = Event()
-        ical_event.add("uid", f"{event.id}@myecl.fr")
-        ical_event.add("summary", event.name)
-        ical_event.add("description", event.description)
-        ical_event.add("dtstart", event.start)
-        ical_event.add("dtend", event.end)
-        ical_event.add("dtstamp", datetime.now(timezone(settings.TIMEZONE)))
-        ical_event.add("class", "public")
-        ical_event.add("organizer", event.organizer)
-        ical_event.add("location", event.location)
-        if event.recurrence_rule:
-            ical_event["rrule"] = event.recurrence_rule
+        if event.decision == Decision.approved:
+            ical_event = Event()
+            ical_event.add("uid", f"{event.id}@myecl.fr")
+            ical_event.add("summary", event.name)
+            ical_event.add("description", event.description)
+            ical_event.add("dtstart", event.start.astimezone(timezone("UTC")))
+            ical_event.add("dtend", event.end.astimezone(timezone("UTC")))
+            ical_event.add("dtstamp", datetime.now(timezone(settings.TIMEZONE)))
+            ical_event.add("class", "public")
+            ical_event.add("organizer", event.organizer)
+            ical_event.add("location", event.location)
+            if event.recurrence_rule:
+                ical_event["rrule"] = event.recurrence_rule
 
-        calendar.add_component(ical_event)
+            calendar.add_component(ical_event)
 
     with open(calendar_file_path, "wb") as calendar_file:
         calendar_file.write(calendar.to_ical())
