@@ -358,7 +358,7 @@ async def buy_ticket(
     if not isinstance(redis_client, Redis) or locker_get(
         redis_client=redis_client, key=redis_key
     ):
-        raise HTTPException(status_code=403, detail="Too fast !")
+        raise HTTPException(status_code=429, detail="Too fast !")
     locker_set(redis_client=redis_client, key=redis_key, lock=True)
 
     new_amount = balance.balance - type_ticket.price
