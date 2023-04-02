@@ -147,7 +147,7 @@ async def create_icalendar_file(
             if event.recurrence_rule:
                 ical_event["rrule"] = event.recurrence_rule
 
-        calendar.add_component(ical_event)
+            calendar.add_component(ical_event)
 
     with open(calendar_file_path, "wb") as calendar_file:
         calendar_file.write(calendar.to_ical())
