@@ -14,6 +14,7 @@ from app.endpoints import (
     core,
     groups,
     loans,
+    raffle,
     users,
 )
 
@@ -30,3 +31,4 @@ api_router.include_router(core.router)
 api_router.include_router(users.router)
 api_router.include_router(loans.router)
 api_router.include_router(cinema.router)
+api_router.include_router(raffle.router)
