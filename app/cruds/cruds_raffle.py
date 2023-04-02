@@ -1,8 +1,8 @@
 """File defining the functions called by the endpoints, making queries to the table using the models"""
 
 import logging
+import random
 
-import numpy as np
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -399,10 +399,7 @@ async def draw_winner_by_lot_raffle(
         winners = tickets
 
     else:
-        winners_index = np.random.choice(
-            list(range(len(tickets))), size=lot.quantity, replace=False
-        )
-        winners = [tickets[i] for i in winners_index]
+        winners = random.sample(tickets, lot.quantity)
 
     await db.execute(
         update(models_raffle.Tickets)
