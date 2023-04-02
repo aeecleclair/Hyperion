@@ -1,19 +1,15 @@
 import uuid
 
-from fastapi import APIRouter, Depends  # , HTTPException  # , File, UploadFile
-
-# from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cruds import cruds_phonebook
-from app.dependencies import get_db, is_user_a_member_of  # , get_request_id
+from app.dependencies import get_db, get_request_id, is_user_a_member_of
+from app.models import models_core
 from app.schemas import schemas_phonebook
-
-# from app.utils.tools import (
-#     get_file_from_data,
-#     save_file_as_data,
-# )
-# from app.utils.types import standard_responses
+from app.utils.tools import get_file_from_data, save_file_as_data
+from app.utils.types import standard_responses
 from app.utils.types.groups_type import GroupType
 from app.utils.types.tags import Tags
 
@@ -96,6 +92,8 @@ router.patch(
     status_code=200,
     tags=[Tags.phonebook],
 )
+
+
 async def update_association(
     association_id: str,
     association: schemas_phonebook.AssociationBase,
@@ -115,6 +113,8 @@ router.delete(
     status_code=200,
     tags=[Tags.phonebook],
 )
+
+
 async def delete_association(
     association_id: str,
     db: AsyncSession = Depends(get_db),
@@ -129,8 +129,81 @@ async def delete_association(
 
 
 # ---------------------------------------------------------------------------- #
+#                                    Members                                   #
+# ---------------------------------------------------------------------------- #
+router.get(
+    "/phonebook/association/id/members/",
+    response_model=schemas_phonebook.MemberComplete,
+    status_code=200,
+    tags=[Tags.phonebook],
+)
+
+
+async def get_member_mandates(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    memberships = await cruds_phonebook.get_membership_by_user_id(user_id, db)
+    if memberships is not None:
+        memberships_complete = []
+        for membership in memberships:
+            association = await cruds_phonebook.get_association_by_id(
+                membership.association_id, db
+            )
+            role = await cruds_phonebook.get_role_by_id(membership.role_id, db)
+            membership_base = schemas_phonebook.MembershipBase.from_orm(membership)
+            memberships_complete.append(
+                schemas_phonebook.MembershipComplete(
+                    association=association, role=role, **membership_base.dict()
+                )
+            )
+
+        return memberships_complete
+
+
+# ---------------------------------------------------------------------------- #
 #                                  Membership                                  #
 # ---------------------------------------------------------------------------- #
+router.post(
+    "/phonebook/association/membership/",
+    response_model=schemas_phonebook.MembershipBase,
+    status_code=200,
+    tags=[Tags.phonebook],
+)
+
+
+async def create_membership(
+    membership: schemas_phonebook.MembershipBase,
+    db: AsyncSession = Depends(get_db),
+    user=Depends(is_user_a_member_of(GroupType.CAA)),
+):
+    """
+    Create a new membership
+
+    **This endpoint is only usable by administrators**
+    """
+    return await cruds_phonebook.create_membership(membership, db)
+
+
+router.delete(
+    "/phonebook/association/membership/",
+    response_model=schemas_phonebook.MembershipBase,
+    status_code=200,
+    tags=[Tags.phonebook],
+)
+
+
+async def delete_membership(
+    membership: schemas_phonebook.MembershipBase,
+    db: AsyncSession = Depends(get_db),
+    user=Depends(is_user_a_member_of(GroupType.CAA)),
+):
+    """
+    Delete a membership
+
+    **This endpoint is only usable by administrators**
+    """
+    return await cruds_phonebook.delete_membership(membership, db)
 
 
 # ---------------------------------------------------------------------------- #
@@ -182,6 +255,8 @@ router.delete(
     status_code=200,
     tags=[Tags.phonebook],
 )
+
+
 async def delete_role(
     role_id: str,
     db: AsyncSession = Depends(get_db),
@@ -195,61 +270,63 @@ async def delete_role(
     return await cruds_phonebook.delete_role(role_id, db)
 
 
-# # ----------------------------------- Logos ---------------------------------- #
+# ---------------------------------------------------------------------------- #
+#                                     Logos                                    #
+# ---------------------------------------------------------------------------- #
 
 
-# @router.post(
-#     "/phonebook/associations/{association_id}/logo/",
-#     # response_model=standard_responses.Result,
-#     status_code=201,
-#     tags=[Tags.phonebook],
-# )
-# async def create_association_logo(
-#     association_id: str,
-#     image: UploadFile = File(...),
-#     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
-#     request_id: str = Depends(get_request_id),
-#     db: AsyncSession = Depends(get_db),
-# ):
-#     """
-#     Upload a logo for an association.
-#     **The user must be a member of the group CAA to use this endpoint**
-#     """
+@router.post(
+    "/phonebook/associations/{association_id}/logo/",
+    # response_model=standard_responses.Result,
+    status_code=201,
+    tags=[Tags.phonebook],
+)
+async def create_association_logo(
+    association_id: str,
+    image: UploadFile = File(...),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
+    request_id: str = Depends(get_request_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Upload a logo for an association.
+    **The user must be a member of the group CAA to use this endpoint**
+    """
 
-#     association = await cruds_phonebook.get_association_by_id(db, association_id)
-#     if association is None:
-#         raise HTTPException(
-#             status_code=404,
-#             detail="The association does not exist.",
-#         )
+    association = await cruds_phonebook.get_association_by_id(association_id, db)
+    if association is None:
+        raise HTTPException(
+            status_code=404,
+            detail="The association does not exist.",
+        )
 
-#     await save_file_as_data(
-#         image=image,
-#         directory="associations",
-#         filename=str(association_id),
-#         request_id=request_id,
-#         max_file_size=4 * 1024 * 1024,
-#         accepted_content_types=["image/jpeg", "image/png", "image/webp"],
-#     )
+    await save_file_as_data(
+        image=image,
+        directory="associations",
+        filename=str(association_id),
+        request_id=request_id,
+        max_file_size=4 * 1024 * 1024,
+        accepted_content_types=["image/jpeg", "image/png", "image/webp"],
+    )
 
-#     return standard_responses.Result(success=True)
+    return standard_responses.Result(success=True)
 
 
-# @router.get(
-#     "/phonebook/associations/{association_id}/logo/",
-#     response_class=FileResponse,
-#     status_code=200,
-#     tags=[Tags.users],
-# )
-# async def read_association_logo(
-#     association_id: str,
-# ) -> FileResponse:
-#     """
-#     Get the logo of an association.
-#     """
+@router.get(
+    "/phonebook/associations/{association_id}/logo/",
+    response_class=FileResponse,
+    status_code=200,
+    tags=[Tags.users],
+)
+async def read_association_logo(
+    association_id: str,
+) -> FileResponse:
+    """
+    Get the logo of an association.
+    """
 
-#     return get_file_from_data(
-#         directory="associations",
-#         filename=str(association_id),
-#         default_asset="assets/images/default_association_logo.png",
-#     )
+    return get_file_from_data(
+        directory="associations",
+        filename=str(association_id),
+        default_asset="assets/images/default_association_logo.png",
+    )
