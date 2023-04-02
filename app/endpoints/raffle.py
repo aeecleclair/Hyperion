@@ -71,7 +71,7 @@ async def create_raffle(
         result = await cruds_raffle.create_raffle(raffle=db_raffle, db=db)
         return result
     except IntegrityError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @router.patch(
