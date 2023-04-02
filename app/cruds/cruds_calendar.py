@@ -65,12 +65,7 @@ async def add_event(
     db.add(event)
     try:
         await db.commit()
-        try:
-            await create_icalendar_file(db, calendar_file_path, settings)
-            return event
-        except Exception as error:
-            await db.rollback()
-            raise ValueError(error)
+        return event
 
     except IntegrityError as error:
         await db.rollback()
@@ -109,7 +104,9 @@ async def delete_event(db: AsyncSession, event_id: str, settings: Settings) -> N
         raise ValueError()
 
 
-async def confirm_event(db: AsyncSession, decision: Decision, event_id: str):
+async def confirm_event(
+    db: AsyncSession, decision: Decision, event_id: str, settings: Settings
+):
     await db.execute(
         update(models_calendar.Event)
         .where(models_calendar.Event.id == event_id)
@@ -117,9 +114,15 @@ async def confirm_event(db: AsyncSession, decision: Decision, event_id: str):
     )
     try:
         await db.commit()
-    except IntegrityError:
+        if decision == Decision.approved:
+            try:
+                await create_icalendar_file(db, calendar_file_path, settings)
+            except Exception as error:
+                await db.rollback()
+                raise ValueError(error)
+    except IntegrityError as error:
         await db.rollback()
-        raise ValueError()
+        raise ValueError(error)
 
 
 async def create_icalendar_file(
@@ -138,8 +141,10 @@ async def create_icalendar_file(
             ical_event.add("uid", f"{event.id}@myecl.fr")
             ical_event.add("summary", event.name)
             ical_event.add("description", event.description)
-            ical_event.add("dtstart", event.start.astimezone(timezone("UTC")))
-            ical_event.add("dtend", event.end.astimezone(timezone("UTC")))
+            ical_event.add(
+                "dtstart", event.start.astimezone(timezone(settings.TIMEZONE))
+            )
+            ical_event.add("dtend", event.end.astimezone(timezone(settings.TIMEZONE)))
             ical_event.add("dtstamp", datetime.now(timezone(settings.TIMEZONE)))
             ical_event.add("class", "public")
             ical_event.add("organizer", event.organizer)

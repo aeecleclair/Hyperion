@@ -189,13 +189,16 @@ async def confirm_booking(
     decision: Decision,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Give a decision to an event.
 
     **Only usable by admins**
     """
-    await cruds_calendar.confirm_event(event_id=event_id, decision=decision, db=db)
+    await cruds_calendar.confirm_event(
+        event_id=event_id, decision=decision, db=db, settings=settings
+    )
 
 
 @router.delete("/calendar/events/{event_id}", status_code=204, tags=[Tags.calendar])
