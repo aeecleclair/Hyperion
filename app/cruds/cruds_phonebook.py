@@ -4,7 +4,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import models_phonebook  # , models_core
+from app.models import models_core, models_phonebook  # , models_core
 from app.schemas import schemas_phonebook
 
 
@@ -75,6 +75,16 @@ async def get_role_by_id(
     return result.scalars().first()
 
 
+async def get_member_by_id(
+    member_id: str, db: AsyncSession
+) -> models_core.CoreUser | None:
+    """Return member with id from database"""
+    result = await db.execute(
+        select(models_core.CoreUser).where(models_core.CoreUser.id == member_id)
+    )
+    return result.scalars().first()
+
+
 async def get_mbrship_by_user_id(
     user_id: str, db: AsyncSession
 ) -> list[models_phonebook.Membership] | None:
@@ -103,7 +113,7 @@ async def get_mbmrships_by_association_id(
 #                                  Association  OK                             #
 # ---------------------------------------------------------------------------- #
 async def create_association(
-    association: schemas_phonebook.AssociationComplete, db: AsyncSession
+    association: models_phonebook.Association, db: AsyncSession
 ):
     """Create a new association in database and return it"""
     db.add(association)
@@ -115,13 +125,12 @@ async def create_association(
 
 
 async def update_association(
-    association_id: str,
-    association: schemas_phonebook.AssociationBase,
+    association: schemas_phonebook.AssociationEditComplete,
     db: AsyncSession,
 ):
     """Update an association in database"""
     update(models_phonebook.Association).where(
-        association_id == models_phonebook.Association.id
+        association.id == models_phonebook.Association.id
     ).values(**association.dict(exclude_none=True))
     try:
         await db.commit()
@@ -180,9 +189,7 @@ async def delete_role(role_id: str, db: AsyncSession):
 # ---------------------------------------------------------------------------- #
 #                                  Membership                                  #
 # ---------------------------------------------------------------------------- #
-async def create_membership(
-    membership: schemas_phonebook.MembershipBase, db: AsyncSession
-):
+async def create_membership(membership: models_phonebook.Membership, db: AsyncSession):
     """Create a membership in database"""
     db.add(membership)
     try:

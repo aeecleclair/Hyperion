@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cruds import cruds_phonebook
 from app.dependencies import get_db, get_request_id, is_user_a_member_of
-from app.models import models_core
+from app.models import models_core, models_phonebook
 from app.schemas import schemas_phonebook
 from app.utils.tools import get_file_from_data, save_file_as_data
 from app.utils.types import standard_responses
@@ -20,7 +20,7 @@ router = APIRouter()
 #                                    Get All                                   #
 # ---------------------------------------------------------------------------- #
 @router.get(
-    "phonebook/associations/",
+    "/phonebook/associations/",
     response_model=list[schemas_phonebook.AssociationComplete] | None,
     status_code=200,
     tags=[Tags.phonebook],
@@ -33,12 +33,11 @@ async def get_all_associations(
 
     **This endpoint is only usable by administrators**
     """
-    associations = await cruds_phonebook.get_all_associations(db)
-    return associations
+    return await cruds_phonebook.get_all_associations(db)
 
 
 @router.get(
-    "phonebook/roles/",
+    "/phonebook/roles/",
     response_model=list[schemas_phonebook.RoleComplete] | None,
     status_code=200,
     tags=[Tags.phonebook],
@@ -66,7 +65,7 @@ async def get_all_roles(
 #                                  Association                                 #
 # ---------------------------------------------------------------------------- #
 @router.post(
-    "phonebook/associations/",
+    "/phonebook/associations/",
     response_model=schemas_phonebook.AssociationComplete,
     status_code=201,
     tags=[Tags.phonebook],
@@ -81,22 +80,21 @@ async def create_association(
 
     **This endpoint is only usable by administrators**
     """
-    id = uuid.uuid4()
-    association = schemas_phonebook.AssociationComplete(id=id, **association.dict())
-    return await cruds_phonebook.create_association(association, db)
+    id = str(uuid.uuid4())
+    association_model = models_phonebook.Association(id=id, **association.dict())
+    await cruds_phonebook.create_association(association_model, db)
+    return association_model
 
 
-router.patch(
-    "phonebook/associations/{association_id}",
+@router.patch(
+    "/phonebook/associations/{association_id}",
     # response_model=schemas_phonebook.AssociationComplete,
     status_code=204,
     tags=[Tags.phonebook],
 )
-
-
 async def update_association(
     association_id: str,
-    association: schemas_phonebook.AssociationBase,
+    association: schemas_phonebook.AssociationEdit,
     db: AsyncSession = Depends(get_db),
     user=Depends(is_user_a_member_of(GroupType.CAA)),
 ):
@@ -105,16 +103,17 @@ async def update_association(
 
     **This endpoint is only usable by administrators**
     """
-    return await cruds_phonebook.update_association(association_id, association, db)
+    association_complete = schemas_phonebook.AssociationEditComplete(
+        id=association_id, **association.dict()
+    )
+    await cruds_phonebook.update_association(association_complete, db)
 
 
-router.delete(
-    "phonebook/associations/{association_id}",
+@router.delete(
+    "/phonebook/associations/{association_id}",
     status_code=204,
     tags=[Tags.phonebook],
 )
-
-
 async def delete_association(
     association_id: str,
     db: AsyncSession = Depends(get_db),
@@ -131,47 +130,80 @@ async def delete_association(
 # ---------------------------------------------------------------------------- #
 #                                    Members                                   #
 # ---------------------------------------------------------------------------- #
-router.get(
-    "/phonebook/associations/id/members",
-    response_model=schemas_phonebook.MemberComplete | None,
+@router.get(
+    "/phonebook/associations/{association_id}/members/",
+    response_model=list[schemas_phonebook.MemberComplete] | None,
     status_code=200,
     tags=[Tags.phonebook],
 )
-
-
-async def get_member_mandates(
-    user_id: str,
+async def get_association_members(
+    association_id: str,
     db: AsyncSession = Depends(get_db),
 ):
-    memberships = await cruds_phonebook.get_membership_by_user_id(user_id, db)
+    memberships = await cruds_phonebook.get_mbmrships_by_association_id(
+        association_id, db
+    )
+    members_complete = []
     if memberships is not None:
-        memberships_complete = []
         for membership in memberships:
             association = await cruds_phonebook.get_association_by_id(
                 membership.association_id, db
             )
             role = await cruds_phonebook.get_role_by_id(membership.role_id, db)
             membership_base = schemas_phonebook.MembershipBase.from_orm(membership)
-            memberships_complete.append(
-                schemas_phonebook.MembershipComplete(
-                    association=association, role=role, **membership_base.dict()
+            membership_complete = schemas_phonebook.MembershipComplete(
+                association=association, role=role, **membership_base.dict()
+            )
+
+            member = await cruds_phonebook.get_member_by_id(membership.user_id, db)
+            member_schema = schemas_phonebook.MemberBase.from_orm(member)
+            members_complete.append(
+                schemas_phonebook.MemberComplete(
+                    memberships=[membership_complete], **member_schema.dict()
                 )
             )
 
-        return memberships_complete
+        return members_complete
+
+
+### OLD CODE ###
+# @router.get(
+#     "/phonebook/associations/{association_id}/members/",
+#     response_model=schemas_phonebook.MemberComplete | None,
+#     status_code=200,
+#     tags=[Tags.phonebook],
+# )
+# async def get_member_mandates(
+#     user_id: str,
+#     db: AsyncSession = Depends(get_db),
+# ):
+#     memberships = await cruds_phonebook.get_membership_by_user_id(user_id, db)
+#     if memberships is not None:
+#         memberships_complete = []
+#         for membership in memberships:
+#             association = await cruds_phonebook.get_association_by_id(
+#                 membership.association_id, db
+#             )
+#             role = await cruds_phonebook.get_role_by_id(membership.role_id, db)
+#             membership_base = schemas_phonebook.MembershipBase.from_orm(membership)
+#             memberships_complete.append(
+#                 schemas_phonebook.MembershipComplete(
+#                     association=association, role=role, **membership_base.dict()
+#                 )
+#             )
+
+#         return memberships_complete
 
 
 # ---------------------------------------------------------------------------- #
 #                                  Membership                                  #
 # ---------------------------------------------------------------------------- #
-router.post(
+@router.post(
     "/phonebook/associations/memberships",
     response_model=schemas_phonebook.MembershipBase,
     status_code=201,
     tags=[Tags.phonebook],
 )
-
-
 async def create_membership(
     membership: schemas_phonebook.MembershipBase,
     db: AsyncSession = Depends(get_db),
@@ -182,17 +214,17 @@ async def create_membership(
 
     **This endpoint is only usable by administrators**
     """
-    return await cruds_phonebook.create_membership(membership, db)
+    membership_model = models_phonebook.Membership(**membership.dict())
+    await cruds_phonebook.create_membership(membership_model, db)
+    return membership
 
 
-router.delete(
+@router.delete(
     "/phonebook/associations/memberships",
     # response_model=schemas_phonebook.MembershipBase,
     status_code=204,
     tags=[Tags.phonebook],
 )
-
-
 async def delete_membership(
     membership: schemas_phonebook.MembershipBase,
     db: AsyncSession = Depends(get_db),
@@ -203,14 +235,14 @@ async def delete_membership(
 
     **This endpoint is only usable by administrators**
     """
-    return await cruds_phonebook.delete_membership(membership, db)
+    await cruds_phonebook.delete_membership(membership, db)
 
 
 # ---------------------------------------------------------------------------- #
 #                                     Role                                     #
 # ---------------------------------------------------------------------------- #
 @router.post(
-    "phonebook/roles/",
+    "/phonebook/roles/",
     response_model=schemas_phonebook.RoleComplete,
     status_code=201,
     tags=[Tags.phonebook],
@@ -225,13 +257,13 @@ async def create_role(
 
     **This endpoint is only usable by administrators**
     """
-    role_id = uuid.uuid4()
+    role_id = str(uuid.uuid4())
     role_complete = schemas_phonebook.RoleComplete(id=role_id, **role.dict())
     return await cruds_phonebook.create_role(role_complete, db)
 
 
 @router.patch(
-    "phonebook/roles/{role_id}",
+    "/phonebook/roles/{role_id}",
     # response_model=schemas_phonebook.RoleComplete,
     status_code=204,
     tags=[Tags.phonebook],
@@ -249,14 +281,12 @@ async def update_role(
     return await cruds_phonebook.update_role(role, db)
 
 
-router.delete(
-    "phonebook/roles/{role_id}",
+@router.delete(
+    "/phonebook/roles/{role_id}",
     # response_model=schemas_phonebook.RoleBase,
     status_code=204,
     tags=[Tags.phonebook],
 )
-
-
 async def delete_role(
     role_id: str,
     db: AsyncSession = Depends(get_db),
