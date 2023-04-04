@@ -124,7 +124,7 @@ def test_add_membership_admin():
     association_id = response.json()["id"]
 
     response = client.post(
-        "phonebook/association/membership/",
+        "phonebook/association/membership",
         json={
             "user_id": member.id,
             "association_id": association_id,
@@ -146,7 +146,7 @@ def test_add_membership_simple():
     association_id = response.json()["id"]
 
     response = client.post(
-        "phonebook/association/membership/",
+        "phonebook/association/membership",
         json={
             "user_id": member.id,
             "association_id": association_id,
@@ -168,7 +168,7 @@ def test_delete_membership_admin():
     association_id = response.json()["id"]
 
     response = client.post(
-        "phonebook/association/membership/",
+        "phonebook/association/membership",
         json={
             "user_id": member.id,
             "association_id": association_id,
@@ -180,7 +180,7 @@ def test_delete_membership_admin():
     member_id = response.json()["user_id"]
 
     response = client.delete(
-        "/phonebook/association/membership/",
+        "/phonebook/association/membership",
         json={"association_id": association_id, "user_id": member_id},
         headers={"Authorization": f"Bearer {token_caa}"},
     )
@@ -198,7 +198,7 @@ def test_delete_membership_simple():
     association_id = response.json()["id"]
 
     response = client.post(
-        "phonebook/association/membership/",
+        "phonebook/association/membership",
         json={
             "user_id": member.id,
             "association_id": association_id,
@@ -210,7 +210,7 @@ def test_delete_membership_simple():
     member_id = response.json()["user_id"]
 
     response = client.delete(
-        "/phonebook/association/membership/",
+        "/phonebook/association/membership",
         json={"association_id": association_id, "user_id": member_id},
         headers={"Authorization": f"Bearer {token_simple}"},
     )
