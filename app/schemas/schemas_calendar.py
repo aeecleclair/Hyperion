@@ -1,8 +1,9 @@
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 
 from app.schemas.schemas_core import CoreUserSimple
+from app.utils import validators
 from app.utils.types.calendar_types import CalendarEventType, Decision
 
 
@@ -17,6 +18,11 @@ class EventBase(BaseModel):
     type: CalendarEventType
     description: str
     recurrence_rule: str | None
+
+    _normalize_start = validator("start", allow_reuse=True)(
+        validators.time_zone_converter
+    )
+    _normalize_end = validator("end", allow_reuse=True)(validators.time_zone_converter)
 
 
 class EventComplete(EventBase):
@@ -38,6 +44,11 @@ class EventEdit(BaseModel):
     type: CalendarEventType | None = None
     description: str | None = None
     recurrence_rule: str | None = None
+
+    _normalize_start = validator("start", allow_reuse=True)(
+        validators.time_zone_converter
+    )
+    _normalize_end = validator("end", allow_reuse=True)(validators.time_zone_converter)
 
     class Config:
         orm_mode = True
