@@ -27,9 +27,9 @@ class Association(Base):
     membership: list[Membership] = relationship("Membership")
 
 
-class Members(CoreUser):
+class Members(Base):
     __tablename__ = "phonebook_members"
-
+    user = relationship("CoreUser", back_populates="members")
     membership: list[Association] = relationship(
         "Association",
         secondary="core_membership",
