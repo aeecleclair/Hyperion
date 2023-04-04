@@ -1,11 +1,17 @@
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
+
+from app.utils import validators
 
 
 class CineSessionTime(BaseModel):
     start: datetime
     duration: int
+
+    _normalize_start = validator("start", allow_reuse=True)(
+        validators.time_zone_converter
+    )
 
 
 class CineSessionBase(CineSessionTime):
@@ -29,3 +35,7 @@ class CineSessionUpdate(BaseModel):
     overview: str | None = None
     genre: str | None = None
     tagline: str | None = None
+
+    _normalize_start = validator("start", allow_reuse=True)(
+        validators.time_zone_converter
+    )
