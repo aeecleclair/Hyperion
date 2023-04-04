@@ -4,7 +4,6 @@ from sqlalchemy import Column, ForeignKey, String
 from sqlalchemy.orm import relationship
 
 from app.database import Base
-from app.models.models_core import CoreUser
 
 
 class Membership(Base):
@@ -25,16 +24,6 @@ class Association(Base):
     name: str = Column(String, nullable=False, index=True)
     type: str = Column(String, nullable=False)
     membership: list[Membership] = relationship("Membership")
-
-
-class Members(Base):
-    __tablename__ = "phonebook_members"
-    user = relationship("CoreUser", back_populates="members")
-    membership: list[Association] = relationship(
-        "Association",
-        secondary="core_membership",
-        back_populates="members",
-    )
 
 
 class Role(Base):

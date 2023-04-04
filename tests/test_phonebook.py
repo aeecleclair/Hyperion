@@ -42,20 +42,6 @@ async def startuptest():
     global token_simple
     token_simple = create_api_access_token(phonebook_user_simple)
 
-    global member
-    async with TestingSessionLocal() as db:
-        member = models_core.CoreUser(
-            id=str(
-                uuid.uuid4(),
-                name="Jean",
-                firstname="Prunte",
-                nickname="Duh",
-                email="jean.prunte@ecl23.ec-lyon.fr",
-            )
-        )
-        db.add(member)
-        await db.commit()
-
     global role
     async with TestingSessionLocal() as db:
         role = models_phonebook.Role(id=str(uuid.uuid4()), name="VP Emprunts")

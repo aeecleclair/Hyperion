@@ -20,7 +20,7 @@ router = APIRouter()
 #                                    Get All                                   #
 # ---------------------------------------------------------------------------- #
 @router.get(
-    "phonebook/association/",
+    "phonebook/associations/",
     response_model=list[schemas_phonebook.AssociationComplete],
     status_code=200,
     tags=[Tags.phonebook],
@@ -38,7 +38,7 @@ async def get_all_associations(
 
 
 @router.get(
-    "phonebook/role/",
+    "phonebook/roles/",
     response_model=list[schemas_phonebook.RoleComplete],
     status_code=200,
     tags=[Tags.phonebook],
@@ -66,7 +66,7 @@ async def get_all_roles(
 #                                  Association                                 #
 # ---------------------------------------------------------------------------- #
 @router.post(
-    "phonebook/association/",
+    "phonebook/associations/",
     response_model=schemas_phonebook.AssociationComplete,
     status_code=200,
     tags=[Tags.phonebook],
@@ -87,7 +87,7 @@ async def create_association(
 
 
 router.patch(
-    "phonebook/association/{association_id}",
+    "phonebook/associations/{association_id}",
     response_model=schemas_phonebook.AssociationComplete,
     status_code=200,
     tags=[Tags.phonebook],
@@ -109,7 +109,7 @@ async def update_association(
 
 
 router.delete(
-    "phonebook/association/{association_id}",
+    "phonebook/associations/{association_id}",
     status_code=200,
     tags=[Tags.phonebook],
 )
@@ -132,7 +132,7 @@ async def delete_association(
 #                                    Members                                   #
 # ---------------------------------------------------------------------------- #
 router.get(
-    "/phonebook/association/id/members/",
+    "/phonebook/associations/id/members",
     response_model=schemas_phonebook.MemberComplete,
     status_code=200,
     tags=[Tags.phonebook],
@@ -165,7 +165,7 @@ async def get_member_mandates(
 #                                  Membership                                  #
 # ---------------------------------------------------------------------------- #
 router.post(
-    "/phonebook/association/membership/",
+    "/phonebook/associations/memberships",
     response_model=schemas_phonebook.MembershipBase,
     status_code=200,
     tags=[Tags.phonebook],
@@ -186,7 +186,7 @@ async def create_membership(
 
 
 router.delete(
-    "/phonebook/association/membership/",
+    "/phonebook/associations/memberships",
     response_model=schemas_phonebook.MembershipBase,
     status_code=200,
     tags=[Tags.phonebook],
@@ -210,7 +210,7 @@ async def delete_membership(
 #                                     Role                                     #
 # ---------------------------------------------------------------------------- #
 @router.post(
-    "phonebook/role",
+    "phonebook/roles/",
     response_model=schemas_phonebook.RoleComplete,
     status_code=200,
     tags=[Tags.phonebook],
@@ -231,7 +231,7 @@ async def create_role(
 
 
 @router.patch(
-    "phonebook/role/{role_id}",
+    "phonebook/roles/{role_id}",
     response_model=schemas_phonebook.RoleComplete,
     status_code=200,
     tags=[Tags.phonebook],
@@ -250,7 +250,7 @@ async def update_role(
 
 
 router.delete(
-    "phonebook/role/{role_id}",
+    "phonebook/roles/{role_id}",
     response_model=schemas_phonebook.RoleBase,
     status_code=200,
     tags=[Tags.phonebook],
@@ -276,7 +276,7 @@ async def delete_role(
 
 
 @router.post(
-    "/phonebook/associations/{association_id}/logo/",
+    "/phonebook/associations/{association_id}/picture",
     # response_model=standard_responses.Result,
     status_code=201,
     tags=[Tags.phonebook],
@@ -313,7 +313,7 @@ async def create_association_logo(
 
 
 @router.get(
-    "/phonebook/associations/{association_id}/logo/",
+    "/phonebook/associations/{association_id}/picture",
     response_class=FileResponse,
     status_code=200,
     tags=[Tags.users],
