@@ -62,19 +62,20 @@ async def startuptest():
         db.add(role)
         await db.commit()
 
+    global association
+    async with TestingSessionLocal() as db:
+        association = models_phonebook.Association(
+            id=str(uuid.uuid4()), type="Section", name="ECLAIR", membership=[membership]
+        )
+        db.add(association)
+        await db.commit()
+
     global membership
     async with TestingSessionLocal() as db:
         membership = models_phonebook.Membership(
             user_id=member.id, association_id=association.id, role_id=role.id
         )
         db.add(membership)
-        await db.commit()
-
-    async with TestingSessionLocal() as db:
-        association = models_phonebook.Association(
-            id=str(uuid.uuid4()), type="Section", name="ECLAIR", membership=[membership]
-        )
-        db.add(association)
         await db.commit()
 
 
