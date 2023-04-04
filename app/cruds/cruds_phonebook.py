@@ -154,7 +154,7 @@ async def delete_association(association_id: str, db: AsyncSession):
 # ---------------------------------------------------------------------------- #
 #                                     Role OK                                  #
 # ---------------------------------------------------------------------------- #
-async def create_role(role: schemas_phonebook.RoleComplete, db: AsyncSession):
+async def create_role(role: models_phonebook.Role, db: AsyncSession):
     """Create a role in database"""
     db.add(role)
     try:
