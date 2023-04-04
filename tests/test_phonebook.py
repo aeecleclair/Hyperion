@@ -67,7 +67,7 @@ async def startuptest():
 
 def test_get_all_associations_admin():
     response = client.get(
-        "/phonebook/association",
+        "/phonebook/association/",
         headers={"Authorization": f"Bearer {token_caa}"},
     )
     assert response.status_code == 200
@@ -75,7 +75,7 @@ def test_get_all_associations_admin():
 
 def test_get_all_associations_simple():
     response = client.get(
-        "/phonebook/association",
+        "/phonebook/association/",
         headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response.status_code == 200
@@ -83,7 +83,7 @@ def test_get_all_associations_simple():
 
 def test_create_association_admin():
     response = client.post(
-        "/phonebook/association",
+        "/phonebook/association/",
         json={"name": "Bazar", "type": "Gros Club"},
         headers={"Authorization": f"Bearer {token_caa}"},
     )
@@ -92,7 +92,7 @@ def test_create_association_admin():
 
 def test_create_association_simple():
     response = client.post(
-        "/phonebook/association",
+        "/phonebook/association/",
         json={"name": "Bazar", "type": "Gros Club"},
         headers={"Authorization": f"Bearer {token_simple}"},
     )
@@ -102,7 +102,7 @@ def test_create_association_simple():
 def test_add_membership_admin():
     # create a new association to join
     response = client.post(
-        "/phonebook/association",
+        "/phonebook/association/",
         json={"name": "Bazar", "type": "Gros Club"},
         headers={"Authorization": f"Bearer {token_caa}"},
     )
@@ -124,7 +124,7 @@ def test_add_membership_admin():
 def test_add_membership_simple():
     # create a new association to join
     response = client.post(
-        "/phonebook/association",
+        "/phonebook/association/",
         json={"name": "Bazar", "type": "Gros Club"},
         headers={"Authorization": f"Bearer {token_caa}"},
     )
@@ -146,7 +146,7 @@ def test_add_membership_simple():
 def test_delete_membership_admin():
     # create a membership to delete
     response = client.post(
-        "/phonebook/association",
+        "/phonebook/association/",
         json={"name": "Bazar", "type": "Gros Club"},
         headers={"Authorization": f"Bearer {token_caa}"},
     )
@@ -176,7 +176,7 @@ def test_delete_membership_admin():
 def test_delete_membership_simple():
     # create a membership to delete
     response = client.post(
-        "/phonebook/association",
+        "/phonebook/association/",
         json={"name": "Bazar", "type": "Gros Club"},
         headers={"Authorization": f"Bearer {token_caa}"},
     )
@@ -205,7 +205,7 @@ def test_delete_membership_simple():
 
 def test_update_association_admin():
     response = client.patch(
-        f"/phonebook/association/{association.id}",
+        f"/phonebook/association/{association.id}/",
         json={"name": "Éclair"},
         headers={"Authorization": f"Bearer {token_caa}"},
     )
@@ -214,7 +214,7 @@ def test_update_association_admin():
 
 def test_update_association_simple():
     response = client.patch(
-        f"/phonebook/association/{association.id}",
+        f"/phonebook/association/{association.id}/",
         json={"name": "Éclair"},
         headers={"Authorization": f"Bearer {token_simple}"},
     )
@@ -224,7 +224,7 @@ def test_update_association_simple():
 def test_delete_association_admin():
     # create an association to delete
     response = client.post(
-        "/phonebook/association",
+        "/phonebook/association/",
         json={"name": "Piston Hebdo", "type": "Gros Club"},
         headers={"Authorization": f"Bearer {token_caa}"},
     )
@@ -232,7 +232,7 @@ def test_delete_association_admin():
     association_id = response.json()["id"]
 
     response = client.delete(
-        f"/phonebook/association/{association_id}",
+        f"/phonebook/association/{association_id}/",
         headers={"Authorization": f"Bearer {token_caa}"},
     )
     assert response.status_code == 204
@@ -241,7 +241,7 @@ def test_delete_association_admin():
 def test_delete_association_simple():
     # create an association to delete
     response = client.post(
-        "/phonebook/association",
+        "/phonebook/association/",
         json={"name": "Piston Hebdo", "type": "Gros Club"},
         headers={"Authorization": f"Bearer {token_caa}"},
     )
@@ -249,7 +249,23 @@ def test_delete_association_simple():
     association_id = response.json()["id"]
 
     response = client.delete(
-        f"/phonebook/association/{association_id}",
+        f"/phonebook/association/{association_id}/",
         headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response.status_code == 403
+
+
+def test_get_members_by_association_id_admin():
+    response = client.get(
+        f"/phonebook/association/{association.id}/members/",
+        headers={"Authorization": f"Bearer {token_caa}"},
+    )
+    assert response.status_code == 200
+
+
+def test_get_members_by_association_id_simple():
+    response = client.get(
+        f"/phonebook/association/{association.id}/members/",
+        headers={"Authorization": f"Bearer {token_simple}"},
+    )
+    assert response.status_code == 200
