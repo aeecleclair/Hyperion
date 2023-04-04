@@ -21,7 +21,7 @@ router = APIRouter()
 # ---------------------------------------------------------------------------- #
 @router.get(
     "phonebook/associations/",
-    response_model=list[schemas_phonebook.AssociationComplete],
+    response_model=list[schemas_phonebook.AssociationComplete] | None,
     status_code=200,
     tags=[Tags.phonebook],
 )
@@ -39,7 +39,7 @@ async def get_all_associations(
 
 @router.get(
     "phonebook/roles/",
-    response_model=list[schemas_phonebook.RoleComplete],
+    response_model=list[schemas_phonebook.RoleComplete] | None,
     status_code=200,
     tags=[Tags.phonebook],
 )
@@ -88,7 +88,7 @@ async def create_association(
 
 router.patch(
     "phonebook/associations/{association_id}",
-    response_model=schemas_phonebook.AssociationComplete,
+    # response_model=schemas_phonebook.AssociationComplete,
     status_code=204,
     tags=[Tags.phonebook],
 )
@@ -133,7 +133,7 @@ async def delete_association(
 # ---------------------------------------------------------------------------- #
 router.get(
     "/phonebook/associations/id/members",
-    response_model=schemas_phonebook.MemberComplete,
+    response_model=schemas_phonebook.MemberComplete | None,
     status_code=200,
     tags=[Tags.phonebook],
 )
@@ -187,7 +187,7 @@ async def create_membership(
 
 router.delete(
     "/phonebook/associations/memberships",
-    response_model=schemas_phonebook.MembershipBase,
+    # response_model=schemas_phonebook.MembershipBase,
     status_code=204,
     tags=[Tags.phonebook],
 )
@@ -232,7 +232,7 @@ async def create_role(
 
 @router.patch(
     "phonebook/roles/{role_id}",
-    response_model=schemas_phonebook.RoleComplete,
+    # response_model=schemas_phonebook.RoleComplete,
     status_code=204,
     tags=[Tags.phonebook],
 )
@@ -251,7 +251,7 @@ async def update_role(
 
 router.delete(
     "phonebook/roles/{role_id}",
-    response_model=schemas_phonebook.RoleBase,
+    # response_model=schemas_phonebook.RoleBase,
     status_code=204,
     tags=[Tags.phonebook],
 )
