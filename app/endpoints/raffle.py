@@ -306,6 +306,53 @@ async def get_tickets(
 
 
 @router.post(
+    "/tombola/tickets/add/{user_id}/{type_id}",
+    response_model=list[schemas_raffle.TicketComplete],
+    status_code=201,
+    tags=[Tags.raffle],
+)
+async def add_ticket_to_user(
+    type_id: str,
+    db: AsyncSession = Depends(get_db),
+    redis_client: Redis | None = Depends(get_redis_client),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
+    request_id: str = Depends(get_request_id),
+):
+    """
+    Add a ticket to another user
+
+    **The user must be a member of the group soli to use this endpoint**
+    """
+    type_ticket = await cruds_raffle.get_typeticket_by_id(typeticket_id=type_id, db=db)
+    if type_ticket is None:
+        raise ValueError("Bad typeticket association")
+
+    db_ticket = [
+        models_raffle.Tickets(id=str(uuid.uuid4()), type_id=type_id, user_id=user.id)
+        for i in range(type_ticket.pack_size)
+    ]
+
+    for ticket in db_ticket:
+        ticket.user = user
+        ticket.type_ticket = type_ticket
+
+    try:
+        tickets = await cruds_raffle.create_ticket(tickets=db_ticket, db=db)
+
+        display_name = get_display_name(
+            firstname=user.firstname, name=user.name, nickname=user.nickname
+        )
+        hyperion_raffle_logger.info(
+            f"Add_ticket_to_user: A pack of {type_ticket.pack_size} tickets of type {type_id} has been buyed by admin for user {display_name}({user.id}) for an amount of {type_ticket.price}€. ({request_id})"
+        )
+
+        return tickets
+
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+@router.post(
     "/tombola/tickets/buy/{type_id}",
     response_model=list[schemas_raffle.TicketComplete],
     status_code=201,
