@@ -312,6 +312,7 @@ async def get_tickets(
     tags=[Tags.raffle],
 )
 async def add_ticket_to_user(
+    user_id: str,
     type_id: str,
     db: AsyncSession = Depends(get_db),
     redis_client: Redis | None = Depends(get_redis_client),
@@ -325,6 +326,8 @@ async def add_ticket_to_user(
     type_ticket = await cruds_raffle.get_typeticket_by_id(typeticket_id=type_id, db=db)
     if type_ticket is None:
         raise ValueError("Bad typeticket association")
+
+    user = await cruds_users.get_user_by_id(db=db, user_id=user_id)
 
     db_ticket = [
         models_raffle.Tickets(id=str(uuid.uuid4()), type_id=type_id, user_id=user.id)
