@@ -328,7 +328,9 @@ async def add_ticket_to_user(
     if type_ticket is None:
         raise ValueError("Bad typeticket association")
 
-    user = await cruds_users.get_user_by_id(db=db, user_id=user_id)
+    user_db = await cruds_users.get_user_by_id(db=db, user_id=user_id)
+    if user_db is None:
+        raise HTTPException(status_code=404, detail="User not found")
 
     db_ticket = [
         models_raffle.Tickets(id=str(uuid.uuid4()), type_id=type_id, user_id=user.id)
@@ -336,17 +338,17 @@ async def add_ticket_to_user(
     ]
 
     for ticket in db_ticket:
-        ticket.user = user
+        ticket.user = user_db
         ticket.type_ticket = type_ticket
 
     try:
         tickets = await cruds_raffle.create_ticket(tickets=db_ticket, db=db)
 
         display_name = get_display_name(
-            firstname=user.firstname, name=user.name, nickname=user.nickname
+            firstname=user_db.firstname, name=user_db.name, nickname=user_db.nickname
         )
         hyperion_raffle_logger.info(
-            f"Add_ticket_to_user: A pack of {type_ticket.pack_size} tickets of type {type_id} has been buyed by admin for user {display_name}({user.id}) for an amount of {type_ticket.price}€. ({request_id})"
+            f"Add_ticket_to_user: A pack of {type_ticket.pack_size} tickets of type {type_id} has been buyed by admin for user {display_name}({user_db.id}) for an amount of {type_ticket.price}€. ({request_id})"
         )
 
         return tickets
