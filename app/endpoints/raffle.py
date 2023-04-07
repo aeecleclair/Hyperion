@@ -321,6 +321,7 @@ async def add_ticket_to_user(
 ):
     """
     Add a ticket to another user
+
     **The user must be a member of the group soli to use this endpoint**
     """
     type_ticket = await cruds_raffle.get_typeticket_by_id(typeticket_id=type_id, db=db)
