@@ -360,11 +360,11 @@ async def buy_ticket(
         raise HTTPException(status_code=429, detail="Too fast !")
     locker_set(redis_client=redis_client, key=redis_key, lock=True)
 
-    new_amount = balance.balance - type_ticket.price
-    if new_amount < 0:
-        raise HTTPException(status_code=400, detail="Not enough cash")
-
     try:
+        new_amount = balance.balance - type_ticket.price
+        if new_amount < 0:
+            raise HTTPException(status_code=400, detail="Not enough cash")
+
         tickets = await cruds_raffle.create_ticket(tickets=db_ticket, db=db)
         await cruds_raffle.edit_cash(
             db=db,
