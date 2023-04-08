@@ -10,7 +10,7 @@ from app.schemas import schemas_loans
 async def get_loaners(
     db: AsyncSession,
 ) -> list[models_loan.Loaner]:
-    """Return the loaner with id"""
+    """Return the loaners with id"""
 
     result = await db.execute(select(models_loan.Loaner))
     # With the `unique()` call, the function raise an error inviting to add `unique()` to `result`.
@@ -125,15 +125,15 @@ async def update_loaner_item(
     await db.commit()
 
 
-async def update_loaner_item_availability(
+async def update_loaner_item_loaned_amount(
     item_id: str,
-    available: bool,
+    loaned_amount: int,
     db: AsyncSession,
 ):
     await db.execute(
         update(models_loan.Item)
         .where(models_loan.Item.id == item_id)
-        .values({"available": available})
+        .values({"loaned_amount": loaned_amount})
     )
     await db.commit()
 
@@ -247,6 +247,24 @@ async def create_loan_content(
     except IntegrityError:
         await db.rollback()
         raise
+
+
+async def get_loan_content_by_loan_id_item_id(
+    loan_id: str,
+    item_id: str,
+    db: AsyncSession,
+) -> models_loan.LoanContent | None:
+    """
+    Add an item to a loan using a LoanContent row
+    """
+
+    result = await db.execute(
+        select(models_loan.LoanContent).where(
+            models_loan.LoanContent.loan_id == loan_id
+            and models_loan.LoanContent.item_id == item_id
+        )
+    )
+    return result.scalars().first()
 
 
 async def delete_loan_content_by_loan_id(

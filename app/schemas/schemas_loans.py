@@ -29,10 +29,7 @@ class ItemBase(BaseModel):
 
     name: str
     suggested_caution: int
-    # A multiple item can be lent to multiple persons at the same time
-    multiple: bool = Field(
-        False, description="If the item can be lent to multiple users at the same time"
-    )
+    total_amount: int
     suggested_lending_duration: timedelta
 
     class Config:
@@ -42,14 +39,15 @@ class ItemBase(BaseModel):
 class ItemUpdate(BaseModel):
     name: str | None = None
     suggested_caution: int | None = None
-    multiple: bool | None = None
+    total_amount: int | None = None
+    loaned_amount: int | None = None
     suggested_lending_duration: timedelta | None = None
 
 
 class Item(ItemBase):
     id: str
     loaner_id: str
-    available: bool
+    loaned_amount: int
 
 
 class LoanBase(BaseModel):
@@ -68,13 +66,18 @@ class LoanBase(BaseModel):
         orm_mode = True
 
 
+class ItemBorrowed(BaseModel):
+    item_id: str
+    amount_borrowed: int
+
+
 class LoanCreation(LoanBase):
     """
     A schema used to create a new loan
     """
 
-    # These ids will be used to create the corresponding LoanContent associations
-    item_ids: list[str]
+    # list with the association item_id / amount_borrowed
+    items_borrowed: list[ItemBorrowed]
 
 
 class LoanInDBUpdate(BaseModel):
@@ -97,7 +100,7 @@ class LoanUpdate(LoanInDBUpdate):
     When the client asks to update the Loan with a PATCH request, they should be able to change the loan items.
     """
 
-    item_ids: list[str] | None = None
+    items_borrowed: list[ItemBorrowed] | None = None
 
 
 class Loan(LoanBase):
