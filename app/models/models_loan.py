@@ -32,6 +32,7 @@ class LoanContent(Base):
 
     loan_id: str = Column(ForeignKey("loan.id"), primary_key=True)
     item_id: str = Column(ForeignKey("loaner_item.id"), primary_key=True)
+    amount: int = Column(Integer)
 
 
 class Item(Base):
@@ -40,14 +41,12 @@ class Item(Base):
     id: str = Column(String, primary_key=True, index=True)
     # Two items with the same name may exist in two different loaners
     name: str = Column(String, nullable=False)
+    category: str = Column(String, nullable=True)
     loaner_id: str = Column(String, ForeignKey("loaner.id"))
     suggested_caution: int = Column(Integer)
-    multiple: bool = Column(Boolean)
-
+    total_amount: int = Column(Integer)
+    loaned_amount: int = Column(Integer)
     suggested_lending_duration: timedelta = Column(Interval, nullable=False)
-
-    available: bool | None = Column(Boolean)
-
     loaner: Loaner = relationship(Loaner, lazy="joined", back_populates="items")
 
 

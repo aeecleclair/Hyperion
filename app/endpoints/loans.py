@@ -269,9 +269,9 @@ async def create_items_for_loaner(
             name=item.name,
             loaner_id=loaner_id,
             suggested_caution=item.suggested_caution,
-            multiple=item.multiple,
+            total_amount=item.total_amount,
+            loaned_amount=0,
             suggested_lending_duration=item.suggested_lending_duration,
-            available=True,
         )
 
         return await cruds_loans.create_item(item=loaner_item_db, db=db)
@@ -470,10 +470,14 @@ async def create_loan(
             detail="Invalid user_id",
         )
 
-    items: list[models_loan.Item] = []
+    # list of item and amount_borrowed
+    items: list[tuple[models_loan.Item, int]] = []
 
     # All items should be valid, available and belong to the loaner
-    for item_id in loan_creation.item_ids:
+    for item_borrowed in loan_creation.items_borrowed:
+        item_id: str = item_borrowed.item_id
+        amount_borrowed: int = item_borrowed.amount_borrowed
+
         item: models_loan.Item | None = await cruds_loans.get_loaner_item_by_id(
             loaner_item_id=item_id, db=db
         )
@@ -488,16 +492,18 @@ async def create_loan(
                 status_code=400,
                 detail=f"Item {item_id} does not belong to {loan_creation.loaner_id} loaner",
             )
-        # If the item can not be borrowed more than one time at the time
-        # we need to check it is available
-        if not item.multiple:
-            if not item.available:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Item {item_id} is not available",
-                )
-        # We make a list of every item to mark them as unavailable later
-        items.append(item)
+
+        # We need to check if the amount is available
+        available_amount: int = item.total_amount - item.loaned_amount
+        isLoanedAmountPossible = amount_borrowed <= available_amount
+        if not isLoanedAmountPossible:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Item {item_id} is not available",
+            )
+        # We make a list of every new item with the amount borrowed to update the loaned amount and create the loaned content
+        item.loaned_amount += amount_borrowed
+        items.append((item, amount_borrowed))
 
     db_loan = models_loan.Loan(
         id=str(uuid.uuid4()),
@@ -515,16 +521,14 @@ async def create_loan(
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
-    for item in items:
-        # We mark all borrowed items that are not multiple as not available
-        if not item.multiple:
-            await cruds_loans.update_loaner_item_availability(
-                item_id=item.id, available=False, db=db
-            )
+    for item, amount_borrowed in items:
+        # We update in db the loaned amount for each item
+        await cruds_loans.update_loaner_item_loaned_amount(
+            item_id=item.id, loaned_amount=item.loaned_amount + amount_borrowed, db=db
+        )
         # We add each item to the loan
         loan_content = models_loan.LoanContent(
-            loan_id=db_loan.id,
-            item_id=item.id,
+            loan_id=db_loan.id, item_id=item.id, amount=amount_borrowed
         )
         await cruds_loans.create_loan_content(loan_content=loan_content, db=db)
 
@@ -578,21 +582,33 @@ async def update_loan(  # noqa: C901
             )
 
     # If a new list of items was provided, we need to mark old items as available and new items as not available
-    if loan_update.item_ids:
+    if loan_update.items_borrowed:
         for old_item in loan.items:
-            if not old_item.multiple:
-                await cruds_loans.update_loaner_item_availability(
-                    item_id=old_item.id,
-                    available=True,
-                    db=db,
+            # We need to update the item loaned amount thanks to the amount in the loan content
+            loan_content = await cruds_loans.get_loan_content_by_loan_id_item_id(
+                loan_id=loan.id,
+                item_id=old_item.id,
+                db=db,
+            )
+            if loan_content is None:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid loan content {loan.id}, {old_item.id}",
                 )
+            await cruds_loans.update_loaner_item_loaned_amount(
+                item_id=old_item.id,
+                loaned_amount=old_item.loaned_amount - loan_content.amount,
+                db=db,
+            )
         # We remove the old items from the database
         await cruds_loans.delete_loan_content_by_loan_id(loan_id=loan_id, db=db)
 
-        items: list[models_loan.Item] = []
+        items: list[tuple[models_loan.Item, int]] = []
 
         # All items should be valid, available and belong to the loaner
-        for item_id in loan_update.item_ids:
+        for item_borrowed in loan_update.items_borrowed:
+            item_id: str = item_borrowed.item_id
+            amount_borrowed: int = item_borrowed.amount_borrowed
             item: models_loan.Item | None = await cruds_loans.get_loaner_item_by_id(
                 loaner_item_id=item_id, db=db
             )
@@ -607,20 +623,17 @@ async def update_loan(  # noqa: C901
                     status_code=400,
                     detail=f"Item {item_id} does not belong to {loan.loaner_id} loaner",
                 )
-            # If the loan is not marked as returned we can check its availability
-            if (
-                loan_update.returned is None and loan.returned is False
-            ) or loan_update.returned is False:
-                # If the item can not be borrowed more than one time at the time
-                # we need to check it is available
-                if not item.multiple:
-                    if not item.available:
-                        raise HTTPException(
-                            status_code=400,
-                            detail=f"Item {item_id} is not available",
-                        )
-            # We make a list of every item to mark them as unavailable later
-            items.append(item)
+            # We need to check if the amount is available
+            available_amount: int = item.total_amount - item.loaned_amount
+            isLoanedAmountPossible = amount_borrowed <= available_amount
+            if not isLoanedAmountPossible:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Item {item_id} is not available",
+                )
+            # We make a list of every new item with the amount borrowed to update the loaned amount and create the loaned content
+            item.loaned_amount += amount_borrowed
+            items.append((item, amount_borrowed))
 
     try:
         # We need to remove the item_ids list from the schema before calling the update_loan crud function
@@ -631,19 +644,14 @@ async def update_loan(  # noqa: C901
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
-    for item in items:
-        if (
-            loan_update.returned is None and loan.returned is False
-        ) or loan_update.returned is False:
-            # We mark all borrowed items that are not multiple as not available
-            if not item.multiple:
-                await cruds_loans.update_loaner_item_availability(
-                    item_id=item.id, available=False, db=db
-                )
+    for item, amount_borrowed in items:
+        # We update in db the loaned amount for each item
+        await cruds_loans.update_loaner_item_loaned_amount(
+            item_id=item.id, loaned_amount=item.loaned_amount + amount_borrowed, db=db
+        )
         # We add each item to the loan
         loan_content = models_loan.LoanContent(
-            loan_id=loan_id,
-            item_id=item.id,
+            loan_id=loan_id, item_id=item.id, amount=amount_borrowed
         )
         await cruds_loans.create_loan_content(loan_content=loan_content, db=db)
 
@@ -659,8 +667,8 @@ async def delete_loan(
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
-    Delete a loaner's item.
-    This will remove the item from all loans but won't delete any loan.
+    Delete a loan
+    This will remove the loan but won't delete any loaner items.
 
     **The user must be a member of the loaner group_manager to use this endpoint**
     """
@@ -681,14 +689,23 @@ async def delete_loan(
             detail=f"Unauthorized to manage {loan.loaner_id} loaner",
         )
 
-    # We need to mark all items included in the loan as available
+    # We need to update the item loaned amount thanks to the amount in the loan content
     for item in loan.items:
-        if not item.multiple:
-            await cruds_loans.update_loaner_item_availability(
-                item_id=item.id,
-                available=True,
-                db=db,
+        loan_content = await cruds_loans.get_loan_content_by_loan_id_item_id(
+            loan_id=loan.id,
+            item_id=item.id,
+            db=db,
+        )
+        if loan_content is None:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid loan content {loan.id}, {item.id}",
             )
+        await cruds_loans.update_loaner_item_loaned_amount(
+            item_id=item.id,
+            loaned_amount=item.loaned_amount - loan_content.amount,
+            db=db,
+        )
 
     await cruds_loans.delete_loan_content_by_loan_id(loan_id=loan_id, db=db)
     await cruds_loans.delete_loan_by_id(loan_id=loan_id, db=db)
@@ -727,14 +744,23 @@ async def return_loan(
             detail=f"Unauthorized to manage {loan.loaner_id} loaner",
         )
 
-    # We need to mark all items included in the loan as available
+    # We need to update the item loaned amount thanks to the amount in the loan content
     for item in loan.items:
-        if not item.multiple:
-            await cruds_loans.update_loaner_item_availability(
-                item_id=item.id,
-                available=True,
-                db=db,
+        loan_content = await cruds_loans.get_loan_content_by_loan_id_item_id(
+            loan_id=loan.id,
+            item_id=item.id,
+            db=db,
+        )
+        if loan_content is None:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid loan content {loan.id}, {item.id}",
             )
+        await cruds_loans.update_loaner_item_loaned_amount(
+            item_id=item.id,
+            loaned_amount=item.loaned_amount - loan_content.amount,
+            db=db,
+        )
 
     await cruds_loans.update_loan_returned_status(
         loan_id=loan_id,
