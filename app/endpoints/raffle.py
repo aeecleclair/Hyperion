@@ -326,7 +326,7 @@ async def add_ticket_to_user(
     """
     type_ticket = await cruds_raffle.get_typeticket_by_id(typeticket_id=type_id, db=db)
     if type_ticket is None:
-        raise ValueError("Bad typeticket association")
+        raise HTTPException(status_code=400, detail="Bad typeticket association")
 
     user_db = await cruds_users.get_user_by_id(db=db, user_id=user_id)
     if user_db is None:
@@ -375,7 +375,7 @@ async def buy_ticket(
     """
     type_ticket = await cruds_raffle.get_typeticket_by_id(typeticket_id=type_id, db=db)
     if type_ticket is None:
-        raise ValueError("Bad typeticket association")
+        raise HTTPException(status_code=400, detail="Bad typeticket association")
 
     balance: models_raffle.Cash | None = await cruds_raffle.get_cash_by_id(
         db=db,
@@ -415,7 +415,7 @@ async def buy_ticket(
     try:
         new_amount = balance.balance - type_ticket.price
         if new_amount < 0:
-            raise HTTPException(status_code=400, detail="Not enough cash")
+            raise ValueError("Not enough cash")
 
         tickets = await cruds_raffle.create_ticket(tickets=db_ticket, db=db)
         await cruds_raffle.edit_cash(
