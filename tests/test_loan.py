@@ -303,3 +303,11 @@ def test_extend_loan():
         headers={"Authorization": f"Bearer {token_loaner}"},
     )
     assert response.status_code == 204
+
+
+def test_delete_loan():
+    response = client.delete(
+        f"/loans/{loan.id}",
+        headers={"Authorization": f"Bearer {token_loaner}"},
+    )
+    assert response.status_code == 204
