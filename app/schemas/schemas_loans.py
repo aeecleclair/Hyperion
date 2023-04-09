@@ -29,7 +29,7 @@ class ItemBase(BaseModel):
 
     name: str
     suggested_caution: int
-    total_amount: int
+    total_quantity: int
     suggested_lending_duration: timedelta
 
     class Config:
@@ -39,15 +39,15 @@ class ItemBase(BaseModel):
 class ItemUpdate(BaseModel):
     name: str | None = None
     suggested_caution: int | None = None
-    total_amount: int | None = None
-    loaned_amount: int | None = None
+    total_quantity: int | None = None
+    loaned_quantity: int | None = None
     suggested_lending_duration: timedelta | None = None
 
 
 class Item(ItemBase):
     id: str
     loaner_id: str
-    loaned_amount: int
+    loaned_quantity: int
 
 
 class LoanBase(BaseModel):
@@ -68,7 +68,7 @@ class LoanBase(BaseModel):
 
 class ItemBorrowed(BaseModel):
     item_id: str
-    amount_borrowed: int
+    quantity_borrowed: int
 
 
 class LoanCreation(LoanBase):
@@ -76,7 +76,7 @@ class LoanCreation(LoanBase):
     A schema used to create a new loan
     """
 
-    # list with the association item_id / amount_borrowed
+    # list with the association item_id / quantity_borrowed
     items_borrowed: list[ItemBorrowed]
 
 
@@ -95,6 +95,11 @@ class LoanInDBUpdate(BaseModel):
     returned: bool | None = None
 
 
+class ItemQuantity(BaseModel):
+    quantity: int
+    item: Item
+
+
 class LoanUpdate(LoanInDBUpdate):
     """
     When the client asks to update the Loan with a PATCH request, they should be able to change the loan items.
@@ -110,7 +115,7 @@ class Loan(LoanBase):
 
     id: str
     returned: bool
-    items: list[Item]
+    items_qty: list[ItemQuantity]
     borrower: schemas_core.CoreUserSimple
     loaner: Loaner
 
