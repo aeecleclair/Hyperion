@@ -99,6 +99,11 @@ class LoanInDBUpdate(BaseModel):
     returned: bool | None = None
 
 
+class ItemQuantity(BaseModel):
+    quantity: int
+    item: Item
+
+
 class LoanUpdate(LoanInDBUpdate):
     """
     When the client asks to update the Loan with a PATCH request, they should be able to change the loan items.
