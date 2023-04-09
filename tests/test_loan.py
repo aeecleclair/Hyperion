@@ -65,8 +65,8 @@ async def startuptest():
                 days=50,
             ),
             suggested_caution=10,
-            total_amount=8,
-            loaned_amount=0,
+            total_quantity=8,
+            loaned_quantity=0,
             loaner=loaner,
         )
         db.add(item)
@@ -79,8 +79,8 @@ async def startuptest():
                 days=50,
             ),
             suggested_caution=10,
-            total_amount=5,
-            loaned_amount=1,
+            total_quantity=5,
+            loaned_quantity=1,
             loaner=loaner,
         )
         db.add(item_to_delete)
@@ -98,7 +98,7 @@ async def startuptest():
         loan_content = models_loan.LoanContent(
             loan_id=loan.id,
             item_id=item.id,
-            amount=1,
+            quantity=1,
         )
 
         await db.execute(
@@ -107,7 +107,7 @@ async def startuptest():
                 models_loan.LoanContent.loan_id == loan_content.loan_id
                 and models_loan.LoanContent.item_id == loan_content.item_id
             )
-            .values({"amount": loan_content.amount})
+            .values({"quantity": loan_content.quantity})
         )
 
         await db.commit()
@@ -176,7 +176,7 @@ def test_create_items_for_loaner():
         json={
             "name": "TestItem",
             "suggested_caution": 100,
-            "total_amount": 4,
+            "total_quantity": 4,
             "suggested_lending_duration": str(timedelta(days=10)),
         },
         headers={"Authorization": f"Bearer {token_loaner}"},
@@ -190,8 +190,8 @@ def test_update_items_for_loaner():
         json={
             "name": "TestItem",
             "suggested_caution": 100,
-            "total_amount": 7,
-            "loaned_amount": 1,
+            "total_quantity": 7,
+            "loaned_quantity": 1,
             "suggested_lending_duration": str(timedelta(days=10)),
         },
         headers={"Authorization": f"Bearer {token_loaner}"},
@@ -236,7 +236,7 @@ def test_create_loan():
             "items_borrowed": [
                 {
                     "item_id": item.id,
-                    "amount_borrowed": 2,
+                    "quantity_borrowed": 2,
                 },
             ],
         },
@@ -258,7 +258,7 @@ def test_update_loan():
             "items_borrowed": [
                 {
                     "item_id": item.id,
-                    "amount_borrowed": 2,
+                    "quantity_borrowed": 2,
                 },
             ],
         },
@@ -278,6 +278,17 @@ def test_return_loan():
 def test_delete_loan():
     response = client.delete(
         f"/loans/{loan.id}",
+        headers={"Authorization": f"Bearer {token_loaner}"},
+    )
+    assert response.status_code == 204
+
+
+def test_extend_loan():
+    response = client.post(
+        f"/loans/{loan.id}/extend",
+        json={
+            "end": "2024-05-25",
+        },
         headers={"Authorization": f"Bearer {token_loaner}"},
     )
     assert response.status_code == 204
