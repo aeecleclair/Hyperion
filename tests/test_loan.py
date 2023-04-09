@@ -275,20 +275,20 @@ def test_return_loan():
     assert response.status_code == 204
 
 
-def test_delete_loan():
-    response = client.delete(
-        f"/loans/{loan.id}",
-        headers={"Authorization": f"Bearer {token_loaner}"},
-    )
-    assert response.status_code == 204
-
-
 def test_extend_loan():
     response = client.post(
         f"/loans/{loan.id}/extend",
         json={
             "end": "2024-05-25",
         },
+        headers={"Authorization": f"Bearer {token_loaner}"},
+    )
+    assert response.status_code == 204
+
+
+def test_delete_loan():
+    response = client.delete(
+        f"/loans/{loan.id}",
         headers={"Authorization": f"Bearer {token_loaner}"},
     )
     assert response.status_code == 204
