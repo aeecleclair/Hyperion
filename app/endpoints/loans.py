@@ -546,11 +546,18 @@ async def create_loan(
         await cruds_loans.create_loan_content(loan_content=loan_content, db=db)
 
     loan = await cruds_loans.get_loan_by_id(loan_id=db_loan.id, db=db)
-    if loan is not None:
-        itemsret = await cruds_loans.get_loan_contents_by_loan_id(
-            loan_id=db_loan.id, db=db
+    if loan is None:
+        raise HTTPException(status_code=404, detail=str("Loan not found"))
+
+    itemsret = await cruds_loans.get_loan_contents_by_loan_id(loan_id=db_loan.id, db=db)
+    if itemsret is None:
+        raise HTTPException(status_code=404, detail=str("LoanContent not found"))
+    items_qty_ret: list[schemas_loans.ItemQuantity] = []
+    for itemret in itemsret:
+        items_qty_ret.append(
+            schemas_loans.ItemQuantity(item=itemret.item, quantity=itemret.quantity)
         )
-        return schemas_loans.Loan(items_qty=itemsret, **loan.__dict__)
+    return schemas_loans.Loan(items_qty=items_qty_ret, **loan.__dict__)
 
 
 @router.patch(
