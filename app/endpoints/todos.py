@@ -62,7 +62,7 @@ async def create_todo(
         )
         return res
     except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @router.post(
