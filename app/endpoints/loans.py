@@ -418,6 +418,11 @@ async def get_current_user_loans(
         itemsret = await cruds_loans.get_loan_contents_by_loan_id(
             loan_id=loan.id, db=db
         )
+        if itemsret is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Loan contents not found",
+            )
         items_qty_ret: list[schemas_loans.ItemQuantity] = []
         for itemret in itemsret:
             items_qty_ret.append(

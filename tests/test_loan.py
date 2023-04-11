@@ -236,7 +236,7 @@ def test_create_loan():
             "items_borrowed": [
                 {
                     "item_id": item.id,
-                    "quantity_borrowed": 2,
+                    "quantity": 2,
                 },
             ],
         },
@@ -258,7 +258,7 @@ def test_update_loan():
             "items_borrowed": [
                 {
                     "item_id": item.id,
-                    "quantity_borrowed": 2,
+                    "quantity": 2,
                 },
             ],
         },
