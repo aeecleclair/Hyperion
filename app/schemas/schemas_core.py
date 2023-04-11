@@ -105,6 +105,12 @@ class CoreUserUpdateAdmin(BaseModel):
     phone: str | None = None
     floor: FloorsType | None = None
 
+    _normalize_name = validator("name", allow_reuse=True)(
+        validators.trailing_spaces_remover
+    )
+    _normalize_firstname = validator("firstname", allow_reuse=True)(
+        validators.trailing_spaces_remover
+    )
     _normalize_nickname = validator("nickname", allow_reuse=True)(
         validators.trailing_spaces_remover
     )
