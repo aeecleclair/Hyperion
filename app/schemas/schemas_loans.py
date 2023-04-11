@@ -40,7 +40,6 @@ class ItemUpdate(BaseModel):
     name: str | None = None
     suggested_caution: int | None = None
     total_quantity: int | None = None
-    loaned_quantity: int | None = None
     suggested_lending_duration: timedelta | None = None
 
 
@@ -68,7 +67,12 @@ class LoanBase(BaseModel):
 
 class ItemBorrowed(BaseModel):
     item_id: str
-    quantity_borrowed: int
+    quantity: int
+
+
+class ItemQuantity(BaseModel):
+    quantity: int
+    item: Item
 
 
 class LoanCreation(LoanBase):
@@ -93,11 +97,6 @@ class LoanInDBUpdate(BaseModel):
     notes: str | None = None
     caution: str | None = None
     returned: bool | None = None
-
-
-class ItemQuantity(BaseModel):
-    quantity: int
-    item: Item
 
 
 class LoanUpdate(LoanInDBUpdate):

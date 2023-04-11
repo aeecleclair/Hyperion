@@ -177,7 +177,19 @@ async def get_loans_by_loaner(
             itemsret = await cruds_loans.get_loan_contents_by_loan_id(
                 loan_id=loan.id, db=db
             )
-            loans.append(schemas_loans.Loan(items_qty=itemsret, **loan.__dict__))
+            if itemsret is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Loan Contents not found",
+                )
+            items_qty_ret: list[schemas_loans.ItemQuantity] = []
+            for itemret in itemsret:
+                items_qty_ret.append(
+                    schemas_loans.ItemQuantity(
+                        item=itemret.item, quantity=itemret.quantity
+                    )
+                )
+            loans.append(schemas_loans.Loan(items_qty=items_qty_ret, **loan.__dict__))
 
     return loans
 
@@ -406,7 +418,12 @@ async def get_current_user_loans(
         itemsret = await cruds_loans.get_loan_contents_by_loan_id(
             loan_id=loan.id, db=db
         )
-        loansret.append(schemas_loans.Loan(items_qty=itemsret, **loan.__dict__))
+        items_qty_ret: list[schemas_loans.ItemQuantity] = []
+        for itemret in itemsret:
+            items_qty_ret.append(
+                schemas_loans.ItemQuantity(item=itemret.item, quantity=itemret.quantity)
+            )
+        loansret.append(schemas_loans.Loan(items_qty=items_qty_ret, **loan.__dict__))
 
     return loansret
 
@@ -481,13 +498,13 @@ async def create_loan(
             detail="Invalid user_id",
         )
 
-    # list of item and quantity_borrowed
+    # list of item and quantity borrowed
     items: list[tuple[models_loan.Item, int]] = []
 
     # All items should be valid, available and belong to the loaner
     for item_borrowed in loan_creation.items_borrowed:
         item_id: str = item_borrowed.item_id
-        quantity_borrowed: int = item_borrowed.quantity_borrowed
+        quantity: int = item_borrowed.quantity
 
         item: models_loan.Item | None = await cruds_loans.get_loaner_item_by_id(
             loaner_item_id=item_id, db=db
@@ -506,15 +523,15 @@ async def create_loan(
 
         # We need to check if the quantity is available
         available_quantity: int = item.total_quantity - item.loaned_quantity
-        isLoanedquantityPossible = quantity_borrowed <= available_quantity
+        isLoanedquantityPossible = quantity <= available_quantity
         if not isLoanedquantityPossible:
             raise HTTPException(
                 status_code=400,
                 detail=f"Item {item_id} is not available",
             )
         # We make a list of every new item with the quantity borrowed to update the loaned quantity and create the loaned content
-        item.loaned_quantity += quantity_borrowed
-        items.append((item, quantity_borrowed))
+        item.loaned_quantity += quantity
+        items.append((item, quantity))
 
     db_loan = models_loan.Loan(
         id=str(uuid.uuid4()),
@@ -532,16 +549,16 @@ async def create_loan(
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
-    for item, quantity_borrowed in items:
+    for item, quantity in items:
         # We update in db the loaned quantity for each item
         await cruds_loans.update_loaner_item_loaned_quantity(
             item_id=item.id,
-            loaned_quantity=item.loaned_quantity + quantity_borrowed,
+            loaned_quantity=item.loaned_quantity,
             db=db,
         )
         # We add each item to the loan
         loan_content = models_loan.LoanContent(
-            loan_id=db_loan.id, item_id=item.id, quantity=quantity_borrowed
+            loan_id=db_loan.id, item_id=item.id, quantity=quantity
         )
         await cruds_loans.create_loan_content(loan_content=loan_content, db=db)
 
@@ -632,7 +649,7 @@ async def update_loan(  # noqa: C901
         # All items should be valid, available and belong to the loaner
         for item_borrowed in loan_update.items_borrowed:
             item_id: str = item_borrowed.item_id
-            quantity_borrowed: int = item_borrowed.quantity_borrowed
+            quantity: int = item_borrowed.quantity
             item: models_loan.Item | None = await cruds_loans.get_loaner_item_by_id(
                 loaner_item_id=item_id, db=db
             )
@@ -649,15 +666,15 @@ async def update_loan(  # noqa: C901
                 )
             # We need to check if the quantity is available
             available_quantity: int = item.total_quantity - item.loaned_quantity
-            isLoanedquantityPossible = quantity_borrowed <= available_quantity
+            isLoanedquantityPossible = quantity <= available_quantity
             if not isLoanedquantityPossible:
                 raise HTTPException(
                     status_code=400,
                     detail=f"Item {item_id} is not available",
                 )
             # We make a list of every new item with the quantity borrowed to update the loaned quantity and create the loaned content
-            item.loaned_quantity += quantity_borrowed
-            items.append((item, quantity_borrowed))
+            item.loaned_quantity += quantity
+            items.append((item, quantity))
 
     try:
         # We need to remove the item_ids list from the schema before calling the update_loan crud function
@@ -668,16 +685,16 @@ async def update_loan(  # noqa: C901
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
-    for item, quantity_borrowed in items:
+    for item, quantity in items:
         # We update in db the loaned quantity for each item
         await cruds_loans.update_loaner_item_loaned_quantity(
             item_id=item.id,
-            loaned_quantity=item.loaned_quantity + quantity_borrowed,
+            loaned_quantity=item.loaned_quantity,
             db=db,
         )
         # We add each item to the loan
         loan_content = models_loan.LoanContent(
-            loan_id=loan_id, item_id=item.id, quantity=quantity_borrowed
+            loan_id=loan_id, item_id=item.id, quantity=quantity
         )
         await cruds_loans.create_loan_content(loan_content=loan_content, db=db)
 
