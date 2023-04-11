@@ -701,7 +701,7 @@ async def update_current_user(
 )
 async def update_user(
     user_id: str,
-    user_update: schemas_core.CoreUserUpdate,
+    user_update: schemas_core.CoreUserUpdateAdmin,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
