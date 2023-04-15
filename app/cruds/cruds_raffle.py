@@ -153,78 +153,78 @@ async def delete_lot(
     await db.commit()
 
 
-async def get_typeticket(db: AsyncSession) -> Sequence[models_raffle.TypeTicket]:
-    """Return all typetickets from database"""
+async def get_packticket(db: AsyncSession) -> Sequence[models_raffle.PackTicket]:
+    """Return all packtickets from database"""
 
     result = await db.execute(
-        select(models_raffle.TypeTicket).options(
-            selectinload(models_raffle.TypeTicket.raffle),
+        select(models_raffle.PackTicket).options(
+            selectinload(models_raffle.PackTicket.raffle),
         )
     )
     return result.scalars().all()
 
 
-async def create_typeticket(
-    typeticket: models_raffle.TypeTicket,
+async def create_packticket(
+    packticket: models_raffle.PackTicket,
     db: AsyncSession,
-) -> models_raffle.TypeTicket:
-    """Create a new Typeticket in databasend return it"""
+) -> models_raffle.PackTicket:
+    """Create a new Packticket in databasend return it"""
 
-    db.add(typeticket)
+    db.add(packticket)
     try:
         await db.commit()
-        return typeticket
+        return packticket
     except IntegrityError as err:
         await db.rollback()
         raise err
 
 
-async def get_typeticket_by_raffleid(
+async def get_packticket_by_raffleid(
     raffle_id: str,
     db: AsyncSession,
-) -> Sequence[models_raffle.TypeTicket] | None:
+) -> Sequence[models_raffle.PackTicket] | None:
     result = await db.execute(
-        select(models_raffle.TypeTicket).where(
-            models_raffle.TypeTicket.raffle_id == raffle_id
+        select(models_raffle.PackTicket).where(
+            models_raffle.PackTicket.raffle_id == raffle_id
         )
     )
     return result.scalars().all()
 
 
-async def get_typeticket_by_id(
-    typeticket_id: str,
+async def get_packticket_by_id(
+    packticket_id: str,
     db: AsyncSession,
-) -> models_raffle.TypeTicket | None:
+) -> models_raffle.PackTicket | None:
     result = await db.execute(
-        select(models_raffle.TypeTicket)
-        .where(models_raffle.TypeTicket.id == typeticket_id)
-        .options(selectinload(models_raffle.TypeTicket.raffle))
+        select(models_raffle.PackTicket)
+        .where(models_raffle.PackTicket.id == packticket_id)
+        .options(selectinload(models_raffle.PackTicket.raffle))
     )
     return result.scalars().first()
 
 
-async def edit_typeticket(
-    typeticket_id: str,
-    typeticket_update: schemas_raffle.TypeTicketEdit,
+async def edit_packticket(
+    packticket_id: str,
+    packticket_update: schemas_raffle.PackTicketEdit,
     db: AsyncSession,
 ):
     await db.execute(
-        update(models_raffle.TypeTicket)
-        .where(models_raffle.TypeTicket.id == typeticket_id)
-        .values(**typeticket_update.dict(exclude_none=True))
+        update(models_raffle.PackTicket)
+        .where(models_raffle.PackTicket.id == packticket_id)
+        .values(**packticket_update.dict(exclude_none=True))
     )
     await db.commit()
 
 
-async def delete_typeticket(
+async def delete_packticket(
     db: AsyncSession,
-    typeticket_id: str,
+    packticket_id: str,
 ):
     """Delete a raffle from database by id"""
 
     await db.execute(
-        delete(models_raffle.TypeTicket).where(
-            models_raffle.TypeTicket.id == typeticket_id
+        delete(models_raffle.PackTicket).where(
+            models_raffle.PackTicket.id == packticket_id
         )
     )
     await db.commit()
@@ -259,8 +259,8 @@ async def get_ticket_by_raffleid(
         (
             await db.execute(
                 select(models_raffle.Tickets).options(
-                    joinedload(models_raffle.Tickets.type_ticket).joinedload(
-                        models_raffle.TypeTicket.raffle
+                    joinedload(models_raffle.Tickets.pack_ticket).joinedload(
+                        models_raffle.PackTicket.raffle
                     ),
                     joinedload(models_raffle.Tickets.user),
                     joinedload(models_raffle.Tickets.lot),
@@ -271,7 +271,7 @@ async def get_ticket_by_raffleid(
         .all()
     )
     filtered_results = [
-        result for result in results if result.type_ticket.raffle_id == raffle_id
+        result for result in results if result.pack_ticket.raffle_id == raffle_id
     ]
     return filtered_results
 
@@ -294,8 +294,8 @@ async def get_ticket_by_userid(
         select(models_raffle.Tickets)
         .where(models_raffle.Tickets.user_id == user_id)
         .options(
-            joinedload(models_raffle.Tickets.type_ticket).joinedload(
-                models_raffle.TypeTicket.raffle
+            joinedload(models_raffle.Tickets.pack_ticket).joinedload(
+                models_raffle.PackTicket.raffle
             ),
             joinedload(models_raffle.Tickets.user),
             joinedload(models_raffle.Tickets.lot),

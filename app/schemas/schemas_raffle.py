@@ -73,7 +73,7 @@ class LotComplete(LotBase):
         orm_mode = True
 
 
-class TypeTicketBase(BaseModel):
+class PackTicketBase(BaseModel):
     price: float
     pack_size: int
     raffle_id: str
@@ -82,7 +82,7 @@ class TypeTicketBase(BaseModel):
         orm_mode = True
 
 
-class TypeTicketEdit(BaseModel):
+class PackTicketEdit(BaseModel):
     raffle_id: str | None = None
     price: float | None = None
     pack_size: int | None = None
@@ -91,14 +91,14 @@ class TypeTicketEdit(BaseModel):
         orm_mode = True
 
 
-class TypeTicketSimple(TypeTicketBase):
+class PackTicketSimple(PackTicketBase):
     id: str
 
     class Config:
         orm_mode = True
 
 
-class TypeTicketComplete(TypeTicketSimple):
+class PackTicketComplete(PackTicketSimple):
     raffle: RaffleSimple
 
     class Config:
@@ -120,7 +120,7 @@ class TicketSimple(TicketBase):
 
 class TicketComplete(TicketSimple):
     lot: LotSimple | None
-    type_ticket: TypeTicketSimple
+    pack_ticket: PackTicketSimple
     user: CoreUserSimple
 
     class Config:

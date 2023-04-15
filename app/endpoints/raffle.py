@@ -161,7 +161,7 @@ async def get_raffle_stats(
 
     tickets_sold = len(tickets)
     amount_raised = sum(
-        [ticket.type_ticket.price / ticket.type_ticket.pack_size for ticket in tickets]
+        [ticket.pack_ticket.price / ticket.pack_ticket.pack_size for ticket in tickets]
     )
 
     return schemas_raffle.RaffleStats(
@@ -170,120 +170,120 @@ async def get_raffle_stats(
 
 
 @router.get(
-    "/tombola/type_tickets",
-    response_model=list[schemas_raffle.TypeTicketSimple],
+    "/tombola/pack_tickets",
+    response_model=list[schemas_raffle.PackTicketSimple],
     status_code=200,
     tags=[Tags.raffle],
 )
-async def get_type_tickets(
+async def get_pack_tickets(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Return all tickets
     """
-    type_tickets = await cruds_raffle.get_typeticket(db)
-    return type_tickets
+    pack_tickets = await cruds_raffle.get_packticket(db)
+    return pack_tickets
 
 
 @router.post(
-    "/tombola/type_tickets",
-    response_model=schemas_raffle.TypeTicketSimple,
+    "/tombola/pack_tickets",
+    response_model=schemas_raffle.PackTicketSimple,
     status_code=201,
     tags=[Tags.raffle],
 )
-async def create_typeticket(
-    typeticket: schemas_raffle.TypeTicketBase,
+async def create_packticket(
+    packticket: schemas_raffle.PackTicketBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
 ):
     """
-    Create a new typeticket
+    Create a new packticket
 
     **The user must be a member of the group soli to use this endpoint**
     """
-    raffle = await cruds_raffle.get_raffle_by_id(raffle_id=typeticket.raffle_id, db=db)
+    raffle = await cruds_raffle.get_raffle_by_id(raffle_id=packticket.raffle_id, db=db)
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
 
-    db_typeticket = models_raffle.TypeTicket(id=str(uuid.uuid4()), **typeticket.dict())
+    db_packticket = models_raffle.PackTicket(id=str(uuid.uuid4()), **packticket.dict())
 
     try:
-        result = await cruds_raffle.create_typeticket(typeticket=db_typeticket, db=db)
+        result = await cruds_raffle.create_packticket(packticket=db_packticket, db=db)
         return result
     except IntegrityError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
 
 @router.patch(
-    "/tombola/type_tickets/{typeticket_id}",
+    "/tombola/pack_tickets/{packticket_id}",
     status_code=204,
     tags=[Tags.raffle],
 )
-async def edit_typeticket(
-    typeticket_id: str,
-    typeticket_update: schemas_raffle.TypeTicketEdit,
+async def edit_packticket(
+    packticket_id: str,
+    packticket_update: schemas_raffle.PackTicketEdit,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
 ):
     """
-    Edit a typeticket
+    Edit a packticket
 
     **The user must be a member of the group soli to use this endpoint**
     """
 
-    typeticket = await cruds_raffle.get_typeticket_by_id(
-        typeticket_id=typeticket_id, db=db
+    packticket = await cruds_raffle.get_packticket_by_id(
+        packticket_id=packticket_id, db=db
     )
-    if not typeticket:
-        raise HTTPException(status_code=404, detail="TypeTicket not found")
+    if not packticket:
+        raise HTTPException(status_code=404, detail="PackTicket not found")
 
-    await cruds_raffle.edit_typeticket(
-        typeticket_id=typeticket_id, typeticket_update=typeticket_update, db=db
+    await cruds_raffle.edit_packticket(
+        packticket_id=packticket_id, packticket_update=packticket_update, db=db
     )
 
 
 @router.delete(
-    "/tombola/type_tickets/{typeticket_id}",
+    "/tombola/pack_tickets/{packticket_id}",
     status_code=204,
     tags=[Tags.raffle],
 )
-async def delete_typeticket(
-    typeticket_id: str,
+async def delete_packticket(
+    packticket_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
 ):
     """
-    Delete a typeticket.
+    Delete a packticket.
 
     **The user must be a member of the group soli to use this endpoint**
     """
 
-    typeticket = await cruds_raffle.get_typeticket_by_id(
-        typeticket_id=typeticket_id, db=db
+    packticket = await cruds_raffle.get_packticket_by_id(
+        packticket_id=packticket_id, db=db
     )
-    if not typeticket:
-        raise HTTPException(status_code=404, detail="Typeticket not found")
+    if not packticket:
+        raise HTTPException(status_code=404, detail="Packticket not found")
 
-    await cruds_raffle.delete_typeticket(typeticket_id=typeticket_id, db=db)
+    await cruds_raffle.delete_packticket(packticket_id=packticket_id, db=db)
 
 
 @router.get(
-    "/tombola/raffle/{raffle_id}/type_tickets",
-    response_model=list[schemas_raffle.TypeTicketSimple],
+    "/tombola/raffle/{raffle_id}/pack_tickets",
+    response_model=list[schemas_raffle.PackTicketSimple],
     status_code=200,
     tags=[Tags.raffle],
 )
-async def get_type_tickets_by_raffle_id(
+async def get_pack_tickets_by_raffle_id(
     raffle_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
-    Return all type_tickets associated to a raffle
+    Return all pack_tickets associated to a raffle
     """
-    type_tickets = await cruds_raffle.get_typeticket_by_raffleid(raffle_id, db)
-    return type_tickets
+    pack_tickets = await cruds_raffle.get_packticket_by_raffleid(raffle_id, db)
+    return pack_tickets
 
 
 @router.get(
@@ -321,9 +321,9 @@ async def buy_ticket(
     """
     Buy a ticket
     """
-    type_ticket = await cruds_raffle.get_typeticket_by_id(typeticket_id=type_id, db=db)
-    if type_ticket is None:
-        raise ValueError("Bad typeticket association")
+    pack_ticket = await cruds_raffle.get_packticket_by_id(packticket_id=type_id, db=db)
+    if pack_ticket is None:
+        raise ValueError("Bad packticket association")
 
     balance: models_raffle.Cash | None = await cruds_raffle.get_cash_by_id(
         db=db,
@@ -345,12 +345,12 @@ async def buy_ticket(
         )
     db_ticket = [
         models_raffle.Tickets(id=str(uuid.uuid4()), type_id=type_id, user_id=user.id)
-        for i in range(type_ticket.pack_size)
+        for i in range(pack_ticket.pack_size)
     ]
 
     for ticket in db_ticket:
         ticket.user = user
-        ticket.type_ticket = type_ticket
+        ticket.pack_ticket = pack_ticket
 
     redis_key = "raffle_" + user.id
 
@@ -360,7 +360,7 @@ async def buy_ticket(
         raise HTTPException(status_code=429, detail="Too fast !")
     locker_set(redis_client=redis_client, key=redis_key, lock=True)
 
-    new_amount = balance.balance - type_ticket.price
+    new_amount = balance.balance - pack_ticket.price
     if new_amount < 0:
         raise HTTPException(status_code=400, detail="Not enough cash")
 
@@ -376,7 +376,7 @@ async def buy_ticket(
             firstname=user.firstname, name=user.name, nickname=user.nickname
         )
         hyperion_raffle_logger.info(
-            f"Add_ticket_to_user: A pack of {type_ticket.pack_size} tickets of type {type_id} has been buyed by user {display_name}({user.id}) for an amount of {type_ticket.price}€. ({request_id})"
+            f"Add_ticket_to_user: A pack of {pack_ticket.pack_size} tickets of type {type_id} has been buyed by user {display_name}({user.id}) for an amount of {pack_ticket.price}€. ({request_id})"
         )
 
         return tickets
