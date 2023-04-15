@@ -73,7 +73,7 @@ class Settings(BaseSettings):
     #####################
 
     # Timezone used to compare dates
-    TIMEZONE: str = "Europe/Paris"
+    TIMEZONE: str
 
     # By default, only production's records are logged
     LOG_DEBUG_MESSAGES: bool | None

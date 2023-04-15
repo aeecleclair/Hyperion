@@ -96,6 +96,29 @@ class CoreUserUpdate(BaseModel):
         schema_extra = examples_core.example_CoreUserUpdate
 
 
+class CoreUserUpdateAdmin(BaseModel):
+    name: str | None = None
+    firstname: str | None = None
+    promo: int | None = None
+    nickname: str | None = None
+    birthday: date | None = None
+    phone: str | None = None
+    floor: FloorsType | None = None
+
+    _normalize_name = validator("name", allow_reuse=True)(
+        validators.trailing_spaces_remover
+    )
+    _normalize_firstname = validator("firstname", allow_reuse=True)(
+        validators.trailing_spaces_remover
+    )
+    _normalize_nickname = validator("nickname", allow_reuse=True)(
+        validators.trailing_spaces_remover
+    )
+
+    class Config:
+        schema_extra = examples_core.example_CoreUserUpdate
+
+
 class CoreUserCreateRequest(BaseModel):
     """
     The schema is used to send an account creation request.

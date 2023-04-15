@@ -4,6 +4,11 @@ See https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
 """
 
 
+from datetime import datetime
+
+from pytz import timezone
+
+
 def password_validator(password: str) -> str:
     """
     Check the password strength, validity and remove trailing spaces.
@@ -37,3 +42,10 @@ def trailing_spaces_remover(value: str | None) -> str | None:
     if value is not None:
         return value.strip()
     return value
+
+
+def time_zone_converter(time_zone: datetime) -> datetime:
+    """
+    Put the time zone in the right.
+    """
+    return time_zone.astimezone(timezone("Europe/Paris"))
