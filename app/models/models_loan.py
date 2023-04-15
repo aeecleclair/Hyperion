@@ -42,7 +42,6 @@ class Item(Base):
     id: str = Column(String, primary_key=True, index=True)
     # Two items with the same name may exist in two different loaners
     name: str = Column(String, nullable=False)
-    category: str = Column(String, nullable=True)
     loaner_id: str = Column(String, ForeignKey("loaner.id"))
     suggested_caution: int = Column(Integer)
     total_quantity: int = Column(Integer)
