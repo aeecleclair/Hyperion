@@ -42,11 +42,11 @@ async def create_raffle(
 async def get_raffle_by_groupid(
     group_id: str,
     db: AsyncSession,
-) -> models_raffle.Raffle | None:
+) -> list[models_raffle.Raffle] | None:
     result = await db.execute(
         select(models_raffle.Raffle).where(models_raffle.Raffle.group_id == group_id)
     )
-    return result.scalars().first()
+    return result.scalars().all()
 
 
 async def get_raffle_by_id(
