@@ -254,10 +254,6 @@ async def get_loan_content_by_loan_id_item_id(
     item_id: str,
     db: AsyncSession,
 ) -> models_loan.LoanContent | None:
-    """
-    Add an item to a loan using a LoanContent row
-    """
-
     result = await db.execute(
         select(models_loan.LoanContent).where(
             models_loan.LoanContent.loan_id == loan_id
@@ -271,10 +267,6 @@ async def get_loan_contents_by_loan_id(
     loan_id: str,
     db: AsyncSession,
 ) -> list[models_loan.LoanContent] | None:
-    """
-    Add an item to a loan using a LoanContent row
-    """
-
     result = await db.execute(
         select(models_loan.LoanContent).where(
             models_loan.LoanContent.loan_id == loan_id
