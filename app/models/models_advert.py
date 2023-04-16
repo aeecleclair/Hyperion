@@ -14,7 +14,7 @@ class Advertiser(Base):
     group_manager_id: str = Column(String, nullable=False)
 
     adverts: list["Advert"] = relationship(
-        "Advert", lazy="joined", back_populates="advertiser"
+        "Advert", lazy="subquery", back_populates="advertiser"
     )
 
 

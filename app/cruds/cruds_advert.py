@@ -1,4 +1,4 @@
-from sqlalchemy import delete, select, update
+from sqlalchemy import and_, delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -77,6 +77,25 @@ async def get_advert_by_id(
         select(models_advert.Advert).where(models_advert.Advert.id == advert_id)
     )
     return result.scalars().first()
+
+
+async def get_adverts_by_advertisers(
+    db: AsyncSession, advertisers: list[str] = []
+) -> list[models_advert.Advert]:
+    result = await db.execute(
+        select(models_advert.Advert).where(
+            and_(
+                True,
+                *[
+                    models_advert.Advert.advertiser.has(
+                        models_advert.Advertiser.id == advertiser_id
+                    )
+                    for advertiser_id in advertisers
+                ],
+            )
+        )
+    )
+    return result.scalars().all()
 
 
 async def create_advert(
