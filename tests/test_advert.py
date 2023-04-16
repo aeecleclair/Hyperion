@@ -11,7 +11,7 @@ from tests.commons import (
     create_user_with_groups,
 )
 
-tag: models_advert.Tag | None = None
+# tag: models_advert.Tag | None = None
 advert: models_advert.Advert | None = None
 advertiser: models_advert.Advertiser | None = None
 group_advertiser: models_core.CoreGroup | None = None
@@ -30,6 +30,9 @@ async def startuptest():
         user_admin = await create_user_with_groups([GroupType.admin], db=db)
         await db.commit()
 
+    global token_admin
+    token_admin = create_api_access_token(user_admin)
+
     global advertiser
     global group_advertiser
     async with TestingSessionLocal() as db:
@@ -44,6 +47,7 @@ async def startuptest():
             name=group_advertiser.name,
             group_manager_id=group_advertiser.id,
         )
+        db.add(advertiser)
         await db.commit()
 
     global user_advertiser
@@ -73,15 +77,17 @@ async def startuptest():
             date=datetime.datetime.now(),
         )
 
+        """
         tag = models_advert.Tag(id=str(uuid.uuid4()), name="Tag", couleur="Couleur")
 
         adverts_tags_link = models_advert.AdvertsTagsLink(
             id=str(uuid.uuid4()), advert_id=advert.id, tag_id=tag.id
         )
+        """
 
         db.add(advert)
-        db.add(tag)
-        db.add(adverts_tags_link)
+        # db.add(tag)
+        # db.add(adverts_tags_link)
         await db.commit()
 
 
@@ -101,15 +107,15 @@ def test_get_advert_by_id():
     assert response.status_code == 200
 
 
-def test_post_advert():
+def test_create_advert():
     response = client.post(
         "/advert/adverts",
         json={
             "title": "Advert2",
             "content": "2nd example of advert",
             "advertiser_id": advertiser.id,
-            "co_advertisers_id": [],
-            "tags": ["Tag"],
+            # "co_advertisers_id": [],
+            #            "tags": ["Tag"],
         },
         headers={"Authorization": f"Bearer {token_advertiser}"},
     )
@@ -119,15 +125,57 @@ def test_post_advert():
 def test_edit_advert():
     response = client.patch(
         f"/advert/adverts/{advert.id}",
-        json={"name": "AdvertEdited"},
+        json={"content": "Advert Content Edited"},
         headers={"Authorization": f"Bearer {token_advertiser}"},
+    )
+    assert response.status_code == 204
+
+
+def test_delete_advert():
+    response = client.delete(
+        f"/advert/adverts/{advert.id}",
+        headers={"Authorization": f"Bearer {token_advertiser}"},
+    )
+    assert response.status_code == 204
+
+
+def test_get_advertisers():
+    response = client.get(
+        "/advert/advertisers",
+        headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 200
 
 
-def test_delete_session():
+def test_get_my_advertisers():
+    response = client.get(
+        "/advert/me/advertisers",
+        headers={"Authorization": f"Bearer {token_simple}"},
+    )
+    assert response.status_code == 200
+
+
+def test_create_advertiser():
+    response = client.post(
+        "/advert/advertisers",
+        json={"name": "Advert2", "group_manager_id": advertiser.group_manager_id},
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 201
+
+
+def test_edit_advertiser():
+    response = client.patch(
+        f"/advert/advertisers/{advertiser.id}",
+        json={"name": "AdvertiserEdited"},
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 204
+
+
+def test_delete_advertiser():
     response = client.delete(
-        f"/advert/adverts/{advert.id}",
-        headers={"Authorization": f"Bearer {token_advertiser}"},
+        f"/advert/advertisers/{advertiser.id}",
+        headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 204

@@ -31,6 +31,7 @@ async def create_advertiser(
         await db.commit()
     except IntegrityError:
         await db.rollback()
+        raise ValueError()
     return db_advert
 
 
@@ -44,7 +45,11 @@ async def update_advertiser(
         .where(models_advert.Advertiser.id == advertiser_id)
         .values(**advertiser_update.dict(exclude_none=True))
     )
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise ValueError()
 
 
 async def delete_advertiser(advertiser_id: str, db: AsyncSession):
@@ -53,7 +58,11 @@ async def delete_advertiser(advertiser_id: str, db: AsyncSession):
             models_advert.Advertiser.id == advertiser_id
         )
     )
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise ValueError()
 
 
 async def get_adverts(db: AsyncSession) -> list[models_advert.Advert]:
@@ -79,6 +88,7 @@ async def create_advert(
         await db.commit()
     except IntegrityError:
         await db.rollback()
+        raise ValueError()
     return db_advert
 
 
@@ -90,16 +100,25 @@ async def update_advert(
         .where(models_advert.Advert.id == advert_id)
         .values(**advert_update.dict(exclude_none=True))
     )
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise ValueError()
 
 
 async def delete_advert(advert_id: str, db: AsyncSession):
     await db.execute(
         delete(models_advert.Advert).where(models_advert.Advert.id == advert_id)
     )
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise ValueError()
 
 
+"""
 async def get_tag(db: AsyncSession) -> list[models_advert.Tag]:
     result = await db.execute(select(models_advert.Tag))
     return result.scalars().all()
@@ -126,6 +145,7 @@ async def create_tag(tag: models_advert.Tag, db: AsyncSession) -> models_advert.
         await db.commit()
     except IntegrityError:
         await db.rollback()
+        raise ValueError()
     return db_tag
 
 
@@ -137,9 +157,18 @@ async def update_tag(
         .where(models_advert.Tag.id == tag_id)
         .values(**tag_update.dict(exclude_none=True))
     )
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise ValueError()
 
 
 async def delete_tag(tag_id: str, db: AsyncSession):
     await db.execute(delete(models_advert.Tag).where(models_advert.Tag.id == tag_id))
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise ValueError()
+"""

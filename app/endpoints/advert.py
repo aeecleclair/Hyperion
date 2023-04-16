@@ -1,13 +1,17 @@
 import uuid
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
+from pytz import timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import Settings
 from app.cruds import cruds_advert
 from app.dependencies import (
     get_db,
     get_request_id,
+    get_settings,
     is_user_a_member,
     is_user_a_member_of,
 )
@@ -98,8 +102,8 @@ async def delete_advertiser(
 
     **This endpoint is only usable by administrators**
     """
-    advertiser: models_advert.Advertiser | None = (
-        await cruds_advert.get_advertiser_by_id(advertiser_id=advertiser_id, db=db)
+    advertiser = await cruds_advert.get_advertiser_by_id(
+        advertiser_id=advertiser_id, db=db
     )
     if advertiser is None:
         raise HTTPException(
@@ -129,6 +133,14 @@ async def update_advertiser(
 
     **This endpoint is only usable by administrators**
     """
+    advertiser = await cruds_advert.get_advertiser_by_id(
+        advertiser_id=advertiser_id, db=db
+    )
+    if not advertiser:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid advertiser_id",
+        )
 
     await cruds_advert.update_advertiser(
         advertiser_id=advertiser_id, advertiser_update=advertiser_update, db=db
@@ -216,16 +228,15 @@ async def create_advert(
     advert: schemas_advert.AdvertBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Create a new advert
 
     **The user must be a member of the advertiser group_manager to use this endpoint**
     """
-    advertiser: models_advert.Advertiser | None = (
-        await cruds_advert.get_advertiser_by_id(
-            advertiser_id=advert.advertiser_id, db=db
-        )
+    advertiser = await cruds_advert.get_advertiser_by_id(
+        advertiser_id=advert.advertiser_id, db=db
     )
     if advertiser is None:
         raise HTTPException(
@@ -235,11 +246,13 @@ async def create_advert(
     if not is_user_member_of_an_allowed_group(user, [advertiser.group_manager_id]):
         raise HTTPException(
             status_code=403,
-            detail=f"Unauthorized to manage {advert.advertiser_id} adverts",
+            detail=f"Unauthorized to manage {advertiser.name} adverts",
         )
 
     db_advert = schemas_advert.AdvertComplete(
-        id=str(uuid.uuid4()), advertiser=advertiser, **advert.dict()
+        id=str(uuid.uuid4()),
+        date=datetime.now(timezone(settings.TIMEZONE)),
+        **advert.dict(),
     )
     try:
         result = await cruds_advert.create_advert(advert=db_advert, db=db)
@@ -248,8 +261,8 @@ async def create_advert(
         raise HTTPException(status_code=422, detail=str(error))
 
 
-@router.patch("/advert/adverts/{advert_id}", status_code=200, tags=[Tags.advert])
-async def update_session(
+@router.patch("/advert/adverts/{advert_id}", status_code=204, tags=[Tags.advert])
+async def update_advert(
     advert_id: str,
     advert_update: schemas_advert.AdvertUpdate,
     db: AsyncSession = Depends(get_db),
@@ -260,29 +273,19 @@ async def update_session(
 
     **The user must be a member of the advertiser group_manager to use this endpoint**
     """
-    advert: models_advert.Advert | None = await cruds_advert.get_advert_by_id(
-        advert_id=advert_id, db=db
-    )
-    if advert is None:
+    advert = await cruds_advert.get_advert_by_id(advert_id=advert_id, db=db)
+    if not advert:
         raise HTTPException(
             status_code=404,
             detail="Invalid advert_id",
         )
 
-    advertiser: models_advert.Advertiser | None = (
-        await cruds_advert.get_advertiser_by_id(
-            advertiser_id=advert.advertiser.id, db=db
-        )
-    )
-    if advertiser is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid advertiser_id",
-        )
-    if not is_user_member_of_an_allowed_group(user, [advertiser.group_manager_id]):
+    if not is_user_member_of_an_allowed_group(
+        user, [advert.advertiser.group_manager_id]
+    ):
         raise HTTPException(
             status_code=403,
-            detail=f"Unauthorized to manage {advert.advertiser_id} adverts",
+            detail=f"Unauthorized to manage {advert.advertiser.name} adverts",
         )
 
     await cruds_advert.update_advert(
@@ -291,7 +294,7 @@ async def update_session(
 
 
 @router.delete("/advert/adverts/{advert_id}", status_code=204, tags=[Tags.advert])
-async def delete_session(
+async def delete_advert(
     advert_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
@@ -299,31 +302,21 @@ async def delete_session(
     """
     Delete an advert
 
-    **The user must be a member of the advertiser group_manager to use this endpoint**
+    **The user must be admin or a member of the advertiser group_manager to use this endpoint**
     """
-    advert: models_advert.Advert | None = await cruds_advert.get_advert_by_id(
-        advert_id=advert_id, db=db
-    )
-    if advert is None:
+    advert = await cruds_advert.get_advert_by_id(advert_id=advert_id, db=db)
+    if not advert:
         raise HTTPException(
             status_code=404,
             detail="Invalid advert_id",
         )
 
-    advertiser: models_advert.Advertiser | None = (
-        await cruds_advert.get_advertiser_by_id(
-            advertiser_id=advert.advertiser.id, db=db
-        )
-    )
-    if advertiser is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid advertiser_id",
-        )
-    if not is_user_member_of_an_allowed_group(user, [advertiser.group_manager_id]):
+    if not is_user_member_of_an_allowed_group(
+        user, [GroupType.admin, advert.advertiser.group_manager_id]
+    ):
         raise HTTPException(
             status_code=403,
-            detail=f"Unauthorized to manage {advert.advertiser.id} adverts",
+            detail=f"Unauthorized to manage {advert.advertiser.name} adverts",
         )
 
     await cruds_advert.delete_advert(advert_id=advert_id, db=db)
@@ -356,7 +349,7 @@ async def read_advert_image(
     status_code=201,
     tags=[Tags.advert],
 )
-async def create_campaigns_logo(
+async def create_advert_image(
     advert_id: str,
     image: UploadFile = File(...),
     user: models_core.CoreUser = Depends(is_user_a_member),
