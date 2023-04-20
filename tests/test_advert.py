@@ -75,15 +75,9 @@ async def startuptest():
             title="Advert",
             content="Example of advert",
             date=datetime.datetime.now(),
+            tags="Tag1, Tag2, Tag3",
+            coadvertisers=[],
         )
-
-        """
-        tag = models_advert.Tag(id=str(uuid.uuid4()), name="Tag", couleur="Couleur")
-
-        adverts_tags_link = models_advert.AdvertsTagsLink(
-            id=str(uuid.uuid4()), advert_id=advert.id, tag_id=tag.id
-        )
-        """
 
         db.add(advert)
         # db.add(tag)
@@ -109,7 +103,7 @@ def test_get_advert_by_id():
 
 def test_get_advert_by_advertisers():
     response = client.get(
-        f"/advert/adverts/search?advertisers={advertiser.id}",
+        f"/advert/adverts?advertisers={advertiser.id}",
         headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response.status_code == 200
@@ -122,8 +116,8 @@ def test_create_advert():
             "title": "Advert2",
             "content": "2nd example of advert",
             "advertiser_id": advertiser.id,
-            # "co_advertisers_id": [],
-            #            "tags": ["Tag"],
+            "coadvertisers_id": [],
+            "tags": "Tag1, Tag2",
         },
         headers={"Authorization": f"Bearer {token_advertiser}"},
     )

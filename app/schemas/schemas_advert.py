@@ -26,12 +26,8 @@ class AdvertBase(BaseModel):
     title: str
     content: str
     advertiser_id: str
-
-
-#    co_advertisers_id: list[str] | None = None
-
-
-#    tags: list[str] | None = None
+    coadvertisers_id: list[str] | None = None
+    tags: str | None = None
 
 
 class AdvertComplete(AdvertBase):
@@ -45,9 +41,5 @@ class AdvertComplete(AdvertBase):
 class AdvertUpdate(BaseModel):
     title: str | None = None
     content: str | None = None
-
-
-#    co_advertisers_id: list[str] | None = None
-
-
-#    tags: list[str] | None = None
+    coadvertisers_id: list[str] | None = None
+    tags: str | None = None

@@ -7,7 +7,7 @@ from app.database import Base
 
 
 class Advertiser(Base):
-    __tablename__ = "advert_advertiser"
+    __tablename__ = "advert_advertisers"
 
     id: str = Column(String, primary_key=True, index=True)
     name: str = Column(String, nullable=False, unique=True)
@@ -16,13 +16,16 @@ class Advertiser(Base):
     adverts: list["Advert"] = relationship(
         "Advert", lazy="subquery", back_populates="advertiser"
     )
+    coadverts: list["Advert"] = relationship(
+        "Advert", secondary="advert_coadvertise_content", back_populates="coadvertisers"
+    )
 
 
 class Advert(Base):
     __tablename__ = "advert_adverts"
 
     id: str = Column(String, primary_key=True, nullable=False)
-    advertiser_id: str = Column(ForeignKey("advert_advertiser.id"))
+    advertiser_id: str = Column(ForeignKey("advert_advertisers.id"))
     advertiser: Advertiser = relationship(
         "Advertiser",
         lazy="joined",
@@ -31,28 +34,13 @@ class Advert(Base):
     title: str = Column(String, nullable=False)
     content: str = Column(String, nullable=False)
     date: datetime = Column(DateTime(timezone=True), nullable=False)
-    # tags_links: list["Tag"] = relationship("AdvertsTagsLink", back_populates="advert")
-
-
-"""
-class Tag(Base):
-    __tablename__ = "advert_tags"
-
-    id: str = Column(String, primary_key=True, nullable=False)
-    name: str = Column(String, nullable=False)
-    couleur: str = Column(String, nullable=False)
-
-    adverts_links: list["AdvertsTagsLink"] = relationship(
-        "AdvertsTagsLink", back_populates="tag"
+    tags: str = Column(String, nullable=True)
+    coadvertisers: list["Advert"] = relationship(
+        "Advertiser", secondary="advert_coadvertise_content", back_populates="coadverts"
     )
 
 
-class AdvertsTagsLink(Base):
-    __tablename__ = "adverts_tags_link"
-
-    id: str = Column(String, primary_key=True, nullable=False)
-    advert_id: str = Column(String, ForeignKey("adverts.id"))
-    tag_id: str = Column(String, ForeignKey("advert_tags.id"))
-    advert: Advert = relationship("Advert", lazy="joined", back_populates="tags_links")
-    tag: Tag = relationship("Tag", lazy="joined", back_populates="adverts_links")
-"""
+class CoAdvertContent(Base):
+    __tablename__ = "advert_coadvertise_content"
+    coadvertiser_id: str = Column(ForeignKey("advert_advertisers.id"), primary_key=True)
+    advert_id: str = Column(ForeignKey("advert_adverts.id"), primary_key=True)

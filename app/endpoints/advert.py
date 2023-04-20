@@ -186,36 +186,22 @@ async def get_current_user_advertisers(
     tags=[Tags.advert],
 )
 async def read_adverts(
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
-):
-    """
-    Get existing adverts
-
-    **The user must be authenticated to use this endpoint**
-    """
-
-    return await cruds_advert.get_adverts(db=db)
-
-
-@router.get(
-    "/advert/adverts/search",
-    response_model=list[schemas_advert.AdvertComplete],
-    status_code=200,
-    tags=[Tags.advert],
-)
-async def search_adverts(
     advertisers: list[str] = Query(default=[]),
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
-    Search adverts by advertisers
+    Get existing adverts. If advertisers optional parameter is used, search adverts by advertisers
 
     **The user must be authenticated to use this endpoint**
     """
 
-    return await cruds_advert.get_adverts_by_advertisers(advertisers=advertisers, db=db)
+    if advertisers:
+        return await cruds_advert.get_adverts_by_advertisers(
+            advertisers=advertisers, db=db
+        )
+    else:
+        return await cruds_advert.get_adverts(db=db)
 
 
 @router.get(
@@ -263,6 +249,18 @@ async def create_advert(
             status_code=404,
             detail="Invalid advertiser_id",
         )
+
+    if advert.coadvertisers_id:
+        for coadvertiser_id in advert.coadvertisers_id:
+            coadvertiser = await cruds_advert.get_advertiser_by_id(
+                advertiser_id=coadvertiser_id, db=db
+            )
+            if coadvertiser is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Invalid coadvertiser_id",
+                )
+
     if not is_user_member_of_an_allowed_group(user, [advertiser.group_manager_id]):
         raise HTTPException(
             status_code=403,

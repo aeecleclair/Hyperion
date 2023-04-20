@@ -1,4 +1,4 @@
-from sqlalchemy import and_, delete, select, update
+from sqlalchemy import delete, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -84,10 +84,15 @@ async def get_adverts_by_advertisers(
 ) -> list[models_advert.Advert]:
     result = await db.execute(
         select(models_advert.Advert).where(
-            and_(
-                True,
+            or_(
                 *[
                     models_advert.Advert.advertiser.has(
+                        models_advert.Advertiser.id == advertiser_id
+                    )
+                    for advertiser_id in advertisers
+                ],
+                *[
+                    models_advert.Advert.coadvertisers.any(
                         models_advert.Advertiser.id == advertiser_id
                     )
                     for advertiser_id in advertisers
@@ -101,8 +106,19 @@ async def get_adverts_by_advertisers(
 async def create_advert(
     advert: schemas_advert.AdvertComplete, db: AsyncSession
 ) -> models_advert.Advert:
-    db_advert = models_advert.Advert(**advert.dict())
+    advert_params = advert.dict()
+    coadvertisers_id = advert_params.pop("coadvertisers_id")
+
+    db_advert = models_advert.Advert(**advert_params)
     db.add(db_advert)
+
+    if coadvertisers_id:
+        for coadvertiser_id in coadvertisers_id:
+            db_coadvert = models_advert.CoAdvertContent(
+                advert_id=db_advert.id, coadvertiser_id=coadvertiser_id
+            )
+            db.add(db_coadvert)
+
     try:
         await db.commit()
     except IntegrityError:
@@ -135,59 +151,3 @@ async def delete_advert(advert_id: str, db: AsyncSession):
     except IntegrityError:
         await db.rollback()
         raise ValueError()
-
-
-"""
-async def get_tag(db: AsyncSession) -> list[models_advert.Tag]:
-    result = await db.execute(select(models_advert.Tag))
-    return result.scalars().all()
-
-
-async def get_tag_by_id(db: AsyncSession, tag_id: str) -> models_advert.Tag | None:
-    result = await db.execute(
-        select(models_advert.Tag).where(models_advert.Tag.id == tag_id)
-    )
-    return result.scalars().first()
-
-
-async def get_tag_by_name(db: AsyncSession, tag_name: str) -> models_advert.Tag | None:
-    result = await db.execute(
-        select(models_advert.Tag).where(models_advert.Tag.name == tag_name)
-    )
-    return result.scalars().first()
-
-
-async def create_tag(tag: models_advert.Tag, db: AsyncSession) -> models_advert.Tag:
-    db_tag = models_advert.Tag(**tag.dict())
-    db.add(db_tag)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise ValueError()
-    return db_tag
-
-
-async def update_tag(
-    tag_id: str, tag_update: schemas_advert.TagUpdate, db: AsyncSession
-):
-    await db.execute(
-        update(models_advert.Tag)
-        .where(models_advert.Tag.id == tag_id)
-        .values(**tag_update.dict(exclude_none=True))
-    )
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise ValueError()
-
-
-async def delete_tag(tag_id: str, db: AsyncSession):
-    await db.execute(delete(models_advert.Tag).where(models_advert.Tag.id == tag_id))
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise ValueError()
-"""
