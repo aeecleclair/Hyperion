@@ -3,7 +3,8 @@ from sqlalchemy import Enum, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
-from app.models.models_core import CoreGroup, CoreUser
+from app.models.models_core import CoreUser
+from app.utils.types.groups_type import GroupType
 from app.utils.types.raffle_types import RaffleStatusType
 
 
@@ -16,8 +17,13 @@ class Raffle(Base):
     status: Mapped[RaffleStatusType] = mapped_column(
         Enum(RaffleStatusType), nullable=False, default=RaffleStatusType.creation
     )
-    group_id: Mapped[str] = mapped_column(
-        ForeignKey("core_group.id"), index=True, nullable=False
+    group: Mapped[str] = mapped_column(
+        
+        String,
+        index=True,
+        nullable=False,
+        default=GroupType.admin,
+    
     )
     description: Mapped[str] = mapped_column(String, index=True, nullable=True)
 
