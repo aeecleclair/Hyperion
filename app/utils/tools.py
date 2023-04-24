@@ -55,17 +55,17 @@ def fuzzy_search_user(
     # https://maxbachmann.github.io/RapidFuzz/Usage/process.html#extract
 
     # TODO: we may want to cache this object. Its generation may take some time if there is a big user base
-    choices = {}
+    choices = []
 
     for user in users:
-        choices[user] = f"{user.firstname} {user.name} {user.nickname}"
+        choices.append(f"{user.firstname} {user.name} {user.nickname}")
 
-    results: list[tuple[str, int | float, models_core.CoreUser]] = process.extract(
+    results: list[tuple[str, int | float, int]] = process.extract(
         query, choices, limit=limit
     )
 
-    # results has the format : (string used for the comparison, similarity score, object)
-    return [res[2] for res in results]
+    # results has the format : (string used for the comparison, similarity score, index of the object in the choices collection)
+    return [users[res[2]] for res in results]
 
 
 async def is_group_id_valid(group_id: str, db: AsyncSession) -> bool:
