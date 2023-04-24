@@ -47,19 +47,19 @@ async def get_raffle(
 
 @router.post(
     "/tombola/raffles",
-    response_model=schemas_raffle.RaffleSimple,
+    response_model=schemas_raffle.RaffleComplete,
     status_code=201,
     tags=[Tags.raffle],
 )
 async def create_raffle(
     raffle: schemas_raffle.RaffleBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
     Create a new raffle
 
-    **The user must be a member of the group soli to use this endpoint**
+    **The user must be a member of the group admin to use this endpoint**
     """
     group = await cruds_groups.get_group_by_id(group_id=raffle.group_id, db=db)
     if not group:
@@ -83,17 +83,23 @@ async def edit_raffle(
     raffle_id: str,
     raffle_update: schemas_raffle.RaffleEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Edit a raffle
 
-    **The user must be a member of the group soli to use this endpoint**
+    **The user must be a member of the raffle's group to use this endpoint**
     """
 
     raffle = await cruds_raffle.get_raffle_by_id(raffle_id=raffle_id, db=db)
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
+
+    if not is_user_member_of_an_allowed_group(user, [raffle.group_id]):
+        raise HTTPException(
+            status_code=403,
+            detail=f"{user.id} user is unauthorized to manage the raffle {raffle_id}",
+        )
 
     await cruds_raffle.edit_raffle(
         raffle_id=raffle_id, raffle_update=raffle_update, db=db
@@ -108,17 +114,23 @@ async def edit_raffle(
 async def delete_raffle(
     raffle_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Delete a raffle.
 
-    **The user must be a member of the group soli to use this endpoint**
+    **The user must be a member of the raffle's group to use this endpoint**
     """
 
     raffle = await cruds_raffle.get_raffle_by_id(raffle_id=raffle_id, db=db)
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
+
+    if not is_user_member_of_an_allowed_group(user, [raffle.group_id]):
+        raise HTTPException(
+            status_code=403,
+            detail=f"{user.id} user is unauthorized to manage the raffle {raffle_id}",
+        )
 
     await cruds_raffle.delete_raffle(raffle_id=raffle_id, db=db)
 
@@ -195,16 +207,22 @@ async def get_pack_tickets(
 async def create_packticket(
     packticket: schemas_raffle.PackTicketBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Create a new packticket
 
-    **The user must be a member of the group soli to use this endpoint**
+    **The user must be a member of the raffle's group to use this endpoint**
     """
     raffle = await cruds_raffle.get_raffle_by_id(raffle_id=packticket.raffle_id, db=db)
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
+
+    if not is_user_member_of_an_allowed_group(user, [raffle.group_id]):
+        raise HTTPException(
+            status_code=403,
+            detail=f"{user.id} user is unauthorized to manage the raffle {packticket.raffle_id}",
+        )
 
     db_packticket = models_raffle.PackTicket(id=str(uuid.uuid4()), **packticket.dict())
 
@@ -224,19 +242,30 @@ async def edit_packticket(
     packticket_id: str,
     packticket_update: schemas_raffle.PackTicketEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Edit a packticket
 
-    **The user must be a member of the group soli to use this endpoint**
+    **The user must be a member of the raffle's group to use this endpoint**
     """
 
     packticket = await cruds_raffle.get_packticket_by_id(
         packticket_id=packticket_id, db=db
     )
+
     if not packticket:
         raise HTTPException(status_code=404, detail="PackTicket not found")
+
+    raffle = await cruds_raffle.get_raffle_by_id(raffle_id=packticket.raffle_id, db=db)
+    if not raffle:
+        raise HTTPException(status_code=404, detail="Raffle not found")
+
+    if not is_user_member_of_an_allowed_group(user, [raffle.group_id]):
+        raise HTTPException(
+            status_code=403,
+            detail=f"{user.id} user is unauthorized to manage the raffle {packticket.raffle_id}",
+        )
 
     await cruds_raffle.edit_packticket(
         packticket_id=packticket_id, packticket_update=packticket_update, db=db
@@ -251,12 +280,12 @@ async def edit_packticket(
 async def delete_packticket(
     packticket_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Delete a packticket.
 
-    **The user must be a member of the group soli to use this endpoint**
+    **The user must be a member of the raffle's group to use this endpoint**
     """
 
     packticket = await cruds_raffle.get_packticket_by_id(
@@ -264,6 +293,16 @@ async def delete_packticket(
     )
     if not packticket:
         raise HTTPException(status_code=404, detail="Packticket not found")
+
+    raffle = await cruds_raffle.get_raffle_by_id(raffle_id=packticket.raffle_id, db=db)
+    if not raffle:
+        raise HTTPException(status_code=404, detail="Raffle not found")
+
+    if not is_user_member_of_an_allowed_group(user, [raffle.group_id]):
+        raise HTTPException(
+            status_code=403,
+            detail=f"{user.id} user is unauthorized to manage the raffle {packticket.raffle_id}",
+        )
 
     await cruds_raffle.delete_packticket(packticket_id=packticket_id, db=db)
 
@@ -294,12 +333,12 @@ async def get_pack_tickets_by_raffle_id(
 )
 async def get_tickets(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
     Return all tickets
 
-    **The user must be a member of the group soli to use this endpoint**
+    **The user must be a member of the group admin to use this endpoint**
     """
     tickets = await cruds_raffle.get_tickets(db)
     return tickets
@@ -388,29 +427,6 @@ async def buy_ticket(
         locker_set(redis_client=redis_client, key=redis_key, lock=False)
 
 
-# @router.delete(
-#     "/tombola/tickets/{ticket_id}",
-#     status_code=204,
-#     tags=[Tags.raffle],
-# )
-# async def delete_ticket(
-#     ticket_id: str,
-#     db: AsyncSession = Depends(get_db),
-#     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
-# ):
-#     """
-#     Delete a ticket.
-
-#     **The user must be a member of the group soli to use this endpoint**
-#     """
-
-#     ticket = await cruds_raffle.get_ticket_by_id(ticket_id=ticket_id, db=db)
-#     if not ticket:
-#         raise HTTPException(status_code=404, detail="Ticket not found")
-
-#     await cruds_raffle.delete_ticket(db=db, ticket_id=ticket_id)
-
-
 @router.get(
     "/tombola/users/{user_id}/tickets",
     response_model=list[schemas_raffle.TicketComplete],
@@ -432,7 +448,8 @@ async def get_tickets_by_userid(
         raise HTTPException(status_code=404, detail="User not found")
 
     if not (
-        user_id == user.id or is_user_member_of_an_allowed_group(user, [GroupType.soli])
+        user_id == user.id
+        or is_user_member_of_an_allowed_group(user, [GroupType.admin])
     ):
         raise HTTPException(
             status_code=403,
@@ -453,15 +470,29 @@ async def get_tickets_by_userid(
 async def get_tickets_by_raffleid(
     raffle_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Get tickets from a specific raffle.
 
-    **The user must be a member of the group soli to use this endpoint
+    **The user must be a member of the raffle's group to use this endpoint
     """
 
     tickets = await cruds_raffle.get_ticket_by_raffleid(raffle_id=raffle_id, db=db)
+    raffle = await cruds_raffle.get_raffle_by_id(raffle_id=raffle_id, db=db)
+
+    if not raffle:
+        raise HTTPException(status_code=404, detail="Raffle not found")
+
+    raffle = await cruds_raffle.get_raffle_by_id(raffle_id=raffle_id, db=db)
+    if not raffle:
+        raise HTTPException(status_code=404, detail="Raffle not found")
+
+    if not is_user_member_of_an_allowed_group(user, [raffle.group_id]):
+        raise HTTPException(
+            status_code=403,
+            detail=f"{user.id} user is unauthorized to manage the raffle {raffle_id}",
+        )
 
     return tickets
 
@@ -492,16 +523,22 @@ async def get_lots(
 async def create_lot(
     lot: schemas_raffle.LotBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Create a new lot
 
-    **The user must be a member of the group soli to use this endpoint
+    **The user must be a member of the raffle's group to use this endpoint
     """
     raffle = await cruds_raffle.get_raffle_by_id(raffle_id=lot.raffle_id, db=db)
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
+
+    if not is_user_member_of_an_allowed_group(user, [raffle.group_id]):
+        raise HTTPException(
+            status_code=403,
+            detail=f"{user.id} user is unauthorized to manage the raffle {raffle.id}",
+        )
 
     db_lot = models_raffle.Lots(id=str(uuid.uuid4()), **lot.dict())
 
@@ -521,17 +558,28 @@ async def edit_lot(
     lot_id: str,
     lot_update: schemas_raffle.LotEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Edit a lot
 
-    **The user must be a member of the group soli to use this endpoint
+    **The user must be a member of the group raffle's to use this endpoint
     """
 
     lot = await cruds_raffle.get_lot_by_id(lot_id=lot_id, db=db)
     if not lot:
         raise HTTPException(status_code=404, detail="Lot not found")
+
+    raffle = await cruds_raffle.get_raffle_by_id(raffle_id=lot.raffle_id, db=db)
+
+    if not raffle:
+        raise HTTPException(status_code=404, detail="Raffle not found")
+
+    if not is_user_member_of_an_allowed_group(user, [raffle.group_id]):
+        raise HTTPException(
+            status_code=403,
+            detail=f"{user.id} user is unauthorized to manage the raffle {raffle.id}",
+        )
 
     await cruds_raffle.edit_lot(lot_id=lot_id, lot_update=lot_update, db=db)
 
@@ -544,17 +592,28 @@ async def edit_lot(
 async def delete_lot(
     lot_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Delete a lot.
 
-    **The user must be a member of the group soli to use this endpoint
+    **The user must be a member of the group raffle's to use this endpoint
     """
 
     lot = await cruds_raffle.get_lot_by_id(lot_id=lot_id, db=db)
     if not lot:
         raise HTTPException(status_code=404, detail="Lot not found")
+
+    raffle = await cruds_raffle.get_raffle_by_id(raffle_id=lot.raffle_id, db=db)
+
+    if not raffle:
+        raise HTTPException(status_code=404, detail="Raffle not found")
+
+    if not is_user_member_of_an_allowed_group(user, [raffle.group_id]):
+        raise HTTPException(
+            status_code=403,
+            detail=f"{user.id} user is unauthorized to manage the raffle {raffle.id}",
+        )
 
     await cruds_raffle.delete_lot(db=db, lot_id=lot_id)
 
@@ -587,12 +646,12 @@ async def get_lots_by_raffleid(
 )
 async def get_users_cash(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
     Get cash from all users.
 
-    **The user must be a member of the group soli to use this endpoint
+    **The user must be a member of the group admin to use this endpoint
     """
     cash = await cruds_raffle.get_users_cash(db)
     return cash
@@ -612,7 +671,7 @@ async def get_cash_by_id(
     """
     Get cash from a specific user.
 
-    **The user must be a member of the group soli to use this endpoint or can only access the endpoint for its own user_id**
+    **The user must be a member of the group admin to use this endpoint or can only access the endpoint for its own user_id**
     """
     user_db = await cruds_users.get_user_by_id(db=db, user_id=user_id)
     if user_db is None:
@@ -646,12 +705,12 @@ async def create_cash_of_user(
     user_id: str,
     cash: schemas_raffle.CashEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
     Create cash for a user.
 
-    **The user must be a member of the group soli to use this endpoint**
+    **The user must be a member of the group admin to use this endpoint**
     """
 
     user_db = await read_user(user_id=user_id, db=db)
@@ -689,14 +748,14 @@ async def edit_cash_by_id(
     user_id: str,
     balance: schemas_raffle.CashEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
     redis_client: Redis = Depends(get_redis_client),
 ):
     """
     Edit cash for an user. This will add the balance to the current balance.
     A negative value can be provided to remove money from the user.
 
-    **The user must be a member of the group soli to use this endpoint**
+    **The user must be a member of the group admin to use this endpoint**
     """
     user_db = await read_user(user_id=user_id, db=db)
     if not user_db:
@@ -738,11 +797,22 @@ async def edit_cash_by_id(
 async def draw_winner(
     lot_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.soli)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     lot = await cruds_raffle.get_lot_by_id(db=db, lot_id=lot_id)
     if lot is None:
         raise HTTPException(status_code=404, detail="Invalid lot id")
+
+    raffle = await cruds_raffle.get_raffle_by_id(raffle_id=lot.raffle_id, db=db)
+
+    if not raffle:
+        raise HTTPException(status_code=404, detail="Raffle not found")
+
+    if not is_user_member_of_an_allowed_group(user, [raffle.group_id]):
+        raise HTTPException(
+            status_code=403,
+            detail=f"{user.id} user is unauthorized to manage the raffle {raffle.id}",
+        )
 
     if lot.raffle.status != RaffleStatusType.locked:
         raise HTTPException(
