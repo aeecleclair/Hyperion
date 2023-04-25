@@ -47,7 +47,7 @@ async def get_raffle(
 
 @router.post(
     "/tombola/raffles",
-    response_model=schemas_raffle.RaffleComplete,
+    response_model=schemas_raffle.RaffleSimple,
     status_code=201,
     tags=[Tags.raffle],
 )
