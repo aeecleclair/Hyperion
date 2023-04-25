@@ -126,6 +126,23 @@ async def delete_raffle(
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
 
+    tickets = await cruds_raffle.get_ticket_by_raffleid(raffle_id=raffle_id, db=db)
+    if tickets is not None:
+        for t in tickets:
+            await cruds_raffle.delete_ticket(db=db, ticket_id=t.id)
+
+    packtickets = await cruds_raffle.get_packticket_by_raffleid(
+        raffle_id=raffle_id, db=db
+    )
+    if packtickets is not None:
+        for p in packtickets:
+            await cruds_raffle.delete_packticket(db=db, packticket_id=p.id)
+
+    lots = await cruds_raffle.get_lot_by_raffleid(raffle_id=raffle_id, db=db)
+    if lots is not None:
+        for lo in lots:
+            await cruds_raffle.delete_lot(db=db, lot_id=lo.id)
+
     if not is_user_member_of_an_allowed_group(user, [raffle.group_id]):
         raise HTTPException(
             status_code=403,
