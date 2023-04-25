@@ -2,58 +2,25 @@ from pydantic import BaseModel
 
 from app.schemas import schemas_core
 
+# REVIEW - ready to be tested
 
-class AssociationBase(BaseModel):
+
+class RoleTags(BaseModel):
     name: str
-    type: str
-    description: str | None = None
-
-
-class AssociationEdit(BaseModel):
-    name: str | None
-    type: str | None
-    description: str | None
-
-
-class AssociationEditComplete(AssociationEdit):
-    id: str
-
-    class Config:
-        orm_mode = True
-
-
-class AssociationComplete(AssociationBase):
-    id: str
-
-    class Config:
-        orm_mode = True
-
-
-class RoleBase(BaseModel):
-    name: str
-
-
-class RoleComplete(BaseModel):
-    id: str
-
-    class Config:
-        orm_mode = True
 
 
 class MembershipBase(BaseModel):
     user_id: str
     association_id: str
-    role_id: str
-
-    class Config:
-        orm_mode = True
+    role_tags: list[str]
+    role_name: str
+    mandate_year: int
 
 
 class MembershipComplete(MembershipBase):
-    association: AssociationComplete
-    role: RoleComplete
+    association: schemas_core.CoreGroup
 
-    class Config:
+    class config:
         orm_mode = True
 
 

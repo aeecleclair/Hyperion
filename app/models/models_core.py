@@ -76,6 +76,7 @@ class CoreGroup(Base):
     id: str = Column(String, primary_key=True, index=True)
     name: str = Column(String, index=True, nullable=False, unique=True)
     description: str | None = Column(String)
+    group_type: str = Column(String, nullable=False)
 
     members: list["CoreUser"] = relationship(
         "CoreUser",

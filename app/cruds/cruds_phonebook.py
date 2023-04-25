@@ -1,6 +1,6 @@
 # from sqlalchemy.orm import selectinload
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,23 +13,27 @@ from app.schemas import schemas_phonebook
 # ---------------------------------------------------------------------------- #
 async def get_all_associations(
     db: AsyncSession,
-) -> list[models_phonebook.Association] | None:
-    """Return all associations from database"""
+) -> list[models_core.CoreGroup] | None:
+    """Return all associations from database"""  # REVIEW - ready to be tested
 
-    result = await db.execute(select(models_phonebook.Association))
+    result = await db.execute(
+        select(models_core.CoreGroup).where(
+            models_core.CoreGroup.group_type is not None
+        )
+    )
     return result.scalars().all()
 
 
-async def get_all_roles(db: AsyncSession) -> list[models_phonebook.Role] | None:
-    """Return all roles from database"""
-    result = await db.execute(select(models_phonebook.Role))
+async def get_all_role_tags(db: AsyncSession) -> list[models_phonebook.RoleTags] | None:
+    """Return all role tags from database"""  # REVIEW - ready to be tested
+    result = await db.execute(select(models_phonebook.RoleTags))
     return result.scalars().all()
 
 
 async def get_all_memberships(
     db: AsyncSession,
 ) -> list[models_phonebook.Membership] | None:
-    """Return all memberships from database"""
+    """Return all memberships from database"""  # REVIEW - ready to be tested
 
     result = await db.execute(select(models_phonebook.Membership))
     return result.scalars().all()
@@ -51,26 +55,14 @@ async def get_membership_by_user_id(
 
 
 # ---------------------------------------------------------------------------- #
-#                                  Get By X ID                                 #
+#                                  Get By X ID                                 # # REVIEW - ready to be tested
 # ---------------------------------------------------------------------------- #
 async def get_association_by_id(
     association_id: str, db: AsyncSession
-) -> models_phonebook.Association | None:
+) -> models_core.CoreGroup | None:
     """Return association with id from database"""
     result = await db.execute(
-        select(models_phonebook.Association).where(
-            models_phonebook.Association.id == association_id
-        )
-    )
-    return result.scalars().first()
-
-
-async def get_role_by_id(
-    role_id: str, db: AsyncSession
-) -> models_phonebook.Role | None:
-    """Return role with id from database"""
-    result = await db.execute(
-        select(models_phonebook.Role).where(models_phonebook.Role.id == role_id)
+        select(models_core.CoreGroup).where(models_core.CoreGroup.id == association_id)
     )
     return result.scalars().first()
 
@@ -83,18 +75,6 @@ async def get_member_by_id(
         select(models_core.CoreUser).where(models_core.CoreUser.id == member_id)
     )
     return result.scalars().first()
-
-
-async def get_mbrship_by_user_id(
-    user_id: str, db: AsyncSession
-) -> list[models_phonebook.Membership] | None:
-    """Return all memberships with id from database"""
-    result = await db.execute(
-        select(models_phonebook.Membership).where(
-            models_phonebook.Membership.user_id == user_id
-        )
-    )
-    return result.scalars().all()
 
 
 async def get_mbmrships_by_association_id(
@@ -110,84 +90,7 @@ async def get_mbmrships_by_association_id(
 
 
 # ---------------------------------------------------------------------------- #
-#                                  Association  OK                             #
-# ---------------------------------------------------------------------------- #
-async def create_association(
-    association: models_phonebook.Association, db: AsyncSession
-):
-    """Create a new association in database and return it"""
-    db.add(association)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-
-
-async def update_association(
-    association: schemas_phonebook.AssociationEditComplete,
-    db: AsyncSession,
-):
-    """Update an association in database"""
-    update(models_phonebook.Association).where(
-        association.id == models_phonebook.Association.id
-    ).values(**association.dict(exclude_none=True))
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-
-
-async def delete_association(association_id: str, db: AsyncSession):
-    """Delete an association from database"""
-    delete(models_phonebook.Association).where(
-        association_id == models_phonebook.Association.id
-    )
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-
-
-# ---------------------------------------------------------------------------- #
-#                                     Role OK                                  #
-# ---------------------------------------------------------------------------- #
-async def create_role(role: models_phonebook.Role, db: AsyncSession):
-    """Create a role in database"""
-    db.add(role)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-
-
-async def update_role(role: schemas_phonebook.RoleComplete, db: AsyncSession):
-    """Update a role in database"""
-    update(models_phonebook.Role).where(role.id == models_phonebook.Role.id).values(
-        **role.dict(exclude_none=True)
-    )
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-
-
-async def delete_role(role_id: str, db: AsyncSession):
-    """Delete a role in database"""
-    delete(models_phonebook.Role).where(role_id == models_phonebook.Role.id)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-
-
-# ---------------------------------------------------------------------------- #
-#                                  Membership                                  #
+#                                  Membership                                  # #REVIEW - ready to be tested
 # ---------------------------------------------------------------------------- #
 async def create_membership(membership: models_phonebook.Membership, db: AsyncSession):
     """Create a membership in database"""
@@ -206,7 +109,6 @@ async def delete_membership(
     delete(models_phonebook.Membership).where(
         membership.association_id == models_phonebook.Membership.association_id
         and membership.user_id == models_phonebook.Membership.user_id
-        and membership.role_id == models_phonebook.Membership.role_id
     )
     try:
         await db.commit()

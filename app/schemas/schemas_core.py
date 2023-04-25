@@ -44,6 +44,7 @@ class CoreGroupBase(BaseModel):
 
     name: str
     description: str | None = None
+    group_type: str | None = None
 
     _normalize_name = validator("name", allow_reuse=True)(
         validators.trailing_spaces_remover
@@ -176,6 +177,7 @@ class CoreGroupUpdate(BaseModel):
 
     name: str | None = None
     description: str | None = None
+    group_type: str | None = None
 
     _normalize_name = validator("name", allow_reuse=True)(
         validators.trailing_spaces_remover
