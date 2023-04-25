@@ -17,6 +17,7 @@ from tests.commons import (
 )
 
 soli_user: models_core.CoreUser | None = None
+admin_user: models_core.CoreUser | None = None
 student_user: models_core.CoreUser | None = None
 raffle: models_raffle.Raffle | None = None
 raffle_to_delete: models_raffle.Raffle | None = None
@@ -29,10 +30,11 @@ cash: models_raffle.Cash | None = None
 
 @pytest_asyncio.fixture(scope="session", autouse=True)
 async def init_objects():
-    global soli_user, student_user, raffle, packticket, ticket, lot, cash, raffle_to_delete, packticket_to_delete
+    global admin_user, soli_user, student_user, raffle, packticket, ticket, lot, cash, raffle_to_delete, packticket_to_delete
 
     soli_user = await create_user_with_groups([GroupType.soli])
     student_user = await create_user_with_groups([GroupType.student])
+        admin_user = await create_user_with_groups([GroupType.admin])
 
     raffle_to_delete = models_raffle.Raffle(
         id=str(uuid.uuid4()),
@@ -90,7 +92,7 @@ def test_get_raffles():
 
 
 def test_create_raffle():
-    token = create_api_access_token(soli_user)
+    token = create_api_access_token(admin_user)
 
     response = client.post(
         "/tombola/raffles",
@@ -128,16 +130,6 @@ def test_edit_raffle():
     assert modified_raffle["status"] == RaffleStatusType.open
 
 
-def test_delete_raffle():
-    token = create_api_access_token(soli_user)
-
-    response = client.delete(
-        f"/tombola/raffles/{raffle_to_delete.id}",
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert response.status_code == 204
-
-
 def test_get_raffle_stats():
     token = create_api_access_token(student_user)
 
@@ -151,7 +143,7 @@ def test_get_raffle_stats():
 
 # # tickets
 def test_get_tickets():
-    token = create_api_access_token(soli_user)
+    token = create_api_access_token(admin_user)
 
     response = client.get(
         "/tombola/tickets",
@@ -357,6 +349,16 @@ def test_delete_lots():
 
     response = client.delete(
         f"/tombola/lots/{lot.id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 204
+
+
+def test_delete_raffle():
+    token = create_api_access_token(soli_user)
+
+    response = client.delete(
+        f"/tombola/raffles/{raffle_to_delete.id}",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 204

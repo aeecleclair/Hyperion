@@ -11,6 +11,7 @@ from sqlalchemy.orm import joinedload, selectinload
 
 from app.models import models_raffle
 from app.schemas import schemas_raffle
+from app.utils.types.raffle_types import RaffleStatusType
 
 hyperion_error_logger = logging.getLogger("hyperion_error")
 
@@ -400,3 +401,24 @@ async def draw_winner_by_lot_raffle(
         raise ValueError("Error during edition of the lot")
 
     return winners
+
+
+# Manage status
+
+
+async def open_raffle(db: AsyncSession, raffle_id: str):
+    await db.execute(
+        update(models_raffle.Raffle)
+        .where(models_raffle.Raffle.id == raffle_id)
+        .values(status=RaffleStatusType.open)
+    )
+    await db.commit()
+
+
+async def locked_raffle(db: AsyncSession, raffle_id: str):
+    await db.execute(
+        update(models_raffle.Raffle)
+        .where(models_raffle.Raffle.id == raffle_id)
+        .values(status=RaffleStatusType.locked)
+    )
+    await db.commit()
