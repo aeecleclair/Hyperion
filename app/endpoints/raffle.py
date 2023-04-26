@@ -64,7 +64,7 @@ async def create_raffle(
     group = await cruds_groups.get_group_by_id(group_id=raffle.group_id, db=db)
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
-
+    raffle.status = RaffleStatusType.creation
     db_raffle = models_raffle.Raffle(id=str(uuid.uuid4()), **raffle.dict())
 
     try:

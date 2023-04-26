@@ -98,7 +98,6 @@ def test_create_raffle():
         "/tombola/raffles",
         json={
             "name": "test",
-            "status": RaffleStatusType.creation,
             "group_id": GroupType.soli,
             "description": "Raffle's description",
         },
@@ -114,7 +113,6 @@ def test_edit_raffle():
         f"/tombola/raffles/{raffle_to_delete.id}",
         json={
             "name": "testupdate",
-            "status": RaffleStatusType.open,
             "description": "Raffle's description",
         },
         headers={"Authorization": f"Bearer {token}"},
@@ -127,7 +125,7 @@ def test_edit_raffle():
     )
     json = response.json()
     [modified_raffle] = [entry for entry in json if entry["id"] == raffle_to_delete.id]
-    assert modified_raffle["status"] == RaffleStatusType.open
+    assert modified_raffle["name"] == "testupdate"
 
 
 def test_get_raffle_stats():

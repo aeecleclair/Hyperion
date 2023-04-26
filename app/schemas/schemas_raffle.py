@@ -10,14 +10,13 @@ class RaffleBase(BaseModel):
     """Base schema for raffles"""
 
     name: str
-    status: RaffleStatusType
+    status: RaffleStatusType | None = None
     description: str | None = None
     group_id: str
 
 
 class RaffleEdit(BaseModel):
     name: str | None = None
-    status: RaffleStatusType | None = None
     description: str | None = None
 
 
