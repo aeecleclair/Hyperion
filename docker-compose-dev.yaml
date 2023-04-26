@@ -22,3 +22,6 @@ services:
     restart: unless-stopped
     ports:
       - 6379:6379
+
+volumes:
+  hyperion_db_data:
