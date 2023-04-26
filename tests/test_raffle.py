@@ -128,6 +128,42 @@ def test_edit_raffle():
     assert modified_raffle["name"] == "testupdate"
 
 
+def test_open_raffle():
+    token = create_api_access_token(soli_user)
+
+    response = client.patch(
+        f"/tombola/raffles/{raffle_to_delete.id}/open",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 204
+
+    response = client.get(
+        "/tombola/raffles/",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    json = response.json()
+    [modified_raffle] = [entry for entry in json if entry["id"] == raffle_to_delete.id]
+    assert modified_raffle["status"] == RaffleStatusType.open
+
+
+def test_locked_raffle():
+    token = create_api_access_token(soli_user)
+
+    response = client.patch(
+        f"/tombola/raffles/{raffle_to_delete.id}/locked",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 204
+
+    response = client.get(
+        "/tombola/raffles/",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    json = response.json()
+    [modified_raffle] = [entry for entry in json if entry["id"] == raffle_to_delete.id]
+    assert modified_raffle["status"] == RaffleStatusType.locked
+
+
 def test_get_raffle_stats():
     token = create_api_access_token(student_user)
 

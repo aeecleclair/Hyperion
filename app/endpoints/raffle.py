@@ -847,3 +847,61 @@ async def draw_winner(
         ticket.lot = lot
 
     return winning_tickets
+
+
+@router.patch(
+    "/tombola/raffles/{raffle_id}/open",
+    status_code=204,
+    tags=[Tags.raffle],
+)
+async def open_raffle(
+    raffle_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Edit a raffle
+
+    **The user must be a member of the raffle's group to use this endpoint**
+    """
+
+    raffle = await cruds_raffle.get_raffle_by_id(raffle_id=raffle_id, db=db)
+    if not raffle:
+        raise HTTPException(status_code=404, detail="Raffle not found")
+
+    if not is_user_member_of_an_allowed_group(user, [raffle.group_id]):
+        raise HTTPException(
+            status_code=403,
+            detail=f"{user.id} user is unauthorized to manage the raffle {raffle_id}",
+        )
+
+    await cruds_raffle.open_raffle(db=db, raffle_id=raffle_id)
+
+
+@router.patch(
+    "/tombola/raffles/{raffle_id}/locked",
+    status_code=204,
+    tags=[Tags.raffle],
+)
+async def locked_raffle(
+    raffle_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Edit a raffle
+
+    **The user must be a member of the raffle's group to use this endpoint**
+    """
+
+    raffle = await cruds_raffle.get_raffle_by_id(raffle_id=raffle_id, db=db)
+    if not raffle:
+        raise HTTPException(status_code=404, detail="Raffle not found")
+
+    if not is_user_member_of_an_allowed_group(user, [raffle.group_id]):
+        raise HTTPException(
+            status_code=403,
+            detail=f"{user.id} user is unauthorized to manage the raffle {raffle_id}",
+        )
+
+    await cruds_raffle.locked_raffle(db=db, raffle_id=raffle_id)
