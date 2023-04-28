@@ -1,4 +1,4 @@
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -121,19 +121,6 @@ async def update_loaner_item(
         update(models_loan.Item)
         .where(models_loan.Item.id == item_id)
         .values(**item_update.dict(exclude_none=True))
-    )
-    await db.commit()
-
-
-async def update_loaner_item_loaned_quantity(
-    item_id: str,
-    loaned_quantity: int,
-    db: AsyncSession,
-):
-    await db.execute(
-        update(models_loan.Item)
-        .where(models_loan.Item.id == item_id)
-        .values({"loaned_quantity": loaned_quantity})
     )
     await db.commit()
 
@@ -273,6 +260,22 @@ async def get_loan_contents_by_loan_id(
         )
     )
     return result.scalars().all()
+
+
+async def get_loaned_quantity(
+    item_id: str,
+    db: AsyncSession,
+) -> int | None:
+    result = await db.execute(
+        select(func.sum(models_loan.LoanContent.quantity)).where(
+            models_loan.LoanContent.item_id == item_id
+        )
+    )
+    qty = result.scalars().first()
+    if qty is None:
+        return 0
+    else:
+        return qty
 
 
 async def delete_loan_content_by_loan_id(

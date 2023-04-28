@@ -49,6 +49,12 @@ class Item(ItemBase):
     loaned_quantity: int
 
 
+class ItemSimple(BaseModel):
+    id: str
+    name: str
+    loaner_id: str
+
+
 class LoanBase(BaseModel):
     """
     Base schema for loan's model
@@ -66,13 +72,21 @@ class LoanBase(BaseModel):
 
 
 class ItemBorrowed(BaseModel):
+    """
+    A schema used to represent Item in a loan with its quantity in a request by the client
+    """
+
     item_id: str
     quantity: int
 
 
 class ItemQuantity(BaseModel):
+    """
+    A schema used to represent Item in a loan with its quantity in a response to the client
+    """
+
     quantity: int
-    item: Item
+    item: ItemSimple
 
 
 class LoanCreation(LoanBase):

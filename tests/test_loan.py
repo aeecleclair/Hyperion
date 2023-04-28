@@ -66,7 +66,6 @@ async def startuptest():
             ),
             suggested_caution=10,
             total_quantity=8,
-            loaned_quantity=0,
             loaner=loaner,
         )
         db.add(item)
@@ -80,7 +79,6 @@ async def startuptest():
             ),
             suggested_caution=10,
             total_quantity=5,
-            loaned_quantity=1,
             loaner=loaner,
         )
         db.add(item_to_delete)
@@ -191,7 +189,6 @@ def test_update_items_for_loaner():
             "name": "TestItem",
             "suggested_caution": 100,
             "total_quantity": 7,
-            "loaned_quantity": 1,
             "suggested_lending_duration": str(timedelta(days=10)),
         },
         headers={"Authorization": f"Bearer {token_loaner}"},

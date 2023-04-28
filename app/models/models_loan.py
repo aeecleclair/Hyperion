@@ -45,7 +45,6 @@ class Item(Base):
     loaner_id: str = Column(String, ForeignKey("loaner.id"))
     suggested_caution: int = Column(Integer)
     total_quantity: int = Column(Integer, nullable=False)
-    loaned_quantity: int = Column(Integer, nullable=False)
     suggested_lending_duration: timedelta = Column(Interval, nullable=False)
     loaner: Loaner = relationship(Loaner, lazy="joined", back_populates="items")
 
