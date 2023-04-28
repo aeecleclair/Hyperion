@@ -190,25 +190,6 @@ async def get_loans_by_loaner(
                     )
                 )
             loans.append(schemas_loans.Loan(items_qty=items_qty_ret, **loan.__dict__))
-    loans: list[schemas_loans.Loan] = []
-    for loan in loaner.loans:
-        if returned is None or loan.returned == returned:
-            itemsret = await cruds_loans.get_loan_contents_by_loan_id(
-                loan_id=loan.id, db=db
-            )
-            if itemsret is None:
-                raise HTTPException(
-                    status_code=404,
-                    detail="Loan Contents not found",
-                )
-            items_qty_ret: list[schemas_loans.ItemQuantity] = []
-            for itemret in itemsret:
-                items_qty_ret.append(
-                    schemas_loans.ItemQuantity(
-                        item=itemret.item, quantity=itemret.quantity
-                    )
-                )
-            loans.append(schemas_loans.Loan(items_qty=items_qty_ret, **loan.__dict__))
 
     return loans
 
@@ -426,30 +407,10 @@ async def get_current_user_loans(
     """
 
     loans_borrowed = await cruds_loans.get_loans_by_borrower(
-    loans_borrowed = await cruds_loans.get_loans_by_borrower(
         db=db,
         borrower_id=user.id,
         returned=returned,
     )
-
-    loansret: list[schemas_loans.Loan] = []
-    for loan in loans_borrowed:
-        itemsret = await cruds_loans.get_loan_contents_by_loan_id(
-            loan_id=loan.id, db=db
-        )
-        if itemsret is None:
-            raise HTTPException(
-                status_code=404,
-                detail="Loan contents not found",
-            )
-        items_qty_ret: list[schemas_loans.ItemQuantity] = []
-        for itemret in itemsret:
-            items_qty_ret.append(
-                schemas_loans.ItemQuantity(item=itemret.item, quantity=itemret.quantity)
-            )
-        loansret.append(schemas_loans.Loan(items_qty=items_qty_ret, **loan.__dict__))
-
-    return loansret
 
     loansret: list[schemas_loans.Loan] = []
     for loan in loans_borrowed:
@@ -543,14 +504,8 @@ async def create_loan(
 
     # list of item and quantity borrowed
     items: list[tuple[models_loan.Item, int]] = []
-    # list of item and quantity borrowed
-    items: list[tuple[models_loan.Item, int]] = []
 
     # All items should be valid, available and belong to the loaner
-    for item_borrowed in loan_creation.items_borrowed:
-        item_id: str = item_borrowed.item_id
-        quantity: int = item_borrowed.quantity
-
     for item_borrowed in loan_creation.items_borrowed:
         item_id: str = item_borrowed.item_id
         quantity: int = item_borrowed.quantity
@@ -607,13 +562,9 @@ async def create_loan(
         # We add each item to the loan
         loan_content = models_loan.LoanContent(
             loan_id=db_loan.id, item_id=item.id, quantity=quantity
-            loan_id=db_loan.id, item_id=item.id, quantity=quantity
         )
         await cruds_loans.create_loan_content(loan_content=loan_content, db=db)
 
-    loan = await cruds_loans.get_loan_by_id(loan_id=db_loan.id, db=db)
-    if loan is None:
-        raise HTTPException(status_code=404, detail=str("Loan not found"))
     loan = await cruds_loans.get_loan_by_id(loan_id=db_loan.id, db=db)
     if loan is None:
         raise HTTPException(status_code=404, detail=str("Loan not found"))
@@ -679,7 +630,6 @@ async def update_loan(  # noqa: C901
 
     # If a new list of items was provided, we need to mark old items as available and new items as not available
     if loan_update.items_borrowed:
-    if loan_update.items_borrowed:
         for old_item in loan.items:
             # We need to update the item loaned quantity thanks to the quantity in the loan content
             loan_content = await cruds_loans.get_loan_content_by_loan_id_item_id(
@@ -696,12 +646,8 @@ async def update_loan(  # noqa: C901
         await cruds_loans.delete_loan_content_by_loan_id(loan_id=loan_id, db=db)
 
         items: list[tuple[models_loan.Item, int]] = []
-        items: list[tuple[models_loan.Item, int]] = []
 
         # All items should be valid, available and belong to the loaner
-        for item_borrowed in loan_update.items_borrowed:
-            item_id: str = item_borrowed.item_id
-            quantity: int = item_borrowed.quantity
         for item_borrowed in loan_update.items_borrowed:
             item_id: str = item_borrowed.item_id
             quantity: int = item_borrowed.quantity
@@ -751,7 +697,6 @@ async def update_loan(  # noqa: C901
         # We add each item to the loan
         loan_content = models_loan.LoanContent(
             loan_id=loan_id, item_id=item.id, quantity=quantity
-            loan_id=loan_id, item_id=item.id, quantity=quantity
         )
         await cruds_loans.create_loan_content(loan_content=loan_content, db=db)
 
@@ -767,8 +712,6 @@ async def delete_loan(
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
-    Delete a loan
-    This will remove the loan but won't delete any loaner items.
     Delete a loan
     This will remove the loan but won't delete any loaner items.
 
@@ -791,7 +734,6 @@ async def delete_loan(
             detail=f"Unauthorized to manage {loan.loaner_id} loaner",
         )
 
-    # We need to update the item loaned quantity thanks to the quantity in the loan content
     # We need to update the item loaned quantity thanks to the quantity in the loan content
     for item in loan.items:
         loan_content = await cruds_loans.get_loan_content_by_loan_id_item_id(
