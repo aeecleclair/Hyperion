@@ -34,6 +34,8 @@ class LoanContent(Base):
     item_id: str = Column(ForeignKey("loaner_item.id"), primary_key=True)
     quantity: int = Column(Integer, nullable=False)
     item: "Item" = relationship("Item")
+    quantity: int = Column(Integer, nullable=False)
+    item: "Item" = relationship("Item")
 
 
 class Item(Base):
@@ -78,6 +80,7 @@ class Loan(Base):
 
     items: list["Item"] = relationship(
         "Item",
+        viewonly=True,
         viewonly=True,
         secondary="loan_content",
         lazy="joined",
