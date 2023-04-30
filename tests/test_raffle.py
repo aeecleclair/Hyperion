@@ -25,10 +25,10 @@ raffle_to_delete: models_raffle.Raffle | None = None
 packticket: models_raffle.PackTicket | None = None
 packticket_to_draw: models_raffle.PackTicket | None = None
 packticket_to_delete: models_raffle.PackTicket | None = None
-lot: models_raffle.Lots | None = None
-lot_to_draw: models_raffle.Lots | None = None
-ticket: models_raffle.Tickets | None = None
-ticket_to_draw: models_raffle.Tickets | None = None
+lot: models_raffle.Lot | None = None
+lot_to_draw: models_raffle.Lot | None = None
+ticket: models_raffle.Ticket | None = None
+ticket_to_draw: models_raffle.Ticket | None = None
 cash: models_raffle.Cash | None = None
 
 
@@ -85,21 +85,21 @@ async def startuptest():
     )
     await add_object_to_db(packticket_to_delete)
 
-    ticket = models_raffle.Tickets(
+    ticket = models_raffle.Ticket(
         id=str(uuid.uuid4()),
         pack_id=packticket.id,
         user_id=student_user.id,
     )
     await add_object_to_db(ticket)
 
-    ticket_to_draw = models_raffle.Tickets(
+    ticket_to_draw = models_raffle.Ticket(
         id=str(uuid.uuid4()),
         pack_id=packticket_to_draw.id,
         user_id=student_user.id,
     )
     await add_object_to_db(ticket_to_draw)
 
-    lot = models_raffle.Lots(
+    lot = models_raffle.Lot(
         id=str(uuid.uuid4()),
         raffle_id=raffle.id,
         description="Description of the lot",
@@ -108,7 +108,7 @@ async def startuptest():
     )
     await add_object_to_db(lot)
 
-    lot_to_draw = models_raffle.Lots(
+    lot_to_draw = models_raffle.Lot(
         id=str(uuid.uuid4()),
         raffle_id=raffle_to_draw.id,
         description="Description of the lot",

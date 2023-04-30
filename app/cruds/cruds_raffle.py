@@ -85,19 +85,19 @@ async def delete_raffle(
     await db.commit()
 
 
-async def get_lots(db: AsyncSession) -> Sequence[models_raffle.Lots]:
+async def get_lots(db: AsyncSession) -> Sequence[models_raffle.Lot]:
     """Return all lots from database"""
 
     result = await db.execute(
-        select(models_raffle.Lots).options(selectinload(models_raffle.Lots.raffle))
+        select(models_raffle.Lot).options(selectinload(models_raffle.Lot.raffle))
     )
     return result.scalars().all()
 
 
 async def create_lot(
-    lot: models_raffle.Lots,
+    lot: models_raffle.Lot,
     db: AsyncSession,
-) -> models_raffle.Lots:
+) -> models_raffle.Lot:
     """Create a new lot in databasend return it"""
 
     db.add(lot)
@@ -109,12 +109,12 @@ async def create_lot(
         raise err
 
 
-async def get_lot_by_raffleid(
+async def get_lots_by_raffleid(
     raffle_id: str,
     db: AsyncSession,
-) -> Sequence[models_raffle.Lots]:
+) -> Sequence[models_raffle.Lot]:
     result = await db.execute(
-        select(models_raffle.Lots).where(models_raffle.Lots.raffle_id == raffle_id)
+        select(models_raffle.Lot).where(models_raffle.Lot.raffle_id == raffle_id)
     )
     return result.scalars().all()
 
@@ -122,11 +122,11 @@ async def get_lot_by_raffleid(
 async def get_lot_by_id(
     lot_id: str,
     db: AsyncSession,
-) -> models_raffle.Lots | None:
+) -> models_raffle.Lot | None:
     result = await db.execute(
-        select(models_raffle.Lots)
-        .where(models_raffle.Lots.id == lot_id)
-        .options(selectinload(models_raffle.Lots.raffle))
+        select(models_raffle.Lot)
+        .where(models_raffle.Lot.id == lot_id)
+        .options(selectinload(models_raffle.Lot.raffle))
     )
     return result.scalars().first()
 
@@ -137,8 +137,8 @@ async def edit_lot(
     db: AsyncSession,
 ):
     await db.execute(
-        update(models_raffle.Lots)
-        .where(models_raffle.Lots.id == lot_id)
+        update(models_raffle.Lot)
+        .where(models_raffle.Lot.id == lot_id)
         .values(**lot_update.dict(exclude_none=True))
     )
     await db.commit()
@@ -150,7 +150,18 @@ async def delete_lot(
 ):
     """Delete a lot from database by id"""
 
-    await db.execute(delete(models_raffle.Lots).where(models_raffle.Lots.id == lot_id))
+    await db.execute(delete(models_raffle.Lot).where(models_raffle.Lot.id == lot_id))
+    await db.commit()
+
+
+async def delete_lots_by_raffleid(db: AsyncSession, raffle_id: str):
+    """Delete lots from database by raffle_id"""
+    lots_to_delete = await get_lots_by_raffleid(raffle_id=raffle_id, db=db)
+    await db.execute(
+        delete(models_raffle.Lot).where(
+            models_raffle.Lot.id.in_([lot.id for lot in lots_to_delete])
+        )
+    )
     await db.commit()
 
 
@@ -183,7 +194,7 @@ async def create_packticket(
 async def get_packtickets_by_raffleid(
     raffle_id: str,
     db: AsyncSession,
-) -> Sequence[models_raffle.PackTicket] | None:
+) -> Sequence[models_raffle.PackTicket]:
     result = await db.execute(
         select(models_raffle.PackTicket).where(
             models_raffle.PackTicket.raffle_id == raffle_id
@@ -231,17 +242,30 @@ async def delete_packticket(
     await db.commit()
 
 
-async def get_tickets(db: AsyncSession) -> Sequence[models_raffle.Tickets]:
+async def delete_packtickets_by_raffleid(db: AsyncSession, raffle_id: str):
+    """Delete packtickets from database by raffle_id"""
+    packtickets_to_delete = await get_packtickets_by_raffleid(
+        raffle_id=raffle_id, db=db
+    )
+    await db.execute(
+        delete(models_raffle.PackTicket).where(
+            models_raffle.PackTicket.id.in_([p.id for p in packtickets_to_delete])
+        )
+    )
+    await db.commit()
+
+
+async def get_tickets(db: AsyncSession) -> Sequence[models_raffle.Ticket]:
     """Return all tickets from database where raffle ID == raffle_id"""
 
-    result = await db.execute(select(models_raffle.Tickets))
+    result = await db.execute(select(models_raffle.Ticket))
     return result.scalars().all()
 
 
 async def create_ticket(
-    tickets: list[models_raffle.Tickets],
+    tickets: list[models_raffle.Ticket],
     db: AsyncSession,
-) -> Sequence[models_raffle.Tickets]:
+) -> Sequence[models_raffle.Ticket]:
     """Create a new ticket in databasend return it"""
     db.add_all(tickets)
     try:
@@ -252,19 +276,19 @@ async def create_ticket(
         raise err
 
 
-async def get_ticket_by_raffleid(
+async def get_tickets_by_raffleid(
     raffle_id: str,
     db: AsyncSession,
-) -> Sequence[models_raffle.Tickets]:
+) -> Sequence[models_raffle.Ticket]:
     results = (
         (
             await db.execute(
-                select(models_raffle.Tickets).options(
-                    joinedload(models_raffle.Tickets.pack_ticket).joinedload(
+                select(models_raffle.Ticket).options(
+                    joinedload(models_raffle.Ticket.pack_ticket).joinedload(
                         models_raffle.PackTicket.raffle
                     ),
-                    joinedload(models_raffle.Tickets.user),
-                    joinedload(models_raffle.Tickets.lot),
+                    joinedload(models_raffle.Ticket.user),
+                    joinedload(models_raffle.Ticket.lot),
                 )
             )
         )
@@ -280,26 +304,26 @@ async def get_ticket_by_raffleid(
 async def get_ticket_by_id(
     ticket_id: str,
     db: AsyncSession,
-) -> models_raffle.Tickets | None:
+) -> models_raffle.Ticket | None:
     result = await db.execute(
-        select(models_raffle.Tickets).where(models_raffle.Tickets.id == ticket_id)
+        select(models_raffle.Ticket).where(models_raffle.Ticket.id == ticket_id)
     )
     return result.scalars().first()
 
 
-async def get_ticket_by_userid(
+async def get_tickets_by_userid(
     user_id: str,
     db: AsyncSession,
-) -> Sequence[models_raffle.Tickets] | None:
+) -> Sequence[models_raffle.Ticket] | None:
     result = await db.execute(
-        select(models_raffle.Tickets)
-        .where(models_raffle.Tickets.user_id == user_id)
+        select(models_raffle.Ticket)
+        .where(models_raffle.Ticket.user_id == user_id)
         .options(
-            joinedload(models_raffle.Tickets.pack_ticket).joinedload(
+            joinedload(models_raffle.Ticket.pack_ticket).joinedload(
                 models_raffle.PackTicket.raffle
             ),
-            joinedload(models_raffle.Tickets.user),
-            joinedload(models_raffle.Tickets.lot),
+            joinedload(models_raffle.Ticket.user),
+            joinedload(models_raffle.Ticket.lot),
         )
     )
     return result.scalars().all()
@@ -312,7 +336,18 @@ async def delete_ticket(
     """Delete a ticket from database by id"""
 
     await db.execute(
-        delete(models_raffle.Tickets).where(models_raffle.Tickets.id == ticket_id)
+        delete(models_raffle.Ticket).where(models_raffle.Ticket.id == ticket_id)
+    )
+    await db.commit()
+
+
+async def delete_tickets_by_raffleid(db: AsyncSession, raffle_id: str):
+    """Delete tickets from database by raffle_id"""
+    tickets_to_delete = await get_tickets_by_raffleid(raffle_id=raffle_id, db=db)
+    await db.execute(
+        delete(models_raffle.Ticket).where(
+            models_raffle.Ticket.id.in_([t.id for t in tickets_to_delete])
+        )
     )
     await db.commit()
 
@@ -360,7 +395,7 @@ async def edit_cash(db: AsyncSession, user_id: str, amount: float):
 
 async def draw_winner_by_lot_raffle(
     lot_id: str, db: AsyncSession
-) -> Sequence[models_raffle.Tickets]:
+) -> Sequence[models_raffle.Ticket]:
     lot = await get_lot_by_id(lot_id=lot_id, db=db)
     if lot is None:
         raise ValueError("Invalid lot")
@@ -369,7 +404,7 @@ async def draw_winner_by_lot_raffle(
     if raffle_id is None:
         raise ValueError("Invalid raffle_id")
 
-    gettickets = await get_ticket_by_raffleid(raffle_id=raffle_id, db=db)
+    gettickets = await get_tickets_by_raffleid(raffle_id=raffle_id, db=db)
     tickets = [t for t in gettickets if t.winning_lot is None]
 
     if len(tickets) < lot.quantity:
@@ -379,8 +414,8 @@ async def draw_winner_by_lot_raffle(
         winners = random.sample(tickets, lot.quantity)
 
     await db.execute(
-        update(models_raffle.Tickets)
-        .where(models_raffle.Tickets.id.in_([w.id for w in winners]))
+        update(models_raffle.Ticket)
+        .where(models_raffle.Ticket.id.in_([w.id for w in winners]))
         .values(winning_lot=lot_id)
     )
     try:
@@ -390,8 +425,8 @@ async def draw_winner_by_lot_raffle(
         raise ValueError("Error during edition of the winning tickets")
 
     await db.execute(
-        update(models_raffle.Lots)
-        .where(models_raffle.Lots.id == lot_id)
+        update(models_raffle.Lot)
+        .where(models_raffle.Lot.id == lot_id)
         .values(quantity=lot.quantity - len(winners))
     )
     try:

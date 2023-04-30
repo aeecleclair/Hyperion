@@ -36,8 +36,8 @@ class PackTicket(Base):
     raffle: Mapped[Raffle] = relationship("Raffle")
 
 
-class Lots(Base):
-    __tablename__ = "raffle_lots"
+class Lot(Base):
+    __tablename__ = "raffle_lot"
 
     id: Mapped[str] = mapped_column(
         String, primary_key=True, index=True, nullable=False
@@ -52,8 +52,8 @@ class Lots(Base):
     raffle: Mapped[Raffle] = relationship("Raffle")
 
 
-class Tickets(Base):
-    __tablename__ = "raffle_tickets"
+class Ticket(Base):
+    __tablename__ = "raffle_ticket"
 
     id: Mapped[str] = mapped_column(
         String, primary_key=True, index=True, nullable=False
@@ -63,11 +63,11 @@ class Tickets(Base):
     )
     user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), nullable=False)
     winning_lot: Mapped[str] = mapped_column(
-        ForeignKey("raffle_lots.id"), nullable=True, index=True
+        ForeignKey("raffle_lot.id"), nullable=True, index=True
     )
 
     pack_ticket: Mapped[PackTicket] = relationship("PackTicket")
-    lot: Mapped[Lots | None] = relationship("Lots")
+    lot: Mapped[Lot | None] = relationship("Lot")
     user: Mapped[CoreUser] = relationship("CoreUser")
 
 

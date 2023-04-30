@@ -127,33 +127,21 @@ async def delete_raffle(
 
     **The user must be a member of the raffle's group to use this endpoint**
     """
-
     raffle = await cruds_raffle.get_raffle_by_id(raffle_id=raffle_id, db=db)
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
-
-    tickets = await cruds_raffle.get_ticket_by_raffleid(raffle_id=raffle_id, db=db)
-    if tickets is not None:
-        for t in tickets:
-            await cruds_raffle.delete_ticket(db=db, ticket_id=t.id)
-
-    packtickets = await cruds_raffle.get_packtickets_by_raffleid(
-        raffle_id=raffle_id, db=db
-    )
-    if packtickets is not None:
-        for p in packtickets:
-            await cruds_raffle.delete_packticket(db=db, packticket_id=p.id)
-
-    lots = await cruds_raffle.get_lot_by_raffleid(raffle_id=raffle_id, db=db)
-    if lots is not None:
-        for lo in lots:
-            await cruds_raffle.delete_lot(db=db, lot_id=lo.id)
 
     if not is_user_member_of_an_allowed_group(user, [raffle.group_id]):
         raise HTTPException(
             status_code=403,
             detail=f"{user.id} user is unauthorized to manage the raffle {raffle_id}",
         )
+
+    await cruds_raffle.delete_tickets_by_raffleid(db=db, raffle_id=raffle_id)
+
+    await cruds_raffle.delete_packtickets_by_raffleid(db=db, raffle_id=raffle_id)
+
+    await cruds_raffle.delete_lots_by_raffleid(db=db, raffle_id=raffle_id)
 
     await cruds_raffle.delete_raffle(raffle_id=raffle_id, db=db)
 
@@ -164,7 +152,7 @@ async def delete_raffle(
     status_code=200,
     tags=[Tags.raffle],
 )
-async def get_raffle_by_group_id(
+async def get_raffles_by_group_id(
     group_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
@@ -192,7 +180,7 @@ async def get_raffle_stats(
     if raffle is None:
         raise HTTPException(status_code=404, detail="Raffle not found")
 
-    tickets = await cruds_raffle.get_ticket_by_raffleid(db=db, raffle_id=raffle_id)
+    tickets = await cruds_raffle.get_tickets_by_raffleid(db=db, raffle_id=raffle_id)
 
     tickets_sold = len(tickets)
     amount_raised = sum(
@@ -412,7 +400,7 @@ async def buy_ticket(
             db=db,
         )
     db_ticket = [
-        models_raffle.Tickets(id=str(uuid.uuid4()), pack_id=pack_id, user_id=user.id)
+        models_raffle.Ticket(id=str(uuid.uuid4()), pack_id=pack_id, user_id=user.id)
         for i in range(pack_ticket.pack_size)
     ]
 
@@ -486,7 +474,7 @@ async def get_tickets_by_userid(
         )
 
     else:
-        tickets = await cruds_raffle.get_ticket_by_userid(user_id=user_id, db=db)
+        tickets = await cruds_raffle.get_tickets_by_userid(user_id=user_id, db=db)
         return tickets
 
 
@@ -507,7 +495,7 @@ async def get_tickets_by_raffleid(
     **The user must be a member of the raffle's group to use this endpoint
     """
 
-    tickets = await cruds_raffle.get_ticket_by_raffleid(raffle_id=raffle_id, db=db)
+    tickets = await cruds_raffle.get_tickets_by_raffleid(raffle_id=raffle_id, db=db)
     raffle = await cruds_raffle.get_raffle_by_id(raffle_id=raffle_id, db=db)
 
     if not raffle:
@@ -575,7 +563,7 @@ async def create_lot(
             detail=f"Raffle {raffle.id} is not in Creation Mode",
         )
 
-    db_lot = models_raffle.Lots(id=str(uuid.uuid4()), **lot.dict())
+    db_lot = models_raffle.Lot(id=str(uuid.uuid4()), **lot.dict())
 
     try:
         result = await cruds_raffle.create_lot(lot=db_lot, db=db)
@@ -674,7 +662,7 @@ async def get_lots_by_raffleid(
     Get lots from a specific raffle.
     """
 
-    lots = await cruds_raffle.get_lot_by_raffleid(raffle_id=raffle_id, db=db)
+    lots = await cruds_raffle.get_lots_by_raffleid(raffle_id=raffle_id, db=db)
 
     return lots
 
