@@ -40,7 +40,7 @@ async def create_raffle(
         raise err
 
 
-async def get_raffle_by_groupid(
+async def get_raffles_by_groupid(
     group_id: str,
     db: AsyncSession,
 ) -> list[models_raffle.Raffle] | None:

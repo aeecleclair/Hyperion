@@ -172,7 +172,7 @@ async def get_raffle_by_group_id(
     """
     Return all raffles from a group
     """
-    raffle = await cruds_raffle.get_raffle_by_groupid(group_id, db)
+    raffle = await cruds_raffle.get_raffles_by_groupid(group_id, db)
     return raffle
 
 
