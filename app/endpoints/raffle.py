@@ -905,7 +905,9 @@ async def open_raffle(
             detail=f"{user.id} user is unauthorized to manage the raffle {raffle_id}",
         )
 
-    await cruds_raffle.open_raffle(db=db, raffle_id=raffle_id)
+    await cruds_raffle.change_raffle_status(
+        db=db, raffle_id=raffle_id, status=RaffleStatusType.open
+    )
 
 
 @router.patch(
@@ -940,4 +942,6 @@ async def lock_raffle(
             detail=f"{user.id} user is unauthorized to manage the raffle {raffle_id}",
         )
 
-    await cruds_raffle.lock_raffle(db=db, raffle_id=raffle_id)
+    await cruds_raffle.change_raffle_status(
+        db=db, raffle_id=raffle_id, status=RaffleStatusType.lock
+    )

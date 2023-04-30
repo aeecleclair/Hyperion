@@ -406,19 +406,12 @@ async def draw_winner_by_lot_raffle(
 # Manage status
 
 
-async def open_raffle(db: AsyncSession, raffle_id: str):
+async def change_raffle_status(
+    db: AsyncSession, raffle_id: str, status: RaffleStatusType
+):
     await db.execute(
         update(models_raffle.Raffle)
         .where(models_raffle.Raffle.id == raffle_id)
-        .values(status=RaffleStatusType.open)
-    )
-    await db.commit()
-
-
-async def lock_raffle(db: AsyncSession, raffle_id: str):
-    await db.execute(
-        update(models_raffle.Raffle)
-        .where(models_raffle.Raffle.id == raffle_id)
-        .values(status=RaffleStatusType.lock)
+        .values(status=status)
     )
     await db.commit()
