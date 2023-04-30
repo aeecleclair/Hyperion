@@ -374,13 +374,13 @@ async def get_tickets(
 
 
 @router.post(
-    "/tombola/tickets/buy/{type_id}",
+    "/tombola/tickets/buy/{pack_id}",
     response_model=list[schemas_raffle.TicketComplete],
     status_code=201,
     tags=[Tags.raffle],
 )
 async def buy_ticket(
-    type_id: str,
+    pack_id: str,
     db: AsyncSession = Depends(get_db),
     redis_client: Redis | None = Depends(get_redis_client),
     user: models_core.CoreUser = Depends(is_user_a_member),
@@ -389,7 +389,7 @@ async def buy_ticket(
     """
     Buy a ticket
     """
-    pack_ticket = await cruds_raffle.get_packticket_by_id(packticket_id=type_id, db=db)
+    pack_ticket = await cruds_raffle.get_packticket_by_id(packticket_id=pack_id, db=db)
     if pack_ticket is None:
         raise ValueError("Bad packticket association")
 
@@ -412,7 +412,7 @@ async def buy_ticket(
             db=db,
         )
     db_ticket = [
-        models_raffle.Tickets(id=str(uuid.uuid4()), type_id=type_id, user_id=user.id)
+        models_raffle.Tickets(id=str(uuid.uuid4()), pack_id=pack_id, user_id=user.id)
         for i in range(pack_ticket.pack_size)
     ]
 
@@ -444,7 +444,7 @@ async def buy_ticket(
             firstname=user.firstname, name=user.name, nickname=user.nickname
         )
         hyperion_raffle_logger.info(
-            f"Add_ticket_to_user: A pack of {pack_ticket.pack_size} tickets of type {type_id} has been buyed by user {display_name}({user.id}) for an amount of {pack_ticket.price}€. ({request_id})"
+            f"Add_ticket_to_user: A pack of {pack_ticket.pack_size} tickets of type {pack_id} has been buyed by user {display_name}({user.id}) for an amount of {pack_ticket.price}€. ({request_id})"
         )
 
         return tickets

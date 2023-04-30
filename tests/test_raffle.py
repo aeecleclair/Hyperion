@@ -87,14 +87,14 @@ async def startuptest():
 
     ticket = models_raffle.Tickets(
         id=str(uuid.uuid4()),
-        type_id=packticket.id,
+        pack_id=packticket.id,
         user_id=student_user.id,
     )
     await add_object_to_db(ticket)
 
     ticket_to_draw = models_raffle.Tickets(
         id=str(uuid.uuid4()),
-        type_id=packticket_to_draw.id,
+        pack_id=packticket_to_draw.id,
         user_id=student_user.id,
     )
     await add_object_to_db(ticket_to_draw)
@@ -272,7 +272,7 @@ def test_buy_tickets():
 #         json={
 #             "user_id": BDE_user.id,
 #             "raffle_id": raffle.id,
-#             "type_id": packticket.id,
+#             "pack_id": packticket.id,
 #             "winning_lot": None,
 #             "nb_tickets": 10,
 #         },

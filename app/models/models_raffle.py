@@ -58,7 +58,7 @@ class Tickets(Base):
     id: Mapped[str] = mapped_column(
         String, primary_key=True, index=True, nullable=False
     )
-    type_id: Mapped[str] = mapped_column(
+    pack_id: Mapped[str] = mapped_column(
         ForeignKey("raffle_pack_ticket.id"), nullable=False
     )
     user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), nullable=False)

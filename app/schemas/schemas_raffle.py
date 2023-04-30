@@ -105,7 +105,7 @@ class PackTicketComplete(PackTicketSimple):
 
 
 class TicketBase(BaseModel):
-    type_id: str
+    pack_id: str
     user_id: str
     winning_lot: str | None = None
 
