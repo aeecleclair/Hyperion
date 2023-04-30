@@ -180,7 +180,7 @@ async def create_packticket(
         raise err
 
 
-async def get_packticket_by_raffleid(
+async def get_packtickets_by_raffleid(
     raffle_id: str,
     db: AsyncSession,
 ) -> Sequence[models_raffle.PackTicket] | None:

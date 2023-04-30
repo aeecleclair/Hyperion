@@ -137,7 +137,7 @@ async def delete_raffle(
         for t in tickets:
             await cruds_raffle.delete_ticket(db=db, ticket_id=t.id)
 
-    packtickets = await cruds_raffle.get_packticket_by_raffleid(
+    packtickets = await cruds_raffle.get_packtickets_by_raffleid(
         raffle_id=raffle_id, db=db
     )
     if packtickets is not None:
@@ -350,7 +350,7 @@ async def get_pack_tickets_by_raffle_id(
     """
     Return all pack_tickets associated to a raffle
     """
-    pack_tickets = await cruds_raffle.get_packticket_by_raffleid(raffle_id, db)
+    pack_tickets = await cruds_raffle.get_packtickets_by_raffleid(raffle_id, db)
     return pack_tickets
 
 
