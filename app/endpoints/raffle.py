@@ -101,6 +101,12 @@ async def edit_raffle(
             detail=f"{user.id} user is unauthorized to manage the raffle {raffle_id}",
         )
 
+    if not (raffle.status == RaffleStatusType.creation):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Raffle {raffle_id} is not in Creation Mode",
+        )
+
     await cruds_raffle.edit_raffle(
         raffle_id=raffle_id, raffle_update=raffle_update, db=db
     )
@@ -282,6 +288,12 @@ async def edit_packticket(
         raise HTTPException(
             status_code=403,
             detail=f"{user.id} user is unauthorized to manage the raffle {packticket.raffle_id}",
+        )
+
+    if not (raffle.status == RaffleStatusType.creation):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Raffle {packticket.raffle_id} is not in Creation Mode",
         )
 
     await cruds_raffle.edit_packticket(
@@ -557,6 +569,12 @@ async def create_lot(
             detail=f"{user.id} user is unauthorized to manage the raffle {raffle.id}",
         )
 
+    if not (raffle.status == RaffleStatusType.creation):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Raffle {raffle.id} is not in Creation Mode",
+        )
+
     db_lot = models_raffle.Lots(id=str(uuid.uuid4()), **lot.dict())
 
     try:
@@ -596,6 +614,12 @@ async def edit_lot(
         raise HTTPException(
             status_code=403,
             detail=f"{user.id} user is unauthorized to manage the raffle {raffle.id}",
+        )
+
+    if not (raffle.status == RaffleStatusType.creation):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Raffle {raffle.id} is not in Creation Mode",
         )
 
     await cruds_raffle.edit_lot(lot_id=lot_id, lot_update=lot_update, db=db)
@@ -869,6 +893,12 @@ async def open_raffle(
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
 
+    if raffle.status is not RaffleStatusType.creation:
+        raise HTTPException(
+            status_code=403,
+            detail=f"You can't mark a raffle as open if it is not in creation mode. The current mode is {raffle.status}.",
+        )
+
     if not is_user_member_of_an_allowed_group(user, [raffle.group_id]):
         raise HTTPException(
             status_code=403,
@@ -897,6 +927,12 @@ async def locked_raffle(
     raffle = await cruds_raffle.get_raffle_by_id(raffle_id=raffle_id, db=db)
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
+
+    if not (raffle.status == RaffleStatusType.open):
+        raise HTTPException(
+            status_code=403,
+            detail=f"You can't mark a raffle as locked if it is not in open mode. The current mode is {raffle.status}.",
+        )
 
     if not is_user_member_of_an_allowed_group(user, [raffle.group_id]):
         raise HTTPException(
