@@ -415,10 +415,10 @@ async def open_raffle(db: AsyncSession, raffle_id: str):
     await db.commit()
 
 
-async def locked_raffle(db: AsyncSession, raffle_id: str):
+async def lock_raffle(db: AsyncSession, raffle_id: str):
     await db.execute(
         update(models_raffle.Raffle)
         .where(models_raffle.Raffle.id == raffle_id)
-        .values(status=RaffleStatusType.locked)
+        .values(status=RaffleStatusType.lock)
     )
     await db.commit()

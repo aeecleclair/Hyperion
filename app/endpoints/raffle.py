@@ -855,7 +855,7 @@ async def draw_winner(
             detail=f"{user.id} user is unauthorized to manage the raffle {raffle.id}",
         )
 
-    if lot.raffle.status != RaffleStatusType.locked:
+    if lot.raffle.status != RaffleStatusType.lock:
         raise HTTPException(
             status_code=400, detail="Raffle must be locked to draw a lot"
         )
@@ -909,11 +909,11 @@ async def open_raffle(
 
 
 @router.patch(
-    "/tombola/raffles/{raffle_id}/locked",
+    "/tombola/raffles/{raffle_id}/lock",
     status_code=204,
     tags=[Tags.raffle],
 )
-async def locked_raffle(
+async def lock_raffle(
     raffle_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
@@ -940,4 +940,4 @@ async def locked_raffle(
             detail=f"{user.id} user is unauthorized to manage the raffle {raffle_id}",
         )
 
-    await cruds_raffle.locked_raffle(db=db, raffle_id=raffle_id)
+    await cruds_raffle.lock_raffle(db=db, raffle_id=raffle_id)

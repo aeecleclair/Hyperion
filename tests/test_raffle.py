@@ -64,7 +64,7 @@ async def startuptest():
     raffle_to_draw = models_raffle.Raffle(
         id=str(uuid.uuid4()),
         name="The best raffle to draw",
-        status=RaffleStatusType.locked,
+        status=RaffleStatusType.lock,
         group_id=GroupType.BDE,
         description="Description of the raffle",
     )
@@ -186,11 +186,11 @@ def test_open_raffle():
     assert modified_raffle["status"] == RaffleStatusType.open
 
 
-def test_locked_raffle():
+def test_lock_raffle():
     token = create_api_access_token(BDE_user)
 
     response = client.patch(
-        f"/tombola/raffles/{raffle_to_delete.id}/locked",
+        f"/tombola/raffles/{raffle_to_delete.id}/lock",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 204
@@ -201,7 +201,7 @@ def test_locked_raffle():
     )
     json = response.json()
     [modified_raffle] = [entry for entry in json if entry["id"] == raffle_to_delete.id]
-    assert modified_raffle["status"] == RaffleStatusType.locked
+    assert modified_raffle["status"] == RaffleStatusType.lock
 
 
 def test_get_raffle_stats():
