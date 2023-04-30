@@ -154,7 +154,7 @@ async def delete_lot(
     await db.commit()
 
 
-async def get_packticket(db: AsyncSession) -> Sequence[models_raffle.PackTicket]:
+async def get_packtickets(db: AsyncSession) -> Sequence[models_raffle.PackTicket]:
     """Return all packtickets from database"""
 
     result = await db.execute(

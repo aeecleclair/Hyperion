@@ -217,7 +217,7 @@ async def get_pack_tickets(
     """
     Return all tickets
     """
-    pack_tickets = await cruds_raffle.get_packticket(db)
+    pack_tickets = await cruds_raffle.get_packtickets(db)
     return pack_tickets
 
 
