@@ -25,8 +25,8 @@ raffle_to_delete: models_raffle.Raffle | None = None
 packticket: models_raffle.PackTicket | None = None
 packticket_to_draw: models_raffle.PackTicket | None = None
 packticket_to_delete: models_raffle.PackTicket | None = None
-lot: models_raffle.Lot | None = None
-lot_to_draw: models_raffle.Lot | None = None
+prize: models_raffle.Prize | None = None
+prize_to_draw: models_raffle.Prize | None = None
 ticket: models_raffle.Ticket | None = None
 ticket_to_draw: models_raffle.Ticket | None = None
 cash: models_raffle.Cash | None = None
@@ -39,7 +39,7 @@ async def init_objects():
 
 @app.on_event("startup")  # create the data needed in the tests
 async def startuptest():
-    global admin_user, soli_user, student_user, raffle, packticket, ticket, lot, cash, raffle_to_delete, packticket_to_delete
+    global admin_user, BDE_user, student_user, raffle, raffle_to_draw, packticket, packticket_to_draw, ticket, ticket_to_draw, prize, prize_to_draw, cash, raffle_to_delete, packticket_to_delete
 
     BDE_user = await create_user_with_groups([GroupType.BDE])
     student_user = await create_user_with_groups([GroupType.student])
@@ -99,23 +99,23 @@ async def startuptest():
     )
     await add_object_to_db(ticket_to_draw)
 
-    lot = models_raffle.Lot(
+    prize = models_raffle.Prize(
         id=str(uuid.uuid4()),
         raffle_id=raffle.id,
-        description="Description of the lot",
-        name="Name of the lot",
+        description="Description of the prize",
+        name="Name of the prize",
         quantity=1,
     )
-    await add_object_to_db(lot)
+    await add_object_to_db(prize)
 
-    lot_to_draw = models_raffle.Lot(
+    prize_to_draw = models_raffle.Prize(
         id=str(uuid.uuid4()),
         raffle_id=raffle_to_draw.id,
-        description="Description of the lot",
-        name="Name of the lot",
+        description="Description of the prize",
+        name="Name of the prize",
         quantity=1,
     )
-    await add_object_to_db(lot_to_draw)
+    await add_object_to_db(prize_to_draw)
 
     cash = models_raffle.Cash(user_id=student_user.id, balance=66)
     await add_object_to_db(cash)
@@ -273,7 +273,7 @@ def test_buy_tickets():
 #             "user_id": BDE_user.id,
 #             "raffle_id": raffle.id,
 #             "pack_id": packticket.id,
-#             "winning_lot": None,
+#             "winning_prize": None,
 #             "nb_tickets": 10,
 #         },
 #         headers={"Authorization": f"Bearer {token}"},
@@ -352,37 +352,37 @@ def test_delete_packtickets():
     assert response.status_code == 204
 
 
-# # lots
-def test_get_lots():
+# # prizes
+def test_get_prizes():
     token = create_api_access_token(student_user)
 
     response = client.get(
-        "/tombola/lots",
+        "/tombola/prizes",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
 
 
-def test_get_lots_by_raffle_id():
+def test_get_prizes_by_raffle_id():
     token = create_api_access_token(student_user)
 
     response = client.get(
-        f"/tombola/raffle/{raffle.id}/lots",
+        f"/tombola/raffle/{raffle.id}/prizes",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
     assert response.json() != []
 
 
-def test_create_lots():
+def test_create_prizes():
     token = create_api_access_token(BDE_user)
 
     response = client.post(
-        "/tombola/lots",
+        "/tombola/prizes",
         json={
             "raffle_id": raffle.id,
-            "description": "Lots description",
-            "name": "Lots name",
+            "description": "Prizes description",
+            "name": "Prizes name",
             "quantity": 2,
         },
         headers={"Authorization": f"Bearer {token}"},
@@ -390,15 +390,15 @@ def test_create_lots():
     assert response.status_code == 201
 
 
-def test_edit_lots():
+def test_edit_prizes():
     token = create_api_access_token(BDE_user)
 
     response = client.patch(
-        f"/tombola/lots/{lot.id}",
+        f"/tombola/prizes/{prize.id}",
         json={
             "raffle_id": raffle.id,
-            "description": "Lots description updated",
-            "name": "Lots name",
+            "description": "Prizes description updated",
+            "name": "Prizes name",
             "quantity": 2,
         },
         headers={"Authorization": f"Bearer {token}"},
@@ -406,23 +406,23 @@ def test_edit_lots():
     assert response.status_code == 204
 
 
-def test_draw_lots():
+def test_draw_prizes():
     token = create_api_access_token(BDE_user)
 
     response = client.post(
-        f"/tombola/lots/{lot_to_draw.id}/draw",
+        f"/tombola/prizes/{prize_to_draw.id}/draw",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 201
     tickets = response.json()
-    assert tickets[0]["lot"] is not None
+    assert tickets[0]["prize"] is not None
 
 
-def test_delete_lots():
+def test_delete_prizes():
     token = create_api_access_token(BDE_user)
 
     response = client.delete(
-        f"/tombola/lots/{lot.id}",
+        f"/tombola/prizes/{prize.id}",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 204

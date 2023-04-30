@@ -39,7 +39,7 @@ class RaffleStats(BaseModel):
     amount_raised: float
 
 
-class LotBase(BaseModel):
+class PrizeBase(BaseModel):
     name: str
     description: str
     raffle_id: str
@@ -49,21 +49,21 @@ class LotBase(BaseModel):
         orm_mode = True
 
 
-class LotEdit(BaseModel):
+class PrizeEdit(BaseModel):
     raffle_id: str | None = None
     description: str | None = None
     name: str | None = None
     quantity: int | None = None
 
 
-class LotSimple(LotBase):
+class PrizeSimple(PrizeBase):
     id: str
 
     class Config:
         orm_mode = True
 
 
-class LotComplete(LotBase):
+class PrizeComplete(PrizeBase):
     id: str
 
     raffle: RaffleComplete
@@ -107,7 +107,7 @@ class PackTicketComplete(PackTicketSimple):
 class TicketBase(BaseModel):
     pack_id: str
     user_id: str
-    winning_lot: str | None = None
+    winning_prize: str | None = None
 
 
 class TicketSimple(TicketBase):
@@ -118,7 +118,7 @@ class TicketSimple(TicketBase):
 
 
 class TicketComplete(TicketSimple):
-    lot: LotSimple | None
+    prize: PrizeSimple | None
     pack_ticket: PackTicketSimple
     user: CoreUserSimple
 

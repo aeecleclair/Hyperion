@@ -85,81 +85,83 @@ async def delete_raffle(
     await db.commit()
 
 
-async def get_lots(db: AsyncSession) -> Sequence[models_raffle.Lot]:
-    """Return all lots from database"""
+async def get_prizes(db: AsyncSession) -> Sequence[models_raffle.Prize]:
+    """Return all prizes from database"""
 
     result = await db.execute(
-        select(models_raffle.Lot).options(selectinload(models_raffle.Lot.raffle))
+        select(models_raffle.Prize).options(selectinload(models_raffle.Prize.raffle))
     )
     return result.scalars().all()
 
 
-async def create_lot(
-    lot: models_raffle.Lot,
+async def create_prize(
+    prize: models_raffle.Prize,
     db: AsyncSession,
-) -> models_raffle.Lot:
-    """Create a new lot in databasend return it"""
+) -> models_raffle.Prize:
+    """Create a new prize in databasend return it"""
 
-    db.add(lot)
+    db.add(prize)
     try:
         await db.commit()
-        return lot
+        return prize
     except IntegrityError as err:
         await db.rollback()
         raise err
 
 
-async def get_lots_by_raffleid(
+async def get_prizes_by_raffleid(
     raffle_id: str,
     db: AsyncSession,
-) -> Sequence[models_raffle.Lot]:
+) -> Sequence[models_raffle.Prize]:
     result = await db.execute(
-        select(models_raffle.Lot).where(models_raffle.Lot.raffle_id == raffle_id)
+        select(models_raffle.Prize).where(models_raffle.Prize.raffle_id == raffle_id)
     )
     return result.scalars().all()
 
 
-async def get_lot_by_id(
-    lot_id: str,
+async def get_prize_by_id(
+    prize_id: str,
     db: AsyncSession,
-) -> models_raffle.Lot | None:
+) -> models_raffle.Prize | None:
     result = await db.execute(
-        select(models_raffle.Lot)
-        .where(models_raffle.Lot.id == lot_id)
-        .options(selectinload(models_raffle.Lot.raffle))
+        select(models_raffle.Prize)
+        .where(models_raffle.Prize.id == prize_id)
+        .options(selectinload(models_raffle.Prize.raffle))
     )
     return result.scalars().first()
 
 
-async def edit_lot(
-    lot_id: str,
-    lot_update: schemas_raffle.LotEdit,
+async def edit_prize(
+    prize_id: str,
+    prize_update: schemas_raffle.PrizeEdit,
     db: AsyncSession,
 ):
     await db.execute(
-        update(models_raffle.Lot)
-        .where(models_raffle.Lot.id == lot_id)
-        .values(**lot_update.dict(exclude_none=True))
+        update(models_raffle.Prize)
+        .where(models_raffle.Prize.id == prize_id)
+        .values(**prize_update.dict(exclude_none=True))
     )
     await db.commit()
 
 
-async def delete_lot(
+async def delete_prize(
     db: AsyncSession,
-    lot_id: str,
+    prize_id: str,
 ):
-    """Delete a lot from database by id"""
+    """Delete a prize from database by id"""
 
-    await db.execute(delete(models_raffle.Lot).where(models_raffle.Lot.id == lot_id))
+    await db.execute(
+        delete(models_raffle.Prize).where(models_raffle.Prize.id == prize_id)
+    )
     await db.commit()
 
 
-async def delete_lots_by_raffleid(db: AsyncSession, raffle_id: str):
-    """Delete lots from database by raffle_id"""
-    lots_to_delete = await get_lots_by_raffleid(raffle_id=raffle_id, db=db)
+async def delete_prizes_by_raffleid(db: AsyncSession, raffle_id: str):
+    """Delete prizes from database by raffle_id"""
+    prizes_to_delete = await get_prizes_by_raffleid(raffle_id=raffle_id, db=db)
     await db.execute(
-        delete(models_raffle.Lot).where(
-            models_raffle.Lot.id.in_([lot.id for lot in lots_to_delete])
+        delete(models_raffle.Prize).where(
+            models_raffle.Prize.id.in_([prize.id for prize in prizes_to_delete])
         )
     )
     await db.commit()
@@ -288,7 +290,7 @@ async def get_tickets_by_raffleid(
                         models_raffle.PackTicket.raffle
                     ),
                     joinedload(models_raffle.Ticket.user),
-                    joinedload(models_raffle.Ticket.lot),
+                    joinedload(models_raffle.Ticket.prize),
                 )
             )
         )
@@ -323,7 +325,7 @@ async def get_tickets_by_userid(
                 models_raffle.PackTicket.raffle
             ),
             joinedload(models_raffle.Ticket.user),
-            joinedload(models_raffle.Ticket.lot),
+            joinedload(models_raffle.Ticket.prize),
         )
     )
     return result.scalars().all()
@@ -393,30 +395,30 @@ async def edit_cash(db: AsyncSession, user_id: str, amount: float):
         raise ValueError(err)
 
 
-async def draw_winner_by_lot_raffle(
-    lot_id: str, db: AsyncSession
+async def draw_winner_by_prize_raffle(
+    prize_id: str, db: AsyncSession
 ) -> Sequence[models_raffle.Ticket]:
-    lot = await get_lot_by_id(lot_id=lot_id, db=db)
-    if lot is None:
-        raise ValueError("Invalid lot")
-    raffle_id = lot.raffle_id
+    prize = await get_prize_by_id(prize_id=prize_id, db=db)
+    if prize is None:
+        raise ValueError("Invalid prize")
+    raffle_id = prize.raffle_id
 
     if raffle_id is None:
         raise ValueError("Invalid raffle_id")
 
     gettickets = await get_tickets_by_raffleid(raffle_id=raffle_id, db=db)
-    tickets = [t for t in gettickets if t.winning_lot is None]
+    tickets = [t for t in gettickets if t.winning_prize is None]
 
-    if len(tickets) < lot.quantity:
+    if len(tickets) < prize.quantity:
         winners = tickets
 
     else:
-        winners = random.sample(tickets, lot.quantity)
+        winners = random.sample(tickets, prize.quantity)
 
     await db.execute(
         update(models_raffle.Ticket)
         .where(models_raffle.Ticket.id.in_([w.id for w in winners]))
-        .values(winning_lot=lot_id)
+        .values(winning_prize=prize_id)
     )
     try:
         await db.commit()
@@ -425,15 +427,15 @@ async def draw_winner_by_lot_raffle(
         raise ValueError("Error during edition of the winning tickets")
 
     await db.execute(
-        update(models_raffle.Lot)
-        .where(models_raffle.Lot.id == lot_id)
-        .values(quantity=lot.quantity - len(winners))
+        update(models_raffle.Prize)
+        .where(models_raffle.Prize.id == prize_id)
+        .values(quantity=prize.quantity - len(winners))
     )
     try:
         await db.commit()
     except IntegrityError:
         await db.rollback()
-        raise ValueError("Error during edition of the lot")
+        raise ValueError("Error during edition of the prize")
 
     return winners
 

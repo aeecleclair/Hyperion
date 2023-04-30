@@ -141,7 +141,7 @@ async def delete_raffle(
 
     await cruds_raffle.delete_packtickets_by_raffleid(db=db, raffle_id=raffle_id)
 
-    await cruds_raffle.delete_lots_by_raffleid(db=db, raffle_id=raffle_id)
+    await cruds_raffle.delete_prizes_by_raffleid(db=db, raffle_id=raffle_id)
 
     await cruds_raffle.delete_raffle(raffle_id=raffle_id, db=db)
 
@@ -515,39 +515,39 @@ async def get_tickets_by_raffleid(
 
 
 @router.get(
-    "/tombola/lots",
-    response_model=list[schemas_raffle.LotSimple],
+    "/tombola/prizes",
+    response_model=list[schemas_raffle.PrizeSimple],
     status_code=200,
     tags=[Tags.raffle],
 )
-async def get_lots(
+async def get_prizes(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
-    Return all lots
+    Return all prizes
     """
-    lots = await cruds_raffle.get_lots(db)
-    return lots
+    prizes = await cruds_raffle.get_prizes(db)
+    return prizes
 
 
 @router.post(
-    "/tombola/lots",
-    response_model=schemas_raffle.LotSimple,
+    "/tombola/prizes",
+    response_model=schemas_raffle.PrizeSimple,
     status_code=201,
     tags=[Tags.raffle],
 )
-async def create_lot(
-    lot: schemas_raffle.LotBase,
+async def create_prize(
+    prize: schemas_raffle.PrizeBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
-    Create a new lot
+    Create a new prize
 
     **The user must be a member of the raffle's group to use this endpoint
     """
-    raffle = await cruds_raffle.get_raffle_by_id(raffle_id=lot.raffle_id, db=db)
+    raffle = await cruds_raffle.get_raffle_by_id(raffle_id=prize.raffle_id, db=db)
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
 
@@ -563,37 +563,37 @@ async def create_lot(
             detail=f"Raffle {raffle.id} is not in Creation Mode",
         )
 
-    db_lot = models_raffle.Lot(id=str(uuid.uuid4()), **lot.dict())
+    db_prize = models_raffle.Prize(id=str(uuid.uuid4()), **prize.dict())
 
     try:
-        result = await cruds_raffle.create_lot(lot=db_lot, db=db)
+        result = await cruds_raffle.create_prize(prize=db_prize, db=db)
         return result
     except IntegrityError as error:
         raise HTTPException(status_code=400, detail=str(error))
 
 
 @router.patch(
-    "/tombola/lots/{lot_id}",
+    "/tombola/prizes/{prize_id}",
     status_code=204,
     tags=[Tags.raffle],
 )
-async def edit_lot(
-    lot_id: str,
-    lot_update: schemas_raffle.LotEdit,
+async def edit_prize(
+    prize_id: str,
+    prize_update: schemas_raffle.PrizeEdit,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
-    Edit a lot
+    Edit a prize
 
     **The user must be a member of the group raffle's to use this endpoint
     """
 
-    lot = await cruds_raffle.get_lot_by_id(lot_id=lot_id, db=db)
-    if not lot:
-        raise HTTPException(status_code=404, detail="Lot not found")
+    prize = await cruds_raffle.get_prize_by_id(prize_id=prize_id, db=db)
+    if not prize:
+        raise HTTPException(status_code=404, detail="Prize not found")
 
-    raffle = await cruds_raffle.get_raffle_by_id(raffle_id=lot.raffle_id, db=db)
+    raffle = await cruds_raffle.get_raffle_by_id(raffle_id=prize.raffle_id, db=db)
 
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
@@ -610,30 +610,30 @@ async def edit_lot(
             detail=f"Raffle {raffle.id} is not in Creation Mode",
         )
 
-    await cruds_raffle.edit_lot(lot_id=lot_id, lot_update=lot_update, db=db)
+    await cruds_raffle.edit_prize(prize_id=prize_id, prize_update=prize_update, db=db)
 
 
 @router.delete(
-    "/tombola/lots/{lot_id}",
+    "/tombola/prizes/{prize_id}",
     status_code=204,
     tags=[Tags.raffle],
 )
-async def delete_lot(
-    lot_id: str,
+async def delete_prize(
+    prize_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
-    Delete a lot.
+    Delete a prize.
 
     **The user must be a member of the group raffle's to use this endpoint
     """
 
-    lot = await cruds_raffle.get_lot_by_id(lot_id=lot_id, db=db)
-    if not lot:
-        raise HTTPException(status_code=404, detail="Lot not found")
+    prize = await cruds_raffle.get_prize_by_id(prize_id=prize_id, db=db)
+    if not prize:
+        raise HTTPException(status_code=404, detail="Prize not found")
 
-    raffle = await cruds_raffle.get_raffle_by_id(raffle_id=lot.raffle_id, db=db)
+    raffle = await cruds_raffle.get_raffle_by_id(raffle_id=prize.raffle_id, db=db)
 
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
@@ -644,27 +644,27 @@ async def delete_lot(
             detail=f"{user.id} user is unauthorized to manage the raffle {raffle.id}",
         )
 
-    await cruds_raffle.delete_lot(db=db, lot_id=lot_id)
+    await cruds_raffle.delete_prize(db=db, prize_id=prize_id)
 
 
 @router.get(
-    "/tombola/raffle/{raffle_id}/lots",
-    response_model=list[schemas_raffle.LotSimple],
+    "/tombola/raffle/{raffle_id}/prizes",
+    response_model=list[schemas_raffle.PrizeSimple],
     status_code=200,
     tags=[Tags.raffle],
 )
-async def get_lots_by_raffleid(
+async def get_prizes_by_raffleid(
     raffle_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
-    Get lots from a specific raffle.
+    Get prizes from a specific raffle.
     """
 
-    lots = await cruds_raffle.get_lots_by_raffleid(raffle_id=raffle_id, db=db)
+    prizes = await cruds_raffle.get_prizes_by_raffleid(raffle_id=raffle_id, db=db)
 
-    return lots
+    return prizes
 
 
 @router.get(
@@ -818,21 +818,21 @@ async def edit_cash_by_id(
 
 
 @router.post(
-    "/tombola/lots/{lot_id}/draw",
+    "/tombola/prizes/{prize_id}/draw",
     response_model=list[schemas_raffle.TicketComplete],
     status_code=201,
     tags=[Tags.raffle],
 )
 async def draw_winner(
-    lot_id: str,
+    prize_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    lot = await cruds_raffle.get_lot_by_id(db=db, lot_id=lot_id)
-    if lot is None:
-        raise HTTPException(status_code=404, detail="Invalid lot id")
+    prize = await cruds_raffle.get_prize_by_id(db=db, prize_id=prize_id)
+    if prize is None:
+        raise HTTPException(status_code=404, detail="Invalid prize id")
 
-    raffle = await cruds_raffle.get_raffle_by_id(raffle_id=lot.raffle_id, db=db)
+    raffle = await cruds_raffle.get_raffle_by_id(raffle_id=prize.raffle_id, db=db)
 
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
@@ -843,20 +843,20 @@ async def draw_winner(
             detail=f"{user.id} user is unauthorized to manage the raffle {raffle.id}",
         )
 
-    if lot.raffle.status != RaffleStatusType.lock:
+    if prize.raffle.status != RaffleStatusType.lock:
         raise HTTPException(
-            status_code=400, detail="Raffle must be locked to draw a lot"
+            status_code=400, detail="Raffle must be locked to draw a prize"
         )
 
     try:
-        winning_tickets = await cruds_raffle.draw_winner_by_lot_raffle(
-            lot_id=lot_id, db=db
+        winning_tickets = await cruds_raffle.draw_winner_by_prize_raffle(
+            prize_id=prize_id, db=db
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
     for ticket in winning_tickets:
-        ticket.lot = lot
+        ticket.prize = prize
 
     return winning_tickets
 
