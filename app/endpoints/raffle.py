@@ -884,7 +884,7 @@ async def open_raffle(
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
-    Edit a raffle
+    Open a raffle
 
     **The user must be a member of the raffle's group to use this endpoint**
     """
@@ -919,7 +919,7 @@ async def lock_raffle(
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
-    Edit a raffle
+    Lock a raffle
 
     **The user must be a member of the raffle's group to use this endpoint**
     """
