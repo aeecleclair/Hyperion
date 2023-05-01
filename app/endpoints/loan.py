@@ -427,7 +427,10 @@ async def get_current_user_loans(
         items_qty_ret: list[schemas_loan.ItemQuantity] = []
         for itemret in itemsret:
             items_qty_ret.append(
-                schemas_loan.ItemQuantity(item=itemret.item, quantity=itemret.quantity)
+                schemas_loan.ItemQuantity(
+                    itemSimple=schemas_loan.ItemSimple(**itemret.item.__dict__),
+                    quantity=itemret.quantity,
+                )
             )
         loansret.append(schemas_loan.Loan(items_qty=items_qty_ret, **loan.__dict__))
 
@@ -578,7 +581,7 @@ async def create_loan(
     for itemret in itemsret:
         items_qty_ret.append(
             schemas_loan.ItemQuantity(
-                item=schemas_loan.ItemSimple(**itemret.item.__dict__),
+                itemSimple=schemas_loan.ItemSimple(**itemret.item.__dict__),
                 quantity=itemret.quantity,
             )
         )

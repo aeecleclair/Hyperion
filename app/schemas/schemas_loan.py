@@ -86,7 +86,7 @@ class ItemQuantity(BaseModel):
     """
 
     quantity: int
-    item: ItemSimple
+    itemSimple: ItemSimple
 
 
 class LoanCreation(LoanBase):
