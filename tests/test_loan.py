@@ -168,6 +168,14 @@ def test_get_loans_by_loaner():
     assert response.status_code == 200
 
 
+def test_get_items_for_loaner():
+    response = client.get(
+        f"/loans/loaners/{loaner.id}/items",
+        headers={"Authorization": f"Bearer {token_loaner}"},
+    )
+    assert response.status_code == 200
+
+
 def test_create_items_for_loaner():
     response = client.post(
         f"/loans/loaners/{loaner.id}/items",

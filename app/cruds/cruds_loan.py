@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models import models_loan
-from app.schemas import schemas_loans
+from app.schemas import schemas_loan
 
 
 async def get_loaners(
@@ -36,7 +36,7 @@ async def create_loaner(
 
 async def update_loaner(
     loaner_id: str,
-    loaner_update: schemas_loans.LoanerUpdate,
+    loaner_update: schemas_loan.LoanerUpdate,
     db: AsyncSession,
 ):
     await db.execute(
@@ -114,7 +114,7 @@ async def get_loaner_item_by_name_and_loaner_id(
 
 async def update_loaner_item(
     item_id: str,
-    item_update: schemas_loans.ItemUpdate,
+    item_update: schemas_loan.ItemUpdate,
     db: AsyncSession,
 ):
     await db.execute(
@@ -176,7 +176,7 @@ async def create_loan(
 
 async def update_loan(
     loan_id: str,
-    loan_update: schemas_loans.LoanInDBUpdate,
+    loan_update: schemas_loan.LoanInDBUpdate,
     db: AsyncSession,
 ):
     await db.execute(
