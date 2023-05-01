@@ -256,7 +256,7 @@ def test_get_raffle_stats():
     token = create_api_access_token(student_user)
 
     response = client.get(
-        f"/tombola/raffle/{raffle.id}/stats",
+        f"/tombola/raffles/{raffle.id}/stats",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
@@ -278,7 +278,7 @@ def test_get_tickets_by_raffle_id():
     token = create_api_access_token(BDE_user)
 
     response = client.get(
-        f"/tombola/raffle/{raffle.id}/tickets",
+        f"/tombola/raffles/{raffle.id}/tickets",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200

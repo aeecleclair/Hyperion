@@ -172,7 +172,7 @@ async def get_raffles_by_group_id(
 
 
 @router.get(
-    "/tombola/raffle/{raffle_id}/stats",
+    "/tombola/raffles/{raffle_id}/stats",
     response_model=schemas_raffle.RaffleStats,
     status_code=200,
     tags=[Tags.raffle],
@@ -552,7 +552,7 @@ async def get_tickets_by_userid(
 
 
 @router.get(
-    "/tombola/raffle/{raffle_id}/tickets",
+    "/tombola/raffles/{raffle_id}/tickets",
     response_model=list[schemas_raffle.TicketComplete],
     status_code=200,
     tags=[Tags.raffle],
