@@ -1,7 +1,8 @@
 import logging
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from redis import Redis
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,7 +19,13 @@ from app.endpoints.users import read_user
 from app.models import models_core, models_raffle
 from app.schemas import schemas_raffle
 from app.utils.redis import locker_get, locker_set
-from app.utils.tools import get_display_name, is_user_member_of_an_allowed_group
+from app.utils.tools import (
+    get_display_name,
+    get_file_from_data,
+    is_user_member_of_an_allowed_group,
+    save_file_as_data,
+)
+from app.utils.types import standard_responses
 from app.utils.types.groups_type import GroupType
 from app.utils.types.raffle_types import RaffleStatusType
 from app.utils.types.tags import Tags
@@ -189,6 +196,72 @@ async def get_raffle_stats(
 
     return schemas_raffle.RaffleStats(
         tickets_sold=tickets_sold, amount_raised=amount_raised
+    )
+
+
+@router.post(
+    "/tombola/raffle/{raffle_id}/logo",
+    response_model=standard_responses.Result,
+    status_code=201,
+    tags=[Tags.raffle],
+)
+async def create_current_raffle_logo(
+    raffle_id: str,
+    image: UploadFile = File(...),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+    request_id: str = Depends(get_request_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Upload a logo for a specific raffle.
+
+    **The user must be a member of the raffle's group to use this endpoint**
+    """
+    raffle = await cruds_raffle.get_raffle_by_id(raffle_id=raffle_id, db=db)
+    if not raffle:
+        raise HTTPException(status_code=404, detail="Raffle not found")
+
+    if not is_user_member_of_an_allowed_group(user, [raffle.group_id]):
+        raise HTTPException(
+            status_code=403,
+            detail=f"{user.id} user is unauthorized to manage the raffle {raffle_id}",
+        )
+
+    if not (raffle.status == RaffleStatusType.creation):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Raffle {raffle_id} is not in Creation Mode",
+        )
+
+    await save_file_as_data(
+        image=image,
+        directory="raffle-pictures",
+        filename=str(raffle_id),
+        request_id=request_id,
+        max_file_size=4 * 1024 * 1024,
+        accepted_content_types=["image/jpeg", "image/png", "image/webp"],
+    )
+
+    return standard_responses.Result(success=True)
+
+
+@router.get(
+    "/tombola/raffle/{raffle_id}/logo",
+    response_class=FileResponse,
+    status_code=200,
+    tags=[Tags.raffle],
+)
+async def read_raffle_logo(
+    raffle_id: str,
+):
+    """
+    Get the logo of a specific raffle.
+    """
+
+    return get_file_from_data(
+        directory="raffle-picture",
+        filename=str(raffle_id),
+        default_asset="assets/images/default_raffle_logo.png",
     )
 
 
@@ -665,6 +738,77 @@ async def get_prizes_by_raffleid(
     prizes = await cruds_raffle.get_prizes_by_raffleid(raffle_id=raffle_id, db=db)
 
     return prizes
+
+
+@router.post(
+    "/tombola/prizes/{prize_id}/picture",
+    response_model=standard_responses.Result,
+    status_code=201,
+    tags=[Tags.raffle],
+)
+async def create_prize_picture(
+    prize_id: str,
+    image: UploadFile = File(...),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+    request_id: str = Depends(get_request_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Upload a logo for a specific prize.
+
+    **The user must be a member of the raffle's group to use this endpoint**
+    """
+    prize = await cruds_raffle.get_prize_by_id(prize_id=prize_id, db=db)
+    if not prize:
+        raise HTTPException(status_code=404, detail="Prize not found")
+
+    raffle = await cruds_raffle.get_raffle_by_id(raffle_id=prize.raffle_id, db=db)
+
+    if not raffle:
+        raise HTTPException(status_code=404, detail="Raffle not found")
+
+    if not is_user_member_of_an_allowed_group(user, [raffle.group_id]):
+        raise HTTPException(
+            status_code=403,
+            detail=f"{user.id} user is unauthorized to manage the raffle {raffle.id}",
+        )
+
+    if not (raffle.status == RaffleStatusType.creation):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Raffle {raffle.id} is not in Creation Mode",
+        )
+
+    await save_file_as_data(
+        image=image,
+        directory="raffle-prize_pictures",
+        filename=str(prize_id),
+        request_id=request_id,
+        max_file_size=4 * 1024 * 1024,
+        accepted_content_types=["image/jpeg", "image/png", "image/webp"],
+    )
+
+    return standard_responses.Result(success=True)
+
+
+@router.get(
+    "/tombola/prizes/{prize_id}/picture",
+    response_class=FileResponse,
+    status_code=200,
+    tags=[Tags.raffle],
+)
+async def read_prize_logo(
+    prize_id: str,
+):
+    """
+    Get the logo of a specific prize.
+    """
+
+    return get_file_from_data(
+        directory="raffle-prize_picture",
+        filename=str(prize_id),
+        default_asset="assets/images/default_prize_picture.png",
+    )
 
 
 @router.get(
