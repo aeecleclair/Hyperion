@@ -186,7 +186,7 @@ async def get_loans_by_loaner(
             for itemret in itemsret:
                 items_qty_ret.append(
                     schemas_loan.ItemQuantity(
-                        item=schemas_loan.ItemSimple(**itemret.item.__dict__),
+                        itemSimple=schemas_loan.ItemSimple(**itemret.item.__dict__),
                         quantity=itemret.quantity,
                     )
                 )
