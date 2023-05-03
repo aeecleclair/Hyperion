@@ -398,7 +398,7 @@ async def delete_packticket(
 
 
 @router.get(
-    "/tombola/raffle/{raffle_id}/pack_tickets",
+    "/tombola/raffles/{raffle_id}/pack_tickets",
     response_model=list[schemas_raffle.PackTicketSimple],
     status_code=200,
     tags=[Tags.raffle],
