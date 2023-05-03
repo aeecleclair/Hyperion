@@ -200,7 +200,7 @@ async def get_raffle_stats(
 
 
 @router.post(
-    "/tombola/raffle/{raffle_id}/logo",
+    "/tombola/raffles/{raffle_id}/logo",
     response_model=standard_responses.Result,
     status_code=201,
     tags=[Tags.raffle],
@@ -246,7 +246,7 @@ async def create_current_raffle_logo(
 
 
 @router.get(
-    "/tombola/raffle/{raffle_id}/logo",
+    "/tombola/raffles/{raffle_id}/logo",
     response_class=FileResponse,
     status_code=200,
     tags=[Tags.raffle],
@@ -721,7 +721,7 @@ async def delete_prize(
 
 
 @router.get(
-    "/tombola/raffle/{raffle_id}/prizes",
+    "/tombola/raffles/{raffle_id}/prizes",
     response_model=list[schemas_raffle.PrizeSimple],
     status_code=200,
     tags=[Tags.raffle],
