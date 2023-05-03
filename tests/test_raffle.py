@@ -173,7 +173,7 @@ def test_create_raffle_logo():
 
     with open("assets/images/default_campaigns_logo.png", "rb") as image:
         response = client.post(
-            f"/tombola/raffle/{raffle.id}/logo",
+            f"/tombola/raffles/{raffle.id}/logo",
             files={"image": ("logo.png", image, "image/png")},
             headers={"Authorization": f"Bearer {token}"},
         )
@@ -185,7 +185,7 @@ def test_read_raffle_logo():
     token = create_api_access_token(BDE_user)
 
     response = client.get(
-        f"/tombola/raffle/{raffle.id}/logo",
+        f"/tombola/raffles/{raffle.id}/logo",
         headers={"Authorization": f"Bearer {token}"},
     )
 
@@ -354,7 +354,7 @@ def test_get_packtickets_by_raffle_id():
     token = create_api_access_token(BDE_user)
 
     response = client.get(
-        f"/tombola/raffle/{raffle.id}/pack_tickets",
+        f"/tombola/raffles/{raffle.id}/pack_tickets",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
@@ -415,7 +415,7 @@ def test_get_prizes_by_raffle_id():
     token = create_api_access_token(student_user)
 
     response = client.get(
-        f"/tombola/raffle/{raffle.id}/prizes",
+        f"/tombola/raffles/{raffle.id}/prizes",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
