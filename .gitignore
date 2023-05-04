@@ -11,6 +11,9 @@ data/
 # Dotenv file
 .env
 
+# Firebase secrets
+firebase.json
+
 # macOS
 .DS_Store
 

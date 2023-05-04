@@ -27,6 +27,7 @@ from app.core.config import Settings
 from app.cruds import cruds_users
 from app.models import models_core
 from app.schemas import schemas_auth
+from app.utils.communication.notifications import NotificationManager
 from app.utils.redis import connect
 from app.utils.tools import is_user_member_of_an_allowed_group
 from app.utils.types.groups_type import GroupType
@@ -137,6 +138,16 @@ def get_redis_client(
         else:
             redis_client = False
     return redis_client
+
+
+def get_notification_manager(
+    settings: Settings = Depends(get_settings),
+    db: AsyncSession = Depends(get_db),
+) -> NotificationManager:
+    """
+    Dependency that returns the firebase manager
+    """
+    return NotificationManager(settings=settings, db=db)
 
 
 def get_user_from_token_with_scopes(

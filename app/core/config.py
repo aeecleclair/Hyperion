@@ -58,6 +58,11 @@ class Settings(BaseSettings):
     REDIS_LIMIT: int
     REDIS_WINDOW: int
 
+    ##########################
+    # Firebase Configuration #
+    ##########################
+    USE_FIREBASE: bool = False
+
     ############################
     # PostgreSQL configuration #
     ############################
