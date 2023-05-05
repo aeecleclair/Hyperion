@@ -43,7 +43,7 @@ async def create_raffle(
 async def get_raffles_by_groupid(
     group_id: str,
     db: AsyncSession,
-) -> list[models_raffle.Raffle] | None:
+) -> list[models_raffle.Raffle]:
     result = await db.execute(
         select(models_raffle.Raffle).where(models_raffle.Raffle.group_id == group_id)
     )
@@ -316,7 +316,7 @@ async def get_ticket_by_id(
 async def get_tickets_by_userid(
     user_id: str,
     db: AsyncSession,
-) -> Sequence[models_raffle.Ticket] | None:
+) -> Sequence[models_raffle.Ticket]:
     result = await db.execute(
         select(models_raffle.Ticket)
         .where(models_raffle.Ticket.user_id == user_id)
