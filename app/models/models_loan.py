@@ -33,6 +33,7 @@ class LoanContent(Base):
     loan_id: str = Column(ForeignKey("loan.id"), primary_key=True)
     item_id: str = Column(ForeignKey("loaner_item.id"), primary_key=True)
     quantity: int = Column(Integer, nullable=False)
+    loan: "Loan" = relationship("Loan")
     item: "Item" = relationship("Item")
 
 

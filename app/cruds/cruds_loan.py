@@ -268,7 +268,8 @@ async def get_loaned_quantity(
 ) -> int | None:
     result = await db.execute(
         select(func.sum(models_loan.LoanContent.quantity)).where(
-            models_loan.LoanContent.item_id == item_id
+            models_loan.LoanContent.loan.has(returned=False)
+            & (models_loan.LoanContent.item_id == item_id)
         )
     )
     qty = result.scalars().first()
