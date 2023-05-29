@@ -267,3 +267,25 @@ class ChallengerAuthClient(BaseAuthClient):
             "firstname": user.firstname,
             "email": user.email,
         }
+
+
+class OpenProjectAuthClient(BaseAuthClient):
+    # If no redirect_uri are hardcoded, the client will need to provide one in its request
+    redirect_uri: str | None = None
+    # Set of scopes the auth client is authorized to grant when issuing an access token.
+    # See app.utils.types.scopes_type.ScopeType for possible values
+    allowed_scopes: Set[ScopeType] = {ScopeType.openid, ScopeType.profile}
+
+    @classmethod
+    def get_userinfo(cls, user: models_core.CoreUser):
+        return {
+            "sub": user.id,
+            "name": get_display_name(
+                firstname=user.firstname, name=user.name, nickname=user.nickname
+            ),
+            "given_name": user.firstname,
+            "family_name": user.name,
+            "picture": f"https://hyperion.myecl.fr/users/{user.id}/profile-picture",
+            "email": user.email,
+            "email_verified": True,
+        }
