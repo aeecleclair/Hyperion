@@ -4,6 +4,7 @@ from enum import Enum
 class CalendarEventType(str, Enum):
     eventAE = "Event AE"
     eventUSE = "Event USE"
+    independentAssociation = "Asso indé"
     happyHour = "HH"
     direction = "Strass"
     nightParty = "Soirée"
