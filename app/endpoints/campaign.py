@@ -243,7 +243,7 @@ async def delete_list(
     tags=[Tags.campaign],
 )
 async def delete_lists_by_type(
-    list_type: ListType | None,
+    list_type: ListType | None = None,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
