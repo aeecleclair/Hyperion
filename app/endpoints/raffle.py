@@ -259,7 +259,7 @@ async def read_raffle_logo(
     """
 
     return get_file_from_data(
-        directory="raffle-picture",
+        directory="raffle-pictures",
         filename=str(raffle_id),
         default_asset="assets/images/default_raffle_logo.png",
     )
