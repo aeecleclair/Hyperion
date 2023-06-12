@@ -142,9 +142,11 @@ async def create_icalendar_file(
             ical_event.add("summary", event.name)
             ical_event.add("description", event.description)
             ical_event.add(
-                "dtstart", event.start.astimezone(timezone(settings.TIMEZONE))
+                "dtstart", event.start.replace(tzinfo=timezone(settings.TIMEZONE))
             )
-            ical_event.add("dtend", event.end.astimezone(timezone(settings.TIMEZONE)))
+            ical_event.add(
+                "dtend", event.end.replace(tzinfo=timezone(settings.TIMEZONE))
+            )
             ical_event.add("dtstamp", datetime.now(timezone(settings.TIMEZONE)))
             ical_event.add("class", "public")
             ical_event.add("organizer", event.organizer)
