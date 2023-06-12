@@ -2,9 +2,10 @@ from enum import Enum
 
 
 class FloorsType(str, Enum):
+    # WARNING: the key is used in the database. Use the same key and value.
     Autre = "Autre"
     Adoma = "Adoma"
-    Exte = "Exté"
+    Exte = "Exte"
     T1 = "T1"
     T2 = "T2"
     T3 = "T3"
