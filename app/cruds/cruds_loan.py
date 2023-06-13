@@ -1,16 +1,16 @@
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models import models_loan
-from app.schemas import schemas_loans
+from app.schemas import schemas_loan
 
 
 async def get_loaners(
     db: AsyncSession,
 ) -> list[models_loan.Loaner]:
-    """Return the loaner with id"""
+    """Return the loaners with id"""
 
     result = await db.execute(select(models_loan.Loaner))
     # With the `unique()` call, the function raise an error inviting to add `unique()` to `result`.
@@ -36,7 +36,7 @@ async def create_loaner(
 
 async def update_loaner(
     loaner_id: str,
-    loaner_update: schemas_loans.LoanerUpdate,
+    loaner_update: schemas_loan.LoanerUpdate,
     db: AsyncSession,
 ):
     await db.execute(
@@ -114,26 +114,13 @@ async def get_loaner_item_by_name_and_loaner_id(
 
 async def update_loaner_item(
     item_id: str,
-    item_update: schemas_loans.ItemUpdate,
+    item_update: schemas_loan.ItemUpdate,
     db: AsyncSession,
 ):
     await db.execute(
         update(models_loan.Item)
         .where(models_loan.Item.id == item_id)
         .values(**item_update.dict(exclude_none=True))
-    )
-    await db.commit()
-
-
-async def update_loaner_item_availability(
-    item_id: str,
-    available: bool,
-    db: AsyncSession,
-):
-    await db.execute(
-        update(models_loan.Item)
-        .where(models_loan.Item.id == item_id)
-        .values({"available": available})
     )
     await db.commit()
 
@@ -189,7 +176,7 @@ async def create_loan(
 
 async def update_loan(
     loan_id: str,
-    loan_update: schemas_loans.LoanInDBUpdate,
+    loan_update: schemas_loan.LoanInDBUpdate,
     db: AsyncSession,
 ):
     await db.execute(
@@ -247,6 +234,49 @@ async def create_loan_content(
     except IntegrityError:
         await db.rollback()
         raise
+
+
+async def get_loan_content_by_loan_id_item_id(
+    loan_id: str,
+    item_id: str,
+    db: AsyncSession,
+) -> models_loan.LoanContent | None:
+    result = await db.execute(
+        select(models_loan.LoanContent).where(
+            models_loan.LoanContent.loan_id == loan_id
+            and models_loan.LoanContent.item_id == item_id
+        )
+    )
+    return result.scalars().first()
+
+
+async def get_loan_contents_by_loan_id(
+    loan_id: str,
+    db: AsyncSession,
+) -> list[models_loan.LoanContent] | None:
+    result = await db.execute(
+        select(models_loan.LoanContent).where(
+            models_loan.LoanContent.loan_id == loan_id
+        )
+    )
+    return result.scalars().all()
+
+
+async def get_loaned_quantity(
+    item_id: str,
+    db: AsyncSession,
+) -> int | None:
+    result = await db.execute(
+        select(func.sum(models_loan.LoanContent.quantity)).where(
+            models_loan.LoanContent.loan.has(returned=False)
+            & (models_loan.LoanContent.item_id == item_id)
+        )
+    )
+    qty = result.scalars().first()
+    if qty is None:
+        return 0
+    else:
+        return qty
 
 
 async def delete_loan_content_by_loan_id(

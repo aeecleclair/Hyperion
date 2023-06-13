@@ -3,10 +3,10 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.cruds import cruds_loans
+from app.cruds import cruds_loan
 from app.dependencies import get_db, is_user_a_member, is_user_a_member_of
 from app.models import models_core, models_loan
-from app.schemas import schemas_loans
+from app.schemas import schemas_loan
 from app.utils.tools import (
     is_group_id_valid,
     is_user_id_valid,
@@ -20,7 +20,7 @@ router = APIRouter()
 
 @router.get(
     "/loans/loaners/",
-    response_model=list[schemas_loans.Loaner],
+    response_model=list[schemas_loan.Loaner],
     status_code=200,
     tags=[Tags.loans],
 )
@@ -34,17 +34,17 @@ async def read_loaners(
     **This endpoint is only usable by administrators**
     """
 
-    return await cruds_loans.get_loaners(db=db)
+    return await cruds_loan.get_loaners(db=db)
 
 
 @router.post(
     "/loans/loaners/",
-    response_model=schemas_loans.Loaner,
+    response_model=schemas_loan.Loaner,
     status_code=201,
     tags=[Tags.loans],
 )
 async def create_loaner(
-    loaner: schemas_loans.LoanerBase,
+    loaner: schemas_loan.LoanerBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
@@ -70,7 +70,7 @@ async def create_loaner(
             group_manager_id=loaner.group_manager_id,
         )
 
-        return await cruds_loans.create_loaner(loaner=loaner_db, db=db)
+        return await cruds_loan.create_loaner(loaner=loaner_db, db=db)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
@@ -90,7 +90,7 @@ async def delete_loaner(
 
     **This endpoint is only usable by administrators**
     """
-    loaner: models_loan.Loaner | None = await cruds_loans.get_loaner_by_id(
+    loaner: models_loan.Loaner | None = await cruds_loan.get_loaner_by_id(
         loaner_id=loaner_id, db=db
     )
     if loaner is None:
@@ -102,12 +102,12 @@ async def delete_loaner(
     # We delete all loans associated with this loaner
     for loan in loaner.loans:
         # We first remove LoanContents associated with the loan
-        await cruds_loans.delete_loan_content_by_loan_id(loan_id=loan.id, db=db)
+        await cruds_loan.delete_loan_content_by_loan_id(loan_id=loan.id, db=db)
         # Then we remove the loan
-        await cruds_loans.delete_loan_by_id(loan_id=loan.id, db=db)
+        await cruds_loan.delete_loan_by_id(loan_id=loan.id, db=db)
 
-    await cruds_loans.delete_loaner_items_by_loaner_id(loaner_id=loaner_id, db=db)
-    await cruds_loans.delete_loaner_by_id(loaner_id=loaner_id, db=db)
+    await cruds_loan.delete_loaner_items_by_loaner_id(loaner_id=loaner_id, db=db)
+    await cruds_loan.delete_loaner_by_id(loaner_id=loaner_id, db=db)
 
 
 @router.patch(
@@ -117,7 +117,7 @@ async def delete_loaner(
 )
 async def update_loaner(
     loaner_id: str,
-    loaner_update: schemas_loans.LoanerUpdate,
+    loaner_update: schemas_loan.LoanerUpdate,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
@@ -127,14 +127,14 @@ async def update_loaner(
     **This endpoint is only usable by administrators**
     """
 
-    await cruds_loans.update_loaner(
+    await cruds_loan.update_loaner(
         loaner_id=loaner_id, loaner_update=loaner_update, db=db
     )
 
 
 @router.get(
     "/loans/loaners/{loaner_id}/loans",
-    response_model=list[schemas_loans.Loan],
+    response_model=list[schemas_loan.Loan],
     status_code=200,
     tags=[Tags.loans],
 )
@@ -155,7 +155,7 @@ async def get_loans_by_loaner(
     """
 
     # We need to make sure the user is allowed to manage the loaner
-    loaner: models_loan.Loaner | None = await cruds_loans.get_loaner_by_id(
+    loaner: models_loan.Loaner | None = await cruds_loan.get_loaner_by_id(
         loaner_id=loaner_id, db=db
     )
     if loaner is None:
@@ -171,18 +171,33 @@ async def get_loans_by_loaner(
             detail=f"Unauthorized to manage {loaner_id} loaner",
         )
 
-    # We didn't manage to use a filter condition in the ORM, as we did for /loans/users/me
-    # so we iterate over the list to filter loans based on their returned status
-    if returned is not None:
-        return [loan for loan in loaner.loans if loan.returned == returned]
+    loans: list[schemas_loan.Loan] = []
+    for loan in loaner.loans:
+        if returned is None or loan.returned == returned:
+            itemsret = await cruds_loan.get_loan_contents_by_loan_id(
+                loan_id=loan.id, db=db
+            )
+            if itemsret is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Loan Contents not found",
+                )
+            items_qty_ret: list[schemas_loan.ItemQuantity] = []
+            for itemret in itemsret:
+                items_qty_ret.append(
+                    schemas_loan.ItemQuantity(
+                        itemSimple=schemas_loan.ItemSimple(**itemret.item.__dict__),
+                        quantity=itemret.quantity,
+                    )
+                )
+            loans.append(schemas_loan.Loan(items_qty=items_qty_ret, **loan.__dict__))
 
-    # We use the ORM relationship capabilities to load loans in the loaner object
-    return loaner.loans
+    return loans
 
 
 @router.get(
     "/loans/loaners/{loaner_id}/items",
-    response_model=list[schemas_loans.Item],
+    response_model=list[schemas_loan.Item],
     status_code=200,
     tags=[Tags.loans],
 )
@@ -198,7 +213,7 @@ async def get_items_by_loaner(
     """
 
     # We need to make sure the user is allowed to manage the loaner
-    loaner: models_loan.Loaner | None = await cruds_loans.get_loaner_by_id(
+    loaner: models_loan.Loaner | None = await cruds_loan.get_loaner_by_id(
         loaner_id=loaner_id, db=db
     )
     if loaner is None:
@@ -212,20 +227,26 @@ async def get_items_by_loaner(
             status_code=403,
             detail=f"Unauthorized to manage {loaner_id} loaner",
         )
+    itemret: list[schemas_loan.Item] = []
+    for itemDB in loaner.items:
+        loaned_quantity = await cruds_loan.get_loaned_quantity(item_id=itemDB.id, db=db)
+        itemret.append(
+            schemas_loan.Item(loaned_quantity=loaned_quantity, **itemDB.__dict__)
+        )
 
     # We use the ORM relationship capabilities to load items in the loaner object
-    return loaner.items
+    return itemret
 
 
 @router.post(
     "/loans/loaners/{loaner_id}/items",
-    response_model=schemas_loans.Item,
+    response_model=schemas_loan.Item,
     status_code=201,
     tags=[Tags.loans],
 )
 async def create_items_for_loaner(
     loaner_id: str,
-    item: schemas_loans.ItemBase,
+    item: schemas_loan.ItemBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
@@ -236,7 +257,7 @@ async def create_items_for_loaner(
     """
 
     # We need to make sure the user is allowed to manage the loaner
-    loaner: models_loan.Loaner | None = await cruds_loans.get_loaner_by_id(
+    loaner: models_loan.Loaner | None = await cruds_loan.get_loaner_by_id(
         loaner_id=loaner_id, db=db
     )
     if loaner is None:
@@ -253,7 +274,7 @@ async def create_items_for_loaner(
 
     # We need to check that the loaner does not have another item with the same name
     if (
-        await cruds_loans.get_loaner_item_by_name_and_loaner_id(
+        await cruds_loan.get_loaner_item_by_name_and_loaner_id(
             loaner_item_name=item.name, loaner_id=loaner_id, db=db
         )
         is not None
@@ -269,12 +290,11 @@ async def create_items_for_loaner(
             name=item.name,
             loaner_id=loaner_id,
             suggested_caution=item.suggested_caution,
-            multiple=item.multiple,
+            total_quantity=item.total_quantity,
             suggested_lending_duration=item.suggested_lending_duration,
-            available=True,
         )
-
-        return await cruds_loans.create_item(item=loaner_item_db, db=db)
+        retItem = await cruds_loan.create_item(item=loaner_item_db, db=db)
+        return schemas_loan.Item(loaned_quantity=0, **retItem.__dict__)
 
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
@@ -288,7 +308,7 @@ async def create_items_for_loaner(
 async def update_items_for_loaner(
     loaner_id: str,
     item_id: str,
-    item_update: schemas_loans.ItemUpdate,
+    item_update: schemas_loan.ItemUpdate,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
@@ -299,10 +319,10 @@ async def update_items_for_loaner(
     """
 
     # We need to make sure the user is allowed to manage the loaner
-    loaner: models_loan.Loaner | None = await cruds_loans.get_loaner_by_id(
+    loaner: models_loan.Loaner | None = await cruds_loan.get_loaner_by_id(
         loaner_id=loaner_id, db=db
     )
-    item: models_loan.Item | None = await cruds_loans.get_loaner_item_by_id(
+    item: models_loan.Item | None = await cruds_loan.get_loaner_item_by_id(
         loaner_item_id=item_id, db=db
     )
     if item is None:
@@ -327,9 +347,7 @@ async def update_items_for_loaner(
             detail=f"Unauthorized to manage {loaner_id} loaner",
         )
 
-    await cruds_loans.update_loaner_item(
-        item_id=item_id, item_update=item_update, db=db
-    )
+    await cruds_loan.update_loaner_item(item_id=item_id, item_update=item_update, db=db)
 
 
 @router.delete(
@@ -350,7 +368,7 @@ async def delete_loaner_item(
     **The user must be a member of the loaner group_manager to use this endpoint**
     """
     # We need to make sure the user is allowed to manage the loaner
-    item: models_loan.Item | None = await cruds_loans.get_loaner_item_by_id(
+    item: models_loan.Item | None = await cruds_loan.get_loaner_item_by_id(
         loaner_item_id=item_id, db=db
     )
     if item is None:
@@ -370,13 +388,13 @@ async def delete_loaner_item(
             detail=f"Unauthorized to manage {loaner_id} loaner",
         )
 
-    await cruds_loans.delete_loan_content_by_item_id(item_id=item_id, db=db)
-    await cruds_loans.delete_loaner_item_by_id(item_id=item_id, db=db)
+    await cruds_loan.delete_loan_content_by_item_id(item_id=item_id, db=db)
+    await cruds_loan.delete_loaner_item_by_id(item_id=item_id, db=db)
 
 
 @router.get(
     "/loans/users/me",
-    response_model=list[schemas_loans.Loan],
+    response_model=list[schemas_loan.Loan],
     status_code=200,
     tags=[Tags.loans],
 )
@@ -393,16 +411,36 @@ async def get_current_user_loans(
     **The user must be authenticated to use this endpoint**
     """
 
-    return await cruds_loans.get_loans_by_borrower(
+    loans_borrowed = await cruds_loan.get_loans_by_borrower(
         db=db,
         borrower_id=user.id,
         returned=returned,
     )
 
+    loansret: list[schemas_loan.Loan] = []
+    for loan in loans_borrowed:
+        itemsret = await cruds_loan.get_loan_contents_by_loan_id(loan_id=loan.id, db=db)
+        if itemsret is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Loan contents not found",
+            )
+        items_qty_ret: list[schemas_loan.ItemQuantity] = []
+        for itemret in itemsret:
+            items_qty_ret.append(
+                schemas_loan.ItemQuantity(
+                    itemSimple=schemas_loan.ItemSimple(**itemret.item.__dict__),
+                    quantity=itemret.quantity,
+                )
+            )
+        loansret.append(schemas_loan.Loan(items_qty=items_qty_ret, **loan.__dict__))
+
+    return loansret
+
 
 @router.get(
     "/loans/users/me/loaners",
-    response_model=list[schemas_loans.Loaner],
+    response_model=list[schemas_loan.Loaner],
     status_code=200,
     tags=[Tags.loans],
 )
@@ -418,7 +456,7 @@ async def get_current_user_loaners(
 
     user_loaners: list[models_loan.Loaner] = []
 
-    existing_loaners: list[models_loan.Loaner] = await cruds_loans.get_loaners(db=db)
+    existing_loaners: list[models_loan.Loaner] = await cruds_loan.get_loaners(db=db)
 
     for loaner in existing_loaners:
         if is_user_member_of_an_allowed_group(
@@ -432,12 +470,12 @@ async def get_current_user_loaners(
 
 @router.post(
     "/loans/",
-    response_model=schemas_loans.Loan,
+    response_model=schemas_loan.Loan,
     status_code=201,
     tags=[Tags.loans],
 )
 async def create_loan(
-    loan_creation: schemas_loans.LoanCreation,
+    loan_creation: schemas_loan.LoanCreation,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
@@ -448,7 +486,7 @@ async def create_loan(
     """
 
     # We need to make sure the user is allowed to manage the loaner
-    loaner: models_loan.Loaner | None = await cruds_loans.get_loaner_by_id(
+    loaner: models_loan.Loaner | None = await cruds_loan.get_loaner_by_id(
         loaner_id=loan_creation.loaner_id, db=db
     )
     if loaner is None:
@@ -470,11 +508,15 @@ async def create_loan(
             detail="Invalid user_id",
         )
 
-    items: list[models_loan.Item] = []
+    # list of item and quantity borrowed
+    items: list[tuple[models_loan.Item, int]] = []
 
     # All items should be valid, available and belong to the loaner
-    for item_id in loan_creation.item_ids:
-        item: models_loan.Item | None = await cruds_loans.get_loaner_item_by_id(
+    for item_borrowed in loan_creation.items_borrowed:
+        item_id: str = item_borrowed.item_id
+        quantity: int = item_borrowed.quantity
+
+        item: models_loan.Item | None = await cruds_loan.get_loaner_item_by_id(
             loaner_item_id=item_id, db=db
         )
         if item is None:
@@ -488,16 +530,23 @@ async def create_loan(
                 status_code=400,
                 detail=f"Item {item_id} does not belong to {loan_creation.loaner_id} loaner",
             )
-        # If the item can not be borrowed more than one time at the time
-        # we need to check it is available
-        if not item.multiple:
-            if not item.available:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Item {item_id} is not available",
-                )
-        # We make a list of every item to mark them as unavailable later
-        items.append(item)
+
+        # We need to check if the quantity is available
+        loaned_quantity = await cruds_loan.get_loaned_quantity(item_id=item.id, db=db)
+        if loaned_quantity is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Could not find Item {item_id} loaned_quantity",
+            )
+        available_quantity: int = item.total_quantity - loaned_quantity
+        isLoanedquantityPossible = quantity <= available_quantity
+        if not isLoanedquantityPossible:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Item {item_id} is not available",
+            )
+        # We make a list of every new item with the quantity borrowed to update the loaned quantity and create the loaned content
+        items.append((item, quantity))
 
     db_loan = models_loan.Loan(
         id=str(uuid.uuid4()),
@@ -511,25 +560,33 @@ async def create_loan(
     )
 
     try:
-        await cruds_loans.create_loan(loan=db_loan, db=db)
+        await cruds_loan.create_loan(loan=db_loan, db=db)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
-    for item in items:
-        # We mark all borrowed items that are not multiple as not available
-        if not item.multiple:
-            await cruds_loans.update_loaner_item_availability(
-                item_id=item.id, available=False, db=db
-            )
+    for item, quantity in items:
         # We add each item to the loan
         loan_content = models_loan.LoanContent(
-            loan_id=db_loan.id,
-            item_id=item.id,
+            loan_id=db_loan.id, item_id=item.id, quantity=quantity
         )
-        await cruds_loans.create_loan_content(loan_content=loan_content, db=db)
+        await cruds_loan.create_loan_content(loan_content=loan_content, db=db)
 
-    res = await cruds_loans.get_loan_by_id(loan_id=db_loan.id, db=db)
-    return res
+    loan = await cruds_loan.get_loan_by_id(loan_id=db_loan.id, db=db)
+    if loan is None:
+        raise HTTPException(status_code=404, detail=str("Loan not found"))
+
+    itemsret = await cruds_loan.get_loan_contents_by_loan_id(loan_id=db_loan.id, db=db)
+    if itemsret is None:
+        raise HTTPException(status_code=404, detail=str("LoanContent not found"))
+    items_qty_ret: list[schemas_loan.ItemQuantity] = []
+    for itemret in itemsret:
+        items_qty_ret.append(
+            schemas_loan.ItemQuantity(
+                itemSimple=schemas_loan.ItemSimple(**itemret.item.__dict__),
+                quantity=itemret.quantity,
+            )
+        )
+    return schemas_loan.Loan(items_qty=items_qty_ret, **loan.__dict__)
 
 
 @router.patch(
@@ -539,7 +596,7 @@ async def create_loan(
 )
 async def update_loan(  # noqa: C901
     loan_id: str,
-    loan_update: schemas_loans.LoanUpdate,
+    loan_update: schemas_loan.LoanUpdate,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
@@ -553,7 +610,7 @@ async def update_loan(  # noqa: C901
     """
 
     # We need to make sure the user is allowed to manage the loaner
-    loan: models_loan.Loan | None = await cruds_loans.get_loan_by_id(
+    loan: models_loan.Loan | None = await cruds_loan.get_loan_by_id(
         loan_id=loan_id, db=db
     )
     if loan is None:
@@ -578,22 +635,29 @@ async def update_loan(  # noqa: C901
             )
 
     # If a new list of items was provided, we need to mark old items as available and new items as not available
-    if loan_update.item_ids:
+    if loan_update.items_borrowed:
         for old_item in loan.items:
-            if not old_item.multiple:
-                await cruds_loans.update_loaner_item_availability(
-                    item_id=old_item.id,
-                    available=True,
-                    db=db,
+            # We need to update the item loaned quantity thanks to the quantity in the loan content
+            loan_content = await cruds_loan.get_loan_content_by_loan_id_item_id(
+                loan_id=loan.id,
+                item_id=old_item.id,
+                db=db,
+            )
+            if loan_content is None:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid loan content {loan.id}, {old_item.id}",
                 )
         # We remove the old items from the database
-        await cruds_loans.delete_loan_content_by_loan_id(loan_id=loan_id, db=db)
+        await cruds_loan.delete_loan_content_by_loan_id(loan_id=loan_id, db=db)
 
-        items: list[models_loan.Item] = []
+        items: list[tuple[models_loan.Item, int]] = []
 
         # All items should be valid, available and belong to the loaner
-        for item_id in loan_update.item_ids:
-            item: models_loan.Item | None = await cruds_loans.get_loaner_item_by_id(
+        for item_borrowed in loan_update.items_borrowed:
+            item_id: str = item_borrowed.item_id
+            quantity: int = item_borrowed.quantity
+            item: models_loan.Item | None = await cruds_loan.get_loaner_item_by_id(
                 loaner_item_id=item_id, db=db
             )
             if item is None:
@@ -607,45 +671,40 @@ async def update_loan(  # noqa: C901
                     status_code=400,
                     detail=f"Item {item_id} does not belong to {loan.loaner_id} loaner",
                 )
-            # If the loan is not marked as returned we can check its availability
-            if (
-                loan_update.returned is None and loan.returned is False
-            ) or loan_update.returned is False:
-                # If the item can not be borrowed more than one time at the time
-                # we need to check it is available
-                if not item.multiple:
-                    if not item.available:
-                        raise HTTPException(
-                            status_code=400,
-                            detail=f"Item {item_id} is not available",
-                        )
-            # We make a list of every item to mark them as unavailable later
-            items.append(item)
+            # We need to check if the quantity is available
+            loaned_quantity = await cruds_loan.get_loaned_quantity(
+                item_id=item.id, db=db
+            )
+            if loaned_quantity is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Could not find Item {item_id} loaned_quantity",
+                )
+            available_quantity: int = item.total_quantity - loaned_quantity
+            isLoanedquantityPossible = quantity <= available_quantity
+            if not isLoanedquantityPossible:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Item {item_id} is not available",
+                )
+            # We make a list of every new item with the quantity borrowed to update the loaned quantity and create the loaned content
+            items.append((item, quantity))
 
     try:
         # We need to remove the item_ids list from the schema before calling the update_loan crud function
-        loan_in_db_update = schemas_loans.LoanInDBUpdate(**loan_update.dict())
-        await cruds_loans.update_loan(
+        loan_in_db_update = schemas_loan.LoanInDBUpdate(**loan_update.dict())
+        await cruds_loan.update_loan(
             loan_id=loan_id, loan_update=loan_in_db_update, db=db
         )
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
-    for item in items:
-        if (
-            loan_update.returned is None and loan.returned is False
-        ) or loan_update.returned is False:
-            # We mark all borrowed items that are not multiple as not available
-            if not item.multiple:
-                await cruds_loans.update_loaner_item_availability(
-                    item_id=item.id, available=False, db=db
-                )
+    for item, quantity in items:
         # We add each item to the loan
         loan_content = models_loan.LoanContent(
-            loan_id=loan_id,
-            item_id=item.id,
+            loan_id=loan_id, item_id=item.id, quantity=quantity
         )
-        await cruds_loans.create_loan_content(loan_content=loan_content, db=db)
+        await cruds_loan.create_loan_content(loan_content=loan_content, db=db)
 
 
 @router.delete(
@@ -659,13 +718,13 @@ async def delete_loan(
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
-    Delete a loaner's item.
-    This will remove the item from all loans but won't delete any loan.
+    Delete a loan
+    This will remove the loan but won't delete any loaner items.
 
     **The user must be a member of the loaner group_manager to use this endpoint**
     """
     # We need to make sure the user is allowed to manage the loaner
-    loan: models_loan.Loan | None = await cruds_loans.get_loan_by_id(
+    loan: models_loan.Loan | None = await cruds_loan.get_loan_by_id(
         loan_id=loan_id, db=db
     )
     if loan is None:
@@ -681,17 +740,21 @@ async def delete_loan(
             detail=f"Unauthorized to manage {loan.loaner_id} loaner",
         )
 
-    # We need to mark all items included in the loan as available
+    # We need to update the item loaned quantity thanks to the quantity in the loan content
     for item in loan.items:
-        if not item.multiple:
-            await cruds_loans.update_loaner_item_availability(
-                item_id=item.id,
-                available=True,
-                db=db,
+        loan_content = await cruds_loan.get_loan_content_by_loan_id_item_id(
+            loan_id=loan.id,
+            item_id=item.id,
+            db=db,
+        )
+        if loan_content is None:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid loan content {loan.id}, {item.id}",
             )
 
-    await cruds_loans.delete_loan_content_by_loan_id(loan_id=loan_id, db=db)
-    await cruds_loans.delete_loan_by_id(loan_id=loan_id, db=db)
+    await cruds_loan.delete_loan_content_by_loan_id(loan_id=loan_id, db=db)
+    await cruds_loan.delete_loan_by_id(loan_id=loan_id, db=db)
 
 
 @router.post(
@@ -711,7 +774,7 @@ async def return_loan(
     """
 
     # We need to make sure the user is allowed to manage the loaner
-    loan: models_loan.Loan | None = await cruds_loans.get_loan_by_id(
+    loan: models_loan.Loan | None = await cruds_loan.get_loan_by_id(
         loan_id=loan_id, db=db
     )
     if loan is None:
@@ -727,16 +790,21 @@ async def return_loan(
             detail=f"Unauthorized to manage {loan.loaner_id} loaner",
         )
 
-    # We need to mark all items included in the loan as available
+    # We need to update the item loaned quantity thanks to the quantity in the loan content
+    # We need to update the item loaned quantity thanks to the quantity in the loan content
     for item in loan.items:
-        if not item.multiple:
-            await cruds_loans.update_loaner_item_availability(
-                item_id=item.id,
-                available=True,
-                db=db,
+        loan_content = await cruds_loan.get_loan_content_by_loan_id_item_id(
+            loan_id=loan.id,
+            item_id=item.id,
+            db=db,
+        )
+        if loan_content is None:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid loan content {loan.id}, {item.id}",
             )
 
-    await cruds_loans.update_loan_returned_status(
+    await cruds_loan.update_loan_returned_status(
         loan_id=loan_id,
         returned=True,
         db=db,
@@ -750,7 +818,7 @@ async def return_loan(
 )
 async def extend_loan(
     loan_id: str,
-    loan_extend: schemas_loans.LoanExtend,
+    loan_extend: schemas_loan.LoanExtend,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
@@ -761,7 +829,7 @@ async def extend_loan(
     """
 
     # We need to make sure the user is allowed to manage the loaner
-    loan: models_loan.Loan | None = await cruds_loans.get_loan_by_id(
+    loan: models_loan.Loan | None = await cruds_loan.get_loan_by_id(
         loan_id=loan_id, db=db
     )
     if loan is None:
@@ -778,15 +846,15 @@ async def extend_loan(
         )
 
     if loan_extend.end is not None:
-        loan_update = schemas_loans.LoanUpdate(
+        loan_update = schemas_loan.LoanUpdate(
             end=loan_extend.end,
         )
     elif loan_extend.duration is not None:
-        loan_update = schemas_loans.LoanUpdate(
+        loan_update = schemas_loan.LoanUpdate(
             end=loan.end + loan_extend.duration,
         )
 
-    await cruds_loans.update_loan(
+    await cruds_loan.update_loan(
         loan_id=loan_id,
         loan_update=loan_update,
         db=db,

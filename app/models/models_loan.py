@@ -32,6 +32,9 @@ class LoanContent(Base):
 
     loan_id: str = Column(ForeignKey("loan.id"), primary_key=True)
     item_id: str = Column(ForeignKey("loaner_item.id"), primary_key=True)
+    quantity: int = Column(Integer, nullable=False)
+    loan: "Loan" = relationship("Loan")
+    item: "Item" = relationship("Item")
 
 
 class Item(Base):
@@ -42,12 +45,8 @@ class Item(Base):
     name: str = Column(String, nullable=False)
     loaner_id: str = Column(String, ForeignKey("loaner.id"))
     suggested_caution: int = Column(Integer)
-    multiple: bool = Column(Boolean)
-
+    total_quantity: int = Column(Integer, nullable=False)
     suggested_lending_duration: timedelta = Column(Interval, nullable=False)
-
-    available: bool | None = Column(Boolean)
-
     loaner: Loaner = relationship(Loaner, lazy="joined", back_populates="items")
 
 
@@ -80,6 +79,7 @@ class Loan(Base):
 
     items: list["Item"] = relationship(
         "Item",
+        viewonly=True,
         secondary="loan_content",
         lazy="joined",
     )
