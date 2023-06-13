@@ -12,6 +12,7 @@ from app.endpoints import (
     campaign,
     cinema,
     core,
+    flappybird,
     groups,
     loans,
     raffle,
@@ -30,5 +31,6 @@ api_router.include_router(groups.router)
 api_router.include_router(core.router)
 api_router.include_router(users.router)
 api_router.include_router(loans.router)
+api_router.include_router(flappybird.router)
 api_router.include_router(cinema.router)
 api_router.include_router(raffle.router)
