@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from icalendar import Calendar, Event
+from icalendar import Calendar, Event, vRecur
 from pytz import timezone
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
@@ -152,7 +152,7 @@ async def create_icalendar_file(
             ical_event.add("organizer", event.organizer)
             ical_event.add("location", event.location)
             if event.recurrence_rule:
-                ical_event["rrule"] = event.recurrence_rule
+                ical_event.add("rrule", vRecur.from_ical(event.recurrence_rule))
 
             calendar.add_component(ical_event)
 
