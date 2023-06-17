@@ -51,7 +51,7 @@ class Lots(Base):
     name: Mapped[str] = mapped_column(String, nullable=True)
     quantity: Mapped[int] = mapped_column(Integer)
 
-    raffle: Raffle = relationship("Raffle")
+    raffle: Mapped[Raffle] = relationship("Raffle")
 
 
 class Tickets(Base):

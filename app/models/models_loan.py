@@ -27,9 +27,9 @@ class LoanContent(Base):
 
     loan_id: Mapped[str] = mapped_column(ForeignKey("loan.id"), primary_key=True)
     item_id: Mapped[str] = mapped_column(ForeignKey("loaner_item.id"), primary_key=True)
-    quantity: int = mapped_column(Integer, nullable=False)
-    loan: "Loan" = relationship("Loan")
-    item: "Item" = relationship("Item")
+    quantity: Mapped[int] = mapped_column(Integer, nullable=False)
+    loan: Mapped["Loan"] = relationship("Loan")
+    item: Mapped["Item"] = relationship("Item")
 
 
 class Item(Base):
@@ -37,12 +37,14 @@ class Item(Base):
 
     id: Mapped[str] = mapped_column(String, primary_key=True, index=True)
     # Two items with the same name may exist in two different loaners
-    name: str = mapped_column(String, nullable=False)
-    loaner_id: str = mapped_column(String, ForeignKey("loaner.id"))
-    suggested_caution: int = mapped_column(Integer)
-    total_quantity: int = mapped_column(Integer, nullable=False)
-    suggested_lending_duration: timedelta = mapped_column(Interval, nullable=False)
-    loaner: Loaner = relationship(Loaner, lazy="joined", back_populates="items")
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    loaner_id: Mapped[str] = mapped_column(String, ForeignKey("loaner.id"))
+    suggested_caution: Mapped[int] = mapped_column(Integer)
+    total_quantity: Mapped[int] = mapped_column(Integer, nullable=False)
+    suggested_lending_duration: Mapped[timedelta] = mapped_column(
+        Interval, nullable=False
+    )
+    loaner: Mapped[Loaner] = relationship(Loaner, lazy="joined", back_populates="items")
 
 
 class Loan(Base):
