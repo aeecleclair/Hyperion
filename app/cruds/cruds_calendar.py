@@ -95,7 +95,7 @@ async def delete_event(db: AsyncSession, event_id: str, settings: Settings) -> N
     try:
         await db.commit()
         try:
-            await create_icalendar_file(db, calendar_file_path, settings)
+            await create_icalendar_file(db, settings)
         except Exception as error:
             await db.rollback()
             raise ValueError(error)
@@ -116,7 +116,7 @@ async def confirm_event(
         await db.commit()
         if decision == Decision.approved:
             try:
-                await create_icalendar_file(db, calendar_file_path, settings)
+                await create_icalendar_file(db, settings)
             except Exception as error:
                 await db.rollback()
                 raise ValueError(error)
@@ -125,9 +125,7 @@ async def confirm_event(
         raise ValueError(error)
 
 
-async def create_icalendar_file(
-    db: AsyncSession, calendar_file_path: str, settings: Settings
-) -> None:
+async def create_icalendar_file(db: AsyncSession, settings: Settings) -> None:
     """Create the ics file corresponding to the database. The calendar is entirely recreated each time an event is added or deleted in the db."""
     events = await get_all_events(db)
 
