@@ -255,7 +255,7 @@ async def get_loan_content_by_loan_id_item_id(
 async def get_loan_contents_by_loan_id(
     loan_id: str,
     db: AsyncSession,
-) -> list[models_loan.LoanContent] | None:
+) -> Sequence[models_loan.LoanContent] | None:
     result = await db.execute(
         select(models_loan.LoanContent).where(
             models_loan.LoanContent.loan_id == loan_id
