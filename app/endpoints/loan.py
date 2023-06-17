@@ -457,9 +457,7 @@ async def get_current_user_loaners(
 
     user_loaners: list[models_loan.Loaner] = []
 
-    existing_loaners: Sequence[models_loan.Loaner] = await cruds_loans.get_loaners(
-        db=db
-    )
+    existing_loaners: Sequence[models_loan.Loaner] = await cruds_loan.get_loaners(db=db)
 
     for loaner in existing_loaners:
         if is_user_member_of_an_allowed_group(
