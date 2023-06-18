@@ -4,9 +4,7 @@ See https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
 """
 
 
-from datetime import datetime
-
-from pytz import timezone
+from datetime import datetime, timedelta, timezone
 
 
 def password_validator(password: str) -> str:
@@ -44,8 +42,12 @@ def trailing_spaces_remover(value: str | None) -> str | None:
     return value
 
 
-def time_zone_converter(time_zone: datetime) -> datetime:
+def paris_time_zone_converter(date_time: datetime) -> datetime:
     """
-    Put the time zone in the right.
+    Convert a aware/naive datetime to an aware datetime based on Paris (UTC +2) timezone
+
+    This function is intended to be used as a Pydantic validator:
+    https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
     """
-    return time_zone.astimezone(timezone("Europe/Paris"))
+
+    return date_time.astimezone(timezone(timedelta(hours=2)))

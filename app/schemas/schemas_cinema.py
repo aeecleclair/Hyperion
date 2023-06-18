@@ -10,7 +10,7 @@ class CineSessionTime(BaseModel):
     duration: int
 
     _normalize_start = validator("start", allow_reuse=True)(
-        validators.time_zone_converter
+        validators.paris_time_zone_converter
     )
 
 
@@ -37,5 +37,5 @@ class CineSessionUpdate(BaseModel):
     tagline: str | None = None
 
     _normalize_start = validator("start", allow_reuse=True)(
-        validators.time_zone_converter
+        validators.paris_time_zone_converter
     )

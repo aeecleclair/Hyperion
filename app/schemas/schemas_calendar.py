@@ -20,9 +20,11 @@ class EventBase(BaseModel):
     recurrence_rule: str | None
 
     _normalize_start = validator("start", allow_reuse=True)(
-        validators.time_zone_converter
+        validators.paris_time_zone_converter
     )
-    _normalize_end = validator("end", allow_reuse=True)(validators.time_zone_converter)
+    _normalize_end = validator("end", allow_reuse=True)(
+        validators.paris_time_zone_converter
+    )
 
 
 class EventComplete(EventBase):
@@ -46,9 +48,11 @@ class EventEdit(BaseModel):
     recurrence_rule: str | None = None
 
     _normalize_start = validator("start", allow_reuse=True)(
-        validators.time_zone_converter
+        validators.paris_time_zone_converter
     )
-    _normalize_end = validator("end", allow_reuse=True)(validators.time_zone_converter)
+    _normalize_end = validator("end", allow_reuse=True)(
+        validators.paris_time_zone_converter
+    )
 
     class Config:
         orm_mode = True
