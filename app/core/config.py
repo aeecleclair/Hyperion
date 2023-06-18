@@ -1,3 +1,4 @@
+from datetime import timedelta, timezone
 from functools import cached_property
 
 from jose import jwk
@@ -73,7 +74,11 @@ class Settings(BaseSettings):
     #####################
 
     # Timezone used to compare dates
-    TIMEZONE: str
+    # By default UTC time is used. The timezone can be changed in the dotenv using a timedelta compatible string.
+    # See https://docs.pydantic.dev/latest/usage/types/#datetime-types
+    # For UTC+2 Europe/Paris timezone, use `TIMEZONE_TIMEDELTA = "PT2H"`
+    TIMEZONE_TIMEDELTA: timedelta = timedelta()
+    # NOTE: in Hyperion code prefer the use of TIMEZONE computed property instead of TIMEZONE_TIMEDELTA
 
     # By default, only production's records are logged
     LOG_DEBUG_MESSAGES: bool | None
