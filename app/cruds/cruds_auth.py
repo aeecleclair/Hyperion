@@ -1,8 +1,7 @@
 """File defining the functions called by the endpoints, making queries to the table using the models"""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
-from pytz import timezone
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession

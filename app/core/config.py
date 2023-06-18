@@ -158,6 +158,10 @@ class Settings(BaseSettings):
         )
         return {"keys": [JWK]}
 
+    @cached_property
+    def TIMEZONE(cls) -> timezone:
+        return timezone(cls.TIMEZONE_TIMEDELTA)
+
     # Tokens validity
     USER_ACTIVATION_TOKEN_EXPIRES_HOURS = 24
     PASSWORD_RESET_TOKEN_EXPIRES_HOURS = 12

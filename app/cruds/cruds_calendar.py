@@ -1,7 +1,6 @@
 from datetime import datetime
 
 from icalendar import Calendar, Event
-from pytz import timezone
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -141,13 +140,9 @@ async def create_icalendar_file(
             ical_event.add("uid", f"{event.id}@myecl.fr")
             ical_event.add("summary", event.name)
             ical_event.add("description", event.description)
-            ical_event.add(
-                "dtstart", event.start.replace(tzinfo=timezone(settings.TIMEZONE))
-            )
-            ical_event.add(
-                "dtend", event.end.replace(tzinfo=timezone(settings.TIMEZONE))
-            )
-            ical_event.add("dtstamp", datetime.now(timezone(settings.TIMEZONE)))
+            ical_event.add("dtstart", event.start.replace(tzinfo=settings.TIMEZONE))
+            ical_event.add("dtend", event.end.replace(tzinfo=settings.TIMEZONE))
+            ical_event.add("dtstamp", datetime.now(settings.TIMEZONE))
             ical_event.add("class", "public")
             ical_event.add("organizer", event.organizer)
             ical_event.add("location", event.location)

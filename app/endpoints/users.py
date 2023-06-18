@@ -16,7 +16,6 @@ from fastapi import (
 )
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
-from pytz import timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import security
@@ -285,8 +284,8 @@ async def create_user(
         email=email,
         account_type=account_type,
         activation_token=activation_token,
-        created_on=datetime.now(timezone(settings.TIMEZONE)),
-        expire_on=datetime.now(timezone(settings.TIMEZONE))
+        created_on=datetime.now(settings.TIMEZONE),
+        expire_on=datetime.now(settings.TIMEZONE)
         + timedelta(hours=settings.USER_ACTIVATION_TOKEN_EXPIRE_HOURS),
     )
 
@@ -339,9 +338,9 @@ async def get_user_activation_page(
                 "message": "The activation token is invalid",
             },
         )
-    if unconfirmed_user.expire_on.astimezone(
-        timezone(settings.TIMEZONE)
-    ) < datetime.now(timezone(settings.TIMEZONE)):
+    if unconfirmed_user.expire_on.astimezone(settings.TIMEZONE) < datetime.now(
+        settings.TIMEZONE
+    ):
         return templates.TemplateResponse(
             "error.html",
             {
@@ -387,9 +386,9 @@ async def activate_user(
         raise HTTPException(status_code=404, detail="Invalid activation token")
 
     # We need to make sure the unconfirmed user is still valid
-    if unconfirmed_user.expire_on.astimezone(
-        timezone(settings.TIMEZONE)
-    ) < datetime.now(timezone(settings.TIMEZONE)):
+    if unconfirmed_user.expire_on.astimezone(settings.TIMEZONE) < datetime.now(
+        settings.TIMEZONE
+    ):
         raise HTTPException(status_code=400, detail="Expired activation token")
 
     # An account with the same email may exist if:
@@ -428,7 +427,7 @@ async def activate_user(
         promo=promo,
         phone=user.phone,
         floor=user.floor,
-        created_on=datetime.now(timezone(settings.TIMEZONE)),
+        created_on=datetime.now(settings.TIMEZONE),
     )
     # We add the new user to the database
     try:
@@ -519,8 +518,8 @@ async def recover_user(
             email=email,
             user_id=db_user.id,
             reset_token=reset_token,
-            created_on=datetime.now(timezone(settings.TIMEZONE)),
-            expire_on=datetime.now(timezone(settings.TIMEZONE))
+            created_on=datetime.now(settings.TIMEZONE),
+            expire_on=datetime.now(settings.TIMEZONE)
             + timedelta(hours=settings.PASSWORD_RESET_TOKEN_EXPIRE_HOURS),
         )
 
@@ -561,8 +560,8 @@ async def reset_password(
         raise HTTPException(status_code=404, detail="Invalid reset token")
 
     # We need to make sure the unconfirmed user is still valid
-    if recover_request.expire_on.astimezone(timezone(settings.TIMEZONE)) < datetime.now(
-        timezone(settings.TIMEZONE)
+    if recover_request.expire_on.astimezone(settings.TIMEZONE) < datetime.now(
+        settings.TIMEZONE
     ):
         raise HTTPException(status_code=400, detail="Expired reset token")
 

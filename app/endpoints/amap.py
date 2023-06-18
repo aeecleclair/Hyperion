@@ -3,7 +3,6 @@ import uuid
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Response
-from pytz import timezone
 from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -434,7 +433,7 @@ async def add_order_to_delievery(
             raise HTTPException(status_code=403, detail="Invalid product")
         amount += prod.price * product_quantity
 
-    ordering_date = datetime.now(timezone(settings.TIMEZONE))
+    ordering_date = datetime.now(settings.TIMEZONE)
     order_id = str(uuid.uuid4())
     db_order = schemas_amap.OrderComplete(
         order_id=order_id,

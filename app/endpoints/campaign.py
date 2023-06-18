@@ -5,7 +5,6 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
-from pytz import timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
@@ -353,7 +352,7 @@ async def open_vote(
     # Archive all changes to a json file
     lists = await cruds_campaign.get_lists(db=db)
     with open(
-        f"data/campaigns/lists-{datetime.now(timezone(settings.TIMEZONE)).isoformat(sep='-',timespec='minutes').replace(':','-')}.json",
+        f"data/campaigns/lists-{datetime.now(settings.TIMEZONE).isoformat(sep='-',timespec='minutes').replace(':','-')}.json",
         "w",
     ) as file:
         json.dump([liste.as_dict() for liste in lists], file)
@@ -468,7 +467,7 @@ async def reset_vote(
         # Archive results to a json file
         results = await get_results(db=db, user=user)
         with open(
-            f"data/campaigns/results-{datetime.now(timezone(settings.TIMEZONE)).isoformat(sep='-',timespec='minutes').replace(':','-')}.json",
+            f"data/campaigns/results-{datetime.now(settings.TIMEZONE).isoformat(sep='-',timespec='minutes').replace(':','-')}.json",
             "w",
         ) as file:
             json.dump(
