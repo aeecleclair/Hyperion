@@ -229,7 +229,7 @@ async def delete_bookings_id(
 
 
 @router.post(
-    "/calendar/ical",
+    "/calendar/ical/create",
     status_code=204,
     tags=[Tags.calendar],
 )
