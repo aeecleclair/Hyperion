@@ -228,6 +228,25 @@ async def delete_bookings_id(
         )
 
 
+@router.post(
+    "/calendar/ical/create",
+    status_code=204,
+    tags=[Tags.calendar],
+)
+async def recreate_ical_file(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    settings: Settings = Depends(get_settings),
+):
+    """
+    Create manually the icalendar file
+
+    **Only usable by global admins**
+    """
+
+    await cruds_calendar.create_icalendar_file(db=db, settings=settings)
+
+
 @router.get(
     "/calendar/ical",
     response_class=FileResponse,
