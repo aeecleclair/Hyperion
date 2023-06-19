@@ -233,7 +233,7 @@ async def delete_bookings_id(
     status_code=204,
     tags=[Tags.calendar],
 )
-async def create_product(
+async def recreate_ical_file(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
     settings: Settings = Depends(get_settings),
