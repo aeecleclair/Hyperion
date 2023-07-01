@@ -1,7 +1,8 @@
 from functools import cached_property
 
 from jose import jwk
-from pydantic import BaseSettings
+from jose.exceptions import JWKError
+from pydantic import BaseSettings, root_validator
 
 from app.utils.auth import providers
 
@@ -181,6 +182,58 @@ class Settings(BaseSettings):
             clients[client_id] = auth_client_class(client_id=client_id, secret=secret)
 
         return clients
+
+    #######################################
+    #          Fields validation          #
+    #######################################
+
+    # Validators may be used to perform more complexe validation
+    # For example, we can check that at least one of two optional fields is set or that the RSA key is provided and valid
+
+    # TODO: Pydantic 2.0 will allow to use `@model_validator`
+
+    @root_validator
+    def check_database_settings(cls, settings: dict):
+        """
+        All fields are optional, but the dotenv should configure SQLITE_DB or a Postgres database
+        """
+        SQLITE_DB = settings.get("SQLITE_DB")
+        POSTGRES_HOST = settings.get("POSTGRES_HOST")
+        POSTGRES_USER = settings.get("POSTGRES_USER")
+        POSTGRES_PASSWORD = settings.get("POSTGRES_PASSWORD")
+        POSTGRES_DB = settings.get("POSTGRES_DB")
+
+        if not (
+            SQLITE_DB
+            or (POSTGRES_HOST and POSTGRES_USER and POSTGRES_PASSWORD and POSTGRES_DB)
+        ):
+            raise ValueError(
+                "Either SQLITE_DB or POSTGRES_HOST, POSTGRES_USER, POSTGRES_PASSWORD and POSTGRES_DB should be configured in the dotenv"
+            )
+
+        return settings
+
+    @root_validator
+    def check_secrets(cls, settings: dict):
+        ACCESS_TOKEN_SECRET_KEY = settings.get("ACCESS_TOKEN_SECRET_KEY")
+        RSA_PRIVATE_PEM_STRING = settings.get("RSA_PRIVATE_PEM_STRING")
+
+        if not ACCESS_TOKEN_SECRET_KEY:
+            raise ValueError(
+                "ACCESS_TOKEN_SECRET_KEY should be configured in the dotenv"
+            )
+
+        if not RSA_PRIVATE_PEM_STRING:
+            raise ValueError(
+                "RSA_PRIVATE_PEM_STRING should be configured in the dotenv"
+            )
+
+        try:
+            jwk.construct(RSA_PRIVATE_PEM_STRING, algorithm="RS256")
+        except JWKError as e:
+            raise ValueError("RSA_PRIVATE_PEM_STRING is not a valid RSA key", e)
+
+        return settings
 
     class Config:
         # By default, the settings are loaded from the `.env` file but this behaviour can be overridden by using
