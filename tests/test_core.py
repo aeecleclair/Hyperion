@@ -63,3 +63,24 @@ def test_get_favicon():
         "/favicon.ico",
     )
     assert response.status_code == 200
+
+
+def test_cors_authorized_origin():
+    origin = "https://test-authorized-origin.com"
+    headers = {
+        "Access-Control-Request-Method": "GET",
+        "origin": origin,
+    }
+    response = client.get("/information", headers=headers)
+    assert response.headers["access-control-allow-origin"] == origin
+
+
+def test_cors_unauthorized_origin():
+    origin = "https://test-UNauthorized-origin.com"
+    headers = {
+        "Access-Control-Request-Method": "GET",
+        "origin": origin,
+    }
+    response = client.get("/information", headers=headers)
+    # The origin should not be in the response as it is not authorized. We will check `None != origin`
+    assert response.headers.get("access-control-allow-origin", None) != origin
