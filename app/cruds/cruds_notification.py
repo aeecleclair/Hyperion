@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -76,3 +76,32 @@ async def create_firebase_devices(
     except IntegrityError as error:
         await db.rollback()
         raise ValueError(error)
+
+
+async def create_topic_membership(
+    topic_membership: models_notification.TopicMembership,
+    db: AsyncSession,
+) -> models_notification.TopicMembership:
+    """Register a new firebase device in database and return it"""
+
+    db.add(topic_membership)
+    try:
+        await db.commit()
+        return topic_membership
+    except IntegrityError as error:
+        await db.rollback()
+        raise ValueError(error)
+
+
+async def delete_topic_membership(
+    user_id: str,
+    topic: str,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_notification.TopicMembership).where(
+            models_notification.TopicMembership.user_id == user_id,
+            models_notification.TopicMembership.topic == topic,
+        )
+    )
+    await db.commit()

@@ -1,8 +1,9 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String
+from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, String
 
 from app.database import Base
+from app.utils.types.notification_types import Topic
 
 
 class Message(Base):
@@ -30,5 +31,14 @@ class Message(Base):
 class FirebaseDevice(Base):
     __tablename__ = "notification_firebase_devices"
 
-    user_id: str = Column(ForeignKey("core_user.id"), nullable=False)
-    firebase_device_token: str = Column(String, index=True, primary_key=True)
+    user_id: str = Column(ForeignKey("core_user.id"), nullable=False, primary_key=True)
+    firebase_device_token: str = Column(
+        String, index=True, nullable=False, primary_key=True
+    )
+
+
+class TopicMembership(Base):
+    __tablename__ = "notification_topic_membership"
+
+    user_id: str = Column(ForeignKey("core_user.id"), nullable=False, primary_key=True)
+    topic: Topic = Column(Enum(Topic), index=True, nullable=False, primary_key=True)
