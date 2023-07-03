@@ -31,3 +31,18 @@ async def get_firebase_devices_by_user_id(
         )
     )
     return result.scalars().all()
+
+
+async def create_firebase_devices(
+    firebase_device: models_notification.FirebaseDevice,
+    db: AsyncSession,
+) -> models_notification.FirebaseDevice:
+    """Register a new firebase device in database and return it"""
+
+    db.add(firebase_device)
+    try:
+        await db.commit()
+        return firebase_device
+    except IntegrityError as error:
+        await db.rollback()
+        raise ValueError(error)

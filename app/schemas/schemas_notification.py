@@ -26,3 +26,11 @@ class Message(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class FirebaseDevice(BaseModel):
+    user_id: str = Field(description="The Hyperion user id")
+    firebase_device_token: str = Field("Firebase device token")
+
+    class Config:
+        orm_mode = True
