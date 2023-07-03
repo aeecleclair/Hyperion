@@ -19,6 +19,20 @@ async def create_message(
         raise err
 
 
+async def get_messages_by_firebase_token(
+    firebase_token: str,
+    db: AsyncSession,
+) -> list[models_notification.Message]:
+    """Create a new raffle in database and return it"""
+
+    result = await db.execute(
+        select(models_notification.Message).where(
+            models_notification.Message.firebase_device_token == firebase_token
+        )
+    )
+    return result.scalars().all()
+
+
 async def get_firebase_devices_by_user_id(
     user_id: str,
     db: AsyncSession,
@@ -31,6 +45,22 @@ async def get_firebase_devices_by_user_id(
         )
     )
     return result.scalars().all()
+
+
+async def get_firebase_devices_by_user_id_and_firebase_token(
+    user_id: str,
+    firebase_token: str,
+    db: AsyncSession,
+) -> models_notification.FirebaseDevice | None:
+    """Return the loaner with id"""
+
+    result = await db.execute(
+        select(models_notification.FirebaseDevice).where(
+            models_notification.FirebaseDevice.user_id == user_id,
+            models_notification.FirebaseDevice.firebase_device_token == firebase_token,
+        )
+    )
+    return result.scalars().first()
 
 
 async def create_firebase_devices(

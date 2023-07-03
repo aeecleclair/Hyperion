@@ -38,3 +38,35 @@ async def register_firebase_device(
         return result
     except IntegrityError as error:
         raise HTTPException(status_code=400, detail=str(error))
+
+
+@router.get(
+    "/notification/messages/{firebase_token}",
+    response_model=schemas_notification.FirebaseDevice,
+    status_code=201,
+    tags=[Tags.notifications],
+)
+async def get_messages(
+    firebase_token: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Get all messages for a specific device from the user
+
+    **The user must be authenticated to use this endpoint**
+    """
+    firebase_device = (
+        cruds_notification.get_firebase_devices_by_user_id_and_firebase_token(
+            user_id=user.id, firebase_token=firebase_token, db=db
+        )
+    )
+
+    if firebase_device is None:
+        raise HTTPException(
+            status_code=404, detail=f"Device not found for user {user.id}"
+        )
+
+    return cruds_notification.get_messages_by_firebase_token(
+        firebase_token=firebase_token, db=db
+    )
