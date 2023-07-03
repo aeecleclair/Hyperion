@@ -86,6 +86,7 @@ class Settings(BaseSettings):
 
     # Origins for the CORS middleware. `["http://localhost"]` can be used for development.
     # See https://fastapi.tiangolo.com/tutorial/cors/
+    # It should begin with 'http://' or 'https:// and should never end with a '/'
     CORS_ORIGINS: list[str]
 
     ###################

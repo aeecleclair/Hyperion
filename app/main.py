@@ -35,19 +35,6 @@ hyperion_access_logger = logging.getLogger("hyperion.access")
 hyperion_security_logger = logging.getLogger("hyperion.security")
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
-# Unfortunately, FastAPI does not support using dependency in startup events.
-# We reproduce FastAPI logic to access settings. See https://github.com/tiangolo/fastapi/issues/425#issuecomment-954963966
-settings = app.dependency_overrides.get(get_settings, get_settings)()
-
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 
 @app.middleware("http")
 async def logging_middleware(
@@ -116,8 +103,17 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 # Alembic should be used for any migration, this function can only create new tables and ensure that the necessary groups are available
 @app.on_event("startup")
 async def startup():
+    # Unfortunately, FastAPI does not support using dependency in startup events.
     # We reproduce FastAPI logic to access settings. See https://github.com/tiangolo/fastapi/issues/425#issuecomment-954963966
     settings = app.dependency_overrides.get(get_settings, get_settings)()
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.CORS_ORIGINS,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     # Initialize loggers
     LogConfig().initialize_loggers(settings=settings)
