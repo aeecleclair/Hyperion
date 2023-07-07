@@ -78,6 +78,21 @@ async def create_firebase_devices(
         raise ValueError(error)
 
 
+async def delete_firebase_devices(
+    user_id: str,
+    firebase_device_token: str,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_notification.FirebaseDevice).where(
+            models_notification.FirebaseDevice.user_id == user_id,
+            models_notification.FirebaseDevice.firebase_device_token
+            == firebase_device_token,
+        )
+    )
+    await db.commit()
+
+
 async def create_topic_membership(
     topic_membership: models_notification.TopicMembership,
     db: AsyncSession,

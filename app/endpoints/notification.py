@@ -41,6 +41,31 @@ async def register_firebase_device(
         raise HTTPException(status_code=400, detail=str(error))
 
 
+@router.post(
+    "/notification/unregister-device",
+    response_model=schemas_notification.FirebaseDevice,
+    status_code=201,
+    tags=[Tags.notifications],
+)
+async def unregister_firebase_device(
+    firebase_token: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Unregister a new firebase device for the user
+
+    **The user must be authenticated to use this endpoint**
+    """
+
+    try:
+        result = await cruds_notification.delete_firebase_devices(
+            user_id=user.id, firebase_device_token=firebase_token, db=db
+        )
+    except IntegrityError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
 @router.get(
     "/notification/messages/{firebase_token}",
     response_model=schemas_notification.FirebaseDevice,
@@ -91,6 +116,8 @@ async def suscribe_to_topic(
     """
     topic_membership = models_notification.TopicMembership(user_id=user.id, topic=topic)
 
+    # TODO: firebase topic subscription
+
     try:
         result = await cruds_notification.create_topic_membership(
             topic_membership=topic_membership, db=db
@@ -116,6 +143,8 @@ async def unsuscribe_to_topic(
 
     **The user must be authenticated to use this endpoint**
     """
+
+    # TODO: firebase topic subscription
 
     try:
         result = await cruds_notification.delete_topic_membership(
