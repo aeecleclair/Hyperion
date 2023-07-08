@@ -241,17 +241,13 @@ async def get_orders_from_delivery(
 
 async def get_products_of_order(
     db: AsyncSession, order_id: str
-) -> Sequence[schemas_amap.ProductQuantity]:
+) -> Sequence[models_amap.AmapOrderContent]:
     result_db = await db.execute(
         select(models_amap.AmapOrderContent)
         .where(models_amap.AmapOrderContent.order_id == order_id)
         .options(selectinload(models_amap.AmapOrderContent.product))
     )
-    products_schema = [
-        schemas_amap.ProductQuantity(**product.__dict__)
-        for product in result_db.scalars().all()
-    ]
-    return products_schema
+    return result_db.scalars().all()
 
 
 async def add_order_to_delivery(

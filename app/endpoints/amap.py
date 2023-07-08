@@ -352,9 +352,10 @@ async def get_orders_from_delivery(
     orders = await cruds_amap.get_orders_from_delivery(db=db, delivery_id=delivery_id)
     res = []
     for order in orders:
-        products = await cruds_amap.get_products_of_order(
+        order_content = await cruds_amap.get_products_of_order(
             db=db, order_id=order.order_id
         )
+        products = [schemas_amap.ProductQuantity(**product.__dict__) for product in order_content]
         res.append(schemas_amap.OrderReturn(productsdetail=products, **order.__dict__))
     return res
 
