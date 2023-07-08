@@ -6,7 +6,6 @@ from typing import AsyncGenerator
 
 import pytest
 import redis
-from fastapi import Depends
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
@@ -57,7 +56,6 @@ async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
             yield db
         finally:
             await db.close()
-
 
 
 # By default the redis client is deactivated
@@ -159,8 +157,6 @@ def create_api_access_token(user: models_core.CoreUser):
     """
     Create a JWT access token for the `user` with the scope `API`
     """
-    # We reproduce FastAPI logic to access settings. See https://github.com/tiangolo/fastapi/issues/425#issuecomment-954963966
-    settings = test_app.dependency_overrides.get(get_settings, get_settings)()
 
     access_token_data = schemas_auth.TokenData(sub=user.id, scopes="API")
     token = security.create_access_token(data=access_token_data, settings=settings)

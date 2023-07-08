@@ -2,7 +2,6 @@ import uuid
 
 import pytest_asyncio
 
-from app.dependencies import get_redis_client, get_settings
 from app.models import models_core, models_raffle
 from app.utils.types.groups_type import GroupType
 from app.utils.types.raffle_types import RaffleStatusType
@@ -15,7 +14,6 @@ from tests.commons import (
     client,
     create_api_access_token,
     create_user_with_groups,
-    test_app,
 )
 
 soli_user: models_core.CoreUser | None = None
@@ -27,9 +25,6 @@ typeticket_to_delete: models_raffle.TypeTicket | None = None
 lot: models_raffle.Lots | None = None
 ticket: models_raffle.Tickets | None = None
 cash: models_raffle.Cash | None = None
-
-
-settings = test_app.dependency_overrides.get(get_settings, get_settings)()
 
 
 @pytest_asyncio.fixture(scope="session", autouse=True)

@@ -3,8 +3,6 @@ from datetime import datetime
 
 import pytest_asyncio
 
-from app.core.config import Settings
-from app.dependencies import get_redis_client, get_settings
 from app.models import models_amap, models_core
 from app.utils.types.amap_types import AmapSlotType, DeliveryStatusType
 from app.utils.types.groups_type import GroupType
@@ -17,7 +15,6 @@ from tests.commons import (
     client,
     create_api_access_token,
     create_user_with_groups,
-    test_app,
 )
 
 amap_user: models_core.CoreUser | None = None
@@ -29,9 +26,6 @@ deletable_delivery: models_amap.Delivery | None = None
 locked_delivery: models_amap.Delivery | None = None
 order: models_amap.Order | None = None
 deletable_order_by_admin: models_amap.Order | None = None
-
-# We reproduce FastAPI logic to access settings. See https://github.com/tiangolo/fastapi/issues/425#issuecomment-954963966
-settings: Settings = test_app.dependency_overrides.get(get_settings, get_settings)()
 
 
 @pytest_asyncio.fixture(scope="session", autouse=True)
