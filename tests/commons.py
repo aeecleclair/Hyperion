@@ -83,10 +83,7 @@ def change_redis_client_status(activated: bool):
             try:
                 redis_client = connect(settings)
             except redis.exceptions.ConnectionError:
-                hyperion_error_logger.warning(
-                    "Redis connection error: Check the Redis configuration or the Redis server"
-                )
-                redis_client = None
+                raise Exception("Connection to Redis failed")
     else:
         if type(redis_client) == redis.Redis:
             redis_client.flushdb()
