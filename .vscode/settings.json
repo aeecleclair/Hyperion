@@ -1,5 +1,4 @@
 {
-    "python.formatting.provider": "black",
     "python.linting.flake8Enabled": true,
     "editor.formatOnSave": true,
     "editor.tabSize": 4,
@@ -10,5 +9,8 @@
         "source.organizeImports": true
     },
     "python.linting.mypyEnabled": true,
-    "python.envFile": "${workspaceFolder}/" // disable .env handling by VSCode (because VSCode misinterpret it, which prevents fastapi to successfully parse it)
+    "python.envFile": "${workspaceFolder}/",
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.black-formatter"
+    } // disable .env handling by VSCode (because VSCode misinterpret it, which prevents fastapi to successfully parse it)
 }
