@@ -1,8 +1,10 @@
+import asyncio
 import logging
 import uuid
 from functools import lru_cache
 from typing import AsyncGenerator
 
+import pytest
 import redis
 from fastapi import Depends
 from fastapi.testclient import TestClient
@@ -13,18 +15,25 @@ from sqlalchemy.orm import sessionmaker
 from app.core import security
 from app.core.config import Settings
 from app.cruds import cruds_groups, cruds_users
-from app.database import Base
 from app.dependencies import get_db, get_redis_client, get_settings
-from app.main import app
+from app.main import get_application
 from app.models import models_core
 from app.schemas import schemas_auth
 from app.utils.redis import connect, disconnect
 from app.utils.types.floors_type import FloorsType
 from app.utils.types.groups_type import GroupType
 
-settings = Settings(
-    _env_file=".env.test"
-)  # Load the test's settings to configure the database
+
+@lru_cache()
+def override_get_settings() -> Settings:
+    """Override the get_settings function to use the testing session"""
+    return Settings(_env_file=".env.test")
+
+
+settings = override_get_settings()
+
+test_app = get_application(settings=settings, drop_db=True)  # Create the test's app
+
 if settings.SQLITE_DB:
     SQLALCHEMY_DATABASE_URL = (
         f"sqlite+aiosqlite:///./{settings.SQLITE_DB}"  # Connect to the test's database
@@ -48,12 +57,6 @@ async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
             yield db
         finally:
             await db.close()
-
-
-@lru_cache()
-def override_get_settings() -> Settings:
-    """Override the get_settings function to use the testing session"""
-    return Settings(_env_file=".env.test")
 
 
 redis_client = None
@@ -84,39 +87,30 @@ def override_get_redis_client(
     return redis_client
 
 
-app.dependency_overrides[get_db] = override_get_db
-app.dependency_overrides[get_settings] = override_get_settings
-app.dependency_overrides[get_redis_client] = override_get_redis_client
+test_app.dependency_overrides[get_db] = override_get_db
+test_app.dependency_overrides[get_settings] = override_get_settings
+test_app.dependency_overrides[get_redis_client] = override_get_redis_client
 
 
-@app.on_event("startup")
-async def commonstartuptest():
-    # create db tables in test.db
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-        await conn.run_sync(Base.metadata.create_all)
+client = TestClient(test_app)  # Create a client to execute tests
 
-    # Add the necessary groups for account types
-    description = "Group type"
-    account_types = [
-        models_core.CoreGroup(id=id, name=id.name, description=description)
-        for id in GroupType
-    ]
-    async with TestingSessionLocal() as db:
-        try:
-            db.add_all(account_types)
-            await db.commit()
-        except IntegrityError:
-            await db.rollback()
+with client:  # That syntax trigger the lifespan defined in main.py
+    pass
 
 
-client = TestClient(app)  # Create a client to execute tests
+# We need to redefine the event_loop (which is function scoped by default)
+# to be able to use session scoped fixture (the function that initialize the db objects in each test file)
+# See https://github.com/tortoise/tortoise-orm/issues/638#issuecomment-830124562
+@pytest.fixture(scope="session")
+def event_loop():
+    """Overrides pytest default function scoped event loop"""
+    policy = asyncio.get_event_loop_policy()
+    loop = policy.new_event_loop()
+    yield loop
+    loop.close()
 
 
-async def create_user_with_groups(
-    groups: list[GroupType],
-    db: AsyncSession,
-) -> models_core.CoreUser:
+async def create_user_with_groups(groups: list[GroupType]) -> models_core.CoreUser:
     """
     Add a dummy user to the database
     The user will be named with its user_id. Email and password will both be its user_id
@@ -135,17 +129,24 @@ async def create_user_with_groups(
         firstname=user_id,
         floor=FloorsType.Autre,
     )
+    async with TestingSessionLocal() as db:
+        try:
+            await cruds_users.create_user(db=db, user=user)
 
-    await cruds_users.create_user(db=db, user=user)
+            for group in groups:
+                await cruds_groups.create_membership(
+                    db=db,
+                    membership=models_core.CoreMembership(
+                        group_id=group.value,
+                        user_id=user_id,
+                    ),
+                )
 
-    for group in groups:
-        await cruds_groups.create_membership(
-            db=db,
-            membership=models_core.CoreMembership(
-                group_id=group.value,
-                user_id=user_id,
-            ),
-        )
+        except IntegrityError as e:
+            await db.rollback()
+            raise e
+        finally:
+            await db.close()
 
     return user
 
@@ -154,11 +155,25 @@ def create_api_access_token(user: models_core.CoreUser):
     """
     Create a JWT access token for the `user` with the scope `API`
     """
-    # Unfortunately, FastAPI does not support using dependency in startup events.
     # We reproduce FastAPI logic to access settings. See https://github.com/tiangolo/fastapi/issues/425#issuecomment-954963966
-    settings = app.dependency_overrides.get(get_settings, get_settings)()
+    settings = test_app.dependency_overrides.get(get_settings, get_settings)()
 
     access_token_data = schemas_auth.TokenData(sub=user.id, scopes="API")
     token = security.create_access_token(data=access_token_data, settings=settings)
 
     return token
+
+
+async def add_object_to_db(object):
+    """
+    Add an object to the database
+    """
+    async with TestingSessionLocal() as db:
+        try:
+            db.add(object)
+            await db.commit()
+        except IntegrityError as e:
+            await db.rollback()
+            raise e
+        finally:
+            await db.close()

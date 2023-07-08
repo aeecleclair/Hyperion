@@ -2,13 +2,13 @@ import datetime
 import uuid
 from datetime import timedelta
 
-from sqlalchemy import update
+import pytest_asyncio
 
-from app.main import app
 from app.models import models_core, models_loan
 from app.utils.types.groups_type import GroupType
+from tests.commons import event_loop  # noqa
 from tests.commons import (
-    TestingSessionLocal,
+    add_object_to_db,
     client,
     create_api_access_token,
     create_user_with_groups,
@@ -27,8 +27,8 @@ token_simple: str = ""
 token_admin: str = ""
 
 
-@app.on_event("startup")  # create the datas needed in the tests
-async def startuptest():
+@pytest_asyncio.fixture(scope="session", autouse=True)
+async def init_objects():
     global admin_user
     global loan_user_loaner
     global loaner
@@ -37,78 +37,61 @@ async def startuptest():
     global loan
     global item
     global item_to_delete
-    async with TestingSessionLocal() as db:
-        admin_user = await create_user_with_groups([GroupType.admin], db=db)
+    admin_user = await create_user_with_groups([GroupType.admin])
 
-        loan_user_loaner = await create_user_with_groups([GroupType.CAA], db=db)
-        loaner = models_loan.Loaner(
-            id=str(uuid.uuid4()),
-            name="CAA",
-            group_manager_id="6c6d7e88-fdb8-4e42-b2b5-3d3cfd12e7d6",
-        )
-        db.add(loaner)
+    loan_user_loaner = await create_user_with_groups([GroupType.CAA])
+    loaner = models_loan.Loaner(
+        id=str(uuid.uuid4()),
+        name="CAA",
+        group_manager_id="6c6d7e88-fdb8-4e42-b2b5-3d3cfd12e7d6",
+    )
+    await add_object_to_db(loaner)
 
-        loan_user_simple = await create_user_with_groups([GroupType.amap], db=db)
+    loan_user_simple = await create_user_with_groups([GroupType.amap])
 
-        loaner_to_delete = models_loan.Loaner(
-            id=str(uuid.uuid4()),
-            name="cinema",
-            group_manager_id="ce5f36e6-5377-489f-9696-de70e2477300",
-        )
-        db.add(loaner_to_delete)
+    loaner_to_delete = models_loan.Loaner(
+        id=str(uuid.uuid4()),
+        name="cinema",
+        group_manager_id="ce5f36e6-5377-489f-9696-de70e2477300",
+    )
+    await add_object_to_db(loaner_to_delete)
 
-        item = models_loan.Item(
-            id=str(uuid.uuid4()),
-            name="Test Item",
-            loaner_id=loaner.id,
-            suggested_lending_duration=timedelta(
-                days=50,
-            ),
-            suggested_caution=10,
-            total_quantity=8,
-            loaner=loaner,
-        )
-        db.add(item)
+    item = models_loan.Item(
+        id=str(uuid.uuid4()),
+        name="Test Item",
+        loaner_id=loaner.id,
+        suggested_lending_duration=timedelta(
+            days=50,
+        ),
+        suggested_caution=10,
+        total_quantity=8,
+        loaner=loaner,
+    )
+    await add_object_to_db(item)
 
-        item_to_delete = models_loan.Item(
-            id=str(uuid.uuid4()),
-            name="Test Item To Delete",
-            loaner_id=loaner.id,
-            suggested_lending_duration=timedelta(
-                days=50,
-            ),
-            suggested_caution=10,
-            total_quantity=5,
-            loaner=loaner,
-        )
-        db.add(item_to_delete)
-        loan = models_loan.Loan(
-            id=str(uuid.uuid4()),
-            borrower_id=loan_user_simple.id,
-            loaner_id=loaner.id,
-            start=datetime.date(year=2023, month=3, day=29),
-            end=datetime.date(year=2023, month=4, day=26),
-            caution="Carte etudiante",
-            returned=False,
-            items=[item],
-        )
-        db.add(loan)
-        loan_content = models_loan.LoanContent(
-            loan_id=loan.id,
-            item_id=item.id,
-            quantity=1,
-        )
-
-        await db.execute(
-            update(models_loan.LoanContent)
-            .where(
-                models_loan.LoanContent.loan_id == loan_content.loan_id
-                and models_loan.LoanContent.item_id == loan_content.item_id
-            )
-            .values({"quantity": loan_content.quantity})
-        )
-
-        await db.commit()
+    item_to_delete = models_loan.Item(
+        id=str(uuid.uuid4()),
+        name="Test Item To Delete",
+        loaner_id=loaner.id,
+        suggested_lending_duration=timedelta(
+            days=50,
+        ),
+        suggested_caution=10,
+        total_quantity=5,
+        loaner=loaner,
+    )
+    await add_object_to_db(item_to_delete)
+    loan = models_loan.Loan(
+        id=str(uuid.uuid4()),
+        borrower_id=loan_user_simple.id,
+        loaner_id=loaner.id,
+        start=datetime.date(year=2023, month=3, day=29),
+        end=datetime.date(year=2023, month=4, day=26),
+        caution="Carte etudiante",
+        returned=False,
+        items=[item],
+    )
+    await add_object_to_db(loan)
 
     global token_admin
     token_admin = create_api_access_token(admin_user)

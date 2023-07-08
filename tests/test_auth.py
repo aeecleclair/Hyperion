@@ -2,29 +2,31 @@ import uuid
 from datetime import date
 from urllib.parse import parse_qs, urlparse
 
-from app.main import app
+import pytest_asyncio
+
 from app.models import models_core
 from app.utils.examples import examples_auth
 from app.utils.types.floors_type import FloorsType
-from tests.commons import TestingSessionLocal, client
+
+# We need to import event_loop for pytest-asyncio routine defined bellow
+from tests.commons import event_loop  # noqa
+from tests.commons import add_object_to_db, client
 
 
-@app.on_event("startup")  # create the data needed in the tests
-async def startuptest():
-    async with TestingSessionLocal() as db:
-        user = models_core.CoreUser(
-            id=str(uuid.uuid4()),
-            email="email@myecl.fr",
-            password_hash="$2b$13$laYmIYSoJxqtNSQZyXu7juK8LXkOAuA8y6FZ8vzEBpV.gq2sBOxTu",  # "azerty"
-            name="Fabristpp",
-            firstname="Antoine",
-            nickname="Nickname",
-            birthday=date.fromisoformat("2000-01-01"),
-            floor=FloorsType.Autre,
-            created_on=date.fromisoformat("2000-01-01"),
-        )
-        db.add(user)
-        await db.commit()
+@pytest_asyncio.fixture(scope="session", autouse=True)
+async def init_objects():
+    user = models_core.CoreUser(
+        id=str(uuid.uuid4()),
+        email="email@myecl.fr",
+        password_hash="$2b$13$laYmIYSoJxqtNSQZyXu7juK8LXkOAuA8y6FZ8vzEBpV.gq2sBOxTu",  # "azerty"
+        name="Fabristpp",
+        firstname="Antoine",
+        nickname="Nickname",
+        birthday=date.fromisoformat("2000-01-01"),
+        floor=FloorsType.Autre,
+        created_on=date.fromisoformat("2000-01-01"),
+    )
+    await add_object_to_db(user)
 
 
 # def test_simple_token():

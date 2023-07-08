@@ -1,11 +1,15 @@
 import datetime
 import uuid
 
-from app.main import app
+import pytest_asyncio
+
 from app.models import models_cinema, models_core
 from app.utils.types.groups_type import GroupType
+
+# We need to import event_loop for pytest-asyncio routine defined bellow
+from tests.commons import event_loop  # noqa
 from tests.commons import (
-    TestingSessionLocal,
+    add_object_to_db,
     client,
     create_api_access_token,
     create_user_with_groups,
@@ -18,37 +22,31 @@ token_cinema: str = ""
 token_simple: str = ""
 
 
-@app.on_event("startup")  # create the datas needed in the tests
-async def startuptest():
+@pytest_asyncio.fixture(scope="session", autouse=True)
+async def init_objects():
     global cinema_user_cinema
-    async with TestingSessionLocal() as db:
-        cinema_user_cinema = await create_user_with_groups([GroupType.cinema], db=db)
-        await db.commit()
+    cinema_user_cinema = await create_user_with_groups([GroupType.cinema])
 
     global token_cinema
     token_cinema = create_api_access_token(cinema_user_cinema)
 
     global cinema_user_simple
-    async with TestingSessionLocal() as db:
-        cinema_user_simple = await create_user_with_groups([GroupType.student], db=db)
-        await db.commit()
+    cinema_user_simple = await create_user_with_groups([GroupType.student])
 
     global token_simple
     token_simple = create_api_access_token(cinema_user_simple)
 
     global session
-    async with TestingSessionLocal() as db:
-        session = models_cinema.Session(
-            id=str(uuid.uuid4()),
-            name="Titanic",
-            start=datetime.datetime.fromisoformat("2022-10-22T20:00:00"),
-            duration=194,
-            overview="Southampton, 10 avril 1912. Le paquebot le plus grand et le plus moderne du monde, réputé pour son insubmersibilité, le « Titanic », appareille pour son premier voyage. Quatre jours plus tard, il heurte un iceberg. À son bord, un artiste pauvre et une grande bourgeoise tombent amoureux.",
-            genre="Drame, Romance",
-            tagline="Rien sur cette terre ne saurait les séparer.",
-        )
-        db.add(session)
-        await db.commit()
+    session = models_cinema.Session(
+        id=str(uuid.uuid4()),
+        name="Titanic",
+        start=datetime.datetime.fromisoformat("2022-10-22T20:00:00"),
+        duration=194,
+        overview="Southampton, 10 avril 1912. Le paquebot le plus grand et le plus moderne du monde, réputé pour son insubmersibilité, le « Titanic », appareille pour son premier voyage. Quatre jours plus tard, il heurte un iceberg. À son bord, un artiste pauvre et une grande bourgeoise tombent amoureux.",
+        genre="Drame, Romance",
+        tagline="Rien sur cette terre ne saurait les séparer.",
+    )
+    await add_object_to_db(session)
 
 
 def test_get_sessions():

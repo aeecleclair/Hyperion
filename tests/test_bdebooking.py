@@ -1,11 +1,15 @@
 import datetime
 import uuid
 
-from app.main import app
+import pytest_asyncio
+
 from app.models import models_bdebooking, models_core
 from app.utils.types.groups_type import GroupType
+
+# We need to import event_loop for pytest-asyncio routine defined bellow
+from tests.commons import event_loop  # noqa
 from tests.commons import (
-    TestingSessionLocal,
+    add_object_to_db,
     client,
     create_api_access_token,
     create_user_with_groups,
@@ -19,45 +23,37 @@ token_bde: str = ""
 token_simple: str = ""
 
 
-@app.on_event("startup")  # create the datas needed in the tests
-async def startuptest():
+@pytest_asyncio.fixture(scope="session", autouse=True)
+async def init_objects():
     global booking_user_bde
-    async with TestingSessionLocal() as db:
-        booking_user_bde = await create_user_with_groups([GroupType.BDE], db=db)
-        await db.commit()
+    booking_user_bde = await create_user_with_groups([GroupType.BDE])
 
     global token_bde
     token_bde = create_api_access_token(booking_user_bde)
 
     global booking_user_simple
-    async with TestingSessionLocal() as db:
-        booking_user_simple = await create_user_with_groups([GroupType.student], db=db)
-        await db.commit()
+    booking_user_simple = await create_user_with_groups([GroupType.student])
 
     global token_simple
     token_simple = create_api_access_token(booking_user_simple)
 
     global room
-    async with TestingSessionLocal() as db:
-        room = models_bdebooking.Room(id=str(uuid.uuid4()), name="Salle de Réunion")
-        db.add(room)
-        await db.commit()
+    room = models_bdebooking.Room(id=str(uuid.uuid4()), name="Salle de Réunion")
+    await add_object_to_db(room)
 
     global booking
-    async with TestingSessionLocal() as db:
-        booking = models_bdebooking.Booking(
-            id=str(uuid.uuid4()),
-            reason="Réunion",
-            start=datetime.datetime.fromisoformat("2022-09-22T20:00:00"),
-            end=datetime.datetime.fromisoformat("2022-09-22T23:00:00"),
-            room_id=room.id,
-            key=True,
-            decision="approved",
-            applicant_id=booking_user_simple.id,
-            entity="ECLAIR",
-        )
-        db.add(booking)
-        await db.commit()
+    booking = models_bdebooking.Booking(
+        id=str(uuid.uuid4()),
+        reason="Réunion",
+        start=datetime.datetime.fromisoformat("2022-09-22T20:00:00"),
+        end=datetime.datetime.fromisoformat("2022-09-22T23:00:00"),
+        room_id=room.id,
+        key=True,
+        decision="approved",
+        applicant_id=booking_user_simple.id,
+        entity="ECLAIR",
+    )
+    await add_object_to_db(booking)
 
 
 def test_get_rights():

@@ -1,15 +1,20 @@
 import uuid
 
+import pytest_asyncio
+
 from app.dependencies import get_redis_client, get_settings
-from app.main import app
 from app.models import models_core, models_raffle
 from app.utils.types.groups_type import GroupType
 from app.utils.types.raffle_types import RaffleStatusType
+
+# We need to import event_loop for pytest-asyncio routine defined bellow
+from tests.commons import event_loop  # noqa
 from tests.commons import (
-    TestingSessionLocal,
+    add_object_to_db,
     client,
     create_api_access_token,
     create_user_with_groups,
+    test_app,
 )
 
 soli_user: models_core.CoreUser | None = None
@@ -23,65 +28,59 @@ ticket: models_raffle.Tickets | None = None
 cash: models_raffle.Cash | None = None
 
 
-settings = app.dependency_overrides.get(get_settings, get_settings)()
+settings = test_app.dependency_overrides.get(get_settings, get_settings)()
 
 
-@app.on_event("startup")  # create the data needed in the tests
-async def startuptest():
+@pytest_asyncio.fixture(scope="session", autouse=True)
+async def init_objects():
     global soli_user, student_user, raffle, typeticket, ticket, lot, cash, raffle_to_delete, typeticket_to_delete
 
-    async with TestingSessionLocal() as db:
-        soli_user = await create_user_with_groups([GroupType.soli], db=db)
-        student_user = await create_user_with_groups([GroupType.student], db=db)
+    soli_user = await create_user_with_groups([GroupType.soli])
+    student_user = await create_user_with_groups([GroupType.student])
 
-        raffle_to_delete = models_raffle.Raffle(
-            id=str(uuid.uuid4()),
-            name="Antoine's raffle",
-            status=RaffleStatusType.creation,
-            group_id=GroupType.soli,
-        )
-        db.add(raffle_to_delete)
-        raffle = models_raffle.Raffle(
-            id=str(uuid.uuid4()),
-            name="The best raffle",
-            status=RaffleStatusType.locked,
-            group_id=GroupType.soli,
-            description="Description of the raffle",
-        )
-        db.add(raffle)
+    raffle_to_delete = models_raffle.Raffle(
+        id=str(uuid.uuid4()),
+        name="Antoine's raffle",
+        status=RaffleStatusType.creation,
+        group_id=GroupType.soli,
+    )
+    await add_object_to_db(raffle_to_delete)
+    raffle = models_raffle.Raffle(
+        id=str(uuid.uuid4()),
+        name="The best raffle",
+        status=RaffleStatusType.locked,
+        group_id=GroupType.soli,
+        description="Description of the raffle",
+    )
+    await add_object_to_db(raffle)
 
-        typeticket = models_raffle.TypeTicket(
-            id=str(uuid.uuid4()), price=1.0, pack_size=1, raffle_id=raffle.id
-        )
-        db.add(typeticket)
-        typeticket_to_delete = models_raffle.TypeTicket(
-            id=str(uuid.uuid4()), price=1.0, pack_size=1, raffle_id=raffle_to_delete.id
-        )
-        db.add(typeticket_to_delete)
+    typeticket = models_raffle.TypeTicket(
+        id=str(uuid.uuid4()), price=1.0, pack_size=1, raffle_id=raffle.id
+    )
+    await add_object_to_db(typeticket)
+    typeticket_to_delete = models_raffle.TypeTicket(
+        id=str(uuid.uuid4()), price=1.0, pack_size=1, raffle_id=raffle_to_delete.id
+    )
+    await add_object_to_db(typeticket_to_delete)
 
-        ticket = models_raffle.Tickets(
-            id=str(uuid.uuid4()),
-            type_id=typeticket.id,
-            user_id=student_user.id,
-        )
-        db.add(ticket)
+    ticket = models_raffle.Tickets(
+        id=str(uuid.uuid4()),
+        type_id=typeticket.id,
+        user_id=student_user.id,
+    )
+    await add_object_to_db(ticket)
 
-        lot = models_raffle.Lots(
-            id=str(uuid.uuid4()),
-            raffle_id=raffle.id,
-            description="Description of the lot",
-            name="Name of the lot",
-            quantity=1,
-        )
-        db.add(lot)
+    lot = models_raffle.Lots(
+        id=str(uuid.uuid4()),
+        raffle_id=raffle.id,
+        description="Description of the lot",
+        name="Name of the lot",
+        quantity=1,
+    )
+    await add_object_to_db(lot)
 
-        cash = models_raffle.Cash(user_id=student_user.id, balance=66)
-        db.add(cash)
-
-        await db.commit()
-
-
-# raffles
+    cash = models_raffle.Cash(user_id=student_user.id, balance=66)
+    await add_object_to_db(cash)
 
 
 def test_get_raffles():
@@ -189,7 +188,7 @@ def test_get_tickets_by_user_id():
 
 def test_buy_tickets():
     # Enable Redis client for locker
-    app.dependency_overrides.get(get_redis_client, get_redis_client)(
+    test_app.dependency_overrides.get(get_redis_client, get_redis_client)(
         settings, activate=True
     )
 
@@ -201,7 +200,9 @@ def test_buy_tickets():
     )
 
     # Disable Redis client (to avoid rate-limit)
-    app.dependency_overrides.get(get_redis_client, get_redis_client)(deactivate=True)
+    test_app.dependency_overrides.get(get_redis_client, get_redis_client)(
+        deactivate=True
+    )
     assert response.status_code == 201
 
 

@@ -1,8 +1,12 @@
-from app.main import app
+import pytest_asyncio
+
 from app.models import models_core
 from app.utils.types.groups_type import GroupType
+
+# We need to import event_loop for pytest-asyncio routine defined bellow
+from tests.commons import event_loop  # noqa
 from tests.commons import (
-    TestingSessionLocal,
+    add_object_to_db,
     client,
     create_api_access_token,
     create_user_with_groups,
@@ -14,21 +18,18 @@ admin_user: models_core.CoreUser | None = None
 id_eclair = "8aab79e7-1e15-456d-b6e2-11e4e9f77e4f"
 
 
-@app.on_event("startup")  # create the data needed in the tests
-async def startuptest():
+@pytest_asyncio.fixture(scope="session", autouse=True)
+async def init_objects():
     global admin_user
 
-    async with TestingSessionLocal() as db:
-        eclair = models_core.CoreGroup(
-            id=id_eclair,
-            name="eclair",
-            description="Les meilleurs",
-        )
-        db.add(eclair)
+    eclair = models_core.CoreGroup(
+        id=id_eclair,
+        name="eclair",
+        description="Les meilleurs",
+    )
+    await add_object_to_db(eclair)
 
-        admin_user = await create_user_with_groups([GroupType.admin], db=db)
-
-        await db.commit()
+    admin_user = await create_user_with_groups([GroupType.admin])
 
 
 def test_read_groups():

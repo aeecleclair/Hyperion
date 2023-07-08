@@ -1,12 +1,11 @@
 from app.dependencies import get_redis_client, get_settings
-from app.main import app
-from tests.commons import client
+from tests.commons import client, test_app
 
-settings = app.dependency_overrides.get(get_settings, get_settings)()
+settings = test_app.dependency_overrides.get(get_settings, get_settings)()
 
 
 def test_limiter():
-    app.dependency_overrides.get(get_redis_client, get_redis_client)(
+    test_app.dependency_overrides.get(get_redis_client, get_redis_client)(
         settings, activate=True
     )
     if settings.REDIS_HOST != "":
@@ -20,4 +19,6 @@ def test_limiter():
 
 
 def test_deactivate_limiter():  # We deactivate the limiter to avoid errors in other tests, it is not really a test, but it is needed
-    app.dependency_overrides.get(get_redis_client, get_redis_client)(deactivate=True)
+    test_app.dependency_overrides.get(get_redis_client, get_redis_client)(
+        deactivate=True
+    )

@@ -1,12 +1,16 @@
 import datetime
 import uuid
 
-from app.main import app
+import pytest_asyncio
+
 from app.models import models_calendar, models_core
 from app.utils.types.bdebooking_type import Decision
 from app.utils.types.groups_type import GroupType
+
+# We need to import event_loop for pytest-asyncio routine defined bellow
+from tests.commons import event_loop  # noqa
 from tests.commons import (
-    TestingSessionLocal,
+    add_object_to_db,
     client,
     create_api_access_token,
     create_user_with_groups,
@@ -20,59 +24,51 @@ token_bde: str = ""
 token_simple: str = ""
 
 
-@app.on_event("startup")  # create the datas needed in the tests
-async def startuptest():
+@pytest_asyncio.fixture(scope="session", autouse=True)
+async def init_objects():
     global calendar_user_bde
-    async with TestingSessionLocal() as db:
-        calendar_user_bde = await create_user_with_groups([GroupType.BDE], db=db)
-        await db.commit()
+    calendar_user_bde = await create_user_with_groups([GroupType.BDE])
 
     global token_bde
     token_bde = create_api_access_token(calendar_user_bde)
 
     global calendar_user_simple
-    async with TestingSessionLocal() as db:
-        calendar_user_simple = await create_user_with_groups([GroupType.student], db=db)
-        await db.commit()
+    calendar_user_simple = await create_user_with_groups([GroupType.student])
 
     global token_simple
     token_simple = create_api_access_token(calendar_user_simple)
 
     global calendar_event
-    async with TestingSessionLocal() as db:
-        calendar_event = models_calendar.Event(
-            id=str(uuid.uuid4()),
-            name="Dojo",
-            organizer="Eclair",
-            applicant_id=calendar_user_bde.id,
-            start=datetime.datetime.fromisoformat("2022-09-22T20:00:00"),
-            end=datetime.datetime.fromisoformat("2022-09-22T23:00:00"),
-            all_day=False,
-            location="Skylab",
-            type="Event AE",
-            description="Apprendre à coder !",
-            decision=Decision.pending,
-        )
-        db.add(calendar_event)
-        await db.commit()
+    calendar_event = models_calendar.Event(
+        id=str(uuid.uuid4()),
+        name="Dojo",
+        organizer="Eclair",
+        applicant_id=calendar_user_bde.id,
+        start=datetime.datetime.fromisoformat("2022-09-22T20:00:00"),
+        end=datetime.datetime.fromisoformat("2022-09-22T23:00:00"),
+        all_day=False,
+        location="Skylab",
+        type="Event AE",
+        description="Apprendre à coder !",
+        decision=Decision.pending,
+    )
+    await add_object_to_db(calendar_event)
 
     global calendar_event_to_delete
-    async with TestingSessionLocal() as db:
-        calendar_event_to_delete = models_calendar.Event(
-            id=str(uuid.uuid4()),
-            name="Dojo",
-            organizer="Eclair",
-            applicant_id=calendar_user_simple.id,
-            start=datetime.datetime.fromisoformat("2022-09-22T20:00:00"),
-            end=datetime.datetime.fromisoformat("2022-09-22T23:00:00"),
-            all_day=False,
-            location="Skylab",
-            type="Event AE",
-            description="Apprendre à coder !",
-            decision=Decision.pending,
-        )
-        db.add(calendar_event_to_delete)
-        await db.commit()
+    calendar_event_to_delete = models_calendar.Event(
+        id=str(uuid.uuid4()),
+        name="Dojo",
+        organizer="Eclair",
+        applicant_id=calendar_user_simple.id,
+        start=datetime.datetime.fromisoformat("2022-09-22T20:00:00"),
+        end=datetime.datetime.fromisoformat("2022-09-22T23:00:00"),
+        all_day=False,
+        location="Skylab",
+        type="Event AE",
+        description="Apprendre à coder !",
+        decision=Decision.pending,
+    )
+    await add_object_to_db(calendar_event_to_delete)
 
 
 def test_get_all_events():
