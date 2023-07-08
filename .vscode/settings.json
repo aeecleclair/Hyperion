@@ -10,5 +10,5 @@
         "source.organizeImports": true
     },
     "python.linting.mypyEnabled": true,
-    "python.envFile": "${workspaceFolder}/" // disable .env handling by VSCode
+    "python.envFile": "${workspaceFolder}/" // disable .env handling by VSCode (because VSCode misinterpret it, which prevents fastapi to successfully parse it)
 }
