@@ -11,6 +11,7 @@ from app.utils.types.raffle_types import RaffleStatusType
 from tests.commons import event_loop  # noqa
 from tests.commons import (
     add_object_to_db,
+    change_redis_client_status,
     client,
     create_api_access_token,
     create_user_with_groups,
@@ -188,9 +189,7 @@ def test_get_tickets_by_user_id():
 
 def test_buy_tickets():
     # Enable Redis client for locker
-    test_app.dependency_overrides.get(get_redis_client, get_redis_client)(
-        settings, activate=True
-    )
+    change_redis_client_status(activated=True)
 
     token = create_api_access_token(student_user)
 
@@ -200,9 +199,7 @@ def test_buy_tickets():
     )
 
     # Disable Redis client (to avoid rate-limit)
-    test_app.dependency_overrides.get(get_redis_client, get_redis_client)(
-        deactivate=True
-    )
+    change_redis_client_status(activated=False)
     assert response.status_code == 201
 
 

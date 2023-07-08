@@ -59,32 +59,39 @@ async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
             await db.close()
 
 
-redis_client = None
+
+# By default the redis client is deactivated
+redis_client: redis.Redis | None | bool = False
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 def override_get_redis_client(
-    settings: Settings = Depends(get_settings), activate=False, deactivate=False
+    settings: Settings = settings,
 ) -> (
     redis.Redis | None | bool
 ):  # As we don't want the limiter to be activated, except during the designed test, we add an "activate"/"deactivate" option
     """Override the get_redis_client function to use the testing session"""
     global redis_client
-    if activate:
+    return redis_client
+
+
+def change_redis_client_status(activated: bool):
+    global redis_client
+    if activated:
         if settings.REDIS_HOST != "":
             try:
                 redis_client = connect(settings)
             except redis.exceptions.ConnectionError:
                 hyperion_error_logger.warning(
-                    "Redis connection error: Check the Redis configuration  or the Redis server"
+                    "Redis connection error: Check the Redis configuration or the Redis server"
                 )
-    elif deactivate:
+                redis_client = None
+    else:
         if type(redis_client) == redis.Redis:
             redis_client.flushdb()
             disconnect(redis_client)
-        redis_client = None
-    return redis_client
+        redis_client = False
 
 
 test_app.dependency_overrides[get_db] = override_get_db

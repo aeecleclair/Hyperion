@@ -117,7 +117,7 @@ def get_redis_client(
     Is None if the redis client is not instantiated, is False if the redis client is instantiated but not connected, is a redis.Redis object if the redis client is connected
     """
     global redis_client
-    if redis_client is None and settings is not None:
+    if redis_client is None:
         if settings.REDIS_HOST != "":
             try:
                 redis_client = connect(settings)

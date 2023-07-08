@@ -13,6 +13,7 @@ from app.utils.types.groups_type import GroupType
 from tests.commons import event_loop  # noqa
 from tests.commons import (
     add_object_to_db,
+    change_redis_client_status,
     client,
     create_api_access_token,
     create_user_with_groups,
@@ -256,9 +257,7 @@ def test_make_delivery_orderable():
 
 def test_add_order_to_delivery():
     # Enable Redis client for locker
-    test_app.dependency_overrides.get(get_redis_client, get_redis_client)(
-        settings, activate=True
-    )
+    change_redis_client_status(activated=True)
 
     token = create_api_access_token(student_user)
 
@@ -276,18 +275,14 @@ def test_add_order_to_delivery():
     )
 
     # Disable Redis client (to avoid rate-limit)
-    test_app.dependency_overrides.get(get_redis_client, get_redis_client)(
-        deactivate=True
-    )
+    change_redis_client_status(activated=False)
 
     assert response.status_code == 201
 
 
 def test_edit_order():
     # Enable Redis client for locker
-    test_app.dependency_overrides.get(get_redis_client, get_redis_client)(
-        settings, activate=True
-    )
+    change_redis_client_status(activated=True)
 
     token = create_api_access_token(student_user)
 
@@ -306,18 +301,14 @@ def test_edit_order():
     )
 
     # Disable Redis client (to avoid rate-limit)
-    test_app.dependency_overrides.get(get_redis_client, get_redis_client)(
-        deactivate=True
-    )
+    change_redis_client_status(activated=False)
 
     assert response.status_code == 204
 
 
 def test_remove_order():
     # Enable Redis client for locker
-    test_app.dependency_overrides.get(get_redis_client, get_redis_client)(
-        settings, activate=True
-    )
+    change_redis_client_status(activated=True)
 
     token = create_api_access_token(student_user)
 
@@ -327,18 +318,14 @@ def test_remove_order():
     )
 
     # Disable Redis client (to avoid rate-limit)
-    test_app.dependency_overrides.get(get_redis_client, get_redis_client)(
-        deactivate=True
-    )
+    change_redis_client_status(activated=False)
 
     assert response.status_code == 204
 
 
 def test_remove_order_by_admin():
     # Enable Redis client for locker
-    test_app.dependency_overrides.get(get_redis_client, get_redis_client)(
-        settings, activate=True
-    )
+    change_redis_client_status(activated=True)
 
     token = create_api_access_token(student_user)
     token_amap = create_api_access_token(amap_user)
@@ -356,9 +343,7 @@ def test_remove_order_by_admin():
     assert response.status_code == 204
 
     # Disable Redis client (to avoid rate-limit)
-    test_app.dependency_overrides.get(get_redis_client, get_redis_client)(
-        deactivate=True
-    )
+    change_redis_client_status(activated=False)
 
 
 def test_get_users_cash():
