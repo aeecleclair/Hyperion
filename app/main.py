@@ -39,11 +39,17 @@ def get_application(
     hyperion_security_logger = logging.getLogger("hyperion.security")
     hyperion_error_logger = logging.getLogger("hyperion.error")
 
-    # Alembic should be used for any migration, this function can only create new tables and ensure that the necessary groups are available
+    LogConfig().initialize_loggers(settings=settings)
+
+    # Create folder for calendars
+    if not os.path.exists("data/ics/"):
+        os.makedirs("data/ics/")
+
+    # Creating a lifespan which will be called when the application starts then shuts down
+    # https://fastapi.tiangolo.com/advanced/events/
     @asynccontextmanager
     async def startup(app: FastAPI):
         # Initialize loggers
-        LogConfig().initialize_loggers(settings=settings)
 
         if (
             app.dependency_overrides.get(get_redis_client, get_redis_client)(
@@ -53,13 +59,10 @@ def get_application(
         ):
             hyperion_error_logger.info("Redis client not configured")
 
-        # Create folder for calendars
-        if not os.path.exists("data/ics/"):
-            os.makedirs("data/ics/")
-
         engine = get_db_engine(settings=settings)
 
-        # create db tables
+        # Create db tables #
+        # Alembic should be used for any migration, this function can only create new tables and ensure that the necessary groups are available
         async with engine.begin() as conn:
             try:
                 if drop_db:
@@ -93,6 +96,7 @@ def get_application(
                         await db.rollback()
 
         yield
+        hyperion_error_logger.info("Shutting down")
 
     app = FastAPI(lifespan=startup)
     app.include_router(api.api_router)
