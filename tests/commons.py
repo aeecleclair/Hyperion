@@ -108,8 +108,10 @@ def event_loop():
     """Overrides pytest default function scoped event loop"""
     policy = asyncio.get_event_loop_policy()
     loop = policy.new_event_loop()
-    yield loop
-    loop.close()
+    try:
+        yield loop
+    finally:
+        loop.close()
 
 
 async def create_user_with_groups(groups: list[GroupType]) -> models_core.CoreUser:
