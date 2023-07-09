@@ -161,7 +161,7 @@ class Settings(BaseSettings):
     # This property parse AUTH_CLIENTS to create a dictionary of auth clients:
     # {"client_id": AuthClientClassInstance}
     @cached_property
-    def KNOWN_AUTH_CLIENTS(cls):
+    def KNOWN_AUTH_CLIENTS(cls) -> dict[str, providers.BaseAuthClient]:
         clients = {}
         for client_id, secret, auth_client_name in cls.AUTH_CLIENTS:
             try:
