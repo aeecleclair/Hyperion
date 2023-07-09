@@ -1,3 +1,5 @@
+from typing import Sequence
+
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,7 +12,7 @@ from app.utils.types.bdebooking_type import Decision
 
 async def get_bookings(
     db: AsyncSession,
-) -> list[models_bdebooking.Booking]:
+) -> Sequence[models_bdebooking.Booking]:
     result = await db.execute(
         select(models_bdebooking.Booking).options(
             selectinload(models_bdebooking.Booking.applicant)
@@ -21,7 +23,7 @@ async def get_bookings(
 
 async def get_confirmed_bookings(
     db: AsyncSession,
-) -> list[models_bdebooking.Booking]:
+) -> Sequence[models_bdebooking.Booking]:
     result = await db.execute(
         select(models_bdebooking.Booking)
         .where(models_bdebooking.Booking.decision == Decision.approved)
@@ -32,7 +34,7 @@ async def get_confirmed_bookings(
 
 async def get_applicant_bookings(
     db: AsyncSession, applicant_id: str
-) -> list[models_bdebooking.Booking]:
+) -> Sequence[models_bdebooking.Booking]:
     result = await db.execute(
         select(models_bdebooking.Booking)
         .where(models_bdebooking.Booking.applicant_id == applicant_id)
@@ -103,7 +105,7 @@ async def delete_booking(db: AsyncSession, booking_id: str):
         raise ValueError()
 
 
-async def get_rooms(db: AsyncSession) -> list[models_bdebooking.Room]:
+async def get_rooms(db: AsyncSession) -> Sequence[models_bdebooking.Room]:
     result = await db.execute(select(models_bdebooking.Room))
     return result.scalars().all()
 

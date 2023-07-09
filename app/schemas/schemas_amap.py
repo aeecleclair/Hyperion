@@ -1,6 +1,7 @@
 """Schemas file for endpoint /amap"""
 
 from datetime import date, datetime
+from typing import Sequence
 
 from pydantic import BaseModel
 
@@ -93,7 +94,7 @@ class OrderComplete(OrderBase):
 class OrderReturn(BaseModel):
     user: CoreUserSimple
     delivery_id: str
-    productsdetail: list[ProductQuantity]
+    productsdetail: Sequence[ProductQuantity]
     collection_slot: AmapSlotType
     order_id: str
     amount: float

@@ -2,8 +2,8 @@
 
 from datetime import date, datetime
 
-from sqlalchemy import Column, Date, DateTime, Enum, ForeignKey, Integer, String
-from sqlalchemy.orm import relationship
+from sqlalchemy import Date, DateTime, Enum, ForeignKey, Integer, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 from app.utils.types.floors_type import FloorsType
@@ -12,31 +12,33 @@ from app.utils.types.floors_type import FloorsType
 class CoreMembership(Base):
     __tablename__ = "core_membership"
 
-    user_id: str = Column(ForeignKey("core_user.id"), primary_key=True)
-    group_id: str = Column(ForeignKey("core_group.id"), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), primary_key=True)
+    group_id: Mapped[str] = mapped_column(ForeignKey("core_group.id"), primary_key=True)
     # A description can be added to the membership
     # This can be used to note why a user is in a given group
-    description: str | None = Column(String)
+    description: Mapped[str | None] = mapped_column(String)
 
 
 class CoreUser(Base):
     __tablename__ = "core_user"
 
-    id: str = Column(String, primary_key=True, index=True)  # Use UUID later
-    email: str = Column(String, unique=True, index=True, nullable=False)
-    password_hash: str = Column(String, nullable=False)
-    name: str = Column(String, nullable=False)
-    firstname: str = Column(String, nullable=False)
-    nickname: str | None = Column(String)
-    birthday: date | None = Column(Date)
-    promo: int | None = Column(Integer)
-    phone: str | None = Column(String)
-    floor: FloorsType = Column(Enum(FloorsType), nullable=False)
-    created_on: datetime | None = Column(DateTime(timezone=True))
+    id: Mapped[str] = mapped_column(
+        String, primary_key=True, index=True
+    )  # Use UUID later
+    email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
+    password_hash: Mapped[str] = mapped_column(String, nullable=False)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    firstname: Mapped[str] = mapped_column(String, nullable=False)
+    nickname: Mapped[str | None] = mapped_column(String)
+    birthday: Mapped[date | None] = mapped_column(Date)
+    promo: Mapped[int | None] = mapped_column(Integer)
+    phone: Mapped[str | None] = mapped_column(String)
+    floor: Mapped[FloorsType] = mapped_column(Enum(FloorsType), nullable=False)
+    created_on: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # We use list["CoreGroup"] with quotes as CoreGroup is only defined after this class
     # Defining CoreUser after CoreGroup would cause a similar issue
-    groups: list["CoreGroup"] = relationship(
+    groups: Mapped[list["CoreGroup"]] = relationship(
         "CoreGroup",
         secondary="core_membership",
         back_populates="members",
@@ -46,16 +48,18 @@ class CoreUser(Base):
 class CoreUserUnconfirmed(Base):
     __tablename__ = "core_user_unconfirmed"
 
-    id: str = Column(String, primary_key=True)
+    id: Mapped[str] = mapped_column(String, primary_key=True)
     # The email column should not be unique.
     # Someone can indeed create more than one user creation request,
     # for example after losing the previously received confirmation email.
     # For each user creation request, a row will be added in this table with a new token
-    email: str = Column(String, nullable=False)
-    account_type: str = Column(String, nullable=False)
-    activation_token: str = Column(String, nullable=False)
-    created_on: datetime = Column(DateTime(timezone=True), nullable=False)
-    expire_on: datetime = Column(DateTime(timezone=True), nullable=False)
+    email: Mapped[str] = mapped_column(String, nullable=False)
+    account_type: Mapped[str] = mapped_column(String, nullable=False)
+    activation_token: Mapped[str] = mapped_column(String, nullable=False)
+    created_on: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    expire_on: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
 class CoreUserRecoverRequest(Base):
@@ -63,21 +67,23 @@ class CoreUserRecoverRequest(Base):
 
     # The email column should not be unique.
     # Someone can indeed create more than one password reset request,
-    email: str = Column(String, nullable=False)
-    user_id: str = Column(String, nullable=False)
-    reset_token: str = Column(String, nullable=False, primary_key=True)
-    created_on: datetime = Column(DateTime(timezone=True), nullable=False)
-    expire_on: datetime = Column(DateTime(timezone=True), nullable=False)
+    email: Mapped[str] = mapped_column(String, nullable=False)
+    user_id: Mapped[str] = mapped_column(String, nullable=False)
+    reset_token: Mapped[str] = mapped_column(String, nullable=False, primary_key=True)
+    created_on: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    expire_on: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
 class CoreGroup(Base):
     __tablename__ = "core_group"
 
-    id: str = Column(String, primary_key=True, index=True)
-    name: str = Column(String, index=True, nullable=False, unique=True)
-    description: str | None = Column(String)
+    id: Mapped[str] = mapped_column(String, primary_key=True, index=True)
+    name: Mapped[str] = mapped_column(String, index=True, nullable=False, unique=True)
+    description: Mapped[str | None] = mapped_column(String)
 
-    members: list["CoreUser"] = relationship(
+    members: Mapped[list["CoreUser"]] = relationship(
         "CoreUser",
         secondary="core_membership",
         back_populates="groups",

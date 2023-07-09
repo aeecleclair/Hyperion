@@ -1,3 +1,5 @@
+from typing import Sequence
+
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,7 +8,7 @@ from app.models import models_cinema
 from app.schemas import schemas_cinema
 
 
-async def get_sessions(db: AsyncSession) -> list[models_cinema.Session]:
+async def get_sessions(db: AsyncSession) -> Sequence[models_cinema.Session]:
     result = await db.execute(select(models_cinema.Session))
     return result.scalars().all()
 

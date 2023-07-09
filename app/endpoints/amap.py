@@ -352,9 +352,13 @@ async def get_orders_from_delivery(
     orders = await cruds_amap.get_orders_from_delivery(db=db, delivery_id=delivery_id)
     res = []
     for order in orders:
-        products = await cruds_amap.get_products_of_order(
+        order_content = await cruds_amap.get_products_of_order(
             db=db, order_id=order.order_id
         )
+        products = [
+            schemas_amap.ProductQuantity(**product.__dict__)
+            for product in order_content
+        ]
         res.append(schemas_amap.OrderReturn(productsdetail=products, **order.__dict__))
     return res
 
@@ -490,6 +494,7 @@ async def add_order_to_delievery(
         hyperion_amap_logger.info(
             f"Add_order_to_delivery: An order has been created for user {order.user_id} for an amount of {amount}€. ({request_id})"
         )
+        productsret
         return schemas_amap.OrderReturn(productsdetail=productsret, **orderret.__dict__)
 
     except ValueError as error:
@@ -820,7 +825,11 @@ async def get_cash_by_id(
             # We want to return a balance of 0 but we don't want to add it to the database
             # An admin AMAP has indeed to add a cash to the user the first time
             # TODO: this is a strange behaviour
-            return schemas_amap.CashComplete(balance=0, user_id=user_id, user=user_db)
+            return schemas_amap.CashComplete(
+                balance=0,
+                user_id=user_id,
+                user=schemas_amap.CoreUserSimple(**user_db.__dict__),
+            )
     else:
         raise HTTPException(
             status_code=403,

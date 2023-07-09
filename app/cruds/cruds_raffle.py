@@ -2,6 +2,7 @@
 
 import logging
 import random
+from typing import Sequence
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
@@ -14,7 +15,7 @@ from app.schemas import schemas_raffle
 hyperion_error_logger = logging.getLogger("hyperion_error")
 
 
-async def get_raffles(db: AsyncSession) -> list[models_raffle.Raffle]:
+async def get_raffles(db: AsyncSession) -> Sequence[models_raffle.Raffle]:
     """Return all raffle from database"""
 
     result = await db.execute(
@@ -83,7 +84,7 @@ async def delete_raffle(
     await db.commit()
 
 
-async def get_lots(db: AsyncSession) -> list[models_raffle.Lots]:
+async def get_lots(db: AsyncSession) -> Sequence[models_raffle.Lots]:
     """Return all lots from database"""
 
     result = await db.execute(
@@ -110,7 +111,7 @@ async def create_lot(
 async def get_lot_by_raffleid(
     raffle_id: str,
     db: AsyncSession,
-) -> list[models_raffle.Lots]:
+) -> Sequence[models_raffle.Lots]:
     result = await db.execute(
         select(models_raffle.Lots).where(models_raffle.Lots.raffle_id == raffle_id)
     )
@@ -152,7 +153,7 @@ async def delete_lot(
     await db.commit()
 
 
-async def get_typeticket(db: AsyncSession) -> list[models_raffle.TypeTicket]:
+async def get_typeticket(db: AsyncSession) -> Sequence[models_raffle.TypeTicket]:
     """Return all typetickets from database"""
 
     result = await db.execute(
@@ -181,7 +182,7 @@ async def create_typeticket(
 async def get_typeticket_by_raffleid(
     raffle_id: str,
     db: AsyncSession,
-) -> list[models_raffle.TypeTicket] | None:
+) -> Sequence[models_raffle.TypeTicket] | None:
     result = await db.execute(
         select(models_raffle.TypeTicket).where(
             models_raffle.TypeTicket.raffle_id == raffle_id
@@ -229,7 +230,7 @@ async def delete_typeticket(
     await db.commit()
 
 
-async def get_tickets(db: AsyncSession) -> list[models_raffle.Tickets]:
+async def get_tickets(db: AsyncSession) -> Sequence[models_raffle.Tickets]:
     """Return all tickets from database where raffle ID == raffle_id"""
 
     result = await db.execute(select(models_raffle.Tickets))
@@ -239,7 +240,7 @@ async def get_tickets(db: AsyncSession) -> list[models_raffle.Tickets]:
 async def create_ticket(
     tickets: list[models_raffle.Tickets],
     db: AsyncSession,
-) -> list[models_raffle.Tickets]:
+) -> Sequence[models_raffle.Tickets]:
     """Create a new ticket in databasend return it"""
     db.add_all(tickets)
     try:
@@ -253,7 +254,7 @@ async def create_ticket(
 async def get_ticket_by_raffleid(
     raffle_id: str,
     db: AsyncSession,
-) -> list[models_raffle.Tickets]:
+) -> Sequence[models_raffle.Tickets]:
     results = (
         (
             await db.execute(
@@ -288,7 +289,7 @@ async def get_ticket_by_id(
 async def get_ticket_by_userid(
     user_id: str,
     db: AsyncSession,
-) -> list[models_raffle.Tickets] | None:
+) -> Sequence[models_raffle.Tickets] | None:
     result = await db.execute(
         select(models_raffle.Tickets)
         .where(models_raffle.Tickets.user_id == user_id)
@@ -315,7 +316,7 @@ async def delete_ticket(
     await db.commit()
 
 
-async def get_users_cash(db: AsyncSession) -> list[models_raffle.Cash]:
+async def get_users_cash(db: AsyncSession) -> Sequence[models_raffle.Cash]:
     result = await db.execute(
         select(models_raffle.Cash).options(selectinload(models_raffle.Cash.user))
     )
@@ -358,7 +359,7 @@ async def edit_cash(db: AsyncSession, user_id: str, amount: float):
 
 async def draw_winner_by_lot_raffle(
     lot_id: str, db: AsyncSession
-) -> list[models_raffle.Tickets]:
+) -> Sequence[models_raffle.Tickets]:
     lot = await get_lot_by_id(lot_id=lot_id, db=db)
     if lot is None:
         raise ValueError("Invalid lot")

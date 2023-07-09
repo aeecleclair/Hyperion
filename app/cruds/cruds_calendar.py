@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Sequence
 
 from icalendar import Calendar, Event, vRecur
 from pytz import timezone
@@ -15,7 +16,7 @@ from app.utils.types.calendar_types import Decision
 calendar_file_path = "data/ics/ae_calendar.ics"
 
 
-async def get_all_events(db: AsyncSession) -> list[models_calendar.Event]:
+async def get_all_events(db: AsyncSession) -> Sequence[models_calendar.Event]:
     """Retriveve all the events in the database."""
     result = await db.execute(
         select(models_calendar.Event).options(
@@ -27,7 +28,7 @@ async def get_all_events(db: AsyncSession) -> list[models_calendar.Event]:
 
 async def get_confirmed_events(
     db: AsyncSession,
-) -> list[models_calendar.Event]:
+) -> Sequence[models_calendar.Event]:
     result = await db.execute(
         select(models_calendar.Event).where(
             models_calendar.Event.decision == Decision.approved
@@ -48,7 +49,7 @@ async def get_event(db: AsyncSession, event_id: str) -> models_calendar.Event | 
 
 async def get_applicant_events(
     db: AsyncSession, applicant_id: str
-) -> list[models_calendar.Event]:
+) -> Sequence[models_calendar.Event]:
     result = await db.execute(
         select(models_calendar.Event)
         .where(models_calendar.Event.applicant_id == applicant_id)

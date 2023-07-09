@@ -1,5 +1,7 @@
 """File defining the functions called by the endpoints, making queries to the table using the models"""
 
+from typing import Sequence
+
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,7 +11,7 @@ from app.models import models_core
 from app.schemas import schemas_core
 
 
-async def get_groups(db: AsyncSession) -> list[models_core.CoreGroup]:
+async def get_groups(db: AsyncSession) -> Sequence[models_core.CoreGroup]:
     """Return all groups from database"""
 
     result = await db.execute(select(models_core.CoreGroup))

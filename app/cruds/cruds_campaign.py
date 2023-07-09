@@ -1,4 +1,5 @@
 import uuid
+from typing import Sequence
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
@@ -74,7 +75,7 @@ async def add_blank_option(db: AsyncSession):
         raise ValueError(err)
 
 
-async def get_sections(db: AsyncSession) -> list[models_campaign.Sections]:
+async def get_sections(db: AsyncSession) -> Sequence[models_campaign.Sections]:
     """Return all users from database."""
 
     result = await db.execute(
@@ -143,7 +144,7 @@ async def delete_lists_from_section(db: AsyncSession, section_id: str) -> None:
     await db.commit()
 
 
-async def get_lists(db: AsyncSession) -> list[models_campaign.Lists]:
+async def get_lists(db: AsyncSession) -> Sequence[models_campaign.Lists]:
     """Return all the campaign lists."""
     result = await db.execute(
         select(models_campaign.Lists)
@@ -304,7 +305,7 @@ async def mark_has_voted(db: AsyncSession, user_id: str, section_id: str) -> Non
 async def get_has_voted(
     db: AsyncSession,
     user_id: str,
-) -> list[models_campaign.HasVoted]:
+) -> Sequence[models_campaign.HasVoted]:
     """Return all the sections the user has voted for."""
     result = await db.execute(
         select(models_campaign.HasVoted).where(
@@ -314,7 +315,7 @@ async def get_has_voted(
     return result.scalars().all()
 
 
-async def get_votes(db: AsyncSession) -> list[models_campaign.Votes]:
+async def get_votes(db: AsyncSession) -> Sequence[models_campaign.Votes]:
     result = await db.execute(select(models_campaign.Votes))
     return result.scalars().all()
 
