@@ -17,7 +17,7 @@ skip_glob = [".git", "migrations/*"]
 
 [tool.mypy]
 python_version = "3.11"
-plugins = ["sqlalchemy.ext.mypy.plugin", "pydantic.mypy"]
+plugins = ["pydantic.mypy"]
 ignore_missing_imports = true
 exclude = '''(?x)(
       .git
