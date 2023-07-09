@@ -1,26 +1,22 @@
-from app.main import app
+import pytest_asyncio
+
 from app.models import models_core
 from app.utils.types.groups_type import GroupType
-from tests.commons import (
-    TestingSessionLocal,
-    client,
-    create_api_access_token,
-    create_user_with_groups,
-)
+
+# We need to import event_loop for pytest-asyncio routine defined bellow
+from tests.commons import event_loop  # noqa
+from tests.commons import client, create_api_access_token, create_user_with_groups
 
 admin_user: models_core.CoreUser | None = None
 student_user: models_core.CoreUser | None = None
 
 
-@app.on_event("startup")  # create the data needed in the tests
-async def startuptest():
+@pytest_asyncio.fixture(scope="session", autouse=True)
+async def init_objects():
     global admin_user, student_user
 
-    async with TestingSessionLocal() as db:
-        admin_user = await create_user_with_groups([GroupType.admin], db=db)
-        student_user = await create_user_with_groups([GroupType.student], db=db)
-
-        await db.commit()
+    admin_user = await create_user_with_groups([GroupType.admin])
+    student_user = await create_user_with_groups([GroupType.student])
 
 
 def test_read_users():

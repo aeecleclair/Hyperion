@@ -1,11 +1,15 @@
 import uuid
 
-from app.main import app
+import pytest_asyncio
+
 from app.models import models_campaign, models_core
 from app.utils.types.campaign_type import ListType
 from app.utils.types.groups_type import GroupType
+
+# We need to import event_loop for pytest-asyncio routine defined bellow
+from tests.commons import event_loop  # noqa
 from tests.commons import (
-    TestingSessionLocal,
+    add_object_to_db,
     client,
     create_api_access_token,
     create_user_with_groups,
@@ -21,45 +25,42 @@ section2id: str = ""
 list2id: str = ""
 
 
-@app.on_event("startup")  # create the datas needed in the tests
-async def startuptest():
+@pytest_asyncio.fixture(scope="session", autouse=True)
+async def init_objects():
     global caa_user, ae_user
 
-    async with TestingSessionLocal() as db:
-        caa_user = await create_user_with_groups([GroupType.CAA, GroupType.AE], db=db)
-        ae_user = await create_user_with_groups([GroupType.AE], db=db)
-
-        await db.commit()
+    caa_user = await create_user_with_groups([GroupType.CAA, GroupType.AE])
+    ae_user = await create_user_with_groups([GroupType.AE])
 
     global section
     global list
     list_id = str(uuid.uuid4())
     section_id = str(uuid.uuid4())
-    async with TestingSessionLocal() as db:
-        section = models_campaign.Sections(
-            id=section_id,
-            name="BDE",
-            description="Bureau Des Eleves",
-        )
-        list = models_campaign.Lists(
-            id=list_id,
-            name="Liste 1",
-            description="une liste",
-            section_id=section_id,
-            type=ListType.serio,
-            members=[
-                models_campaign.ListMemberships(
-                    user_id=caa_user.id, list_id=list_id, role="Prez"
-                ),
-                models_campaign.ListMemberships(
-                    user_id=ae_user.id, list_id=list_id, role="SG"
-                ),
-            ],
-            program="Mon program",
-        )
-        db.add(section)
-        db.add(list)
-        await db.commit()
+
+    section = models_campaign.Sections(
+        id=section_id,
+        name="BDE",
+        description="Bureau Des Eleves",
+    )
+    await add_object_to_db(section)
+
+    list = models_campaign.Lists(
+        id=list_id,
+        name="Liste 1",
+        description="une liste",
+        section_id=section_id,
+        type=ListType.serio,
+        members=[
+            models_campaign.ListMemberships(
+                user_id=caa_user.id, list_id=list_id, role="Prez"
+            ),
+            models_campaign.ListMemberships(
+                user_id=ae_user.id, list_id=list_id, role="SG"
+            ),
+        ],
+        program="Mon program",
+    )
+    await add_object_to_db(list)
 
 
 def test_get_sections():

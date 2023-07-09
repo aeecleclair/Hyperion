@@ -1,13 +1,17 @@
 import uuid
 from datetime import datetime
 
-from app.dependencies import get_redis_client, get_settings
-from app.main import app
+import pytest_asyncio
+
 from app.models import models_amap, models_core
 from app.utils.types.amap_types import AmapSlotType, DeliveryStatusType
 from app.utils.types.groups_type import GroupType
+
+# We need to import event_loop for pytest-asyncio routine defined bellow
+from tests.commons import event_loop  # noqa
 from tests.commons import (
-    TestingSessionLocal,
+    add_object_to_db,
+    change_redis_client_status,
     client,
     create_api_access_token,
     create_user_with_groups,
@@ -23,74 +27,68 @@ locked_delivery: models_amap.Delivery | None = None
 order: models_amap.Order | None = None
 deletable_order_by_admin: models_amap.Order | None = None
 
-settings = app.dependency_overrides.get(get_settings, get_settings)()
 
-
-@app.on_event("startup")  # create the data needed in the tests
-async def startuptest():
+@pytest_asyncio.fixture(scope="session", autouse=True)
+async def init_objects():
     global amap_user, student_user, product, deletable_product, delivery, deletable_delivery, locked_delivery, order, deletable_order_by_admin, cash
 
-    async with TestingSessionLocal() as db:
-        amap_user = await create_user_with_groups([GroupType.amap], db=db)
-        student_user = await create_user_with_groups([GroupType.student], db=db)
+    amap_user = await create_user_with_groups([GroupType.amap])
+    student_user = await create_user_with_groups([GroupType.student])
 
-        product = models_amap.Product(
-            id=str(uuid.uuid4()), name="Tomato", price=1.5, category="Test"
-        )
-        db.add(product)
-        deletable_product = models_amap.Product(
-            id=str(uuid.uuid4()), name="Deletable Tomato", price=1.5, category="Test"
-        )
-        db.add(deletable_product)
+    product = models_amap.Product(
+        id=str(uuid.uuid4()), name="Tomato", price=1.5, category="Test"
+    )
+    await add_object_to_db(product)
+    deletable_product = models_amap.Product(
+        id=str(uuid.uuid4()), name="Deletable Tomato", price=1.5, category="Test"
+    )
+    await add_object_to_db(deletable_product)
 
-        # We can not create two deliveries with the same date
-        delivery = models_amap.Delivery(
-            id=str(uuid.uuid4()),
-            delivery_date=datetime(2022, 8, 15),
-            status=DeliveryStatusType.creation,
-        )
-        db.add(delivery)
-        deletable_delivery = models_amap.Delivery(
-            id=str(uuid.uuid4()),
-            delivery_date=datetime(2022, 8, 16),
-            status=DeliveryStatusType.creation,
-        )
-        db.add(deletable_delivery)
+    # We can not create two deliveries with the same date
+    delivery = models_amap.Delivery(
+        id=str(uuid.uuid4()),
+        delivery_date=datetime(2022, 8, 15),
+        status=DeliveryStatusType.creation,
+    )
+    await add_object_to_db(delivery)
+    deletable_delivery = models_amap.Delivery(
+        id=str(uuid.uuid4()),
+        delivery_date=datetime(2022, 8, 16),
+        status=DeliveryStatusType.creation,
+    )
+    await add_object_to_db(deletable_delivery)
 
-        locked_delivery = models_amap.Delivery(
-            id=str(uuid.uuid4()),
-            delivery_date=datetime(2022, 8, 17),
-            status=DeliveryStatusType.locked,
-        )
-        db.add(locked_delivery)
+    locked_delivery = models_amap.Delivery(
+        id=str(uuid.uuid4()),
+        delivery_date=datetime(2022, 8, 17),
+        status=DeliveryStatusType.locked,
+    )
+    await add_object_to_db(locked_delivery)
 
-        order = models_amap.Order(
-            order_id=str(uuid.uuid4()),
-            user_id=student_user.id,
-            delivery_id=delivery.id,
-            amount=0.0,
-            collection_slot=AmapSlotType.midi,
-            ordering_date=datetime(2022, 8, 10, 12, 16, 26),
-            delivery_date=delivery.delivery_date,
-        )
-        db.add(order)
-        await db.commit()
+    order = models_amap.Order(
+        order_id=str(uuid.uuid4()),
+        user_id=student_user.id,
+        delivery_id=delivery.id,
+        amount=0.0,
+        collection_slot=AmapSlotType.midi,
+        ordering_date=datetime(2022, 8, 10, 12, 16, 26),
+        delivery_date=delivery.delivery_date,
+    )
+    await add_object_to_db(order)
 
-        deletable_order_by_admin = models_amap.Order(
-            order_id=str(uuid.uuid4()),
-            user_id=student_user.id,
-            delivery_id=locked_delivery.id,
-            amount=0.0,
-            collection_slot=AmapSlotType.midi,
-            ordering_date=datetime(2022, 8, 18, 12, 16, 26),
-            delivery_date=locked_delivery.delivery_date,
-        )
-        db.add(deletable_order_by_admin)
-        await db.commit()
+    deletable_order_by_admin = models_amap.Order(
+        order_id=str(uuid.uuid4()),
+        user_id=student_user.id,
+        delivery_id=locked_delivery.id,
+        amount=0.0,
+        collection_slot=AmapSlotType.midi,
+        ordering_date=datetime(2022, 8, 18, 12, 16, 26),
+        delivery_date=locked_delivery.delivery_date,
+    )
+    await add_object_to_db(deletable_order_by_admin)
 
-        cash = models_amap.Cash(user_id=student_user.id, balance=666)
-        db.add(cash)
-        await db.commit()
+    cash = models_amap.Cash(user_id=student_user.id, balance=666)
+    await add_object_to_db(cash)
 
 
 def test_get_products():
@@ -253,9 +251,7 @@ def test_make_delivery_orderable():
 
 def test_add_order_to_delivery():
     # Enable Redis client for locker
-    app.dependency_overrides.get(get_redis_client, get_redis_client)(
-        settings, activate=True
-    )
+    change_redis_client_status(activated=True)
 
     token = create_api_access_token(student_user)
 
@@ -273,16 +269,14 @@ def test_add_order_to_delivery():
     )
 
     # Disable Redis client (to avoid rate-limit)
-    app.dependency_overrides.get(get_redis_client, get_redis_client)(deactivate=True)
+    change_redis_client_status(activated=False)
 
     assert response.status_code == 201
 
 
 def test_edit_order():
     # Enable Redis client for locker
-    app.dependency_overrides.get(get_redis_client, get_redis_client)(
-        settings, activate=True
-    )
+    change_redis_client_status(activated=True)
 
     token = create_api_access_token(student_user)
 
@@ -301,16 +295,14 @@ def test_edit_order():
     )
 
     # Disable Redis client (to avoid rate-limit)
-    app.dependency_overrides.get(get_redis_client, get_redis_client)(deactivate=True)
+    change_redis_client_status(activated=False)
 
     assert response.status_code == 204
 
 
 def test_remove_order():
     # Enable Redis client for locker
-    app.dependency_overrides.get(get_redis_client, get_redis_client)(
-        settings, activate=True
-    )
+    change_redis_client_status(activated=True)
 
     token = create_api_access_token(student_user)
 
@@ -320,16 +312,14 @@ def test_remove_order():
     )
 
     # Disable Redis client (to avoid rate-limit)
-    app.dependency_overrides.get(get_redis_client, get_redis_client)(deactivate=True)
+    change_redis_client_status(activated=False)
 
     assert response.status_code == 204
 
 
 def test_remove_order_by_admin():
     # Enable Redis client for locker
-    app.dependency_overrides.get(get_redis_client, get_redis_client)(
-        settings, activate=True
-    )
+    change_redis_client_status(activated=True)
 
     token = create_api_access_token(student_user)
     token_amap = create_api_access_token(amap_user)
@@ -347,7 +337,7 @@ def test_remove_order_by_admin():
     assert response.status_code == 204
 
     # Disable Redis client (to avoid rate-limit)
-    app.dependency_overrides.get(get_redis_client, get_redis_client)(deactivate=True)
+    change_redis_client_status(activated=False)
 
 
 def test_get_users_cash():
