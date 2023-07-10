@@ -31,9 +31,7 @@ from app.utils.types.groups_type import GroupType
 
 # We wrap the application in a function to be able to pass the settings and drop_db parameters
 # The drop_db parameter is used to drop the database tables before creating them again
-def get_application(
-    settings: Settings = get_settings(), drop_db: bool = False
-) -> FastAPI:
+def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     hyperion_access_logger = logging.getLogger("hyperion.access")
     hyperion_security_logger = logging.getLogger("hyperion.security")
     hyperion_error_logger = logging.getLogger("hyperion.error")
