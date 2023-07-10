@@ -11,11 +11,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from app.app import get_application
 from app.core import security
 from app.core.config import Settings
 from app.cruds import cruds_groups, cruds_users
 from app.dependencies import get_db, get_redis_client, get_settings
-from app.main import get_application
 from app.models import models_core
 from app.schemas import schemas_auth
 from app.utils.redis import connect, disconnect
