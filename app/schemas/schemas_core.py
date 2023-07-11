@@ -2,7 +2,7 @@
 
 from datetime import date, datetime
 
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, Field, validator
 
 from app.utils import validators
 from app.utils.examples import examples_core
@@ -160,6 +160,9 @@ class CoreUserActivateRequest(CoreUserBase):
     birthday: date | None = None
     phone: str | None = None
     floor: FloorsType
+    promo: int | None = Field(
+        default=None, description="Promotion of the student, an integer like 21"
+    )
 
     # Password validator
     # https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
@@ -169,7 +172,6 @@ class CoreUserActivateRequest(CoreUserBase):
 
     class Config:
         orm_mode = True
-
         schema_extra = examples_core.example_CoreUserActivateRequest
 
 

@@ -156,17 +156,17 @@ async def create_user_by_user(
     # Check the account type
 
     # For staff and student
-    # ^[\w\-.]*@(ecl\d{2})|(alternance\d{4})|(auditeur)|(master)?.ec-lyon.fr$
+    # ^[\w\-.]*@((etu(-enise)?|auditeur).)?ec-lyon.fr$
     # For staff
     # ^[\w\-.]*@(auditeur.)?ec-lyon.fr$
     # For student
-    # ^[\w\-.]*@((ecl\d{2})|(alternance\d{4})|(master)).ec-lyon.fr$
+    # ^[\w\-.]*@etu(-enise)?.ec-lyon.fr$
 
-    if re.match(r"^[\w\-.]*@(auditeur.)?ec-lyon.fr", user_create.email):
+    if re.match(r"^[\w\-.]*@(auditeur.)?ec-lyon.fr$", user_create.email):
         # Its a staff email address
         account_type = AccountType.staff
     elif re.match(
-        r"^[\w\-.]*@((ecl\d{2})|(alternance\d{4})|(master)).ec-lyon.fr$",
+        r"^[\w\-.]*@etu(-enise)?.ec-lyon.fr$",
         user_create.email,
     ):
         # Its a student email address
@@ -406,16 +406,6 @@ async def activate_user(
     # A password should have been provided
     password_hash = security.get_password_hash(user.password)
 
-    # For student users, we try to deduce a promo from the email address
-    if re.match(
-        r"^[\w\-.]*@(ecl\d{2})|(alternance\d{4}).ec-lyon.fr$",
-        unconfirmed_user.email,
-    ):
-        promo = int(unconfirmed_user.email[-13:-11])
-    else:
-        # For other users, we set the promo to None
-        promo = None
-
     confirmed_user = models_core.CoreUser(
         id=unconfirmed_user.id,
         email=unconfirmed_user.email,
@@ -424,7 +414,7 @@ async def activate_user(
         firstname=user.firstname,
         nickname=user.nickname,
         birthday=user.birthday,
-        promo=promo,
+        promo=user.promo,
         phone=user.phone,
         floor=user.floor,
         created_on=datetime.now(timezone(settings.TIMEZONE)),
@@ -445,7 +435,7 @@ async def activate_user(
             db=db, email=unconfirmed_user.email
         )
     except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+        raise HTTPException(status_code=400, detail=str(error))
 
     hyperion_security_logger.info(
         f"Activate_user: Activated user {confirmed_user.id} ({request_id})"
