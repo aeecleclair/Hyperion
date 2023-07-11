@@ -12,4 +12,4 @@ unidecode==1.3.6
 uvicorn[standard]==0.22.0
 redis==4.6.0
 icalendar == 5.0.4
-asyncpg==0.27.0
+asyncpg==0.28.0
