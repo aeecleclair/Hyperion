@@ -24,8 +24,11 @@ class NotificationManager:
 
         if self.use_firebase:
             try:
-                firebase_cred = credentials.Certificate("firebase.json")
-                firebase_app = firebase_admin.initialize_app(firebase_cred)
+                firebase_cred = credentials.Certificate(
+                    "myecl-eclair-c5190fc3d689.json"
+                )
+                # firebase_app = firebase_admin.initialize_app(firebase_cred)
+                firebase_admin.initialize_app(firebase_cred)
             except Exception as error:
                 hyperion_error_logger.error(
                     f"Firebase is not configured correctly, disabling the notification manager. Please check a valid firebase.json file exist at the root of the project ({error})."
@@ -43,7 +46,7 @@ class NotificationManager:
         message = messaging.MulticastMessage(
             notification=messaging.Notification(title=title, body=body), tokens=tokens
         )
-        messaging.send_multicast(message)
+        res = messaging.send_multicast(message)
 
     def _send_firebase_trigger_notification_by_tokens(self, tokens: list[str] = []):
         """
@@ -99,7 +102,7 @@ class NotificationManager:
     ) -> None:
         message_model = models_notification.Message(
             firebase_device_token=device.firebase_device_token,
-            **message.dict(),
+            **dict(message),
         )
 
         try:
