@@ -1,5 +1,5 @@
 alembic==1.10.2                      # database migrations
-fastapi==0.99.0
+fastapi==0.100.0
 Jinja2==3.1.2                       # template engine for html files
 passlib[bcrypt]==1.7.4              # password hashing using bcrypt
 python-dotenv==1.0.0               # load environment variables from .env file
