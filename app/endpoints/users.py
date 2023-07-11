@@ -326,7 +326,6 @@ async def get_user_activation_page(
 
     **This endpoint is an UI endpoint which send and html page response.
     """
-    print("Hello")
 
     unconfirmed_user = await cruds_users.get_unconfirmed_user_by_activation_token(
         db=db, activation_token=activation_token
@@ -577,6 +576,100 @@ async def reset_password(
     )
 
     return standard_responses.Result()
+
+
+@router.post(
+    "/users/migrate-mail",
+    status_code=204,
+    tags=[Tags.users],
+)
+async def migrate_mail(
+    mail_migration: schemas_core.MailMigrationRequest,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+    settings: Settings = Depends(get_settings),
+):
+    """
+    Due to a change in the email format, all student users need to migrate their email address.
+    This endpoint will send a confirmation code to the user's new email address. He will need to use this code to confirm the change with `/users/confirm-mail-migration` endpoint.
+    """
+
+    if not re.match(
+        r"^[\w\-.]*@((ecl\d{2})|(alternance\d{4})|(master)).ec-lyon.fr$", user.email
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Only student users with an old email adresse can migrate their email address",
+        )
+
+    if not re.match(r"^[\w\-.]*@etu(-enise)?.ec-lyon.fr$", mail_migration.new_email):
+        raise HTTPException(
+            status_code=400,
+            detail="The new email adresse must match the new ECL format for student users",
+        )
+
+    confirmation_token = security.generate_token()
+
+    migration_object = models_core.CoreUserEmailMigrationCode(
+        user_id=user.id,
+        new_email=mail_migration.new_email,
+        confirmation_token=confirmation_token,
+    )
+
+    await cruds_users.create_email_migration_code(
+        migration_object=migration_object, db=db
+    )
+
+    if settings.SMTP_ACTIVE:
+        send_email(
+            recipient=mail_migration.new_email,
+            subject="MyECL - Confirm your new email adresse",
+            content=f"You can confirm your new email adresse with the token {confirmation_token}",
+            settings=settings,
+        )
+    print(confirmation_token)
+
+
+@router.post(
+    "/users/migrate-mail-confirm",
+    status_code=204,
+    tags=[Tags.users],
+)
+async def migrate_mail_confirm(
+    confirmation_object: schemas_core.MailMigrationConfirmation,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+    settings: Settings = Depends(get_settings),
+):
+    """
+    Due to a change in the email format, all student users need to migrate their email address.
+    This endpoint will updates the user new email address.
+    """
+
+    migration_object = await cruds_users.get_email_migration_code_by_token_and_user_id(
+        confirmation_token=confirmation_object.token,
+        user_id=user.id,
+        db=db,
+    )
+
+    if migration_object is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid confirmation token for this user",
+        )
+
+    try:
+        await cruds_users.update_user_email_by_id(
+            db=db, user_id=user.id, new_email=migration_object.new_email
+        )
+    except Exception as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+    await cruds_users.delete_email_migration_code_by_token_and_user_id(
+        confirmation_token=confirmation_object.token,
+        user_id=user.id,
+        db=db,
+    )
 
 
 @router.post(

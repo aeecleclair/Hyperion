@@ -175,6 +175,66 @@ async def get_recover_request_by_reset_token(
     return result.scalars().first()
 
 
+async def create_email_migration_code(
+    migration_object: models_core.CoreUserEmailMigrationCode,
+    db: AsyncSession,
+) -> models_core.CoreUserEmailMigrationCode:
+    db.add(migration_object)
+    try:
+        await db.commit()
+        return migration_object
+    except IntegrityError:
+        await db.rollback()
+        raise
+
+
+async def get_email_migration_code_by_token_and_user_id(
+    user_id: str,
+    confirmation_token: str,
+    db: AsyncSession,
+) -> models_core.CoreUserEmailMigrationCode | None:
+    result = await db.execute(
+        select(models_core.CoreUserEmailMigrationCode).where(
+            models_core.CoreUserEmailMigrationCode.user_id == user_id,
+            models_core.CoreUserEmailMigrationCode.confirmation_token
+            == confirmation_token,
+        )
+    )
+    return result.scalars().first()
+
+
+async def delete_email_migration_code_by_token_and_user_id(
+    user_id: str,
+    confirmation_token: str,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_core.CoreUserEmailMigrationCode).where(
+            models_core.CoreUserEmailMigrationCode.user_id == user_id,
+            models_core.CoreUserEmailMigrationCode.confirmation_token
+            == confirmation_token,
+        )
+    )
+    await db.commit()
+
+
+async def update_user_email_by_id(
+    user_id: str,
+    new_email: str,
+    db: AsyncSession,
+):
+    try:
+        await db.execute(
+            update(models_core.CoreUser)
+            .where(models_core.CoreUser.id == user_id)
+            .values(email=new_email)
+        )
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise
+
+
 async def delete_recover_request_by_email(db: AsyncSession, email: str):
     """Delete a user from database by id"""
 
