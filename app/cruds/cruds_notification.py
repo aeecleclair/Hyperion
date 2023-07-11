@@ -3,6 +3,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import models_notification
+from app.utils.types.notification_types import Topic
 
 
 async def create_message(
@@ -120,3 +121,17 @@ async def delete_topic_membership(
         )
     )
     await db.commit()
+
+
+async def get_topic_membership_by_topic(
+    topic: Topic,
+    db: AsyncSession,
+) -> list[models_notification.TopicMembership]:
+    """Return the loaner with id"""
+
+    result = await db.execute(
+        select(models_notification.TopicMembership).where(
+            models_notification.TopicMembership.topic == topic
+        )
+    )
+    return result.scalars().all()
