@@ -7,7 +7,7 @@ python-jose[cryptography]==3.3.0    # generate and verify the JWT tokens
 python-multipart==0.0.6             # a form data parser, as oauth flow requires form-data parameters
 SQLAlchemy[asyncio]==2.0.5.post1   # [asyncio] allows greenlet to be installed on Apple M1 devices. The my[py] plugin is required in devellopment but Dependabot fails to manage two versions of the same module.
 rapidfuzz==3.0.0                         # Fuzzy String Matching
-requests==2.28.2
+requests==2.31.0
 unidecode==1.3.6
 uvicorn[standard]==0.22.0
 redis==4.6.0
