@@ -11,5 +11,5 @@ requests==2.31.0
 unidecode==1.3.6
 uvicorn[standard]==0.22.0
 redis==4.6.0
-icalendar == 5.0.4
+icalendar == 5.0.7
 asyncpg==0.28.0
