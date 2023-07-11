@@ -189,13 +189,11 @@ async def create_email_migration_code(
 
 
 async def get_email_migration_code_by_token_and_user_id(
-    user_id: str,
     confirmation_token: str,
     db: AsyncSession,
 ) -> models_core.CoreUserEmailMigrationCode | None:
     result = await db.execute(
         select(models_core.CoreUserEmailMigrationCode).where(
-            models_core.CoreUserEmailMigrationCode.user_id == user_id,
             models_core.CoreUserEmailMigrationCode.confirmation_token
             == confirmation_token,
         )
@@ -204,13 +202,11 @@ async def get_email_migration_code_by_token_and_user_id(
 
 
 async def delete_email_migration_code_by_token_and_user_id(
-    user_id: str,
     confirmation_token: str,
     db: AsyncSession,
 ):
     await db.execute(
         delete(models_core.CoreUserEmailMigrationCode).where(
-            models_core.CoreUserEmailMigrationCode.user_id == user_id,
             models_core.CoreUserEmailMigrationCode.confirmation_token
             == confirmation_token,
         )

@@ -624,22 +624,22 @@ async def migrate_mail(
         send_email(
             recipient=mail_migration.new_email,
             subject="MyECL - Confirm your new email adresse",
-            content=f"You can confirm your new email adresse with the token {confirmation_token}",
+            content=f"You can confirm your new email adresse by clicking the following link: {settings.CLIENT_URL}/users/migrate-mail-confirm?token={confirmation_token}",
             settings=settings,
         )
-    print(confirmation_token)
+    print(
+        f"You can confirm your new email adresse by clicking the following link: {settings.CLIENT_URL}users/migrate-mail-confirm?token={confirmation_token}"
+    )
 
 
-@router.post(
+@router.get(
     "/users/migrate-mail-confirm",
-    status_code=204,
+    status_code=200,
     tags=[Tags.users],
 )
 async def migrate_mail_confirm(
-    confirmation_object: schemas_core.MailMigrationConfirmation,
+    token: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
-    settings: Settings = Depends(get_settings),
 ):
     """
     Due to a change in the email format, all student users need to migrate their email address.
@@ -647,8 +647,7 @@ async def migrate_mail_confirm(
     """
 
     migration_object = await cruds_users.get_email_migration_code_by_token_and_user_id(
-        confirmation_token=confirmation_object.token,
-        user_id=user.id,
+        confirmation_token=token,
         db=db,
     )
 
@@ -660,16 +659,19 @@ async def migrate_mail_confirm(
 
     try:
         await cruds_users.update_user_email_by_id(
-            db=db, user_id=user.id, new_email=migration_object.new_email
+            db=db,
+            user_id=migration_object.user_id,
+            new_email=migration_object.new_email,
         )
     except Exception as error:
         raise HTTPException(status_code=400, detail=str(error))
 
     await cruds_users.delete_email_migration_code_by_token_and_user_id(
-        confirmation_token=confirmation_object.token,
-        user_id=user.id,
+        confirmation_token=token,
         db=db,
     )
+
+    return "The email address has been successfully updated"
 
 
 @router.post(

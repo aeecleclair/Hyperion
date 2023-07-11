@@ -245,10 +245,6 @@ class MailMigrationRequest(BaseModel):
     new_email: str
 
 
-class MailMigrationConfirmation(BaseModel):
-    token: str
-
-
 class CoreMembership(BaseModel):
     """Schema for membership creation (allows adding a user to a group)"""
 
