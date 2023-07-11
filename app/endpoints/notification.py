@@ -1,3 +1,5 @@
+from datetime import date
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,7 +31,9 @@ async def register_firebase_device(
     **The user must be authenticated to use this endpoint**
     """
     firebase_device = models_notification.FirebaseDevice(
-        user_id=user.id, firebase_device_token=firebase_token
+        user_id=user.id,
+        firebase_device_token=firebase_token,
+        creation_date=date.today(),
     )
 
     try:

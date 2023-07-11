@@ -1,6 +1,6 @@
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, String
+from sqlalchemy import Boolean, Date, DateTime, Enum, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -40,6 +40,7 @@ class FirebaseDevice(Base):
     firebase_device_token: Mapped[str] = mapped_column(
         String, index=True, nullable=False, primary_key=True
     )
+    creation_date: Mapped[date] = mapped_column(Date, nullable=False)
 
 
 class TopicMembership(Base):
