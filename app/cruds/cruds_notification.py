@@ -59,8 +59,6 @@ async def get_firebase_devices_by_user_id(
     user_id: str,
     db: AsyncSession,
 ) -> list[models_notification.FirebaseDevice]:
-    """Return the loaner with id"""
-
     result = await db.execute(
         select(models_notification.FirebaseDevice).where(
             models_notification.FirebaseDevice.user_id == user_id
@@ -74,13 +72,23 @@ async def get_firebase_devices_by_user_id_and_firebase_token(
     firebase_token: str,
     db: AsyncSession,
 ) -> models_notification.FirebaseDevice | None:
-    """Return the loaner with id"""
-
     result = await db.execute(
         select(models_notification.FirebaseDevice).where(
             # models_notification.FirebaseDevice.user_id == user_id,
             models_notification.FirebaseDevice.firebase_device_token
             == firebase_token,
+        )
+    )
+    return result.scalars().first()
+
+
+async def get_firebase_devices_by_firebase_token(
+    firebase_token: str,
+    db: AsyncSession,
+) -> models_notification.FirebaseDevice | None:
+    result = await db.execute(
+        select(models_notification.FirebaseDevice).where(
+            models_notification.FirebaseDevice.firebase_device_token == firebase_token,
         )
     )
     return result.scalars().first()
@@ -114,20 +122,30 @@ async def delete_firebase_devices(
     await db.commit()
 
 
-async def update_firebase_devices_creation_date(
-    user_id: str,
+async def batch_delete_firebase_device_by_token(
+    tokens: list[str],
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_notification.FirebaseDevice).where(
+            models_notification.FirebaseDevice.firebase_device_token.in_(tokens),
+        )
+    )
+    await db.commit()
+
+
+async def update_firebase_devices_register_date(
     firebase_device_token: str,
-    new_creation_date: date,
+    new_register_date: date,
     db: AsyncSession,
 ):
     await db.execute(
         update(models_notification.FirebaseDevice)
         .where(
-            models_notification.FirebaseDevice.user_id == user_id,
             models_notification.FirebaseDevice.firebase_device_token
             == firebase_device_token,
         )
-        .values({"creation_date": new_creation_date})
+        .values({"register_date": new_register_date})
     )
     await db.commit()
 
@@ -170,6 +188,20 @@ async def get_topic_membership_by_topic(
     result = await db.execute(
         select(models_notification.TopicMembership).where(
             models_notification.TopicMembership.topic == topic
+        )
+    )
+    return result.scalars().all()
+
+
+async def get_topic_membership_by_user_id(
+    user_id: str,
+    db: AsyncSession,
+) -> list[models_notification.TopicMembership]:
+    """Return the loaner with id"""
+
+    result = await db.execute(
+        select(models_notification.TopicMembership).where(
+            models_notification.TopicMembership.user_id == user_id
         )
     )
     return result.scalars().all()

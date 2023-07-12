@@ -29,6 +29,7 @@ async def register_firebase_device(
     firebase_token: str = Body(embed=True),
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
+    notification_manager: NotificationManager = Depends(get_notification_manager),
 ):
     """
     Register a firebase device for the user, if the device already exists, this will update the creation date.
@@ -37,17 +38,39 @@ async def register_firebase_device(
     **The user must be authenticated to use this endpoint**
     """
 
-    # If there is already a device with this token, we want to remove it
-    #  - If the user is not the same, we indeed don't want the new user to receive the notifications of the old one
-    #  - If the user is the same, a new device will be created with a new creation date
-    await cruds_notification.delete_firebase_devices(
-        firebase_device_token=firebase_token, db=db
+    # If there is already a device with this token, we need to update the register date
+    firebase_device = await cruds_notification.get_firebase_devices_by_firebase_token(
+        firebase_token=firebase_token, db=db
     )
+
+    if firebase_device is not None:
+        if firebase_device.user_id == user.id:
+            # We also need to subscribe the new token to the topics the user is subscribed to
+            topics = await cruds_notification.get_topic_membership_by_user_id(
+                user_id=user.id, db=db
+            )
+
+            for topic in topics:
+                await notification_manager.subscribe_tokens_to_topic(
+                    tokens=[firebase_token], topic=topic
+                )
+
+            # Update the register date
+            await cruds_notification.update_firebase_devices_register_date(
+                firebase_device_token=firebase_token,
+                new_register_date=date.today(),
+                db=db,
+            )
+            return
+        # If the user is not the same, we indeed don't want the new user to receive the notifications of the old one
+        await cruds_notification.delete_firebase_devices(
+            firebase_device_token=firebase_token, db=db
+        )
 
     firebase_device = models_notification.FirebaseDevice(
         user_id=user.id,
         firebase_device_token=firebase_token,
-        creation_date=date.today(),
+        register_date=date.today(),
     )
 
     await cruds_notification.create_firebase_devices(
@@ -64,13 +87,25 @@ async def unregister_firebase_device(
     firebase_token: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
+    notification_manager: NotificationManager = Depends(get_notification_manager),
 ):
     """
     Unregister a new firebase device for the user
 
     **The user must be authenticated to use this endpoint**
     """
-    # Anybody may unregister a device if they know its token
+    # Anybody may unregister a device if they know its token, which should be secret
+
+    # We also need to unsubscribe the token to the topics the user is subscribed to
+    topics = await cruds_notification.get_topic_membership_by_user_id(
+        user_id=user.id, db=db
+    )
+
+    for topic in topics:
+        await notification_manager.unsubscribe_tokens_to_topic(
+            tokens=[firebase_token], topic=topic
+        )
+
     await cruds_notification.delete_firebase_devices(
         firebase_device_token=firebase_token, db=db
     )
@@ -129,7 +164,11 @@ async def suscribe_to_topic(
     """
     topic_membership = models_notification.TopicMembership(user_id=user.id, topic=topic)
 
-    await notification_manager.subscribe_user_to_topic(user_id=user.id, topic=topic)
+    # TODO; when we have a new token for an user, we need to subscribe
+
+    await notification_manager.subscribe_user_to_topic(
+        user_id=user.id, topic=topic, db=db
+    )
 
     await cruds_notification.create_topic_membership(
         topic_membership=topic_membership, db=db
@@ -153,7 +192,9 @@ async def unsuscribe_to_topic(
     **The user must be authenticated to use this endpoint**
     """
 
-    await notification_manager.unsubscribe_user_to_topic(user_id=user.id, topic=topic)
+    await notification_manager.unsubscribe_user_to_topic(
+        user_id=user.id, topic=topic, db=db
+    )
 
     await cruds_notification.delete_topic_membership(
         topic=topic, user_id=user.id, db=db
@@ -186,5 +227,6 @@ async def send_notif(
             expire_on=datetime.now(),
             is_visible=True,
         ),
+        db=db,
     )
     print("send notif done")

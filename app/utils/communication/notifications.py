@@ -6,10 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
 from app.cruds.cruds_notification import (
+    batch_delete_firebase_device_by_token,
     create_message,
     get_firebase_devices_by_user_id,
     get_topic_membership_by_topic,
-    remove_message_by_context_and_firebase_device_token,
 )
 from app.models import models_notification
 from app.schemas.schemas_notification import Message
@@ -18,55 +18,46 @@ from app.utils.types.notification_types import Topic
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
+"""
+TODO
+
+Enlever les tokens qui ne marchent plus : https://firebase.google.com/docs/cloud-messaging/manage-tokens
+Rendre tout cela asynchrone
+
+Faire des methodes internes et des méthodes plus publiques
+
+"""
+
+
 class NotificationManager:
+    """
+    Notification manager for Firebase.
+    This class should only be instantiated once.
+    """
+
+    # See https://firebase.google.com/docs/cloud-messaging/send-message?hl=fr for documentation and examples
+
     def __init__(self, settings: Settings, db: AsyncSession):
         self.use_firebase = settings.USE_FIREBASE
-        self.db = db
 
-        if self.use_firebase:
-            try:
-                firebase_cred = credentials.Certificate(
-                    "myecl-eclair-c5190fc3d689.json"
-                )
-                # firebase_app = firebase_admin.initialize_app(firebase_cred)
-                firebase_admin.initialize_app(firebase_cred)
-            except Exception as error:
-                hyperion_error_logger.error(
-                    f"Firebase is not configured correctly, disabling the notification manager. Please check a valid firebase.json file exist at the root of the project ({error})."
-                )
-                self.use_firebase = False
+        if not self.use_firebase:
+            return
 
-    def _send_firebase_push_notification_by_tokens(
-        self, title: str | None = None, body: str | None = None, tokens: list[str] = []
+        try:
+            firebase_cred = credentials.Certificate("firebase.json")
+            firebase_admin.initialize_app(firebase_cred)
+        except Exception as error:
+            hyperion_error_logger.error(
+                f"Firebase is not configured correctly, disabling the notification manager. Please check a valid firebase.json file exist at the root of the project ({error})."
+            )
+            self.use_firebase = False
+
+    async def _manage_batch_response(
+        self, response: messaging.BatchResponse, tokens: list[str], db: AsyncSession
     ):
         """
-        Send a firebase push notification to a list of tokens.
-
-        NOTE: we don't use this function in Hyperion, since we only use "trigger" notifications.
+        Manage the response of a firebase notification.
         """
-        message = messaging.MulticastMessage(
-            notification=messaging.Notification(title=title, body=body), tokens=tokens
-        )
-        res = messaging.send_multicast(message)
-
-    def _send_firebase_trigger_notification_by_tokens(self, tokens: list[str] = []):
-        """
-        Send a firebase trigger notification to a list of tokens.
-
-        Allows to let the application know that a new notification is available, without sending the content of the notification.
-        """
-        # See https://firebase.google.com/docs/cloud-messaging/send-message?hl=fr#send-messages-to-multiple-devices
-
-        # self._send_firebase_push_notification_by_tokens(title="trigger", tokens=tokens)
-
-        # Check the is less than 500 tokens
-
-        message = messaging.MulticastMessage(
-            data={"trigger": "message", "title": "Hello World!", "body": "🐮"},
-            tokens=tokens,
-        )
-        response = messaging.send_multicast(message)
-
         if response.failure_count > 0:
             responses = response.responses
             failed_tokens = []
@@ -74,22 +65,66 @@ class NotificationManager:
                 if not resp.success:
                     # The order of responses corresponds to the order of the registration tokens.
                     failed_tokens.append(tokens[idx])
-            print("List of tokens that caused failures: {0}".format(failed_tokens))
+            hyperion_error_logger.info(
+                f"{response.failure_count} messages failed to be send, removing their tokens from the database."
+            )
+            await batch_delete_firebase_device_by_token(tokens=tokens, db=db)
 
-        print(response)
+    async def _send_firebase_push_notification_by_tokens(
+        self,
+        db: AsyncSession,
+        data: dict[str, str] | None = None,
+        tokens: list[str] = [],
+    ):
+        """
+        Send a firebase push notification to a list of tokens.
+
+        NOTE: we don't use this function in Hyperion, since we only use "trigger" notifications.
+        """
+        # See https://firebase.google.com/docs/cloud-messaging/send-message?hl=fr#send-messages-to-multiple-devices
+
+        # We can only send 500 tokens at a time
+        if len(tokens) > 500:
+            await self._send_firebase_push_notification_by_tokens(
+                data=data, tokens=tokens[500:], db=db
+            )
+            tokens = tokens[:500]
+
+        # We may pass a notification object along the data
+        message = messaging.MulticastMessage(data=data, tokens=tokens)
+        result = messaging.send_multicast(message)
+
+        await self._manage_batch_response(response=result, tokens=tokens, db=db)
+
+    async def _send_firebase_trigger_notification_by_tokens(
+        self, db: AsyncSession, tokens: list[str] = []
+    ):
+        """
+        Send a firebase trigger notification to a list of tokens.
+
+        Allows to let the application know that a new notification is available, without sending the content of the notification.
+        """
+
+        await self._send_firebase_push_notification_by_tokens(tokens=tokens, db=db)
 
     def _send_firebase_push_notification_by_topic(
-        self, topic: Topic, title: str | None = None, body: str | None = None
+        self,
+        topic: Topic,
+        data: dict[str, str] | None = None,
     ):
         """
         Send a firebase push notification for a given topic.
 
         NOTE: we don't use this function in Hyperion, since we only use "trigger" notifications.
         """
-        message = messaging.Message(
-            notification=messaging.Notification(title=title, body=body), topic=topic
-        )
-        messaging.send(message)
+        message = messaging.Message(data=data, topic=topic)
+        try:
+            messaging.send(message)
+        except messaging.FirebaseError as error:
+            hyperion_error_logger.error(
+                f"Notification: Unable to send firebase notification for topic {topic}: {error}"
+            )
+            raise
 
     def _send_firebase_trigger_notification_by_topic(self, topic: Topic):
         """
@@ -97,30 +132,29 @@ class NotificationManager:
 
         Allows to let the application know that a new notification is available, without sending the content of the notification.
         """
-        self._send_firebase_push_notification_by_topic(title="trigger", topic=topic)
+        self._send_firebase_push_notification_by_topic(topic=topic)
 
-    def _subscribe_tokens_to_topic(self, topic: Topic, tokens: list[str]):
+    def subscribe_tokens_to_topic(self, topic: Topic, tokens: list[str]):
         """
         Subscribe a list of tokens to a given topic.
         """
         response = messaging.subscribe_to_topic(tokens, topic)
         if response.failure_count > 0:
-            print(
-                f"Failed to subscribe to topic {topic} due to {list(map(lambda e: e.reason,response.errors))}"
+            hyperion_error_logger.info(
+                f"Notification: Failed to subscribe to topic {topic} due to {list(map(lambda e: e.reason,response.errors))}"
             )
 
-    def _unsubscribe_tokens_to_topic(self, topic: Topic, tokens: list[str]):
+    def unsubscribe_tokens_to_topic(self, topic: Topic, tokens: list[str]):
         """
         Unsubscribe a list of tokens to a given topic.
         """
-        response = messaging.unsubscribe_from_topic(tokens, topic)
-        if response.failure_count > 0:
-            print(
-                f"Failed to subscribe to topic {topic} due to {list(map(lambda e: e.reason,response.errors))}"
-            )
+        messaging.unsubscribe_from_topic(tokens, topic)
 
-    async def add_message_for_user_in_database(
-        self, message: Message, device: models_notification.FirebaseDevice
+    async def _add_message_for_user_in_database(
+        self,
+        message: Message,
+        device: models_notification.FirebaseDevice,
+        db: AsyncSession,
     ) -> None:
         message_model = models_notification.Message(
             firebase_device_token=device.firebase_device_token,
@@ -128,13 +162,16 @@ class NotificationManager:
         )
 
         try:
-            await create_message(message=message_model, db=self.db)
+            await create_message(message=message_model, db=db)
         except Exception as error:
             hyperion_error_logger.warning(
                 f"Notification: Unable to add message for device {device.firebase_device_token} to database: {error}"
             )
+            raise
 
-    async def send_notification_to_user(self, user_id: str, message: Message) -> None:
+    async def send_notification_to_user(
+        self, user_id: str, message: Message, db: AsyncSession
+    ) -> None:
         """
         Send a notification to a user.
         This utils will find all devices related to the user and send a firebase "trigger" notification to each of them.
@@ -142,29 +179,34 @@ class NotificationManager:
 
         The "trigger" notification will only be send if firebase is correctly configured.
         """
+        # TODO: use a try catch?
         if not self.use_firebase:
             return
 
         # Get all firebase_device_token related to the user
-        firebase_devices = await get_firebase_devices_by_user_id(
-            user_id=user_id, db=self.db
-        )
+        firebase_devices = await get_firebase_devices_by_user_id(user_id=user_id, db=db)
 
         firebase_device_tokens = []
         for device in firebase_devices:
-            await self.add_message_for_user_in_database(message=message, device=device)
+            await self._add_message_for_user_in_database(
+                message=message, device=device, db=db
+            )
             firebase_device_tokens.append(device.firebase_device_token)
 
+        print(firebase_device_tokens)
+
         try:
-            self._send_firebase_trigger_notification_by_tokens(
-                tokens=firebase_device_tokens
+            await self._send_firebase_trigger_notification_by_tokens(
+                tokens=firebase_device_tokens, db=db
             )
         except Exception as error:
             hyperion_error_logger.warning(
                 f"Notification: Unable to send firebase notification to user {user_id} with device {device.firebase_device_token}: {error}"
             )
 
-    async def send_notification_to_topic(self, topic: Topic, message: Message) -> None:
+    async def send_notification_to_topic(
+        self, topic: Topic, message: Message, db: AsyncSession
+    ) -> None:
         """
         Send a notification for a given topic.
         This utils will find all users devices subscribed to the topic and send a firebase "trigger" notification for the topic.
@@ -178,17 +220,17 @@ class NotificationManager:
         # Get all firebase_device_token related to the user
         topic_memberships = await get_topic_membership_by_topic(
             topic=topic,
-            db=self.db,
+            db=db,
         )
 
         for membership in topic_memberships:
             firebase_devices = await get_firebase_devices_by_user_id(
-                user_id=membership.user_id, db=self.db
+                user_id=membership.user_id, db=db
             )
 
             for device in firebase_devices:
-                await self.add_message_for_user_in_database(
-                    message=message, device=device
+                await self._add_message_for_user_in_database(
+                    message=message, device=device, db=db
                 )
 
         try:
@@ -198,37 +240,35 @@ class NotificationManager:
                 f"Notification: Unable to send firebase notification for topic {topic}: {error}"
             )
 
-    async def subscribe_user_to_topic(self, topic: Topic, user_id: str) -> None:
+    async def subscribe_user_to_topic(
+        self, topic: Topic, user_id: str, db: AsyncSession
+    ) -> None:
         """
         Subscribe a list of tokens to a given topic.
         """
         # Get all firebase_device_token related to the user
-        firebase_devices = await get_firebase_devices_by_user_id(
-            user_id=user_id, db=self.db
-        )
+        firebase_devices = await get_firebase_devices_by_user_id(user_id=user_id, db=db)
 
         firebase_device_tokens = [
             device.firebase_device_token for device in firebase_devices
         ]
 
-        print(firebase_device_tokens)
-
         try:
-            self._subscribe_tokens_to_topic(tokens=firebase_device_tokens, topic=topic)
+            self.subscribe_tokens_to_topic(tokens=firebase_device_tokens, topic=topic)
         except Exception as error:
             hyperion_error_logger.warning(
                 f"Notification: Unable to subscribe user {user_id} to topic {topic}: {error}"
             )
             raise
 
-    async def unsubscribe_user_to_topic(self, topic: Topic, user_id: str) -> None:
+    async def unsubscribe_user_to_topic(
+        self, topic: Topic, user_id: str, db: AsyncSession
+    ) -> None:
         """
         Subscribe a list of tokens to a given topic.
         """
         # Get all firebase_device_token related to the user
-        firebase_devices = await get_firebase_devices_by_user_id(
-            user_id=user_id, db=self.db
-        )
+        firebase_devices = await get_firebase_devices_by_user_id(user_id=user_id, db=db)
 
         firebase_device_tokens = [
             device.firebase_device_token for device in firebase_devices
@@ -237,9 +277,7 @@ class NotificationManager:
         print(firebase_device_tokens)
 
         try:
-            self._unsubscribe_tokens_to_topic(
-                tokens=firebase_device_tokens, topic=topic
-            )
+            self.unsubscribe_tokens_to_topic(tokens=firebase_device_tokens, topic=topic)
         except Exception as error:
             hyperion_error_logger.warning(
                 f"Notification: Unable to subscribe user {user_id} to topic {topic}: {error}"

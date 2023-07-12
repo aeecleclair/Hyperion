@@ -34,13 +34,11 @@ class Message(Base):
 class FirebaseDevice(Base):
     __tablename__ = "notification_firebase_devices"
 
-    user_id: Mapped[str] = mapped_column(
-        ForeignKey("core_user.id"), nullable=False, primary_key=True
-    )
+    user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), nullable=False)
     firebase_device_token: Mapped[str] = mapped_column(
         String, index=True, nullable=False, primary_key=True
     )
-    creation_date: Mapped[date] = mapped_column(Date, nullable=False)
+    register_date: Mapped[date] = mapped_column(Date, nullable=False)
 
 
 class TopicMembership(Base):

@@ -46,6 +46,9 @@ SessionLocal: Callable[
 ] | None = None  # Create a global variable for the database session, so that it can be instancied in the startup event
 
 
+notification_manager: NotificationManager | None = None
+
+
 async def get_request_id(request: Request) -> str:
     """
     The request identifier is a unique UUID which is used to associate logs saved during the same request
@@ -145,9 +148,14 @@ def get_notification_manager(
     db: AsyncSession = Depends(get_db),
 ) -> NotificationManager:
     """
-    Dependency that returns the firebase manager
+    Dependency that returns the notification manager
     """
-    return NotificationManager(settings=settings, db=db)
+    global notification_manager
+
+    if notification_manager is None:
+        notification_manager = NotificationManager(settings=settings, db=db)
+
+    return notification_manager
 
 
 def get_user_from_token_with_scopes(
