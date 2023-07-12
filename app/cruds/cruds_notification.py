@@ -34,6 +34,24 @@ async def get_messages_by_firebase_token(
     return result.scalars().all()
 
 
+async def remove_message_by_context_and_firebase_device_token(
+    context: str,
+    firebase_device_token: str,
+    db: AsyncSession,
+):
+    try:
+        await db.execute(
+            delete(models_notification.Message).where(
+                models_notification.Message.context == context,
+                models_notification.Message.firebase_device_token
+                == firebase_device_token,
+            )
+        )
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+
+
 async def get_firebase_devices_by_user_id(
     user_id: str,
     db: AsyncSession,

@@ -9,6 +9,7 @@ from app.cruds.cruds_notification import (
     create_message,
     get_firebase_devices_by_user_id,
     get_topic_membership_by_topic,
+    remove_message_by_context_and_firebase_device_token,
 )
 from app.models import models_notification
 from app.schemas.schemas_notification import Message
@@ -54,7 +55,28 @@ class NotificationManager:
 
         Allows to let the application know that a new notification is available, without sending the content of the notification.
         """
-        self._send_firebase_push_notification_by_tokens(title="trigger", tokens=tokens)
+        # See https://firebase.google.com/docs/cloud-messaging/send-message?hl=fr#send-messages-to-multiple-devices
+
+        # self._send_firebase_push_notification_by_tokens(title="trigger", tokens=tokens)
+
+        # Check the is less than 500 tokens
+
+        message = messaging.MulticastMessage(
+            data={"trigger": "message", "title": "Hello World!", "body": "🐮"},
+            tokens=tokens,
+        )
+        response = messaging.send_multicast(message)
+
+        if response.failure_count > 0:
+            responses = response.responses
+            failed_tokens = []
+            for idx, resp in enumerate(responses):
+                if not resp.success:
+                    # The order of responses corresponds to the order of the registration tokens.
+                    failed_tokens.append(tokens[idx])
+            print("List of tokens that caused failures: {0}".format(failed_tokens))
+
+        print(response)
 
     def _send_firebase_push_notification_by_topic(
         self, topic: Topic, title: str | None = None, body: str | None = None

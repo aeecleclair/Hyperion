@@ -22,9 +22,8 @@ router = APIRouter()
 
 
 @router.post(
-    "/notification/register-device",
-    response_model=schemas_notification.FirebaseDevice,
-    status_code=201,
+    "/notification/devices",
+    status_code=204,
     tags=[Tags.notifications],
 )
 async def register_firebase_device(
@@ -44,22 +43,20 @@ async def register_firebase_device(
     )
 
     try:
-        result = await cruds_notification.create_firebase_devices(
+        await cruds_notification.create_firebase_devices(
             firebase_device=firebase_device, db=db
         )
-        return result
     except IntegrityError as error:
         raise HTTPException(status_code=400, detail=str(error))
 
 
-@router.post(
-    "/notification/unregister-device",
-    response_model=schemas_notification.FirebaseDevice,
-    status_code=201,
+@router.delete(
+    "/notification/devices/{firebase_token}",
+    status_code=204,
     tags=[Tags.notifications],
 )
 async def unregister_firebase_device(
-    firebase_token: str,
+    firebase_token: str = Body(embed=True),
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
@@ -70,7 +67,7 @@ async def unregister_firebase_device(
     """
 
     try:
-        result = await cruds_notification.delete_firebase_devices(
+        await cruds_notification.delete_firebase_devices(
             user_id=user.id, firebase_device_token=firebase_token, db=db
         )
     except IntegrityError as error:
@@ -79,7 +76,7 @@ async def unregister_firebase_device(
 
 @router.get(
     "/notification/messages/{firebase_token}",
-    response_model=schemas_notification.FirebaseDevice,
+    response_model=list[schemas_notification.Message],
     status_code=201,
     tags=[Tags.notifications],
 )
@@ -111,14 +108,14 @@ async def get_messages(
 
 @router.post(
     "/notification/topics/{topic}/subscribe",
-    response_model=schemas_notification.FirebaseDevice,
-    status_code=201,
+    status_code=204,
     tags=[Tags.notifications],
 )
 async def suscribe_to_topic(
     topic: Topic,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
+    notification_manager: NotificationManager = Depends(get_notification_manager),
 ):
     """
     Subscribe to a topic
@@ -130,24 +127,23 @@ async def suscribe_to_topic(
     # TODO: firebase topic subscription
 
     try:
-        result = await cruds_notification.create_topic_membership(
+        await cruds_notification.create_topic_membership(
             topic_membership=topic_membership, db=db
         )
-        return result
     except IntegrityError as error:
         raise HTTPException(status_code=400, detail=str(error))
 
 
 @router.post(
     "/notification/topics/{topic}/unsubscribe",
-    response_model=schemas_notification.FirebaseDevice,
-    status_code=201,
+    status_code=204,
     tags=[Tags.notifications],
 )
 async def unsuscribe_to_topic(
     topic: Topic,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
+    notification_manager: NotificationManager = Depends(get_notification_manager),
 ):
     """
     Unsubscribe to a topic
@@ -158,10 +154,9 @@ async def unsuscribe_to_topic(
     # TODO: firebase topic subscription
 
     try:
-        result = await cruds_notification.delete_topic_membership(
+        await cruds_notification.delete_topic_membership(
             topic=topic, user_id=user.id, db=db
         )
-        return result
     except IntegrityError as error:
         raise HTTPException(status_code=400, detail=str(error))
 
@@ -174,7 +169,7 @@ async def unsuscribe_to_topic(
 async def send_notif(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
-    notif_manager: NotificationManager = Depends(get_notification_manager),
+    notification_manager: NotificationManager = Depends(get_notification_manager),
 ):
     """
     Unsubscribe to a topic
@@ -182,10 +177,10 @@ async def send_notif(
     **The user must be authenticated to use this endpoint**
     """
     print("send notif")
-    await notif_manager.send_notification_to_user(
+    await notification_manager.send_notification_to_user(
         user_id=user.id,
         message=schemas_notification.Message(
-            title="Hello world",
+            title="Hello world!",
             content="test",
             context="test",
             action_id="test",
