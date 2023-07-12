@@ -1,4 +1,6 @@
-from sqlalchemy import delete, select
+from datetime import date
+
+from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,7 +19,8 @@ async def create_message(
         await db.commit()
     except IntegrityError as err:
         await db.rollback()
-        raise err
+        print(err)
+        raise
 
 
 async def get_messages_by_firebase_token(
@@ -67,7 +70,7 @@ async def get_firebase_devices_by_user_id(
 
 
 async def get_firebase_devices_by_user_id_and_firebase_token(
-    user_id: str,
+    # user_id: str,
     firebase_token: str,
     db: AsyncSession,
 ) -> models_notification.FirebaseDevice | None:
@@ -75,8 +78,9 @@ async def get_firebase_devices_by_user_id_and_firebase_token(
 
     result = await db.execute(
         select(models_notification.FirebaseDevice).where(
-            models_notification.FirebaseDevice.user_id == user_id,
-            models_notification.FirebaseDevice.firebase_device_token == firebase_token,
+            # models_notification.FirebaseDevice.user_id == user_id,
+            models_notification.FirebaseDevice.firebase_device_token
+            == firebase_token,
         )
     )
     return result.scalars().first()
@@ -98,16 +102,32 @@ async def create_firebase_devices(
 
 
 async def delete_firebase_devices(
-    user_id: str,
     firebase_device_token: str,
     db: AsyncSession,
 ):
     await db.execute(
         delete(models_notification.FirebaseDevice).where(
+            models_notification.FirebaseDevice.firebase_device_token
+            == firebase_device_token,
+        )
+    )
+    await db.commit()
+
+
+async def update_firebase_devices_creation_date(
+    user_id: str,
+    firebase_device_token: str,
+    new_creation_date: date,
+    db: AsyncSession,
+):
+    await db.execute(
+        update(models_notification.FirebaseDevice)
+        .where(
             models_notification.FirebaseDevice.user_id == user_id,
             models_notification.FirebaseDevice.firebase_device_token
             == firebase_device_token,
         )
+        .values({"creation_date": new_creation_date})
     )
     await db.commit()
 

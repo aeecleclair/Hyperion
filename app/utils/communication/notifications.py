@@ -197,3 +197,50 @@ class NotificationManager:
             hyperion_error_logger.warning(
                 f"Notification: Unable to send firebase notification for topic {topic}: {error}"
             )
+
+    async def subscribe_user_to_topic(self, topic: Topic, user_id: str) -> None:
+        """
+        Subscribe a list of tokens to a given topic.
+        """
+        # Get all firebase_device_token related to the user
+        firebase_devices = await get_firebase_devices_by_user_id(
+            user_id=user_id, db=self.db
+        )
+
+        firebase_device_tokens = [
+            device.firebase_device_token for device in firebase_devices
+        ]
+
+        print(firebase_device_tokens)
+
+        try:
+            self._subscribe_tokens_to_topic(tokens=firebase_device_tokens, topic=topic)
+        except Exception as error:
+            hyperion_error_logger.warning(
+                f"Notification: Unable to subscribe user {user_id} to topic {topic}: {error}"
+            )
+            raise
+
+    async def unsubscribe_user_to_topic(self, topic: Topic, user_id: str) -> None:
+        """
+        Subscribe a list of tokens to a given topic.
+        """
+        # Get all firebase_device_token related to the user
+        firebase_devices = await get_firebase_devices_by_user_id(
+            user_id=user_id, db=self.db
+        )
+
+        firebase_device_tokens = [
+            device.firebase_device_token for device in firebase_devices
+        ]
+
+        print(firebase_device_tokens)
+
+        try:
+            self._unsubscribe_tokens_to_topic(
+                tokens=firebase_device_tokens, topic=topic
+            )
+        except Exception as error:
+            hyperion_error_logger.warning(
+                f"Notification: Unable to subscribe user {user_id} to topic {topic}: {error}"
+            )

@@ -1,7 +1,6 @@
 from datetime import date, datetime
 
 from fastapi import APIRouter, Body, Depends, HTTPException
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cruds import cruds_notification
@@ -32,22 +31,28 @@ async def register_firebase_device(
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
-    Register a new firebase device for the user
+    Register a firebase device for the user, if the device already exists, this will update the creation date.
+    This endpoint should be called once a month to ensure that the token is still valide.
 
     **The user must be authenticated to use this endpoint**
     """
+
+    # If there is already a device with this token, we want to remove it
+    #  - If the user is not the same, we indeed don't want the new user to receive the notifications of the old one
+    #  - If the user is the same, a new device will be created with a new creation date
+    await cruds_notification.delete_firebase_devices(
+        firebase_device_token=firebase_token, db=db
+    )
+
     firebase_device = models_notification.FirebaseDevice(
         user_id=user.id,
         firebase_device_token=firebase_token,
         creation_date=date.today(),
     )
 
-    try:
-        await cruds_notification.create_firebase_devices(
-            firebase_device=firebase_device, db=db
-        )
-    except IntegrityError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+    await cruds_notification.create_firebase_devices(
+        firebase_device=firebase_device, db=db
+    )
 
 
 @router.delete(
@@ -56,7 +61,7 @@ async def register_firebase_device(
     tags=[Tags.notifications],
 )
 async def unregister_firebase_device(
-    firebase_token: str = Body(embed=True),
+    firebase_token: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
@@ -65,45 +70,45 @@ async def unregister_firebase_device(
 
     **The user must be authenticated to use this endpoint**
     """
-
-    try:
-        await cruds_notification.delete_firebase_devices(
-            user_id=user.id, firebase_device_token=firebase_token, db=db
-        )
-    except IntegrityError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+    # Anybody may unregister a device if they know its token
+    await cruds_notification.delete_firebase_devices(
+        firebase_device_token=firebase_token, db=db
+    )
 
 
 @router.get(
     "/notification/messages/{firebase_token}",
     response_model=list[schemas_notification.Message],
-    status_code=201,
+    status_code=200,
     tags=[Tags.notifications],
 )
 async def get_messages(
     firebase_token: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    #    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Get all messages for a specific device from the user
 
     **The user must be authenticated to use this endpoint**
     """
+    # TODO: enable authentification for this endpoint
     firebase_device = (
-        cruds_notification.get_firebase_devices_by_user_id_and_firebase_token(
-            user_id=user.id, firebase_token=firebase_token, db=db
+        await cruds_notification.get_firebase_devices_by_user_id_and_firebase_token(
+            firebase_token=firebase_token, db=db  # user_id=user.id,
         )
     )
 
     if firebase_device is None:
         raise HTTPException(
-            status_code=404, detail=f"Device not found for user {user.id}"
+            status_code=404, detail="Device not found for user"  # {user.id}"
         )
 
-    return cruds_notification.get_messages_by_firebase_token(
+    return await cruds_notification.get_messages_by_firebase_token(
         firebase_token=firebase_token, db=db
     )
+
+    # TODO: remove messages after the client got them
 
 
 @router.post(
@@ -124,14 +129,11 @@ async def suscribe_to_topic(
     """
     topic_membership = models_notification.TopicMembership(user_id=user.id, topic=topic)
 
-    # TODO: firebase topic subscription
+    await notification_manager.subscribe_user_to_topic(user_id=user.id, topic=topic)
 
-    try:
-        await cruds_notification.create_topic_membership(
-            topic_membership=topic_membership, db=db
-        )
-    except IntegrityError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+    await cruds_notification.create_topic_membership(
+        topic_membership=topic_membership, db=db
+    )
 
 
 @router.post(
@@ -151,14 +153,11 @@ async def unsuscribe_to_topic(
     **The user must be authenticated to use this endpoint**
     """
 
-    # TODO: firebase topic subscription
+    await notification_manager.unsubscribe_user_to_topic(user_id=user.id, topic=topic)
 
-    try:
-        await cruds_notification.delete_topic_membership(
-            topic=topic, user_id=user.id, db=db
-        )
-    except IntegrityError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+    await cruds_notification.delete_topic_membership(
+        topic=topic, user_id=user.id, db=db
+    )
 
 
 @router.post(
@@ -182,7 +181,7 @@ async def send_notif(
         message=schemas_notification.Message(
             title="Hello world!",
             content="test",
-            context="test",
+            context="test2",
             action_id="test",
             expire_on=datetime.now(),
             is_visible=True,
