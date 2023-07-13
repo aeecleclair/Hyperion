@@ -43,7 +43,7 @@ async def create_raffle(
 async def get_raffles_by_groupid(
     group_id: str,
     db: AsyncSession,
-) -> list[models_raffle.Raffle]:
+) -> Sequence[models_raffle.Raffle]:
     result = await db.execute(
         select(models_raffle.Raffle).where(models_raffle.Raffle.group_id == group_id)
     )
@@ -265,7 +265,7 @@ async def get_tickets(db: AsyncSession) -> Sequence[models_raffle.Ticket]:
 
 
 async def create_ticket(
-    tickets: list[models_raffle.Ticket],
+    tickets: Sequence[models_raffle.Ticket],
     db: AsyncSession,
 ) -> Sequence[models_raffle.Ticket]:
     """Create a new ticket in databasend return it"""

@@ -34,11 +34,6 @@ cash: models_raffle.Cash | None = None
 
 @pytest_asyncio.fixture(scope="session", autouse=True)
 async def init_objects():
-    global admin_user, BDE_user, student_user, raffle, raffle_to_draw, packticket, packticket_to_draw, ticket, ticket_to_draw, lot, lot_to_draw, cash, raffle_to_delete, packticket_to_delete
-
-
-@app.on_event("startup")  # create the data needed in the tests
-async def startuptest():
     global admin_user, BDE_user, student_user, raffle, raffle_to_draw, packticket, packticket_to_draw, ticket, ticket_to_draw, prize, prize_to_draw, cash, raffle_to_delete, packticket_to_delete
 
     BDE_user = await create_user_with_groups([GroupType.BDE])

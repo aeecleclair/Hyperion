@@ -19,7 +19,7 @@ class Raffle(Base):
     group_id: Mapped[str] = mapped_column(ForeignKey("core_group.id"), index=True, nullable=False)
     description: Mapped[str] = mapped_column(String, index=True, nullable=True)
 
-    group: CoreGroup = relationship("CoreGroup")
+    group: Mapped[CoreGroup] = relationship("CoreGroup")
 
 
 class PackTicket(Base):
@@ -63,13 +63,11 @@ class Ticket(Base):
     )
     user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), nullable=False)
     winning_prize: Mapped[str] = mapped_column(
-        
         ForeignKey("raffle_prize.id"), nullable=True, index=True
-    
     )
 
     pack_ticket: Mapped[PackTicket] = relationship("PackTicket")
-    lot: Mapped[Prize | None] = relationship("Prize")
+    prize: Mapped[Prize | None] = relationship("Prize")
     user: Mapped[CoreUser] = relationship("CoreUser")
 
 

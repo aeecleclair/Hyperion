@@ -65,7 +65,6 @@ class PrizeSimple(PrizeBase):
 
 class PrizeComplete(PrizeBase):
     id: str
-
     raffle: RaffleComplete
 
     class Config:
