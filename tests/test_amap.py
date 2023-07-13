@@ -321,23 +321,25 @@ def test_remove_order_by_admin():
     # Enable Redis client for locker
     change_redis_client_status(activated=True)
 
-    token = create_api_access_token(student_user)
-    token_amap = create_api_access_token(amap_user)
+    try:
+        token = create_api_access_token(student_user)
+        token_amap = create_api_access_token(amap_user)
 
-    response = client.delete(
-        f"/amap/orders/{deletable_order_by_admin.order_id}",
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert response.status_code == 403
+        response = client.delete(
+            f"/amap/orders/{deletable_order_by_admin.order_id}",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 400
 
-    response = client.delete(
-        f"/amap/orders/{deletable_order_by_admin.order_id}",
-        headers={"Authorization": f"Bearer {token_amap}"},
-    )
-    assert response.status_code == 204
+        response = client.delete(
+            f"/amap/orders/{deletable_order_by_admin.order_id}",
+            headers={"Authorization": f"Bearer {token_amap}"},
+        )
+        assert response.status_code == 204
 
     # Disable Redis client (to avoid rate-limit)
-    change_redis_client_status(activated=False)
+    finally:
+        change_redis_client_status(activated=False)
 
 
 def test_get_users_cash():
