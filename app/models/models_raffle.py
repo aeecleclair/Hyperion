@@ -16,7 +16,9 @@ class Raffle(Base):
     status: Mapped[RaffleStatusType] = mapped_column(
         Enum(RaffleStatusType), nullable=False, default=RaffleStatusType.creation
     )
-    group_id: Mapped[str] = mapped_column(ForeignKey("core_group.id"), index=True, nullable=False)
+    group_id: Mapped[str] = mapped_column(
+        ForeignKey("core_group.id"), index=True, nullable=False
+    )
     description: Mapped[str] = mapped_column(String, index=True, nullable=True)
 
     group: Mapped[CoreGroup] = relationship("CoreGroup")
