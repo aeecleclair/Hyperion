@@ -110,7 +110,7 @@ async def edit_raffle(
 
     if not (raffle.status == RaffleStatusType.creation):
         raise HTTPException(
-            status_code=403,
+            status_code=400,
             detail=f"Raffle {raffle_id} is not in Creation Mode",
         )
 
@@ -229,7 +229,7 @@ async def create_current_raffle_logo(
 
     if not (raffle.status == RaffleStatusType.creation):
         raise HTTPException(
-            status_code=403,
+            status_code=400,
             detail=f"Raffle {raffle_id} is not in Creation Mode",
         )
 
@@ -353,7 +353,7 @@ async def edit_packticket(
 
     if not (raffle.status == RaffleStatusType.creation):
         raise HTTPException(
-            status_code=403,
+            status_code=400,
             detail=f"Raffle {packticket.raffle_id} is not in Creation Mode",
         )
 
@@ -633,7 +633,7 @@ async def create_prize(
 
     if not (raffle.status == RaffleStatusType.creation):
         raise HTTPException(
-            status_code=403,
+            status_code=400,
             detail=f"Raffle {raffle.id} is not in Creation Mode",
         )
 
@@ -680,7 +680,7 @@ async def edit_prize(
 
     if not (raffle.status == RaffleStatusType.creation):
         raise HTTPException(
-            status_code=403,
+            status_code=400,
             detail=f"Raffle {raffle.id} is not in Creation Mode",
         )
 
@@ -776,7 +776,7 @@ async def create_prize_picture(
 
     if not (raffle.status == RaffleStatusType.creation):
         raise HTTPException(
-            status_code=403,
+            status_code=400,
             detail=f"Raffle {raffle.id} is not in Creation Mode",
         )
 
@@ -1028,7 +1028,7 @@ async def open_raffle(
 
     if raffle.status is not RaffleStatusType.creation:
         raise HTTPException(
-            status_code=403,
+            status_code=400,
             detail=f"You can't mark a raffle as open if it is not in creation mode. The current mode is {raffle.status}.",
         )
 
@@ -1065,7 +1065,7 @@ async def lock_raffle(
 
     if not (raffle.status == RaffleStatusType.open):
         raise HTTPException(
-            status_code=403,
+            status_code=400,
             detail=f"You can't mark a raffle as locked if it is not in open mode. The current mode is {raffle.status}.",
         )
 
