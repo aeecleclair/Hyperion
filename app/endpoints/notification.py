@@ -45,16 +45,6 @@ async def register_firebase_device(
 
     if firebase_device is not None:
         if firebase_device.user_id == user.id:
-            # We also need to subscribe the new token to the topics the user is subscribed to
-            topics = await cruds_notification.get_topic_membership_by_user_id(
-                user_id=user.id, db=db
-            )
-
-            for topic in topics:
-                await notification_manager.subscribe_tokens_to_topic(
-                    tokens=[firebase_token], topic=topic
-                )
-
             # Update the register date
             await cruds_notification.update_firebase_devices_register_date(
                 firebase_device_token=firebase_token,
@@ -62,9 +52,19 @@ async def register_firebase_device(
                 db=db,
             )
             return
-        # If the user is not the same, we indeed don't want the new user to receive the notifications of the old one
+        # If the user is not the same, we don't want the new user to receive the notifications of the old one
         await cruds_notification.delete_firebase_devices(
             firebase_device_token=firebase_token, db=db
+        )
+
+    # We also need to subscribe the new token to the topics the user is subscribed to
+    topics = await cruds_notification.get_topic_membership_by_user_id(
+        user_id=user.id, db=db
+    )
+
+    for topic in topics:
+        await notification_manager.subscribe_tokens_to_topic(
+            tokens=[firebase_token], topic=topic
         )
 
     firebase_device = models_notification.FirebaseDevice(
@@ -162,16 +162,9 @@ async def suscribe_to_topic(
 
     **The user must be authenticated to use this endpoint**
     """
-    topic_membership = models_notification.TopicMembership(user_id=user.id, topic=topic)
-
-    # TODO; when we have a new token for an user, we need to subscribe
 
     await notification_manager.subscribe_user_to_topic(
         user_id=user.id, topic=topic, db=db
-    )
-
-    await cruds_notification.create_topic_membership(
-        topic_membership=topic_membership, db=db
     )
 
 
@@ -194,10 +187,6 @@ async def unsuscribe_to_topic(
 
     await notification_manager.unsubscribe_user_to_topic(
         user_id=user.id, topic=topic, db=db
-    )
-
-    await cruds_notification.delete_topic_membership(
-        topic=topic, user_id=user.id, db=db
     )
 
 

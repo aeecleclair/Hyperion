@@ -1,4 +1,5 @@
 from datetime import date
+from typing import Sequence
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
@@ -12,21 +13,30 @@ async def create_message(
     message: models_notification.Message,
     db: AsyncSession,
 ) -> None:
-    """Create a new raffle in database and return it"""
-
     db.add(message)
     try:
         await db.commit()
-    except IntegrityError as err:
+    except IntegrityError:
         await db.rollback()
-        print(err)
+        raise
+
+
+async def create_batch_messages(
+    messages: list[models_notification.Message],
+    db: AsyncSession,
+) -> None:
+    db.add_all(messages)
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
         raise
 
 
 async def get_messages_by_firebase_token(
     firebase_token: str,
     db: AsyncSession,
-) -> list[models_notification.Message]:
+) -> Sequence[models_notification.Message]:
     """Create a new raffle in database and return it"""
 
     result = await db.execute(
@@ -42,23 +52,33 @@ async def remove_message_by_context_and_firebase_device_token(
     firebase_device_token: str,
     db: AsyncSession,
 ):
-    try:
-        await db.execute(
-            delete(models_notification.Message).where(
-                models_notification.Message.context == context,
-                models_notification.Message.firebase_device_token
-                == firebase_device_token,
-            )
+    await db.execute(
+        delete(models_notification.Message).where(
+            models_notification.Message.context == context,
+            models_notification.Message.firebase_device_token == firebase_device_token,
         )
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
+    )
+    await db.commit()
+
+
+async def remove_messages_by_context_and_firebase_device_tokens_list(
+    context: str,
+    tokens: list[str],
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_notification.Message).where(
+            models_notification.Message.context == context,
+            models_notification.Message.firebase_device_token.in_(tokens),
+        )
+    )
+    await db.commit()
 
 
 async def get_firebase_devices_by_user_id(
     user_id: str,
     db: AsyncSession,
-) -> list[models_notification.FirebaseDevice]:
+) -> Sequence[models_notification.FirebaseDevice]:
     result = await db.execute(
         select(models_notification.FirebaseDevice).where(
             models_notification.FirebaseDevice.user_id == user_id
@@ -182,7 +202,7 @@ async def delete_topic_membership(
 async def get_topic_membership_by_topic(
     topic: Topic,
     db: AsyncSession,
-) -> list[models_notification.TopicMembership]:
+) -> Sequence[models_notification.TopicMembership]:
     """Return the loaner with id"""
 
     result = await db.execute(
@@ -196,7 +216,7 @@ async def get_topic_membership_by_topic(
 async def get_topic_membership_by_user_id(
     user_id: str,
     db: AsyncSession,
-) -> list[models_notification.TopicMembership]:
+) -> Sequence[models_notification.TopicMembership]:
     """Return the loaner with id"""
 
     result = await db.execute(
