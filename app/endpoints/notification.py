@@ -196,6 +196,7 @@ async def unsuscribe_to_topic(
     tags=[Tags.notifications],
 )
 async def send_notif(
+    message: schemas_notification.Message,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
     notification_manager: NotificationManager = Depends(get_notification_manager),
@@ -208,14 +209,7 @@ async def send_notif(
     print("send notif")
     await notification_manager.send_notification_to_user(
         user_id=user.id,
-        message=schemas_notification.Message(
-            title="Hello world!",
-            content="test",
-            context="test2",
-            action_id="test",
-            expire_on=datetime.now(),
-            is_visible=True,
-        ),
+        message=message,
         db=db,
     )
     print("send notif done")
