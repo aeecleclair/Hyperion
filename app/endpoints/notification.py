@@ -191,7 +191,7 @@ async def unsuscribe_to_topic(
 
 
 @router.post(
-    "/notification/topics/send",
+    "/notification/send",
     status_code=201,
     tags=[Tags.notifications],
 )
