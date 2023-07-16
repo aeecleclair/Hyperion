@@ -190,6 +190,29 @@ async def unsuscribe_to_topic(
     )
 
 
+@router.get(
+    "/notification/topics",
+    status_code=200,
+    tags=[Tags.notifications],
+    response_model=list[Topic],
+)
+async def get_topic(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Get topics the user is subscribed to
+
+    **The user must be authenticated to use this endpoint**
+    """
+
+    memberships = await cruds_notification.get_topic_membership_by_user_id(
+        user_id=user.id, db=db
+    )
+
+    return [membership.topic for membership in memberships]
+
+
 @router.post(
     "/notification/send",
     status_code=201,
