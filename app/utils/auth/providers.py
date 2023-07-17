@@ -191,7 +191,9 @@ class WikijsAuthClient(BaseAuthClient):
     # https://github.com/requarks/wiki/blob/main/server/modules/authentication/oidc/definition.yml
 
     # redirect_uri should alway match the one provided by the client
-    redirect_uri: str = "https://wiki.myecl.fr/login/ebf58183-230b-4d2d-aa12-77bef30512b7/callback"
+    redirect_uri: str = (
+        "https://wiki.myecl.fr/login/ebf58183-230b-4d2d-aa12-77bef30512b7/callback"
+    )
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.utils.types.scopes_type.ScopeType for possible values
     allowed_scopes: Set[ScopeType] = {ScopeType.openid, ScopeType.profile}
