@@ -288,16 +288,13 @@ async def authorize_validation(
                 )
         redirect_uri = auth_client.redirect_uri
     else:
-        # A redirect_uri must be provided in the request, as none are hardcoded in the auth_client
-        if authorizereq.redirect_uri is None:
-            hyperion_access_logger.info(
-                f"Authorize-validation: Unprovided redirect_uri ({request_id})"
-            )
-            raise HTTPException(
-                status_code=422,
-                detail="Unprovided redirect_uri",
-            )
-        redirect_uri = authorizereq.redirect_uri
+        hyperion_access_logger.info(
+            f"Authorize-validation: Unprovided redirect_uri ({request_id})"
+        )
+        raise HTTPException(
+            status_code=422,
+            detail="Unprovided redirect_uri",
+        )
 
     # Special characters like `:` or `/` may be encoded as `%3A` and `%2F`, we need to decode them before returning the redirection object
     redirect_uri = urllib.parse.unquote(redirect_uri)

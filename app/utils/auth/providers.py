@@ -21,8 +21,8 @@ class BaseAuthClient:
     # Auth client configuration: override these parameters #
     ########################################################
 
-    # If no redirect_uri are hardcoded, the client will need to provide one in its request
-    redirect_uri: str | None = None
+    # redirect_uri should alway match the one provided by the client
+    redirect_uri: str
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.utils.types.scopes_type.ScopeType for possible values
     # WARNING: to be able to use openid connect, `ScopeType.openid` should always be allowed
@@ -75,8 +75,8 @@ class AppAuthClient(BaseAuthClient):
     An auth client for Hyperion mobile application
     """
 
-    # If no redirect_uri are hardcoded, the client will need to provide one in its request
-    redirect_uri: str | None = None
+    # redirect_uri should alway match the one provided by the client
+    redirect_uri: str
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.utils.types.scopes_type.ScopeType for possible values
     # WARNING: to be able to use openid connect, `ScopeType.openid` should always be allowed
@@ -91,6 +91,8 @@ class PostmanAuthClient(BaseAuthClient):
     An auth client for Postman
     """
 
+    # redirect_uri should alway match the one provided by the client
+    redirect_uri: str = "http://postman/"
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.utils.types.scopes_type.ScopeType for possible values
     # WARNING: to be able to use openid connect, `ScopeType.openid` should always be allowed
@@ -98,8 +100,8 @@ class PostmanAuthClient(BaseAuthClient):
 
 
 class NextcloudAuthClient(BaseAuthClient):
-    # If no redirect_uri are hardcoded, the client will need to provide one in its request
-    redirect_uri: str | None = None
+    # redirect_uri should alway match the one provided by the client
+    redirect_uri: str = "https://ecloud.myecl.fr/apps/oidc_login/oidc"
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.utils.types.scopes_type.ScopeType for possible values
     allowed_scopes: Set[ScopeType] = {ScopeType.openid}
@@ -129,8 +131,8 @@ class NextcloudAuthClient(BaseAuthClient):
 
 
 class PiwigoAuthClient(BaseAuthClient):
-    # If no redirect_uri are hardcoded, the client will need to provide one in its request
-    redirect_uri: str | None = None
+    # redirect_uri should alway match the one provided by the client
+    redirect_uri: str = "https://piwigo.myecl.fr/plugins/OpenIdConnect/auth.php"
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.utils.types.scopes_type.ScopeType for possible values
     # WARNING: to be able to use openid connect, `ScopeType.openid` should always be allowed
@@ -170,8 +172,8 @@ class PiwigoAuthClient(BaseAuthClient):
 
 
 class HedgeDocAuthClient(BaseAuthClient):
-    # If no redirect_uri are hardcoded, the client will need to provide one in its request
-    redirect_uri: str | None = None
+    # redirect_uri should alway match the one provided by the client
+    redirect_uri: str = "https://hedgedoc.eclair.ec-lyon.fr/auth/oauth2/callback"
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.utils.types.scopes_type.ScopeType for possible values
     allowed_scopes: Set[ScopeType] = {ScopeType.profile}
@@ -188,8 +190,8 @@ class HedgeDocAuthClient(BaseAuthClient):
 class WikijsAuthClient(BaseAuthClient):
     # https://github.com/requarks/wiki/blob/main/server/modules/authentication/oidc/definition.yml
 
-    # If no redirect_uri are hardcoded, the client will need to provide one in its request
-    redirect_uri: str | None = None
+    # redirect_uri should alway match the one provided by the client
+    redirect_uri: str = "https://wiki.myecl.fr/login/ebf58183-230b-4d2d-aa12-77bef30512b7/callback"
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.utils.types.scopes_type.ScopeType for possible values
     allowed_scopes: Set[ScopeType] = {ScopeType.openid, ScopeType.profile}
@@ -207,8 +209,8 @@ class WikijsAuthClient(BaseAuthClient):
 
 
 class SynapseAuthClient(BaseAuthClient):
-    # If no redirect_uri are hardcoded, the client will need to provide one in its request
-    redirect_uri: str | None = None
+    # redirect_uri should alway match the one provided by the client
+    redirect_uri: str = "https://matrix.eclair.ec-lyon.fr/_synapse/client/oidc/callback"
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.utils.types.scopes_type.ScopeType for possible values
     allowed_scopes: Set[ScopeType] = {ScopeType.openid, ScopeType.profile}
@@ -236,8 +238,8 @@ class SynapseAuthClient(BaseAuthClient):
 
 
 class MinecraftAuthClient(BaseAuthClient):
-    # If no redirect_uri are hardcoded, the client will need to provide one in its request
-    redirect_uri: str | None = None
+    # redirect_uri should alway match the one provided by the client
+    redirect_uri: str = "http://minecraft.myecl.fr:25566"
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.utils.types.scopes_type.ScopeType for possible values
     allowed_scopes: Set[ScopeType] = {ScopeType.profile}
@@ -253,8 +255,8 @@ class MinecraftAuthClient(BaseAuthClient):
 
 
 class ChallengerAuthClient(BaseAuthClient):
-    # If no redirect_uri are hardcoded, the client will need to provide one in its request
-    redirect_uri: str | None = None
+    # redirect_uri should alway match the one provided by the client
+    redirect_uri: str = "https://challenger.challenge-centrale-lyon.fr/login"
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.utils.types.scopes_type.ScopeType for possible values
     allowed_scopes: Set[ScopeType] = {ScopeType.openid, ScopeType.profile}
@@ -270,8 +272,8 @@ class ChallengerAuthClient(BaseAuthClient):
 
 
 class OpenProjectAuthClient(BaseAuthClient):
-    # If no redirect_uri are hardcoded, the client will need to provide one in its request
-    redirect_uri: str | None = None
+    # redirect_uri should alway match the one provided by the client
+    redirect_uri: str = "https://project.myecl.fr:443/auth/myecl/callback"
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.utils.types.scopes_type.ScopeType for possible values
     allowed_scopes: Set[ScopeType] = {ScopeType.openid, ScopeType.profile}
