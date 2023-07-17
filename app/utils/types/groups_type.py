@@ -23,7 +23,6 @@ class GroupType(str, Enum):
     AE = "45649735-866a-49df-b04b-a13c74fd5886"
     CAA = "6c6d7e88-fdb8-4e42-b2b5-3d3cfd12e7d6"
     cinema = "ce5f36e6-5377-489f-9696-de70e2477300"
-    soli = "566b6455-ee7e-4933-bd09-83497167e7a8"
 
     # Module related groups
 
