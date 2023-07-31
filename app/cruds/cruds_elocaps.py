@@ -1,5 +1,6 @@
 from datetime import date
 from math import exp
+from typing import Sequence
 
 from sqlalchemy import desc, func, select
 from sqlalchemy.exc import IntegrityError
@@ -11,7 +12,7 @@ from app.schemas import schemas_elocaps
 from app.utils.types.elocaps_types import CapsMode
 
 
-async def get_latest_games(db: AsyncSession, count=10) -> list[models_elocaps.Game]:
+async def get_latest_games(db: AsyncSession, count=10) -> Sequence[models_elocaps.Game]:
     result = await db.execute(
         select(models_elocaps.Game)
         .order_by(desc(models_elocaps.Game.timestamp))
@@ -27,7 +28,7 @@ async def get_latest_games(db: AsyncSession, count=10) -> list[models_elocaps.Ga
 
 async def get_games_played_on(
     db: AsyncSession, time: date
-) -> list[models_elocaps.Game]:
+) -> Sequence[models_elocaps.Game]:
     result = await db.execute(
         select(models_elocaps.Game)
         .where(func.DATE(models_elocaps.Game.timestamp) == time)
@@ -42,7 +43,7 @@ async def get_games_played_on(
 
 async def get_player_info(
     db: AsyncSession, user_id: str
-) -> list[models_elocaps.Player]:
+) -> Sequence[models_elocaps.Player]:
     result = await db.execute(
         select(models_elocaps.Player).where(models_elocaps.Player.user_id == user_id)
     )
@@ -215,7 +216,7 @@ async def end_game(db: AsyncSession, game_id: str) -> None:
 
 async def get_leaderboard(
     db: AsyncSession, game_mode: CapsMode, count=10
-) -> list[models_elocaps.Player]:
+) -> Sequence[models_elocaps.Player]:
     result = await db.execute(
         select(models_elocaps.Player)
         .where(models_elocaps.Player.mode == game_mode)

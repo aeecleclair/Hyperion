@@ -2,15 +2,17 @@ from datetime import date, datetime, timedelta
 from random import randint
 from typing import TypedDict
 
+import pytest_asyncio
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from app.main import app
 from app.models import models_core, models_elocaps
 from app.utils.types.elocaps_types import CapsMode
 from app.utils.types.groups_type import GroupType
+from tests.commons import event_loop  # noqa
 from tests.commons import (
     TestingSessionLocal,
+    add_object_to_db,
     client,
     create_api_access_token,
     create_user_with_groups,
@@ -33,7 +35,7 @@ async def create_games(db, n):
     for mode in CapsMode:
         for user in users:
             player = models_elocaps.Player(user_id=user["user"].id, mode=mode)
-            db.add(player)
+            await add_object_to_db(player)
             user["players"][mode] = player
     await db.commit()
     for i in range(n):
@@ -76,11 +78,11 @@ async def create_games(db, n):
     )
 
 
-@app.on_event("startup")  # create the data needed in the tests
-async def startuptest():
+@pytest_asyncio.fixture(scope="module", autouse=True)
+async def initialize_the_things_that_are_needed_for_the_tests():
     async with TestingSessionLocal() as db:
         for i in range(4):
-            user = await create_user_with_groups([GroupType.student], db)
+            user = await create_user_with_groups([GroupType.student])
             token = create_api_access_token(user)
             users.append({"user": user, "token": token, "players": {}})
         await create_games(db, 100)
@@ -155,23 +157,6 @@ def test_validate_and_end_game():
         and response.json()["id"] == game.id
         and response.json()["is_confirmed"]
     )
-
-
-def test_my_games():
-    response = client.get(
-        "/elocaps/players/me/games",
-        headers={"Authorization": f"Bearer {users[0]['token']}"},
-    )
-    assert response.status_code == 200 and len(response.json()) == len(
-        [i for i in game_players if i.user_id == users[0]["user"].id]
-    )
-
-
-def test_my_info():
-    response = client.get(
-        "/elocaps/players/me", headers={"Authorization": f"Bearer {users[0]['token']}"}
-    )
-    assert response.status_code == 200
 
 
 def test_player_games():

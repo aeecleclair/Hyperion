@@ -9,6 +9,7 @@ from app.utils.types.elocaps_types import CapsMode
 
 
 class PlayerBase(BaseModel):
+    user_id: str
     elo: int
     mode: CapsMode
 

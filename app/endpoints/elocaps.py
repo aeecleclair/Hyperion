@@ -89,32 +89,6 @@ async def confirm_game(
 
 
 @router.get(
-    "/elocaps/players/me/games",
-    response_model=list[schemas_elocaps.Game],
-    status_code=200,
-    tags=[Tags.elocaps],
-)
-async def get_my_games(
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
-):
-    return await cruds_elocaps.get_player_games(db, user.id)
-
-
-@router.get(
-    "/elocaps/players/me",
-    response_model=list[schemas_elocaps.PlayerBase],
-    status_code=200,
-    tags=[Tags.elocaps],
-)
-async def get_my_info(
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
-):
-    return await cruds_elocaps.get_player_info(db, user.id)
-
-
-@router.get(
     "/elocaps/players/{user_id}/games",
     response_model=list[schemas_elocaps.Game],
     status_code=200,

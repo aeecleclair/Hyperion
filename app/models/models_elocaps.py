@@ -3,17 +3,8 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import uuid4
 
-from sqlalchemy import (
-    Boolean,
-    Column,
-    DateTime,
-    Enum,
-    ForeignKey,
-    Integer,
-    String,
-    func,
-)
-from sqlalchemy.orm import relationship
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 from app.models import models_core
@@ -24,28 +15,34 @@ class Player(Base):
     __tablename__ = "elocaps_player"
 
     # Needed because relationships are awful and don't even work if it's not there
-    id: str = Column(
+    id: Mapped[str] = mapped_column(
         String, primary_key=True, nullable=False, default=lambda: str(uuid4())
     )
-    user_id: str = Column(ForeignKey("core_user.id"), nullable=False)
-    mode: CapsMode = Column(Enum(CapsMode), nullable=False)
+    user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), nullable=False)
+    mode: Mapped[CapsMode] = mapped_column(Enum(CapsMode), nullable=False)
     # User id and mode should be unique
-    elo: int = Column(Integer, nullable=False, default=1000)
+    elo: Mapped[int] = mapped_column(Integer, nullable=False, default=1000)
 
-    user: models_core.CoreUser = relationship("CoreUser")
-    game_players: GamePlayer = relationship("GamePlayer", back_populates="player")
+    user: Mapped[models_core.CoreUser] = relationship("CoreUser")
+    game_players: Mapped[GamePlayer] = relationship(
+        "GamePlayer", back_populates="player"
+    )
 
 
 class Game(Base):
     __tablename__ = "elocaps_game"
 
-    id: str = Column(
+    id: Mapped[str] = mapped_column(
         String, primary_key=True, nullable=False, default=lambda: str(uuid4())
     )
-    timestamp: datetime = Column(DateTime, nullable=False, default=func.now())
-    mode: CapsMode = Column(Enum(CapsMode), nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=func.now()
+    )
+    mode: Mapped[CapsMode] = mapped_column(Enum(CapsMode), nullable=False)
 
-    game_players: list[GamePlayer] = relationship("GamePlayer", back_populates="game")
+    game_players: Mapped[list[GamePlayer]] = relationship(
+        "GamePlayer", back_populates="game"
+    )
 
     @property
     def is_confirmed(self) -> bool:
@@ -70,19 +67,19 @@ class Game(Base):
 class GamePlayer(Base):
     __tablename__ = "elocaps_game_player"
 
-    game_id: str = Column(
+    game_id: Mapped[str] = mapped_column(
         ForeignKey("elocaps_game.id"), nullable=False, primary_key=True
     )
-    player_id: str = Column(
+    player_id: Mapped[str] = mapped_column(
         ForeignKey("elocaps_player.id"), nullable=False, primary_key=True
     )
-    team: int = Column(Integer, nullable=False)
-    quarters: int = Column(Integer, nullable=False)
-    has_confirmed: bool = Column(Boolean, nullable=False, default=False)
-    elo_gain: int = Column(Integer, nullable=False, default=0)
+    team: Mapped[int] = mapped_column(Integer, nullable=False)
+    quarters: Mapped[int] = mapped_column(Integer, nullable=False)
+    has_confirmed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    elo_gain: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
-    game: Game = relationship("Game", viewonly=True)
-    player: Player = relationship(
+    game: Mapped[Game] = relationship("Game", viewonly=True)
+    player: Mapped[Player] = relationship(
         "Player", uselist=False, back_populates="game_players"
     )
 
