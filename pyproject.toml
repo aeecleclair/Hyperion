@@ -30,3 +30,4 @@ warn_unreachable = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+filterwarnings = "error"
