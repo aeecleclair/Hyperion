@@ -32,7 +32,7 @@ ticket_to_draw: models_raffle.Ticket | None = None
 cash: models_raffle.Cash | None = None
 
 
-@pytest_asyncio.fixture(scope="session", autouse=True)
+@pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects():
     global admin_user, BDE_user, student_user, raffle, raffle_to_draw, packticket, packticket_to_draw, ticket, ticket_to_draw, prize, prize_to_draw, cash, raffle_to_delete, packticket_to_delete
 

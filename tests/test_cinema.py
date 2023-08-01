@@ -22,7 +22,7 @@ token_cinema: str = ""
 token_simple: str = ""
 
 
-@pytest_asyncio.fixture(scope="session", autouse=True)
+@pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects():
     global cinema_user_cinema
     cinema_user_cinema = await create_user_with_groups([GroupType.cinema])

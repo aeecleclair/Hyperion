@@ -11,7 +11,7 @@ admin_user: models_core.CoreUser | None = None
 student_user: models_core.CoreUser | None = None
 
 
-@pytest_asyncio.fixture(scope="session", autouse=True)
+@pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects():
     global admin_user, student_user
 

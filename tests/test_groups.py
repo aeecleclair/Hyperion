@@ -18,7 +18,7 @@ admin_user: models_core.CoreUser | None = None
 id_eclair = "8aab79e7-1e15-456d-b6e2-11e4e9f77e4f"
 
 
-@pytest_asyncio.fixture(scope="session", autouse=True)
+@pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects():
     global admin_user
 
