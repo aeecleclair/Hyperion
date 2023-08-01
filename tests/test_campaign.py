@@ -25,7 +25,7 @@ section2id: str = ""
 list2id: str = ""
 
 
-@pytest_asyncio.fixture(scope="session", autouse=True)
+@pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects():
     global caa_user, ae_user
 

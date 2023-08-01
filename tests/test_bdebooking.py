@@ -23,7 +23,7 @@ token_bde: str = ""
 token_simple: str = ""
 
 
-@pytest_asyncio.fixture(scope="session", autouse=True)
+@pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects():
     global booking_user_bde
     booking_user_bde = await create_user_with_groups([GroupType.BDE])

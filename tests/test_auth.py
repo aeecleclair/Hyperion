@@ -13,7 +13,7 @@ from tests.commons import event_loop  # noqa
 from tests.commons import add_object_to_db, client
 
 
-@pytest_asyncio.fixture(scope="session", autouse=True)
+@pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects():
     user = models_core.CoreUser(
         id=str(uuid.uuid4()),
