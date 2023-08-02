@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date
 
 from fastapi import APIRouter, Body, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -58,13 +58,13 @@ async def register_firebase_device(
         )
 
     # We also need to subscribe the new token to the topics the user is subscribed to
-    topics = await cruds_notification.get_topic_membership_by_user_id(
+    topic_memberships = await cruds_notification.get_topic_membership_by_user_id(
         user_id=user.id, db=db
     )
 
-    for topic in topics:
+    for topic_membership in topic_memberships:
         await notification_manager.subscribe_tokens_to_topic(
-            tokens=[firebase_token], topic=topic
+            tokens=[firebase_token], topic=topic_membership.topic
         )
 
     firebase_device = models_notification.FirebaseDevice(
@@ -97,13 +97,13 @@ async def unregister_firebase_device(
     # Anybody may unregister a device if they know its token, which should be secret
 
     # We also need to unsubscribe the token to the topics the user is subscribed to
-    topics = await cruds_notification.get_topic_membership_by_user_id(
+    topic_memberships = await cruds_notification.get_topic_membership_by_user_id(
         user_id=user.id, db=db
     )
 
-    for topic in topics:
+    for topic_membership in topic_memberships:
         await notification_manager.unsubscribe_tokens_to_topic(
-            tokens=[firebase_token], topic=topic
+            tokens=[firebase_token], topic=topic_membership.topic
         )
 
     await cruds_notification.delete_firebase_devices(
