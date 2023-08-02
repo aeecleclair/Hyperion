@@ -19,9 +19,10 @@ class Message(BaseModel):
     content: str | None
 
     # TODO
-    action_id: str = Field(
+    action_module: str = Field(
         description="An action id is used by Titan to know what to do when receiving the notification"
     )
+    action_table: str
     expire_on: datetime
 
     class Config:

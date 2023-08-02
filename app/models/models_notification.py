@@ -27,7 +27,8 @@ class Message(Base):
 
     # TODO
     # An action id is used by Titan to know what to do when receiving the notification
-    action_id: Mapped[str] = mapped_column(String)
+    action_module: Mapped[str] = mapped_column(String)
+    action_table: Mapped[str] = mapped_column(String)
     expire_on: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
