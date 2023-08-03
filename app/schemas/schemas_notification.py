@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date
 
 from pydantic import BaseModel, Field
 
@@ -23,7 +23,7 @@ class Message(BaseModel):
         description="An action id is used by Titan to know what to do when receiving the notification"
     )
     action_table: str
-    expire_on: datetime
+    expire_on: date
 
     class Config:
         orm_mode = True

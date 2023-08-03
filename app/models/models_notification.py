@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, Enum, ForeignKey, String
+from sqlalchemy import Boolean, Date, Enum, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -29,7 +29,7 @@ class Message(Base):
     # An action id is used by Titan to know what to do when receiving the notification
     action_module: Mapped[str] = mapped_column(String)
     action_table: Mapped[str] = mapped_column(String)
-    expire_on: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expire_on: Mapped[date] = mapped_column(Date, nullable=False)
 
 
 class FirebaseDevice(Base):
