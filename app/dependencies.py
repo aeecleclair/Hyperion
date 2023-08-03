@@ -12,7 +12,7 @@ from functools import lru_cache
 from typing import Any, AsyncGenerator, Callable, Coroutine
 
 import redis
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import BackgroundTasks, Depends, HTTPException, Request, status
 from jose import jwt
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import (
@@ -27,7 +27,7 @@ from app.core.config import Settings
 from app.cruds import cruds_users
 from app.models import models_core
 from app.schemas import schemas_auth
-from app.utils.communication.notifications import NotificationManager
+from app.utils.communication.notifications import NotificationManager, NotificationTool
 from app.utils.redis import connect
 from app.utils.tools import is_user_member_of_an_allowed_group
 from app.utils.types.groups_type import GroupType
@@ -145,7 +145,6 @@ def get_redis_client(
 
 def get_notification_manager(
     settings: Settings = Depends(get_settings),
-    db: AsyncSession = Depends(get_db),
 ) -> NotificationManager:
     """
     Dependency that returns the notification manager
@@ -153,9 +152,29 @@ def get_notification_manager(
     global notification_manager
 
     if notification_manager is None:
-        notification_manager = NotificationManager(settings=settings, db=db)
+        notification_manager = NotificationManager(settings=settings)
 
     return notification_manager
+
+
+def get_notification_tool(
+    background_tasks: BackgroundTasks,
+    settings: Settings = Depends(get_settings),
+    db: AsyncSession = Depends(get_db),
+) -> NotificationTool:
+    """
+    Dependency that returns the notification manager
+    """
+    global notification_manager
+
+    if notification_manager is None:
+        notification_manager = NotificationManager(settings=settings)
+
+    return NotificationTool(
+        background_tasks=background_tasks,
+        notification_manager=notification_manager,
+        db=db,
+    )
 
 
 def get_user_from_token_with_scopes(

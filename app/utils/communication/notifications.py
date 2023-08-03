@@ -1,6 +1,7 @@
 import logging
 
 import firebase_admin
+from fastapi import BackgroundTasks
 from firebase_admin import credentials, messaging
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -32,7 +33,7 @@ class NotificationManager:
 
     # See https://firebase.google.com/docs/cloud-messaging/send-message?hl=fr for documentation and examples
 
-    def __init__(self, settings: Settings, db: AsyncSession):
+    def __init__(self, settings: Settings):
         self.use_firebase = settings.USE_FIREBASE
 
         if not self.use_firebase:
@@ -312,4 +313,31 @@ class NotificationManager:
 
         await cruds_notification.delete_topic_membership(
             topic=topic, user_id=user_id, db=db
+        )
+
+
+class NotificationTool:
+    """
+    Utility class to send notifications in the background.
+
+    This class should be instantiated before each use with a `BackgroundTasks` manager.
+    The best way to do so would be to use a
+    """
+
+    def __init__(
+        self,
+        background_tasks: BackgroundTasks,
+        notification_manager: NotificationManager,
+        db: AsyncSession,
+    ):
+        self.background_tasks = background_tasks
+        self.notification_manager = notification_manager
+        self.db = db
+
+    async def send_notification_to_user(self, user_id: str, message: Message):
+        self.background_tasks.add_task(
+            self.notification_manager.send_notification_to_user,
+            user_id=user_id,
+            message=message,
+            db=self.db,
         )
