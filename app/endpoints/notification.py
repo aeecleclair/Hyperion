@@ -7,12 +7,13 @@ from app.cruds import cruds_notification
 from app.dependencies import (
     get_db,
     get_notification_manager,
+    get_notification_tool,
     is_user_a_member,
     is_user_a_member_of,
 )
 from app.models import models_core, models_notification
 from app.schemas import schemas_notification
-from app.utils.communication.notifications import NotificationManager
+from app.utils.communication.notifications import NotificationManager, NotificationTool
 from app.utils.types.groups_type import GroupType
 from app.utils.types.notification_types import Topic
 from app.utils.types.tags import Tags
@@ -222,7 +223,7 @@ async def send_notif(
     message: schemas_notification.Message,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
-    notification_manager: NotificationManager = Depends(get_notification_manager),
+    notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
     Unsubscribe to a topic
@@ -230,9 +231,8 @@ async def send_notif(
     **The user must be authenticated to use this endpoint**
     """
     print("send notif")
-    await notification_manager.send_notification_to_user(
+    await notification_tool.send_notification_to_user(
         user_id=user.id,
         message=message,
-        db=db,
     )
     print("send notif done")
