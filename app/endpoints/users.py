@@ -636,7 +636,7 @@ async def migrate_mail_confirm(
     This endpoint will updates the user new email address.
     """
 
-    migration_object = await cruds_users.get_email_migration_code_by_token_and_user_id(
+    migration_object = await cruds_users.get_email_migration_code_by_token(
         confirmation_token=token,
         db=db,
     )
@@ -656,7 +656,7 @@ async def migrate_mail_confirm(
     except Exception as error:
         raise HTTPException(status_code=400, detail=str(error))
 
-    await cruds_users.delete_email_migration_code_by_token_and_user_id(
+    await cruds_users.delete_email_migration_code_by_token(
         confirmation_token=token,
         db=db,
     )

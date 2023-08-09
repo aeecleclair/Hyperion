@@ -188,7 +188,7 @@ async def create_email_migration_code(
         raise
 
 
-async def get_email_migration_code_by_token_and_user_id(
+async def get_email_migration_code_by_token(
     confirmation_token: str,
     db: AsyncSession,
 ) -> models_core.CoreUserEmailMigrationCode | None:
@@ -201,7 +201,7 @@ async def get_email_migration_code_by_token_and_user_id(
     return result.scalars().first()
 
 
-async def delete_email_migration_code_by_token_and_user_id(
+async def delete_email_migration_code_by_token(
     confirmation_token: str,
     db: AsyncSession,
 ):
