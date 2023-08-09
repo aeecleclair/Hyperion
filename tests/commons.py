@@ -114,10 +114,12 @@ def event_loop():
         loop.close()
 
 
-async def create_user_with_groups(groups: list[GroupType]) -> models_core.CoreUser:
+async def create_user_with_groups(
+    groups: list[GroupType], core_user: models_core.CoreUser | None = None
+) -> models_core.CoreUser:
     """
     Add a dummy user to the database
-    The user will be named with its user_id. Email and password will both be its user_id
+    If a core_user is not provided, the user will be named with its user_id and email and password will both be its user_id
 
     The user will be added to provided `groups`
     """
@@ -125,14 +127,18 @@ async def create_user_with_groups(groups: list[GroupType]) -> models_core.CoreUs
 
     password_hash = security.get_password_hash(user_id)
 
-    user = models_core.CoreUser(
-        id=user_id,
-        email=user_id,
-        password_hash=password_hash,
-        name=user_id,
-        firstname=user_id,
-        floor=FloorsType.Autre,
-    )
+    if core_user is None:
+        user = models_core.CoreUser(
+            id=user_id,
+            email=user_id,
+            password_hash=password_hash,
+            name=user_id,
+            firstname=user_id,
+            floor=FloorsType.Autre,
+        )
+    else:
+        user = core_user
+
     async with TestingSessionLocal() as db:
         try:
             await cruds_users.create_user(db=db, user=user)
