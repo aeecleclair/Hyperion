@@ -19,6 +19,7 @@ from app.dependencies import get_db, get_redis_client, get_settings
 from app.models import models_core
 from app.schemas import schemas_auth
 from app.utils.redis import connect, disconnect
+from app.utils.tools import get_random_string
 from app.utils.types.floors_type import FloorsType
 from app.utils.types.groups_type import GroupType
 
@@ -115,7 +116,13 @@ def event_loop():
 
 
 async def create_user_with_groups(
-    groups: list[GroupType], core_user: models_core.CoreUser | None = None
+    groups: list[GroupType],
+    user_id: str | None = None,
+    email: str | None = None,
+    password: str | None = None,
+    name: str | None = None,
+    firstname: str | None = None,
+    floor: FloorsType = FloorsType.Autre,
 ) -> models_core.CoreUser:
     """
     Add a dummy user to the database
@@ -123,21 +130,19 @@ async def create_user_with_groups(
 
     The user will be added to provided `groups`
     """
-    user_id = str(uuid.uuid4())
 
-    password_hash = security.get_password_hash(user_id)
+    user_id = user_id or str(uuid.uuid4())
+    assert user_id is not None
+    password_hash = security.get_password_hash(password or get_random_string())
 
-    if core_user is None:
-        user = models_core.CoreUser(
-            id=user_id,
-            email=user_id,
-            password_hash=password_hash,
-            name=user_id,
-            firstname=user_id,
-            floor=FloorsType.Autre,
-        )
-    else:
-        user = core_user
+    user = models_core.CoreUser(
+        id=user_id,
+        email=email or (get_random_string() + "@etu.ec-lyon.fr"),
+        password_hash=password_hash,
+        name=name or get_random_string(),
+        firstname=firstname or get_random_string(),
+        floor=floor,
+    )
 
     async with TestingSessionLocal() as db:
         try:

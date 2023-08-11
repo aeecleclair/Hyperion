@@ -1,9 +1,6 @@
-import uuid
-
 import pytest_asyncio
 
 from app.models import models_core
-from app.utils.types.floors_type import FloorsType
 from app.utils.types.groups_type import GroupType
 
 # We need to import event_loop for pytest-asyncio routine defined bellow
@@ -27,14 +24,7 @@ async def init_objects():
 
     student_user_with_old_email = await create_user_with_groups(
         [GroupType.student],
-        core_user=models_core.CoreUser(
-            id=str(uuid.uuid4()),
-            email="fabristpp.eclair@ecl21.ec-lyon.fr",
-            password_hash="secret",
-            name="eclair",
-            firstname="fabristpp",
-            floor=FloorsType.Autre,
-        ),
+        email="fabristpp.eclair@ecl21.ec-lyon.fr",
     )
 
 
