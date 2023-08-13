@@ -6,12 +6,15 @@ from pydantic import BaseModel, Field
 class AdvertiserBase(BaseModel):
     name: str
     group_manager_id: str = Field(
-        description="The group manager id should by a group identifier"
+        description="The group manager id should be a group identifier"
     )
 
 
 class AdvertiserComplete(AdvertiserBase):
     id: str
+
+    class Config:
+        orm_mode = True
 
 
 class AdvertiserUpdate(BaseModel):
@@ -23,8 +26,12 @@ class AdvertBase(BaseModel):
     title: str
     content: str
     advertiser_id: str
-    co_advertisers_id: list[str] | None = None
-    tags: list[str] | None = None
+
+
+#    co_advertisers_id: list[str] | None = None
+
+
+#    tags: list[str] | None = None
 
 
 class AdvertComplete(AdvertBase):
@@ -38,24 +45,9 @@ class AdvertComplete(AdvertBase):
 class AdvertUpdate(BaseModel):
     title: str | None = None
     content: str | None = None
-    groups_id: list[str] | None = None
-    tags: list[str] | None = None
 
 
-class TagBase(BaseModel):
-    name: str
-    color: str | None = None
-    group_manager_id: str = Field(
-        description="The group manager id should by a group identifier"
-    )
+#    co_advertisers_id: list[str] | None = None
 
 
-class TagComplete(TagBase):
-    id: str
-
-
-class TagUpdate(BaseModel):
-    name: str | None = None
-    content: str | None = None
-    groups_id: list[str] | None = None
-    tags: list[str] | None = None
+#    tags: list[str] | None = None
