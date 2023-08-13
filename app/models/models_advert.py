@@ -42,3 +42,4 @@ class Tags(Base):
     id: str = Column(String, primary_key=True, nullable=False)
     name: str = Column(String, nullable=False)
     couleur: str = Column(String, nullable=False)
+    group_manager_id: str = Column(String, nullable=False)
