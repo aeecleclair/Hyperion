@@ -110,6 +110,13 @@ async def get_tag_by_id(db: AsyncSession, tag_id: str) -> models_advert.Tags | N
     return result.scalars().first()
 
 
+async def get_tag_by_name(db: AsyncSession, tag_name: str) -> models_advert.Tags | None:
+    result = await db.execute(
+        select(models_advert.Tags).where(models_advert.Tags.name == tag_name)
+    )
+    return result.scalars().first()
+
+
 async def create_tag(tag: models_advert.Tags, db: AsyncSession) -> models_advert.Tags:
     db_tag = models_advert.Tags(**tag.dict())
     db.add(db_tag)
