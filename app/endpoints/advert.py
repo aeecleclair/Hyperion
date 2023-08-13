@@ -203,17 +203,16 @@ async def read_advert(
     **The user must be authenticated to use this endpoint**
     """
 
-    return await cruds_advert.get_adverts(db=db)
+    return await cruds_advert.get_advert_by_id(advert_id=advert_id, db=db)
 
 
 @router.post(
-    "/advert/adverts/advertisers/{advertiser_id}",
+    "/advert/adverts/",
     response_model=schemas_advert.AdvertComplete,
     status_code=201,
     tags=[Tags.advert],
 )
 async def create_advert(
-    advertiser_id: str,
     advert: schemas_advert.AdvertBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
@@ -224,7 +223,9 @@ async def create_advert(
     **The user must be a member of the advertiser group_manager to use this endpoint**
     """
     advertiser: models_advert.Advertiser | None = (
-        await cruds_advert.get_advertiser_by_id(advertiser_id=advertiser_id, db=db)
+        await cruds_advert.get_advertiser_by_id(
+            advertiser_id=advert.advertiser_id, db=db
+        )
     )
     if advertiser is None:
         raise HTTPException(
@@ -234,7 +235,7 @@ async def create_advert(
     if not is_user_member_of_an_allowed_group(user, [advertiser.group_manager_id]):
         raise HTTPException(
             status_code=403,
-            detail=f"Unauthorized to manage {advertiser_id} adverts",
+            detail=f"Unauthorized to manage {advert.advertiser_id} adverts",
         )
 
     db_advert = schemas_advert.AdvertComplete(
@@ -245,6 +246,87 @@ async def create_advert(
         return result
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
+
+
+@router.patch("/advert/adverts/{advert_id}", status_code=200, tags=[Tags.advert])
+async def update_session(
+    advert_id: str,
+    advert_update: schemas_advert.AdvertUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Edit an advert
+
+    **The user must be a member of the advertiser group_manager to use this endpoint**
+    """
+    advert: models_advert.Advert | None = await cruds_advert.get_advert_by_id(
+        advert_id=advert_id, db=db
+    )
+    if advert is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid advert_id",
+        )
+
+    advertiser: models_advert.Advertiser | None = (
+        await cruds_advert.get_advertiser_by_id(
+            advertiser_id=advert.advertiser.id, db=db
+        )
+    )
+    if advertiser is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid advertiser_id",
+        )
+    if not is_user_member_of_an_allowed_group(user, [advertiser.group_manager_id]):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Unauthorized to manage {advert.advertiser_id} adverts",
+        )
+
+    await cruds_advert.update_advert(
+        advert_id=advert_id, advert_update=advert_update, db=db
+    )
+
+
+@router.delete("/advert/adverts/{advert_id}", status_code=204, tags=[Tags.advert])
+async def delete_session(
+    advert_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Delete an advert
+
+    **The user must be a member of the advertiser group_manager to use this endpoint**
+    """
+    advert: models_advert.Advert | None = await cruds_advert.get_advert_by_id(
+        advert_id=advert_id, db=db
+    )
+    if advert is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid advert_id",
+        )
+
+    advertiser: models_advert.Advertiser | None = (
+        await cruds_advert.get_advertiser_by_id(
+            advertiser_id=advert.advertiser.id, db=db
+        )
+    )
+    if advertiser is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid advertiser_id",
+        )
+    if not is_user_member_of_an_allowed_group(user, [advertiser.group_manager_id]):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Unauthorized to manage {advert.advertiser.id} adverts",
+        )
+
+    await cruds_advert.delete_advert(advert_id=advert_id, db=db)
 
 
 @router.get(
