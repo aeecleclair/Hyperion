@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 from pytz import timezone
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -196,6 +196,26 @@ async def read_adverts(
     """
 
     return await cruds_advert.get_adverts(db=db)
+
+
+@router.get(
+    "/advert/adverts/search",
+    response_model=list[schemas_advert.AdvertComplete],
+    status_code=200,
+    tags=[Tags.advert],
+)
+async def search_adverts(
+    advertisers: list[str] = Query(default=[]),
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Search adverts by advertisers
+
+    **The user must be authenticated to use this endpoint**
+    """
+
+    return await cruds_advert.get_adverts_by_advertisers(advertisers=advertisers, db=db)
 
 
 @router.get(

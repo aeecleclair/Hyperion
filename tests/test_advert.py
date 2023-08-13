@@ -107,6 +107,14 @@ def test_get_advert_by_id():
     assert response.status_code == 200
 
 
+def test_get_advert_by_advertisers():
+    response = client.get(
+        f"/advert/adverts/search?advertisers={advertiser.id}",
+        headers={"Authorization": f"Bearer {token_simple}"},
+    )
+    assert response.status_code == 200
+
+
 def test_create_advert():
     response = client.post(
         "/advert/adverts",
