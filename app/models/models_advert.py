@@ -14,6 +14,7 @@ class Advert(Base):
     content: str = Column(String, nullable=False)
     date: datetime = Column(DateTime(timezone=True), nullable=False)
     author: int = Column(String, nullable=False)
+    groupe: int = Column(String, nullable=False)
     tags: str = Column(list, nullable=True)
     lists: list["Tags"] = relationship("Tags", back_populates="advert")
 
