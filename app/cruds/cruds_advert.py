@@ -1,3 +1,5 @@
+from typing import Sequence
+
 from sqlalchemy import delete, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,7 +8,7 @@ from app.models import models_advert
 from app.schemas import schemas_advert
 
 
-async def get_advertisers(db: AsyncSession) -> list[models_advert.Advertiser]:
+async def get_advertisers(db: AsyncSession) -> Sequence[models_advert.Advertiser]:
     result = await db.execute(select(models_advert.Advertiser))
     return result.scalars().all()
 
@@ -65,7 +67,7 @@ async def delete_advertiser(advertiser_id: str, db: AsyncSession):
         raise ValueError()
 
 
-async def get_adverts(db: AsyncSession) -> list[models_advert.Advert]:
+async def get_adverts(db: AsyncSession) -> Sequence[models_advert.Advert]:
     result = await db.execute(select(models_advert.Advert))
     return result.scalars().all()
 
@@ -81,7 +83,7 @@ async def get_advert_by_id(
 
 async def get_adverts_by_advertisers(
     db: AsyncSession, advertisers: list[str] = []
-) -> list[models_advert.Advert]:
+) -> Sequence[models_advert.Advert]:
     result = await db.execute(
         select(models_advert.Advert).where(
             or_(
