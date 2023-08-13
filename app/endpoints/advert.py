@@ -27,7 +27,7 @@ router = APIRouter()
 
 
 @router.get(
-    "/advert/advertisers/",
+    "/advert/advertisers",
     response_model=list[schemas_advert.AdvertiserComplete],
     status_code=200,
     tags=[Tags.advert],
@@ -46,7 +46,7 @@ async def read_advertisers(
 
 
 @router.post(
-    "/advert/advertisers/",
+    "/advert/advertisers",
     response_model=schemas_advert.AdvertiserComplete,
     status_code=201,
     tags=[Tags.advert],
@@ -207,7 +207,7 @@ async def read_advert(
 
 
 @router.post(
-    "/advert/adverts/",
+    "/advert/adverts",
     response_model=schemas_advert.AdvertComplete,
     status_code=201,
     tags=[Tags.advert],

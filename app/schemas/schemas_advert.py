@@ -9,9 +9,6 @@ class AdvertiserBase(BaseModel):
         description="The group manager id should by a group identifier"
     )
 
-    class Config:
-        orm_mode = True
-
 
 class AdvertiserComplete(AdvertiserBase):
     id: str
@@ -23,7 +20,7 @@ class AdvertiserUpdate(BaseModel):
 
 
 class AdvertBase(BaseModel):
-    name: str
+    title: str
     content: str
     advertiser_id: str
     co_advertisers_id: list[str] | None = None
@@ -32,19 +29,21 @@ class AdvertBase(BaseModel):
 
 class AdvertComplete(AdvertBase):
     id: str
-    advertiser: AdvertiserComplete
     date: datetime | None = None
+
+    class Config:
+        orm_mode = True
 
 
 class AdvertUpdate(BaseModel):
-    name: str | None = None
+    title: str | None = None
     content: str | None = None
     groups_id: list[str] | None = None
     tags: list[str] | None = None
 
 
 class TagBase(BaseModel):
-    name: str | None = None
+    name: str
     color: str | None = None
     group_manager_id: str = Field(
         description="The group manager id should by a group identifier"
