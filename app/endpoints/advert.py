@@ -58,14 +58,14 @@ async def read_advertisers(
 async def create_advertiser(
     advertiser: schemas_advert.AdvertiserBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Create a new advertiser.
 
     Each advertiser is associated with a `manager_group`. Users belonging to this group are able to manage the adverts related to the advertiser.
 
-    **This endpoint is only usable by administrators**
+    **The user must be authenticated to use this endpoint**
     """
 
     # We need to check that advertiser.group_manager_id is a valid group
@@ -343,7 +343,7 @@ async def delete_advert(
 
 
 @router.get(
-    "/advert/adverts/{advert_id}/image",
+    "/advert/adverts/{advert_id}/picture",
     response_class=FileResponse,
     status_code=200,
     tags=[Tags.advert],
@@ -364,7 +364,7 @@ async def read_advert_image(
 
 
 @router.post(
-    "/advert/adverts/{advert_id}/poster",
+    "/advert/adverts/{advert_id}/picture",
     response_model=standard_responses.Result,
     status_code=201,
     tags=[Tags.advert],
