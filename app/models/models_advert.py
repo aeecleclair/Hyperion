@@ -42,5 +42,9 @@ class Advert(Base):
 
 class CoAdvertContent(Base):
     __tablename__ = "advert_coadvertise_content"
-    coadvertiser_id: Mapped[str] = mapped_column(ForeignKey("advert_advertisers.id"), primary_key=True)
-    advert_id: Mapped[str] = mapped_column(ForeignKey("advert_adverts.id"), primary_key=True)
+    coadvertiser_id: Mapped[str] = mapped_column(
+        ForeignKey("advert_advertisers.id"), primary_key=True
+    )
+    advert_id: Mapped[str] = mapped_column(
+        ForeignKey("advert_adverts.id"), primary_key=True
+    )

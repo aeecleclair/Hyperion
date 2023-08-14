@@ -45,7 +45,7 @@ async def init_objects():
 
     advertiser = models_advert.Advertiser(
         id=str(uuid.uuid4()),
-        name='CAA',
+        name="CAA",
         group_manager_id=GroupType.CAA.value,
     )
     await add_object_to_db(advertiser)
