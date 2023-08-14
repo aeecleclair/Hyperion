@@ -10,4 +10,4 @@ httpx==0.24.1 # needed for tests as a replacement of requests in TestClient
 types-requests==2.31.0.2
 types-redis==4.6.0.3
 mypy==1.4.1
-types-pytz==2023.3.0.0
+types-pytz==2023.3.0.1
