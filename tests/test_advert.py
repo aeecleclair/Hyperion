@@ -117,23 +117,6 @@ def test_create_advert():
     assert response.status_code == 201
 
 
-def test_edit_advert():
-    response = client.patch(
-        f"/advert/adverts/{advert.id}",
-        json={"content": "Advert Content Edited"},
-        headers={"Authorization": f"Bearer {token_advertiser}"},
-    )
-    assert response.status_code == 204
-
-
-def test_delete_advert():
-    response = client.delete(
-        f"/advert/adverts/{advert.id}",
-        headers={"Authorization": f"Bearer {token_advertiser}"},
-    )
-    assert response.status_code == 204
-
-
 def test_create_picture():
     with open("assets/images/default_advert.png", "rb") as image:
         response = client.post(
@@ -152,6 +135,23 @@ def test_get_picture():
     )
 
     assert response.status_code == 200
+
+
+def test_edit_advert():
+    response = client.patch(
+        f"/advert/adverts/{advert.id}",
+        json={"content": "Advert Content Edited"},
+        headers={"Authorization": f"Bearer {token_advertiser}"},
+    )
+    assert response.status_code == 204
+
+
+def test_delete_advert():
+    response = client.delete(
+        f"/advert/adverts/{advert.id}",
+        headers={"Authorization": f"Bearer {token_advertiser}"},
+    )
+    assert response.status_code == 204
 
 
 def test_get_advertisers():
