@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date
 
 from sqlalchemy import Boolean, Date, Enum, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
@@ -29,6 +29,10 @@ class Message(Base):
     # An action id is used by Titan to know what to do when receiving the notification
     action_module: Mapped[str] = mapped_column(String)
     action_table: Mapped[str] = mapped_column(String)
+
+    # We can plan a notification to be sent later, the frontend should not display it before the planned date
+    delivery_datetime: Mapped[date] = mapped_column(Date, nullable=False)
+    # Messages should be deleted after a certain time
     expire_on: Mapped[date] = mapped_column(Date, nullable=False)
 
 
