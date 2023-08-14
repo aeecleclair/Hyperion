@@ -221,7 +221,6 @@ async def get_topic(
 )
 async def send_notif(
     message: schemas_notification.Message,
-    db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
