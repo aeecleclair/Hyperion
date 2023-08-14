@@ -9,7 +9,7 @@ SQLAlchemy[asyncio]==2.0.19   # [asyncio] allows greenlet to be installed on App
 rapidfuzz==3.2.0                         # Fuzzy String Matching
 requests==2.31.0
 unidecode==1.3.6
-uvicorn[standard]==0.22.0
+uvicorn[standard]==0.23.2
 redis==4.6.0
 icalendar == 5.0.7
 asyncpg==0.28.0
