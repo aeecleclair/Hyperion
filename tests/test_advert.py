@@ -1,11 +1,13 @@
 import datetime
 import uuid
 
-from app.main import app
+import pytest_asyncio
+
 from app.models import models_advert, models_core
 from app.utils.types.groups_type import GroupType
+from tests.commons import event_loop  # noqa
 from tests.commons import (
-    TestingSessionLocal,
+    add_object_to_db,
     client,
     create_api_access_token,
     create_user_with_groups,
@@ -23,66 +25,57 @@ token_advertiser: str = ""
 token_simple: str = ""
 
 
-@app.on_event("startup")  # create the datas needed in the tests
-async def startuptest():
+@pytest_asyncio.fixture(scope="module", autouse=True)
+async def init_objects():
     global user_admin
-    async with TestingSessionLocal() as db:
-        user_admin = await create_user_with_groups([GroupType.admin], db=db)
-        await db.commit()
+    user_admin = await create_user_with_groups([GroupType.admin])
 
     global token_admin
     token_admin = create_api_access_token(user_admin)
 
     global advertiser
     global group_advertiser
-    async with TestingSessionLocal() as db:
-        group_advertiser = models_core.CoreGroup(
-            id=str(uuid.uuid4()),
-            name="advertiser",
-            description="",
-        )
-        db.add(group_advertiser)
-        advertiser = models_advert.Advertiser(
-            id=str(uuid.uuid4()),
-            name=group_advertiser.name,
-            group_manager_id=group_advertiser.id,
-        )
-        db.add(advertiser)
-        await db.commit()
 
-    global user_advertiser
-    async with TestingSessionLocal() as db:
-        user_advertiser = await create_user_with_groups([group_advertiser.id], db=db)
-        await db.commit()
+    # group_advertiser = models_core.CoreGroup(
+    #     id=str(uuid.uuid4()),
+    #     name="advertiser",
+    #     description="",
+    # )
+    # await add_object_to_db(group_advertiser)
+
+    advertiser = models_advert.Advertiser(
+        id=str(uuid.uuid4()),
+        name='CAA',
+        group_manager_id=GroupType.CAA.value,
+    )
+    await add_object_to_db(advertiser)
+
+    user_advertiser = await create_user_with_groups([GroupType.CAA])
 
     global token_advertiser
     token_advertiser = create_api_access_token(user_advertiser)
 
     global user_simple
-    async with TestingSessionLocal() as db:
-        user_simple = await create_user_with_groups([GroupType.student], db=db)
-        await db.commit()
+    user_simple = await create_user_with_groups([GroupType.student])
 
     global token_simple
     token_simple = create_api_access_token(user_simple)
 
     global advert
     global tag
-    async with TestingSessionLocal() as db:
-        advert = models_advert.Advert(
-            id=str(uuid.uuid4()),
-            advertiser_id=advertiser.id,
-            title="Advert",
-            content="Example of advert",
-            date=datetime.datetime.now(),
-            tags="Tag1, Tag2, Tag3",
-            coadvertisers=[],
-        )
+    advert = models_advert.Advert(
+        id=str(uuid.uuid4()),
+        advertiser_id=advertiser.id,
+        title="Advert",
+        content="Example of advert",
+        date=datetime.datetime.now(),
+        tags="Tag1, Tag2, Tag3",
+        coadvertisers=[],
+    )
 
-        db.add(advert)
-        # db.add(tag)
-        # db.add(adverts_tags_link)
-        await db.commit()
+    await add_object_to_db(advert)
+    # db.add(tag)
+    # db.add(adverts_tags_link)
 
 
 def test_get_adverts():
