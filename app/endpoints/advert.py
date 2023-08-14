@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import Sequence
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
@@ -165,7 +166,7 @@ async def get_current_user_advertisers(
 
     user_advertisers: list[models_advert.Advertiser] = []
 
-    existing_advertisers: list[
+    existing_advertisers: Sequence[
         models_advert.Advertiser
     ] = await cruds_advert.get_advertisers(db=db)
 
@@ -181,7 +182,7 @@ async def get_current_user_advertisers(
 
 @router.get(
     "/advert/adverts",
-    response_model=list[schemas_advert.AdvertComplete],
+    response_model=list[schemas_advert.AdvertReturnComplete],
     status_code=200,
     tags=[Tags.advert],
 )
@@ -206,7 +207,7 @@ async def read_adverts(
 
 @router.get(
     "/advert/adverts/{advert_id}",
-    response_model=schemas_advert.AdvertComplete,
+    response_model=schemas_advert.AdvertReturnComplete,
     status_code=200,
     tags=[Tags.advert],
 )
@@ -226,7 +227,7 @@ async def read_advert(
 
 @router.post(
     "/advert/adverts",
-    response_model=schemas_advert.AdvertComplete,
+    response_model=schemas_advert.AdvertReturnComplete,
     status_code=201,
     tags=[Tags.advert],
 )

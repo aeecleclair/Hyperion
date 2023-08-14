@@ -38,6 +38,15 @@ class AdvertComplete(AdvertBase):
         orm_mode = True
 
 
+class AdvertReturnComplete(AdvertBase):
+    id: str
+    advertiser: AdvertiserComplete
+    date: datetime | None = None
+
+    class Config:
+        orm_mode = True
+
+
 class AdvertUpdate(BaseModel):
     title: str | None = None
     content: str | None = None
