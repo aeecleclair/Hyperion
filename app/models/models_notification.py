@@ -27,8 +27,8 @@ class Message(Base):
 
     # TODO
     # An action id is used by Titan to know what to do when receiving the notification
-    action_module: Mapped[str] = mapped_column(String)
-    action_table: Mapped[str] = mapped_column(String)
+    action_module: Mapped[str | None] = mapped_column(String, nullable=True)
+    action_table: Mapped[str | None] = mapped_column(String, nullable=True)
 
     # We can plan a notification to be sent later, the frontend should not display it before the planned date
     delivery_datetime: Mapped[date] = mapped_column(Date, nullable=False)

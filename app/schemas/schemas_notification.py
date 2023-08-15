@@ -19,10 +19,10 @@ class Message(BaseModel):
     content: str | None
 
     # TODO
-    action_module: str = Field(
+    action_module: str | None = Field(
         description="An action id is used by Titan to know what to do when receiving the notification"
     )
-    action_table: str
+    action_table: str | None
 
     delivery_datetime: datetime = Field(
         description="The date the notification should be shown"
