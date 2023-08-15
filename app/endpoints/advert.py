@@ -43,8 +43,6 @@ async def read_advertisers(
 ):
     """
     Get existing advertisers.
-
-    **This endpoint is only usable by administrators**
     """
 
     return await cruds_advert.get_advertisers(db=db)
