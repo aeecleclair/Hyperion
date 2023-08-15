@@ -346,3 +346,16 @@ class NotificationTool:
         #     message=message,
         #     db=self.db,
         # )
+
+    async def send_notification_to_topic(self, topic: Topic, message: Message):
+        await self.notification_manager.send_notification_to_topic(
+            topic=topic,
+            message=message,
+            db=self.db,
+        )
+        # self.background_tasks.add_task(
+        #     self.notification_manager.send_notification_to_topic,
+        #     topic=topic,
+        #     message=message,
+        #     db=self.db,
+        # )
