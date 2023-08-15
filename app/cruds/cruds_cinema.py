@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Sequence
 
 from sqlalchemy import delete, select, update
@@ -10,6 +11,15 @@ from app.schemas import schemas_cinema
 
 async def get_sessions(db: AsyncSession) -> Sequence[models_cinema.Session]:
     result = await db.execute(select(models_cinema.Session))
+    return result.scalars().all()
+
+
+async def get_sessions_after_datetime(
+    start_after: datetime, db: AsyncSession
+) -> Sequence[models_cinema.Session]:
+    result = await db.execute(
+        select(models_cinema.Session).where(models_cinema.Session.start >= start_after)
+    )
     return result.scalars().all()
 
 

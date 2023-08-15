@@ -1,4 +1,6 @@
+import logging
 import uuid
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -7,18 +9,24 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.cruds import cruds_cinema
 from app.dependencies import (
     get_db,
+    get_notification_tool,
     get_request_id,
     is_user_a_member,
     is_user_a_member_of,
 )
 from app.models import models_core
 from app.schemas import schemas_cinema
+from app.schemas.schemas_notification import Message
+from app.utils.communication.notifications import NotificationTool
 from app.utils.tools import get_file_from_data, save_file_as_data
 from app.utils.types import standard_responses
 from app.utils.types.groups_type import GroupType
+from app.utils.types.notification_types import Topic
 from app.utils.types.tags import Tags
 
 router = APIRouter()
+
+hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 @router.get(
@@ -45,15 +53,50 @@ async def create_session(
     session: schemas_cinema.CineSessionBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.cinema)),
+    notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     db_session = schemas_cinema.CineSessionComplete(
         id=str(uuid.uuid4()), **session.dict()
     )
     try:
         result = await cruds_cinema.create_session(session=db_session, db=db)
-        return result
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
+
+    # Send a notification with the week recap
+    try:
+        today = datetime.now(timezone.utc)
+        sunday = today.replace(
+            day=today.day - today.weekday() + 6, hour=11, minute=0, second=0
+        )
+        next_week_sessions = await cruds_cinema.get_sessions_after_datetime(
+            start_after=sunday, db=db
+        )
+        message_content = ""
+        days = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
+        for next_session in next_week_sessions:
+            message_content += (
+                f"{next_session.name} - {days[next_session.start.weekday()]}\n"
+            )
+        message = Message(
+            # We use sunday date as context to avoid sending the recap twice
+            context=f"cinema-recap-{sunday}",
+            is_visible=True,
+            title="Le programme de la semaine",
+            content=message_content,
+            delivery_datetime=sunday,
+            # The notification will expire the next sunday
+            expire_on=sunday.replace(day=sunday.day + 7),
+        )
+        await notification_tool.send_notification_to_topic(
+            topic=Topic.cinema, message=message
+        )
+    except Exception as error:
+        hyperion_error_logger.error(
+            f"Error while sending cinema recap notification, {error}"
+        )
+
+    return result
 
 
 @router.patch("/cinema/sessions/{session_id}", status_code=200, tags=[Tags.cinema])
