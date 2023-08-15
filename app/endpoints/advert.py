@@ -39,7 +39,7 @@ router = APIRouter()
 )
 async def read_advertisers(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Get existing advertisers.
