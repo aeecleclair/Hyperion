@@ -126,13 +126,12 @@ async def create_user_with_groups(
 ) -> models_core.CoreUser:
     """
     Add a dummy user to the database
-    If a core_user is not provided, the user will be named with its user_id and email and password will both be its user_id
+    User property will be randomly generated if not provided
 
     The user will be added to provided `groups`
     """
 
     user_id = user_id or str(uuid.uuid4())
-    assert user_id is not None
     password_hash = security.get_password_hash(password or get_random_string())
 
     user = models_core.CoreUser(
