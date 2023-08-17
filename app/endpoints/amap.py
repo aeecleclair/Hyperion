@@ -2,11 +2,12 @@ import logging
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import Depends, HTTPException, Response
 from pytz import timezone
 from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api import Module
 from app.core.config import Settings
 from app.cruds import cruds_amap, cruds_users
 from app.dependencies import (
@@ -26,12 +27,12 @@ from app.utils.types.amap_types import DeliveryStatusType
 from app.utils.types.groups_type import GroupType
 from app.utils.types.tags import Tags
 
-router = APIRouter()
+amap = Module()
 
 hyperion_amap_logger = logging.getLogger("hyperion.amap")
 
 
-@router.get(
+@amap.router.get(
     "/amap/products",
     response_model=list[schemas_amap.ProductComplete],
     status_code=200,
@@ -50,7 +51,7 @@ async def get_products(
     return products
 
 
-@router.post(
+@amap.router.post(
     "/amap/products",
     response_model=schemas_amap.ProductComplete,
     status_code=201,
@@ -75,7 +76,7 @@ async def create_product(
         raise HTTPException(status_code=400, detail=str(error))
 
 
-@router.get(
+@amap.router.get(
     "/amap/products/{product_id}",
     response_model=schemas_amap.ProductComplete,
     status_code=200,
@@ -97,7 +98,7 @@ async def get_product_by_id(
     return product
 
 
-@router.patch(
+@amap.router.patch(
     "/amap/products/{product_id}",
     status_code=204,
     tags=[Tags.amap],
@@ -123,7 +124,7 @@ async def edit_product(
     )
 
 
-@router.delete(
+@amap.router.delete(
     "/amap/products/{product_id}",
     status_code=204,
     tags=[Tags.amap],
@@ -151,7 +152,7 @@ async def delete_product(
     await cruds_amap.delete_product(db=db, product_id=product_id)
 
 
-@router.get(
+@amap.router.get(
     "/amap/deliveries",
     response_model=list[schemas_amap.DeliveryReturn],
     status_code=200,
@@ -167,7 +168,7 @@ async def get_deliveries(
     return await cruds_amap.get_deliveries(db)
 
 
-@router.post(
+@amap.router.post(
     "/amap/deliveries",
     response_model=schemas_amap.DeliveryReturn,
     status_code=201,
@@ -200,7 +201,7 @@ async def create_delivery(
     return result
 
 
-@router.delete(
+@amap.router.delete(
     "/amap/deliveries/{delivery_id}",
     status_code=204,
     tags=[Tags.amap],
@@ -229,7 +230,7 @@ async def delete_delivery(
     await cruds_amap.delete_delivery(db=db, delivery_id=delivery_id)
 
 
-@router.patch(
+@amap.router.patch(
     "/amap/deliveries/{delivery_id}",
     status_code=204,
     tags=[Tags.amap],
@@ -259,7 +260,7 @@ async def edit_delivery(
     await cruds_amap.edit_delivery(db=db, delivery_id=delivery_id, delivery=delivery)
 
 
-@router.post(
+@amap.router.post(
     "/amap/deliveries/{delivery_id}/products",
     status_code=201,
     tags=[Tags.amap],
@@ -295,7 +296,7 @@ async def add_product_to_delivery(
         raise HTTPException(status_code=400, detail=str(error))
 
 
-@router.delete(
+@amap.router.delete(
     "/amap/deliveries/{delivery_id}/products",
     status_code=204,
     tags=[Tags.amap],
@@ -326,7 +327,7 @@ async def remove_product_from_delivery(
     )
 
 
-@router.get(
+@amap.router.get(
     "/amap/deliveries/{delivery_id}/orders",
     response_model=list[schemas_amap.OrderReturn],
     status_code=200,
@@ -360,7 +361,7 @@ async def get_orders_from_delivery(
     return res
 
 
-@router.get(
+@amap.router.get(
     "/amap/orders/{order_id}",
     response_model=schemas_amap.OrderReturn,
     status_code=200,
@@ -385,7 +386,7 @@ async def get_order_by_id(
     return schemas_amap.OrderReturn(productsdetail=products, **order.__dict__)
 
 
-@router.post(
+@amap.router.post(
     "/amap/orders",
     response_model=schemas_amap.OrderReturn,
     status_code=201,
@@ -501,7 +502,7 @@ async def add_order_to_delievery(
         locker_set(redis_client=redis_client, key=redis_key, lock=False)
 
 
-@router.patch(
+@amap.router.patch(
     "/amap/orders/{order_id}",
     status_code=204,
     tags=[Tags.amap],
@@ -618,7 +619,7 @@ async def edit_order_from_delievery(
             locker_set(redis_client=redis_client, key=redis_key, lock=False)
 
 
-@router.delete(
+@amap.router.delete(
     "/amap/orders/{order_id}",
     status_code=204,
     tags=[Tags.amap],
@@ -693,7 +694,7 @@ async def remove_order(
         locker_set(redis_client=redis_client, key=redis_key, lock=False)
 
 
-@router.post(
+@amap.router.post(
     "/amap/deliveries/{delivery_id}/openordering",
     status_code=204,
     tags=[Tags.amap],
@@ -716,7 +717,7 @@ async def open_ordering_of_delivery(
     await cruds_amap.open_ordering_of_delivery(delivery_id=delivery_id, db=db)
 
 
-@router.post(
+@amap.router.post(
     "/amap/deliveries/{delivery_id}/lock",
     status_code=204,
     tags=[Tags.amap],
@@ -738,7 +739,7 @@ async def lock_delivery(
     await cruds_amap.lock_delivery(delivery_id=delivery_id, db=db)
 
 
-@router.post(
+@amap.router.post(
     "/amap/deliveries/{delivery_id}/delivered",
     status_code=204,
     tags=[Tags.amap],
@@ -760,7 +761,7 @@ async def mark_delivery_as_delivered(
     await cruds_amap.mark_delivery_as_delivered(delivery_id=delivery_id, db=db)
 
 
-@router.post(
+@amap.router.post(
     "/amap/deliveries/{delivery_id}/archive",
     status_code=204,
     tags=[Tags.amap],
@@ -783,7 +784,7 @@ async def archive_of_delivery(
     await cruds_amap.mark_delivery_as_archived(db=db, delivery_id=delivery_id)
 
 
-@router.get(
+@amap.router.get(
     "/amap/users/cash",
     response_model=list[schemas_amap.CashComplete],
     status_code=200,
@@ -802,7 +803,7 @@ async def get_users_cash(
     return cash
 
 
-@router.get(
+@amap.router.get(
     "/amap/users/{user_id}/cash",
     response_model=schemas_amap.CashComplete,
     status_code=200,
@@ -844,7 +845,7 @@ async def get_cash_by_id(
     return cash
 
 
-@router.post(
+@amap.router.post(
     "/amap/users/{user_id}/cash",
     response_model=schemas_amap.CashComplete,
     status_code=201,
@@ -893,7 +894,7 @@ async def create_cash_of_user(
     )
 
 
-@router.patch(
+@amap.router.patch(
     "/amap/users/{user_id}/cash",
     status_code=204,
     tags=[Tags.amap],
@@ -929,7 +930,7 @@ async def edit_cash_by_id(
     )
 
 
-@router.get(
+@amap.router.get(
     "/amap/users/{user_id}/orders",
     response_model=list[schemas_amap.OrderReturn],
     status_code=200,
@@ -966,7 +967,7 @@ async def get_orders_of_user(
     return res
 
 
-@router.get(
+@amap.router.get(
     "/amap/information",
     response_model=schemas_amap.Information,
     status_code=200,
@@ -991,7 +992,7 @@ async def get_information(
     return information
 
 
-@router.patch(
+@amap.router.patch(
     "/amap/information",
     status_code=204,
     tags=[Tags.amap],

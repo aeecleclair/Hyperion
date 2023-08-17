@@ -1,9 +1,10 @@
 import uuid
 from typing import Sequence
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api import Module
 from app.cruds import cruds_loan
 from app.dependencies import get_db, is_user_a_member, is_user_a_member_of
 from app.models import models_core, models_loan
@@ -16,10 +17,10 @@ from app.utils.tools import (
 from app.utils.types.groups_type import GroupType
 from app.utils.types.tags import Tags
 
-router = APIRouter()
+loan = Module()
 
 
-@router.get(
+@loan.router.get(
     "/loans/loaners/",
     response_model=list[schemas_loan.Loaner],
     status_code=200,
@@ -38,7 +39,7 @@ async def read_loaners(
     return await cruds_loan.get_loaners(db=db)
 
 
-@router.post(
+@loan.router.post(
     "/loans/loaners/",
     response_model=schemas_loan.Loaner,
     status_code=201,
@@ -76,7 +77,7 @@ async def create_loaner(
         raise HTTPException(status_code=422, detail=str(error))
 
 
-@router.delete(
+@loan.router.delete(
     "/loans/loaners/{loaner_id}",
     status_code=204,
     tags=[Tags.loans],
@@ -111,7 +112,7 @@ async def delete_loaner(
     await cruds_loan.delete_loaner_by_id(loaner_id=loaner_id, db=db)
 
 
-@router.patch(
+@loan.router.patch(
     "/loans/loaners/{loaner_id}",
     status_code=204,
     tags=[Tags.loans],
@@ -133,7 +134,7 @@ async def update_loaner(
     )
 
 
-@router.get(
+@loan.router.get(
     "/loans/loaners/{loaner_id}/loans",
     response_model=list[schemas_loan.Loan],
     status_code=200,
@@ -196,7 +197,7 @@ async def get_loans_by_loaner(
     return loans
 
 
-@router.get(
+@loan.router.get(
     "/loans/loaners/{loaner_id}/items",
     response_model=list[schemas_loan.Item],
     status_code=200,
@@ -239,7 +240,7 @@ async def get_items_by_loaner(
     return itemret
 
 
-@router.post(
+@loan.router.post(
     "/loans/loaners/{loaner_id}/items",
     response_model=schemas_loan.Item,
     status_code=201,
@@ -301,7 +302,7 @@ async def create_items_for_loaner(
         raise HTTPException(status_code=422, detail=str(error))
 
 
-@router.patch(
+@loan.router.patch(
     "/loans/loaners/{loaner_id}/items/{item_id}",
     status_code=204,
     tags=[Tags.loans],
@@ -351,7 +352,7 @@ async def update_items_for_loaner(
     await cruds_loan.update_loaner_item(item_id=item_id, item_update=item_update, db=db)
 
 
-@router.delete(
+@loan.router.delete(
     "/loans/loaners/{loaner_id}/items/{item_id}",
     status_code=204,
     tags=[Tags.loans],
@@ -393,7 +394,7 @@ async def delete_loaner_item(
     await cruds_loan.delete_loaner_item_by_id(item_id=item_id, db=db)
 
 
-@router.get(
+@loan.router.get(
     "/loans/users/me",
     response_model=list[schemas_loan.Loan],
     status_code=200,
@@ -439,7 +440,7 @@ async def get_current_user_loans(
     return loansret
 
 
-@router.get(
+@loan.router.get(
     "/loans/users/me/loaners",
     response_model=list[schemas_loan.Loaner],
     status_code=200,
@@ -469,7 +470,7 @@ async def get_current_user_loaners(
     return user_loaners
 
 
-@router.post(
+@loan.router.post(
     "/loans/",
     response_model=schemas_loan.Loan,
     status_code=201,
@@ -590,7 +591,7 @@ async def create_loan(
     return schemas_loan.Loan(items_qty=items_qty_ret, **loan.__dict__)
 
 
-@router.patch(
+@loan.router.patch(
     "/loans/{loan_id}",
     status_code=204,
     tags=[Tags.loans],
@@ -708,7 +709,7 @@ async def update_loan(  # noqa: C901
         await cruds_loan.create_loan_content(loan_content=loan_content, db=db)
 
 
-@router.delete(
+@loan.router.delete(
     "/loans/{loan_id}",
     status_code=204,
     tags=[Tags.loans],
@@ -758,7 +759,7 @@ async def delete_loan(
     await cruds_loan.delete_loan_by_id(loan_id=loan_id, db=db)
 
 
-@router.post(
+@loan.router.post(
     "/loans/{loan_id}/return",
     status_code=204,
     tags=[Tags.loans],
@@ -812,7 +813,7 @@ async def return_loan(
     )
 
 
-@router.post(
+@loan.router.post(
     "/loans/{loan_id}/extend",
     status_code=204,
     tags=[Tags.loans],

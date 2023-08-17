@@ -1,8 +1,9 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api import Module
 from app.cruds import cruds_bdebooking
 from app.dependencies import get_db, is_user_a_member, is_user_a_member_of
 from app.models import models_core
@@ -12,10 +13,10 @@ from app.utils.types.bdebooking_type import Decision
 from app.utils.types.groups_type import GroupType
 from app.utils.types.tags import Tags
 
-router = APIRouter()
+bdebooking = Module()
 
 
-@router.get(
+@bdebooking.router.get(
     "/bdebooking/rights",
     response_model=schemas_bdebooking.Rights,
     status_code=200,
@@ -32,7 +33,7 @@ async def get_rights(
     return schemas_bdebooking.Rights(view=view, manage=manage)
 
 
-@router.get(
+@bdebooking.router.get(
     "/bdebooking/bookings",
     response_model=list[schemas_bdebooking.BookingReturnApplicant],
     status_code=200,
@@ -51,7 +52,7 @@ async def get_bookings(
     return bookings
 
 
-@router.get(
+@bdebooking.router.get(
     "/bdebooking/bookings/confirmed",
     response_model=list[schemas_bdebooking.BookingReturn],
     status_code=200,
@@ -70,7 +71,7 @@ async def get_confirmed_bookings(
     return bookings
 
 
-@router.get(
+@bdebooking.router.get(
     "/bdebooking/user/{applicant_id}",
     response_model=list[schemas_bdebooking.BookingReturn],
     status_code=200,
@@ -97,7 +98,7 @@ async def get_applicant_bookings(
         raise HTTPException(status_code=403)
 
 
-@router.get(
+@bdebooking.router.get(
     "/bdebooking/bookings/{booking_id}",
     response_model=schemas_bdebooking.BookingReturn,
     status_code=200,
@@ -125,7 +126,7 @@ async def get_booking_by_id(
         raise HTTPException(status_code=404)
 
 
-@router.get(
+@bdebooking.router.get(
     "/bdebooking/bookings/{booking_id}/applicant",
     response_model=schemas_bdebooking.Applicant,
     status_code=200,
@@ -148,7 +149,7 @@ async def get_booking_applicant(
         raise HTTPException(status_code=404)
 
 
-@router.post(
+@bdebooking.router.post(
     "/bdebooking/bookings",
     response_model=schemas_bdebooking.BookingReturn,
     status_code=201,
@@ -174,7 +175,7 @@ async def create_bookings(
     return await cruds_bdebooking.get_booking_by_id(db=db, booking_id=db_booking.id)
 
 
-@router.patch(
+@bdebooking.router.patch(
     "/bdebooking/bookings/{booking_id}",
     status_code=204,
     tags=[Tags.bdebooking],
@@ -209,7 +210,7 @@ async def edit_bookings_id(
         raise HTTPException(status_code=422, detail=str(error))
 
 
-@router.patch(
+@bdebooking.router.patch(
     "/bdebooking/bookings/{booking_id}/reply/{decision}",
     status_code=204,
     tags=[Tags.bdebooking],
@@ -230,7 +231,7 @@ async def confirm_booking(
     )
 
 
-@router.delete(
+@bdebooking.router.delete(
     "/bdebooking/bookings/{booking_id}", status_code=204, tags=[Tags.bdebooking]
 )
 async def delete_bookings_id(
@@ -258,7 +259,7 @@ async def delete_bookings_id(
         )
 
 
-@router.get(
+@bdebooking.router.get(
     "/bdebooking/rooms",
     response_model=list[schemas_bdebooking.RoomComplete],
     status_code=200,
@@ -276,7 +277,7 @@ async def get_rooms(
     return await cruds_bdebooking.get_rooms(db=db)
 
 
-@router.get(
+@bdebooking.router.get(
     "/bdebooking/rooms/{room_id}",
     response_model=schemas_bdebooking.RoomComplete,
     status_code=200,
@@ -295,7 +296,7 @@ async def get_room_by_id(
     return await cruds_bdebooking.get_room_by_id(db=db, room_id=room_id)
 
 
-@router.post(
+@bdebooking.router.post(
     "/bdebooking/rooms",
     response_model=schemas_bdebooking.RoomComplete,
     status_code=201,
@@ -316,7 +317,7 @@ async def create_room(
     return db_room
 
 
-@router.patch(
+@bdebooking.router.patch(
     "/bdebooking/rooms/{room_id}",
     status_code=204,
     tags=[Tags.bdebooking],
@@ -335,7 +336,7 @@ async def edit_room(
     await cruds_bdebooking.edit_room(db=db, room_id=room_id, room=room)
 
 
-@router.delete(
+@bdebooking.router.delete(
     "/bdebooking/rooms/{room_id}",
     status_code=204,
     tags=[Tags.bdebooking],

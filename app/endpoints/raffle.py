@@ -1,12 +1,13 @@
 import logging
 import uuid
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from redis import Redis
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api import Module
 from app.cruds import cruds_groups, cruds_raffle, cruds_users
 from app.dependencies import (
     get_db,
@@ -30,12 +31,12 @@ from app.utils.types.groups_type import GroupType
 from app.utils.types.raffle_types import RaffleStatusType
 from app.utils.types.tags import Tags
 
-router = APIRouter()
+raffle = Module()
 hyperion_raffle_logger = logging.getLogger("hyperion.raffle")
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
-@router.get(
+@raffle.router.get(
     "/tombola/raffles",
     response_model=list[schemas_raffle.RaffleComplete],
     status_code=200,
@@ -52,7 +53,7 @@ async def get_raffle(
     return raffles
 
 
-@router.post(
+@raffle.router.post(
     "/tombola/raffles",
     response_model=schemas_raffle.RaffleSimple,
     status_code=201,
@@ -81,7 +82,7 @@ async def create_raffle(
         raise HTTPException(status_code=400, detail=str(error))
 
 
-@router.patch(
+@raffle.router.patch(
     "/tombola/raffles/{raffle_id}",
     status_code=204,
     tags=[Tags.raffle],
@@ -119,7 +120,7 @@ async def edit_raffle(
     )
 
 
-@router.delete(
+@raffle.router.delete(
     "/tombola/raffles/{raffle_id}",
     status_code=204,
     tags=[Tags.raffle],
@@ -153,7 +154,7 @@ async def delete_raffle(
     await cruds_raffle.delete_raffle(raffle_id=raffle_id, db=db)
 
 
-@router.get(
+@raffle.router.get(
     "/tombola/group/{group_id}/raffles",
     response_model=list[schemas_raffle.RaffleSimple],
     status_code=200,
@@ -171,7 +172,7 @@ async def get_raffles_by_group_id(
     return raffle
 
 
-@router.get(
+@raffle.router.get(
     "/tombola/raffles/{raffle_id}/stats",
     response_model=schemas_raffle.RaffleStats,
     status_code=200,
@@ -199,7 +200,7 @@ async def get_raffle_stats(
     )
 
 
-@router.post(
+@raffle.router.post(
     "/tombola/raffles/{raffle_id}/logo",
     response_model=standard_responses.Result,
     status_code=201,
@@ -245,7 +246,7 @@ async def create_current_raffle_logo(
     return standard_responses.Result(success=True)
 
 
-@router.get(
+@raffle.router.get(
     "/tombola/raffles/{raffle_id}/logo",
     response_class=FileResponse,
     status_code=200,
@@ -266,7 +267,7 @@ async def read_raffle_logo(
     )
 
 
-@router.get(
+@raffle.router.get(
     "/tombola/pack_tickets",
     response_model=list[schemas_raffle.PackTicketSimple],
     status_code=200,
@@ -283,7 +284,7 @@ async def get_pack_tickets(
     return pack_tickets
 
 
-@router.post(
+@raffle.router.post(
     "/tombola/pack_tickets",
     response_model=schemas_raffle.PackTicketSimple,
     status_code=201,
@@ -318,7 +319,7 @@ async def create_packticket(
         raise HTTPException(status_code=422, detail=str(error))
 
 
-@router.patch(
+@raffle.router.patch(
     "/tombola/pack_tickets/{packticket_id}",
     status_code=204,
     tags=[Tags.raffle],
@@ -363,7 +364,7 @@ async def edit_packticket(
     )
 
 
-@router.delete(
+@raffle.router.delete(
     "/tombola/pack_tickets/{packticket_id}",
     status_code=204,
     tags=[Tags.raffle],
@@ -398,7 +399,7 @@ async def delete_packticket(
     await cruds_raffle.delete_packticket(packticket_id=packticket_id, db=db)
 
 
-@router.get(
+@raffle.router.get(
     "/tombola/raffles/{raffle_id}/pack_tickets",
     response_model=list[schemas_raffle.PackTicketSimple],
     status_code=200,
@@ -416,7 +417,7 @@ async def get_pack_tickets_by_raffle_id(
     return pack_tickets
 
 
-@router.get(
+@raffle.router.get(
     "/tombola/tickets",
     response_model=list[schemas_raffle.TicketSimple],
     status_code=200,
@@ -435,7 +436,7 @@ async def get_tickets(
     return tickets
 
 
-@router.post(
+@raffle.router.post(
     "/tombola/tickets/buy/{pack_id}",
     response_model=list[schemas_raffle.TicketComplete],
     status_code=201,
@@ -519,7 +520,7 @@ async def buy_ticket(
         locker_set(redis_client=redis_client, key=redis_key, lock=False)
 
 
-@router.get(
+@raffle.router.get(
     "/tombola/users/{user_id}/tickets",
     response_model=list[schemas_raffle.TicketComplete],
     status_code=200,
@@ -553,7 +554,7 @@ async def get_tickets_by_userid(
         return tickets
 
 
-@router.get(
+@raffle.router.get(
     "/tombola/raffles/{raffle_id}/tickets",
     response_model=list[schemas_raffle.TicketComplete],
     status_code=200,
@@ -589,7 +590,7 @@ async def get_tickets_by_raffleid(
     return tickets
 
 
-@router.get(
+@raffle.router.get(
     "/tombola/prizes",
     response_model=list[schemas_raffle.PrizeSimple],
     status_code=200,
@@ -606,7 +607,7 @@ async def get_prizes(
     return prizes
 
 
-@router.post(
+@raffle.router.post(
     "/tombola/prizes",
     response_model=schemas_raffle.PrizeSimple,
     status_code=201,
@@ -647,7 +648,7 @@ async def create_prize(
         raise HTTPException(status_code=400, detail=str(error))
 
 
-@router.patch(
+@raffle.router.patch(
     "/tombola/prizes/{prize_id}",
     status_code=204,
     tags=[Tags.raffle],
@@ -688,7 +689,7 @@ async def edit_prize(
     await cruds_raffle.edit_prize(prize_id=prize_id, prize_update=prize_update, db=db)
 
 
-@router.delete(
+@raffle.router.delete(
     "/tombola/prizes/{prize_id}",
     status_code=204,
     tags=[Tags.raffle],
@@ -722,7 +723,7 @@ async def delete_prize(
     await cruds_raffle.delete_prize(db=db, prize_id=prize_id)
 
 
-@router.get(
+@raffle.router.get(
     "/tombola/raffles/{raffle_id}/prizes",
     response_model=list[schemas_raffle.PrizeSimple],
     status_code=200,
@@ -742,7 +743,7 @@ async def get_prizes_by_raffleid(
     return prizes
 
 
-@router.post(
+@raffle.router.post(
     "/tombola/prizes/{prize_id}/picture",
     response_model=standard_responses.Result,
     status_code=201,
@@ -793,7 +794,7 @@ async def create_prize_picture(
     return standard_responses.Result(success=True)
 
 
-@router.get(
+@raffle.router.get(
     "/tombola/prizes/{prize_id}/picture",
     response_class=FileResponse,
     status_code=200,
@@ -814,7 +815,7 @@ async def read_prize_logo(
     )
 
 
-@router.get(
+@raffle.router.get(
     "/tombola/users/cash",
     response_model=list[schemas_raffle.CashComplete],
     status_code=200,
@@ -833,7 +834,7 @@ async def get_users_cash(
     return cash
 
 
-@router.get(
+@raffle.router.get(
     "/tombola/users/{user_id}/cash",
     response_model=schemas_raffle.CashComplete,
     status_code=200,
@@ -871,7 +872,7 @@ async def get_cash_by_id(
         )
 
 
-@router.post(
+@raffle.router.post(
     "/tombola/users/{user_id}/cash",
     response_model=schemas_raffle.CashComplete,
     status_code=201,
@@ -915,7 +916,7 @@ async def create_cash_of_user(
     )
 
 
-@router.patch(
+@raffle.router.patch(
     "/tombola/users/{user_id}/cash",
     status_code=204,
     tags=[Tags.raffle],
@@ -964,7 +965,7 @@ async def edit_cash_by_id(
         locker_set(redis_client=redis_client, key=redis_key, lock=False)
 
 
-@router.post(
+@raffle.router.post(
     "/tombola/prizes/{prize_id}/draw",
     response_model=list[schemas_raffle.TicketComplete],
     status_code=201,
@@ -1008,7 +1009,7 @@ async def draw_winner(
     return winning_tickets
 
 
-@router.patch(
+@raffle.router.patch(
     "/tombola/raffles/{raffle_id}/open",
     status_code=204,
     tags=[Tags.raffle],
@@ -1045,7 +1046,7 @@ async def open_raffle(
     )
 
 
-@router.patch(
+@raffle.router.patch(
     "/tombola/raffles/{raffle_id}/lock",
     status_code=204,
     tags=[Tags.raffle],
