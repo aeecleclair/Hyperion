@@ -587,7 +587,8 @@ async def migrate_mail(
     """
 
     if not re.match(
-        r"^[\w\-.]*@((ecl\d{2})|(alternance\d{4})|(master)).ec-lyon.fr$", user.email
+        r"^[\w\-.]*@((ecl\d{2})|(alternance\d{4})|(master)|(auditeur)).ec-lyon.fr$",
+        user.email,
     ):
         raise HTTPException(
             status_code=400,
