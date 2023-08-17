@@ -303,9 +303,10 @@ async def create_user(
             content=f"Please confirm your MyECL account by using the following token in the application : {activation_token}",
             settings=settings,
         )
-    hyperion_security_logger.info(
-        f"Create_user: Creating an unconfirmed account for {email} with token {activation_token} ({request_id})"
-    )
+    else:
+        hyperion_security_logger.info(
+            f"Create_user: Creating an unconfirmed account for {email} with token {activation_token} ({request_id})"
+        )
 
 
 @router.get(
@@ -524,7 +525,8 @@ async def recover_user(
                 content=f"You can reset your password with the token {reset_token}",
                 settings=settings,
             )
-        print(reset_token)
+        else:
+            hyperion_security_logger.info(f"Reset mail with token {reset_token}")
 
     return standard_responses.Result()
 
@@ -618,9 +620,10 @@ async def migrate_mail(
             content=f"You can confirm your new email adresse by clicking the following link: {settings.CLIENT_URL}/users/migrate-mail-confirm?token={confirmation_token}",
             settings=settings,
         )
-    print(
-        f"You can confirm your new email adresse by clicking the following link: {settings.CLIENT_URL}users/migrate-mail-confirm?token={confirmation_token}"
-    )
+    else:
+        hyperion_security_logger.info(
+            f"You can confirm your new email adresse by clicking the following link: {settings.CLIENT_URL}users/migrate-mail-confirm?token={confirmation_token}"
+        )
 
 
 @router.get(
