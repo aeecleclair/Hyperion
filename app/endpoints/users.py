@@ -603,6 +603,7 @@ async def migrate_mail(
     migration_object = models_core.CoreUserEmailMigrationCode(
         user_id=user.id,
         new_email=mail_migration.new_email,
+        old_email=user.email,
         confirmation_token=confirmation_token,
     )
 
@@ -660,6 +661,14 @@ async def migrate_mail_confirm(
         confirmation_token=token,
         db=db,
     )
+
+    with open(
+        "data/core/mail-migration-archives.txt",
+        "a",
+    ) as file:
+        file.write(
+            f"{migration_object.user_id},{migration_object.old_email},{migration_object.new_email}\n"
+        )
 
     return "The email address has been successfully updated"
 
