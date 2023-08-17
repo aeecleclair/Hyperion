@@ -14,11 +14,14 @@ async def get_sessions(db: AsyncSession) -> Sequence[models_cinema.Session]:
     return result.scalars().all()
 
 
-async def get_sessions_after_datetime(
-    start_after: datetime, db: AsyncSession
+async def get_sessions_in_time_frame(
+    start_after: datetime, start_before: datetime, db: AsyncSession
 ) -> Sequence[models_cinema.Session]:
     result = await db.execute(
-        select(models_cinema.Session).where(models_cinema.Session.start >= start_after)
+        select(models_cinema.Session).where(
+            models_cinema.Session.start >= start_after,
+            models_cinema.Session.start < start_before,
+        )
     )
     return result.scalars().all()
 

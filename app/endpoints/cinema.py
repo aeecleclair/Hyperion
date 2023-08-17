@@ -69,8 +69,8 @@ async def create_session(
         sunday = today.replace(
             day=today.day - today.weekday() + 6, hour=11, minute=0, second=0
         )
-        next_week_sessions = await cruds_cinema.get_sessions_after_datetime(
-            start_after=sunday, db=db
+        next_week_sessions = await cruds_cinema.get_sessions_in_time_frame(
+            start_after=sunday, start_before=sunday.replace(day=sunday.day + 7), db=db
         )
         message_content = ""
         days = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
