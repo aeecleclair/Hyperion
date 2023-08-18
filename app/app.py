@@ -28,6 +28,7 @@ from app.models import models_core
 from app.models.models_module_visibility import ModuleVisibility
 from app.utils.redis import limiter
 from app.utils.types.groups_type import GroupType
+from app.utils.types.module_list import ModuleList
 
 
 async def create_db_tables(engine, drop_db, hyperion_error_logger):
@@ -69,7 +70,7 @@ async def initialize_groups(SessionLocal, hyperion_error_logger):
 async def initialize_module_visibility(SessionLocal, hyperion_error_logger):
     """Add the default module visibilities for Titan"""
     async with SessionLocal() as db:
-        for module in api.ModuleList:
+        for module in ModuleList:
             for default_group_id in module.default_allowed_groups_ids:
                 module_visibility_exists = (
                     await cruds_module_visibility.get_module_visibility(
