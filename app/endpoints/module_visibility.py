@@ -9,7 +9,7 @@ from app.schemas import schemas_module_visibility
 from app.utils.types.groups_type import GroupType
 from app.utils.types.tags import Tags
 
-module_visibility = Module()
+module_visibility = Module(root="/module_visibility")
 
 
 @module_visibility.router.get(

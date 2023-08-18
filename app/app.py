@@ -25,6 +25,7 @@ from app.dependencies import (
     get_settings,
 )
 from app.models import models_core
+from app.models.models_module_visibility import ModuleVisibility
 from app.utils.redis import limiter
 from app.utils.types.groups_type import GroupType
 
@@ -92,6 +93,29 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
                     except IntegrityError as error:
                         hyperion_error_logger.fatal(
                             f"Startup: Could not add group {group.name}<{group.id}> in the database: {error}"
+                        )
+                        await db.rollback()
+
+        # Add the default module visibilities for Titan
+        async with SessionLocal() as db:
+            for module in api.ModuleList:
+                # exists = await cruds_groups.get_module_by_root(root=module.root, db=db)
+                # We don't want to recreate the groups if they already exist
+                # if not exists:
+                #     group = models_core.CoreGroup(
+                #         id=id, name=id.name, description="Group type"
+                #     )
+
+                for default_group in module.default_allowed_groups_ids:
+                    module_visibility = ModuleVisibility(
+                        root=module.root, allowedGroupId=default_group
+                    )
+                    try:
+                        db.add(module_visibility)
+                        await db.commit()
+                    except IntegrityError as error:
+                        hyperion_error_logger.fatal(
+                            f"Startup: Could not add module visibility {module.root}<{default_group}> in the database: {error}"
                         )
                         await db.rollback()
 

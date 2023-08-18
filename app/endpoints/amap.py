@@ -27,7 +27,7 @@ from app.utils.types.amap_types import DeliveryStatusType
 from app.utils.types.groups_type import GroupType
 from app.utils.types.tags import Tags
 
-amap = Module()
+amap = Module(root="/amap")
 
 hyperion_amap_logger = logging.getLogger("hyperion.amap")
 

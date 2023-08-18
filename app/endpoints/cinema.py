@@ -19,7 +19,7 @@ from app.utils.types import standard_responses
 from app.utils.types.groups_type import GroupType
 from app.utils.types.tags import Tags
 
-cinema = Module()
+cinema = Module(root="/cinema")
 
 
 @cinema.router.get(

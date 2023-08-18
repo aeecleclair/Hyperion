@@ -8,7 +8,7 @@ from app.utils.mail.mailworker import send_email
 from app.utils.types.groups_type import GroupType
 from app.utils.types.module import Module
 
-admin = Module()
+admin = Module(root="/admin")
 
 
 @admin.router.post("/send-email/")

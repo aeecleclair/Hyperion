@@ -9,7 +9,7 @@ from app.dependencies import get_settings
 from app.schemas import schemas_core
 from app.utils.types.tags import Tags
 
-core = Module()
+core = Module(root="/")
 
 
 @core.router.get(

@@ -12,7 +12,6 @@ from fastapi.templating import Jinja2Templates
 from pytz import timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.utils.types.module import Module
 from app.core.config import Settings
 from app.core.security import (
     authenticate_user,
@@ -32,10 +31,11 @@ from app.models import models_auth, models_core
 from app.schemas import schemas_auth
 from app.utils.auth.providers import BaseAuthClient
 from app.utils.tools import is_user_member_of_an_allowed_group
+from app.utils.types.module import Module
 from app.utils.types.scopes_type import ScopeType
 from app.utils.types.tags import Tags
 
-auth = Module()
+auth = Module(root="/auth")
 
 templates = Jinja2Templates(directory="assets/templates")
 

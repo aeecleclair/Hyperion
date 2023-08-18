@@ -7,7 +7,6 @@ from redis import Redis
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.utils.types.module import Module
 from app.cruds import cruds_groups, cruds_raffle, cruds_users
 from app.dependencies import (
     get_db,
@@ -28,10 +27,11 @@ from app.utils.tools import (
 )
 from app.utils.types import standard_responses
 from app.utils.types.groups_type import GroupType
+from app.utils.types.module import Module
 from app.utils.types.raffle_types import RaffleStatusType
 from app.utils.types.tags import Tags
 
-raffle = Module()
+raffle = Module(root="/tombola")
 hyperion_raffle_logger = logging.getLogger("hyperion.raffle")
 hyperion_error_logger = logging.getLogger("hyperion.error")
 

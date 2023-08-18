@@ -8,8 +8,10 @@ class Module:
 
     def __init__(
         self,
+        root,
         router=APIRouter(),
         default_allowed_groups_ids: list[GroupType] = [],
     ):
+        self.root = root
         self.router = router
         self.default_allowed_groups_ids = default_allowed_groups_ids

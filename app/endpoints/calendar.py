@@ -5,7 +5,6 @@ from fastapi import Depends, HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.utils.types.module import Module
 from app.core.config import Settings
 from app.cruds import cruds_calendar
 from app.dependencies import get_db, get_settings, is_user_a_member, is_user_a_member_of
@@ -14,9 +13,10 @@ from app.schemas import schemas_calendar
 from app.utils.tools import is_user_member_of_an_allowed_group
 from app.utils.types.calendar_types import Decision
 from app.utils.types.groups_type import GroupType
+from app.utils.types.module import Module
 from app.utils.types.tags import Tags
 
-calendar = Module()
+calendar = Module(root="/calendar")
 ical_file_path = "data/ics/ae_calendar.ics"
 
 

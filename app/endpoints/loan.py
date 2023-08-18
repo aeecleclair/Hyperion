@@ -17,7 +17,7 @@ from app.utils.tools import (
 from app.utils.types.groups_type import GroupType
 from app.utils.types.tags import Tags
 
-loan = Module()
+loan = Module(root="/loan")
 
 
 @loan.router.get(

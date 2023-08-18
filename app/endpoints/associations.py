@@ -1,6 +1,6 @@
 from app.utils.types.module import Module
 
-associations = Module()
+associations = Module(root="/associations")
 
 
 @associations.router.get("/associations")

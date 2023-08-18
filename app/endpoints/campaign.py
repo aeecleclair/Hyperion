@@ -8,7 +8,6 @@ from fastapi.responses import FileResponse
 from pytz import timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.utils.types.module import Module
 from app.core.config import Settings
 from app.cruds import cruds_campaign, cruds_users
 from app.dependencies import get_db, get_request_id, get_settings, is_user_a_member_of
@@ -22,9 +21,10 @@ from app.utils.tools import (
 from app.utils.types import standard_responses
 from app.utils.types.campaign_type import ListType, StatusType
 from app.utils.types.groups_type import GroupType
+from app.utils.types.module import Module
 from app.utils.types.tags import Tags
 
-campaign = Module()
+campaign = Module(root="/campaign")
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 

@@ -3,7 +3,6 @@ import uuid
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.utils.types.module import Module
 from app.cruds import cruds_bdebooking
 from app.dependencies import get_db, is_user_a_member, is_user_a_member_of
 from app.models import models_core
@@ -11,9 +10,10 @@ from app.schemas import schemas_bdebooking
 from app.utils.tools import is_user_member_of_an_allowed_group
 from app.utils.types.bdebooking_type import Decision
 from app.utils.types.groups_type import GroupType
+from app.utils.types.module import Module
 from app.utils.types.tags import Tags
 
-bdebooking = Module()
+bdebooking = Module(root="/bdebooking")
 
 
 @bdebooking.router.get(
