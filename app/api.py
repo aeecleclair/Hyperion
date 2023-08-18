@@ -2,11 +2,36 @@
 
 from fastapi import APIRouter
 
-from app.utils.types.module_list import CoreRouter, ModuleList
+from app.endpoints import (
+    admin,
+    amap,
+    associations,
+    auth,
+    bdebooking,
+    calendar,
+    campaign,
+    cinema,
+    core,
+    groups,
+    loan,
+    module_visibility,
+    raffle,
+    users,
+)
 
 api_router = APIRouter()
-for module in ModuleList:
-    api_router.include_router(module.value.router)
 
-for core_module in CoreRouter:
-    api_router.include_router(module.value.router)
+api_router.include_router(admin.router)
+api_router.include_router(amap.router)
+api_router.include_router(associations.router)
+api_router.include_router(auth.router)
+api_router.include_router(bdebooking.router)
+api_router.include_router(calendar.router)
+api_router.include_router(campaign.router)
+api_router.include_router(cinema.router)
+api_router.include_router(core.router)
+api_router.include_router(groups.router)
+api_router.include_router(loan.router)
+api_router.include_router(module_visibility.router)
+api_router.include_router(raffle.router)
+api_router.include_router(users.router)
