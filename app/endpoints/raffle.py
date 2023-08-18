@@ -7,7 +7,7 @@ from redis import Redis
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api import Module
+from app.utils.types.module import Module
 from app.cruds import cruds_groups, cruds_raffle, cruds_users
 from app.dependencies import (
     get_db,

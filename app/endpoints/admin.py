@@ -1,12 +1,12 @@
 from fastapi import Depends
 from starlette.responses import JSONResponse
 
-from app.api import Module
 from app.core.config import Settings
 from app.dependencies import get_settings, is_user_a_member_of
 from app.models import models_core
 from app.utils.mail.mailworker import send_email
 from app.utils.types.groups_type import GroupType
+from app.utils.types.module import Module
 
 admin = Module()
 

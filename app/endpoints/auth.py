@@ -12,7 +12,7 @@ from fastapi.templating import Jinja2Templates
 from pytz import timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api import Module
+from app.utils.types.module import Module
 from app.core.config import Settings
 from app.core.security import (
     authenticate_user,

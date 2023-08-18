@@ -3,7 +3,7 @@ import uuid
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api import Module
+from app.utils.types.module import Module
 from app.cruds import cruds_bdebooking
 from app.dependencies import get_db, is_user_a_member, is_user_a_member_of
 from app.models import models_core

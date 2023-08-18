@@ -4,7 +4,7 @@ from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api import Module
+from app.utils.types.module import Module
 from app.cruds import cruds_cinema
 from app.dependencies import (
     get_db,

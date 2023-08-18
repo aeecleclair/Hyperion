@@ -20,19 +20,7 @@ from app.endpoints import (
     raffle,
     users,
 )
-from app.utils.types.groups_type import GroupType
-
-
-class Module:
-    """Module representation in Hyperion"""
-
-    def __init__(
-        self,
-        router=APIRouter(),
-        default_allowed_groups_ids: list[GroupType] = [],
-    ):
-        self.router = router
-        self.default_allowed_groups_ids = default_allowed_groups_ids
+from app.utils.types.module import Module
 
 
 class ModuleList(Module, Enum):
@@ -59,7 +47,7 @@ class CoreRouter(Module, Enum):
 
 api_router = APIRouter()
 for module in ModuleList:
-    api_router.include_router(module.router)
+    api_router.include_router(module.value.router)
 
 for core_module in CoreRouter:
-    api_router.include_router(module.router)
+    api_router.include_router(module.value.router)

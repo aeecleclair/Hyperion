@@ -1,7 +1,7 @@
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api import Module
+from app.utils.types.module import Module
 from app.cruds import cruds_module_visibility
 from app.dependencies import get_db, is_user_a_member_of
 from app.models import models_core

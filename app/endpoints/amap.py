@@ -7,7 +7,7 @@ from pytz import timezone
 from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api import Module
+from app.utils.types.module import Module
 from app.core.config import Settings
 from app.cruds import cruds_amap, cruds_users
 from app.dependencies import (

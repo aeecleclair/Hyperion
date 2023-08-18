@@ -1,4 +1,4 @@
-from app.api import Module
+from app.utils.types.module import Module
 
 associations = Module()
 

@@ -3,7 +3,7 @@ from os import path
 from fastapi import Depends, HTTPException
 from fastapi.responses import FileResponse
 
-from app.api import Module
+from app.utils.types.module import Module
 from app.core.config import Settings
 from app.dependencies import get_settings
 from app.schemas import schemas_core
