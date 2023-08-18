@@ -48,13 +48,12 @@ async def get_modules_by_user(
     return result.unique().scalars().all()
 
 
-async def get_modules_by_user(
-    user: models_core.CoreUser,
+async def get_module_visibility(
+    root: str,
+    group_id: str,
     db: AsyncSession,
-) -> Sequence[models_module_visibility.ModuleVisibility]:
-    """Return the every module with their visibility"""
-
-    userGroupIds = map(lambda group: group.id, user.groups)
+) -> models_module_visibility.ModuleVisibility:
+    """Return module visibility by root and group id"""
 
     result = await db.execute(
         select(
@@ -62,14 +61,13 @@ async def get_modules_by_user(
             func.group_concat(
                 models_module_visibility.ModuleVisibility.allowedGroupId, ", "
             ),
+        ).where(
+            models_module_visibility.ModuleVisibility.root == root
+            and models_module_visibility.ModuleVisibility.allowedGroupId == group_id
         )
-        .where(
-            models_module_visibility.ModuleVisibility.allowedGroupId._in(userGroupIds)
-        )
-        .group_by(models_module_visibility.ModuleVisibility.root)
     )
 
-    return result.unique().scalars().all()
+    return result.unique().scalars().first()
 
 
 async def create_module_visibility(

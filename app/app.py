@@ -16,7 +16,7 @@ from sqlalchemy.exc import IntegrityError
 from app import api
 from app.core.config import Settings
 from app.core.log import LogConfig
-from app.cruds import cruds_groups
+from app.cruds import cruds_groups, cruds_module_visibility
 from app.database import Base
 from app.dependencies import (
     get_db_engine,
@@ -28,6 +28,67 @@ from app.models import models_core
 from app.models.models_module_visibility import ModuleVisibility
 from app.utils.redis import limiter
 from app.utils.types.groups_type import GroupType
+
+
+async def create_db_tables(engine, drop_db, hyperion_error_logger):
+    """Create db tables
+    Alembic should be used for any migration, this function can only create new tables and ensure that the necessary groups are available
+    """
+    async with engine.begin() as conn:
+        try:
+            if drop_db:
+                await conn.run_sync(Base.metadata.drop_all)
+            await conn.run_sync(Base.metadata.create_all)
+        except Exception as error:
+            hyperion_error_logger.fatal(
+                f"Startup: Could not create tables in the database: {error}"
+            )
+
+
+async def initialize_groups(SessionLocal, hyperion_error_logger):
+    """Add the necessary groups for account types"""
+    async with SessionLocal() as db:
+        for id in GroupType:
+            exists = await cruds_groups.get_group_by_id(group_id=id, db=db)
+            # We don't want to recreate the groups if they already exist
+            if not exists:
+                group = models_core.CoreGroup(
+                    id=id, name=id.name, description="Group type"
+                )
+
+                try:
+                    db.add(group)
+                    await db.commit()
+                except IntegrityError as error:
+                    hyperion_error_logger.fatal(
+                        f"Startup: Could not add group {group.name}<{group.id}> in the database: {error}"
+                    )
+                    await db.rollback()
+
+
+async def initialize_module_visibility(SessionLocal, hyperion_error_logger):
+    """Add the default module visibilities for Titan"""
+    async with SessionLocal() as db:
+        for module in api.ModuleList:
+            for default_group_id in module.default_allowed_groups_ids:
+                module_visibility_exists = (
+                    await cruds_module_visibility.get_module_visibility(
+                        root=module.root, group_id=default_group_id, db=db
+                    )
+                )
+                # We don't want to recreate the groups if they already exist
+                if not module_visibility_exists:
+                    module_visibility = ModuleVisibility(
+                        root=module.root, allowedGroupId=default_group_id
+                    )
+                    try:
+                        db.add(module_visibility)
+                        await db.commit()
+                    except IntegrityError as error:
+                        hyperion_error_logger.fatal(
+                            f"Startup: Could not add module visibility {module.root}<{default_group_id}> in the database: {error}"
+                        )
+                        await db.rollback()
 
 
 # We wrap the application in a function to be able to pass the settings and drop_db parameters
@@ -61,63 +122,13 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
             hyperion_error_logger.info("Redis client not configured")
 
         engine = get_db_engine(settings=settings)
-
-        # Create db tables #
-        # Alembic should be used for any migration, this function can only create new tables and ensure that the necessary groups are available
-        async with engine.begin() as conn:
-            try:
-                if drop_db:
-                    await conn.run_sync(Base.metadata.drop_all)
-                await conn.run_sync(Base.metadata.create_all)
-            except Exception as error:
-                hyperion_error_logger.fatal(
-                    f"Startup: Could not create tables in the database: {error}"
-                )
+        create_db_tables(engine, drop_db, hyperion_error_logger)
 
         SessionLocal = app.dependency_overrides.get(
             get_session_maker, get_session_maker
         )()
-        # Add the necessary groups for account types
-        async with SessionLocal() as db:
-            for id in GroupType:
-                exists = await cruds_groups.get_group_by_id(group_id=id, db=db)
-                # We don't want to recreate the groups if they already exist
-                if not exists:
-                    group = models_core.CoreGroup(
-                        id=id, name=id.name, description="Group type"
-                    )
-
-                    try:
-                        db.add(group)
-                        await db.commit()
-                    except IntegrityError as error:
-                        hyperion_error_logger.fatal(
-                            f"Startup: Could not add group {group.name}<{group.id}> in the database: {error}"
-                        )
-                        await db.rollback()
-
-        # Add the default module visibilities for Titan
-        async with SessionLocal() as db:
-            for module in api.ModuleList:
-                # exists = await cruds_groups.get_module_by_root(root=module.root, db=db)
-                # We don't want to recreate the groups if they already exist
-                # if not exists:
-                #     group = models_core.CoreGroup(
-                #         id=id, name=id.name, description="Group type"
-                #     )
-
-                for default_group in module.default_allowed_groups_ids:
-                    module_visibility = ModuleVisibility(
-                        root=module.root, allowedGroupId=default_group
-                    )
-                    try:
-                        db.add(module_visibility)
-                        await db.commit()
-                    except IntegrityError as error:
-                        hyperion_error_logger.fatal(
-                            f"Startup: Could not add module visibility {module.root}<{default_group}> in the database: {error}"
-                        )
-                        await db.rollback()
+        initialize_groups(SessionLocal, hyperion_error_logger)
+        initialize_module_visibility(SessionLocal, hyperion_error_logger)
 
         yield
         hyperion_error_logger.info("Shutting down")
