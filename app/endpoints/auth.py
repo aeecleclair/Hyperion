@@ -652,9 +652,6 @@ async def authorization_code_grant(  # noqa: C901 # The function is too complex 
     # If a redirect_uri was provided in the previous request, we need to check they match
     # > Ensure that the redirect_uri parameter value is identical to the redirect_uri parameter value that was included in the initial Authorization Request.
     # > If the redirect_uri parameter value is not present when there is only one registered redirect_uri value, the Authorization Server MAY return an error (since the Client should have included the parameter) or MAY proceed without an error (since OAuth 2.0 permits the parameter to be omitted in this case).
-    if tokenreq.redirect_uri is None:
-        # We use the value provided previously
-        tokenreq.redirect_uri = db_authorization_code.redirect_uri
     # If a redirect_uri is provided, it should match the one in the auth client
     if tokenreq.redirect_uri != db_authorization_code.redirect_uri:
         hyperion_access_logger.warning(
