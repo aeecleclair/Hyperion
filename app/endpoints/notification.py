@@ -235,3 +235,22 @@ async def send_notif(
         message=message,
     )
     print("send notif done")
+
+
+@router.get(
+    "/notification/devices",
+    status_code=200,
+    tags=[Tags.notifications],
+)
+async def get_tokens(
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Unsubscribe to a topic
+
+    **The user must be authenticated to use this endpoint**
+    """
+    return await cruds_notification.get_firebase_devices_by_user_id(
+        user_id=user.id, db=db
+    )
