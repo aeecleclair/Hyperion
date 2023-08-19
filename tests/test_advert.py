@@ -13,10 +13,8 @@ from tests.commons import (
     create_user_with_groups,
 )
 
-# tag: models_advert.Tag | None = None
 advert: models_advert.Advert | None = None
 advertiser: models_advert.Advertiser | None = None
-group_advertiser: models_core.CoreGroup | None = None
 user_admin: models_core.CoreUser | None = None
 user_advertiser: models_core.CoreUser | None = None
 user_simple: models_core.CoreUser | None = None
@@ -34,14 +32,6 @@ async def init_objects():
     token_admin = create_api_access_token(user_admin)
 
     global advertiser
-    global group_advertiser
-
-    # group_advertiser = models_core.CoreGroup(
-    #     id=str(uuid.uuid4()),
-    #     name="advertiser",
-    #     description="",
-    # )
-    # await add_object_to_db(group_advertiser)
 
     advertiser = models_advert.Advertiser(
         id=str(uuid.uuid4()),
@@ -74,8 +64,6 @@ async def init_objects():
     )
 
     await add_object_to_db(advert)
-    # db.add(tag)
-    # db.add(adverts_tags_link)
 
 
 def test_get_adverts():
