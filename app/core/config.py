@@ -179,7 +179,9 @@ class Settings(BaseSettings):
             if not secret:
                 secret = None
             # We can create a new instance of the auth_client_class with the client id and secret
-            clients[client_id] = auth_client_class(client_id=client_id, secret=secret, redirect_uri=redirect_uri)
+            clients[client_id] = auth_client_class(
+                client_id=client_id, secret=secret, redirect_uri=redirect_uri
+            )
 
         return clients
 
