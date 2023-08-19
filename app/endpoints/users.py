@@ -595,7 +595,7 @@ async def migrate_mail(
             detail="Only student users with an old email adresse can migrate their email address",
         )
 
-    if not re.match(r"^[\w\-.]*@(etu(-enise)?\.ec-lyon\.fr$", mail_migration.new_email):
+    if not re.match(r"^[\w\-.]*@etu(-enise)?\.ec-lyon\.fr$", mail_migration.new_email):
         raise HTTPException(
             status_code=400,
             detail="The new email adresse must match the new ECL format for student users",
