@@ -1,18 +1,17 @@
 from os import path
 
-from fastapi import Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 
-from app.utils.types.module import Module
 from app.core.config import Settings
 from app.dependencies import get_settings
 from app.schemas import schemas_core
 from app.utils.types.tags import Tags
 
-core = Module(root="/")
+router = APIRouter()
 
 
-@core.router.get(
+@router.get(
     "/information",
     response_model=schemas_core.CoreInformation,
     status_code=200,
@@ -31,7 +30,7 @@ async def read_information(settings: Settings = Depends(get_settings)):
     )
 
 
-@core.router.get(
+@router.get(
     "/privacy",
     response_class=FileResponse,
     status_code=200,
@@ -45,7 +44,7 @@ async def read_privacy():
     return FileResponse("assets/privacy.txt")
 
 
-@core.router.get(
+@router.get(
     "/terms-and-conditions",
     response_class=FileResponse,
     status_code=200,
@@ -59,7 +58,7 @@ async def read_terms_and_conditions():
     return FileResponse("assets/terms-and-conditions.txt")
 
 
-@core.router.get(
+@router.get(
     "/support",
     response_class=FileResponse,
     status_code=200,
@@ -73,7 +72,7 @@ async def read_support():
     return FileResponse("assets/support.txt")
 
 
-@core.router.get(
+@router.get(
     "/security.txt",
     response_class=FileResponse,
     status_code=200,
@@ -87,7 +86,7 @@ async def read_security_txt():
     return FileResponse("assets/security.txt")
 
 
-@core.router.get(
+@router.get(
     "/.well-known/security.txt",
     response_class=FileResponse,
     status_code=200,
@@ -101,7 +100,7 @@ async def read_wellknown_security_txt():
     return FileResponse("assets/security.txt")
 
 
-@core.router.get(
+@router.get(
     "/style/{file}.css",
     response_class=FileResponse,
     status_code=200,
@@ -128,7 +127,7 @@ async def get_style_file(
     return FileResponse(css_path)
 
 
-@core.router.get(
+@router.get(
     "/favicon.ico",
     response_class=FileResponse,
     status_code=200,

@@ -1,46 +1,24 @@
 from sqlite3 import IntegrityError
 from typing import Sequence
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import models_core, models_module_visibility
 
 
-async def get_modules(
-    db: AsyncSession,
-) -> Sequence[models_module_visibility.ModuleVisibility]:
-    """Return every module with their visibility"""
-
-    result = await db.execute(
-        select(
-            models_module_visibility.ModuleVisibility.root,
-            func.group_concat(
-                models_module_visibility.ModuleVisibility.allowedGroupId, ", "
-            ),
-        ).group_by(models_module_visibility.ModuleVisibility.root)
-    )
-
-    return result.unique().scalars().all()
-
-
 async def get_modules_by_user(
     user: models_core.CoreUser,
     db: AsyncSession,
-) -> Sequence[models_module_visibility.ModuleVisibility]:
+) -> Sequence[str]:
     """Return the every module with their visibility"""
 
-    userGroupIds = map(lambda group: group.id, user.groups)
+    userGroupIds = list(map(lambda group: group.id, user.groups))
 
     result = await db.execute(
-        select(
-            models_module_visibility.ModuleVisibility.root,
-            func.group_concat(
-                models_module_visibility.ModuleVisibility.allowedGroupId, ", "
-            ),
-        )
+        select(models_module_visibility.ModuleVisibility.root)
         .where(
-            models_module_visibility.ModuleVisibility.allowedGroupId._in(userGroupIds)
+            models_module_visibility.ModuleVisibility.allowed_group_id.in_(userGroupIds)
         )
         .group_by(models_module_visibility.ModuleVisibility.root)
     )
@@ -48,25 +26,39 @@ async def get_modules_by_user(
     return result.unique().scalars().all()
 
 
+async def get_allowed_groups_by_root(
+    root: str,
+    db: AsyncSession,
+) -> Sequence[str]:
+    """Return the every module with their visibility"""
+
+    result = await db.execute(
+        select(
+            models_module_visibility.ModuleVisibility.allowed_group_id,
+        ).where(models_module_visibility.ModuleVisibility.root == root)
+    )
+
+    resultList = result.unique().scalars().all()
+
+    if resultList:
+        return resultList
+    else:
+        return []
+
+
 async def get_module_visibility(
     root: str,
     group_id: str,
     db: AsyncSession,
-) -> models_module_visibility.ModuleVisibility:
+) -> models_module_visibility.ModuleVisibility | None:
     """Return module visibility by root and group id"""
 
     result = await db.execute(
-        select(
-            models_module_visibility.ModuleVisibility.root,
-            func.group_concat(
-                models_module_visibility.ModuleVisibility.allowedGroupId, ", "
-            ),
-        ).where(
-            models_module_visibility.ModuleVisibility.root == root
-            and models_module_visibility.ModuleVisibility.allowedGroupId == group_id
+        select(models_module_visibility.ModuleVisibility).where(
+            (models_module_visibility.ModuleVisibility.allowed_group_id == group_id)
+            & (models_module_visibility.ModuleVisibility.root == root)
         )
     )
-
     return result.unique().scalars().first()
 
 
@@ -92,8 +84,8 @@ async def delete_module_visibility(
     await db.execute(
         delete(models_module_visibility.ModuleVisibility).where(
             models_module_visibility.ModuleVisibility.root == module_visibility.root
-            and models_module_visibility.ModuleVisibility.allowedGroupId
-            == module_visibility.allowedGroupId
+            and models_module_visibility.ModuleVisibility.allowed_group_id
+            == module_visibility.allowed_group_id
         )
     )
     await db.commit()

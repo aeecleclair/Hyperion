@@ -1,10 +1,9 @@
 import uuid
 
-from fastapi import Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.utils.types.module import Module
 from app.cruds import cruds_cinema
 from app.dependencies import (
     get_db,
@@ -19,10 +18,10 @@ from app.utils.types import standard_responses
 from app.utils.types.groups_type import GroupType
 from app.utils.types.tags import Tags
 
-cinema = Module(root="/cinema")
+router = APIRouter()
 
 
-@cinema.router.get(
+@router.get(
     "/cinema/sessions",
     response_model=list[schemas_cinema.CineSessionComplete],
     status_code=200,
@@ -36,7 +35,7 @@ async def get_sessions(
     return result
 
 
-@cinema.router.post(
+@router.post(
     "/cinema/sessions",
     response_model=schemas_cinema.CineSessionComplete,
     status_code=201,
@@ -57,9 +56,7 @@ async def create_session(
         raise HTTPException(status_code=422, detail=str(error))
 
 
-@cinema.router.patch(
-    "/cinema/sessions/{session_id}", status_code=200, tags=[Tags.cinema]
-)
+@router.patch("/cinema/sessions/{session_id}", status_code=200, tags=[Tags.cinema])
 async def update_session(
     session_id: str,
     session_update: schemas_cinema.CineSessionUpdate,
@@ -71,9 +68,7 @@ async def update_session(
     )
 
 
-@cinema.router.delete(
-    "/cinema/sessions/{session_id}", status_code=204, tags=[Tags.cinema]
-)
+@router.delete("/cinema/sessions/{session_id}", status_code=204, tags=[Tags.cinema])
 async def delete_session(
     session_id: str,
     db: AsyncSession = Depends(get_db),
@@ -82,7 +77,7 @@ async def delete_session(
     await cruds_cinema.delete_session(session_id=session_id, db=db)
 
 
-@cinema.router.post(
+@router.post(
     "/cinema/sessions/{session_id}/poster",
     response_model=standard_responses.Result,
     status_code=201,
@@ -114,7 +109,7 @@ async def create_campaigns_logo(
     return standard_responses.Result(success=True)
 
 
-@cinema.router.get(
+@router.get(
     "/cinema/sessions/{session_id}/poster",
     response_class=FileResponse,
     status_code=200,

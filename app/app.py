@@ -71,16 +71,17 @@ async def initialize_module_visibility(SessionLocal, hyperion_error_logger):
     """Add the default module visibilities for Titan"""
     async with SessionLocal() as db:
         for module in ModuleList:
-            for default_group_id in module.default_allowed_groups_ids:
+            for default_group_id in module.value.default_allowed_groups_ids:
                 module_visibility_exists = (
                     await cruds_module_visibility.get_module_visibility(
-                        root=module.root, group_id=default_group_id, db=db
+                        root=module.value.root, group_id=default_group_id, db=db
                     )
                 )
-                # We don't want to recreate the groups if they already exist
+
+                # We don't want to recreate the module visibility if they already exist
                 if not module_visibility_exists:
                     module_visibility = ModuleVisibility(
-                        root=module.root, allowedGroupId=default_group_id
+                        root=module.value.root, allowed_group_id=default_group_id.value
                     )
                     try:
                         db.add(module_visibility)
@@ -123,13 +124,13 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
             hyperion_error_logger.info("Redis client not configured")
 
         engine = get_db_engine(settings=settings)
-        create_db_tables(engine, drop_db, hyperion_error_logger)
+        await create_db_tables(engine, drop_db, hyperion_error_logger)
 
         SessionLocal = app.dependency_overrides.get(
             get_session_maker, get_session_maker
         )()
-        initialize_groups(SessionLocal, hyperion_error_logger)
-        initialize_module_visibility(SessionLocal, hyperion_error_logger)
+        await initialize_groups(SessionLocal, hyperion_error_logger)
+        await initialize_module_visibility(SessionLocal, hyperion_error_logger)
 
         yield
         hyperion_error_logger.info("Shutting down")

@@ -1,18 +1,19 @@
-from fastapi import Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.utils.types.module import Module
 from app.cruds import cruds_module_visibility
-from app.dependencies import get_db, is_user_a_member_of
-from app.models import models_core
+from app.dependencies import get_db, is_user_a_member, is_user_a_member_of
+from app.models import models_core, models_module_visibility
 from app.schemas import schemas_module_visibility
+from app.utils.tools import is_group_id_valid
 from app.utils.types.groups_type import GroupType
+from app.utils.types.module_list import ModuleList
 from app.utils.types.tags import Tags
 
-module_visibility = Module(root="/module_visibility")
+router = APIRouter()
 
 
-@module_visibility.router.get(
+@router.get(
     "/module_visibility/",
     response_model=list[schemas_module_visibility.ModuleVisibility],
     status_code=200,
@@ -27,52 +28,75 @@ async def get_module_visibility(
 
     **This endpoint is only usable by administrators**
     """
-    result = await cruds_module_visibility.get_modules(db=db)
+
     returnModuleVisibilities = []
-    for module in result:
-        if module.allowedGroupId != "":
-            returnModuleVisibilities.append(
-                schemas_module_visibility.ModuleVisibility(
-                    root=module.root, allowedGroupIds=module.allowedGroupId.split(", ")
-                )
+    for module in ModuleList:
+        allowedGroupIds = await cruds_module_visibility.get_allowed_groups_by_root(
+            root=module.value.root, db=db
+        )
+        returnModuleVisibilities.append(
+            schemas_module_visibility.ModuleVisibility(
+                root=module.value.root,
+                allowedGroupIds=allowedGroupIds,
             )
-        else:
-            returnModuleVisibilities.append(
-                schemas_module_visibility.ModuleVisibility(
-                    root=module.root, allowedGroupIds=[]
-                )
-            )
+        )
+
     return returnModuleVisibilities
 
 
-@module_visibility.router.get(
+@router.get(
     "/module_visibility/me",
-    response_model=list[schemas_module_visibility.ModuleVisibility],
+    response_model=list[str],
     status_code=200,
     tags=[Tags.core],
 )
 async def get_user_modules_visibility(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
-    Get group user module visibility.
+    Get group user accessible root
 
     **This endpoint is only usable by everyone**
     """
     result = await cruds_module_visibility.get_modules_by_user(user=user, db=db)
-    returnModuleVisibilities = []
-    for module in result:
-        if module.allowedGroupId != "":
-            returnModuleVisibilities.append(
-                schemas_module_visibility.ModuleVisibility(
-                    root=module.root, allowedGroupIds=module.allowedGroupId.split(", ")
-                )
-            )
-        else:
-            returnModuleVisibilities.append(
-                schemas_module_visibility.ModuleVisibility(
-                    root=module.root, allowedGroupIds=[]
-                )
-            )
-    return returnModuleVisibilities
+
+    return result
+
+
+@router.post(
+    "/loans/loaners/",
+    response_model=schemas_module_visibility.ModuleVisibility,
+    status_code=201,
+    tags=[Tags.loans],
+)
+async def add_module_visibility(
+    root: str,
+    group_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Add a new group to a module
+
+    **This endpoint is only usable by administrators**
+    """
+
+    # We need to check that loaner.group_manager_id is a valid group
+    if not await is_group_id_valid(group_id, db=db):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid id, group_manager_id must be a valid group id",
+        )
+
+    try:
+        module_visibility_db = models_module_visibility.ModuleVisibility(
+            root=root,
+            allowed_group_id=group_id,
+        )
+
+        return await cruds_module_visibility.create_module_visibility(
+            module_visibility=module_visibility_db, db=db
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))

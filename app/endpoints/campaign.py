@@ -3,7 +3,7 @@ import logging
 import uuid
 from datetime import datetime
 
-from fastapi import Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from pytz import timezone
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,15 +21,14 @@ from app.utils.tools import (
 from app.utils.types import standard_responses
 from app.utils.types.campaign_type import ListType, StatusType
 from app.utils.types.groups_type import GroupType
-from app.utils.types.module import Module
 from app.utils.types.tags import Tags
 
-campaign = Module(root="/campaign")
+router = APIRouter()
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
-@campaign.router.get(
+@router.get(
     "/campaign/sections",
     response_model=list[schemas_campaign.SectionComplete],
     status_code=200,
@@ -48,7 +47,7 @@ async def get_sections(
     return sections
 
 
-@campaign.router.post(
+@router.post(
     "/campaign/sections",
     response_model=schemas_campaign.SectionComplete,
     status_code=201,
@@ -85,7 +84,7 @@ async def add_section(
         raise HTTPException(status_code=422, detail=str(error))
 
 
-@campaign.router.delete(
+@router.delete(
     "/campaign/sections/{section_id}",
     status_code=204,
     tags=[Tags.campaign],
@@ -116,7 +115,7 @@ async def delete_section(
         raise HTTPException(status_code=422, detail=str(error))
 
 
-@campaign.router.get(
+@router.get(
     "/campaign/lists",
     response_model=list[schemas_campaign.ListReturn],
     status_code=200,
@@ -135,7 +134,7 @@ async def get_lists(
     return lists
 
 
-@campaign.router.post(
+@router.post(
     "/campaign/lists",
     response_model=schemas_campaign.ListReturn,
     status_code=201,
@@ -206,7 +205,7 @@ async def add_list(
         raise HTTPException(status_code=400, detail=str(error))
 
 
-@campaign.router.delete(
+@router.delete(
     "/campaign/lists/{list_id}",
     status_code=204,
     tags=[Tags.campaign],
@@ -237,7 +236,7 @@ async def delete_list(
         raise HTTPException(status_code=400, detail=str(error))
 
 
-@campaign.router.delete(
+@router.delete(
     "/campaign/lists/",
     status_code=204,
     tags=[Tags.campaign],
@@ -272,7 +271,7 @@ async def delete_lists_by_type(
         raise HTTPException(status_code=400, detail=str(error))
 
 
-@campaign.router.patch(
+@router.patch(
     "/campaign/lists/{list_id}",
     status_code=204,
     tags=[Tags.campaign],
@@ -320,7 +319,7 @@ async def update_list(
         raise HTTPException(status_code=400, detail=str(error))
 
 
-@campaign.router.post(
+@router.post(
     "/campaign/status/open",
     status_code=204,
     tags=[Tags.campaign],
@@ -359,7 +358,7 @@ async def open_vote(
         json.dump([liste.as_dict() for liste in lists], file)
 
 
-@campaign.router.post(
+@router.post(
     "/campaign/status/close",
     status_code=204,
     tags=[Tags.campaign],
@@ -386,7 +385,7 @@ async def close_vote(
     await cruds_campaign.set_status(db=db, new_status=StatusType.closed)
 
 
-@campaign.router.post(
+@router.post(
     "/campaign/status/counting",
     status_code=204,
     tags=[Tags.campaign],
@@ -413,7 +412,7 @@ async def count_voting(
     await cruds_campaign.set_status(db=db, new_status=StatusType.counting)
 
 
-@campaign.router.post(
+@router.post(
     "/campaign/status/published",
     status_code=204,
     tags=[Tags.campaign],
@@ -440,7 +439,7 @@ async def publish_vote(
     await cruds_campaign.set_status(db=db, new_status=StatusType.published)
 
 
-@campaign.router.post(
+@router.post(
     "/campaign/status/reset",
     status_code=204,
     tags=[Tags.campaign],
@@ -484,7 +483,7 @@ async def reset_vote(
         raise HTTPException(status_code=400, detail=str(error))
 
 
-@campaign.router.post(
+@router.post(
     "/campaign/votes",
     status_code=204,
     tags=[Tags.campaign],
@@ -541,7 +540,7 @@ async def vote(
         raise HTTPException(status_code=400, detail=str(error))
 
 
-@campaign.router.get(
+@router.get(
     "/campaign/votes",
     response_model=list[str],
     status_code=200,
@@ -569,7 +568,7 @@ async def get_sections_already_voted(
     return sections_ids
 
 
-@campaign.router.get(
+@router.get(
     "/campaign/results",
     response_model=list[schemas_campaign.Result],
     status_code=200,
@@ -618,7 +617,7 @@ async def get_results(
         )
 
 
-@campaign.router.get(
+@router.get(
     "/campaign/status",
     response_model=schemas_campaign.VoteStatus,
     status_code=200,
@@ -637,7 +636,7 @@ async def get_status_vote(
     return schemas_campaign.VoteStatus(status=status)
 
 
-@campaign.router.get(
+@router.get(
     "/campaign/stats/{section_id}",
     response_model=schemas_campaign.VoteStats,
     status_code=200,
@@ -663,7 +662,7 @@ async def get_stats_for_section(
     return schemas_campaign.VoteStats(section_id=section_id, count=count)
 
 
-@campaign.router.post(
+@router.post(
     "/campaign/lists/{list_id}/logo",
     response_model=standard_responses.Result,
     status_code=201,
@@ -708,7 +707,7 @@ async def create_campaigns_logo(
     return standard_responses.Result(success=True)
 
 
-@campaign.router.get(
+@router.get(
     "/campaign/lists/{list_id}/logo",
     response_class=FileResponse,
     status_code=200,

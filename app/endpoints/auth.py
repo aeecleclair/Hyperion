@@ -5,7 +5,16 @@ import urllib.parse
 from datetime import datetime, timedelta
 from typing import Set
 
-from fastapi import Depends, Form, Header, HTTPException, Request, Response, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    Form,
+    Header,
+    HTTPException,
+    Request,
+    Response,
+    status,
+)
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.templating import Jinja2Templates
@@ -31,11 +40,11 @@ from app.models import models_auth, models_core
 from app.schemas import schemas_auth
 from app.utils.auth.providers import BaseAuthClient
 from app.utils.tools import is_user_member_of_an_allowed_group
-from app.utils.types.module import Module
 from app.utils.types.scopes_type import ScopeType
 from app.utils.types.tags import Tags
 
-auth = Module(root="/auth")
+router = APIRouter()
+
 
 templates = Jinja2Templates(directory="assets/templates")
 
@@ -48,7 +57,7 @@ hyperion_security_logger = logging.getLogger("hyperion.security")
 
 
 # TODO: maybe remove
-@auth.router.post(
+@router.post(
     "/auth/simple_token",
     response_model=schemas_auth.AccessToken,
     status_code=200,
@@ -96,7 +105,7 @@ async def login_for_access_token(
 # Common to OAuth 2.0 and OIDC
 
 
-@auth.router.get(
+@router.get(
     "/auth/authorize",
     tags=[Tags.auth],
     response_class=HTMLResponse,
@@ -137,7 +146,7 @@ async def get_authorize_page(
     )
 
 
-@auth.router.post(
+@router.post(
     "/auth/authorize",
     tags=[Tags.auth],
     response_class=HTMLResponse,
@@ -185,7 +194,7 @@ async def post_authorize_page(
     )
 
 
-@auth.router.post(
+@router.post(
     "/auth/authorization-flow/authorize-validation",
     tags=[Tags.auth],
     response_class=RedirectResponse,
@@ -381,7 +390,7 @@ async def authorize_validation(
     return RedirectResponse(url, status_code=status.HTTP_302_FOUND)
 
 
-@auth.router.post(
+@router.post(
     "/auth/token",
     tags=[Tags.auth],
     response_model=schemas_auth.TokenResponse,
@@ -966,7 +975,7 @@ def create_response_body(
     return response_body
 
 
-@auth.router.get(
+@router.get(
     "/auth/userinfo",
     tags=[Tags.auth],
 )
@@ -1019,7 +1028,7 @@ async def auth_get_userinfo(
     return auth_client.get_userinfo(user=user)
 
 
-@auth.router.get(
+@router.get(
     "/oidc/authorization-flow/jwks_uri",
     tags=[Tags.auth],
 )
@@ -1029,7 +1038,7 @@ def jwks_uri(
     return settings.RSA_PUBLIC_JWK
 
 
-@auth.router.get(
+@router.get(
     "/.well-known/openid-configuration",
     tags=[Tags.auth],
 )

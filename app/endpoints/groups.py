@@ -8,7 +8,7 @@ Group management is part of the core of Hyperion. These endpoints allow managing
 import logging
 import uuid
 
-from fastapi import Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cruds import cruds_groups, cruds_users
@@ -16,10 +16,9 @@ from app.dependencies import get_db, get_request_id, is_user_a_member_of
 from app.models import models_core
 from app.schemas import schemas_core
 from app.utils.types.groups_type import GroupType
-from app.utils.types.module import Module
 from app.utils.types.tags import Tags
 
-groups = Module(root="/groups")
+router = APIRouter()
 
 hyperion_security_logger = logging.getLogger("hyperion.security")
 
@@ -27,7 +26,7 @@ hyperion_security_logger = logging.getLogger("hyperion.security")
 hyperion_security_logger = logging.getLogger("hyperion.security")
 
 
-@groups.router.get(
+@router.get(
     "/groups/",
     response_model=list[schemas_core.CoreGroupSimple],
     status_code=200,
@@ -47,7 +46,7 @@ async def read_groups(
     return groups
 
 
-@groups.router.get(
+@router.get(
     "/groups/{group_id}",
     response_model=schemas_core.CoreGroup,
     status_code=200,
@@ -70,7 +69,7 @@ async def read_group(
     return db_group
 
 
-@groups.router.post(
+@router.post(
     "/groups/",
     response_model=schemas_core.CoreGroupSimple,
     status_code=201,
@@ -102,7 +101,7 @@ async def create_group(
         raise HTTPException(status_code=422, detail=str(error))
 
 
-@groups.router.patch(
+@router.patch(
     "/groups/{group_id}",
     status_code=204,
     tags=[Tags.groups],
@@ -137,7 +136,7 @@ async def update_group(
     await cruds_groups.update_group(db=db, group_id=group_id, group_update=group_update)
 
 
-@groups.router.post(
+@router.post(
     "/groups/membership",
     response_model=schemas_core.CoreGroup,
     status_code=201,
@@ -179,7 +178,7 @@ async def create_membership(
         raise HTTPException(status_code=422, detail=str(error))
 
 
-@groups.router.post(
+@router.post(
     "/groups/batch-membership",
     status_code=204,
     tags=[Tags.groups],
@@ -225,7 +224,7 @@ async def create_batch_membership(
         # If the user does not exist, we will pass silently
 
 
-@groups.router.delete(
+@router.delete(
     "/groups/membership",
     status_code=204,
     tags=[Tags.groups],
@@ -251,7 +250,7 @@ async def delete_membership(
     )
 
 
-@groups.router.delete(
+@router.delete(
     "/groups/batch-membership",
     status_code=204,
     tags=[Tags.groups],
@@ -283,7 +282,7 @@ async def delete_batch_membership(
     )
 
 
-@groups.router.delete(
+@router.delete(
     "/groups/{group_id}",
     status_code=204,
     tags=[Tags.groups],

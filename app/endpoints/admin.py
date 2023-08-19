@@ -1,4 +1,4 @@
-from fastapi import Depends
+from fastapi import APIRouter, Depends
 from starlette.responses import JSONResponse
 
 from app.core.config import Settings
@@ -6,12 +6,11 @@ from app.dependencies import get_settings, is_user_a_member_of
 from app.models import models_core
 from app.utils.mail.mailworker import send_email
 from app.utils.types.groups_type import GroupType
-from app.utils.types.module import Module
 
-admin = Module(root="/admin")
+router = APIRouter()
 
 
-@admin.router.post("/send-email/")
+@router.post("/send-email/")
 def send_email_backgroundtasks(
     email: str,
     subject: str,
