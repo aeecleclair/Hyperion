@@ -68,7 +68,7 @@ async def get_user_modules_visibility(
     "/module_visibility/",
     response_model=schemas_module_visibility.ModuleVisibility,
     status_code=201,
-    tags=[Tags.loans],
+    tags=[Tags.core],
 )
 async def add_module_visibility(
     root: str,
@@ -86,9 +86,8 @@ async def add_module_visibility(
     if not await is_group_id_valid(group_id, db=db):
         raise HTTPException(
             status_code=400,
-            detail="Invalid id, group_manager_id must be a valid group id",
+            detail="Invalid id, group_id must be a valid group id",
         )
-
     try:
         module_visibility_db = models_module_visibility.ModuleVisibility(
             root=root,
@@ -103,13 +102,13 @@ async def add_module_visibility(
 
 
 @router.delete(
-    "/module_visibility/{root}/{group_id}", status_code=204, tags=[Tags.cinema]
+    "/module_visibility/{root}/{group_id}", status_code=204, tags=[Tags.core]
 )
 async def delete_session(
     root: str,
     group_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.cinema)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     await cruds_module_visibility.delete_module_visibility(
         root=root, allowed_group_id=group_id, db=db
