@@ -156,17 +156,17 @@ async def create_user_by_user(
     # Check the account type
 
     # For staff and student
-    # ^[\w\-.]*@(ecl\d{2})|(alternance\d{4})|(auditeur)|(master)?.ec-lyon.fr$
+    # ^[\w\-.]*@((etu(-enise)?|enise).)?ec-lyon.fr$
     # For staff
-    # ^[\w\-.]*@(auditeur.)?ec-lyon.fr$
+    # ^[\w\-.]*@(enise.)?ec-lyon.fr$
     # For student
-    # ^[\w\-.]*@((ecl\d{2})|(alternance\d{4})|(master)).ec-lyon.fr$
+    # ^[\w\-.]*@etu(-enise)?.ec-lyon.fr$
 
-    if re.match(r"^[\w\-.]*@(auditeur.)?ec-lyon.fr", user_create.email):
+    if re.match(r"^[\w\-.]*@(enise.)?ec-lyon.fr$", user_create.email):
         # Its a staff email address
         account_type = AccountType.staff
     elif re.match(
-        r"^[\w\-.]*@((ecl\d{2})|(alternance\d{4})|(master)).ec-lyon.fr$",
+        r"^[\w\-.]*@etu(-enise)?.ec-lyon.fr$",
         user_create.email,
     ):
         # Its a student email address
@@ -303,9 +303,10 @@ async def create_user(
             content=f"Please confirm your MyECL account by using the following token in the application : {activation_token}",
             settings=settings,
         )
-    hyperion_security_logger.info(
-        f"Create_user: Creating an unconfirmed account for {email} with token {activation_token} ({request_id})"
-    )
+    else:
+        hyperion_security_logger.info(
+            f"Create_user: Creating an unconfirmed account for {email} with token {activation_token} ({request_id})"
+        )
 
 
 @router.get(
@@ -326,7 +327,6 @@ async def get_user_activation_page(
 
     **This endpoint is an UI endpoint which send and html page response.
     """
-    print("Hello")
 
     unconfirmed_user = await cruds_users.get_unconfirmed_user_by_activation_token(
         db=db, activation_token=activation_token
@@ -407,16 +407,6 @@ async def activate_user(
     # A password should have been provided
     password_hash = security.get_password_hash(user.password)
 
-    # For student users, we try to deduce a promo from the email address
-    if re.match(
-        r"^[\w\-.]*@(ecl\d{2})|(alternance\d{4}).ec-lyon.fr$",
-        unconfirmed_user.email,
-    ):
-        promo = int(unconfirmed_user.email[-13:-11])
-    else:
-        # For other users, we set the promo to None
-        promo = None
-
     confirmed_user = models_core.CoreUser(
         id=unconfirmed_user.id,
         email=unconfirmed_user.email,
@@ -425,7 +415,7 @@ async def activate_user(
         firstname=user.firstname,
         nickname=user.nickname,
         birthday=user.birthday,
-        promo=promo,
+        promo=user.promo,
         phone=user.phone,
         floor=user.floor,
         created_on=datetime.now(timezone(settings.TIMEZONE)),
@@ -446,7 +436,7 @@ async def activate_user(
             db=db, email=unconfirmed_user.email
         )
     except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+        raise HTTPException(status_code=400, detail=str(error))
 
     hyperion_security_logger.info(
         f"Activate_user: Activated user {confirmed_user.id} ({request_id})"
@@ -535,7 +525,8 @@ async def recover_user(
                 content=f"You can reset your password with the token {reset_token}",
                 settings=settings,
             )
-        print(reset_token)
+        else:
+            hyperion_security_logger.info(f"Reset mail with token {reset_token}")
 
     return standard_responses.Result()
 
@@ -577,6 +568,113 @@ async def reset_password(
     )
 
     return standard_responses.Result()
+
+
+@router.post(
+    "/users/migrate-mail",
+    status_code=204,
+    tags=[Tags.users],
+)
+async def migrate_mail(
+    mail_migration: schemas_core.MailMigrationRequest,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+    settings: Settings = Depends(get_settings),
+):
+    """
+    Due to a change in the email format, all student users need to migrate their email address.
+    This endpoint will send a confirmation code to the user's new email address. He will need to use this code to confirm the change with `/users/confirm-mail-migration` endpoint.
+    """
+
+    if not re.match(
+        r"^[\w\-.]*@((ecl\d{2})|(alternance\d{4})|(master)|(auditeur)).ec-lyon.fr$",
+        user.email,
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Only student users with an old email adresse can migrate their email address",
+        )
+
+    if not re.match(r"^[\w\-.]*@etu(-enise)?.ec-lyon.fr$", mail_migration.new_email):
+        raise HTTPException(
+            status_code=400,
+            detail="The new email adresse must match the new ECL format for student users",
+        )
+
+    confirmation_token = security.generate_token()
+
+    migration_object = models_core.CoreUserEmailMigrationCode(
+        user_id=user.id,
+        new_email=mail_migration.new_email,
+        old_email=user.email,
+        confirmation_token=confirmation_token,
+    )
+
+    await cruds_users.create_email_migration_code(
+        migration_object=migration_object, db=db
+    )
+
+    if settings.SMTP_ACTIVE:
+        send_email(
+            recipient=mail_migration.new_email,
+            subject="MyECL - Confirm your new email adresse",
+            content=f"You can confirm your new email adresse by clicking the following link: {settings.CLIENT_URL}/users/migrate-mail-confirm?token={confirmation_token}",
+            settings=settings,
+        )
+    else:
+        hyperion_security_logger.info(
+            f"You can confirm your new email adresse by clicking the following link: {settings.CLIENT_URL}users/migrate-mail-confirm?token={confirmation_token}"
+        )
+
+
+@router.get(
+    "/users/migrate-mail-confirm",
+    status_code=200,
+    tags=[Tags.users],
+)
+async def migrate_mail_confirm(
+    token: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Due to a change in the email format, all student users need to migrate their email address.
+    This endpoint will updates the user new email address.
+    """
+
+    migration_object = await cruds_users.get_email_migration_code_by_token(
+        confirmation_token=token,
+        db=db,
+    )
+
+    if migration_object is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid confirmation token for this user",
+        )
+
+    try:
+        await cruds_users.update_user_email_by_id(
+            db=db,
+            user_id=migration_object.user_id,
+            new_email=migration_object.new_email,
+        )
+    except Exception as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+    await cruds_users.delete_email_migration_code_by_token(
+        confirmation_token=token,
+        db=db,
+    )
+
+    with open(
+        "data/core/mail-migration-archives.txt",
+        "a",
+    ) as file:
+        file.write(
+            f"{migration_object.user_id},{migration_object.old_email},{migration_object.new_email}\n"
+        )
+
+    return "The email address has been successfully updated"
 
 
 @router.post(
