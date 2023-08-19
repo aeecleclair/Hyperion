@@ -198,7 +198,7 @@ class NotificationManager:
         """
         Send a notification to a given user.
         This utils will find all devices related to the user and send a firebase "trigger" notification to each of them.
-        This notification will prompte Titan to query the API to get the notification content.
+        This notification will prompt Titan to query the API to get the notification content.
 
         The "trigger" notification will only be send if firebase is correctly configured.
         """
