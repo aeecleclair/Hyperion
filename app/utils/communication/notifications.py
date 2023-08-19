@@ -203,6 +203,9 @@ class NotificationManager:
         The "trigger" notification will only be send if firebase is correctly configured.
         """
         if not self.use_firebase:
+            hyperion_error_logger.info(
+                "Firebase is disabled, not sending notification."
+            )
             return
 
         # Get all firebase_device_token related to the user
