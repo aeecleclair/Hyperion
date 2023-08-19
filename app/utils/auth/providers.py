@@ -181,7 +181,7 @@ class HedgeDocAuthClient(BaseAuthClient):
 
 class WikijsAuthClient(BaseAuthClient):
     # https://github.com/requarks/wiki/blob/main/server/modules/authentication/oidc/definition.yml
-    
+
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.utils.types.scopes_type.ScopeType for possible values
     allowed_scopes: Set[ScopeType] = {ScopeType.openid, ScopeType.profile}
