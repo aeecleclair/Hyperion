@@ -166,7 +166,7 @@ async def create_user_by_user(
         # Its a staff email address
         account_type = AccountType.staff
     elif re.match(
-        r"^[\w\-.]*@etu(-enise)?\.ec-lyon\.fr$",
+        r"^[\w\-.]*@(etu(-enise)?\.ec-lyon\.fr|centraliens-lyon\.net)$",
         user_create.email,
     ):
         # Its a student email address
@@ -595,7 +595,7 @@ async def migrate_mail(
             detail="Only student users with an old email adresse can migrate their email address",
         )
 
-    if not re.match(r"^[\w\-.]*@etu(-enise)?\.ec-lyon\.fr$", mail_migration.new_email):
+    if not re.match(r"^[\w\-.]*@(etu(-enise)?\.ec-lyon\.fr$", mail_migration.new_email):
         raise HTTPException(
             status_code=400,
             detail="The new email adresse must match the new ECL format for student users",
