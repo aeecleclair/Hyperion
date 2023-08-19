@@ -75,13 +75,13 @@ async def create_advertiser(
         )
 
     try:
-        advertiser_db = schemas_advert.AdvertiserComplete(
+        db_advertiser = models_advert.Advertiser(
             id=str(uuid.uuid4()),
             name=advertiser.name,
-            group_manager_id=advertiser.group_manager_id,
+            group_manager_id=advertiser.group_manager_id
         )
 
-        return await cruds_advert.create_advertiser(advertiser=advertiser_db, db=db)
+        return await cruds_advert.create_advertiser(db_advertiser=db_advertiser, db=db)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
@@ -266,13 +266,16 @@ async def create_advert(
             detail=f"Unauthorized to manage {advertiser.name} adverts",
         )
 
-    db_advert = schemas_advert.AdvertComplete(
+    advert_params = advert.dict()
+    coadvertisers_id = advert_params.pop("coadvertisers_id")
+
+    db_advert = models_advert.Advert(
         id=str(uuid.uuid4()),
         date=datetime.now(timezone(settings.TIMEZONE)),
-        **advert.dict(),
-    )
+        **advert_params)
+
     try:
-        result = await cruds_advert.create_advert(advert=db_advert, db=db)
+        result = await cruds_advert.create_advert(db_advert=db_advert, coadvertisers_id=coadvertisers_id, db=db)
         return result
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))

@@ -25,16 +25,15 @@ async def get_advertiser_by_id(
 
 
 async def create_advertiser(
-    advertiser: schemas_advert.AdvertiserComplete, db: AsyncSession
+    db_advertiser: models_advert.Advertiser, db: AsyncSession
 ) -> models_advert.Advertiser:
-    db_advert = models_advert.Advertiser(**advertiser.dict())
-    db.add(db_advert)
+    db.add(db_advertiser)
     try:
         await db.commit()
     except IntegrityError:
         await db.rollback()
         raise ValueError()
-    return db_advert
+    return db_advertiser
 
 
 async def update_advertiser(
@@ -106,12 +105,8 @@ async def get_adverts_by_advertisers(
 
 
 async def create_advert(
-    advert: schemas_advert.AdvertComplete, db: AsyncSession
+    db_advert: models_advert.Advert, coadvertisers_id: list[str], db: AsyncSession
 ) -> models_advert.Advert:
-    advert_params = advert.dict()
-    coadvertisers_id = advert_params.pop("coadvertisers_id")
-
-    db_advert = models_advert.Advert(**advert_params)
     db.add(db_advert)
 
     if coadvertisers_id:
