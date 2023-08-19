@@ -879,6 +879,9 @@ async def read_user_profile_picture(
     Unauthenticated users can use this endpoint (needed for some OIDC services)
     """
 
+    # user_id should not contains wildcards, which could interpreted by glob.glob (https://docs.python.org/fr/3.10/library/glob.html)
+    user_id = user_id.replace("*", "")
+
     return get_file_from_data(
         directory="profile-pictures",
         filename=str(user_id),
