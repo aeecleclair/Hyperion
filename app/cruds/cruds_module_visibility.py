@@ -78,14 +78,17 @@ async def create_module_visibility(
 
 
 async def delete_module_visibility(
-    module_visibility: models_module_visibility.ModuleVisibility,
+    root: str,
+    allowed_group_id: str,
     db: AsyncSession,
 ):
     await db.execute(
         delete(models_module_visibility.ModuleVisibility).where(
-            models_module_visibility.ModuleVisibility.root == module_visibility.root
-            and models_module_visibility.ModuleVisibility.allowed_group_id
-            == module_visibility.allowed_group_id
+            (models_module_visibility.ModuleVisibility.root == root)
+            & (
+                models_module_visibility.ModuleVisibility.allowed_group_id
+                == allowed_group_id
+            )
         )
     )
     await db.commit()

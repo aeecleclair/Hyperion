@@ -31,13 +31,13 @@ async def get_module_visibility(
 
     returnModuleVisibilities = []
     for module in ModuleList:
-        allowedGroupIds = await cruds_module_visibility.get_allowed_groups_by_root(
+        allowed_group_ids = await cruds_module_visibility.get_allowed_groups_by_root(
             root=module.value.root, db=db
         )
         returnModuleVisibilities.append(
             schemas_module_visibility.ModuleVisibility(
                 root=module.value.root,
-                allowedGroupIds=allowedGroupIds,
+                allowed_group_ids=allowed_group_ids,
             )
         )
 
@@ -65,7 +65,7 @@ async def get_user_modules_visibility(
 
 
 @router.post(
-    "/loans/loaners/",
+    "/module_visibility/",
     response_model=schemas_module_visibility.ModuleVisibility,
     status_code=201,
     tags=[Tags.loans],
@@ -100,3 +100,17 @@ async def add_module_visibility(
         )
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
+
+
+@router.delete(
+    "/module_visibility/{root}/{group_id}", status_code=204, tags=[Tags.cinema]
+)
+async def delete_session(
+    root: str,
+    group_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.cinema)),
+):
+    await cruds_module_visibility.delete_module_visibility(
+        root=root, allowed_group_id=group_id, db=db
+    )
