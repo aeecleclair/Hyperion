@@ -1,7 +1,7 @@
 from sqlite3 import IntegrityError
 from typing import Sequence
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import models_core, models_module_visibility

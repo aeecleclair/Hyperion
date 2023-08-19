@@ -66,13 +66,12 @@ async def get_user_modules_visibility(
 
 @router.post(
     "/module_visibility/",
-    response_model=schemas_module_visibility.ModuleVisibility,
+    response_model=schemas_module_visibility.ModuleVisibilityCreate,
     status_code=201,
     tags=[Tags.core],
 )
 async def add_module_visibility(
-    root: str,
-    group_id: str,
+    module_visibility: schemas_module_visibility.ModuleVisibilityCreate,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
@@ -83,15 +82,15 @@ async def add_module_visibility(
     """
 
     # We need to check that loaner.group_manager_id is a valid group
-    if not await is_group_id_valid(group_id, db=db):
+    if not await is_group_id_valid(module_visibility.allowed_group_id, db=db):
         raise HTTPException(
             status_code=400,
             detail="Invalid id, group_id must be a valid group id",
         )
     try:
         module_visibility_db = models_module_visibility.ModuleVisibility(
-            root=root,
-            allowed_group_id=group_id,
+            root=module_visibility.root,
+            allowed_group_id=module_visibility.allowed_group_id,
         )
 
         return await cruds_module_visibility.create_module_visibility(
