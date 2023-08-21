@@ -24,7 +24,7 @@ class Message(BaseModel):
     )
     action_table: str | None
 
-    delivery_datetime: datetime = Field(
+    delivery_datetime: datetime | None = Field(
         description="The date the notification should be shown"
     )
     expire_on: date

@@ -31,7 +31,7 @@ class Message(Base):
     action_table: Mapped[str | None] = mapped_column(String, nullable=True)
 
     # We can plan a notification to be sent later, the frontend should not display it before the planned date
-    delivery_datetime: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    delivery_datetime: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     # Messages should be deleted after a certain time
     expire_on: Mapped[date] = mapped_column(Date, nullable=False)
 
