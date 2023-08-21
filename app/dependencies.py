@@ -147,7 +147,10 @@ def get_notification_manager(
     settings: Settings = Depends(get_settings),
 ) -> NotificationManager:
     """
-    Dependency that returns the notification manager
+    Dependency that returns the notification manager.
+    This dependency provide a low level tool allowing to use notification manager internal methods.
+
+    If you want to send a notification, prefer `get_notification_tool` dependency.
     """
     global notification_manager
 
@@ -159,16 +162,12 @@ def get_notification_manager(
 
 def get_notification_tool(
     background_tasks: BackgroundTasks,
-    settings: Settings = Depends(get_settings),
     db: AsyncSession = Depends(get_db),
+    notification_manager: NotificationManager = Depends(get_notification_manager),
 ) -> NotificationTool:
     """
-    Dependency that returns the notification manager
+    Dependency that returns a notification tool, allowing to send push notification as a background tasks.
     """
-    global notification_manager
-
-    if notification_manager is None:
-        notification_manager = NotificationManager(settings=settings)
 
     return NotificationTool(
         background_tasks=background_tasks,
