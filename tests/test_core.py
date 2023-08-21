@@ -37,7 +37,7 @@ async def init_objects():
 
 def test_get_module_visibility():
     response = client.get(
-        "/module_visibility",
+        "/module-visibility",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 200
@@ -45,7 +45,7 @@ def test_get_module_visibility():
 
 def test_get_my_module_visibility():
     response = client.get(
-        "/module_visibility/me",
+        "/module-visibility/me",
         headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response.status_code == 200
@@ -53,7 +53,7 @@ def test_get_my_module_visibility():
 
 def test_add_module_visibility():
     response = client.post(
-        "/module_visibility/",
+        "/module-visibility/",
         json={
             "root": "root",
             "allowed_group_id": GroupType.AE.value,
@@ -65,7 +65,7 @@ def test_add_module_visibility():
 
 def test_delete_loaners():
     response = client.delete(
-        f"/module_visibility/{root}/{group_id}",
+        f"/module-visibility/{root}/{group_id}",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 204

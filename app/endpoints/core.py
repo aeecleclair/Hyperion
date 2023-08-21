@@ -144,7 +144,7 @@ async def get_favicon():
 
 
 @router.get(
-    "/module_visibility/",
+    "/module-visibility/",
     response_model=list[schemas_core.ModuleVisibility],
     status_code=200,
     tags=[Tags.core],
@@ -175,7 +175,7 @@ async def get_module_visibility(
 
 
 @router.get(
-    "/module_visibility/me",
+    "/module-visibility/me",
     response_model=list[str],
     status_code=200,
     tags=[Tags.core],
@@ -194,7 +194,7 @@ async def get_user_modules_visibility(
 
 
 @router.post(
-    "/module_visibility/",
+    "/module-visibility/",
     response_model=schemas_core.ModuleVisibilityCreate,
     status_code=201,
     tags=[Tags.core],
@@ -230,7 +230,7 @@ async def add_module_visibility(
 
 
 @router.delete(
-    "/module_visibility/{root}/{group_id}", status_code=204, tags=[Tags.core]
+    "/module-visibility/{root}/{group_id}", status_code=204, tags=[Tags.core]
 )
 async def delete_session(
     root: str,
