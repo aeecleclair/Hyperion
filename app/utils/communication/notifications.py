@@ -326,7 +326,8 @@ class NotificationTool:
     Utility class to send notifications in the background.
 
     This class should be instantiated before each use with a `BackgroundTasks` manager.
-    The best way to do so would be to use a
+    The best way to do so would be to use a dependency that instantiate this class
+    the first time it is used and the return the same instance for each subsequent use.
     """
 
     def __init__(

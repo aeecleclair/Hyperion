@@ -229,31 +229,31 @@ async def send_notif(
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
-    Unsubscribe to a topic
+    Send ourself a test notification.
 
-    **The user must be authenticated to use this endpoint**
+    **Only admins can use this endpoint**
     """
-    print("send notif")
     await notification_tool.send_notification_to_user(
         user_id=user.id,
         message=message,
     )
-    print("send notif done")
 
 
 @router.get(
     "/notification/devices",
     status_code=200,
+    response_model=list[schemas_notification.FirebaseDevice],
     tags=[Tags.notifications],
 )
-async def get_tokens(
+async def get_devices(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Unsubscribe to a topic
+    Get all devices a user have registered.
+    This endpoint is useful to get firebase tokens for debugging purposes.
 
-    **The user must be authenticated to use this endpoint**
+    **Only admins can use this endpoint**
     """
     return await cruds_notification.get_firebase_devices_by_user_id(
         user_id=user.id, db=db
