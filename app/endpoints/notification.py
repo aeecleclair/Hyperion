@@ -140,11 +140,15 @@ async def get_messages(
             status_code=404, detail="Device not found for user"  # {user.id}"
         )
 
-    return await cruds_notification.get_messages_by_firebase_token(
+    messages = await cruds_notification.get_messages_by_firebase_token(
         firebase_token=firebase_token, db=db
     )
 
-    # TODO: remove messages after the client got them
+    await cruds_notification.remove_message_by_firebase_device_token(
+        firebase_device_token=firebase_token, db=db
+    )
+
+    return messages
 
 
 @router.post(

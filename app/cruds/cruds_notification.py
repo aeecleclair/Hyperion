@@ -61,6 +61,18 @@ async def remove_message_by_context_and_firebase_device_token(
     await db.commit()
 
 
+async def remove_message_by_firebase_device_token(
+    firebase_device_token: str,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_notification.Message).where(
+            models_notification.Message.firebase_device_token == firebase_device_token,
+        )
+    )
+    await db.commit()
+
+
 async def remove_messages_by_context_and_firebase_device_tokens_list(
     context: str,
     tokens: list[str],
