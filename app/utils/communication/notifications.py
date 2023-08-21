@@ -76,7 +76,9 @@ class NotificationManager:
         """
         Send a firebase push notification to a list of tokens.
 
-        We don't use this function in Hyperion, since we only use "trigger" notifications.
+        If this function allows to send data in the notification, hyperion only send trigger notification.
+
+        Prefer using `self._send_firebase_trigger_notification_by_tokens` to send a trigger notification.
         """
         # See https://firebase.google.com/docs/cloud-messaging/send-message?hl=fr#send-messages-to-multiple-devices
 
@@ -122,7 +124,9 @@ class NotificationManager:
         """
         Send a firebase push notification for a given topic.
 
-        We don't use this function in Hyperion, since we only use "trigger" notifications.
+        If this function allows to send data in the notification, hyperion only send trigger notification.
+
+        Prefer using `self._send_firebase_trigger_notification_by_topic` to send a trigger notification.
         """
 
         if not self.use_firebase:
