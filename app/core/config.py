@@ -61,6 +61,8 @@ class Settings(BaseSettings):
     ##########################
     # Firebase Configuration #
     ##########################
+    # To enable Firebase push notification capabilities, a JSON key file named `firebase.json` should be placed at Hyperion root.
+    # This file can be created and downloaded from [Google cloud, IAM and administration, Service account](https://console.cloud.google.com/iam-admin/serviceaccounts) page.
     USE_FIREBASE: bool = False
 
     ############################
