@@ -47,8 +47,7 @@ async def get_allowed_groups_by_root(
 
     if resultList:
         return resultList
-    else:
-        return []
+    return []
 
 
 async def get_module_visibility(

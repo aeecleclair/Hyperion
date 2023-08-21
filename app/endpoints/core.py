@@ -189,9 +189,8 @@ async def get_user_modules_visibility(
 
     **This endpoint is only usable by everyone**
     """
-    result = await cruds_module_visibility.get_modules_by_user(user=user, db=db)
 
-    return result
+    return await cruds_module_visibility.get_modules_by_user(user=user, db=db)
 
 
 @router.post(
