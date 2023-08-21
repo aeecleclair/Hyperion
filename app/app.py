@@ -25,7 +25,6 @@ from app.dependencies import (
     get_settings,
 )
 from app.models import models_core
-from app.models.models_module_visibility import ModuleVisibility
 from app.utils.redis import limiter
 from app.utils.types.groups_type import GroupType
 from app.utils.types.module_list import ModuleList
@@ -80,7 +79,7 @@ async def initialize_module_visibility(SessionLocal, hyperion_error_logger):
 
                 # We don't want to recreate the module visibility if they already exist
                 if not module_visibility_exists:
-                    module_visibility = ModuleVisibility(
+                    module_visibility = models_core.ModuleVisibility(
                         root=module.value.root, allowed_group_id=default_group_id.value
                     )
                     try:
