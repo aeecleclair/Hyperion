@@ -14,17 +14,6 @@ from app.utils.types.notification_types import Topic
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
-"""
-TODO
-
-Enlever les tokens qui ne marchent plus : https://firebase.google.com/docs/cloud-messaging/manage-tokens
-Rendre tout cela asynchrone
-
-Faire des methodes internes et des méthodes plus publiques
-
-"""
-
-
 class NotificationManager:
     """
     Notification manager for Firebase.
