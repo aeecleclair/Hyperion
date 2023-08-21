@@ -49,6 +49,15 @@ class NotificationManager:
             failed_tokens = []
             for idx, resp in enumerate(responses):
                 if not resp.success:
+                    # Firebase may return different errors: https://firebase.google.com/docs/reference/admin/python/firebase_admin.messaging#exceptions
+                    # UnregisteredError happens when the token is not valid anymore, and should thus be removed from the database
+                    # Other errors may happen, we want to log them as they may indicate a problem with the firebase configuration
+                    if not isinstance(
+                        resp.exception, firebase_admin.messaging.UnregisteredError
+                    ):
+                        hyperion_error_logger.error(
+                            f"Firebase: Failed to send firebase notification to token {tokens[idx]}: {resp.exception}"
+                        )
                     # The order of responses corresponds to the order of the registration tokens.
                     failed_tokens.append(tokens[idx])
             hyperion_error_logger.info(
