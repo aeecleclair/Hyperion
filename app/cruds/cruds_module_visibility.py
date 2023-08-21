@@ -7,6 +7,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import models_core
 
 
+async def get_all_module_visibility_membership(
+    db: AsyncSession,
+):
+    result = await db.execute(select(models_core.ModuleVisibility))
+    return result.unique().scalars().all()
+
+
 async def get_modules_by_user(
     user: models_core.CoreUser,
     db: AsyncSession,

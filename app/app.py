@@ -69,6 +69,13 @@ async def initialize_groups(SessionLocal, hyperion_error_logger):
 async def initialize_module_visibility(SessionLocal, hyperion_error_logger):
     """Add the default module visibilities for Titan"""
     async with SessionLocal() as db:
+        # Is run to create default module visibilies or when the table is empty
+        haveBeenInitialized = (
+            len(await cruds_module_visibility.get_all_module_visibility_membership(db))
+            > 0
+        )
+        if haveBeenInitialized:
+            return
         for module in ModuleList:
             for default_group_id in module.value.default_allowed_groups_ids:
                 module_visibility_exists = (
