@@ -2,6 +2,9 @@ import pytest_asyncio
 
 from app.models import models_core
 from app.utils.types.groups_type import GroupType
+
+# We need to import event_loop for pytest-asyncio routine defined bellow
+from tests.commons import event_loop  # noqa
 from tests.commons import (
     add_object_to_db,
     client,
@@ -14,6 +17,7 @@ admin_user: models_core.CoreUser | None = None
 token_simple: str = ""
 token_admin: str = ""
 root = "vote"
+group_id = GroupType.AE.value
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
@@ -25,9 +29,8 @@ async def init_objects():
     user_simple = await create_user_with_groups([GroupType.AE])
     global token_simple
     token_simple = create_api_access_token(user_simple)
-    global root
     module_visibility = models_core.ModuleVisibility(
-        root=root, allowed_group_id=[GroupType.AE]
+        root=root, allowed_group_id=[group_id]
     )
     await add_object_to_db(module_visibility)
 
@@ -62,7 +65,7 @@ def test_add_module_visibility():
 
 def test_delete_loaners():
     response = client.delete(
-        f"/module_visibility/{root}/{GroupType.AE}",
+        f"/module_visibility/{root}/{group_id}",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 204
