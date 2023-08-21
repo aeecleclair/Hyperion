@@ -5,7 +5,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
-from app.cruds import cruds_module_visibility
+from app.cruds import cruds_core
 from app.dependencies import get_db, get_settings, is_user_a_member, is_user_a_member_of
 from app.models import models_core
 from app.schemas import schemas_core
@@ -159,19 +159,19 @@ async def get_module_visibility(
     **This endpoint is only usable by administrators**
     """
 
-    returnModuleVisibilities = []
+    return_module_visibilities = []
     for module in ModuleList:
-        allowed_group_ids = await cruds_module_visibility.get_allowed_groups_by_root(
+        allowed_group_ids = await cruds_core.get_allowed_groups_by_root(
             root=module.value.root, db=db
         )
-        returnModuleVisibilities.append(
+        return_module_visibilities.append(
             schemas_core.ModuleVisibility(
                 root=module.value.root,
                 allowed_group_ids=allowed_group_ids,
             )
         )
 
-    return returnModuleVisibilities
+    return return_module_visibilities
 
 
 @router.get(
@@ -190,7 +190,7 @@ async def get_user_modules_visibility(
     **This endpoint is only usable by everyone**
     """
 
-    return await cruds_module_visibility.get_modules_by_user(user=user, db=db)
+    return await cruds_core.get_modules_by_user(user=user, db=db)
 
 
 @router.post(
@@ -222,11 +222,11 @@ async def add_module_visibility(
             allowed_group_id=module_visibility.allowed_group_id,
         )
 
-        return await cruds_module_visibility.create_module_visibility(
+        return await cruds_core.create_module_visibility(
             module_visibility=module_visibility_db, db=db
         )
     except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @router.delete(
@@ -238,6 +238,6 @@ async def delete_session(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
-    await cruds_module_visibility.delete_module_visibility(
+    await cruds_core.delete_module_visibility(
         root=root, allowed_group_id=group_id, db=db
     )

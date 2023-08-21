@@ -1,7 +1,7 @@
-from sqlite3 import IntegrityError
 from typing import Sequence
 
 from sqlalchemy import delete, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import models_core
@@ -88,8 +88,8 @@ async def delete_module_visibility(
 ):
     await db.execute(
         delete(models_core.ModuleVisibility).where(
-            (models_core.ModuleVisibility.root == root)
-            & (models_core.ModuleVisibility.allowed_group_id == allowed_group_id)
+            models_core.ModuleVisibility.root == root,
+            models_core.ModuleVisibility.allowed_group_id == allowed_group_id,
         )
     )
     await db.commit()

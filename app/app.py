@@ -16,7 +16,7 @@ from sqlalchemy.exc import IntegrityError
 from app import api
 from app.core.config import Settings
 from app.core.log import LogConfig
-from app.cruds import cruds_groups, cruds_module_visibility
+from app.cruds import cruds_core, cruds_groups
 from app.database import Base
 from app.dependencies import (
     get_db_engine,
@@ -71,17 +71,14 @@ async def initialize_module_visibility(SessionLocal, hyperion_error_logger):
     async with SessionLocal() as db:
         # Is run to create default module visibilies or when the table is empty
         haveBeenInitialized = (
-            len(await cruds_module_visibility.get_all_module_visibility_membership(db))
-            > 0
+            len(await cruds_core.get_all_module_visibility_membership(db)) > 0
         )
         if haveBeenInitialized:
             return
         for module in ModuleList:
             for default_group_id in module.value.default_allowed_groups_ids:
-                module_visibility_exists = (
-                    await cruds_module_visibility.get_module_visibility(
-                        root=module.value.root, group_id=default_group_id, db=db
-                    )
+                module_visibility_exists = await cruds_core.get_module_visibility(
+                    root=module.value.root, group_id=default_group_id, db=db
                 )
 
                 # We don't want to recreate the module visibility if they already exist
