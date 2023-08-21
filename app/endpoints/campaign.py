@@ -25,6 +25,7 @@ from app.utils.types.tags import Tags
 
 router = APIRouter()
 
+
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
