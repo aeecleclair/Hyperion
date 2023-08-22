@@ -9,10 +9,6 @@ class ModuleList(Module, Enum):
         root="advert",
         default_allowed_groups_ids=[GroupType.student, GroupType.staff],
     )
-    admin = Module(
-        root="admin",
-        default_allowed_groups_ids=[GroupType.admin],
-    )
     amap = Module(
         root="amap",
         default_allowed_groups_ids=[GroupType.student, GroupType.staff],
