@@ -30,6 +30,10 @@ class ModuleList(Module, Enum):
         default_allowed_groups_ids=[GroupType.student, GroupType.staff],
     )
     calendar = Module(
+        root="home",
+        default_allowed_groups_ids=[GroupType.student, GroupType.staff],
+    )
+    event = Module(
         root="event",
         default_allowed_groups_ids=[GroupType.student, GroupType.staff],
     )
