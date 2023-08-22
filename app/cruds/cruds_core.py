@@ -45,9 +45,7 @@ async def get_allowed_groups_by_root(
 
     resultList = result.unique().scalars().all()
 
-    if resultList:
-        return resultList
-    return []
+    return resultList
 
 
 async def get_module_visibility(
@@ -59,8 +57,8 @@ async def get_module_visibility(
 
     result = await db.execute(
         select(models_core.ModuleVisibility).where(
-            (models_core.ModuleVisibility.allowed_group_id == group_id)
-            & (models_core.ModuleVisibility.root == root)
+            models_core.ModuleVisibility.allowed_group_id == group_id,
+            models_core.ModuleVisibility.root == root,
         )
     )
     return result.unique().scalars().first()
