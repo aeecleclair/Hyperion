@@ -1,6 +1,5 @@
 import uuid
 from datetime import datetime
-from typing import Sequence
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
