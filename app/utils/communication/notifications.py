@@ -301,14 +301,25 @@ class NotificationManager:
             device.firebase_device_token for device in firebase_devices
         ]
 
-        self.subscribe_tokens_to_topic(tokens=firebase_device_tokens, topic=topic)
+        self.subscribe_tokens_to_topic(
+            tokens=firebase_device_tokens, custom_topic=custom_topic
+        )
 
-        topic_membership = models_notification.TopicMembership(
-            user_id=user_id, topic=topic
+        existing_topic_membership = (
+            await cruds_notification.get_topic_membership_by_user_id_and_topic(
+                custom_topic=custom_topic, user_id=user_id, db=db
+            )
         )
-        await cruds_notification.create_topic_membership(
-            topic_membership=topic_membership, db=db
-        )
+        # If the membership already exist we don't want to create a new one
+        if not existing_topic_membership:
+            topic_membership = models_notification.TopicMembership(
+                user_id=user_id,
+                topic=custom_topic.topic,
+                topic_identifier=custom_topic.topic_identifier,
+            )
+            await cruds_notification.create_topic_membership(
+                topic_membership=topic_membership, db=db
+            )
 
     async def unsubscribe_user_to_topic(
         self, custom_topic: CustomTopic, user_id: str, db: AsyncSession
