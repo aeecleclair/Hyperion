@@ -392,4 +392,3 @@ async def create_advert_image(
     )
 
     return standard_responses.Result(success=True)
-    return standard_responses.Result(success=True)

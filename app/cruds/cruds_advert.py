@@ -26,7 +26,7 @@ async def get_advertiser_by_id(
 
 async def get_advertisers_by_groups(
     db: AsyncSession, user_groups_ids: Sequence[str]
-) -> list[models_advert.Advertiser] | None:
+) -> Sequence[models_advert.Advertiser] | None:
     result = await db.execute(
         select(models_advert.Advertiser).where(
             models_advert.Advertiser.group_manager_id.in_(user_groups_ids)
