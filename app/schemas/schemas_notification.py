@@ -18,9 +18,8 @@ class Message(BaseModel):
     title: str | None
     content: str | None
 
-    # TODO
     action_module: str | None = Field(
-        description="An action id is used by Titan to know what to do when receiving the notification"
+        description="An identifier for the module that should be triggered when the notification is clicked"
     )
     action_table: str | None
 

@@ -76,8 +76,6 @@ class NotificationManager:
         """
         Send a firebase push notification to a list of tokens.
 
-        If this function allows to send data in the notification, hyperion only send trigger notification.
-
         Prefer using `self._send_firebase_trigger_notification_by_tokens` to send a trigger notification.
         """
         # See https://firebase.google.com/docs/cloud-messaging/send-message?hl=fr#send-messages-to-multiple-devices
@@ -111,7 +109,9 @@ class NotificationManager:
     ):
         """
         Send a firebase trigger notification to a list of tokens.
-        This approche let the application know that a new notification is available, without sending the content of the notification.
+        This approach let the application know that a new notification is available,
+        without sending the content of the notification.
+        This is better for privacy and RGPD compliance.
         """
 
         # Push without any data or notification may not be processed by the app in the background.
@@ -128,8 +128,6 @@ class NotificationManager:
     ):
         """
         Send a firebase push notification for a given topic.
-
-        If this function allows to send data in the notification, hyperion only send trigger notification.
 
         Prefer using `self._send_firebase_trigger_notification_by_topic` to send a trigger notification.
         """
@@ -150,7 +148,10 @@ class NotificationManager:
         """
         Send a firebase trigger notification for a given topic.
 
-        This approche let the application know that a new notification is available, without sending the content of the notification.
+        Send a firebase trigger notification to a list of tokens.
+        This approach let the application know that a new notification is available,
+        without sending the content of the notification.
+        This is better for privacy and RGPD compliance.
         """
 
         # Push without any data or notification may not be processed by the app in the background.

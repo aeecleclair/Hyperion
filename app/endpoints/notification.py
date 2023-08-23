@@ -129,18 +129,18 @@ async def unregister_firebase_device(
 async def get_messages(
     firebase_token: str,
     db: AsyncSession = Depends(get_db),
-    #    user: models_core.CoreUser = Depends(is_user_a_member),
+    # If we want to enable authentification for /messages/{firebase_token} endpoint, we may to uncomment the following line
+    # user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Get all messages for a specific device from the user
 
     **The user must be authenticated to use this endpoint**
     """
-    # TODO: enable authentification for this endpoint
-    firebase_device = (
-        await cruds_notification.get_firebase_devices_by_user_id_and_firebase_token(
-            firebase_token=firebase_token, db=db  # user_id=user.id,
-        )
+    firebase_device = await cruds_notification.get_firebase_devices_by_user_id_and_firebase_token(
+        # If we want to enable authentification for /messages/{firebase_token} endpoint, we may to uncomment the following line
+        firebase_token=firebase_token,
+        db=db,  # user_id=user.id,
     )
 
     if firebase_device is None:
@@ -249,7 +249,7 @@ async def get_topic(
     status_code=201,
     tags=[Tags.notifications],
 )
-async def send_notif(
+async def send_notification(
     message: schemas_notification.Message,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
     notification_tool: NotificationTool = Depends(get_notification_tool),

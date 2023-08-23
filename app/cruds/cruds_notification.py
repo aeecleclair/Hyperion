@@ -37,8 +37,6 @@ async def get_messages_by_firebase_token(
     firebase_token: str,
     db: AsyncSession,
 ) -> Sequence[models_notification.Message]:
-    """Create a new raffle in database and return it"""
-
     result = await db.execute(
         select(models_notification.Message).where(
             models_notification.Message.firebase_device_token == firebase_token
@@ -100,12 +98,14 @@ async def get_firebase_devices_by_user_id(
 
 
 async def get_firebase_devices_by_user_id_and_firebase_token(
+    # If we want to enable authentification for /messages/{firebase_token} endpoint, we may to uncomment the following line
     # user_id: str,
     firebase_token: str,
     db: AsyncSession,
 ) -> models_notification.FirebaseDevice | None:
     result = await db.execute(
         select(models_notification.FirebaseDevice).where(
+            # If we want to enable authentification for /messages/{firebase_token} endpoint, we may to uncomment the following line
             # models_notification.FirebaseDevice.user_id == user_id,
             models_notification.FirebaseDevice.firebase_device_token
             == firebase_token,
@@ -186,8 +186,6 @@ async def create_topic_membership(
     topic_membership: models_notification.TopicMembership,
     db: AsyncSession,
 ) -> models_notification.TopicMembership:
-    """Register a new firebase device in database and return it"""
-
     db.add(topic_membership)
     try:
         await db.commit()
@@ -217,8 +215,6 @@ async def get_topic_membership_by_topic(
     custom_topic: CustomTopic,
     db: AsyncSession,
 ) -> Sequence[models_notification.TopicMembership]:
-    """Return the loaner with id"""
-
     result = await db.execute(
         select(models_notification.TopicMembership).where(
             models_notification.TopicMembership.topic == custom_topic.topic,
@@ -233,8 +229,6 @@ async def get_topic_membership_by_user_id(
     user_id: str,
     db: AsyncSession,
 ) -> Sequence[models_notification.TopicMembership]:
-    """Return the loaner with id"""
-
     result = await db.execute(
         select(models_notification.TopicMembership).where(
             models_notification.TopicMembership.user_id == user_id
