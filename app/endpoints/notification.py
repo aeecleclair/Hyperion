@@ -164,7 +164,7 @@ async def get_messages(
     status_code=204,
     tags=[Tags.notifications],
 )
-async def suscribe_to_topic(
+async def subscribe_to_topic(
     topic_str: str = Path(
         description="The topic to subscribe to (the Topic may be followed by an additional identifier)",
         example="cinema_4c029b5f-2bf7-4b70-85d4-340a4bd28653",
@@ -197,7 +197,7 @@ async def suscribe_to_topic(
     status_code=204,
     tags=[Tags.notifications],
 )
-async def unsuscribe_to_topic(
+async def unsubscribe_to_topic(
     topic_str: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
