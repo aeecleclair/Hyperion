@@ -618,7 +618,7 @@ async def migrate_mail(
         send_email(
             recipient=mail_migration.new_email,
             subject="MyECL - Confirm your new email adresse",
-            content=f"You can confirm your new email adresse by clicking the following link: {settings.CLIENT_URL}/users/migrate-mail-confirm?token={confirmation_token}",
+            content=f"You can confirm your new email adresse by clicking the following link: {settings.CLIENT_URL}users/migrate-mail-confirm?token={confirmation_token}",
             settings=settings,
         )
     else:
