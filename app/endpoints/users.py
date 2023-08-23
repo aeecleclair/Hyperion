@@ -166,11 +166,17 @@ async def create_user_by_user(
         # Its a staff email address
         account_type = AccountType.staff
     elif re.match(
-        r"^[\w\-.]*@(etu(-enise)?\.ec-lyon\.fr|centraliens-lyon\.net)$",
+        r"^[\w\-.]*@etu(-enise)?\.ec-lyon\.fr$",
         user_create.email,
     ):
         # Its a student email address
         account_type = AccountType.student
+    elif re.match(
+        r"^[\w\-.]*@centraliens-lyon\.net$",
+        user_create.email,
+    ):
+        # Its a former student email address
+        account_type = AccountType.formerstudent
     else:
         raise HTTPException(
             status_code=400,
