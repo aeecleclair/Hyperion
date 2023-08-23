@@ -9,7 +9,7 @@ from app.core.config import Settings
 from app.cruds import cruds_notification
 from app.models import models_notification
 from app.schemas.schemas_notification import Message
-from app.utils.types.notification_types import CustomTopic, Topic
+from app.utils.types.notification_types import CustomTopic
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 

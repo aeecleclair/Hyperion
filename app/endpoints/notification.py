@@ -15,7 +15,7 @@ from app.models import models_core, models_notification
 from app.schemas import schemas_notification
 from app.utils.communication.notifications import NotificationManager, NotificationTool
 from app.utils.types.groups_type import GroupType
-from app.utils.types.notification_types import CustomTopic, Topic
+from app.utils.types.notification_types import CustomTopic
 from app.utils.types.tags import Tags
 
 router = APIRouter()
