@@ -24,6 +24,17 @@ async def get_advertiser_by_id(
     return result.scalars().first()
 
 
+async def get_advertisers_by_groups(
+    db: AsyncSession, user_groups_ids: Sequence[str]
+) -> list[models_advert.Advertiser] | None:
+    result = await db.execute(
+        select(models_advert.Advertiser).where(
+            models_advert.Advertiser.group_manager_id.in_(user_groups_ids)
+        )
+    )
+    return result.scalars().all()
+
+
 async def create_advertiser(
     db_advertiser: models_advert.Advertiser, db: AsyncSession
 ) -> models_advert.Advertiser:

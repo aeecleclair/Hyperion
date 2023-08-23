@@ -161,21 +161,11 @@ async def get_current_user_advertisers(
 
     **The user must be authenticated to use this endpoint**
     """
+    user_groups_ids = []
+    for group in user.groups:
+        user_groups_ids.append(group.id)
 
-    user_advertisers: list[models_advert.Advertiser] = []
-
-    existing_advertisers: Sequence[
-        models_advert.Advertiser
-    ] = await cruds_advert.get_advertisers(db=db)
-
-    for advertiser in existing_advertisers:
-        if is_user_member_of_an_allowed_group(
-            allowed_groups=[advertiser.group_manager_id],
-            user=user,
-        ):
-            user_advertisers.append(advertiser)
-
-    return user_advertisers
+    return await cruds_advert.get_advertisers_by_groups(db=db, user_groups_ids=user_groups_ids)
 
 
 @router.get(
@@ -400,4 +390,5 @@ async def create_advert_image(
         accepted_content_types=["image/jpeg", "image/png", "image/webp"],
     )
 
+    return standard_responses.Result(success=True)
     return standard_responses.Result(success=True)
