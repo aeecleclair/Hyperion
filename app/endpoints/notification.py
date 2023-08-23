@@ -1,6 +1,6 @@
 from datetime import date
 
-from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException, Path
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cruds import cruds_notification
@@ -15,7 +15,7 @@ from app.models import models_core, models_notification
 from app.schemas import schemas_notification
 from app.utils.communication.notifications import NotificationManager, NotificationTool
 from app.utils.types.groups_type import GroupType
-from app.utils.types.notification_types import Topic
+from app.utils.types.notification_types import CustomTopic, Topic
 from app.utils.types.tags import Tags
 
 router = APIRouter()
@@ -65,7 +65,11 @@ async def register_firebase_device(
 
     for topic_membership in topic_memberships:
         await notification_manager.subscribe_tokens_to_topic(
-            tokens=[firebase_token], topic=topic_membership.topic
+            tokens=[firebase_token],
+            custom_topic=CustomTopic(
+                topic=topic_membership.topic,
+                topic_identifier=topic_membership.topic_identifier,
+            ),
         )
 
     firebase_device = models_notification.FirebaseDevice(
@@ -104,7 +108,11 @@ async def unregister_firebase_device(
 
     for topic_membership in topic_memberships:
         await notification_manager.unsubscribe_tokens_to_topic(
-            tokens=[firebase_token], topic=topic_membership.topic
+            tokens=[firebase_token],
+            custom_topic=CustomTopic(
+                topic=topic_membership.topic,
+                topic_identifier=topic_membership.topic_identifier,
+            ),
         )
 
     await cruds_notification.delete_firebase_devices(
@@ -152,12 +160,15 @@ async def get_messages(
 
 
 @router.post(
-    "/notification/topics/{topic}/subscribe",
+    "/notification/topics/{topic_str}/subscribe",
     status_code=204,
     tags=[Tags.notifications],
 )
 async def suscribe_to_topic(
-    topic: Topic,
+    topic_str: str = Path(
+        description="The topic to subscribe to (the Topic may be followed by an additional identifier)",
+        example="cinema_4c029b5f-2bf7-4b70-85d4-340a4bd28653",
+    ),
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
     notification_manager: NotificationManager = Depends(get_notification_manager),
@@ -168,18 +179,26 @@ async def suscribe_to_topic(
     **The user must be authenticated to use this endpoint**
     """
 
+    try:
+        custom_topic = CustomTopic.from_str(topic_str)
+    except Exception as error:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid custom topic: {error}",
+        )
+
     await notification_manager.subscribe_user_to_topic(
-        user_id=user.id, topic=topic, db=db
+        user_id=user.id, custom_topic=custom_topic, db=db
     )
 
 
 @router.post(
-    "/notification/topics/{topic}/unsubscribe",
+    "/notification/topics/{topic_str}/unsubscribe",
     status_code=204,
     tags=[Tags.notifications],
 )
 async def unsuscribe_to_topic(
-    topic: Topic,
+    topic_str: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
     notification_manager: NotificationManager = Depends(get_notification_manager),
@@ -190,8 +209,10 @@ async def unsuscribe_to_topic(
     **The user must be authenticated to use this endpoint**
     """
 
+    custom_topic = CustomTopic.from_str(topic_str)
+
     await notification_manager.unsubscribe_user_to_topic(
-        user_id=user.id, topic=topic, db=db
+        user_id=user.id, custom_topic=custom_topic, db=db
     )
 
 
@@ -199,7 +220,7 @@ async def unsuscribe_to_topic(
     "/notification/topics",
     status_code=200,
     tags=[Tags.notifications],
-    response_model=list[Topic],
+    response_model=list[str],
 )
 async def get_topic(
     db: AsyncSession = Depends(get_db),
@@ -215,7 +236,12 @@ async def get_topic(
         user_id=user.id, db=db
     )
 
-    return [membership.topic for membership in memberships]
+    return [
+        CustomTopic(
+            topic=membership.topic, topic_identifier=membership.topic_identifier
+        ).to_str()
+        for membership in memberships
+    ]
 
 
 @router.post(

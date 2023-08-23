@@ -21,7 +21,7 @@ from app.utils.communication.notifications import NotificationTool
 from app.utils.tools import get_file_from_data, save_file_as_data
 from app.utils.types import standard_responses
 from app.utils.types.groups_type import GroupType
-from app.utils.types.notification_types import Topic
+from app.utils.types.notification_types import CustomTopic, Topic
 from app.utils.types.tags import Tags
 
 router = APIRouter()
@@ -89,7 +89,7 @@ async def create_session(
             expire_on=sunday.replace(day=sunday.day + 7),
         )
         await notification_tool.send_notification_to_topic(
-            topic=Topic.cinema, message=message
+            custom_topic=CustomTopic(topic=Topic.cinema), message=message
         )
     except Exception as error:
         hyperion_error_logger.error(

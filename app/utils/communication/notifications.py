@@ -9,7 +9,7 @@ from app.core.config import Settings
 from app.cruds import cruds_notification
 from app.models import models_notification
 from app.schemas.schemas_notification import Message
-from app.utils.types.notification_types import Topic
+from app.utils.types.notification_types import CustomTopic, Topic
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
@@ -123,7 +123,7 @@ class NotificationManager:
 
     def _send_firebase_push_notification_by_topic(
         self,
-        topic: Topic,
+        custom_topic: CustomTopic,
         data: dict[str, str] | None = None,
     ):
         """
@@ -137,16 +137,16 @@ class NotificationManager:
         if not self.use_firebase:
             return
 
-        message = messaging.Message(data=data, topic=topic)
+        message = messaging.Message(data=data, topic=custom_topic.to_str())
         try:
             messaging.send(message)
         except messaging.FirebaseError as error:
             hyperion_error_logger.error(
-                f"Notification: Unable to send firebase notification for topic {topic}: {error}"
+                f"Notification: Unable to send firebase notification for topic {custom_topic}: {error}"
             )
             raise
 
-    def _send_firebase_trigger_notification_by_topic(self, topic: Topic):
+    def _send_firebase_trigger_notification_by_topic(self, custom_topic: CustomTopic):
         """
         Send a firebase trigger notification for a given topic.
 
@@ -157,30 +157,30 @@ class NotificationManager:
         # We thus need to send a data object with a dummy key to make sure the notification is processed.
         # See https://stackoverflow.com/questions/59298850/firebase-messaging-background-message-handler-method-not-called-when-the-app
         self._send_firebase_push_notification_by_topic(
-            topic=topic, data={"trigger": "trigger"}
+            custom_topic=custom_topic, data={"trigger": "trigger"}
         )
 
-    def subscribe_tokens_to_topic(self, topic: Topic, tokens: list[str]):
+    def subscribe_tokens_to_topic(self, custom_topic: CustomTopic, tokens: list[str]):
         """
         Subscribe a list of tokens to a given topic.
         """
         if not self.use_firebase:
             return
 
-        response = messaging.subscribe_to_topic(tokens, topic)
+        response = messaging.subscribe_to_topic(tokens, custom_topic.to_str())
         if response.failure_count > 0:
             hyperion_error_logger.info(
-                f"Notification: Failed to subscribe to topic {topic} due to {list(map(lambda e: e.reason,response.errors))}"
+                f"Notification: Failed to subscribe to topic {custom_topic} due to {list(map(lambda e: e.reason,response.errors))}"
             )
 
-    def unsubscribe_tokens_to_topic(self, topic: Topic, tokens: list[str]):
+    def unsubscribe_tokens_to_topic(self, custom_topic: CustomTopic, tokens: list[str]):
         """
         Unsubscribe a list of tokens to a given topic.
         """
         if not self.use_firebase:
             return
 
-        messaging.unsubscribe_from_topic(tokens, topic)
+        messaging.unsubscribe_from_topic(tokens, custom_topic.to_str())
 
     async def _add_message_for_user_in_database(
         self,
@@ -246,7 +246,7 @@ class NotificationManager:
             )
 
     async def send_notification_to_topic(
-        self, topic: Topic, message: Message, db: AsyncSession
+        self, custom_topic: CustomTopic, message: Message, db: AsyncSession
     ) -> None:
         """
         Send a notification for a given topic.
@@ -260,7 +260,7 @@ class NotificationManager:
 
         # Get all firebase_device_token related to the user
         topic_memberships = await cruds_notification.get_topic_membership_by_topic(
-            topic=topic,
+            custom_topic=custom_topic,
             db=db,
         )
 
@@ -280,14 +280,14 @@ class NotificationManager:
         )
 
         try:
-            self._send_firebase_trigger_notification_by_topic(topic=topic)
+            self._send_firebase_trigger_notification_by_topic(custom_topic=custom_topic)
         except Exception as error:
             hyperion_error_logger.warning(
-                f"Notification: Unable to send firebase notification for topic {topic}: {error}"
+                f"Notification: Unable to send firebase notification for topic {custom_topic}: {error}"
             )
 
     async def subscribe_user_to_topic(
-        self, topic: Topic, user_id: str, db: AsyncSession
+        self, custom_topic: CustomTopic, user_id: str, db: AsyncSession
     ) -> None:
         """
         Subscribe a list of tokens to a given topic.
@@ -311,7 +311,7 @@ class NotificationManager:
         )
 
     async def unsubscribe_user_to_topic(
-        self, topic: Topic, user_id: str, db: AsyncSession
+        self, custom_topic: CustomTopic, user_id: str, db: AsyncSession
     ) -> None:
         """
         Subscribe a list of tokens to a given topic.
@@ -325,10 +325,12 @@ class NotificationManager:
             device.firebase_device_token for device in firebase_devices
         ]
 
-        self.unsubscribe_tokens_to_topic(tokens=firebase_device_tokens, topic=topic)
+        self.unsubscribe_tokens_to_topic(
+            tokens=firebase_device_tokens, custom_topic=custom_topic
+        )
 
         await cruds_notification.delete_topic_membership(
-            topic=topic, user_id=user_id, db=db
+            custom_topic=custom_topic, user_id=user_id, db=db
         )
 
 
@@ -359,10 +361,12 @@ class NotificationTool:
             db=self.db,
         )
 
-    async def send_notification_to_topic(self, topic: Topic, message: Message):
+    async def send_notification_to_topic(
+        self, custom_topic: CustomTopic, message: Message
+    ):
         self.background_tasks.add_task(
             self.notification_manager.send_notification_to_topic,
-            topic=topic,
+            custom_topic=custom_topic,
             message=message,
             db=self.db,
         )

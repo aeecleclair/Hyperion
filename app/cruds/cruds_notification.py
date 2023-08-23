@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import models_notification
-from app.utils.types.notification_types import Topic
+from app.utils.types.notification_types import CustomTopic
 
 
 async def create_message(
@@ -199,27 +199,31 @@ async def create_topic_membership(
 
 async def delete_topic_membership(
     user_id: str,
-    topic: str,
+    custom_topic: CustomTopic,
     db: AsyncSession,
 ):
     await db.execute(
         delete(models_notification.TopicMembership).where(
             models_notification.TopicMembership.user_id == user_id,
-            models_notification.TopicMembership.topic == topic,
+            models_notification.TopicMembership.topic == custom_topic.topic,
+            models_notification.TopicMembership.topic_identifier
+            == custom_topic.topic_identifier,
         )
     )
     await db.commit()
 
 
 async def get_topic_membership_by_topic(
-    topic: Topic,
+    custom_topic: CustomTopic,
     db: AsyncSession,
 ) -> Sequence[models_notification.TopicMembership]:
     """Return the loaner with id"""
 
     result = await db.execute(
         select(models_notification.TopicMembership).where(
-            models_notification.TopicMembership.topic == topic
+            models_notification.TopicMembership.topic == custom_topic.topic,
+            models_notification.TopicMembership.topic_identifier
+            == custom_topic.topic_identifier,
         )
     )
     return result.scalars().all()
@@ -237,3 +241,19 @@ async def get_topic_membership_by_user_id(
         )
     )
     return result.scalars().all()
+
+
+async def get_topic_membership_by_user_id_and_topic(
+    user_id: str,
+    custom_topic: CustomTopic,
+    db: AsyncSession,
+) -> models_notification.TopicMembership | None:
+    result = await db.execute(
+        select(models_notification.TopicMembership).where(
+            models_notification.TopicMembership.user_id == user_id,
+            models_notification.TopicMembership.topic == custom_topic.topic,
+            models_notification.TopicMembership.topic_identifier
+            == custom_topic.topic_identifier,
+        )
+    )
+    return result.scalars().first()
