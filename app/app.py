@@ -42,6 +42,9 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     if not os.path.exists("data/ics/"):
         os.makedirs("data/ics/")
 
+    if not os.path.exists("data/core/"):
+        os.makedirs("data/core/")
+
     # Creating a lifespan which will be called when the application starts then shuts down
     # https://fastapi.tiangolo.com/advanced/events/
     @asynccontextmanager
