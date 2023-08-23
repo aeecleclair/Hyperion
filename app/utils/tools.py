@@ -1,6 +1,7 @@
 import glob
 import logging
 import os
+import random
 import shutil
 from typing import Sequence
 
@@ -183,3 +184,7 @@ def get_display_name(
     if nickname:
         return f"{firstname} {name} ({nickname})"
     return f"{firstname} {name}"
+
+
+def get_random_string(length: int = 5) -> str:
+    return "".join(random.choices("abcdefghijklmnopqrstuvwxyz0123456789", k=length))
