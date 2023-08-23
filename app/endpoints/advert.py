@@ -164,7 +164,9 @@ async def get_current_user_advertisers(
     for group in user.groups:
         user_groups_ids.append(group.id)
 
-    return await cruds_advert.get_advertisers_by_groups(db=db, user_groups_ids=user_groups_ids)
+    return await cruds_advert.get_advertisers_by_groups(
+        db=db, user_groups_ids=user_groups_ids
+    )
 
 
 @router.get(
