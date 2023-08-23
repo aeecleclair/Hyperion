@@ -110,11 +110,16 @@ class NotificationManager:
         self, db: AsyncSession, tokens: list[str] = []
     ):
         """
-        Send a firebase trigger notification to a list of tokens. This consist to send a notification without any content.
-        Allows to let the application know that a new notification is available, without sending the content of the notification.
+        Send a firebase trigger notification to a list of tokens.
+        This approche let the application know that a new notification is available, without sending the content of the notification.
         """
 
-        await self._send_firebase_push_notification_by_tokens(tokens=tokens, db=db)
+        # Push without any data or notification may not be processed by the app in the background.
+        # We thus need to send a data object with a dummy key to make sure the notification is processed.
+        # See https://stackoverflow.com/questions/59298850/firebase-messaging-background-message-handler-method-not-called-when-the-app
+        await self._send_firebase_push_notification_by_tokens(
+            tokens=tokens, db=db, data={"trigger": "trigger"}
+        )
 
     def _send_firebase_push_notification_by_topic(
         self,
@@ -145,9 +150,15 @@ class NotificationManager:
         """
         Send a firebase trigger notification for a given topic.
 
-        Allows to let the application know that a new notification is available, without sending the content of the notification.
+        This approche let the application know that a new notification is available, without sending the content of the notification.
         """
-        self._send_firebase_push_notification_by_topic(topic=topic)
+
+        # Push without any data or notification may not be processed by the app in the background.
+        # We thus need to send a data object with a dummy key to make sure the notification is processed.
+        # See https://stackoverflow.com/questions/59298850/firebase-messaging-background-message-handler-method-not-called-when-the-app
+        self._send_firebase_push_notification_by_topic(
+            topic=topic, data={"trigger": "trigger"}
+        )
 
     def subscribe_tokens_to_topic(self, topic: Topic, tokens: list[str]):
         """
