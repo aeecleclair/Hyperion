@@ -716,6 +716,7 @@ async def create_campaigns_logo(
 )
 async def read_campaigns_logo(
     list_id: str,
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.AE)),
 ):
     """
     Get the logo of a campaign list.

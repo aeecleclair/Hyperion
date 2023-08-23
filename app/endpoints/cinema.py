@@ -117,6 +117,7 @@ async def create_campaigns_logo(
 )
 async def read_session_poster(
     session_id: str,
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     return get_file_from_data(
         default_asset="assets/images/default_movie.png",

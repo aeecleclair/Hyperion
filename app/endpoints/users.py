@@ -872,12 +872,17 @@ async def read_own_profile_picture(
 )
 async def read_user_profile_picture(
     user_id: str,
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get the profile picture of an user.
 
     Unauthenticated users can use this endpoint (needed for some OIDC services)
     """
+
+    db_user = await cruds_users.get_user_by_id(db=db, user_id=user_id)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
 
     return get_file_from_data(
         directory="profile-pictures",

@@ -112,11 +112,19 @@ async def get_style_file(
     """
     Return a style file from the assets folder
     """
+    css_dir = "assets/style/"
+    css_path = f"{css_dir}{file}.css"
 
-    if not path.isfile(f"assets/style/{file}.css"):
+    # Security check (even if FastAPI parsing of path parameters does not allow path traversal)
+    if path.commonprefix(
+        (path.realpath(css_path), path.realpath(css_dir))
+    ) != path.realpath(css_dir):
         raise HTTPException(status_code=404, detail="File not found")
 
-    return FileResponse(f"assets/style/{file}.css")
+    if not path.isfile(css_path):
+        raise HTTPException(status_code=404, detail="File not found")
+
+    return FileResponse(css_path)
 
 
 @router.get(
