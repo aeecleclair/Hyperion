@@ -13,6 +13,7 @@ class GroupType(str, Enum):
 
     # Account types
     student = "39691052-2ae5-4e12-99d0-7a9f5f2b0136"
+    formerstudent = "ab4c7503-41b3-11ee-8177-089798f1a4a5"
     staff = "703056c4-be9d-475c-aa51-b7fc62a96aaa"
     association = "29751438-103c-42f2-b09b-33fbb20758a7"
 
@@ -39,6 +40,7 @@ class AccountType(str, Enum):
     """
 
     student = GroupType.student.value
+    formerstudent = GroupType.formerstudent.value
     staff = GroupType.staff.value
     association = GroupType.association.value
 

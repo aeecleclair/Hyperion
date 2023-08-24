@@ -162,15 +162,21 @@ async def create_user_by_user(
     # For student
     # ^[\w\-.]*@etu(-enise)?.ec-lyon.fr$
 
-    if re.match(r"^[\w\-.]*@(enise.)?ec-lyon.fr$", user_create.email):
+    if re.match(r"^[\w\-.]*@(enise\.)?ec-lyon\.fr$", user_create.email):
         # Its a staff email address
         account_type = AccountType.staff
     elif re.match(
-        r"^[\w\-.]*@etu(-enise)?.ec-lyon.fr$",
+        r"^[\w\-.]*@etu(-enise)?\.ec-lyon\.fr$",
         user_create.email,
     ):
         # Its a student email address
         account_type = AccountType.student
+    elif re.match(
+        r"^[\w\-.]*@centraliens-lyon\.net$",
+        user_create.email,
+    ):
+        # Its a former student email address
+        account_type = AccountType.formerstudent
     else:
         raise HTTPException(
             status_code=400,
@@ -587,7 +593,7 @@ async def migrate_mail(
     """
 
     if not re.match(
-        r"^[\w\-.]*@((ecl\d{2})|(alternance\d{4})|(master)|(auditeur)).ec-lyon.fr$",
+        r"^[\w\-.]*@((ecl\d{2})|(alternance\d{4})|(master)|(auditeur))\.ec-lyon\.fr$",
         user.email,
     ):
         raise HTTPException(
@@ -595,7 +601,7 @@ async def migrate_mail(
             detail="Only student users with an old email adresse can migrate their email address",
         )
 
-    if not re.match(r"^[\w\-.]*@etu(-enise)?.ec-lyon.fr$", mail_migration.new_email):
+    if not re.match(r"^[\w\-.]*@etu(-enise)?\.ec-lyon\.fr$", mail_migration.new_email):
         raise HTTPException(
             status_code=400,
             detail="The new email adresse must match the new ECL format for student users",
@@ -872,12 +878,17 @@ async def read_own_profile_picture(
 )
 async def read_user_profile_picture(
     user_id: str,
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get the profile picture of an user.
 
     Unauthenticated users can use this endpoint (needed for some OIDC services)
     """
+
+    db_user = await cruds_users.get_user_by_id(db=db, user_id=user_id)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
 
     return get_file_from_data(
         directory="profile-pictures",

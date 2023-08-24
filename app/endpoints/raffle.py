@@ -253,6 +253,7 @@ async def create_current_raffle_logo(
 )
 async def read_raffle_logo(
     raffle_id: str,
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Get the logo of a specific raffle.
@@ -800,6 +801,7 @@ async def create_prize_picture(
 )
 async def read_prize_logo(
     prize_id: str,
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Get the logo of a specific prize.
