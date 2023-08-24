@@ -166,8 +166,7 @@ async def get_messages(
 )
 async def subscribe_to_topic(
     topic_str: str = Path(
-        description="The topic to subscribe to (the Topic may be followed by an additional identifier)",
-        example="cinema_4c029b5f-2bf7-4b70-85d4-340a4bd28653",
+        description="The topic to subscribe to. The Topic may be followed by an additional identifier (ex: cinema_4c029b5f-2bf7-4b70-85d4-340a4bd28653)",
     ),
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
