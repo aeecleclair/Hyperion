@@ -276,7 +276,7 @@ async def authorize_validation(
         )
         redirect_uri = auth_client.override_redirect_uri
     # If a redirect_uri is hardcoded in the auth_client we will use this one. If one was provided in the request, we want to make sure they match.
-    elif auth_client.redirect_uri is not None:
+    else:
         if authorizereq.redirect_uri is not None:
             if auth_client.redirect_uri != authorizereq.redirect_uri:
                 hyperion_access_logger.warning(
@@ -287,17 +287,6 @@ async def authorize_validation(
                     detail="Mismatching redirect_uri",
                 )
         redirect_uri = auth_client.redirect_uri
-    else:
-        # A redirect_uri must be provided in the request, as none are hardcoded in the auth_client
-        if authorizereq.redirect_uri is None:
-            hyperion_access_logger.info(
-                f"Authorize-validation: Unprovided redirect_uri ({request_id})"
-            )
-            raise HTTPException(
-                status_code=422,
-                detail="Unprovided redirect_uri",
-            )
-        redirect_uri = authorizereq.redirect_uri
 
     # Special characters like `:` or `/` may be encoded as `%3A` and `%2F`, we need to decode them before returning the redirection object
     redirect_uri = urllib.parse.unquote(redirect_uri)
@@ -663,33 +652,16 @@ async def authorization_code_grant(  # noqa: C901 # The function is too complex 
     # If a redirect_uri was provided in the previous request, we need to check they match
     # > Ensure that the redirect_uri parameter value is identical to the redirect_uri parameter value that was included in the initial Authorization Request.
     # > If the redirect_uri parameter value is not present when there is only one registered redirect_uri value, the Authorization Server MAY return an error (since the Client should have included the parameter) or MAY proceed without an error (since OAuth 2.0 permits the parameter to be omitted in this case).
-    if db_authorization_code.redirect_uri is not None:
-        if tokenreq.redirect_uri is None:
-            # We use the value provided previously
-            tokenreq.redirect_uri = db_authorization_code.redirect_uri
-        # If a redirect_uri is provided, it should match the one in the auth client
-        if tokenreq.redirect_uri != db_authorization_code.redirect_uri:
-            hyperion_access_logger.warning(
-                f"Token authorization_code_grant: redirect_uri {tokenreq.redirect_uri} do not match the redirect_uri provided previously {db_authorization_code.redirect_uri} ({request_id})"
-            )
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "error": "invalid_request",
-                    "error_description": "redirect_uri should remain identical",
-                },
-            )
-
-    # If tokenreq.redirect_uri is still None, we should raise an error as we don't know which uri to use
-    if tokenreq.redirect_uri is None:
+    # If a redirect_uri is provided, it should match the one in the auth client
+    if tokenreq.redirect_uri != db_authorization_code.redirect_uri:
         hyperion_access_logger.warning(
-            f"Token authorization_code_grant: redirect_uri was never provided ({request_id})"
+            f"Token authorization_code_grant: redirect_uri {tokenreq.redirect_uri} do not match the redirect_uri provided previously {db_authorization_code.redirect_uri} ({request_id})"
         )
         return JSONResponse(
             status_code=400,
             content={
                 "error": "invalid_request",
-                "error_description": "redirect_uri was never provided",
+                "error_description": "redirect_uri should remain identical",
             },
         )
 

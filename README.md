@@ -135,3 +135,15 @@ POSTGRES_USER = "hyperion"
 POSTGRES_PASSWORD = "pass"
 POSTGRES_DB = "hyperion"
 ```
+
+## Configure Firebase notifications
+
+Hyperion support push notification using Firebase Messaging service.
+
+To enable the service:
+
+1. Add `USE_FIREBASE=true` to dotenv file
+2. Create a service account on Firebase console:
+   1. Go to [Google cloud, IAM and administration, Service account](https://console.cloud.google.com/iam-admin/serviceaccounts) and add a new Service Account with Messaging API capabilities.
+   2. Choose _Manage keys_ and create a new JSON key.
+   3. Rename the file `firebase.json` and add it at Hyperion root

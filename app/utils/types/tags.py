@@ -16,3 +16,4 @@ class Tags(str, Enum):
     cinema = "Cinema"
     raffle = "Raffle"
     advert = "Advert"
+    notifications = "Notifications"
