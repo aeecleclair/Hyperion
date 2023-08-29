@@ -119,11 +119,11 @@ class Settings(BaseSettings):
     AUTH_ISSUER = "hyperion"
 
     # Add an AUTH_CLIENTS variable to the .env dotenv to configure auth clients
-    # This variable should have the format: [["client id", "client secret", "app.utils.auth.providers class name"]]
+    # This variable should have the format: [["client id", "client secret", "redirect_uri", "app.utils.auth.providers class name"]]
     # Use an empty secret `null` or `""` to use PKCE instead of a client secret
-    # Ex: AUTH_CLIENTS=[["Nextcloudclient", "supersecret", "NextcloudAuthClient"], ["Piwigo", "secret2", "BaseAuthClient"], , ["mobileapp", null, "BaseAuthClient"]]
+    # Ex: AUTH_CLIENTS=[["Nextcloudclient", "supersecret", "https://mynextcloud.instance/", "NextcloudAuthClient"], ["Piwigo", "secret2", "https://mypiwigo.instance/", "BaseAuthClient"], , ["mobileapp", null, "https://titan/", "BaseAuthClient"]]
     # NOTE: AUTH_CLIENTS property should never be used in the code. To get an auth client, use `KNOWN_AUTH_CLIENTS`
-    AUTH_CLIENTS: list[tuple[str, str | None, str]]
+    AUTH_CLIENTS: list[tuple[str, str | None, str, str]]
 
     ######################################
     # Automatically generated parameters #
@@ -164,7 +164,7 @@ class Settings(BaseSettings):
     @cached_property
     def KNOWN_AUTH_CLIENTS(cls) -> dict[str, providers.BaseAuthClient]:
         clients = {}
-        for client_id, secret, auth_client_name in cls.AUTH_CLIENTS:
+        for client_id, secret, redirect_uri, auth_client_name in cls.AUTH_CLIENTS:
             try:
                 auth_client_class: type[providers.BaseAuthClient] = getattr(
                     providers, auth_client_name
@@ -179,7 +179,9 @@ class Settings(BaseSettings):
             if not secret:
                 secret = None
             # We can create a new instance of the auth_client_class with the client id and secret
-            clients[client_id] = auth_client_class(client_id=client_id, secret=secret)
+            clients[client_id] = auth_client_class(
+                client_id=client_id, secret=secret, redirect_uri=redirect_uri
+            )
 
         return clients
 

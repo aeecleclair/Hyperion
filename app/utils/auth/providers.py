@@ -21,8 +21,6 @@ class BaseAuthClient:
     # Auth client configuration: override these parameters #
     ########################################################
 
-    # If no redirect_uri are hardcoded, the client will need to provide one in its request
-    redirect_uri: str | None = None
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.utils.types.scopes_type.ScopeType for possible values
     # WARNING: to be able to use openid connect, `ScopeType.openid` should always be allowed
@@ -58,13 +56,15 @@ class BaseAuthClient:
     #    The following methods should not be overridden    #
     ########################################################
 
-    def __init__(self, client_id: str, secret: str | None) -> None:
+    def __init__(self, client_id: str, secret: str | None, redirect_uri: str) -> None:
         # The following parameters are not class variables but instance variables.
         # There can indeed be more than one client using the class, the client will need to have its own client id and secret.
 
         self.client_id: str = client_id
         # If no secret is provided, the client is expected to use PKCE
         self.secret: str | None = secret
+        # redirect_uri should alway match the one provided by the client
+        self.redirect_uri: str = redirect_uri
 
     def filter_scopes(self, requested_scopes: Set[str]) -> Set[ScopeType]:
         return self.allowed_scopes.intersection(requested_scopes)
@@ -75,8 +75,8 @@ class AppAuthClient(BaseAuthClient):
     An auth client for Hyperion mobile application
     """
 
-    # If no redirect_uri are hardcoded, the client will need to provide one in its request
-    redirect_uri: str | None = None
+    # redirect_uri should alway match the one provided by the client
+    redirect_uri: str
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.utils.types.scopes_type.ScopeType for possible values
     # WARNING: to be able to use openid connect, `ScopeType.openid` should always be allowed
@@ -98,8 +98,6 @@ class PostmanAuthClient(BaseAuthClient):
 
 
 class NextcloudAuthClient(BaseAuthClient):
-    # If no redirect_uri are hardcoded, the client will need to provide one in its request
-    redirect_uri: str | None = None
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.utils.types.scopes_type.ScopeType for possible values
     allowed_scopes: Set[ScopeType] = {ScopeType.openid}
@@ -129,8 +127,6 @@ class NextcloudAuthClient(BaseAuthClient):
 
 
 class PiwigoAuthClient(BaseAuthClient):
-    # If no redirect_uri are hardcoded, the client will need to provide one in its request
-    redirect_uri: str | None = None
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.utils.types.scopes_type.ScopeType for possible values
     # WARNING: to be able to use openid connect, `ScopeType.openid` should always be allowed
@@ -170,8 +166,6 @@ class PiwigoAuthClient(BaseAuthClient):
 
 
 class HedgeDocAuthClient(BaseAuthClient):
-    # If no redirect_uri are hardcoded, the client will need to provide one in its request
-    redirect_uri: str | None = None
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.utils.types.scopes_type.ScopeType for possible values
     allowed_scopes: Set[ScopeType] = {ScopeType.profile}
@@ -188,8 +182,6 @@ class HedgeDocAuthClient(BaseAuthClient):
 class WikijsAuthClient(BaseAuthClient):
     # https://github.com/requarks/wiki/blob/main/server/modules/authentication/oidc/definition.yml
 
-    # If no redirect_uri are hardcoded, the client will need to provide one in its request
-    redirect_uri: str | None = None
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.utils.types.scopes_type.ScopeType for possible values
     allowed_scopes: Set[ScopeType] = {ScopeType.openid, ScopeType.profile}
@@ -207,8 +199,6 @@ class WikijsAuthClient(BaseAuthClient):
 
 
 class SynapseAuthClient(BaseAuthClient):
-    # If no redirect_uri are hardcoded, the client will need to provide one in its request
-    redirect_uri: str | None = None
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.utils.types.scopes_type.ScopeType for possible values
     allowed_scopes: Set[ScopeType] = {ScopeType.openid, ScopeType.profile}
@@ -236,8 +226,6 @@ class SynapseAuthClient(BaseAuthClient):
 
 
 class MinecraftAuthClient(BaseAuthClient):
-    # If no redirect_uri are hardcoded, the client will need to provide one in its request
-    redirect_uri: str | None = None
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.utils.types.scopes_type.ScopeType for possible values
     allowed_scopes: Set[ScopeType] = {ScopeType.profile}
@@ -253,8 +241,6 @@ class MinecraftAuthClient(BaseAuthClient):
 
 
 class ChallengerAuthClient(BaseAuthClient):
-    # If no redirect_uri are hardcoded, the client will need to provide one in its request
-    redirect_uri: str | None = None
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.utils.types.scopes_type.ScopeType for possible values
     allowed_scopes: Set[ScopeType] = {ScopeType.openid, ScopeType.profile}
@@ -270,8 +256,6 @@ class ChallengerAuthClient(BaseAuthClient):
 
 
 class OpenProjectAuthClient(BaseAuthClient):
-    # If no redirect_uri are hardcoded, the client will need to provide one in its request
-    redirect_uri: str | None = None
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.utils.types.scopes_type.ScopeType for possible values
     allowed_scopes: Set[ScopeType] = {ScopeType.openid, ScopeType.profile}
