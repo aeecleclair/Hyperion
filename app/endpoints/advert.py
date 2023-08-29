@@ -240,17 +240,6 @@ async def create_advert(
             detail="Invalid advertiser_id",
         )
 
-    if advert.coadvertisers_id:
-        for coadvertiser_id in advert.coadvertisers_id:
-            coadvertiser = await cruds_advert.get_advertiser_by_id(
-                advertiser_id=coadvertiser_id, db=db
-            )
-            if coadvertiser is None:
-                raise HTTPException(
-                    status_code=404,
-                    detail="Invalid coadvertiser_id",
-                )
-
     if not is_user_member_of_an_allowed_group(user, [advertiser.group_manager_id]):
         raise HTTPException(
             status_code=403,
@@ -258,7 +247,6 @@ async def create_advert(
         )
 
     advert_params = advert.dict()
-    coadvertisers_id = advert_params.pop("coadvertisers_id")
 
     db_advert = models_advert.Advert(
         id=str(uuid.uuid4()),
@@ -268,7 +256,7 @@ async def create_advert(
 
     try:
         result = await cruds_advert.create_advert(
-            db_advert=db_advert, coadvertisers_id=coadvertisers_id, db=db
+            db_advert=db_advert, db=db
         )
         return result
     except ValueError as error:

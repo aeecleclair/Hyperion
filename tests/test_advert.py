@@ -60,7 +60,6 @@ async def init_objects():
         content="Example of advert",
         date=datetime.datetime.now(),
         tags="Tag1, Tag2, Tag3",
-        coadvertisers=[],
     )
 
     await add_object_to_db(advert)
@@ -97,7 +96,6 @@ def test_create_advert():
             "title": "Advert2",
             "content": "2nd example of advert",
             "advertiser_id": advertiser.id,
-            "coadvertisers_id": [],
             "tags": "Tag1, Tag2",
         },
         headers={"Authorization": f"Bearer {token_advertiser}"},

@@ -103,12 +103,6 @@ async def get_adverts_by_advertisers(
                     )
                     for advertiser_id in advertisers
                 ],
-                *[
-                    models_advert.Advert.coadvertisers.any(
-                        models_advert.Advertiser.id == advertiser_id
-                    )
-                    for advertiser_id in advertisers
-                ],
             )
         )
     )
@@ -116,17 +110,9 @@ async def get_adverts_by_advertisers(
 
 
 async def create_advert(
-    db_advert: models_advert.Advert, coadvertisers_id: list[str], db: AsyncSession
+    db_advert: models_advert.Advert, db: AsyncSession
 ) -> models_advert.Advert:
     db.add(db_advert)
-
-    if coadvertisers_id:
-        for coadvertiser_id in coadvertisers_id:
-            db_coadvert = models_advert.CoAdvertContent(
-                advert_id=db_advert.id, coadvertiser_id=coadvertiser_id
-            )
-            db.add(db_coadvert)
-
     try:
         await db.commit()
     except IntegrityError:

@@ -26,7 +26,6 @@ class AdvertBase(BaseModel):
     title: str
     content: str
     advertiser_id: str
-    coadvertisers_id: list[str] | None = None
     tags: str | None = None
 
 
@@ -50,5 +49,4 @@ class AdvertReturnComplete(AdvertBase):
 class AdvertUpdate(BaseModel):
     title: str | None = None
     content: str | None = None
-    coadvertisers_id: list[str] | None = None
     tags: str | None = None

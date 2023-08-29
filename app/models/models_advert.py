@@ -16,9 +16,6 @@ class Advertiser(Base):
     adverts: Mapped[list["Advert"]] = relationship(
         "Advert", lazy="subquery", back_populates="advertiser"
     )
-    coadverts: Mapped[list["Advert"]] = relationship(
-        "Advert", secondary="advert_coadvertise_content", back_populates="coadvertisers"
-    )
 
 
 class Advert(Base):
@@ -35,16 +32,3 @@ class Advert(Base):
     content: Mapped[str] = mapped_column(String, nullable=False)
     date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     tags: Mapped[str] = mapped_column(String, nullable=True)
-    coadvertisers: Mapped[list["Advert"]] = relationship(
-        "Advertiser", secondary="advert_coadvertise_content", back_populates="coadverts"
-    )
-
-
-class CoAdvertContent(Base):
-    __tablename__ = "advert_coadvertise_content"
-    coadvertiser_id: Mapped[str] = mapped_column(
-        ForeignKey("advert_advertisers.id"), primary_key=True
-    )
-    advert_id: Mapped[str] = mapped_column(
-        ForeignKey("advert_adverts.id"), primary_key=True
-    )
