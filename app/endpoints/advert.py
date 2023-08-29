@@ -255,9 +255,7 @@ async def create_advert(
     )
 
     try:
-        result = await cruds_advert.create_advert(
-            db_advert=db_advert, db=db
-        )
+        result = await cruds_advert.create_advert(db_advert=db_advert, db=db)
         return result
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
