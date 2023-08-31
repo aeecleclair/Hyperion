@@ -128,9 +128,9 @@ class Settings(BaseSettings):
     # Add an AUTH_CLIENTS variable to the .env dotenv to configure auth clients
     # This variable should have the format: [["client id", "client secret", "redirect_uri", "app.utils.auth.providers class name"]]
     # Use an empty secret `null` or `""` to use PKCE instead of a client secret
-    # Ex: AUTH_CLIENTS=[["Nextcloudclient", "supersecret", "https://mynextcloud.instance/", "NextcloudAuthClient"], ["Piwigo", "secret2", "https://mypiwigo.instance/", "BaseAuthClient"], , ["mobileapp", null, "https://titan/", "BaseAuthClient"]]
+    # Ex: AUTH_CLIENTS=[["Nextcloudclient", "supersecret", "https://mynextcloud.instance/", "NextcloudAuthClient"], ["Piwigo", "secret2", "https://mypiwigo.instance/", "BaseAuthClient"], ["mobileapp", null, "https://titan/", "BaseAuthClient"]]
     # NOTE: AUTH_CLIENTS property should never be used in the code. To get an auth client, use `KNOWN_AUTH_CLIENTS`
-    AUTH_CLIENTS: list[tuple[str, str | None, str, str]]
+    AUTH_CLIENTS: list[tuple[str, str | None, list[str], str]]
 
     ######################################
     # Automatically generated parameters #

@@ -275,18 +275,22 @@ async def authorize_validation(
             f"Authorize-validation: Overriding redirect_uri with {auth_client.override_redirect_uri}, as configured in the auth client ({request_id})"
         )
         redirect_uri = auth_client.override_redirect_uri
-    # If a redirect_uri is hardcoded in the auth_client we will use this one. If one was provided in the request, we want to make sure they match.
+    # If at least one redirect_uri is hardcoded in the auth_client we will use this one. If one was provided in the request, we want to make sure they match.
     else:
-        if authorizereq.redirect_uri is not None:
-            if auth_client.redirect_uri != authorizereq.redirect_uri:
-                hyperion_access_logger.warning(
-                    f"Authorize-validation: Mismatching redirect_uri, received {authorizereq.redirect_uri} but expected {auth_client.redirect_uri} ({request_id})"
-                )
-                raise HTTPException(
-                    status_code=422,
-                    detail="Mismatching redirect_uri",
-                )
-        redirect_uri = auth_client.redirect_uri
+        if authorizereq.redirect_uri is None:
+            # We use the hardcoded value
+            authorizereq.redirect_uri = auth_client.redirect_uri[0]
+        # If a redirect_uri is provided, it should match one specified in the auth client
+        if authorizereq.redirect_uri not in auth_client.redirect_uri:
+            print(auth_client.redirect_uri)
+            hyperion_access_logger.warning(
+                f"Authorize-validation: Mismatching redirect_uri, received {authorizereq.redirect_uri} but expected one of {auth_client.redirect_uri} ({request_id})"
+            )
+            raise HTTPException(
+                status_code=422,
+                detail="Mismatching redirect_uri",
+            )
+        redirect_uri = authorizereq.redirect_uri
 
     # Special characters like `:` or `/` may be encoded as `%3A` and `%2F`, we need to decode them before returning the redirection object
     redirect_uri = urllib.parse.unquote(redirect_uri)
@@ -635,9 +639,9 @@ async def authorization_code_grant(  # noqa: C901 # The function is too complex 
     elif auth_client.redirect_uri is not None:
         if tokenreq.redirect_uri is None:
             # We use the hardcoded value
-            tokenreq.redirect_uri = auth_client.redirect_uri
-        # If a redirect_uri is provided, it should match the one in the auth client
-        if tokenreq.redirect_uri != auth_client.redirect_uri:
+            tokenreq.redirect_uri = auth_client.redirect_uri[0]
+        # If a redirect_uri is provided, it should match one specified in the auth client
+        if tokenreq.redirect_uri not in auth_client.redirect_uri:
             hyperion_access_logger.warning(
                 f"Token authorization_code_grant: redirect_uri {tokenreq.redirect_uri} do not match hardcoded redirect_uri ({request_id})"
             )
@@ -645,7 +649,7 @@ async def authorization_code_grant(  # noqa: C901 # The function is too complex 
                 status_code=400,
                 content={
                     "error": "invalid_request",
-                    "error_description": "redirect_uri do not match",
+                    "error_description": "redirect_uri does not match",
                 },
             )
 
