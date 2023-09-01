@@ -301,7 +301,7 @@ async def create_user(
     # After adding the unconfirmed user to the database, we got an activation token that need to be send by email,
     # in order to make sure the email address is valid
 
-    if settings.SMTP_ACTIVE:
+    if True:
         activation_content = templates.get_template("activation_mail.html").render(
             {"activation_token": activation_token}
         )
@@ -532,7 +532,7 @@ async def recover_user(
         )
 
         if settings.SMTP_ACTIVE:
-            reset_content = templates.templates.get_template("reset_mail.html").render(
+            reset_content = templates.get_template("reset_mail.html").render(
                 {"reset_token": reset_token}
             )
             send_email(
