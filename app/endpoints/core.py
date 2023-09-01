@@ -107,6 +107,20 @@ async def read_wellknown_security_txt():
 
 
 @router.get(
+    "/robots.txt",
+    response_class=FileResponse,
+    status_code=200,
+    tags=[Tags.core],
+)
+async def read_robots_txt():
+    """
+    Return Hyperion robots.txt file
+    """
+
+    return FileResponse("assets/robots.txt")
+
+
+@router.get(
     "/style/{file}.css",
     response_class=FileResponse,
     status_code=200,
