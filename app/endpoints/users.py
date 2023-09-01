@@ -302,8 +302,8 @@ async def create_user(
     # in order to make sure the email address is valid
 
     if settings.SMTP_ACTIVE:
-        activation_content = templates.TemplateContent(
-            "activation_mail.html", {"activation_token": activation_token}
+        activation_content = templates.get_template("activation_mail.html").render(
+            {"activation_token": activation_token}
         )
         background_tasks.add_task(
             send_email,
@@ -532,8 +532,8 @@ async def recover_user(
         )
 
         if settings.SMTP_ACTIVE:
-            reset_content = templates.TemplateContent(
-                "reset_mail.html", {"reset_token": reset_token}
+            reset_content = templates.templates.get_template("reset_mail.html").render(
+                {"reset_token": reset_token}
             )
             send_email(
                 recipient=db_user.email,
