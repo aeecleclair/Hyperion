@@ -191,12 +191,12 @@ async def create_user_by_user(
         )
         # We will send to the email a message explaining they already have an account and can reset their password if they want.
         if settings.SMTP_ACTIVE:
+            account_exists_content = templates.get_template("account_exists_mail.html").render()
             background_tasks.add_task(
                 send_email,
                 recipient=user_create.email,
                 subject="MyECL - your account already exists",
-                # TODO: Replace this link with a link that points to the password reset page
-                content="This email address is already associated to an account. If you forgot your credentials, you can reset your password",
+                content=account_exists_content,
                 settings=settings,
             )
 
