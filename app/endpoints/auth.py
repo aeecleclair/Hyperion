@@ -279,10 +279,9 @@ async def authorize_validation(
     else:
         if authorizereq.redirect_uri is None:
             # We use the hardcoded value
-            authorizereq.redirect_uri = auth_client.redirect_uri[0]
+            redirect_uri = auth_client.redirect_uri[0]
         # If a redirect_uri is provided, it should match one specified in the auth client
-        if authorizereq.redirect_uri not in auth_client.redirect_uri:
-            print(auth_client.redirect_uri)
+        elif authorizereq.redirect_uri not in auth_client.redirect_uri:
             hyperion_access_logger.warning(
                 f"Authorize-validation: Mismatching redirect_uri, received {authorizereq.redirect_uri} but expected one of {auth_client.redirect_uri} ({request_id})"
             )
@@ -290,7 +289,8 @@ async def authorize_validation(
                 status_code=422,
                 detail="Mismatching redirect_uri",
             )
-        redirect_uri = authorizereq.redirect_uri
+        else:
+            redirect_uri = authorizereq.redirect_uri
 
     # Special characters like `:` or `/` may be encoded as `%3A` and `%2F`, we need to decode them before returning the redirection object
     redirect_uri = urllib.parse.unquote(redirect_uri)
