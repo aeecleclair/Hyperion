@@ -635,7 +635,7 @@ async def migrate_mail(
     )
 
     if settings.SMTP_ACTIVE:
-        migration_content = templates.get_template("activation_mail.html").render(
+        migration_content = templates.get_template("migration_mail.html").render(
             {
                 "migration_link": f"{settings.CLIENT_URL}users/migrate-mail-confirm?token={confirmation_token}"
             }
