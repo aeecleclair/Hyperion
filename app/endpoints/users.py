@@ -635,10 +635,15 @@ async def migrate_mail(
     )
 
     if settings.SMTP_ACTIVE:
+        migration_content = templates.get_template("activation_mail.html").render(
+            {
+                "migration_link": f"{settings.CLIENT_URL}users/migrate-mail-confirm?token={confirmation_token}"
+            }
+        )
         send_email(
             recipient=mail_migration.new_email,
             subject="MyECL - Confirm your new email adresse",
-            content=f"You can confirm your new email adresse by clicking the following link: {settings.CLIENT_URL}users/migrate-mail-confirm?token={confirmation_token}",
+            content=migration_content,
             settings=settings,
         )
     else:
