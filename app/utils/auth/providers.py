@@ -28,6 +28,8 @@ class BaseAuthClient:
     # Restrict the authentication to this client to specific Hyperion groups.
     # When set to `None`, users from any group can use the auth client
     allowed_groups: list[GroupType] | None = None
+    # redirect_uri should alway match the one provided by the client
+    redirect_uri: list[str]
     # Sometimes, when the client is wrongly configured, it may return an incorrect return_uri. This may also be useful for debugging clients.
     # `override_redirect_uri` allows bypassing all redirect_uri verifications and overriding the returned redirect_uri.
     # This setting will override the previous `BaseAuthClient.redirect_uri``
@@ -56,7 +58,9 @@ class BaseAuthClient:
     #    The following methods should not be overridden    #
     ########################################################
 
-    def __init__(self, client_id: str, secret: str | None, redirect_uri: str) -> None:
+    def __init__(
+        self, client_id: str, secret: str | None, redirect_uri: list[str]
+    ) -> None:
         # The following parameters are not class variables but instance variables.
         # There can indeed be more than one client using the class, the client will need to have its own client id and secret.
 
@@ -64,7 +68,7 @@ class BaseAuthClient:
         # If no secret is provided, the client is expected to use PKCE
         self.secret: str | None = secret
         # redirect_uri should alway match the one provided by the client
-        self.redirect_uri: str = redirect_uri
+        self.redirect_uri: list[str] = redirect_uri
 
     def filter_scopes(self, requested_scopes: Set[str]) -> Set[ScopeType]:
         return self.allowed_scopes.intersection(requested_scopes)
@@ -75,8 +79,6 @@ class AppAuthClient(BaseAuthClient):
     An auth client for Hyperion mobile application
     """
 
-    # redirect_uri should alway match the one provided by the client
-    redirect_uri: str
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.utils.types.scopes_type.ScopeType for possible values
     # WARNING: to be able to use openid connect, `ScopeType.openid` should always be allowed
