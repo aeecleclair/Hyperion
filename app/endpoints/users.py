@@ -191,7 +191,9 @@ async def create_user_by_user(
         )
         # We will send to the email a message explaining they already have an account and can reset their password if they want.
         if settings.SMTP_ACTIVE:
-            account_exists_content = templates.get_template("account_exists_mail.html").render()
+            account_exists_content = templates.get_template(
+                "account_exists_mail.html"
+            ).render()
             background_tasks.add_task(
                 send_email,
                 recipient=user_create.email,
