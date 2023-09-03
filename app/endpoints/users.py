@@ -191,12 +191,14 @@ async def create_user_by_user(
         )
         # We will send to the email a message explaining they already have an account and can reset their password if they want.
         if settings.SMTP_ACTIVE:
+            account_exists_content = templates.get_template(
+                "account_exists_mail.html"
+            ).render()
             background_tasks.add_task(
                 send_email,
                 recipient=user_create.email,
                 subject="MyECL - your account already exists",
-                # TODO: Replace this link with a link that points to the password reset page
-                content="This email address is already associated to an account. If you forgot your credentials, you can reset your password",
+                content=account_exists_content,
                 settings=settings,
             )
 
@@ -302,12 +304,18 @@ async def create_user(
     # in order to make sure the email address is valid
 
     if settings.SMTP_ACTIVE:
+        activation_content = templates.get_template("activation_mail.html").render(
+            {"activation_token": activation_token}
+        )
         background_tasks.add_task(
             send_email,
             recipient=email,
             subject="MyECL - confirm your email",
-            content=f"Please confirm your MyECL account by using the following token in the application : {activation_token}",
+            content=activation_content,
             settings=settings,
+        )
+        hyperion_security_logger.info(
+            f"Create_user: Creating an unconfirmed account for {email} ({request_id})"
         )
     else:
         hyperion_security_logger.info(
@@ -445,7 +453,7 @@ async def activate_user(
         raise HTTPException(status_code=400, detail=str(error))
 
     hyperion_security_logger.info(
-        f"Activate_user: Activated user {confirmed_user.id} ({request_id})"
+        f"Activate_user: Activated user {confirmed_user.id} (email: {confirmed_user.email}) ({request_id})"
     )
     return standard_responses.Result()
 
@@ -498,6 +506,7 @@ async def recover_user(
     email: str = Body(..., embed=True),
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
+    request_id: str = Depends(get_request_id),
 ):
     """
     Allow a user to start a password reset process.
@@ -525,14 +534,19 @@ async def recover_user(
         )
 
         if settings.SMTP_ACTIVE:
+            reset_content = templates.get_template("reset_mail.html").render(
+                {"reset_token": reset_token}
+            )
             send_email(
                 recipient=db_user.email,
                 subject="MyECL - reset your password",
-                content=f"You can reset your password with the token {reset_token}",
+                content=reset_content,
                 settings=settings,
             )
         else:
-            hyperion_security_logger.info(f"Reset mail with token {reset_token}")
+            hyperion_security_logger.info(
+                f"Reset password for {email} with token {reset_token} ({request_id})"
+            )
 
     return standard_responses.Result()
 
@@ -621,10 +635,15 @@ async def migrate_mail(
     )
 
     if settings.SMTP_ACTIVE:
+        migration_content = templates.get_template("migration_mail.html").render(
+            {
+                "migration_link": f"{settings.CLIENT_URL}users/migrate-mail-confirm?token={confirmation_token}"
+            }
+        )
         send_email(
             recipient=mail_migration.new_email,
             subject="MyECL - Confirm your new email adresse",
-            content=f"You can confirm your new email adresse by clicking the following link: {settings.CLIENT_URL}users/migrate-mail-confirm?token={confirmation_token}",
+            content=migration_content,
             settings=settings,
         )
     else:
