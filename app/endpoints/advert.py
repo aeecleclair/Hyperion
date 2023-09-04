@@ -251,6 +251,7 @@ async def create_advert(
     db_advert = models_advert.Advert(
         id=str(uuid.uuid4()),
         date=datetime.now(timezone(settings.TIMEZONE)),
+        advertiser=advertiser,
         **advert_params,
     )
 
