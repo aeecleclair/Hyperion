@@ -7,6 +7,14 @@ class Topic(str, Enum):
     """
 
     cinema = "cinema"
+    advert = "advert"
+    bookingadmin = "bookingadmin"
+    amap = "amap"
+    booking = "booking"
+    event = "event"
+    loan = "loan"
+    raffle = "raffle"
+    vote = "vote"
 
 
 class CustomTopic:
