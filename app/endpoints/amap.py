@@ -11,6 +11,7 @@ from app.core.config import Settings
 from app.cruds import cruds_amap, cruds_users
 from app.dependencies import (
     get_db,
+    get_notification_tool,
     get_redis_client,
     get_request_id,
     get_settings,
@@ -20,6 +21,8 @@ from app.dependencies import (
 from app.endpoints.users import read_user
 from app.models import models_amap, models_core
 from app.schemas import schemas_amap
+from app.schemas.schemas_notification import Message
+from app.utils.communication.notifications import NotificationTool
 from app.utils.redis import locker_get, locker_set
 from app.utils.tools import is_user_member_of_an_allowed_group
 from app.utils.types.amap_types import DeliveryStatusType
@@ -29,6 +32,7 @@ from app.utils.types.tags import Tags
 router = APIRouter()
 
 hyperion_amap_logger = logging.getLogger("hyperion.amap")
+hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 @router.get(
@@ -856,6 +860,7 @@ async def create_cash_of_user(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
     request_id: str = Depends(get_request_id),
+    notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
     Create cash for an user.
@@ -887,10 +892,32 @@ async def create_cash_of_user(
 
     # We can not directly return the cash_db because it does not contain the user.
     # Calling get_cash_by_id will return the cash with the user loaded as it's a relationship.
-    return await cruds_amap.get_cash_by_id(
+    result = await cruds_amap.get_cash_by_id(
         user_id=user_id,
         db=db,
     )
+
+    try:
+        now = datetime.now(timezone.utc)
+        message = Message(
+            # We use sunday date as context to avoid sending the recap twice
+            context=f"amap-cash-{user_id}",
+            is_visible=True,
+            title="AMAP - Solde mis à jour",
+            content=f"Votre nouveau solde est de {result.balance} €.",
+            # The notification will expire the next sunday
+            expire_on=now.replace(day=now.day + 3),
+        )
+        await notification_tool.send_notification_to_user(
+            user_id=user_id,
+            message=message,
+        )
+    except Exception as error:
+        hyperion_error_logger.error(
+            f"Error while sending cinema recap notification, {error}"
+        )
+
+    return result
 
 
 @router.patch(
