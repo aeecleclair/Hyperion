@@ -9,6 +9,7 @@ from app.cruds import cruds_bdebooking
 from app.dependencies import (
     get_db,
     get_notification_tool,
+    get_settings,
     is_user_a_member,
     is_user_a_member_of,
 )

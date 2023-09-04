@@ -860,6 +860,7 @@ async def create_cash_of_user(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
     request_id: str = Depends(get_request_id),
+    settings: Settings = Depends(get_settings),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
