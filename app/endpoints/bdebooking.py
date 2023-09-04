@@ -169,6 +169,7 @@ async def create_bookings(
     booking: schemas_bdebooking.BookingBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
+    settings: Settings = Depends(get_settings),
     notification_tool=Depends(get_notification_tool),
 ):
     """
@@ -187,7 +188,7 @@ async def create_bookings(
 
     try:
         if result:
-            now = datetime.now(timezone("UTC")
+            now = datetime.now(timezone(settings.TIMEZONE))
             message = Message(
                 # We use sunday date as context to avoid sending the recap twice
                 context=f"booking-create-{result.id}",

@@ -899,7 +899,7 @@ async def create_cash_of_user(
 
     try:
         if result:
-            now = datetime.now(timezone("UTC")
+            now = datetime.now(timezone(settings.TIMEZONE))
             message = Message(
                 context=f"amap-cash-{user_id}",
                 is_visible=True,
