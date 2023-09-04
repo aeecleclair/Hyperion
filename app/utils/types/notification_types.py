@@ -20,7 +20,7 @@ class Topic(str, Enum):
 class CustomTopic:
     def __init__(self, topic: Topic, topic_identifier: str | None = None):
         self.topic = topic
-        self.topic_identifier = topic_identifier
+        self.topic_identifier = topic_identifier or ""
 
     def to_str(self):
         if self.topic_identifier:
