@@ -898,20 +898,20 @@ async def create_cash_of_user(
     )
 
     try:
-        now = datetime.now(timezone.utc)
-        message = Message(
-            # We use sunday date as context to avoid sending the recap twice
-            context=f"amap-cash-{user_id}",
-            is_visible=True,
-            title="AMAP - Solde mis à jour",
-            content=f"Votre nouveau solde est de {result.balance} €.",
-            # The notification will expire the next sunday
-            expire_on=now.replace(day=now.day + 3),
-        )
-        await notification_tool.send_notification_to_user(
-            user_id=user_id,
-            message=message,
-        )
+        if result:
+            now = datetime.now(timezone("UTC")
+            message = Message(
+                context=f"amap-cash-{user_id}",
+                is_visible=True,
+                title="AMAP - Solde mis à jour",
+                content=f"Votre nouveau solde est de {result.balance} €.",
+                # The notification will expire in 3 days
+                expire_on=now.replace(day=now.day + 3),
+            )
+            await notification_tool.send_notification_to_user(
+                user_id=user_id,
+                message=message,
+            )
     except Exception as error:
         hyperion_error_logger.error(
             f"Error while sending cinema recap notification, {error}"

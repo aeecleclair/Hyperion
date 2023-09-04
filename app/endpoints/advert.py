@@ -268,13 +268,14 @@ async def create_advert(
         raise HTTPException(status_code=400, detail=str(error))
 
     try:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(timezone(settings.TIMEZONE))
         message = Message(
             context=f"advert-{result.id}",
             is_visible=True,
             title=f"📣 {result.advertiser} - {result.title}",
-            content=result.description,
-            expire_on=now.replace(day=now + 3),
+            content=result.content,
+            # The notification will expire in 3 days
+            expire_on=now.replace(day=now.day + 3),
         )
         await notification_tool.send_notification_to_topic(
             custom_topic=CustomTopic(topic=Topic.advert), message=message

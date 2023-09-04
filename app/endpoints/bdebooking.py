@@ -186,20 +186,21 @@ async def create_bookings(
     result = await cruds_bdebooking.get_booking_by_id(db=db, booking_id=db_booking.id)
 
     try:
-        now = datetime.now(timezone.utc)
-        message = Message(
-            # We use sunday date as context to avoid sending the recap twice
-            context=f"booking-create-{result.id}",
-            is_visible=True,
-            title="Réservations - Nouvelle réservation 📅",
-            content=f"{result.applicant.nickname} - {result.room.name} {result.date.strftime('%m/%d/%Y, %H:%M')} - {result.reason}",
-            # The notification will expire the next sunday
-            expire_on=now.replace(day=now.day + 3),
-        )
-        await notification_tool.send_notification_to_topic(
-            topic=CustomTopic(topic=Topic.bookingadmin),
-            message=message,
-        )
+        if result:
+            now = datetime.now(timezone("UTC")
+            message = Message(
+                # We use sunday date as context to avoid sending the recap twice
+                context=f"booking-create-{result.id}",
+                is_visible=True,
+                title="Réservations - Nouvelle réservation 📅",
+                content=f"{result.applicant.nickname} - {result.room.name} {result.date.strftime('%m/%d/%Y, %H:%M')} - {result.reason}",
+                # The notification will expire the next sunday
+                expire_on=now.replace(day=now.day + 3),
+            )
+            await notification_tool.send_notification_to_topic(
+                topic=CustomTopic(topic=Topic.bookingadmin),
+                message=message,
+            )
     except Exception as error:
         hyperion_error_logger.error(
             f"Error while sending cinema recap notification, {error}"
