@@ -22,11 +22,11 @@ class CustomTopic:
         self.topic = topic
         self.topic_identifier = topic_identifier or ""
 
-    def to_str(self):
+    def to_str(self) -> str:
         if self.topic_identifier:
             return f"{self.topic}_{self.topic_identifier}"
         else:
-            return self.topic
+            return str(self.topic)
 
     @classmethod
     def from_str(cls, topic_str: str):
