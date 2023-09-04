@@ -52,5 +52,9 @@ class TopicMembership(Base):
     user_id: Mapped[str] = mapped_column(
         ForeignKey("core_user.id"), nullable=False, primary_key=True
     )
-    topic: Mapped[Topic] = mapped_column(Enum(Topic), index=True, nullable=False)
-    topic_identifier: Mapped[str | None] = mapped_column(String, nullable=True)
+    topic: Mapped[Topic] = mapped_column(
+        Enum(Topic), index=True, nullable=False, primary_key=True
+    )
+    topic_identifier: Mapped[str | None] = mapped_column(
+        String, nullable=True, primary_key=True
+    )
