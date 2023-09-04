@@ -1,8 +1,9 @@
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
+from pytz import timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
@@ -196,7 +197,7 @@ async def create_bookings(
                 context=f"booking-create-{result.id}",
                 is_visible=True,
                 title="Réservations - Nouvelle réservation 📅",
-                content=f"{result.applicant.nickname} - {result.room.name} {result.date.strftime('%m/%d/%Y, %H:%M')} - {result.reason}",
+                content=f"{result.applicant.nickname} - {result.room.name} {result.start.strftime('%m/%d/%Y, %H:%M')} - {result.reason}",
                 # The notification will expire the next sunday
                 expire_on=now.replace(day=now.day + 3),
             )
