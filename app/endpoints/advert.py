@@ -231,7 +231,7 @@ async def create_advert(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
     settings: Settings = Depends(get_settings),
-    notification_tool=Depends(get_notification_tool),
+    notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
     Create a new advert
@@ -282,7 +282,7 @@ async def create_advert(
         )
     except Exception as error:
         hyperion_error_logger.error(
-            f"Error while sending cinema recap notification, {error}"
+            f"Error while sending AMAP recap notification, {error}"
         )
 
     return result

@@ -915,7 +915,7 @@ async def create_cash_of_user(
             )
     except Exception as error:
         hyperion_error_logger.error(
-            f"Error while sending cinema recap notification, {error}"
+            f"Error while sending AMAP notification, {error}"
         )
 
     return result
