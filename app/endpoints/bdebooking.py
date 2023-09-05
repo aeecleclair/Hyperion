@@ -1,18 +1,32 @@
+import logging
 import uuid
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
+from pytz import timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import Settings
 from app.cruds import cruds_bdebooking
-from app.dependencies import get_db, is_user_a_member, is_user_a_member_of
+from app.dependencies import (
+    get_db,
+    get_notification_tool,
+    get_settings,
+    is_user_a_member,
+    is_user_a_member_of,
+)
 from app.models import models_core
 from app.schemas import schemas_bdebooking
+from app.schemas.schemas_notification import Message
 from app.utils.tools import is_user_member_of_an_allowed_group
 from app.utils.types.bdebooking_type import Decision
 from app.utils.types.groups_type import GroupType
+from app.utils.types.notification_types import CustomTopic, Topic
 from app.utils.types.tags import Tags
 
 router = APIRouter()
+
+hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 @router.get(
@@ -158,6 +172,8 @@ async def create_bookings(
     booking: schemas_bdebooking.BookingBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
+    settings: Settings = Depends(get_settings),
+    notification_tool=Depends(get_notification_tool),
 ):
     """
     Create a booking.
@@ -171,7 +187,30 @@ async def create_bookings(
         **booking.dict(),
     )
     await cruds_bdebooking.create_booking(booking=db_booking, db=db)
-    return await cruds_bdebooking.get_booking_by_id(db=db, booking_id=db_booking.id)
+    result = await cruds_bdebooking.get_booking_by_id(db=db, booking_id=db_booking.id)
+
+    try:
+        if result:
+            now = datetime.now(timezone(settings.TIMEZONE))
+            message = Message(
+                # We use sunday date as context to avoid sending the recap twice
+                context=f"booking-create-{result.id}",
+                is_visible=True,
+                title="Réservations - Nouvelle réservation 📅",
+                content=f"{result.applicant.nickname} - {result.room.name} {result.start.strftime('%m/%d/%Y, %H:%M')} - {result.reason}",
+                # The notification will expire the next sunday
+                expire_on=now.replace(day=now.day + 3),
+            )
+            await notification_tool.send_notification_to_topic(
+                topic=CustomTopic(topic=Topic.bookingadmin),
+                message=message,
+            )
+    except Exception as error:
+        hyperion_error_logger.error(
+            f"Error while sending cinema recap notification, {error}"
+        )
+
+    return result
 
 
 @router.patch(

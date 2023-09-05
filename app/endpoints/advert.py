@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import datetime
 
@@ -10,6 +11,7 @@ from app.core.config import Settings
 from app.cruds import cruds_advert
 from app.dependencies import (
     get_db,
+    get_notification_tool,
     get_request_id,
     get_settings,
     is_user_a_member,
@@ -17,6 +19,7 @@ from app.dependencies import (
 )
 from app.models import models_advert, models_core
 from app.schemas import schemas_advert
+from app.schemas.schemas_notification import Message
 from app.utils.tools import (
     get_file_from_data,
     is_group_id_valid,
@@ -25,9 +28,12 @@ from app.utils.tools import (
 )
 from app.utils.types import standard_responses
 from app.utils.types.groups_type import GroupType
+from app.utils.types.notification_types import CustomTopic, Topic
 from app.utils.types.tags import Tags
 
 router = APIRouter()
+
+hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 @router.get(
@@ -225,6 +231,7 @@ async def create_advert(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
     settings: Settings = Depends(get_settings),
+    notification_tool=Depends(get_notification_tool),
 ):
     """
     Create a new advert
@@ -257,9 +264,28 @@ async def create_advert(
 
     try:
         result = await cruds_advert.create_advert(db_advert=db_advert, db=db)
-        return result
     except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+        raise HTTPException(status_code=400, detail=str(error))
+
+    try:
+        now = datetime.now(timezone(settings.TIMEZONE))
+        message = Message(
+            context=f"advert-{result.id}",
+            is_visible=True,
+            title=f"📣 {result.advertiser} - {result.title}",
+            content=result.content,
+            # The notification will expire in 3 days
+            expire_on=now.replace(day=now.day + 3),
+        )
+        await notification_tool.send_notification_to_topic(
+            custom_topic=CustomTopic(topic=Topic.advert), message=message
+        )
+    except Exception as error:
+        hyperion_error_logger.error(
+            f"Error while sending cinema recap notification, {error}"
+        )
+
+    return result
 
 
 @router.patch("/advert/adverts/{advert_id}", status_code=204, tags=[Tags.advert])

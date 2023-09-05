@@ -7,18 +7,26 @@ class Topic(str, Enum):
     """
 
     cinema = "cinema"
+    advert = "advert"
+    bookingadmin = "bookingadmin"
+    amap = "amap"
+    booking = "booking"
+    event = "event"
+    loan = "loan"
+    raffle = "raffle"
+    vote = "vote"
 
 
 class CustomTopic:
     def __init__(self, topic: Topic, topic_identifier: str | None = None):
         self.topic = topic
-        self.topic_identifier = topic_identifier
+        self.topic_identifier = topic_identifier or ""
 
-    def to_str(self):
+    def to_str(self) -> str:
         if self.topic_identifier:
             return f"{self.topic}_{self.topic_identifier}"
         else:
-            return self.topic
+            return str(self.topic)
 
     @classmethod
     def from_str(cls, topic_str: str):
