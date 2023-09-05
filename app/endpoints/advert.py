@@ -20,6 +20,7 @@ from app.dependencies import (
 from app.models import models_advert, models_core
 from app.schemas import schemas_advert
 from app.schemas.schemas_notification import Message
+from app.utils.communication.notifications import NotificationTool
 from app.utils.tools import (
     get_file_from_data,
     is_group_id_valid,
