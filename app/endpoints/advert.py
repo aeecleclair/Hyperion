@@ -273,7 +273,7 @@ async def create_advert(
         message = Message(
             context=f"advert-{result.id}",
             is_visible=True,
-            title=f"📣 {result.advertiser} - {result.title}",
+            title=f"📣 Annonce - {result.title}",
             content=result.content,
             # The notification will expire in 3 days
             expire_on=now.replace(day=now.day + 3),

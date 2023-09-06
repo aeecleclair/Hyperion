@@ -197,7 +197,7 @@ async def create_bookings(
                 # We use sunday date as context to avoid sending the recap twice
                 context=f"booking-create-{result.id}",
                 is_visible=True,
-                title="Réservations - Nouvelle réservation 📅",
+                title="📅 Réservation - Nouvelle réservation",
                 content=f"{result.applicant.nickname} - {result.room.name} {result.start.strftime('%m/%d/%Y, %H:%M')} - {result.reason}",
                 # The notification will expire the next sunday
                 expire_on=now.replace(day=now.day + 3),
