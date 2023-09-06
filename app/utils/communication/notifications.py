@@ -161,7 +161,9 @@ class NotificationManager:
             custom_topic=custom_topic, data={"trigger": "trigger"}
         )
 
-    def subscribe_tokens_to_topic(self, custom_topic: CustomTopic, tokens: list[str]):
+    async def subscribe_tokens_to_topic(
+        self, custom_topic: CustomTopic, tokens: list[str]
+    ):
         """
         Subscribe a list of tokens to a given topic.
         """
@@ -174,7 +176,9 @@ class NotificationManager:
                 f"Notification: Failed to subscribe to topic {custom_topic} due to {list(map(lambda e: e.reason,response.errors))}"
             )
 
-    def unsubscribe_tokens_to_topic(self, custom_topic: CustomTopic, tokens: list[str]):
+    async def unsubscribe_tokens_to_topic(
+        self, custom_topic: CustomTopic, tokens: list[str]
+    ):
         """
         Unsubscribe a list of tokens to a given topic.
         """
