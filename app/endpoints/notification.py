@@ -59,7 +59,7 @@ async def register_firebase_device(
         )
 
     # We also need to subscribe the new token to the topics the user is subscribed to
-    topic_memberships = await cruds_notification.get_topic_membership_by_user_id(
+    topic_memberships = await cruds_notification.get_topic_memberships_by_user_id(
         user_id=user.id, db=db
     )
 
@@ -102,7 +102,7 @@ async def unregister_firebase_device(
     # Anybody may unregister a device if they know its token, which should be secret
 
     # We also need to unsubscribe the token to the topics the user is subscribed to
-    topic_memberships = await cruds_notification.get_topic_membership_by_user_id(
+    topic_memberships = await cruds_notification.get_topic_memberships_by_user_id(
         user_id=user.id, db=db
     )
 
@@ -231,7 +231,7 @@ async def get_topic(
     **The user must be authenticated to use this endpoint**
     """
 
-    memberships = await cruds_notification.get_topic_membership_by_user_id(
+    memberships = await cruds_notification.get_topic_memberships_by_user_id(
         user_id=user.id, db=db
     )
 
@@ -255,7 +255,7 @@ async def get_topic_identifier(
     **The user must be authenticated to use this endpoint**
     """
 
-    memberships = await cruds_notification.get_topic_membership_by_user_id_and_topic(
+    memberships = await cruds_notification.get_topic_memberships_by_user_id_and_topic(
         user_id=user.id, db=db, custom_topic=CustomTopic.from_str(topic_str)
     )
 

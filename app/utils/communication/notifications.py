@@ -264,7 +264,7 @@ class NotificationManager:
             return
 
         # Get all firebase_device_token related to the user
-        topic_memberships = await cruds_notification.get_topic_membership_by_topic(
+        topic_memberships = await cruds_notification.get_topic_memberships_by_topic(
             custom_topic=custom_topic,
             db=db,
         )
@@ -308,12 +308,12 @@ class NotificationManager:
 
         if len(firebase_device_tokens) > 0:
             # Asking firebase to subscribe with an empty list of tokens will raise an error
-            self.subscribe_tokens_to_topic(
+            await self.subscribe_tokens_to_topic(
                 tokens=firebase_device_tokens, custom_topic=custom_topic
             )
 
         existing_topic_membership = (
-            await cruds_notification.get_topic_membership_by_user_id_and_topic(
+            await cruds_notification.get_topic_membership_by_user_id_and_full_topic(
                 custom_topic=custom_topic, user_id=user_id, db=db
             )
         )
@@ -345,7 +345,7 @@ class NotificationManager:
 
         if len(firebase_device_tokens) > 0:
             # Asking firebase to unsubscribe with an empty list of tokens will raise an error
-            self.unsubscribe_tokens_to_topic(
+            await self.unsubscribe_tokens_to_topic(
                 tokens=firebase_device_tokens, custom_topic=custom_topic
             )
 
