@@ -227,6 +227,7 @@ async def get_topic(
 ):
     """
     Get topics the user is subscribed to
+    Does not return session topics (those with a topic_identifier)
 
     **The user must be authenticated to use this endpoint**
     """
@@ -235,7 +236,11 @@ async def get_topic(
         user_id=user.id, db=db
     )
 
-    return [CustomTopic(topic=membership.topic).to_str() for membership in memberships]
+    return [
+        CustomTopic(topic=membership.topic).to_str()
+        for membership in memberships
+        if not membership.topic_identifier
+    ]
 
 
 @router.get(
