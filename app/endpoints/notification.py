@@ -235,6 +235,30 @@ async def get_topic(
         user_id=user.id, db=db
     )
 
+    return [CustomTopic(topic=membership.topic).to_str() for membership in memberships]
+
+
+@router.get(
+    "/notification/topics/{topic_str}",
+    status_code=200,
+    tags=[Tags.notifications],
+    response_model=list[str],
+)
+async def get_topic_identifier(
+    topic_str: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Get full topic (with identifiers) the user is subscribed to
+
+    **The user must be authenticated to use this endpoint**
+    """
+
+    memberships = await cruds_notification.get_topic_membership_by_user_id_and_topic(
+        user_id=user.id, db=db, custom_topic=CustomTopic.from_str(topic_str)
+    )
+
     return [
         CustomTopic(
             topic=membership.topic, topic_identifier=membership.topic_identifier
