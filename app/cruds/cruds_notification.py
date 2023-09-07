@@ -241,7 +241,7 @@ async def get_topic_memberships_by_user_id_and_topic(
     user_id: str,
     custom_topic: CustomTopic,
     db: AsyncSession,
-) -> models_notification.TopicMembership | None:
+) -> Sequence[models_notification.TopicMembership]:
     result = await db.execute(
         select(models_notification.TopicMembership).where(
             models_notification.TopicMembership.user_id == user_id,
