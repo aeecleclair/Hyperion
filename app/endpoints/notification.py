@@ -255,12 +255,12 @@ async def get_topic_identifier(
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
-    Get full topic (with identifiers) the user is subscribed to
+    Get custom topic (with identifiers) the user is subscribed to
 
     **The user must be authenticated to use this endpoint**
     """
 
-    memberships = await cruds_notification.get_topic_memberships_by_user_id_and_topic(
+    memberships = await cruds_notification.get_topic_memberships_with_identifiers_by_user_id_and_topic(
         user_id=user.id, db=db, topic=Topic(topic_str)
     )
 

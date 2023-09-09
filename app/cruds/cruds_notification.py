@@ -237,7 +237,7 @@ async def get_topic_memberships_by_user_id(
     return result.scalars().all()
 
 
-async def get_topic_memberships_by_user_id_and_topic(
+async def get_topic_memberships_with_identifiers_by_user_id_and_topic(
     user_id: str,
     topic: Topic,
     db: AsyncSession,
@@ -246,6 +246,7 @@ async def get_topic_memberships_by_user_id_and_topic(
         select(models_notification.TopicMembership).where(
             models_notification.TopicMembership.user_id == user_id,
             models_notification.TopicMembership.topic == topic,
+            models_notification.TopicMembership.topic_identifier is not None,
         )
     )
     return result.scalars().all()
