@@ -282,9 +282,7 @@ async def create_advert(
             custom_topic=CustomTopic(topic=Topic.advert), message=message
         )
     except Exception as error:
-        hyperion_error_logger.error(
-            f"Error while sending AMAP recap notification, {error}"
-        )
+        hyperion_error_logger.error(f"Error while sending advert notification, {error}")
 
     return result
 
