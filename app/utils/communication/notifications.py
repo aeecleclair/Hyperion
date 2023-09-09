@@ -64,7 +64,7 @@ class NotificationManager:
                 f"{response.failure_count} messages failed to be send, removing their tokens from the database."
             )
             await cruds_notification.batch_delete_firebase_device_by_token(
-                tokens=tokens, db=db
+                tokens=failed_tokens, db=db
             )
 
     async def _send_firebase_push_notification_by_tokens(
