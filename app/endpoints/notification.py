@@ -261,7 +261,7 @@ async def get_topic_identifier(
     """
 
     memberships = await cruds_notification.get_topic_memberships_by_user_id_and_topic(
-        user_id=user.id, db=db, custom_topic=Topic(topic_str)
+        user_id=user.id, db=db, topic=Topic(topic_str)
     )
 
     return [

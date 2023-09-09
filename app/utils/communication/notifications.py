@@ -313,7 +313,7 @@ class NotificationManager:
             )
 
         existing_topic_membership = (
-            await cruds_notification.get_topic_membership_by_user_id_and_full_topic(
+            await cruds_notification.get_topic_membership_by_user_id_and_custom_topic(
                 custom_topic=custom_topic, user_id=user_id, db=db
             )
         )
