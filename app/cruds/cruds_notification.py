@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import models_notification
-from app.utils.types.notification_types import CustomTopic
+from app.utils.types.notification_types import CustomTopic, Topic
 
 
 async def create_message(
@@ -239,19 +239,19 @@ async def get_topic_memberships_by_user_id(
 
 async def get_topic_memberships_by_user_id_and_topic(
     user_id: str,
-    custom_topic: CustomTopic,
+    topic: Topic,
     db: AsyncSession,
 ) -> Sequence[models_notification.TopicMembership]:
     result = await db.execute(
         select(models_notification.TopicMembership).where(
             models_notification.TopicMembership.user_id == user_id,
-            models_notification.TopicMembership.topic == custom_topic.topic,
+            models_notification.TopicMembership.topic == topic,
         )
     )
     return result.scalars().all()
 
 
-async def get_topic_membership_by_user_id_and_full_topic(
+async def get_topic_membership_by_user_id_and_custom_topic(
     user_id: str,
     custom_topic: CustomTopic,
     db: AsyncSession,
