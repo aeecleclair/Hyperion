@@ -93,6 +93,8 @@ class NotificationManager:
         try:
             # Set high priority for android, and background notification for iOS
             # This allow to ensure that the notification will be processed in the background
+            # See https://firebase.google.com/docs/cloud-messaging/concept-options#setting-the-priority-of-a-message
+            # And https://developer.apple.com/documentation/usernotifications/setting_up_a_remote_notification_server/pushing_background_updates_to_your_app
             androidconfig = messaging.AndroidConfig(priority="high")
             apnsconfig = messaging.APNSConfig(
                 headers={"apns-priority": "5", "apns-push-type": "background"},
@@ -144,6 +146,8 @@ class NotificationManager:
 
         # Set high priority for android, and background notification for iOS
         # This allow to ensure that the notification will be processed in the background
+        # See https://firebase.google.com/docs/cloud-messaging/concept-options#setting-the-priority-of-a-message
+        # And https://developer.apple.com/documentation/usernotifications/setting_up_a_remote_notification_server/pushing_background_updates_to_your_app
         androidconfig = messaging.AndroidConfig(priority="high")
         apnsconfig = messaging.APNSConfig(
             headers={"apns-priority": "5", "apns-push-type": "background"},
