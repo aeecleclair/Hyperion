@@ -70,7 +70,6 @@ class NotificationManager:
     async def _send_firebase_push_notification_by_tokens(
         self,
         db: AsyncSession,
-        data: dict[str, str] | None = None,
         tokens: list[str] = [],
     ):
         """
@@ -86,13 +85,22 @@ class NotificationManager:
         # We can only send 500 tokens at a time
         if len(tokens) > 500:
             await self._send_firebase_push_notification_by_tokens(
-                data=data, tokens=tokens[500:], db=db
+                tokens=tokens[500:], db=db
             )
             tokens = tokens[:500]
 
         # We may pass a notification object along the data
         try:
-            message = messaging.MulticastMessage(data=data, tokens=tokens)
+            androidconfig = messaging.AndroidConfig(priority="high")
+            apnsconfig = messaging.APNSConfig(
+                headers={"apns-priority": "5", "apns-push-type": "background"},
+                payload=messaging.APNSPayload(
+                    aps=messaging.Aps(content_available=True), test="plop"
+                ),
+            )
+            message = messaging.MulticastMessage(
+                tokens=tokens, android=androidconfig, apns=apnsconfig
+            )
             result = messaging.send_multicast(message)
         except messaging.FirebaseError as error:
             hyperion_error_logger.error(
@@ -117,9 +125,7 @@ class NotificationManager:
         # Push without any data or notification may not be processed by the app in the background.
         # We thus need to send a data object with a dummy key to make sure the notification is processed.
         # See https://stackoverflow.com/questions/59298850/firebase-messaging-background-message-handler-method-not-called-when-the-app
-        await self._send_firebase_push_notification_by_tokens(
-            tokens=tokens, db=db, data={"trigger": "trigger"}
-        )
+        await self._send_firebase_push_notification_by_tokens(tokens=tokens, db=db)
 
     def _send_firebase_push_notification_by_topic(
         self,
@@ -135,7 +141,17 @@ class NotificationManager:
         if not self.use_firebase:
             return
 
-        message = messaging.Message(data=data, topic=custom_topic.to_str())
+        androidconfig = messaging.AndroidConfig(priority="high")
+        apnsconfig = messaging.APNSConfig(
+            headers={"apns-priority": "5", "apns-push-type": "background"},
+            payload=messaging.APNSPayload(aps=messaging.Aps(content_available=True)),
+        )
+        message = messaging.Message(
+            data=data,
+            topic=custom_topic.to_str(),
+            android=androidconfig,
+            apns=apnsconfig,
+        )
         try:
             messaging.send(message)
         except messaging.FirebaseError as error:
@@ -157,9 +173,7 @@ class NotificationManager:
         # Push without any data or notification may not be processed by the app in the background.
         # We thus need to send a data object with a dummy key to make sure the notification is processed.
         # See https://stackoverflow.com/questions/59298850/firebase-messaging-background-message-handler-method-not-called-when-the-app
-        self._send_firebase_push_notification_by_topic(
-            custom_topic=custom_topic, data={"trigger": "trigger"}
-        )
+        self._send_firebase_push_notification_by_topic(custom_topic=custom_topic)
 
     async def subscribe_tokens_to_topic(
         self, custom_topic: CustomTopic, tokens: list[str]
