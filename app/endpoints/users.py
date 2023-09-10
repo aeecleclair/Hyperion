@@ -621,6 +621,25 @@ async def migrate_mail(
             detail="The new email adresse must match the new ECL format for student users",
         )
 
+    existing_user = await cruds_users.get_user_by_email(
+        db=db, email=mail_migration.new_email
+    )
+    if existing_user is not None:
+        hyperion_security_logger.info(
+            f"Email migration: There is already an account with the email {mail_migration.new_email}"
+        )
+        if settings.SMTP_ACTIVE:
+            migration_content = templates.get_template(
+                "migration_mail_already_used.html"
+            ).render({})
+            send_email(
+                recipient=mail_migration.new_email,
+                subject="MyECL - Confirm your new email adresse",
+                content=migration_content,
+                settings=settings,
+            )
+        return
+
     confirmation_token = security.generate_token()
 
     migration_object = models_core.CoreUserEmailMigrationCode(
