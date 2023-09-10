@@ -82,7 +82,7 @@ async def create_session(
             # We use sunday date as context to avoid sending the recap twice
             context=f"cinema-recap-{sunday}",
             is_visible=True,
-            title="Cinéma - Programme de la semaine 🎬",
+            title="🎬 Cinéma - Programme de la semaine",
             content=message_content,
             delivery_datetime=sunday,
             # The notification will expire the next sunday
