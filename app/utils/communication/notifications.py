@@ -130,7 +130,6 @@ class NotificationManager:
     def _send_firebase_push_notification_by_topic(
         self,
         custom_topic: CustomTopic,
-        data: dict[str, str] | None = None,
     ):
         """
         Send a firebase push notification for a given topic.
@@ -147,7 +146,6 @@ class NotificationManager:
             payload=messaging.APNSPayload(aps=messaging.Aps(content_available=True)),
         )
         message = messaging.Message(
-            data=data,
             topic=custom_topic.to_str(),
             android=androidconfig,
             apns=apnsconfig,
