@@ -15,7 +15,7 @@ from app.models import models_core, models_notification
 from app.schemas import schemas_notification
 from app.utils.communication.notifications import NotificationManager, NotificationTool
 from app.utils.types.groups_type import GroupType
-from app.utils.types.notification_types import CustomTopic
+from app.utils.types.notification_types import CustomTopic, Topic
 from app.utils.types.tags import Tags
 
 router = APIRouter()
@@ -59,7 +59,7 @@ async def register_firebase_device(
         )
 
     # We also need to subscribe the new token to the topics the user is subscribed to
-    topic_memberships = await cruds_notification.get_topic_membership_by_user_id(
+    topic_memberships = await cruds_notification.get_topic_memberships_by_user_id(
         user_id=user.id, db=db
     )
 
@@ -102,7 +102,7 @@ async def unregister_firebase_device(
     # Anybody may unregister a device if they know its token, which should be secret
 
     # We also need to unsubscribe the token to the topics the user is subscribed to
-    topic_memberships = await cruds_notification.get_topic_membership_by_user_id(
+    topic_memberships = await cruds_notification.get_topic_memberships_by_user_id(
         user_id=user.id, db=db
     )
 
@@ -227,12 +227,41 @@ async def get_topic(
 ):
     """
     Get topics the user is subscribed to
+    Does not return session topics (those with a topic_identifier)
 
     **The user must be authenticated to use this endpoint**
     """
 
-    memberships = await cruds_notification.get_topic_membership_by_user_id(
+    memberships = await cruds_notification.get_topic_memberships_by_user_id(
         user_id=user.id, db=db
+    )
+
+    return [
+        CustomTopic(topic=membership.topic).to_str()
+        for membership in memberships
+        if not membership.topic_identifier
+    ]
+
+
+@router.get(
+    "/notification/topics/{topic_str}",
+    status_code=200,
+    tags=[Tags.notifications],
+    response_model=list[str],
+)
+async def get_topic_identifier(
+    topic_str: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Get custom topic (with identifiers) the user is subscribed to
+
+    **The user must be authenticated to use this endpoint**
+    """
+
+    memberships = await cruds_notification.get_topic_memberships_with_identifiers_by_user_id_and_topic(
+        user_id=user.id, db=db, topic=Topic(topic_str)
     )
 
     return [
