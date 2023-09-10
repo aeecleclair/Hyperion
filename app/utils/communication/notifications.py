@@ -91,11 +91,13 @@ class NotificationManager:
 
         # We may pass a notification object along the data
         try:
+            # Set high priority for android, and background notification for iOS
+            # This allow to ensure that the notification will be processed in the background
             androidconfig = messaging.AndroidConfig(priority="high")
             apnsconfig = messaging.APNSConfig(
                 headers={"apns-priority": "5", "apns-push-type": "background"},
                 payload=messaging.APNSPayload(
-                    aps=messaging.Aps(content_available=True), test="plop"
+                    aps=messaging.Aps(content_available=True)
                 ),
             )
             message = messaging.MulticastMessage(
@@ -140,6 +142,8 @@ class NotificationManager:
         if not self.use_firebase:
             return
 
+        # Set high priority for android, and background notification for iOS
+        # This allow to ensure that the notification will be processed in the background
         androidconfig = messaging.AndroidConfig(priority="high")
         apnsconfig = messaging.APNSConfig(
             headers={"apns-priority": "5", "apns-push-type": "background"},
