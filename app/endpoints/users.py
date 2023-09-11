@@ -612,13 +612,13 @@ async def migrate_mail(
     ):
         raise HTTPException(
             status_code=400,
-            detail="Only student users with an old email adresse can migrate their email address",
+            detail="Only student users with an old email address can migrate their email address",
         )
 
     if not re.match(r"^[\w\-.]*@etu(-enise)?\.ec-lyon\.fr$", mail_migration.new_email):
         raise HTTPException(
             status_code=400,
-            detail="The new email adresse must match the new ECL format for student users",
+            detail="The new email address must match the new ECL format for student users",
         )
 
     confirmation_token = security.generate_token()
@@ -642,13 +642,13 @@ async def migrate_mail(
         )
         send_email(
             recipient=mail_migration.new_email,
-            subject="MyECL - Confirm your new email adresse",
+            subject="MyECL - Confirm your new email address",
             content=migration_content,
             settings=settings,
         )
     else:
         hyperion_security_logger.info(
-            f"You can confirm your new email adresse by clicking the following link: {settings.CLIENT_URL}users/migrate-mail-confirm?token={confirmation_token}"
+            f"You can confirm your new email address by clicking the following link: {settings.CLIENT_URL}users/migrate-mail-confirm?token={confirmation_token}"
         )
 
 
