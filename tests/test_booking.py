@@ -3,7 +3,7 @@ import uuid
 
 import pytest_asyncio
 
-from app.models import models_bdebooking, models_core
+from app.models import models_booking, models_core
 from app.utils.types.groups_type import GroupType
 
 # We need to import event_loop for pytest-asyncio routine defined bellow
@@ -15,8 +15,8 @@ from tests.commons import (
     create_user_with_groups,
 )
 
-booking: models_bdebooking.Booking | None = None
-room: models_bdebooking.Room | None = None
+booking: models_booking.Booking | None = None
+room: models_booking.Room | None = None
 booking_user_bde: models_core.CoreUser | None = None
 booking_user_simple: models_core.CoreUser | None = None
 token_bde: str = ""
@@ -38,11 +38,11 @@ async def init_objects():
     token_simple = create_api_access_token(booking_user_simple)
 
     global room
-    room = models_bdebooking.Room(id=str(uuid.uuid4()), name="Salle de Réunion")
+    room = models_booking.Room(id=str(uuid.uuid4()), name="Salle de Réunion", group_id="0a25cb76-4b63-4fd3-b939-da6d9feabf28")
     await add_object_to_db(room)
 
     global booking
-    booking = models_bdebooking.Booking(
+    booking = models_booking.Booking(
         id=str(uuid.uuid4()),
         reason="Réunion",
         start=datetime.datetime.fromisoformat("2022-09-22T20:00:00"),
@@ -59,7 +59,7 @@ async def init_objects():
 def test_get_rights():
     response = client.get(
         "/bdebooking/rights",
-        headers={"Authorization": f"Bearer {token_bde}"},
+        headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response.status_code == 200
 
@@ -151,7 +151,7 @@ def test_get_room_id():
 def test_post_room():
     response = client.post(
         "/bdebooking/rooms",
-        json={"name": "Local JE"},
+        json={"name": "Local JE", "group_id": "0a25cb76-4b63-4fd3-b939-da6d9feabf28"},
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 201
@@ -160,7 +160,7 @@ def test_post_room():
 def test_edit_room():
     response = client.patch(
         f"/bdebooking/rooms/{room.id}",
-        json={"name": "Foyer"},
+        json={"name": "Foyer", "group_id": "0a25cb76-4b63-4fd3-b939-da6d9feabf28"},
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 204
@@ -170,7 +170,7 @@ def test_delete_room():
     # create a room to delete
     response = client.post(
         "/bdebooking/rooms",
-        json={"name": "Local JE"},
+        json={"name": "Local JE", "group_id": "0a25cb76-4b63-4fd3-b939-da6d9feabf28"},
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 201
