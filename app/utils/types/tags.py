@@ -10,7 +10,7 @@ class Tags(str, Enum):
     auth = "Auth"
     loans = "Loans"
     amap = "AMAP"
-    bdebooking = "BDEBooking"
+    booking = "Booking"
     calendar = "Calendar"
     campaign = "Campaign"
     cinema = "Cinema"
