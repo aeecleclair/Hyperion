@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import models_notification
-from app.utils.types.notification_types import CustomTopic
+from app.utils.types.notification_types import CustomTopic, Topic
 
 
 async def create_message(
@@ -211,7 +211,7 @@ async def delete_topic_membership(
     await db.commit()
 
 
-async def get_topic_membership_by_topic(
+async def get_topic_memberships_by_topic(
     custom_topic: CustomTopic,
     db: AsyncSession,
 ) -> Sequence[models_notification.TopicMembership]:
@@ -225,7 +225,7 @@ async def get_topic_membership_by_topic(
     return result.scalars().all()
 
 
-async def get_topic_membership_by_user_id(
+async def get_topic_memberships_by_user_id(
     user_id: str,
     db: AsyncSession,
 ) -> Sequence[models_notification.TopicMembership]:
@@ -237,7 +237,22 @@ async def get_topic_membership_by_user_id(
     return result.scalars().all()
 
 
-async def get_topic_membership_by_user_id_and_topic(
+async def get_topic_memberships_with_identifiers_by_user_id_and_topic(
+    user_id: str,
+    topic: Topic,
+    db: AsyncSession,
+) -> Sequence[models_notification.TopicMembership]:
+    result = await db.execute(
+        select(models_notification.TopicMembership).where(
+            models_notification.TopicMembership.user_id == user_id,
+            models_notification.TopicMembership.topic == topic,
+            models_notification.TopicMembership.topic_identifier != "",
+        )
+    )
+    return result.scalars().all()
+
+
+async def get_topic_membership_by_user_id_and_custom_topic(
     user_id: str,
     custom_topic: CustomTopic,
     db: AsyncSession,

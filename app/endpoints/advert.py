@@ -20,6 +20,7 @@ from app.dependencies import (
 from app.models import models_advert, models_core
 from app.schemas import schemas_advert
 from app.schemas.schemas_notification import Message
+from app.utils.communication.notifications import NotificationTool
 from app.utils.tools import (
     get_file_from_data,
     is_group_id_valid,
@@ -231,7 +232,7 @@ async def create_advert(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
     settings: Settings = Depends(get_settings),
-    notification_tool=Depends(get_notification_tool),
+    notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
     Create a new advert
@@ -272,7 +273,7 @@ async def create_advert(
         message = Message(
             context=f"advert-{result.id}",
             is_visible=True,
-            title=f"📣 {result.advertiser} - {result.title}",
+            title=f"📣 Annonce - {result.title}",
             content=result.content,
             # The notification will expire in 3 days
             expire_on=now.replace(day=now.day + 3),
@@ -281,9 +282,7 @@ async def create_advert(
             custom_topic=CustomTopic(topic=Topic.advert), message=message
         )
     except Exception as error:
-        hyperion_error_logger.error(
-            f"Error while sending cinema recap notification, {error}"
-        )
+        hyperion_error_logger.error(f"Error while sending advert notification, {error}")
 
     return result
 
