@@ -172,7 +172,7 @@ def test_get_user_bookings_manage():
 
 def test_get_user_bookings_manage_confirmed():
     response = client.get(
-        "/booking/bookings/users/me/manage/confirmed",
+        "/booking/bookings/confirmed",
         headers={"Authorization": f"Bearer {token_manager}"},
     )
     assert response.status_code == 200
