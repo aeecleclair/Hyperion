@@ -7,13 +7,14 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 from app.models.models_core import CoreUser
 
+
 class Manager(Base):
     __tablename__ = "booking_manager"
 
     id: Mapped[str] = mapped_column(String, primary_key=True, nullable=False)
     name: Mapped[str] = mapped_column(String, nullable=False, unique=True)
     group_id: Mapped[str] = mapped_column(ForeignKey("core_group.id"), nullable=False)
-    rooms: Mapped[list["Room"]] = relationship()   
+    rooms: Mapped[list["Room"]] = relationship(back_populates="manager")
 
 
 class Room(Base):
@@ -21,12 +22,16 @@ class Room(Base):
 
     id: Mapped[str] = mapped_column(String, primary_key=True, nullable=False)
     name: Mapped[str] = mapped_column(String, nullable=False)
-    manager_id: Mapped[str] = mapped_column(ForeignKey("booking_manager.id"), nullable=False)
+    manager_id: Mapped[str] = mapped_column(
+        ForeignKey("booking_manager.id"), nullable=False
+    )
+    manager: Mapped["Manager"] = relationship(lazy="joined", back_populates="rooms")
     bookings: Mapped[list["Booking"]] = relationship(back_populates="room")
+
 
 class Booking(Base):
     __tablename__ = "booking"
-    
+
     id: Mapped[str] = mapped_column(String, primary_key=True, index=True)
     reason: Mapped[str] = mapped_column(String, nullable=False)
     start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -44,4 +49,3 @@ class Booking(Base):
     )
     applicant: Mapped[CoreUser] = relationship("CoreUser")
     entity: Mapped[str] = mapped_column(String)
-

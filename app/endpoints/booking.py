@@ -1,7 +1,6 @@
 import logging
 import uuid
 from datetime import datetime
-from typing import Sequence
 
 from fastapi import APIRouter, Depends, HTTPException
 from pytz import timezone
@@ -29,6 +28,7 @@ router = APIRouter()
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
+
 @router.get(
     "/booking/managers",
     response_model=list[schemas_booking.Manager],
@@ -47,6 +47,7 @@ async def get_managers(
 
     return await cruds_booking.get_managers(db=db)
 
+
 @router.post(
     "/booking/managers",
     response_model=schemas_booking.Manager,
@@ -61,7 +62,7 @@ async def create_manager(
     """
     Create a manager.
 
-    **This endpoint is only usable by admins**
+    **This endpoint is only usable by administrators**
     """
 
     # We need to check that manager.group_id is a valid group
@@ -101,12 +102,14 @@ async def update_manager(
     """
 
     # We need to check that manager.group_id is a valid group
-    if manager_update.group_id is not None and not await is_group_id_valid(manager_update.group_id, db=db):
+    if manager_update.group_id is not None and not await is_group_id_valid(
+        manager_update.group_id, db=db
+    ):
         raise HTTPException(
             status_code=400,
             detail="Invalid id, group_id must be a valid group id",
         )
-        
+
     await cruds_booking.update_manager(
         manager_id=manager_id, manager_update=manager_update, db=db
     )
@@ -123,15 +126,16 @@ async def delete_manager(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
-    Delete a manager. All rooms associated with the loaner will also be deleted from the database.
+    Delete a manager. All rooms and bookings associated with the manager will also be deleted from the database.
 
     **This endpoint is only usable by administrators**
     """
 
     await cruds_booking.delete_manager(manager_id=manager_id, db=db)
 
+
 @router.get(
-    "/booking/users/me/managers",
+    "/booking/managers/users/me",
     response_model=list[schemas_booking.Manager],
     status_code=200,
     tags=[Tags.booking],
@@ -146,22 +150,11 @@ async def get_current_user_managers(
     **The user must be authenticated to use this endpoint**
     """
 
-    user_managers: list[models_booking.Manager] = []
-
-    managers: Sequence[models_booking.Manager] = await cruds_booking.get_managers(db=db)
-
-    for manager in managers:
-        if is_user_member_of_an_allowed_group(
-            allowed_groups=[manager.group_id],
-            user=user,
-        ):
-            user_managers.append(manager)
-
-    return user_managers
+    return await cruds_booking.get_user_managers(user=user, db=db)
 
 
 @router.get(
-    "/booking/bookings/user/managers",
+    "/booking/bookings/users/me/manage",
     response_model=list[schemas_booking.BookingReturnApplicant],
     status_code=200,
     tags=[Tags.booking],
@@ -176,19 +169,15 @@ async def get_bookings_for_manager(
     **The user must be authenticated to use this endpoint**
     """
 
-    managers = [
-        manager 
-            for manager in await cruds_booking.get_managers(db=db) 
-            if is_user_member_of_an_allowed_group(
-                allowed_groups=[manager.group_id],
-                user=user,
-            )
-    ]
+    user_managers = await cruds_booking.get_user_managers(user=user, db=db)
 
-    return [booking for manager in managers for room in manager.rooms for booking in room.bookings]
+    bookings = await cruds_booking.get_bookings(db=db)
+
+    return [booking for booking in bookings if booking.room.manager in user_managers]
+
 
 @router.get(
-    "/booking/bookings/user/managers/confirmed",
+    "/booking/bookings/confirmed",
     response_model=list[schemas_booking.BookingReturn],
     status_code=200,
     tags=[Tags.booking],
@@ -198,44 +187,18 @@ async def get_confirmed_bookings_for_manager(
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
-    Return all bookings a user can manage.
+    Return all confirmed bookings.
 
     **The user must be authenticated to use this endpoint**
     """
 
-    managers = [
-        manager 
-            for manager in await cruds_booking.get_managers(db=db) 
-            if is_user_member_of_an_allowed_group(
-                allowed_groups=[manager.group_id],
-                user=user,
-            )
-    ]
-
-    return [booking for manager in managers for room in manager.rooms for booking in room.bookings if booking.decision == Decision.approved]
-
-
-@router.get(
-    "/booking/bookings/confirmed",
-    response_model=list[schemas_booking.BookingReturn],
-    status_code=200,
-    tags=[Tags.booking],
-)
-async def get_confirmed_bookings(
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
-):
-    """
-    Get all confirmed bookings.
-
-    **Usable by every member**
-    """
     bookings = await cruds_booking.get_confirmed_bookings(db=db)
+
     return bookings
 
 
 @router.get(
-    "/booking/bookings/user/{applicant_id}",
+    "/booking/bookings/users/{applicant_id}",
     response_model=list[schemas_booking.BookingReturn],
     status_code=200,
     tags=[Tags.booking],
@@ -248,11 +211,9 @@ async def get_applicant_bookings(
     """
     Get one user bookings.
 
-    **Usable by the user or admins**
+    **Only usable by the user**
     """
-    if user.id == applicant_id or is_user_member_of_an_allowed_group(
-        user, [GroupType.BDE]
-    ):
+    if user.id == applicant_id:
         bookings = await cruds_booking.get_applicant_bookings(
             db=db, applicant_id=applicant_id
         )
@@ -261,64 +222,13 @@ async def get_applicant_bookings(
         raise HTTPException(status_code=403)
 
 
-@router.get(
-    "/booking/bookings/{booking_id}",
-    response_model=schemas_booking.BookingReturn,
-    status_code=200,
-    tags=[Tags.booking],
-)
-async def get_booking_by_id(
-    booking_id: str,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
-):
-    """
-    Get one booking.
-
-    **Usable by admins or booking's applicant**
-    """
-    booking = await cruds_booking.get_booking_by_id(db=db, booking_id=booking_id)
-    if booking is not None:
-        if booking.applicant_id == user.id or is_user_member_of_an_allowed_group(
-            user, [GroupType.BDE]
-        ):
-            return booking
-        else:
-            raise HTTPException(status_code=403)
-    else:
-        raise HTTPException(status_code=404)
-
-
-@router.get(
-    "/booking/bookings/{booking_id}/applicant",
-    response_model=schemas_booking.Applicant,
-    status_code=200,
-    tags=[Tags.booking],
-)
-async def get_booking_applicant(
-    booking_id: str,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
-):
-    """
-    Get one booking's applicant.
-
-    **Usable by admins**
-    """
-    booking = await cruds_booking.get_booking_by_id(db=db, booking_id=booking_id)
-    if booking is not None:
-        return booking.applicant
-    else:
-        raise HTTPException(status_code=404)
-
-
 @router.post(
     "/booking/bookings",
     response_model=schemas_booking.BookingReturn,
     status_code=201,
     tags=[Tags.booking],
 )
-async def create_bookings(
+async def create_booking(
     booking: schemas_booking.BookingBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
@@ -328,7 +238,7 @@ async def create_bookings(
     """
     Create a booking.
 
-    **Usable by every members**
+    **The user must be authenticated to use this endpoint**
     """
     db_booking = schemas_booking.BookingComplete(
         id=str(uuid.uuid4()),
@@ -368,7 +278,7 @@ async def create_bookings(
     status_code=204,
     tags=[Tags.booking],
 )
-async def edit_bookings_id(
+async def edit_booking(
     booking_id: str,
     booking_edit: schemas_booking.BookingEdit,
     db: AsyncSession = Depends(get_db),
@@ -377,13 +287,15 @@ async def edit_bookings_id(
     """
     Edit a booking.
 
-    **Only usable by admins or applicant before decision**
+    **Only usable by a user in the manager group of the booking or applicant before decision**
     """
-    booking = await cruds_booking.get_booking_by_id(db=db, booking_id=booking_id)
+    booking: models_booking.Booking = await cruds_booking.get_booking_by_id(
+        db=db, booking_id=booking_id
+    )
 
-    if booking is not None and not (
+    if not (
         (user.id == booking.applicant_id and booking.decision == Decision.pending)
-        or is_user_member_of_an_allowed_group(user, [GroupType.BDE])
+        or is_user_member_of_an_allowed_group(user, [booking.room.manager.group_id])
     ):
         raise HTTPException(
             status_code=403,
@@ -407,37 +319,52 @@ async def confirm_booking(
     booking_id: str,
     decision: Decision,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Give a decision to a booking.
 
-    **Only usable by admins**
+    **Only usable by a user in the manager group of the booking**
     """
-    await cruds_booking.confirm_booking(
-        booking_id=booking_id, decision=decision, db=db
+
+    booking: models_booking.Booking = await cruds_booking.get_booking_by_id(
+        db=db, booking_id=booking_id
     )
+
+    if is_user_member_of_an_allowed_group(user, [booking.room.manager.group_id]):
+        await cruds_booking.confirm_booking(
+            booking_id=booking_id, decision=decision, db=db
+        )
+    else:
+        raise HTTPException(
+            status_code=403,
+            detail="You are not allowed to delete this booking",
+        )
 
 
 @router.delete(
-    "/booking/bookings/{booking_id}", status_code=204, tags=[Tags.booking]
+    "/booking/bookings/{booking_id}",
+    status_code=204,
+    tags=[Tags.booking],
 )
-async def delete_bookings_id(
-    booking_id,
+async def delete_booking(
+    booking_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Remove a booking.
 
-    **Only usable by admins or applicant before decision**
+    **Only usable by a user in the manager group of the booking or applicant before decision**
     """
-    booking = await cruds_booking.get_booking_by_id(db=db, booking_id=booking_id)
 
-    if booking is not None and (
-        (user.id == booking.applicant_id and booking.decision == Decision.pending)
-        or is_user_member_of_an_allowed_group(user, [GroupType.BDE])
-    ):
+    booking: models_booking.Booking = await cruds_booking.get_booking_by_id(
+        db=db, booking_id=booking_id
+    )
+
+    if (
+        user.id == booking.applicant_id and booking.decision == Decision.pending
+    ) or is_user_member_of_an_allowed_group(user, [booking.room.manager.group_id]):
         await cruds_booking.delete_booking(booking_id=booking_id, db=db)
 
     else:
@@ -448,7 +375,7 @@ async def delete_bookings_id(
 
 
 @router.get(
-    "/booking/rooms/",
+    "/booking/rooms",
     response_model=list[schemas_booking.RoomComplete],
     status_code=200,
     tags=[Tags.booking],
@@ -460,14 +387,14 @@ async def get_rooms(
     """
     Get all rooms.
 
-    **This endpoint is usable by every member**
+    **The user must be authenticated to use this endpoint**
     """
 
     return await cruds_booking.get_rooms(db=db)
 
 
 @router.post(
-    "/booking/rooms/",
+    "/booking/rooms",
     response_model=schemas_booking.RoomComplete,
     status_code=201,
     tags=[Tags.booking],
@@ -491,7 +418,8 @@ async def create_room(
         return await cruds_booking.create_room(db=db, room=room_db)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
-    
+
+
 @router.patch(
     "/booking/rooms/{room_id}",
     status_code=204,
@@ -511,6 +439,7 @@ async def edit_room(
 
     await cruds_booking.edit_room(db=db, room_id=room_id, room=room)
 
+
 @router.delete(
     "/booking/rooms/{room_id}",
     status_code=204,
@@ -528,21 +457,3 @@ async def delete_room(
     """
 
     await cruds_booking.delete_room(db=db, room_id=room_id)
-
-@router.get(
-    "/booking/rooms/{room_id}",
-    response_model=schemas_booking.RoomComplete,
-    status_code=200,
-    tags=[Tags.booking],
-)
-async def get_room_by_id(
-    room_id: str,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
-):
-    """
-    Get a particular room.
-
-    **Usable by every member**
-    """
-    return await cruds_booking.get_room_by_id(db=db, room_id=room_id)
