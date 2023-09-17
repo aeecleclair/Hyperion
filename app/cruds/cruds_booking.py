@@ -1,6 +1,6 @@
 from typing import Sequence
 
-from sqlalchemy import delete, select, text, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -9,19 +9,16 @@ from app.models import models_booking
 from app.schemas import schemas_booking
 from app.utils.types.booking_type import Decision
 
+
 async def get_managers(
     db: AsyncSession,
 ) -> Sequence[models_booking.Manager]:
-    result = await db.execute(
-        select(models_booking.Manager)
-        .options(selectinload(models_booking.Manager.rooms)
-                 .selectinload(models_booking.Room.bookings)
-                 .selectinload(models_booking.Booking.applicant)))
+    result = await db.execute(select(models_booking.Manager))
     return result.scalars().all()
 
+
 async def create_manager(
-    db: AsyncSession,
-    manager: models_booking.Manager
+    db: AsyncSession, manager: models_booking.Manager
 ) -> models_booking.Manager:
     db.add(manager)
     try:
@@ -30,7 +27,8 @@ async def create_manager(
     except IntegrityError as error:
         await db.rollback()
         raise ValueError(error)
-    
+
+
 async def update_manager(
     manager_id: str,
     manager_update: schemas_booking.ManagerUpdate,
@@ -47,10 +45,11 @@ async def update_manager(
         await db.rollback()
         raise ValueError(error)
 
+
 async def delete_manager(
     manager_id: str,
     db: AsyncSession,
-):  
+):
     manager = await get_manager_by_id(db=db, manager_id=manager_id)
     for room in manager.rooms:
         await delete_room(db=db, room_id=room.id)
@@ -63,6 +62,7 @@ async def delete_manager(
         await db.rollback()
         raise ValueError(error)
 
+
 async def get_manager_by_id(
     manager_id: str,
     db: AsyncSession,
@@ -73,6 +73,19 @@ async def get_manager_by_id(
         .options(selectinload(models_booking.Manager.rooms))
     )
     return result.scalars().one()
+
+
+async def get_user_managers(
+    user: models_booking.CoreUser,
+    db: AsyncSession,
+) -> Sequence[models_booking.Manager]:
+    groups_id = map(lambda group: group.id, user.groups)
+    result = await db.execute(
+        select(models_booking.Manager).where(
+            models_booking.Manager.group_id.in_(groups_id)
+        )
+    )
+    return result.scalars().all()
 
 
 async def get_bookings(
@@ -116,7 +129,8 @@ async def get_booking_by_id(
         .where(models_booking.Booking.id == booking_id)
         .options(selectinload(models_booking.Booking.applicant))
     )
-    return result.scalars().first()
+    return result.scalars().one()
+
 
 async def create_booking(db: AsyncSession, booking: schemas_booking.BookingComplete):
     db_booking = models_booking.Booking(**booking.dict())
@@ -158,9 +172,7 @@ async def confirm_booking(db: AsyncSession, decision: Decision, booking_id: str)
 
 async def delete_booking(db: AsyncSession, booking_id: str):
     await db.execute(
-        delete(models_booking.Booking).where(
-            models_booking.Booking.id == booking_id
-        )
+        delete(models_booking.Booking).where(models_booking.Booking.id == booking_id)
     )
     try:
         await db.commit()
@@ -169,9 +181,7 @@ async def delete_booking(db: AsyncSession, booking_id: str):
         raise ValueError(error)
 
 
-async def get_room_by_id(
-    db: AsyncSession, room_id: str
-) -> models_booking.Room | None:
+async def get_room_by_id(db: AsyncSession, room_id: str) -> models_booking.Room | None:
     result = await db.execute(
         select(models_booking.Room)
         .where(models_booking.Room.id == room_id)
@@ -183,6 +193,7 @@ async def get_room_by_id(
 async def get_rooms(db: AsyncSession) -> Sequence[models_booking.Room]:
     result = await db.execute(select(models_booking.Room))
     return result.scalars().all()
+
 
 async def create_room(db: AsyncSession, room: models_booking.Room):
     db.add(room)

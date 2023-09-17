@@ -182,7 +182,7 @@ async def edit_bookings_id(
 @router.patch(
     "/calendar/events/{event_id}/reply/{decision}",
     status_code=204,
-    tags=[Tags.booking],
+    tags=[Tags.calendar],
 )
 async def confirm_booking(
     event_id: str,
