@@ -66,7 +66,7 @@ async def delete_manager(
 async def get_manager_by_id(
     manager_id: str,
     db: AsyncSession,
-) -> models_booking.Manager | None:
+) -> models_booking.Manager:
     result = await db.execute(
         select(models_booking.Manager)
         .where(models_booking.Manager.id == manager_id)
@@ -123,7 +123,7 @@ async def get_applicant_bookings(
 
 async def get_booking_by_id(
     db: AsyncSession, booking_id: str
-) -> models_booking.Booking | None:
+) -> models_booking.Booking:
     result = await db.execute(
         select(models_booking.Booking)
         .where(models_booking.Booking.id == booking_id)
@@ -181,13 +181,13 @@ async def delete_booking(db: AsyncSession, booking_id: str):
         raise ValueError(error)
 
 
-async def get_room_by_id(db: AsyncSession, room_id: str) -> models_booking.Room | None:
+async def get_room_by_id(db: AsyncSession, room_id: str) -> models_booking.Room:
     result = await db.execute(
         select(models_booking.Room)
         .where(models_booking.Room.id == room_id)
         .options(selectinload(models_booking.Room.bookings))
     )
-    return result.scalars().first()
+    return result.scalars().one()
 
 
 async def get_rooms(db: AsyncSession) -> Sequence[models_booking.Room]:
