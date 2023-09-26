@@ -24,6 +24,8 @@ class GroupType(str, Enum):
     AE = "45649735-866a-49df-b04b-a13c74fd5886"
     CAA = "6c6d7e88-fdb8-4e42-b2b5-3d3cfd12e7d6"
     cinema = "ce5f36e6-5377-489f-9696-de70e2477300"
+    BDR = "e1410d80-6dbe-480f-84cb-86c362f76aa0"
+    comparat = "6253685d-4298-47c5-a046-61e23e3c574a"
 
     # Module related groups
 
