@@ -74,7 +74,7 @@ class LogConfig:
                         if settings.LOG_DEBUG_MESSAGES
                         else "logging.NullHandler"
                     ),
-                    # "stream": "ext://sys.stderr",
+                    "stream": "ext://sys.stderr",
                     "level": "DEBUG",
                 },
                 # Console handler is always active, even in production.
@@ -110,7 +110,7 @@ class LogConfig:
                         settings.MATRIX_TOKEN is not None
                         and settings.MATRIX_LOG_AMAP_ROOM_ID is not None
                     ),
-                    "level": "ERROR",
+                    "level": "INFO",
                 },
                 # There is a handler per log file #
                 # They are based on RotatingFileHandler to logs in multiple 1024 bytes files
@@ -122,7 +122,7 @@ class LogConfig:
                     "filename": "logs/errors.log",
                     "maxBytes": 1024 * 1024 * 10,  # ~ 10 MB
                     "backupCount": 20,
-                    "level": "WARNING",
+                    "level": "INFO",
                 },
                 "file_access": {
                     # file_access should receive information about all incoming requests and JWT verifications
@@ -172,6 +172,7 @@ class LogConfig:
                 "hyperion.access": {
                     "handlers": [
                         "file_access",
+                        "console",
                         "debug_console",
                     ],
                     "level": MINIMUM_LOG_LEVEL,
@@ -180,6 +181,7 @@ class LogConfig:
                     "handlers": [
                         "file_security",
                         "matrix_errors",
+                        "console",
                         "debug_console",
                     ],
                     "level": MINIMUM_LOG_LEVEL,
@@ -187,21 +189,36 @@ class LogConfig:
                 # hyperion.error should be used to log all errors which does not correspond to one of the specific loggers
                 # Other loggers can process error messages and may be more appropriated than hyperion.error
                 "hyperion.error": {
-                    "handlers": ["file_errors", "matrix_errors", "console"],
+                    "handlers": [
+                        "file_errors",
+                        "matrix_errors",
+                        "console",
+                        "debug_console",
+                    ],
                     "level": MINIMUM_LOG_LEVEL,
                 },
                 "hyperion.amap": {
-                    "handlers": ["file_amap", "matrix_amap", "debug_console"],
+                    "handlers": [
+                        "file_amap",
+                        "matrix_amap",
+                        "console",
+                        "debug_console",
+                    ],
                     "level": MINIMUM_LOG_LEVEL,
                 },
                 "hyperion.raffle": {
-                    "handlers": ["file_raffle", "debug_console"],
+                    "handlers": ["file_raffle", "console", "debug_console"],
                     "level": MINIMUM_LOG_LEVEL,
                 },
                 # We disable "uvicorn.access" to replace it with our custom "hyperion.access" which add custom information like the request_id
                 "uvicorn.access": {"handlers": []},
                 "uvicorn.error": {
-                    "handlers": ["file_errors", "matrix_errors", "console"],
+                    "handlers": [
+                        "file_errors",
+                        "matrix_errors",
+                        "console",
+                        "debug_console",
+                    ],
                     "level": MINIMUM_LOG_LEVEL,
                 },
             },
@@ -243,7 +260,9 @@ class LogConfig:
             queue_handler = QueueHandler(log_queue)
 
             # The listener will watch the queue and let the previous handler process logs records in their own thread
-            listener = QueueListener(log_queue, *logger.handlers)
+            listener = QueueListener(
+                log_queue, *logger.handlers, respect_handler_level=True
+            )
             listener.start()
 
             # We remove all previous handlers
