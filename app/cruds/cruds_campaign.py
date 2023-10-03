@@ -36,6 +36,78 @@ async def get_status(
     return status[0].status
 
 
+async def get_voters(db: AsyncSession) -> Sequence[models_campaign.Voters]:
+    result = await db.execute(select(models_campaign.Voters))
+    return result.scalars().all()
+
+
+async def get_voters_list(
+    db: AsyncSession,
+) -> Sequence[str] | None:
+    result = await db.execute(select(models_campaign.Voters))
+    voters_group = result.scalars().all()
+    if len(voters_group) == 0:
+        # The voters was never set in the database, we can create a default status in the database and return it
+        # Since this is the only place a row can be added to the status table, there should never be more than one row in the table
+        voters_model = models_campaign.Voters(group="ALL", id="id")
+        db.add(voters_model)
+        try:
+            await db.commit()
+        except IntegrityError as err:
+            await db.rollback()
+            raise ValueError(err)
+        return StatusType.waiting
+
+    # The status is contained in the only result returned by the database
+    return [e.group for e in voters_group]
+
+
+async def add_voters(
+    voters: list[str],
+    db: AsyncSession,
+) -> None:
+    await db.add(voters)
+    await db.commit()
+
+
+async def delete_voters(
+    id: str,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        delete(models_campaign.Voters).where(models_campaign.Voters.id == id)
+    )
+    await db.commit()
+
+
+async def update_voters(
+    id: str,
+    voters_update: schemas_campaign.Voters,
+    db: AsyncSession,
+) -> None:
+    """Update a campaign list."""
+    await db.execute(
+        update(models_campaign.Voter)
+        .where(models_campaign.Voters.id == id)
+        .values(**voters_update.dict(exclude_none=True))
+    )
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise ValueError()
+
+
+async def get_voters_by_id(
+    voters_id: str,
+    db: AsyncSession,
+) -> models_campaign.Voters | None:
+    result = await db.execute(
+        select(models_campaign.Voters).where(models_campaign.Voters.id == voters_id)
+    )
+    return result.scalars().first()
+
+
 async def set_status(
     db: AsyncSession,
     new_status: StatusType,

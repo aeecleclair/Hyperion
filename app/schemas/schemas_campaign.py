@@ -109,3 +109,13 @@ class Result(BaseModel):
 class VoteStats(BaseModel):
     section_id: str
     count: int
+
+
+class Voters(BaseModel):
+    """Base schema for a vote."""
+
+    id_voters: str
+    group: str
+
+    class Config:
+        orm_mode = True
