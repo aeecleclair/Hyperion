@@ -133,10 +133,11 @@ async def delete_manager(
 
     manager = await cruds_booking.get_manager_by_id(db=db, manager_id=manager_id)
     if manager.rooms:
-        raise HTTPException(status_code=403, detail=str("There are still rooms linked to this manager"))
+        raise HTTPException(
+            status_code=403, detail=str("There are still rooms linked to this manager")
+        )
     else:
         await cruds_booking.delete_manager(manager_id=manager_id, db=db)
-        
 
 
 @router.get(
@@ -367,9 +368,7 @@ async def delete_booking(
         db=db, booking_id=booking_id
     )
 
-    if (
-        user.id == booking.applicant_id and booking.decision == Decision.pending
-    ):
+    if user.id == booking.applicant_id and booking.decision == Decision.pending:
         await cruds_booking.delete_booking(booking_id=booking_id, db=db)
 
     else:
@@ -460,9 +459,12 @@ async def delete_room(
     Remove a room.
 
     **This endpoint is only usable by admins**
-    """ 
+    """
     room = await cruds_booking.get_room_by_id(db=db, room_id=room_id)
-    if all(map(lambda b: b.end < datetime.now(),room.bookings)):
+    if all(map(lambda b: b.end < datetime.now(), room.bookings)):
         await cruds_booking.delete_room(db=db, room_id=room_id)
     else:
-        raise HTTPException(status_code=403, detail=str("There are still future or ongoing bookings of this room"))
+        raise HTTPException(
+            status_code=403,
+            detail=str("There are still future or ongoing bookings of this room"),
+        )
