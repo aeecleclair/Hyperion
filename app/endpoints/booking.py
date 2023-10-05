@@ -462,7 +462,9 @@ async def delete_room(
     **This endpoint is only usable by admins**
     """
     room = await cruds_booking.get_room_by_id(db=db, room_id=room_id)
-    if all(map(lambda b: b.end < datetime.now(timezone(settings.TIMEZONE)), room.bookings)):
+    if all(
+        map(lambda b: b.end < datetime.now(timezone(settings.TIMEZONE)), room.bookings)
+    ):
         await cruds_booking.delete_room(db=db, room_id=room_id)
     else:
         raise HTTPException(
