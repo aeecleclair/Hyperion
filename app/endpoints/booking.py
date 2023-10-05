@@ -132,7 +132,13 @@ async def delete_manager(
     **This endpoint is only usable by administrators**
     """
 
-    await cruds_booking.delete_manager(manager_id=manager_id, db=db)
+    manager = await cruds_booking.get_manager_by_id(db=db, manager_id=manager_id)
+    if manager.rooms:
+        raise HTTPException(
+            status_code=403, detail=str("There are still rooms linked to this manager")
+        )
+    else:
+        await cruds_booking.delete_manager(manager_id=manager_id, db=db)
 
 
 @router.get(
@@ -356,16 +362,14 @@ async def delete_booking(
     """
     Remove a booking.
 
-    **Only usable by a user in the manager group of the booking or applicant before decision**
+    **Only usable by the applicant before decision**
     """
 
     booking: models_booking.Booking = await cruds_booking.get_booking_by_id(
         db=db, booking_id=booking_id
     )
 
-    if (
-        user.id == booking.applicant_id and booking.decision == Decision.pending
-    ) or is_user_member_of_an_allowed_group(user, [booking.room.manager.group_id]):
+    if user.id == booking.applicant_id and booking.decision == Decision.pending:
         await cruds_booking.delete_booking(booking_id=booking_id, db=db)
 
     else:
@@ -449,6 +453,7 @@ async def edit_room(
 async def delete_room(
     room_id: str,
     db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
@@ -456,5 +461,11 @@ async def delete_room(
 
     **This endpoint is only usable by admins**
     """
-
-    await cruds_booking.delete_room(db=db, room_id=room_id)
+    room = await cruds_booking.get_room_by_id(db=db, room_id=room_id)
+    if all(map(lambda b: b.end < datetime.now(), room.bookings)):
+        await cruds_booking.delete_room(db=db, room_id=room_id)
+    else:
+        raise HTTPException(
+            status_code=403,
+            detail=str("There are still future or ongoing bookings of this room"),
+        )
