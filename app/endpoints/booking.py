@@ -360,7 +360,7 @@ async def delete_booking(
     """
     Remove a booking.
 
-    **Only usable by a user in the manager group of the booking or applicant before decision**
+    **Only usable by the applicant before decision**
     """
 
     booking: models_booking.Booking = await cruds_booking.get_booking_by_id(
@@ -369,7 +369,7 @@ async def delete_booking(
 
     if (
         user.id == booking.applicant_id and booking.decision == Decision.pending
-    ) or is_user_member_of_an_allowed_group(user, [booking.room.manager.group_id]):
+    ):
         await cruds_booking.delete_booking(booking_id=booking_id, db=db)
 
     else:
