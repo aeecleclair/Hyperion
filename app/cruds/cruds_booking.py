@@ -50,9 +50,6 @@ async def delete_manager(
     manager_id: str,
     db: AsyncSession,
 ):
-    manager = await get_manager_by_id(db=db, manager_id=manager_id)
-    for room in manager.rooms:
-        await delete_room(db=db, room_id=room.id)
     await db.execute(
         delete(models_booking.Manager).where(models_booking.Manager.id == manager_id)
     )
