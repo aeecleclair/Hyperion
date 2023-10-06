@@ -1,9 +1,9 @@
 import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException
-from pytz import timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
@@ -257,7 +257,7 @@ async def create_booking(
 
     try:
         if result:
-            now = datetime.now(timezone(settings.TIMEZONE))
+            now = datetime.now(ZoneInfo(settings.TIMEZONE))
             message = Message(
                 # We use sunday date as context to avoid sending the recap twice
                 context=f"booking-create-{result.id}",
@@ -462,7 +462,11 @@ async def delete_room(
     """
     room = await cruds_booking.get_room_by_id(db=db, room_id=room_id)
     if all(
-        map(lambda b: b.end < datetime.now(timezone(settings.TIMEZONE)), room.bookings)
+        map(
+            lambda b: b.end.replace(tzinfo=ZoneInfo(settings.TIMEZONE))
+            < datetime.now(timezone.utc),
+            room.bookings,
+        )
     ):
         await cruds_booking.delete_room(db=db, room_id=room_id)
     else:
