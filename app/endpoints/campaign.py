@@ -51,12 +51,13 @@ async def get_sections(
 
     **The user must be a voter to use this endpoint**
     """
-    voters = cruds_campaign.get_voters_list(db)
-    if False:
-        raise HTTPException(
-            status_code=403,
-            detail="Access forbidden : you are not a poll member ",
-        )
+    voters = await cruds_campaign.get_voters_list(db)
+    if len(voters) > 0:
+        if not is_user_member_of_an_allowed_group(user, voters):
+            raise HTTPException(
+                status_code=403,
+                detail="Access forbidden : you are not a poll member ",
+            )
 
     sections = await cruds_campaign.get_sections(db)
     return sections
@@ -145,7 +146,7 @@ async def get_lists(
 
     **The user must be a voter to use this endpoint**
     """
-    voters = cruds_campaign.get_voters_list(db)
+    voters = await cruds_campaign.get_voters_list(db)
     if len(voters) > 0:
         if not is_user_member_of_an_allowed_group(user, voters):
             raise HTTPException(
@@ -523,7 +524,7 @@ async def vote(
 
     **The user must be a voter to use this endpoint**
     """
-    voters = cruds_campaign.get_voters_list(db)
+    voters = await cruds_campaign.get_voters_list(db)
     if len(voters) > 0:
         if not is_user_member_of_an_allowed_group(user, voters):
             raise HTTPException(
@@ -586,7 +587,7 @@ async def get_sections_already_voted(
 
     **The user must be a voter to use this endpoint**
     """
-    voters = cruds_campaign.get_voters_list(db)
+    voters = await cruds_campaign.get_voters_list(db)
     if len(voters) > 0:
         if not is_user_member_of_an_allowed_group(user, voters):
             raise HTTPException(
@@ -621,7 +622,7 @@ async def get_results(
 
     **The user must be a voter to use this endpoint**
     """
-    voters = cruds_campaign.get_voters_list(db)
+    voters = await cruds_campaign.get_voters_list(db)
     if len(voters) > 0:
         if not is_user_member_of_an_allowed_group(user, voters):
             raise HTTPException(
@@ -677,7 +678,7 @@ async def get_status_vote(
 
     **The user must be a voter to use this endpoint**
     """
-    voters = cruds_campaign.get_voters_list(db)
+    voters = await cruds_campaign.get_voters_list(db)
     if len(voters) > 0:
         if not is_user_member_of_an_allowed_group(user, voters):
             raise HTTPException(
@@ -775,7 +776,7 @@ async def read_campaigns_logo(
     Get the logo of a campaign list.
     **The user must be a voter to use this endpoint**
     """
-    voters = cruds_campaign.get_voters_list(db)
+    voters = await cruds_campaign.get_voters_list(db)
     if len(voters) > 0:
         if not is_user_member_of_an_allowed_group(user, voters):
             raise HTTPException(
@@ -800,7 +801,8 @@ async def get_voters(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
     db: AsyncSession = Depends(get_db),
 ):
-    return cruds_campaign.get_voters(db=db)
+    voters = await cruds_campaign.get_voters(db=db)
+    return voters
 
 
 @router.post(

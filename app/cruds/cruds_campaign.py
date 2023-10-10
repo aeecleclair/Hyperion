@@ -43,7 +43,7 @@ async def get_voters(db: AsyncSession) -> Sequence[models_campaign.Voters]:
 
 async def get_voters_list(
     db: AsyncSession,
-) -> Sequence[str] | None:
+) -> list[str] | None:
     result = await db.execute(select(models_campaign.Voters))
     voters_group = result.scalars().all()
     if len(voters_group) == 0:
@@ -56,18 +56,21 @@ async def get_voters_list(
         except IntegrityError as err:
             await db.rollback()
             raise ValueError(err)
-        return StatusType.waiting
 
     # The status is contained in the only result returned by the database
     return [e.group for e in voters_group]
 
 
 async def add_voters(
-    voters: list[str],
+    voters: models_campaign.Voters,
     db: AsyncSession,
 ) -> None:
     await db.add(voters)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError as err:
+        await db.rollback()
+        raise err
 
 
 async def delete_voters(

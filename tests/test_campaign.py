@@ -36,6 +36,7 @@ async def init_objects():
 
     global section
     global list
+    global voters
     list_id = str(uuid.uuid4())
     voters_id = str(uuid.uuid4())
     section_id = str(uuid.uuid4())
@@ -65,7 +66,10 @@ async def init_objects():
     )
     await add_object_to_db(list)
 
-    voters = models_campaign.Voters(id=voters_id, group=GroupType.AE)
+    voters = models_campaign.Voters(
+        id=voters_id,
+        group=GroupType.AE,
+    )
     await add_object_to_db(voters)
 
 
