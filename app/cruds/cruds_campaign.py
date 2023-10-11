@@ -65,7 +65,7 @@ async def add_voters(
     voters: models_campaign.Voters,
     db: AsyncSession,
 ) -> None:
-    await db.add(voters)
+    db.add(voters)
     try:
         await db.commit()
     except IntegrityError as err:
@@ -90,7 +90,7 @@ async def update_voters(
 ) -> None:
     """Update a campaign list."""
     await db.execute(
-        update(models_campaign.Voter)
+        update(models_campaign.Voters)
         .where(models_campaign.Voters.id == id)
         .values(**voters_update.dict(exclude_none=True))
     )
