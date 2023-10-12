@@ -74,7 +74,6 @@ class LogConfig:
                         if settings.LOG_DEBUG_MESSAGES
                         else "logging.NullHandler"
                     ),
-                    "stream": "ext://sys.stderr",
                     "level": "DEBUG",
                 },
                 # Console handler is always active, even in production.
@@ -82,7 +81,6 @@ class LogConfig:
                 "console": {
                     "formatter": "console_formatter",
                     "class": "logging.StreamHandler",
-                    "stream": "ext://sys.stderr",
                     "level": "INFO",
                 },
                 # Matrix_errors handler send text messages to a Matrix server
