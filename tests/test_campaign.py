@@ -64,10 +64,14 @@ async def init_objects():
     )
     await add_object_to_db(list)
 
-    voters = models_campaign.VoterGroups(
+    voters_AE = models_campaign.VoterGroups(
         group_id=GroupType.AE,
     )
-    await add_object_to_db(voters)
+    await add_object_to_db(voters_AE)
+    voters_CAA = models_campaign.VoterGroups(
+        group_id=GroupType.CAA,
+    )
+    await add_object_to_db(voters_CAA)
 
 
 def test_get_sections():
@@ -116,6 +120,15 @@ def test_get_voters():
     assert response.status_code == 200
 
 
+def test_delete_voter_by_group_id():
+    token = create_api_access_token(CAA_user)
+    response = client.delete(
+        f"/campaign/voters/{GroupType.CAA}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 204
+
+
 def test_delete_voters():
     token = create_api_access_token(CAA_user)
     response = client.delete(
@@ -130,11 +143,9 @@ def test_add_voters():
     response = client.post(
         "/campaign/voters",
         headers={"Authorization": f"Bearer {token}"},
-        json=[
-            {
-                "group_id": GroupType.AE,
-            }
-        ],
+        json={
+            "group_id": GroupType.AE,
+        },
     )
     assert response.status_code == 201
 

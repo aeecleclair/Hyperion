@@ -364,12 +364,12 @@ async def get_voters(
 
 @router.post(
     "/campaign/voters",
-    response_model=list[schemas_campaign.VoterGroup],
+    response_model=schemas_campaign.VoterGroup,
     status_code=201,
     tags=[Tags.campaign],
 )
-async def add_voters(
-    voters: list[schemas_campaign.VoterGroup],
+async def add_voter(
+    voter: schemas_campaign.VoterGroup,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
     db: AsyncSession = Depends(get_db),
 ):
@@ -378,14 +378,47 @@ async def add_voters(
 
     **The user must be a member of the group CAA to use this endpoint**
     """
-    db_voters = [
-        models_campaign.VoterGroups(**voter.dict(exclude_none=True)) for voter in voters
-    ]
+    db_voter = models_campaign.VoterGroups(**voter.dict(exclude_none=True))
     try:
-        await cruds_campaign.add_voters(voters=db_voters, db=db)
+        await cruds_campaign.add_voter(voter=db_voter, db=db)
     except IntegrityError as error:
         raise HTTPException(status_code=400, detail=str(error))
-    return db_voters
+    return db_voter
+
+
+@router.delete(
+    "/campaign/voters/{group_id}",
+    status_code=204,
+    tags=[Tags.campaign],
+)
+async def delete_voter_by_group_id(
+    group_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
+):
+    """
+    Remove a voter by its group id
+
+    **The user must be a member of the group CAA to use this endpoint**
+    """
+    await cruds_campaign.delete_voter_by_group_id(group_id=group_id, db=db)
+
+
+@router.delete(
+    "/campaign/voters",
+    status_code=204,
+    tags=[Tags.campaign],
+)
+async def delete_voters(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
+):
+    """
+    Remove voters (groups allowed to vote)
+
+    **The user must be a member of the group CAA to use this endpoint**
+    """
+    await cruds_campaign.delete_voters(db=db)
 
 
 @router.delete(
