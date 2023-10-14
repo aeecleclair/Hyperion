@@ -52,12 +52,11 @@ async def get_sections(
     **The user must be a voter to use this endpoint**
     """
     voters = await cruds_campaign.get_voters_list(db)
-    if voters:
-        if not is_user_member_of_an_allowed_group(user, voters):
-            raise HTTPException(
-                status_code=403,
-                detail="Access forbidden : you are not a poll member ",
-            )
+    if not voters or not is_user_member_of_an_allowed_group(user, voters):
+        raise HTTPException(
+            status_code=403,
+            detail="Access forbidden : you are not a poll member ",
+        )
 
     sections = await cruds_campaign.get_sections(db)
     return sections
@@ -75,7 +74,7 @@ async def add_section(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """
-    Add a section of comparat.
+    Add a section.
 
     This endpoint can only be used in 'waiting' status.
 
@@ -111,7 +110,7 @@ async def delete_section(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """
-    Delete a section of comparat.
+    Delete a section.
 
     This endpoint can only be used in 'waiting' status.
 
@@ -821,21 +820,6 @@ async def add_voters(
         await cruds_campaign.add_voters(voters=db_voters, db=db)
     except IntegrityError as error:
         raise HTTPException(status_code=400, detail=str(error))
-
-
-@router.patch(
-    "/campaign/voters/{voters_id}",
-    response_model=standard_responses.Result,
-    status_code=201,
-    tags=[Tags.campaign],
-)
-async def edit_voters(
-    voters_id: str,
-    voters_update: schemas_campaign.Voters,
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
-    db: AsyncSession = Depends(get_db),
-):
-    await cruds_campaign.update_voters(id=voters_id, voters_update=voters_update, db=db)
 
 
 @router.delete(
