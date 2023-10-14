@@ -54,7 +54,7 @@ async def add_voter(
 
 
 async def delete_voter_by_group_id(
-    group_id: int,
+    group_id: str,
     db: AsyncSession,
 ) -> None:
     await db.execute(
