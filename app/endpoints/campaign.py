@@ -347,9 +347,9 @@ async def update_list(
 
 @router.get(
     "/campaign/voters",
-    response_class=FileResponse,
+    response_model=schemas_campaign.Voters,
     status_code=200,
-    tags=[Tags.users],
+    tags=[Tags.campaign],
 )
 async def get_voters(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
@@ -361,7 +361,7 @@ async def get_voters(
 
 @router.post(
     "/campaign/voters",
-    response_model=standard_responses.Result,
+    response_model=schemas_campaign.Voters,
     status_code=201,
     tags=[Tags.campaign],
 )
@@ -777,7 +777,7 @@ async def get_stats_for_section(
     "/campaign/lists/{list_id}/logo",
     response_model=standard_responses.Result,
     status_code=201,
-    tags=[Tags.users],
+    tags=[Tags.campaign],
 )
 async def create_campaigns_logo(
     list_id: str,
@@ -822,7 +822,7 @@ async def create_campaigns_logo(
     "/campaign/lists/{list_id}/logo",
     response_class=FileResponse,
     status_code=200,
-    tags=[Tags.users],
+    tags=[Tags.campaign],
 )
 async def read_campaigns_logo(
     list_id: str,
