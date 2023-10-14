@@ -421,23 +421,6 @@ async def delete_voters(
     await cruds_campaign.delete_voters(db=db)
 
 
-@router.delete(
-    "/campaign/voters",
-    status_code=204,
-    tags=[Tags.campaign],
-)
-async def delete_voters(
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
-):
-    """
-    Remove voters (groups allowed to vote)
-
-    **The user must be a member of the group CAA to use this endpoint**
-    """
-    await cruds_campaign.delete_voters(db=db)
-
-
 @router.post(
     "/campaign/status/open",
     status_code=204,
