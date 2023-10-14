@@ -352,16 +352,21 @@ async def update_list(
     tags=[Tags.campaign],
 )
 async def get_voters(
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    Return the voters (groups allowed to vorte) for the current campaign.
+    """
     voters = await cruds_campaign.get_voters(db=db)
-    return voters
+    voters_return = schemas_campaign.Voters(groups_ids=[])
+    for voter in voters:
+        voters_return.groups_ids.append(voter.group_id)
+    return voters_return
 
 
 @router.post(
     "/campaign/voters",
-    response_model=schemas_campaign.Voters,
     status_code=201,
     tags=[Tags.campaign],
 )
@@ -375,7 +380,9 @@ async def add_voters(
 
     **The user must be a member of the group CAA to use this endpoint**
     """
-    db_voters = models_campaign.Voters(**voters.dict())
+    db_voters = []
+    for group_id in voters.groups_ids:
+        db_voters.append(models_campaign.Voters(group_id=group_id))
     try:
         await cruds_campaign.add_voters(voters=db_voters, db=db)
     except IntegrityError as error:

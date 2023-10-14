@@ -24,7 +24,6 @@ voters: models_campaign.Voters | None = None
 
 section2id: str = ""
 list2id: str = ""
-voters2id: str = ""
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
@@ -38,7 +37,6 @@ async def init_objects():
     global list
     global voters
     list_id = str(uuid.uuid4())
-    voters_id = str(uuid.uuid4())
     section_id = str(uuid.uuid4())
 
     section = models_campaign.Sections(
@@ -67,8 +65,7 @@ async def init_objects():
     await add_object_to_db(list)
 
     voters = models_campaign.Voters(
-        id=voters_id,
-        group=GroupType.AE,
+        group_id=GroupType.AE,
     )
     await add_object_to_db(voters)
 
@@ -109,7 +106,7 @@ def test_delete_section():
 
 
 def test_get_voters():
-    token = create_api_access_token(CAA_user)
+    token = create_api_access_token(AE_user)
     response = client.get(
         "/campaign/voters",
         headers={
@@ -119,37 +116,25 @@ def test_get_voters():
     assert response.status_code == 200
 
 
+def test_delete_voters():
+    token = create_api_access_token(CAA_user)
+    response = client.delete(
+        "/campaign/voters",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 204
+
+
 def test_add_voters():
     token = create_api_access_token(CAA_user)
     response = client.post(
         "/campaign/voters",
         headers={"Authorization": f"Bearer {token}"},
         json={
-            "group": GroupType.AE,
+            "groups_ids": [GroupType.AE],
         },
     )
     assert response.status_code == 201
-    global voters2id
-    voters2id = response.json()["id"]
-
-
-def test_update_voters():
-    token = create_api_access_token(CAA_user)
-    response = client.patch(
-        f"/campaign/voters/{voters.id}",
-        headers={"Authorization": f"Bearer {token}"},
-        json={"group": GroupType.amap},
-    )
-    assert response.status_code == 204
-
-
-def test_delete_voters():
-    token = create_api_access_token(CAA_user)
-    response = client.delete(
-        f"/campaign/voters/{voters2id}",
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert response.status_code == 204
 
 
 def test_get_lists():

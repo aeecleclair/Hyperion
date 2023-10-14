@@ -83,8 +83,6 @@ class ListEdit(BaseModel):
 
 
 class Voters(BaseModel):
-    """Schema for voters (groups allowed to vote)"""
-
     groups_ids: list[str]
 
 

@@ -42,10 +42,11 @@ async def get_voters(db: AsyncSession) -> Sequence[models_campaign.Voters]:
 
 
 async def add_voters(
-    voters: models_campaign.Voters,
+    voters: Sequence[models_campaign.Voters],
     db: AsyncSession,
 ) -> None:
-    db.add(voters)
+    for voter in voters:
+        db.add(voter)
     try:
         await db.commit()
     except IntegrityError as err:
