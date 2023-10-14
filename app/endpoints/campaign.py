@@ -347,7 +347,7 @@ async def update_list(
 
 @router.get(
     "/campaign/voters",
-    response_model=schemas_campaign.Voters,
+    response_model=list[schemas_campaign.VoterGroup],
     status_code=200,
     tags=[Tags.campaign],
 )
@@ -359,19 +359,17 @@ async def get_voters(
     Return the voters (groups allowed to vorte) for the current campaign.
     """
     voters = await cruds_campaign.get_voters(db=db)
-    voters_return = schemas_campaign.Voters(groups_ids=[])
-    for voter in voters:
-        voters_return.groups_ids.append(voter.group_id)
-    return voters_return
+    return voters
 
 
 @router.post(
     "/campaign/voters",
+    response_model=list[schemas_campaign.VoterGroup],
     status_code=201,
     tags=[Tags.campaign],
 )
 async def add_voters(
-    voters: schemas_campaign.Voters,
+    voters: list[schemas_campaign.VoterGroup],
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
     db: AsyncSession = Depends(get_db),
 ):
@@ -380,13 +378,14 @@ async def add_voters(
 
     **The user must be a member of the group CAA to use this endpoint**
     """
-    db_voters = []
-    for group_id in voters.groups_ids:
-        db_voters.append(models_campaign.Voters(group_id=group_id))
+    db_voters = [
+        models_campaign.VoterGroups(**voter.dict(exclude_none=True)) for voter in voters
+    ]
     try:
         await cruds_campaign.add_voters(voters=db_voters, db=db)
     except IntegrityError as error:
         raise HTTPException(status_code=400, detail=str(error))
+    return db_voters
 
 
 @router.delete(

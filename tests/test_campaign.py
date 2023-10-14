@@ -20,7 +20,7 @@ AE_user: models_core.CoreUser | None = None
 
 section: models_campaign.Sections | None = None
 list: models_campaign.Lists | None = None
-voters: models_campaign.Voters | None = None
+voters: models_campaign.VoterGroups | None = None
 
 section2id: str = ""
 list2id: str = ""
@@ -64,7 +64,7 @@ async def init_objects():
     )
     await add_object_to_db(list)
 
-    voters = models_campaign.Voters(
+    voters = models_campaign.VoterGroups(
         group_id=GroupType.AE,
     )
     await add_object_to_db(voters)
@@ -130,9 +130,11 @@ def test_add_voters():
     response = client.post(
         "/campaign/voters",
         headers={"Authorization": f"Bearer {token}"},
-        json={
-            "groups_ids": [GroupType.AE],
-        },
+        json=[
+            {
+                "group_id": GroupType.AE,
+            }
+        ],
     )
     assert response.status_code == 201
 

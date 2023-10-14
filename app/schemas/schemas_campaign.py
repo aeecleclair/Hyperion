@@ -82,8 +82,11 @@ class ListEdit(BaseModel):
     program: str | None = None
 
 
-class Voters(BaseModel):
-    groups_ids: list[str]
+class VoterGroup(BaseModel):
+    group_id: str
+
+    class Config:
+        orm_mode = True
 
 
 class VoteBase(BaseModel):

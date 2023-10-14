@@ -36,13 +36,13 @@ async def get_status(
     return status[0].status
 
 
-async def get_voters(db: AsyncSession) -> Sequence[models_campaign.Voters]:
-    result = await db.execute(select(models_campaign.Voters))
+async def get_voters(db: AsyncSession) -> Sequence[models_campaign.VoterGroups]:
+    result = await db.execute(select(models_campaign.VoterGroups))
     return result.scalars().all()
 
 
 async def add_voters(
-    voters: Sequence[models_campaign.Voters],
+    voters: Sequence[models_campaign.VoterGroups],
     db: AsyncSession,
 ) -> None:
     for voter in voters:
@@ -57,7 +57,7 @@ async def add_voters(
 async def delete_voters(
     db: AsyncSession,
 ) -> None:
-    await db.execute(delete(models_campaign.Voters))
+    await db.execute(delete(models_campaign.VoterGroups))
     await db.commit()
 
 

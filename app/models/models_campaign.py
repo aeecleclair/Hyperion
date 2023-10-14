@@ -45,8 +45,8 @@ class Lists(Base):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 
-class Voters(Base):
-    __tablename__ = "campaign_voters"
+class VoterGroups(Base):
+    __tablename__ = "campaign_votergroups"
 
     group_id: Mapped[str] = mapped_column(String, nullable=False, primary_key=True)
 
