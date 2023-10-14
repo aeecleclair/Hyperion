@@ -330,7 +330,7 @@ async def delete_votes(db: AsyncSession) -> None:
 async def reset_campaign(db: AsyncSession) -> None:
     """Reset the campaign.
     This will delete all the votes and blank list lists."""
-    await delete_list_by_type(ListType.blank, db)
     await db.execute(delete(models_campaign.Votes))
     await db.execute(delete(models_campaign.HasVoted))
     await db.commit()
+    await delete_list_by_type(ListType.blank, db)
