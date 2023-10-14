@@ -49,10 +49,11 @@ async def get_sections(
     """
     Return sections in the database as a list of `schemas_campaign.SectionBase`
 
-    **The user must be a voter to use this endpoint**
+    **The user must be a voter or a member of the group CAA to use this endpoint**
     """
     voters = await cruds_campaign.get_voters(db)
     voters_groups = [voter.group_id for voter in voters]
+    voters_groups.append(GroupType.CAA)
     if not voters_groups or not is_user_member_of_an_allowed_group(user, voters_groups):
         raise HTTPException(
             status_code=403,
@@ -144,10 +145,11 @@ async def get_lists(
     """
     Return campaign lists registered for the vote.
 
-    **The user must be a voter to use this endpoint**
+    **The user must be a voter or a member of the group CAA to use this endpoint**
     """
     voters = await cruds_campaign.get_voters(db)
     voters_groups = [voter.group_id for voter in voters]
+    voters_groups.append(GroupType.CAA)
     if not voters_groups or not is_user_member_of_an_allowed_group(user, voters_groups):
         raise HTTPException(
             status_code=403,
@@ -730,10 +732,11 @@ async def get_status_vote(
     """
     Get the current status of the vote.
 
-    **The user must be a voter to use this endpoint**
+    **The user must be a voter or a member of the group CAA to use this endpoint**
     """
     voters = await cruds_campaign.get_voters(db)
     voters_groups = [voter.group_id for voter in voters]
+    voters_groups.append(GroupType.CAA)
     if not voters_groups or not is_user_member_of_an_allowed_group(user, voters_groups):
         raise HTTPException(
             status_code=403,
@@ -828,10 +831,11 @@ async def read_campaigns_logo(
 ):
     """
     Get the logo of a campaign list.
-    **The user must be a voter to use this endpoint**
+    **The user must be a voter or a member of the group CAA to use this endpoint**
     """
     voters = await cruds_campaign.get_voters(db)
     voters_groups = [voter.group_id for voter in voters]
+    voters_groups.append(GroupType.CAA)
     if not voters_groups or not is_user_member_of_an_allowed_group(user, voters_groups):
         raise HTTPException(
             status_code=403,
