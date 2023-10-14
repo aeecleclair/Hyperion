@@ -83,6 +83,8 @@ class ListEdit(BaseModel):
 
 
 class VoterGroup(BaseModel):
+    """Base schema for voters (groups allowed to vote)."""
+
     group_id: str
 
     class Config:

@@ -46,6 +46,10 @@ class Lists(Base):
 
 
 class VoterGroups(Base):
+    """
+    VoterGroups are groups allowed to vote for a campaign
+    """
+
     __tablename__ = "campaign_voter_groups"
 
     group_id: Mapped[str] = mapped_column(String, nullable=False, primary_key=True)
