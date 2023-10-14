@@ -45,6 +45,12 @@ class Lists(Base):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 
+class Voters(Base):
+    __tablename__ = "campaign_voters"
+
+    group_id: Mapped[str] = mapped_column(String, nullable=False, primary_key=True)
+
+
 class Votes(Base):
     __tablename__ = "campaign_votes"
 
@@ -69,10 +75,3 @@ class Status(Base):
 
     id: Mapped[str] = mapped_column(String, nullable=False, primary_key=True)
     status: Mapped[StatusType] = mapped_column(Enum(StatusType), nullable=False)
-
-
-class Voters(Base):
-    __tablename__ = "campaign_voters"
-
-    id: Mapped[str] = mapped_column(String, nullable=False, primary_key=True)
-    group: Mapped[str] = mapped_column(String, nullable=False)

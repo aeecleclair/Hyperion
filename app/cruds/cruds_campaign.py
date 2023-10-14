@@ -41,26 +41,6 @@ async def get_voters(db: AsyncSession) -> Sequence[models_campaign.Voters]:
     return result.scalars().all()
 
 
-async def get_voters_list(
-    db: AsyncSession,
-) -> list[str] | None:
-    result = await db.execute(select(models_campaign.Voters))
-    voters = result.scalars().all()
-    if len(voters) == 0:
-        # The voters was never set in the database, we can create a default status in the database and return it
-        # Since this is the only place a row can be added to the status table, there should never be more than one row in the table
-        voters_model = models_campaign.Voters(group="ALL", id="id")
-        db.add(voters_model)
-        try:
-            await db.commit()
-        except IntegrityError as err:
-            await db.rollback()
-            raise ValueError(err)
-
-    # The status is contained in the only result returned by the database
-    return [voter.group for voter in voters]
-
-
 async def add_voters(
     voters: models_campaign.Voters,
     db: AsyncSession,
@@ -74,23 +54,10 @@ async def add_voters(
 
 
 async def delete_voters(
-    id: str,
     db: AsyncSession,
 ) -> None:
-    await db.execute(
-        delete(models_campaign.Voters).where(models_campaign.Voters.id == id)
-    )
+    await db.execute(delete(models_campaign.Voters))
     await db.commit()
-
-
-async def get_voters_by_id(
-    voters_id: str,
-    db: AsyncSession,
-) -> models_campaign.Voters | None:
-    result = await db.execute(
-        select(models_campaign.Voters).where(models_campaign.Voters.id == voters_id)
-    )
-    return result.scalars().first()
 
 
 async def set_status(

@@ -51,11 +51,12 @@ async def get_sections(
 
     **The user must be a voter to use this endpoint**
     """
-    voters = await cruds_campaign.get_voters_list(db)
-    if not voters or not is_user_member_of_an_allowed_group(user, voters):
+    voters = await cruds_campaign.get_voters(db)
+    voters_groups = [voter.group_id for voter in voters]
+    if not voters_groups or not is_user_member_of_an_allowed_group(user, voters_groups):
         raise HTTPException(
             status_code=403,
-            detail="Access forbidden : you are not a poll member ",
+            detail="Access forbidden : you are not a poll member",
         )
 
     sections = await cruds_campaign.get_sections(db)
@@ -145,13 +146,13 @@ async def get_lists(
 
     **The user must be a voter to use this endpoint**
     """
-    voters = await cruds_campaign.get_voters_list(db)
-    if voters:
-        if not is_user_member_of_an_allowed_group(user, voters):
-            raise HTTPException(
-                status_code=403,
-                detail="Access forbidden : you are not a poll member ",
-            )
+    voters = await cruds_campaign.get_voters(db)
+    voters_groups = [voter.group_id for voter in voters]
+    if not voters_groups or not is_user_member_of_an_allowed_group(user, voters_groups):
+        raise HTTPException(
+            status_code=403,
+            detail="Access forbidden : you are not a poll member",
+        )
 
     lists = await cruds_campaign.get_lists(db=db)
     return lists
@@ -342,6 +343,60 @@ async def update_list(
         raise HTTPException(status_code=400, detail=str(error))
 
 
+@router.get(
+    "/campaign/voters",
+    response_class=FileResponse,
+    status_code=200,
+    tags=[Tags.users],
+)
+async def get_voters(
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
+    db: AsyncSession = Depends(get_db),
+):
+    voters = await cruds_campaign.get_voters(db=db)
+    return voters
+
+
+@router.post(
+    "/campaign/voters",
+    response_model=standard_responses.Result,
+    status_code=201,
+    tags=[Tags.campaign],
+)
+async def add_voters(
+    voters: schemas_campaign.Voters,
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Add voters (groups allowed to vote) for this campaign
+
+    **The user must be a member of the group CAA to use this endpoint**
+    """
+    db_voters = models_campaign.Voters(**voters.dict())
+    try:
+        await cruds_campaign.add_voters(voters=db_voters, db=db)
+    except IntegrityError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+@router.delete(
+    "/campaign/voters",
+    status_code=204,
+    tags=[Tags.campaign],
+)
+async def delete_voters(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
+):
+    """
+    Remove voters (groups allowed to vote)
+
+    **The user must be a member of the group CAA to use this endpoint**
+    """
+    await cruds_campaign.delete_voters(db=db)
+
+
 @router.post(
     "/campaign/status/open",
     status_code=204,
@@ -523,13 +578,13 @@ async def vote(
 
     **The user must be a voter to use this endpoint**
     """
-    voters = await cruds_campaign.get_voters_list(db)
-    if voters:
-        if not is_user_member_of_an_allowed_group(user, voters):
-            raise HTTPException(
-                status_code=403,
-                detail="Access forbidden : you are not a poll member ",
-            )
+    voters = await cruds_campaign.get_voters(db)
+    voters_groups = [voter.group_id for voter in voters]
+    if not voters_groups or not is_user_member_of_an_allowed_group(user, voters_groups):
+        raise HTTPException(
+            status_code=403,
+            detail="Access forbidden : you are not a poll member",
+        )
 
     status = await cruds_campaign.get_status(db=db)
     if status != StatusType.open:
@@ -586,13 +641,13 @@ async def get_sections_already_voted(
 
     **The user must be a voter to use this endpoint**
     """
-    voters = await cruds_campaign.get_voters_list(db)
-    if voters:
-        if not is_user_member_of_an_allowed_group(user, voters):
-            raise HTTPException(
-                status_code=403,
-                detail="Access forbidden : you are not a poll member ",
-            )
+    voters = await cruds_campaign.get_voters(db)
+    voters_groups = [voter.group_id for voter in voters]
+    if not voters_groups or not is_user_member_of_an_allowed_group(user, voters_groups):
+        raise HTTPException(
+            status_code=403,
+            detail="Access forbidden : you are not a poll member",
+        )
 
     status = await cruds_campaign.get_status(db=db)
     if status != StatusType.open:
@@ -619,19 +674,19 @@ async def get_results(
     """
     Return the results of the vote.
 
-    **The user must be a voter to use this endpoint**
+    **The user must be a voter or a member of the group CAA to use this endpoint**
     """
-    voters = await cruds_campaign.get_voters_list(db)
-    if voters:
-        if not is_user_member_of_an_allowed_group(user, voters):
-            raise HTTPException(
-                status_code=403,
-                detail="Access forbidden : you are not a poll member ",
-            )
+    voters = await cruds_campaign.get_voters(db)
+    voters_groups = [voter.group_id for voter in voters]
+    voters_groups.append(GroupType.CAA)
+    if not voters_groups or not is_user_member_of_an_allowed_group(user, voters_groups):
+        raise HTTPException(
+            status_code=403,
+            detail="Access forbidden : you are not a poll member",
+        )
 
     status = await cruds_campaign.get_status(db=db)
 
-    # There may be an edge case where user is member of CAA but not comparat. In this case, the user may not be able to access the results.
     if (
         status == StatusType.counting
         and is_user_member_of_an_allowed_group(user, [GroupType.CAA])
@@ -677,13 +732,13 @@ async def get_status_vote(
 
     **The user must be a voter to use this endpoint**
     """
-    voters = await cruds_campaign.get_voters_list(db)
-    if voters:
-        if not is_user_member_of_an_allowed_group(user, voters):
-            raise HTTPException(
-                status_code=403,
-                detail="Access forbidden : you are not a poll member ",
-            )
+    voters = await cruds_campaign.get_voters(db)
+    voters_groups = [voter.group_id for voter in voters]
+    if not voters_groups or not is_user_member_of_an_allowed_group(user, voters_groups):
+        raise HTTPException(
+            status_code=403,
+            detail="Access forbidden : you are not a poll member",
+        )
 
     status = await cruds_campaign.get_status(db=db)
     return schemas_campaign.VoteStatus(status=status)
@@ -775,65 +830,16 @@ async def read_campaigns_logo(
     Get the logo of a campaign list.
     **The user must be a voter to use this endpoint**
     """
-    voters = await cruds_campaign.get_voters_list(db)
-    if voters:
-        if not is_user_member_of_an_allowed_group(user, voters):
-            raise HTTPException(
-                status_code=403,
-                detail="Access forbidden : you are not a poll member ",
-            )
+    voters = await cruds_campaign.get_voters(db)
+    voters_groups = [voter.group_id for voter in voters]
+    if not voters_groups or not is_user_member_of_an_allowed_group(user, voters_groups):
+        raise HTTPException(
+            status_code=403,
+            detail="Access forbidden : you are not a poll member",
+        )
 
     return get_file_from_data(
         directory="campaigns",
         filename=str(list_id),
         default_asset="assets/images/default_campaigns_logo.png",
     )
-
-
-@router.get(
-    "/campaign/voters",
-    response_class=FileResponse,
-    status_code=200,
-    tags=[Tags.users],
-)
-async def get_voters(
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
-    db: AsyncSession = Depends(get_db),
-):
-    voters = await cruds_campaign.get_voters(db=db)
-    return voters
-
-
-@router.post(
-    "/campaign/voters",
-    response_model=standard_responses.Result,
-    status_code=201,
-    tags=[Tags.campaign],
-)
-async def add_voters(
-    voters: schemas_campaign.Voters,
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
-    db: AsyncSession = Depends(get_db),
-):
-    db_voters = models_campaign.Voters(id=str(uuid.uuid4()), **voters.dict())
-    try:
-        await cruds_campaign.add_voters(voters=db_voters, db=db)
-    except IntegrityError as error:
-        raise HTTPException(status_code=400, detail=str(error))
-
-
-@router.delete(
-    "/campaign/voters/{voters_id}",
-    status_code=204,
-    tags=[Tags.campaign],
-)
-async def delete_voters(
-    voters_id: str,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
-):
-    voters = await cruds_campaign.get_voters_by_id(voters_id=voters_id, db=db)
-    if not voters:
-        raise HTTPException(status_code=404, detail="Voters not found")
-
-    await cruds_campaign.delete_voters(id=voters_id, db=db)

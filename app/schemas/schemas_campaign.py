@@ -5,7 +5,7 @@ from app.utils.types.campaign_type import ListType, StatusType
 
 
 class SectionBase(BaseModel):
-    """Base schema for a section of AEECL."""
+    """Base schema for a section."""
 
     name: str
     description: str
@@ -82,6 +82,12 @@ class ListEdit(BaseModel):
     program: str | None = None
 
 
+class Voters(BaseModel):
+    """Schema for voters (groups allowed to vote)"""
+
+    groups_ids: list[str]
+
+
 class VoteBase(BaseModel):
     """Base schema for a vote."""
 
@@ -109,13 +115,3 @@ class Result(BaseModel):
 class VoteStats(BaseModel):
     section_id: str
     count: int
-
-
-class Voters(BaseModel):
-    """Base schema for a vote."""
-
-    id_voters: str
-    group: str
-
-    class Config:
-        orm_mode = True
