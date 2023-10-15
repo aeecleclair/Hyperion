@@ -36,6 +36,7 @@ class MatrixHandler(StreamHandler):
                 server_base_url=server_base_url,
             )
         else:
+            # We use warning level so that the message is not sent to matrix again
             hyperion_error_logger.warning(
                 "MatrixHandler isn't configured in the .env file, disabling the handler"
             )
@@ -47,6 +48,7 @@ class MatrixHandler(StreamHandler):
             try:
                 self.matrix.send_message(self.room_id, msg)
             except ValueError as err:
+                # We use warning level so that the message is not sent to matrix again
                 hyperion_error_logger.warning(
                     f"MatrixHandler: Unable to send message to Matrix server: {err}"
                 )

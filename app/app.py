@@ -99,11 +99,11 @@ async def initialize_module_visibility(SessionLocal, hyperion_error_logger):
 # We wrap the application in a function to be able to pass the settings and drop_db parameters
 # The drop_db parameter is used to drop the database tables before creating them again
 def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
+    LogConfig().initialize_loggers(settings=settings)
+
     hyperion_access_logger = logging.getLogger("hyperion.access")
     hyperion_security_logger = logging.getLogger("hyperion.security")
     hyperion_error_logger = logging.getLogger("hyperion.error")
-
-    LogConfig().initialize_loggers(settings=settings)
 
     # Create folder for calendars
     if not os.path.exists("data/ics/"):
