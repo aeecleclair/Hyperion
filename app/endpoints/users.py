@@ -696,6 +696,18 @@ async def migrate_mail_confirm(
             detail="Invalid confirmation token for this user",
         )
 
+    existing_user = await cruds_users.get_user_by_email(
+        db=db, email=migration_object.new_email
+    )
+    if existing_user is not None:
+        hyperion_security_logger.info(
+            f"Email migration: There is already an account with the email {migration_object.new_email}"
+        )
+        raise HTTPException(
+            status_code=400,
+            detail=f"There is already an account with the email {migration_object.new_email}",
+        )
+
     try:
         await cruds_users.update_user_email_by_id(
             db=db,
