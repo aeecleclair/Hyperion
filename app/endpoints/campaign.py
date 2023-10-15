@@ -378,6 +378,13 @@ async def add_voter(
 
     **The user must be a member of the group CAA to use this endpoint**
     """
+    status = await cruds_campaign.get_status(db=db)
+    if status != StatusType.waiting:
+        raise HTTPException(
+            status_code=400,
+            detail=f"VoterGroups can only be edited in waiting mode. The current status is {status}",
+        )
+
     db_voter = models_campaign.VoterGroups(**voter.dict(exclude_none=True))
     try:
         await cruds_campaign.add_voter(voter=db_voter, db=db)
@@ -401,6 +408,13 @@ async def delete_voter_by_group_id(
 
     **The user must be a member of the group CAA to use this endpoint**
     """
+    status = await cruds_campaign.get_status(db=db)
+    if status != StatusType.waiting:
+        raise HTTPException(
+            status_code=400,
+            detail=f"VoterGroups can only be edited in waiting mode. The current status is {status}",
+        )
+
     await cruds_campaign.delete_voter_by_group_id(group_id=group_id, db=db)
 
 
@@ -418,6 +432,13 @@ async def delete_voters(
 
     **The user must be a member of the group CAA to use this endpoint**
     """
+    status = await cruds_campaign.get_status(db=db)
+    if status != StatusType.waiting:
+        raise HTTPException(
+            status_code=400,
+            detail=f"VoterGroups can only be edited in waiting mode. The current status is {status}",
+        )
+
     await cruds_campaign.delete_voters(db=db)
 
 
