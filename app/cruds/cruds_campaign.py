@@ -36,6 +36,42 @@ async def get_status(
     return status[0].status
 
 
+async def get_voters(db: AsyncSession) -> Sequence[models_campaign.VoterGroups]:
+    result = await db.execute(select(models_campaign.VoterGroups))
+    return result.scalars().all()
+
+
+async def add_voter(
+    voter: models_campaign.VoterGroups,
+    db: AsyncSession,
+) -> None:
+    db.add(voter)
+    try:
+        await db.commit()
+    except IntegrityError as err:
+        await db.rollback()
+        raise err
+
+
+async def delete_voter_by_group_id(
+    group_id: str,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        delete(models_campaign.VoterGroups).where(
+            models_campaign.VoterGroups.group_id == group_id
+        )
+    )
+    await db.commit()
+
+
+async def delete_voters(
+    db: AsyncSession,
+) -> None:
+    await db.execute(delete(models_campaign.VoterGroups))
+    await db.commit()
+
+
 async def set_status(
     db: AsyncSession,
     new_status: StatusType,
