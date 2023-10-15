@@ -126,7 +126,7 @@ async def delete_manager(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
-    Delete a manager. All rooms and bookings associated with the manager will also be deleted from the database.
+    Delete a manager only if the manager is not linked to any room
 
     **This endpoint is only usable by administrators**
     """
@@ -456,7 +456,7 @@ async def delete_room(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
-    Remove a room.
+    Delete a room only if there are not future or ongoing bookings of this room
 
     **This endpoint is only usable by admins**
     """
