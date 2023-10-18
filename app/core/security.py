@@ -12,10 +12,9 @@ from app.models import models_core
 from app.schemas import schemas_auth
 
 """
-In order to salt and hash password, we use a *passlib* [CryptContext](https://passlib.readthedocs.io/en/stable/narr/quickstart.html) object.
+In order to salt and hash password, we the bcrypt hashing function (see https://en.wikipedia.org/wiki/Bcrypt).
 
-We use "bcrypt" to hash password, a different hash will be added automatically for each password. See [Auth0 Understanding bcrypt](https://auth0.com/blog/hashing-in-action-understanding-bcrypt/) for information about bcrypt.
-deprecated="auto" may be used to do password hash migration, see [Passlib hash migration](https://passlib.readthedocs.io/en/stable/narr/context-tutorial.html#deprecation-hash-migration).
+A different salt will be added automatically for each password. See [Auth0 Understanding bcrypt](https://auth0.com/blog/hashing-in-action-understanding-bcrypt/) for information about bcrypt.
 It is important to use enough rounds while accounting for the hash computation time. Default is 12. 13 allows for a 0.5 seconds computing delay.
 """
 
