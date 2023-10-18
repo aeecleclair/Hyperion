@@ -15,5 +15,5 @@ class TodosItem(Base):
     )
     name: Mapped[str] = mapped_column(String, nullable=False)
     creation: Mapped[date] = mapped_column(Date, nullable=False)
-    deadline: Mapped[date | None] = mapped_column(Date)
+    deadline: Mapped[date | None] = mapped_column(Date, nullable=True)
     done: Mapped[bool] = mapped_column(Boolean, nullable=False)
