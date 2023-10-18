@@ -1,9 +1,9 @@
 import secrets
 from datetime import datetime, timedelta
 
+import bcrypt
 from fastapi.security import OAuth2AuthorizationCodeBearer
 from jose import jwt
-from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
@@ -11,7 +11,6 @@ from app.cruds import cruds_users
 from app.models import models_core
 from app.schemas import schemas_auth
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=13)
 """
 In order to salt and hash password, we use a *passlib* [CryptContext](https://passlib.readthedocs.io/en/stable/narr/quickstart.html) object.
 
@@ -36,23 +35,6 @@ The algorithme used to generate JWT access tokens
 """
 
 
-def get_password_hash(password: str) -> str:
-    """
-    Return a salted hash computed from password. The function use a bcrypt based *passlib* CryptContext.
-    Both the salt and the algorithm identifier are included in the hash.
-    """
-    return pwd_context.hash(password)
-
-
-def verify_password(plain_password: str, hashed_password: str | None) -> bool:
-    """
-    Compare `plain_password` against its salted hash representation `hashed_password`. The function use a bcrypt based *passlib* CryptContext.
-
-    Pass hashed_password=None to simulate the delay a real verification would have taken. This is useful to limit timing attacks
-    """
-    return pwd_context.verify(plain_password, hashed_password)
-
-
 def generate_token(nbytes=32) -> str:
     """
     Generate a `nbytes` bytes cryptographically strong random urlsafe token using the *secrets* library.
@@ -61,6 +43,29 @@ def generate_token(nbytes=32) -> str:
     """
     # We use https://docs.python.org/3/library/secrets.html#secrets.token_urlsafe to generate the activation secret token
     return secrets.token_urlsafe(nbytes)
+
+
+def get_password_hash(password: str) -> str:
+    """
+    Return a salted hash computed from password. The function use a bcrypt based *passlib* CryptContext.
+    Both the salt and the algorithm identifier are included in the hash.
+    """
+    hashed = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt(rounds=13))
+    return hashed.decode("utf-8")
+
+
+def verify_password(plain_password: str, hashed_password: str | None) -> bool:
+    """
+    Compare `plain_password` against its salted hash representation `hashed_password`. The function use a bcrypt based *passlib* CryptContext.
+
+    Pass hashed_password=None to simulate the delay a real verification would have taken. This is useful to limit timing attacks
+    """
+    fake_hash = bcrypt.hashpw(generate_token(12).encode("utf-8"), bcrypt.gensalt(13))
+    if hashed_password is None:
+        return bcrypt.checkpw(plain_password.encode("utf-8"), fake_hash)
+    return bcrypt.checkpw(
+        plain_password.encode("utf-8"), hashed_password.encode("utf-8")
+    )
 
 
 async def authenticate_user(
