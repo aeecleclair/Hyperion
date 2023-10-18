@@ -1,3 +1,5 @@
+from typing import Sequence
+
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,7 +10,7 @@ from app.models import models_todos
 async def get_items_by_user_id(
     db: AsyncSession,
     user_id: str,
-) -> list[models_todos.TodosItem]:
+) -> Sequence[models_todos.TodosItem]:
     """
     Return all items from a given user
     """
