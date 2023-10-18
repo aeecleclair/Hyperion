@@ -26,3 +26,6 @@ logs/
 
 # Migrations scripts
 migrations/versions/*.py
+
+# Pytest-cov
+.coverage
