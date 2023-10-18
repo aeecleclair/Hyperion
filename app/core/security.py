@@ -47,7 +47,7 @@ def generate_token(nbytes=32) -> str:
 
 def get_password_hash(password: str) -> str:
     """
-    Return a salted hash computed from password. The function use a bcrypt based *passlib* CryptContext.
+    Return a salted hash computed from password.
     Both the salt and the algorithm identifier are included in the hash.
     """
     hashed = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt(rounds=13))
@@ -56,9 +56,10 @@ def get_password_hash(password: str) -> str:
 
 def verify_password(plain_password: str, hashed_password: str | None) -> bool:
     """
-    Compare `plain_password` against its salted hash representation `hashed_password`. The function use a bcrypt based *passlib* CryptContext.
+    Compare `plain_password` against its salted hash representation `hashed_password`.
 
-    Pass hashed_password=None to simulate the delay a real verification would have taken. This is useful to limit timing attacks
+    We genrerate a fake_hash for the case where hashed_password=None (ie the email isn't valid) to simulate the delay a real verification would have taken.
+    This is useful to limit timing attacks that could be used to guess valid emails.
     """
     fake_hash = bcrypt.hashpw(generate_token(12).encode("utf-8"), bcrypt.gensalt(13))
     if hashed_password is None:
