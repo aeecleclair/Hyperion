@@ -4,7 +4,7 @@ import uuid
 import pytest_asyncio
 
 from app.models import models_calendar, models_core
-from app.utils.types.bdebooking_type import Decision
+from app.utils.types.booking_type import Decision
 from app.utils.types.groups_type import GroupType
 
 # We need to import event_loop for pytest-asyncio routine defined bellow
