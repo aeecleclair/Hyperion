@@ -3,7 +3,6 @@ from datetime import date
 import pytest_asyncio
 
 from app.models import models_core, models_todos
-from app.utils.types.groups_type import GroupType
 
 # We need to import event_loop for pytest-asyncio routine defined bellow
 from tests.commons import event_loop  # noqa
