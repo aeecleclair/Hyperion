@@ -11,6 +11,7 @@ from app.core.config import Settings
 from app.cruds import cruds_amap, cruds_users
 from app.dependencies import (
     get_db,
+    get_notification_tool,
     get_redis_client,
     get_request_id,
     get_settings,
@@ -20,6 +21,8 @@ from app.dependencies import (
 from app.endpoints.users import read_user
 from app.models import models_amap, models_core
 from app.schemas import schemas_amap
+from app.schemas.schemas_notification import Message
+from app.utils.communication.notifications import NotificationTool
 from app.utils.redis import locker_get, locker_set
 from app.utils.tools import is_user_member_of_an_allowed_group
 from app.utils.types.amap_types import DeliveryStatusType
@@ -29,6 +32,7 @@ from app.utils.types.tags import Tags
 router = APIRouter()
 
 hyperion_amap_logger = logging.getLogger("hyperion.amap")
+hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 @router.get(
@@ -72,7 +76,7 @@ async def create_product(
         result = await cruds_amap.create_product(product=db_product, db=db)
         return result
     except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @router.get(
@@ -145,7 +149,7 @@ async def delete_product(
 
     if await cruds_amap.is_product_used(db=db, product_id=product_id):
         raise HTTPException(
-            status_code=403, detail="This product is used in a delivery"
+            status_code=400, detail="This product is used in a delivery"
         )
 
     await cruds_amap.delete_product(db=db, product_id=product_id)
@@ -193,11 +197,11 @@ async def create_delivery(
         db=db, delivery_date=db_delivery.delivery_date
     ):
         raise HTTPException(
-            status_code=403, detail="There is already a delivery planned that day."
+            status_code=400, detail="There is already a delivery planned that day."
         )
-    else:
-        result = await cruds_amap.create_delivery(delivery=db_delivery, db=db)
-        return result
+
+    result = await cruds_amap.create_delivery(delivery=db_delivery, db=db)
+    return result
 
 
 @router.delete(
@@ -217,16 +221,16 @@ async def delete_delivery(
     """
 
     delivery_db = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
-    if delivery_db is not None:
-        if delivery_db.status == DeliveryStatusType.creation:
-            await cruds_amap.delete_delivery(db=db, delivery_id=delivery_id)
-        else:
-            raise HTTPException(
-                status_code=403,
-                detail=f"You can't remove a product if the delivery is not in creation mode. The current mode is {delivery_db.status}.",
-            )
-    else:
+    if delivery_db is None:
         raise HTTPException(status_code=404, detail="Delivery not found.")
+
+    if delivery_db.status != DeliveryStatusType.creation:
+        raise HTTPException(
+            status_code=400,
+            detail=f"You can't remove a product if the delivery is not in creation mode. The current mode is {delivery_db.status}.",
+        )
+
+    await cruds_amap.delete_delivery(db=db, delivery_id=delivery_id)
 
 
 @router.patch(
@@ -247,18 +251,16 @@ async def edit_delivery(
     """
 
     delivery_db = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
-    if delivery_db is not None:
-        if delivery_db.status == DeliveryStatusType.creation:
-            await cruds_amap.edit_delivery(
-                db=db, delivery_id=delivery_id, delivery=delivery
-            )
-        else:
-            raise HTTPException(
-                status_code=403,
-                detail=f"You can't edit a delivery if the delivery is not in creation mode. The current mode is {delivery_db.status}.",
-            )
-    else:
+    if delivery_db is None:
         raise HTTPException(status_code=404, detail="Delivery not found.")
+
+    if delivery_db.status != DeliveryStatusType.creation:
+        raise HTTPException(
+            status_code=400,
+            detail=f"You can't edit a delivery if the delivery is not in creation mode. The current mode is {delivery_db.status}.",
+        )
+
+    await cruds_amap.edit_delivery(db=db, delivery_id=delivery_id, delivery=delivery)
 
 
 @router.post(
@@ -278,24 +280,23 @@ async def add_product_to_delivery(
     **The user must be a member of the group AMAP to use this endpoint**
     """
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
-    if delivery is not None:
-        if delivery.status == DeliveryStatusType.creation:
-            try:
-                await cruds_amap.add_product_to_delivery(
-                    delivery_id=delivery_id,
-                    products_ids=products_ids,
-                    db=db,
-                )
-
-            except ValueError as error:
-                raise HTTPException(status_code=400, detail=str(error))
-        else:
-            raise HTTPException(
-                status_code=403,
-                detail=f"You can't add a product if the delivery is not in creation mode. The current mode is {delivery.status}.",
-            )
-    else:
+    if delivery is None:
         raise HTTPException(status_code=404, detail="Delivery not found.")
+
+    if delivery.status != DeliveryStatusType.creation:
+        raise HTTPException(
+            status_code=403,
+            detail=f"You can't add a product if the delivery is not in creation mode. The current mode is {delivery.status}.",
+        )
+
+    try:
+        await cruds_amap.add_product_to_delivery(
+            delivery_id=delivery_id,
+            products_ids=products_ids,
+            db=db,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @router.delete(
@@ -315,18 +316,18 @@ async def remove_product_from_delivery(
     **The user must be a member of the group AMAP to use this endpoint**
     """
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
-    if delivery is not None:
-        if delivery.status == DeliveryStatusType.creation:
-            await cruds_amap.remove_product_from_delivery(
-                db=db, delivery_id=delivery_id, products_ids=products_ids
-            )
-        else:
-            raise HTTPException(
-                status_code=403,
-                detail=f"You can't remove a product if the delivery is not in creation mode. The current mode is {delivery.status}.",
-            )
-    else:
+    if delivery is None:
         raise HTTPException(status_code=404, detail="Delivery not found.")
+
+    if delivery.status != DeliveryStatusType.creation:
+        raise HTTPException(
+            status_code=403,
+            detail=f"You can't remove a product if the delivery is not in creation mode. The current mode is {delivery.status}.",
+        )
+
+    await cruds_amap.remove_product_from_delivery(
+        db=db, delivery_id=delivery_id, products_ids=products_ids
+    )
 
 
 @router.get(
@@ -414,7 +415,7 @@ async def add_order_to_delievery(
 
     if delivery.status != DeliveryStatusType.orderable:
         raise HTTPException(
-            status_code=403,
+            status_code=400,
             detail=f"You can't order if the delivery is not in orderable mode. The current mode is {delivery.status}",
         )
 
@@ -467,14 +468,14 @@ async def add_order_to_delievery(
         )
 
     if not amount:
-        raise HTTPException(status_code=403, detail="You can't order nothing")
+        raise HTTPException(status_code=400, detail="You can't order nothing")
 
     redis_key = "amap_" + order.user_id
 
     if not isinstance(redis_client, Redis) or locker_get(
         redis_client=redis_client, key=redis_key
     ):
-        raise HTTPException(status_code=403, detail="Too fast !")
+        raise HTTPException(status_code=429, detail="Too fast !")
     locker_set(redis_client=redis_client, key=redis_key, lock=True)
 
     try:
@@ -498,7 +499,7 @@ async def add_order_to_delievery(
         return schemas_amap.OrderReturn(productsdetail=productsret, **orderret.__dict__)
 
     except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+        raise HTTPException(status_code=400, detail=str(error))
 
     finally:
         locker_set(redis_client=redis_client, key=redis_key, lock=False)
@@ -536,7 +537,7 @@ async def edit_order_from_delievery(
 
     if delivery.status != DeliveryStatusType.orderable:
         raise HTTPException(
-            status_code=403,
+            status_code=400,
             detail=f"You can't edit an order if the delivery is not in orderable mode. The current mode is {delivery.status}s",
         )
 
@@ -555,7 +556,7 @@ async def edit_order_from_delievery(
                 order=order, db=db, order_id=order_id
             )
         except ValueError as error:
-            raise HTTPException(status_code=422, detail=str(error))
+            raise HTTPException(status_code=400, detail=str(error))
 
     else:
         if order.products_quantity is None or len(order.products_quantity) != len(
@@ -569,7 +570,7 @@ async def edit_order_from_delievery(
         ):
             prod = await cruds_amap.get_product_by_id(product_id=product_id, db=db)
             if prod is None or prod not in delivery.products:
-                raise HTTPException(status_code=403, detail="Invalid product")
+                raise HTTPException(status_code=400, detail="Invalid product")
             amount += prod.price * product_quantity
 
         db_order = schemas_amap.OrderComplete(
@@ -592,7 +593,7 @@ async def edit_order_from_delievery(
         if not isinstance(redis_client, Redis) or locker_get(
             redis_client=redis_client, key=redis_key
         ):
-            raise HTTPException(status_code=403, detail="Too fast !")
+            raise HTTPException(status_code=429, detail="Too fast !")
         locker_set(redis_client=redis_client, key=redis_key, lock=True)
 
         try:
@@ -615,7 +616,7 @@ async def edit_order_from_delievery(
             )
 
         except ValueError as error:
-            raise HTTPException(status_code=422, detail=str(error))
+            raise HTTPException(status_code=400, detail=str(error))
 
         finally:
             locker_set(redis_client=redis_client, key=redis_key, lock=False)
@@ -651,7 +652,7 @@ async def remove_order(
         is_user_admin and delivery.status == DeliveryStatusType.locked
     ):
         raise HTTPException(
-            status_code=403,
+            status_code=400,
             detail=f"You can't remove an order if the delivery is not in orderable mode. The current mode is {delivery.status}",
         )
 
@@ -671,7 +672,7 @@ async def remove_order(
     if not isinstance(redis_client, Redis) or locker_get(
         redis_client=redis_client, key=redis_key
     ):
-        raise HTTPException(status_code=403, detail="Too fast !")
+        raise HTTPException(status_code=429, detail="Too fast !")
     locker_set(redis_client=redis_client, key=redis_key, lock=True)
 
     try:
@@ -690,14 +691,16 @@ async def remove_order(
         return Response(status_code=204)
 
     except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+        raise HTTPException(status_code=400, detail=str(error))
 
     finally:
         locker_set(redis_client=redis_client, key=redis_key, lock=False)
 
 
 @router.post(
-    "/amap/deliveries/{delivery_id}/openordering", status_code=204, tags=[Tags.amap]
+    "/amap/deliveries/{delivery_id}/openordering",
+    status_code=204,
+    tags=[Tags.amap],
 )
 async def open_ordering_of_delivery(
     delivery_id: str,
@@ -705,39 +708,44 @@ async def open_ordering_of_delivery(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
-    if delivery is not None:
-        if delivery.status == DeliveryStatusType.creation:
-            await cruds_amap.open_ordering_of_delivery(delivery_id=delivery_id, db=db)
-        else:
-            raise HTTPException(
-                status_code=403,
-                detail=f"You can't open ordering for a delivery if it is not in creation mode. The current mode is {delivery.status}.",
-            )
-    else:
+    if delivery is None:
         raise HTTPException(status_code=404, detail="Delivery not found.")
 
+    if delivery.status != DeliveryStatusType.creation:
+        raise HTTPException(
+            status_code=400,
+            detail=f"You can't open ordering for a delivery if it is not in creation mode. The current mode is {delivery.status}.",
+        )
 
-@router.post("/amap/deliveries/{delivery_id}/lock", status_code=204, tags=[Tags.amap])
+    await cruds_amap.open_ordering_of_delivery(delivery_id=delivery_id, db=db)
+
+
+@router.post(
+    "/amap/deliveries/{delivery_id}/lock",
+    status_code=204,
+    tags=[Tags.amap],
+)
 async def lock_delivery(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
-    if delivery is not None:
-        if delivery.status == DeliveryStatusType.orderable:
-            await cruds_amap.lock_delivery(delivery_id=delivery_id, db=db)
-        else:
-            raise HTTPException(
-                status_code=403,
-                detail=f"You can't mark a delivery as locked if it is not in orderable mode. The current mode is {delivery.status}.",
-            )
-    else:
+    if delivery is None:
         raise HTTPException(status_code=404, detail="Delivery not found.")
+
+    if delivery.status != DeliveryStatusType.orderable:
+        raise HTTPException(
+            status_code=400,
+            detail=f"You can't mark a delivery as locked if it is not in orderable mode. The current mode is {delivery.status}.",
+        )
+    await cruds_amap.lock_delivery(delivery_id=delivery_id, db=db)
 
 
 @router.post(
-    "/amap/deliveries/{delivery_id}/delivered", status_code=204, tags=[Tags.amap]
+    "/amap/deliveries/{delivery_id}/delivered",
+    status_code=204,
+    tags=[Tags.amap],
 )
 async def mark_delivery_as_delivered(
     delivery_id: str,
@@ -745,20 +753,21 @@ async def mark_delivery_as_delivered(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
-    if delivery is not None:
-        if delivery.status == DeliveryStatusType.locked:
-            await cruds_amap.mark_delivery_as_delivered(delivery_id=delivery_id, db=db)
-        else:
-            raise HTTPException(
-                status_code=403,
-                detail=f"You can't mark a delivery as delivered if it is not in locked mode. The current mode is {delivery.status}.",
-            )
-    else:
+    if delivery is None:
         raise HTTPException(status_code=404, detail="Delivery not found.")
+
+    if delivery.status != DeliveryStatusType.locked:
+        raise HTTPException(
+            status_code=400,
+            detail=f"You can't mark a delivery as delivered if it is not in locked mode. The current mode is {delivery.status}.",
+        )
+    await cruds_amap.mark_delivery_as_delivered(delivery_id=delivery_id, db=db)
 
 
 @router.post(
-    "/amap/deliveries/{delivery_id}/archive", status_code=204, tags=[Tags.amap]
+    "/amap/deliveries/{delivery_id}/archive",
+    status_code=204,
+    tags=[Tags.amap],
 )
 async def archive_of_delivery(
     delivery_id: str,
@@ -766,16 +775,16 @@ async def archive_of_delivery(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
 ):
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
-    if delivery is not None:
-        if delivery.status == DeliveryStatusType.delivered:
-            await cruds_amap.mark_delivery_as_archived(db=db, delivery_id=delivery_id)
-        else:
-            raise HTTPException(
-                status_code=403,
-                detail=f"You can't archive a delivery if it is not in delivered mode. The current mode is {delivery.status}.",
-            )
-    else:
+    if delivery is None:
         raise HTTPException(status_code=404, detail="Delivery not found.")
+
+    if delivery.status != DeliveryStatusType.delivered:
+        raise HTTPException(
+            status_code=400,
+            detail=f"You can't archive a delivery if it is not in delivered mode. The current mode is {delivery.status}.",
+        )
+
+    await cruds_amap.mark_delivery_as_archived(db=db, delivery_id=delivery_id)
 
 
 @router.get(
@@ -817,24 +826,26 @@ async def get_cash_by_id(
     if user_db is None:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if user_id == user.id or is_user_member_of_an_allowed_group(user, [GroupType.amap]):
-        cash = await cruds_amap.get_cash_by_id(user_id=user_id, db=db)
-        if cash is not None:
-            return cash
-        else:
-            # We want to return a balance of 0 but we don't want to add it to the database
-            # An admin AMAP has indeed to add a cash to the user the first time
-            # TODO: this is a strange behaviour
-            return schemas_amap.CashComplete(
-                balance=0,
-                user_id=user_id,
-                user=schemas_amap.CoreUserSimple(**user_db.__dict__),
-            )
-    else:
+    if not (
+        user_id == user.id or is_user_member_of_an_allowed_group(user, [GroupType.amap])
+    ):
         raise HTTPException(
             status_code=403,
             detail="Users that are not member of the group AMAP can only access the endpoint for their own user_id.",
         )
+
+    cash = await cruds_amap.get_cash_by_id(user_id=user_id, db=db)
+    if cash is None:
+        # We want to return a balance of 0 but we don't want to add it to the database
+        # An admin AMAP has indeed to add a cash to the user the first time
+        # TODO: this is a strange behaviour
+        return schemas_amap.CashComplete(
+            balance=0,
+            user_id=user_id,
+            user=schemas_amap.CoreUserSimple(**user_db.__dict__),
+        )
+
+    return cash
 
 
 @router.post(
@@ -849,6 +860,8 @@ async def create_cash_of_user(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
     request_id: str = Depends(get_request_id),
+    settings: Settings = Depends(get_settings),
+    notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
     Create cash for an user.
@@ -880,10 +893,30 @@ async def create_cash_of_user(
 
     # We can not directly return the cash_db because it does not contain the user.
     # Calling get_cash_by_id will return the cash with the user loaded as it's a relationship.
-    return await cruds_amap.get_cash_by_id(
+    result = await cruds_amap.get_cash_by_id(
         user_id=user_id,
         db=db,
     )
+
+    try:
+        if result:
+            now = datetime.now(timezone(settings.TIMEZONE))
+            message = Message(
+                context=f"amap-cash-{user_id}",
+                is_visible=True,
+                title="AMAP - Solde mis à jour",
+                content=f"Votre nouveau solde est de {result.balance} €.",
+                # The notification will expire in 3 days
+                expire_on=now.replace(day=now.day + 3),
+            )
+            await notification_tool.send_notification_to_user(
+                user_id=user_id,
+                message=message,
+            )
+    except Exception as error:
+        hyperion_error_logger.error(f"Error while sending AMAP notification, {error}")
+
+    return result
 
 
 @router.patch(
@@ -942,19 +975,21 @@ async def get_orders_of_user(
     if not user_requested:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if user_id == user.id or is_user_member_of_an_allowed_group(user, [GroupType.amap]):
-        orders = await cruds_amap.get_orders_of_user(user_id=user_id, db=db)
-        res = []
-        for order in orders:
-            products = await cruds_amap.get_products_of_order(
-                db=db, order_id=order.order_id
-            )
-            res.append(
-                schemas_amap.OrderReturn(productsdetail=products, **order.__dict__)
-            )
-        return res
-    else:
-        raise HTTPException(status_code=403)
+    if not (
+        user_id == user.id or is_user_member_of_an_allowed_group(user, [GroupType.amap])
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Users that are not member of the group AMAP can only access the endpoint for their own user_id.",
+        )
+    orders = await cruds_amap.get_orders_of_user(user_id=user_id, db=db)
+    res = []
+    for order in orders:
+        products = await cruds_amap.get_products_of_order(
+            db=db, order_id=order.order_id
+        )
+        res.append(schemas_amap.OrderReturn(productsdetail=products, **order.__dict__))
+    return res
 
 
 @router.get(

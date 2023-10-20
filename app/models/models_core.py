@@ -76,6 +76,21 @@ class CoreUserRecoverRequest(Base):
     expire_on: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
+class CoreUserEmailMigrationCode(Base):
+    """
+    The ECL changed the email format for student users, requiring them to migrate their email.
+    """
+
+    __tablename__ = "core_user_email_migration_code"
+
+    user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), primary_key=True)
+    new_email: Mapped[str] = mapped_column(String, nullable=False)
+    old_email: Mapped[str] = mapped_column(String, nullable=False)
+    confirmation_token: Mapped[str] = mapped_column(
+        String, nullable=False, primary_key=True
+    )
+
+
 class CoreGroup(Base):
     __tablename__ = "core_group"
 
@@ -88,3 +103,10 @@ class CoreGroup(Base):
         secondary="core_membership",
         back_populates="groups",
     )
+
+
+class ModuleVisibility(Base):
+    __tablename__ = "module_visibility"
+
+    root: Mapped[str] = mapped_column(String, primary_key=True)
+    allowed_group_id: Mapped[str] = mapped_column(String, primary_key=True)

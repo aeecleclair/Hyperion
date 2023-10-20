@@ -19,6 +19,7 @@ from app.dependencies import get_db, get_redis_client, get_settings
 from app.models import models_core
 from app.schemas import schemas_auth
 from app.utils.redis import connect, disconnect
+from app.utils.tools import get_random_string
 from app.utils.types.floors_type import FloorsType
 from app.utils.types.groups_type import GroupType
 
@@ -83,7 +84,7 @@ def change_redis_client_status(activated: bool):
             except redis.exceptions.ConnectionError:
                 raise Exception("Connection to Redis failed")
     else:
-        if type(redis_client) == redis.Redis:
+        if isinstance(redis_client, redis.Redis):
             redis_client.flushdb()
             disconnect(redis_client)
         redis_client = False
@@ -103,7 +104,7 @@ with client:  # That syntax trigger the lifespan defined in main.py
 # We need to redefine the event_loop (which is function scoped by default)
 # to be able to use session scoped fixture (the function that initialize the db objects in each test file)
 # See https://github.com/tortoise/tortoise-orm/issues/638#issuecomment-830124562
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def event_loop():
     """Overrides pytest default function scoped event loop"""
     policy = asyncio.get_event_loop_policy()
@@ -114,25 +115,34 @@ def event_loop():
         loop.close()
 
 
-async def create_user_with_groups(groups: list[GroupType]) -> models_core.CoreUser:
+async def create_user_with_groups(
+    groups: list[GroupType],
+    user_id: str | None = None,
+    email: str | None = None,
+    password: str | None = None,
+    name: str | None = None,
+    firstname: str | None = None,
+    floor: FloorsType = FloorsType.Autre,
+) -> models_core.CoreUser:
     """
     Add a dummy user to the database
-    The user will be named with its user_id. Email and password will both be its user_id
+    User property will be randomly generated if not provided
 
     The user will be added to provided `groups`
     """
-    user_id = str(uuid.uuid4())
 
-    password_hash = security.get_password_hash(user_id)
+    user_id = user_id or str(uuid.uuid4())
+    password_hash = security.get_password_hash(password or get_random_string())
 
     user = models_core.CoreUser(
         id=user_id,
-        email=user_id,
+        email=email or (get_random_string() + "@etu.ec-lyon.fr"),
         password_hash=password_hash,
-        name=user_id,
-        firstname=user_id,
-        floor=FloorsType.Autre,
+        name=name or get_random_string(),
+        firstname=firstname or get_random_string(),
+        floor=floor,
     )
+
     async with TestingSessionLocal() as db:
         try:
             await cruds_users.create_user(db=db, user=user)

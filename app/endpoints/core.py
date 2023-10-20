@@ -2,10 +2,16 @@ from os import path
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
-from app.dependencies import get_settings
+from app.cruds import cruds_core
+from app.dependencies import get_db, get_settings, is_user_a_member, is_user_a_member_of
+from app.models import models_core
 from app.schemas import schemas_core
+from app.utils.tools import is_group_id_valid
+from app.utils.types.groups_type import GroupType
+from app.utils.types.module_list import ModuleList
 from app.utils.types.tags import Tags
 
 router = APIRouter()
@@ -101,6 +107,20 @@ async def read_wellknown_security_txt():
 
 
 @router.get(
+    "/robots.txt",
+    response_class=FileResponse,
+    status_code=200,
+    tags=[Tags.core],
+)
+async def read_robots_txt():
+    """
+    Return Hyperion robots.txt file
+    """
+
+    return FileResponse("assets/robots.txt")
+
+
+@router.get(
     "/style/{file}.css",
     response_class=FileResponse,
     status_code=200,
@@ -112,11 +132,19 @@ async def get_style_file(
     """
     Return a style file from the assets folder
     """
+    css_dir = "assets/style/"
+    css_path = f"{css_dir}{file}.css"
 
-    if not path.isfile(f"assets/style/{file}.css"):
+    # Security check (even if FastAPI parsing of path parameters does not allow path traversal)
+    if path.commonprefix(
+        (path.realpath(css_path), path.realpath(css_dir))
+    ) != path.realpath(css_dir):
         raise HTTPException(status_code=404, detail="File not found")
 
-    return FileResponse(f"assets/style/{file}.css")
+    if not path.isfile(css_path):
+        raise HTTPException(status_code=404, detail="File not found")
+
+    return FileResponse(css_path)
 
 
 @router.get(
@@ -127,3 +155,103 @@ async def get_style_file(
 )
 async def get_favicon():
     return FileResponse("assets/images/favicon.ico")
+
+
+@router.get(
+    "/module-visibility/",
+    response_model=list[schemas_core.ModuleVisibility],
+    status_code=200,
+    tags=[Tags.core],
+)
+async def get_module_visibility(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Get all existing module_visibility.
+
+    **This endpoint is only usable by administrators**
+    """
+
+    return_module_visibilities = []
+    for module in ModuleList:
+        allowed_group_ids = await cruds_core.get_allowed_groups_by_root(
+            root=module.value.root, db=db
+        )
+        return_module_visibilities.append(
+            schemas_core.ModuleVisibility(
+                root=module.value.root,
+                allowed_group_ids=allowed_group_ids,
+            )
+        )
+
+    return return_module_visibilities
+
+
+@router.get(
+    "/module-visibility/me",
+    response_model=list[str],
+    status_code=200,
+    tags=[Tags.core],
+)
+async def get_user_modules_visibility(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Get group user accessible root
+
+    **This endpoint is only usable by everyone**
+    """
+
+    return await cruds_core.get_modules_by_user(user=user, db=db)
+
+
+@router.post(
+    "/module-visibility/",
+    response_model=schemas_core.ModuleVisibilityCreate,
+    status_code=201,
+    tags=[Tags.core],
+)
+async def add_module_visibility(
+    module_visibility: schemas_core.ModuleVisibilityCreate,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Add a new group to a module
+
+    **This endpoint is only usable by administrators**
+    """
+
+    # We need to check that loaner.group_manager_id is a valid group
+    if not await is_group_id_valid(module_visibility.allowed_group_id, db=db):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid id, group_id must be a valid group id",
+        )
+    try:
+        module_visibility_db = models_core.ModuleVisibility(
+            root=module_visibility.root,
+            allowed_group_id=module_visibility.allowed_group_id,
+        )
+
+        return await cruds_core.create_module_visibility(
+            module_visibility=module_visibility_db, db=db
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+@router.delete(
+    "/module-visibility/{root}/{group_id}", status_code=204, tags=[Tags.core]
+)
+async def delete_session(
+    root: str,
+    group_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    await cruds_core.delete_module_visibility(
+        root=root, allowed_group_id=group_id, db=db
+    )

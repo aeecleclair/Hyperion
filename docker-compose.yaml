@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   hyperion-db:
@@ -41,4 +41,5 @@ services:
       - ./logs:/app/logs:Z
       - ./data:/app/data:Z
       - ./.env:/app/.env:Z
+      - ./firebase.json:/app/firebase.json:Z
       - ./migrations/versions:/app/migrations/versions:Z

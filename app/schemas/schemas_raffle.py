@@ -10,14 +10,13 @@ class RaffleBase(BaseModel):
     """Base schema for raffles"""
 
     name: str
-    status: RaffleStatusType
+    status: RaffleStatusType | None = None
     description: str | None = None
     group_id: str
 
 
 class RaffleEdit(BaseModel):
     name: str | None = None
-    status: RaffleStatusType | None = None
     description: str | None = None
 
 
@@ -40,7 +39,7 @@ class RaffleStats(BaseModel):
     amount_raised: float
 
 
-class LotBase(BaseModel):
+class PrizeBase(BaseModel):
     name: str
     description: str
     raffle_id: str
@@ -50,30 +49,29 @@ class LotBase(BaseModel):
         orm_mode = True
 
 
-class LotEdit(BaseModel):
+class PrizeEdit(BaseModel):
     raffle_id: str | None = None
     description: str | None = None
     name: str | None = None
     quantity: int | None = None
 
 
-class LotSimple(LotBase):
+class PrizeSimple(PrizeBase):
     id: str
 
     class Config:
         orm_mode = True
 
 
-class LotComplete(LotBase):
+class PrizeComplete(PrizeBase):
     id: str
-
     raffle: RaffleComplete
 
     class Config:
         orm_mode = True
 
 
-class TypeTicketBase(BaseModel):
+class PackTicketBase(BaseModel):
     price: float
     pack_size: int
     raffle_id: str
@@ -82,7 +80,7 @@ class TypeTicketBase(BaseModel):
         orm_mode = True
 
 
-class TypeTicketEdit(BaseModel):
+class PackTicketEdit(BaseModel):
     raffle_id: str | None = None
     price: float | None = None
     pack_size: int | None = None
@@ -91,14 +89,14 @@ class TypeTicketEdit(BaseModel):
         orm_mode = True
 
 
-class TypeTicketSimple(TypeTicketBase):
+class PackTicketSimple(PackTicketBase):
     id: str
 
     class Config:
         orm_mode = True
 
 
-class TypeTicketComplete(TypeTicketSimple):
+class PackTicketComplete(PackTicketSimple):
     raffle: RaffleSimple
 
     class Config:
@@ -106,9 +104,9 @@ class TypeTicketComplete(TypeTicketSimple):
 
 
 class TicketBase(BaseModel):
-    type_id: str
+    pack_id: str
     user_id: str
-    winning_lot: str | None = None
+    winning_prize: str | None = None
 
 
 class TicketSimple(TicketBase):
@@ -119,8 +117,8 @@ class TicketSimple(TicketBase):
 
 
 class TicketComplete(TicketSimple):
-    lot: LotSimple | None
-    type_ticket: TypeTicketSimple
+    prize: PrizeSimple | None
+    pack_ticket: PackTicketSimple
     user: CoreUserSimple
 
     class Config:

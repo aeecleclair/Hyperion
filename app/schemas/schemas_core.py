@@ -2,7 +2,7 @@
 
 from datetime import date, datetime
 
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, Field, validator
 
 from app.utils import validators
 from app.utils.examples import examples_core
@@ -160,6 +160,9 @@ class CoreUserActivateRequest(CoreUserBase):
     birthday: date | None = None
     phone: str | None = None
     floor: FloorsType
+    promo: int | None = Field(
+        default=None, description="Promotion of the student, an integer like 21"
+    )
 
     # Password validator
     # https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
@@ -169,7 +172,6 @@ class CoreUserActivateRequest(CoreUserBase):
 
     class Config:
         orm_mode = True
-
         schema_extra = examples_core.example_CoreUserActivateRequest
 
 
@@ -241,6 +243,10 @@ class ResetPasswordRequest(BaseModel):
     )
 
 
+class MailMigrationRequest(BaseModel):
+    new_email: str
+
+
 class CoreMembership(BaseModel):
     """Schema for membership creation (allows adding a user to a group)"""
 
@@ -270,3 +276,19 @@ class CoreBatchDeleteMembership(BaseModel):
 class CoreMembershipDelete(BaseModel):
     user_id: str
     group_id: str
+
+
+class ModuleVisibility(BaseModel):
+    root: str
+    allowed_group_ids: list[str]
+
+    class Config:
+        orm_mode = True
+
+
+class ModuleVisibilityCreate(BaseModel):
+    root: str
+    allowed_group_id: str
+
+    class Config:
+        orm_mode = True

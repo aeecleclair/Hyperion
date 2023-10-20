@@ -27,7 +27,7 @@ token_simple: str = ""
 token_admin: str = ""
 
 
-@pytest_asyncio.fixture(scope="session", autouse=True)
+@pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects():
     global admin_user
     global loan_user_loaner

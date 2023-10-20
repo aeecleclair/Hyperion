@@ -10,13 +10,22 @@ from tests.commons import client, create_api_access_token, create_user_with_grou
 admin_user: models_core.CoreUser | None = None
 student_user: models_core.CoreUser | None = None
 
+student_user_with_old_email: models_core.CoreUser | None = None
 
-@pytest_asyncio.fixture(scope="session", autouse=True)
+UNIQUE_TOKEN = "my_unique_token"
+
+
+@pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects():
-    global admin_user, student_user
+    global admin_user, student_user, student_user_with_old_email
 
     admin_user = await create_user_with_groups([GroupType.admin])
     student_user = await create_user_with_groups([GroupType.student])
+
+    student_user_with_old_email = await create_user_with_groups(
+        [GroupType.student],
+        email="fabristpp.eclair@ecl21.ec-lyon.fr",
+    )
 
 
 def test_read_users():
@@ -146,3 +155,60 @@ def test_search_users():
     assert response.status_code == 200
     data = response.json()
     assert all([user["id"] not in group_users for user in data])
+
+
+async def test_invalid_migrate_mail():
+    student_user_with_old_email_token = create_api_access_token(
+        student_user_with_old_email
+    )
+    other_student_user_token = create_api_access_token(student_user)
+
+    # Invalid old mail format
+    response = client.post(
+        "/users/migrate-mail",
+        json={"new_email": "fabristpp.eclair@etu.ec-lyon.fr"},
+        headers={"Authorization": f"Bearer {other_student_user_token}"},
+    )
+    assert response.status_code == 400
+
+    # Invalid new mail format
+    response = client.post(
+        "/users/migrate-mail",
+        json={"new_email": "fabristpp.eclair@test.fr"},
+        headers={"Authorization": f"Bearer {student_user_with_old_email_token}"},
+    )
+    assert response.status_code == 400
+
+
+async def test_migrate_mail(mocker):
+    # NOTE: we don't want to mock app.core.security.generate_token but
+    # app.endpoints.users.security.generate_token which is the imported version of the function
+    mocker.patch(
+        "app.endpoints.users.security.generate_token", return_value=UNIQUE_TOKEN
+    )
+
+    token = create_api_access_token(student_user_with_old_email)
+
+    # Start the migration process
+    response = client.post(
+        "/users/migrate-mail",
+        json={"new_email": "fabristpp.eclair@etu.ec-lyon.fr"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 204
+
+    # Try invalid confirmation code
+    response = client.get(
+        "/users/migrate-mail-confirm",
+        params={"token": "an other token"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 404
+
+    # Confirm the migration
+    response = client.get(
+        "/users/migrate-mail-confirm",
+        params={"token": UNIQUE_TOKEN},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200

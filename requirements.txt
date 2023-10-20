@@ -1,16 +1,17 @@
-alembic==1.10.2                      # database migrations
+alembic==1.11.3                      # database migrations
 fastapi==0.100.0
 Jinja2==3.1.2                       # template engine for html files
-passlib[bcrypt]==1.7.4              # password hashing using bcrypt
+bcrypt==4.0.1                       # password hashing
 pydantic==1.10.10                   # Schema manipulation
 python-dotenv==1.0.0               # load environment variables from .env file
 python-jose[cryptography]==3.3.0    # generate and verify the JWT tokens
 python-multipart==0.0.6             # a form data parser, as oauth flow requires form-data parameters
-SQLAlchemy[asyncio]==2.0.5.post1   # [asyncio] allows greenlet to be installed on Apple M1 devices. The my[py] plugin is required in devellopment but Dependabot fails to manage two versions of the same module.
-rapidfuzz==3.0.0                         # Fuzzy String Matching
+SQLAlchemy[asyncio]==2.0.20   # [asyncio] allows greenlet to be installed on Apple M1 devices. The my[py] plugin is required in devellopment but Dependabot fails to manage two versions of the same module.
+rapidfuzz==3.2.0                         # Fuzzy String Matching
 requests==2.31.0
 unidecode==1.3.6
-uvicorn[standard]==0.22.0
-redis==4.6.0
-icalendar == 5.0.4
+uvicorn[standard]==0.23.2
+redis==5.0.1
+icalendar == 5.0.7
 asyncpg==0.28.0
+firebase-admin==6.2.0               # Firebase is used for push notification

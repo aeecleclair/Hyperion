@@ -2,7 +2,7 @@
 <html lang="en">
 
 <head>
-    <title>MyECL - log in</title>
+    <title>MyECL - Connexion</title>
 </head>
 
 <body>
@@ -16,7 +16,7 @@
         <label for="email">Email</label>
         <input type="email" placeholder="Email" id="email" name="email" required autofocus>
 
-        <label for="password">Password</label>
+        <label for="password">Mot de passe</label>
         <input type="password" placeholder="Password" id="password" name="password" required>
 
         <input type="hidden" name="response_type" value="{{ response_type }}">
@@ -35,10 +35,10 @@
         {% endif %}
 
 
-        <button type="submit">Log In</button>
+        <button type="submit">Se connecter</button>
 
         {% if show_invalid_warning %}
-        <p class="invalid">Invalid email or password</p>
+        <p class="invalid">Identifiants invalides</p>
         {% endif %}
 
     </form>

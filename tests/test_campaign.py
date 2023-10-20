@@ -15,25 +15,27 @@ from tests.commons import (
     create_user_with_groups,
 )
 
-caa_user: models_core.CoreUser | None = None
-ae_user: models_core.CoreUser | None = None
+CAA_user: models_core.CoreUser | None = None
+AE_user: models_core.CoreUser | None = None
 
 section: models_campaign.Sections | None = None
 list: models_campaign.Lists | None = None
+voters: models_campaign.VoterGroups | None = None
 
 section2id: str = ""
 list2id: str = ""
 
 
-@pytest_asyncio.fixture(scope="session", autouse=True)
+@pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects():
-    global caa_user, ae_user
+    global CAA_user, AE_user
 
-    caa_user = await create_user_with_groups([GroupType.CAA, GroupType.AE])
-    ae_user = await create_user_with_groups([GroupType.AE])
+    CAA_user = await create_user_with_groups([GroupType.CAA, GroupType.AE])
+    AE_user = await create_user_with_groups([GroupType.AE])
 
     global section
     global list
+    global voters
     list_id = str(uuid.uuid4())
     section_id = str(uuid.uuid4())
 
@@ -52,19 +54,28 @@ async def init_objects():
         type=ListType.serio,
         members=[
             models_campaign.ListMemberships(
-                user_id=caa_user.id, list_id=list_id, role="Prez"
+                user_id=CAA_user.id, list_id=list_id, role="Prez"
             ),
             models_campaign.ListMemberships(
-                user_id=ae_user.id, list_id=list_id, role="SG"
+                user_id=AE_user.id, list_id=list_id, role="SG"
             ),
         ],
         program="Mon program",
     )
     await add_object_to_db(list)
 
+    voters_AE = models_campaign.VoterGroups(
+        group_id=GroupType.AE,
+    )
+    await add_object_to_db(voters_AE)
+    voters_CAA = models_campaign.VoterGroups(
+        group_id=GroupType.CAA,
+    )
+    await add_object_to_db(voters_CAA)
+
 
 def test_get_sections():
-    token = create_api_access_token(ae_user)
+    token = create_api_access_token(AE_user)
     response = client.get(
         "/campaign/sections",
         headers={
@@ -75,7 +86,7 @@ def test_get_sections():
 
 
 def test_add_sections():
-    token = create_api_access_token(caa_user)
+    token = create_api_access_token(CAA_user)
     response = client.post(
         "/campaign/sections",
         headers={"Authorization": f"Bearer {token}"},
@@ -90,7 +101,7 @@ def test_add_sections():
 
 
 def test_delete_section():
-    token = create_api_access_token(caa_user)
+    token = create_api_access_token(CAA_user)
     response = client.delete(
         f"/campaign/sections/{section2id}",
         headers={"Authorization": f"Bearer {token}"},
@@ -98,8 +109,49 @@ def test_delete_section():
     assert response.status_code == 204
 
 
+def test_get_voters():
+    token = create_api_access_token(AE_user)
+    response = client.get(
+        "/campaign/voters",
+        headers={
+            "Authorization": f"Bearer {token}",
+        },
+    )
+    assert response.status_code == 200
+
+
+def test_delete_voter_by_group_id():
+    token = create_api_access_token(CAA_user)
+    response = client.delete(
+        f"/campaign/voters/{GroupType.CAA}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 204
+
+
+def test_delete_voters():
+    token = create_api_access_token(CAA_user)
+    response = client.delete(
+        "/campaign/voters",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 204
+
+
+def test_add_voters():
+    token = create_api_access_token(CAA_user)
+    response = client.post(
+        "/campaign/voters",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "group_id": GroupType.AE,
+        },
+    )
+    assert response.status_code == 201
+
+
 def test_get_lists():
-    token = create_api_access_token(ae_user)
+    token = create_api_access_token(AE_user)
     response = client.get(
         "/campaign/lists",
         headers={"Authorization": f"Bearer {token}"},
@@ -108,7 +160,7 @@ def test_get_lists():
 
 
 def test_add_list():
-    token = create_api_access_token(caa_user)
+    token = create_api_access_token(CAA_user)
     response = client.post(
         "/campaign/lists",
         headers={"Authorization": f"Bearer {token}"},
@@ -117,7 +169,7 @@ def test_add_list():
             "description": "Probablement la meilleure liste disponible",
             "type": "Serio",
             "section_id": section.id,
-            "members": [{"user_id": caa_user.id, "role": "Prez"}],
+            "members": [{"user_id": CAA_user.id, "role": "Prez"}],
             "program": "Contacter la DSI",
         },
     )
@@ -127,7 +179,7 @@ def test_add_list():
 
 
 def test_delete_list():
-    token = create_api_access_token(caa_user)
+    token = create_api_access_token(CAA_user)
     response = client.delete(
         f"/campaign/lists/{list2id}",
         headers={"Authorization": f"Bearer {token}"},
@@ -136,20 +188,20 @@ def test_delete_list():
 
 
 def test_update_list():
-    token = create_api_access_token(caa_user)
+    token = create_api_access_token(CAA_user)
     response = client.patch(
         f"/campaign/lists/{list.id}",
         headers={"Authorization": f"Bearer {token}"},
         json={
             "name": "Liste 1 Update",
-            "members": [{"user_id": caa_user.id, "role": "Prez"}],
+            "members": [{"user_id": CAA_user.id, "role": "Prez"}],
         },
     )
     assert response.status_code == 204
 
 
 def test_create_campaigns_logo():
-    token = create_api_access_token(caa_user)
+    token = create_api_access_token(CAA_user)
 
     with open("assets/images/default_campaigns_logo.png", "rb") as image:
         response = client.post(
@@ -163,7 +215,7 @@ def test_create_campaigns_logo():
 
 def test_vote_if_not_opened():
     # An user should be able to vote if the status is not opened
-    token = create_api_access_token(ae_user)
+    token = create_api_access_token(AE_user)
     response = client.post(
         "/campaign/votes",
         headers={"Authorization": f"Bearer {token}"},
@@ -173,7 +225,7 @@ def test_vote_if_not_opened():
 
 
 def test_open_vote():
-    token = create_api_access_token(caa_user)
+    token = create_api_access_token(CAA_user)
     response = client.post(
         "/campaign/status/open",
         headers={
@@ -184,7 +236,7 @@ def test_open_vote():
 
 
 def test_read_campaigns_logo():
-    token = create_api_access_token(ae_user)
+    token = create_api_access_token(AE_user)
 
     response = client.get(
         f"/campaign/lists/{list.id}/logo",
@@ -196,7 +248,7 @@ def test_read_campaigns_logo():
 
 def test_vote_if_opened():
     # As the status is now opened, the user should be able to vote
-    token = create_api_access_token(ae_user)
+    token = create_api_access_token(AE_user)
     response = client.post(
         "/campaign/votes",
         headers={"Authorization": f"Bearer {token}"},
@@ -207,7 +259,7 @@ def test_vote_if_opened():
 
 def test_vote_a_second_time_for_the_same_section():
     # An user should not be able to vote twice for the same section
-    token = create_api_access_token(ae_user)
+    token = create_api_access_token(AE_user)
     response = client.post(
         "/campaign/votes",
         headers={"Authorization": f"Bearer {token}"},
@@ -217,7 +269,7 @@ def test_vote_a_second_time_for_the_same_section():
 
 
 def test_get_sections_already_voted():
-    token = create_api_access_token(ae_user)
+    token = create_api_access_token(AE_user)
     response = client.get(
         "/campaign/votes",
         headers={"Authorization": f"Bearer {token}"},
@@ -226,7 +278,7 @@ def test_get_sections_already_voted():
 
 
 def test_get_stats_for_section():
-    token = create_api_access_token(caa_user)
+    token = create_api_access_token(CAA_user)
     response = client.get(
         f"/campaign/stats/{section.id}",
         headers={"Authorization": f"Bearer {token}"},
@@ -236,7 +288,7 @@ def test_get_stats_for_section():
 
 def test_get_results_while_open():
     # As the status is open, nobody should be able to access results
-    token = create_api_access_token(caa_user)
+    token = create_api_access_token(CAA_user)
     response = client.get(
         "/campaign/results",
         headers={"Authorization": f"Bearer {token}"},
@@ -245,7 +297,7 @@ def test_get_results_while_open():
 
 
 def test_close_vote():
-    token = create_api_access_token(caa_user)
+    token = create_api_access_token(CAA_user)
     response = client.post(
         "/campaign/status/close", headers={"Authorization": f"Bearer {token}"}
     )
@@ -253,7 +305,7 @@ def test_close_vote():
 
 
 def test_count_vote():
-    token = create_api_access_token(caa_user)
+    token = create_api_access_token(CAA_user)
     response = client.post(
         "/campaign/status/counting", headers={"Authorization": f"Bearer {token}"}
     )
@@ -262,7 +314,7 @@ def test_count_vote():
 
 def test_get_results_while_counting():
     # As the status is counting, only CAA user should be able to access results
-    token = create_api_access_token(caa_user)
+    token = create_api_access_token(CAA_user)
     response = client.get(
         "/campaign/results",
         headers={"Authorization": f"Bearer {token}"},
@@ -271,7 +323,7 @@ def test_get_results_while_counting():
 
 
 def test_publish_vote():
-    token = create_api_access_token(caa_user)
+    token = create_api_access_token(CAA_user)
     response = client.post(
         "/campaign/status/published", headers={"Authorization": f"Bearer {token}"}
     )
@@ -279,7 +331,7 @@ def test_publish_vote():
 
 
 def test_get_results_while_published():
-    token = create_api_access_token(ae_user)
+    token = create_api_access_token(AE_user)
     response = client.get(
         "/campaign/results",
         headers={"Authorization": f"Bearer {token}"},
@@ -288,7 +340,7 @@ def test_get_results_while_published():
 
 
 def test_reset_votes():
-    token = create_api_access_token(caa_user)
+    token = create_api_access_token(CAA_user)
     response = client.post(
         "/campaign/status/reset",
         headers={"Authorization": f"Bearer {token}"},

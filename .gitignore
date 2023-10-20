@@ -11,6 +11,9 @@ data/
 # Dotenv file
 .env
 
+# Firebase secrets
+firebase.json
+
 # macOS
 .DS_Store
 
@@ -23,3 +26,6 @@ logs/
 
 # Migrations scripts
 migrations/versions/*.py
+
+# Pytest-cov
+.coverage

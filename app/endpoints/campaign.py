@@ -6,11 +6,18 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from pytz import timezone
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
 from app.cruds import cruds_campaign, cruds_users
-from app.dependencies import get_db, get_request_id, get_settings, is_user_a_member_of
+from app.dependencies import (
+    get_db,
+    get_request_id,
+    get_settings,
+    is_user_a_member,
+    is_user_a_member_of,
+)
 from app.models import models_campaign, models_core
 from app.schemas import schemas_campaign
 from app.utils.tools import (
@@ -37,13 +44,22 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 )
 async def get_sections(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.AE)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Return sections in the database as a list of `schemas_campaign.SectionBase`
 
-    **The user must be a member of the group AE to use this endpoint**
+    **The user must be a member of a group authorised to vote (voters) or a member of the group CAA to use this endpoint**
     """
+    voters = await cruds_campaign.get_voters(db)
+    voters_groups = [voter.group_id for voter in voters]
+    voters_groups.append(GroupType.CAA)
+    if not is_user_member_of_an_allowed_group(user, voters_groups):
+        raise HTTPException(
+            status_code=403,
+            detail="Access forbidden : you are not a poll member",
+        )
+
     sections = await cruds_campaign.get_sections(db)
     return sections
 
@@ -60,7 +76,7 @@ async def add_section(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """
-    Add a section of AEECL.
+    Add a section.
 
     This endpoint can only be used in 'waiting' status.
 
@@ -96,7 +112,7 @@ async def delete_section(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """
-    Delete a section of AEECL.
+    Delete a section.
 
     This endpoint can only be used in 'waiting' status.
 
@@ -124,13 +140,22 @@ async def delete_section(
 )
 async def get_lists(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.AE)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Return campaign lists registered for the vote.
 
-    **The user must be a member of the group AE to use this endpoint**
+    **The user must be a member of a group authorised to vote (voters) or a member of the group CAA to use this endpoint**
     """
+    voters = await cruds_campaign.get_voters(db)
+    voters_groups = [voter.group_id for voter in voters]
+    voters_groups.append(GroupType.CAA)
+    if not is_user_member_of_an_allowed_group(user, voters_groups):
+        raise HTTPException(
+            status_code=403,
+            detail="Access forbidden : you are not a poll member",
+        )
+
     lists = await cruds_campaign.get_lists(db=db)
     return lists
 
@@ -320,6 +345,103 @@ async def update_list(
         raise HTTPException(status_code=400, detail=str(error))
 
 
+@router.get(
+    "/campaign/voters",
+    response_model=list[schemas_campaign.VoterGroup],
+    status_code=200,
+    tags=[Tags.campaign],
+)
+async def get_voters(
+    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Return the voters (groups allowed to vorte) for the current campaign.
+    """
+    voters = await cruds_campaign.get_voters(db=db)
+    return voters
+
+
+@router.post(
+    "/campaign/voters",
+    response_model=schemas_campaign.VoterGroup,
+    status_code=201,
+    tags=[Tags.campaign],
+)
+async def add_voter(
+    voter: schemas_campaign.VoterGroup,
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Add voters (groups allowed to vote) for this campaign
+
+    **The user must be a member of the group CAA to use this endpoint**
+    """
+    status = await cruds_campaign.get_status(db=db)
+    if status != StatusType.waiting:
+        raise HTTPException(
+            status_code=400,
+            detail=f"VoterGroups can only be edited in waiting mode. The current status is {status}",
+        )
+
+    db_voter = models_campaign.VoterGroups(**voter.dict(exclude_none=True))
+    try:
+        await cruds_campaign.add_voter(voter=db_voter, db=db)
+    except IntegrityError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+    return db_voter
+
+
+@router.delete(
+    "/campaign/voters/{group_id}",
+    status_code=204,
+    tags=[Tags.campaign],
+)
+async def delete_voter_by_group_id(
+    group_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
+):
+    """
+    Remove a voter by its group id
+
+    **The user must be a member of the group CAA to use this endpoint**
+    """
+    status = await cruds_campaign.get_status(db=db)
+    if status != StatusType.waiting:
+        raise HTTPException(
+            status_code=400,
+            detail=f"VoterGroups can only be edited in waiting mode. The current status is {status}",
+        )
+
+    await cruds_campaign.delete_voter_by_group_id(group_id=group_id, db=db)
+
+
+@router.delete(
+    "/campaign/voters",
+    status_code=204,
+    tags=[Tags.campaign],
+)
+async def delete_voters(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
+):
+    """
+    Remove voters (groups allowed to vote)
+
+    **The user must be a member of the group CAA to use this endpoint**
+    """
+    status = await cruds_campaign.get_status(db=db)
+    if status != StatusType.waiting:
+        raise HTTPException(
+            status_code=400,
+            detail=f"VoterGroups can only be edited in waiting mode. The current status is {status}",
+        )
+
+    await cruds_campaign.delete_voters(db=db)
+
+
 @router.post(
     "/campaign/status/open",
     status_code=204,
@@ -492,15 +614,23 @@ async def reset_vote(
 async def vote(
     vote: schemas_campaign.VoteBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.AE)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Add a vote for a given campaign list.
 
     An user can only vote for one list per section.
 
-    **The user must be a member of the group AE to use this endpoint**
+    **The user must be a member of a group authorised to vote (voters) to use this endpoint**
     """
+    voters = await cruds_campaign.get_voters(db)
+    voters_groups = [voter.group_id for voter in voters]
+    if not is_user_member_of_an_allowed_group(user, voters_groups):
+        raise HTTPException(
+            status_code=403,
+            detail="Access forbidden : you are not a poll member",
+        )
+
     status = await cruds_campaign.get_status(db=db)
     if status != StatusType.open:
         raise HTTPException(
@@ -549,13 +679,20 @@ async def vote(
 )
 async def get_sections_already_voted(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.AE)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Return the list of id of sections an user has already voted for.
 
-    **The user must be a member of the group AE to use this endpoint**
+    **The user must be a member of a group authorised to vote (voters) to use this endpoint**
     """
+    voters = await cruds_campaign.get_voters(db)
+    voters_groups = [voter.group_id for voter in voters]
+    if not is_user_member_of_an_allowed_group(user, voters_groups):
+        raise HTTPException(
+            status_code=403,
+            detail="Access forbidden : you are not a poll member",
+        )
 
     status = await cruds_campaign.get_status(db=db)
     if status != StatusType.open:
@@ -577,17 +714,24 @@ async def get_sections_already_voted(
 )
 async def get_results(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.AE)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Return the results of the vote.
 
-    **The user must be a member of the group CAA and AE to use this endpoint in 'counting' status**
-    **The user must be a member of the group AE to use this endpoint in 'published' status**
+    **The user must be a member of a group authorised to vote (voters) or a member of the group CAA to use this endpoint**
     """
+    voters = await cruds_campaign.get_voters(db)
+    voters_groups = [voter.group_id for voter in voters]
+    voters_groups.append(GroupType.CAA)
+    if not is_user_member_of_an_allowed_group(user, voters_groups):
+        raise HTTPException(
+            status_code=403,
+            detail="Access forbidden : you are not a poll member",
+        )
+
     status = await cruds_campaign.get_status(db=db)
 
-    # There may be an edge case where user is member of CAA but not AE. In this case, the user may not be able to access the results.
     if (
         status == StatusType.counting
         and is_user_member_of_an_allowed_group(user, [GroupType.CAA])
@@ -626,13 +770,22 @@ async def get_results(
 )
 async def get_status_vote(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.AE)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Get the current status of the vote.
 
-    **The user must be a member of the group AE to use this endpoint**
+    **The user must be a member of a group authorised to vote (voters) or a member of the group CAA to use this endpoint**
     """
+    voters = await cruds_campaign.get_voters(db)
+    voters_groups = [voter.group_id for voter in voters]
+    voters_groups.append(GroupType.CAA)
+    if not is_user_member_of_an_allowed_group(user, voters_groups):
+        raise HTTPException(
+            status_code=403,
+            detail="Access forbidden : you are not a poll member",
+        )
+
     status = await cruds_campaign.get_status(db=db)
     return schemas_campaign.VoteStatus(status=status)
 
@@ -667,7 +820,7 @@ async def get_stats_for_section(
     "/campaign/lists/{list_id}/logo",
     response_model=standard_responses.Result,
     status_code=201,
-    tags=[Tags.users],
+    tags=[Tags.campaign],
 )
 async def create_campaigns_logo(
     list_id: str,
@@ -712,14 +865,25 @@ async def create_campaigns_logo(
     "/campaign/lists/{list_id}/logo",
     response_class=FileResponse,
     status_code=200,
-    tags=[Tags.users],
+    tags=[Tags.campaign],
 )
 async def read_campaigns_logo(
     list_id: str,
+    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get the logo of a campaign list.
+    **The user must be a member of a group authorised to vote (voters) or a member of the group CAA to use this endpoint**
     """
+    voters = await cruds_campaign.get_voters(db)
+    voters_groups = [voter.group_id for voter in voters]
+    voters_groups.append(GroupType.CAA)
+    if not is_user_member_of_an_allowed_group(user, voters_groups):
+        raise HTTPException(
+            status_code=403,
+            detail="Access forbidden : you are not a poll member",
+        )
 
     return get_file_from_data(
         directory="campaigns",

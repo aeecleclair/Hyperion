@@ -5,7 +5,7 @@ from datetime import datetime
 from pydantic import BaseModel
 
 from app.schemas.schemas_core import CoreUserSimple
-from app.utils.types.bdebooking_type import Decision
+from app.utils.types.booking_type import Decision
 
 
 class Rights(BaseModel):
@@ -13,8 +13,26 @@ class Rights(BaseModel):
     manage: bool
 
 
+class ManagerBase(BaseModel):
+    name: str
+    group_id: str
+
+    class Config:
+        orm_mode = True
+
+
+class ManagerUpdate(BaseModel):
+    name: str | None = None
+    group_id: str | None = None
+
+
+class Manager(ManagerBase):
+    id: str
+
+
 class RoomBase(BaseModel):
     name: str
+    manager_id: str
 
 
 class RoomComplete(RoomBase):

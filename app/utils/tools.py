@@ -1,6 +1,7 @@
 import glob
 import logging
 import os
+import random
 import shutil
 from typing import Sequence
 
@@ -116,6 +117,8 @@ async def save_file_as_data(
      - webp
 
     An HTTP Exception will be raised if an error occurres.
+
+    WARNING: **NEVER** trust user input when calling this function. Always check that parameters are valid.
     """
     if image.content_type not in accepted_content_types:
         raise HTTPException(
@@ -168,6 +171,8 @@ def get_file_from_data(
     If there is a file with the provided filename in the data folder, return it. The file extension will be inferred from the provided content file.
     > "data/{directory}/{filename}.ext"
     Otherwise, return the default asset.
+
+    WARNING: **NEVER** trust user input when calling this function. Always check that parameters are valid.
     """
     for filePath in glob.glob(f"data/{directory}/{filename}.*"):
         return FileResponse(filePath)
@@ -183,3 +188,7 @@ def get_display_name(
     if nickname:
         return f"{firstname} {name} ({nickname})"
     return f"{firstname} {name}"
+
+
+def get_random_string(length: int = 5) -> str:
+    return "".join(random.choices("abcdefghijklmnopqrstuvwxyz0123456789", k=length))

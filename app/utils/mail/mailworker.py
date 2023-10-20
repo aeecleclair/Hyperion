@@ -7,7 +7,7 @@ from app.core.config import Settings
 
 def send_email(recipient: str, subject: str, content: str, settings: Settings):
     """
-    Send a plain text email using **starttls**.
+    Send a html email using **starttls**.
     Use the SMTP settings defined in environments variables or the dotenv file.
     See [Settings class](app/core/settings.py) for more information
     """
@@ -19,7 +19,7 @@ def send_email(recipient: str, subject: str, content: str, settings: Settings):
     context = ssl.create_default_context()
 
     msg = EmailMessage()
-    msg.set_content(content, subtype="plain", charset="utf-8")
+    msg.set_content(content, subtype="html", charset="utf-8")
     msg["From"] = settings.SMTP_EMAIL
     msg["To"] = recipient
     msg["Subject"] = subject

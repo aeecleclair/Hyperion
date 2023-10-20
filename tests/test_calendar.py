@@ -4,7 +4,7 @@ import uuid
 import pytest_asyncio
 
 from app.models import models_calendar, models_core
-from app.utils.types.bdebooking_type import Decision
+from app.utils.types.booking_type import Decision
 from app.utils.types.groups_type import GroupType
 
 # We need to import event_loop for pytest-asyncio routine defined bellow
@@ -24,7 +24,7 @@ token_bde: str = ""
 token_simple: str = ""
 
 
-@pytest_asyncio.fixture(scope="session", autouse=True)
+@pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects():
     global calendar_user_bde
     calendar_user_bde = await create_user_with_groups([GroupType.BDE])
