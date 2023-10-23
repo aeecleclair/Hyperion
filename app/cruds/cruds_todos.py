@@ -11,10 +11,8 @@ async def get_items_by_user_id(
     db: AsyncSession,
     user_id: str,
 ) -> Sequence[models_todos.TodosItem]:
-    """
-    Return all items from a given user
-    """
-
+    # On récupère tous les éléments TodosItem
+    # dont le user_id correspond à celui que l'on recherche
     result = await db.execute(
         select(models_todos.TodosItem).where(
             models_todos.TodosItem.user_id == user_id,
@@ -23,35 +21,19 @@ async def get_items_by_user_id(
     return result.scalars().all()
 
 
-async def get_item_by_id(
-    db: AsyncSession,
-    id: str,
-) -> models_todos.TodosItem | None:
-    """
-    Return an item by its id
-    """
-
-    result = await db.execute(
-        select(models_todos.TodosItem).where(
-            models_todos.TodosItem.id == id,
-        )
-    )
-    return result.scalars().first()
-
-
 async def create_item(
     db: AsyncSession,
     item: models_todos.TodosItem,
 ) -> models_todos.TodosItem:
-    """
-    Create a new item
-    """
-
+    # Avec `db.add(item)` l'élément est placé tout seul dans la bonne table de la bdd.
+    # todo_item est en effet une instance du model : models_todos.TodosItem
     db.add(item)
     try:
         await db.commit()
         return item
     except IntegrityError as error:
+        # En cas d'erreur d'ajout de l'objet, on revient en arrière (rollback de la db)
+        # pour annuler les modifications de la db et on lève une erreur.
         await db.rollback()
         raise ValueError(error)
 
@@ -61,9 +43,7 @@ async def edit_done_status(
     id: str,
     done: bool,
 ) -> None:
-    """
-    Mark an item as done or not done
-    """
+    # On met à jour le champ `done` de l'élément TodosItem
 
     await db.execute(
         update(models_todos.TodosItem)

@@ -10,6 +10,7 @@ from app.models import models_core, models_todos
 from app.schemas import schemas_todos
 from app.utils.types.tags import Tags
 
+# We create a router, an object used by FastAPI to route requests to the right endpoints
 router = APIRouter()
 
 
@@ -54,7 +55,8 @@ async def create_todo(
         id=todo_id,
         creation=creation_time,
         user_id=user.id,
-        **item.dict(),  # We add all informations contained in the schema, the operation is called unpacking
+        **item.dict(),  # We add all informations contained in the schema,
+        # the operation is called unpacking
     )
     try:
         res = await cruds_todos.create_item(
@@ -63,7 +65,8 @@ async def create_todo(
         )
         return res
     except ValueError as error:
-        # If we failed to create the object in the database, we send back a 400 error code with the detail of the error
+        # If we failed to create the object in the database,
+        # we send back a 400 error code with the detail of the error
         raise HTTPException(status_code=400, detail=str(error))
 
 
