@@ -254,7 +254,7 @@ async def create_advert(
             detail=f"Unauthorized to manage {advertiser.name} adverts",
         )
 
-    advert_params = advert.dict()
+    advert_params = advert.model_dump()
 
     db_advert = models_advert.Advert(
         id=str(uuid.uuid4()),

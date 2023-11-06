@@ -1,6 +1,6 @@
 """Schemas file for endpoint /amap"""
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from app.schemas.schemas_core import CoreUserSimple
 from app.utils.types.raffle_types import RaffleStatusType
@@ -22,9 +22,7 @@ class RaffleEdit(BaseModel):
 
 class RaffleComplete(RaffleBase):
     id: str
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class RaffleStats(BaseModel):
@@ -37,9 +35,7 @@ class PrizeBase(BaseModel):
     description: str
     raffle_id: str
     quantity: int
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PrizeEdit(BaseModel):
@@ -51,49 +47,37 @@ class PrizeEdit(BaseModel):
 
 class PrizeSimple(PrizeBase):
     id: str
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PrizeComplete(PrizeBase):
     id: str
     raffle: RaffleComplete
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PackTicketBase(BaseModel):
     price: float
     pack_size: int
     raffle_id: str
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PackTicketEdit(BaseModel):
     raffle_id: str | None = None
     price: float | None = None
     pack_size: int | None = None
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PackTicketSimple(PackTicketBase):
     id: str
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PackTicketComplete(PackTicketSimple):
     raffle: RaffleComplete
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TicketBase(BaseModel):
@@ -104,26 +88,20 @@ class TicketBase(BaseModel):
 
 class TicketSimple(TicketBase):
     id: str
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TicketComplete(TicketSimple):
-    prize: PrizeSimple | None
+    prize: PrizeSimple | None = None
     pack_ticket: PackTicketSimple
     user: CoreUserSimple
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CashBase(BaseModel):
     balance: float
     user_id: str
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CashComplete(CashBase):

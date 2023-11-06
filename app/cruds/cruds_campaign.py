@@ -271,7 +271,7 @@ async def update_list(
     await db.execute(
         update(models_campaign.Lists)
         .where(models_campaign.Lists.id == list_id)
-        .values(**campaign_list.dict(exclude={"members"}, exclude_none=True))
+        .values(**campaign_list.model_dump(exclude={"members"}, exclude_none=True))
     )
 
     # We may need to recreate the list of members
@@ -292,7 +292,7 @@ async def update_list(
             update(models_campaign.Lists)
             .where(models_campaign.Lists.id == list_id)
             .values(
-                **campaign_list.dict(exclude={"members"}, exclude_none=True),
+                **campaign_list.model_dump(exclude={"members"}, exclude_none=True),
             )
         )
 

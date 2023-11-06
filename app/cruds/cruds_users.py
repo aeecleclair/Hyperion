@@ -88,7 +88,7 @@ async def update_user(db: AsyncSession, user_id: str, user_update):
     await db.execute(
         update(models_core.CoreUser)
         .where(models_core.CoreUser.id == user_id)
-        .values(**user_update.dict(exclude_none=True))
+        .values(**user_update.model_dump(exclude_none=True))
     )
     await db.commit()
 

@@ -56,7 +56,7 @@ async def create_session(
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     db_session = schemas_cinema.CineSessionComplete(
-        id=str(uuid.uuid4()), **session.dict()
+        id=str(uuid.uuid4()), **session.model_dump()
     )
     try:
         result = await cruds_cinema.create_session(session=db_session, db=db)

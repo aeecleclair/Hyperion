@@ -44,7 +44,7 @@ async def update_loaner(
     await db.execute(
         update(models_loan.Loaner)
         .where(models_loan.Loaner.id == loaner_id)
-        .values(**loaner_update.dict(exclude_none=True))
+        .values(**loaner_update.model_dump(exclude_none=True))
     )
     await db.commit()
 
@@ -122,7 +122,7 @@ async def update_loaner_item(
     await db.execute(
         update(models_loan.Item)
         .where(models_loan.Item.id == item_id)
-        .values(**item_update.dict(exclude_none=True))
+        .values(**item_update.model_dump(exclude_none=True))
     )
     await db.commit()
 
@@ -184,7 +184,7 @@ async def update_loan(
     await db.execute(
         update(models_loan.Loan)
         .where(models_loan.Loan.id == loan_id)
-        .values(**loan_update.dict(exclude_none=True))
+        .values(**loan_update.model_dump(exclude_none=True))
     )
     await db.commit()
 

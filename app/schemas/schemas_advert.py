@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import ConfigDict, BaseModel, Field
 
 
 class AdvertiserBase(BaseModel):
@@ -12,9 +12,7 @@ class AdvertiserBase(BaseModel):
 
 class AdvertiserComplete(AdvertiserBase):
     id: str
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AdvertiserUpdate(BaseModel):
@@ -32,18 +30,14 @@ class AdvertBase(BaseModel):
 class AdvertComplete(AdvertBase):
     id: str
     date: datetime | None = None
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AdvertReturnComplete(AdvertBase):
     id: str
     advertiser: AdvertiserComplete
     date: datetime | None = None
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AdvertUpdate(BaseModel):

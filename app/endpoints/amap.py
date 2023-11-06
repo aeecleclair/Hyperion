@@ -70,7 +70,7 @@ async def create_product(
 
     **The user must be a member of the group AMAP to use this endpoint**
     """
-    db_product = models_amap.Product(id=str(uuid.uuid4()), **product.dict())
+    db_product = models_amap.Product(id=str(uuid.uuid4()), **product.__dict__)
 
     try:
         result = await cruds_amap.create_product(product=db_product, db=db)
@@ -191,7 +191,7 @@ async def create_delivery(
     db_delivery = schemas_amap.DeliveryComplete(
         id=str(uuid.uuid4()),
         status=DeliveryStatusType.creation,
-        **delivery.dict(),
+        **delivery.model_dump(),
     )
     if await cruds_amap.is_there_a_delivery_on(
         db=db, delivery_date=db_delivery.delivery_date

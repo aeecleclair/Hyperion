@@ -68,7 +68,7 @@ async def edit_raffle(
     await db.execute(
         update(models_raffle.Raffle)
         .where(models_raffle.Raffle.id == raffle_id)
-        .values(**raffle_update.dict(exclude_none=True))
+        .values(**raffle_update.model_dump(exclude_none=True))
     )
     await db.commit()
 
@@ -139,7 +139,7 @@ async def edit_prize(
     await db.execute(
         update(models_raffle.Prize)
         .where(models_raffle.Prize.id == prize_id)
-        .values(**prize_update.dict(exclude_none=True))
+        .values(**prize_update.model_dump(exclude_none=True))
     )
     await db.commit()
 
@@ -225,7 +225,7 @@ async def edit_packticket(
     await db.execute(
         update(models_raffle.PackTicket)
         .where(models_raffle.PackTicket.id == packticket_id)
-        .values(**packticket_update.dict(exclude_none=True))
+        .values(**packticket_update.model_dump(exclude_none=True))
     )
     await db.commit()
 

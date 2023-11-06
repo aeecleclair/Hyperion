@@ -138,7 +138,7 @@ async def add_event(
         id=event_id,
         decision=Decision.pending,
         applicant_id=user.id,
-        **event.dict(),
+        **event.model_dump(),
     )
     try:
         return await cruds_calendar.add_event(event=db_event, db=db, settings=settings)

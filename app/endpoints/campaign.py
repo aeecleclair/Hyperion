@@ -385,7 +385,7 @@ async def add_voter(
             detail=f"VoterGroups can only be edited in waiting mode. The current status is {status}",
         )
 
-    db_voter = models_campaign.VoterGroups(**voter.dict(exclude_none=True))
+    db_voter = models_campaign.VoterGroups(**voter.model_dump(exclude_none=True))
     try:
         await cruds_campaign.add_voter(voter=db_voter, db=db)
     except IntegrityError as error:

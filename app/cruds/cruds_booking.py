@@ -37,7 +37,7 @@ async def update_manager(
     await db.execute(
         update(models_booking.Manager)
         .where(models_booking.Manager.id == manager_id)
-        .values(**manager_update.dict(exclude_none=True))
+        .values(**manager_update.model_dump(exclude_none=True))
     )
     try:
         await db.commit()
@@ -130,7 +130,7 @@ async def get_booking_by_id(
 
 
 async def create_booking(db: AsyncSession, booking: schemas_booking.BookingComplete):
-    db_booking = models_booking.Booking(**booking.dict())
+    db_booking = models_booking.Booking(**booking.model_dump())
     db.add(db_booking)
     try:
         await db.commit()
@@ -145,7 +145,7 @@ async def edit_booking(
     await db.execute(
         update(models_booking.Booking)
         .where(models_booking.Booking.id == booking_id)
-        .values(**booking.dict(exclude_none=True))
+        .values(**booking.model_dump(exclude_none=True))
     )
     try:
         await db.commit()

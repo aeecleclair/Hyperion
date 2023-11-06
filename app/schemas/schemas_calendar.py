@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, validator
+from pydantic import ConfigDict, BaseModel, field_validator
 
 from app.schemas.schemas_core import CoreUserSimple
 from app.utils import validators
@@ -17,21 +17,17 @@ class EventBase(BaseModel):
     location: str
     type: CalendarEventType
     description: str
-    recurrence_rule: str | None
+    recurrence_rule: str | None = None
 
-    _normalize_start = validator("start", allow_reuse=True)(
-        validators.time_zone_converter
-    )
-    _normalize_end = validator("end", allow_reuse=True)(validators.time_zone_converter)
+    _normalize_start = field_validator("start")(validators.time_zone_converter)
+    _normalize_end = field_validator("end")(validators.time_zone_converter)
 
 
 class EventComplete(EventBase):
     id: str
     decision: Decision
     applicant_id: str
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class EventEdit(BaseModel):
@@ -45,13 +41,9 @@ class EventEdit(BaseModel):
     description: str | None = None
     recurrence_rule: str | None = None
 
-    _normalize_start = validator("start", allow_reuse=True)(
-        validators.time_zone_converter
-    )
-    _normalize_end = validator("end", allow_reuse=True)(validators.time_zone_converter)
-
-    class Config:
-        orm_mode = True
+    _normalize_start = field_validator("start")(validators.time_zone_converter)
+    _normalize_end = field_validator("end")(validators.time_zone_converter)
+    model_config = ConfigDict(from_attributes=True)
 
 
 class EventApplicant(CoreUserSimple):
@@ -62,6 +54,4 @@ class EventApplicant(CoreUserSimple):
 
 class EventReturn(EventComplete):
     applicant: EventApplicant
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)

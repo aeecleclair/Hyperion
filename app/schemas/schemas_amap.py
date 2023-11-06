@@ -3,7 +3,7 @@
 from datetime import date, datetime
 from typing import Sequence
 
-from pydantic import BaseModel
+from pydantic import ConfigDict, BaseModel
 
 from app.schemas.schemas_core import CoreUserSimple
 from app.utils.types.amap_types import AmapSlotType, DeliveryStatusType
@@ -13,9 +13,7 @@ class Rights(BaseModel):
     view: bool
     manage: bool
     amap_id: str
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ProductBase(BaseModel):
@@ -37,17 +35,13 @@ class ProductEdit(BaseModel):
 
 class ProductComplete(ProductSimple):
     id: str
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ProductQuantity(BaseModel):
     quantity: int
     product: ProductComplete
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DeliveryBase(BaseModel):
@@ -60,9 +54,7 @@ class DeliveryBase(BaseModel):
 class DeliveryComplete(DeliveryBase):
     id: str
     status: DeliveryStatusType
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DeliveryUpdate(BaseModel):
@@ -86,9 +78,7 @@ class OrderComplete(OrderBase):
     amount: float
     ordering_date: datetime
     delivery_date: date
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class OrderReturn(BaseModel):
@@ -100,18 +90,14 @@ class OrderReturn(BaseModel):
     amount: float
     ordering_date: datetime
     delivery_date: date
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class OrderEdit(BaseModel):
     products_ids: list[str] | None = None
     collection_slot: AmapSlotType | None = None
     products_quantity: list[int] | None = None
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DeliveryReturn(BaseModel):
@@ -119,9 +105,7 @@ class DeliveryReturn(BaseModel):
     products: list[ProductComplete] = []
     id: str
     status: DeliveryStatusType
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AddProductDelivery(BaseModel):
@@ -132,9 +116,7 @@ class AddProductDelivery(BaseModel):
 class CashBase(BaseModel):
     balance: float
     user_id: str
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CashComplete(CashBase):
@@ -153,9 +135,7 @@ class Information(BaseModel):
     manager: str
     link: str
     description: str
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class InformationEdit(BaseModel):

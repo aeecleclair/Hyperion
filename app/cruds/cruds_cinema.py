@@ -38,7 +38,7 @@ async def get_session_by_id(
 async def create_session(
     session: schemas_cinema.CineSessionComplete, db: AsyncSession
 ) -> models_cinema.Session:
-    db_session = models_cinema.Session(**session.dict())
+    db_session = models_cinema.Session(**session.model_dump())
     db.add(db_session)
     try:
         await db.commit()
@@ -53,7 +53,7 @@ async def update_session(
     await db.execute(
         update(models_cinema.Session)
         .where(models_cinema.Session.id == session_id)
-        .values(**session_update.dict(exclude_none=True))
+        .values(**session_update.model_dump(exclude_none=True))
     )
     await db.commit()
 

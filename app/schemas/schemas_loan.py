@@ -1,6 +1,6 @@
 from datetime import date, timedelta
 
-from pydantic import BaseModel, Field
+from pydantic import ConfigDict, BaseModel, Field
 
 from app.schemas import schemas_core
 
@@ -10,9 +10,7 @@ class LoanerBase(BaseModel):
     group_manager_id: str = Field(
         description="The group manager id should by a group identifier"
     )
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class LoanerUpdate(BaseModel):
@@ -31,9 +29,7 @@ class ItemBase(BaseModel):
     suggested_caution: int
     total_quantity: int
     suggested_lending_duration: timedelta
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ItemUpdate(BaseModel):
@@ -66,9 +62,7 @@ class LoanBase(BaseModel):
     end: date
     notes: str | None = None
     caution: str | None = None
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ItemBorrowed(BaseModel):

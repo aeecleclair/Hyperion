@@ -218,7 +218,7 @@ class NotificationManager:
             message_models.append(
                 models_notification.Message(
                     firebase_device_token=token,
-                    **message.dict(),
+                    **message.model_dump(),
                 )
             )
 

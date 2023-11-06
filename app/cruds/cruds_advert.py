@@ -55,7 +55,7 @@ async def update_advertiser(
     await db.execute(
         update(models_advert.Advertiser)
         .where(models_advert.Advertiser.id == advertiser_id)
-        .values(**advertiser_update.dict(exclude_none=True))
+        .values(**advertiser_update.model_dump(exclude_none=True))
     )
     try:
         await db.commit()
@@ -127,7 +127,7 @@ async def update_advert(
     await db.execute(
         update(models_advert.Advert)
         .where(models_advert.Advert.id == advert_id)
-        .values(**advert_update.dict(exclude_none=True))
+        .values(**advert_update.model_dump(exclude_none=True))
     )
     try:
         await db.commit()
