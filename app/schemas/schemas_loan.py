@@ -1,6 +1,6 @@
 from datetime import date, timedelta
 
-from pydantic import ConfigDict, BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas import schemas_core
 

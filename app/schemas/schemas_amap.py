@@ -3,7 +3,7 @@
 from datetime import date, datetime
 from typing import Sequence
 
-from pydantic import ConfigDict, BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from app.schemas.schemas_core import CoreUserSimple
 from app.utils.types.amap_types import AmapSlotType, DeliveryStatusType

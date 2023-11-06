@@ -1,4 +1,4 @@
-from pydantic import ConfigDict, BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from app.schemas import schemas_core
 from app.utils.types.campaign_type import ListType, StatusType

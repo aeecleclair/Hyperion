@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import ConfigDict, BaseModel, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from app.utils import validators
 

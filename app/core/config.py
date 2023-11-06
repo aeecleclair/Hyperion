@@ -3,9 +3,9 @@ from functools import cached_property
 from jose import jwk
 from jose.exceptions import JWKError
 from pydantic import model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.utils.auth import providers
-from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):

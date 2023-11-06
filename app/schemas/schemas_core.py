@@ -2,7 +2,7 @@
 
 from datetime import date, datetime
 
-from pydantic import ConfigDict, BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from pydantic.functional_validators import field_validator
 
 from app.utils import validators
