@@ -68,14 +68,13 @@ def test_create_todo():
 def test_check_todo():
     token = create_api_access_token(user)
 
-    response = client.post(
+    response = client.patch(
         "/todos/0b7dc7bf-0ab4-421a-bbe7-7ec064fcec8d/check",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 204
-    response = client.post(
+    response = client.patch(
         "/todos/0b7dc7bf-0ab4-421a-bbe7-7ec064fcec8d/check",
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert response.status_code == 204
     assert response.status_code == 204
