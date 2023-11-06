@@ -460,7 +460,7 @@ async def add_order_to_delievery(
             user_id=order.user_id,
         )
         balance = models_amap.Cash(
-            **new_cash_db.dict(),
+            **new_cash_db.model_dump(),
         )
         await cruds_amap.create_cash_of_user(
             cash=balance,
@@ -510,7 +510,7 @@ async def add_order_to_delievery(
     status_code=204,
     tags=[Tags.amap],
 )
-async def edit_order_from_delievery(
+async def edit_order_from_delivery(
     order_id: str,
     order: schemas_amap.OrderEdit,
     db: AsyncSession = Depends(get_db),
@@ -580,7 +580,7 @@ async def edit_order_from_delievery(
             delivery_id=previous_order.delivery_id,
             user_id=previous_order.user_id,
             amount=amount,
-            **order.dict(),
+            **order.model_dump(),
         )
 
         previous_amount = previous_order.amount
