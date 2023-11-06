@@ -36,6 +36,15 @@ class AuthorizeValidation(Authorize):
     email: str
     password: str
 
+    # If we don't add these parameters
+    # the heritage from Authorize does not allow Mypy to infer the str | None
+    redirect_uri: str | None = None
+    scope: str | None = None
+    state: str | None = None
+    nonce: str | None = None
+    code_challenge: str | None = None
+    code_challenge_method: str | None = None
+
     # Email normalization, this will modify the email variable
     # https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
     _normalize_email = field_validator(
