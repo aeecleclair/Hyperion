@@ -71,7 +71,7 @@ async def create_todo(
 
 
 # We define a POST endpoint to make a todo as done or undone
-@router.post(
+@router.patch(
     "/todos/{item_id}/check",
     status_code=204,
     tags=[Tags.todos],
