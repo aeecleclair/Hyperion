@@ -34,7 +34,7 @@ async def get_todos(
 # We define a new endpoint, accepting a POST, that intend to create a new todo
 @router.post(
     "/todos/",
-    response_model=schemas_todos.TodosItemBase,
+    response_model=schemas_todos.TodosItemComplete,
     status_code=201,
     tags=[Tags.todos],
 )
@@ -59,11 +59,11 @@ async def create_todo(
         # the operation is called unpacking
     )
     try:
-        res = await cruds_todos.create_item(
+        await cruds_todos.create_item(
             item=db_item,
             db=db,
         )
-        return res
+        return db_item
     except ValueError as error:
         # If we failed to create the object in the database,
         # we send back a 400 error code with the detail of the error
