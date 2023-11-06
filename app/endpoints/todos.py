@@ -86,7 +86,7 @@ async def check_todo(
     """
 
     # We first need to make sur an item with the identifier `id` exist
-    item = await cruds_todos.get_item_by_id(db=db, id=id)
+    item = await cruds_todos.get_items_by_user_id(db=db, id=id)
     if item is None:
         raise HTTPException(status_code=404, detail="Todo item not found")
     # We need to make sure the item belongs to the current user
