@@ -40,14 +40,26 @@ async def create_item(
 
 async def edit_done_status(
     db: AsyncSession,
-    id: str,
+    item_id: str,
     done: bool,
 ) -> None:
     # On met à jour le champ `done` de l'élément TodosItem
 
     await db.execute(
         update(models_todos.TodosItem)
-        .where(models_todos.TodosItem.id == id)
+        .where(models_todos.TodosItem.id == item_id)
         .values(done=done)
     )
     await db.commit()
+
+
+async def get_items_by_id(
+    db: AsyncSession,
+    item_id: str,
+) -> models_todos.TodosItem | None:
+    result = await db.execute(
+        select(models_todos.TodosItem).where(
+            models_todos.TodosItem.id == item_id,
+        )
+    )
+    return result.scalars().first()

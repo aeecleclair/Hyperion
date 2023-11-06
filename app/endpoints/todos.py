@@ -77,7 +77,7 @@ async def create_todo(
     tags=[Tags.todos],
 )
 async def check_todo(
-    id: str,
+    item_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
@@ -86,7 +86,7 @@ async def check_todo(
     """
 
     # We first need to make sur an item with the identifier `id` exist
-    item = await cruds_todos.get_items_by_user_id(db=db, id=id)
+    item = await cruds_todos.get_items_by_id(db=db, item_id=item_id)
     if item is None:
         raise HTTPException(status_code=404, detail="Todo item not found")
     # We need to make sure the item belongs to the current user
@@ -100,6 +100,6 @@ async def check_todo(
 
     await cruds_todos.edit_done_status(
         db=db,
-        id=id,
+        item_id=item_id,
         done=new_status,
     )
