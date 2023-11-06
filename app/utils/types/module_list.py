@@ -45,3 +45,7 @@ class ModuleList(Module, Enum):
         root="vote",
         default_allowed_groups_ids=[GroupType.AE],
     )
+    todos = Module(
+        root="todos",
+        default_allowed_groups_ids=[GroupType.student],
+    )
