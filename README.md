@@ -1,5 +1,7 @@
 # Hyperion
 
+[![codecov](https://codecov.io/gh/aeecleclair/Hyperion/graph/badge.svg?token=Q49AK8EAU1)](https://codecov.io/gh/aeecleclair/Hyperion)
+
 ## Presentation
 
 Hyperion is the API of an open-source project launched by ÉCLAIR, the computer science association of Ecole Centrale de Lyon. This project aims to provide students of business and engineering schools a digital tool to simplify the association process. In a way, we could say that Hyperion is trying to create a social network for school associations. 
