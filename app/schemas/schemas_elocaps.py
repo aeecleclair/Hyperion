@@ -17,18 +17,28 @@ class PlayerBase(BaseModel):
         orm_mode = True
 
 
-class GameBase(BaseModel):
+class PlayerModeInfo(BaseModel):
+    elo: int
+    winrate: float | None
+
+
+class DetailedPlayer(BaseModel):
+    user_id: str
+    info: dict[CapsMode, PlayerModeInfo]
+
+
+class GameMode(BaseModel):
     mode: CapsMode
 
     class Config:
         orm_mode = True
 
 
-class GameCreateRequest(GameBase):
+class GameCreateRequest(GameMode):
     players: list[GamePlayerBase]
 
 
-class Game(GameBase):
+class Game(GameMode):
     timestamp: datetime
     id: str
     game_players: list[GamePlayer]

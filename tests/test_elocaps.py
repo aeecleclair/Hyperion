@@ -27,6 +27,7 @@ UserTest = TypedDict(
     },
 )
 users: list[UserTest] = []
+newUser: models_core.CoreUser | None = None
 game_players: list[models_elocaps.GamePlayer] = []
 games: list[models_elocaps.Game] = []
 
@@ -86,6 +87,8 @@ async def initialize_the_things_that_are_needed_for_the_tests():
             token = create_api_access_token(user)
             users.append({"user": user, "token": token, "players": {}})
         await create_games(db, 100)
+        global newUser
+        newUser = await create_user_with_groups([GroupType.student])
 
 
 def test_get_latest_games():
@@ -115,7 +118,6 @@ def test_get_games_played_on():
     assert response2.status_code == 200 and len(response2.json()) == len(
         [i for i in games if i.timestamp.date() == yesterday]
     )
-    print(games[0].id)
 
 
 def test_get_game():
@@ -126,7 +128,15 @@ def test_get_game():
     )
     assert response.status_code == 200
     json = response.json()
-    assert json["timestamp"] == game.timestamp.isoformat() and json["id"] == game.id
+    assert json["id"] == game.id
+    assert json["timestamp"] == game.timestamp.isoformat()
+    assert (
+        client.get(
+            "/elocaps/games/1234",
+            headers={"Authorization": f"Bearer {users[0]['token']}"},
+        ).status_code
+        == 404
+    )
 
 
 def test_validate_and_end_game():
@@ -138,16 +148,28 @@ def test_validate_and_end_game():
         for u in users
         if u["user"].id == i.user_id
     ]
-    response1 = client.post(
-        f"/elocaps/games/{game.id}/validate",
-        headers={"Authorization": f"Bearer {tokens[0]}"},
+    another_token = next(x for x in users if not x["token"] in tokens)["token"]
+    assert (
+        client.post(
+            f"/elocaps/games/{game.id}/validate",
+            headers={"Authorization": f"Bearer {another_token}"},
+        ).status_code
+        == 400
     )
-    assert response1.status_code == 204
-    response2 = client.post(
-        f"/elocaps/games/{game.id}/validate",
-        headers={"Authorization": f"Bearer {tokens[1]}"},
+    assert (
+        client.post(
+            f"/elocaps/games/{game.id}/validate",
+            headers={"Authorization": f"Bearer {tokens[0]}"},
+        ).status_code
+        == 204
     )
-    assert response2.status_code == 204
+    assert (
+        client.post(
+            f"/elocaps/games/{game.id}/validate",
+            headers={"Authorization": f"Bearer {tokens[1]}"},
+        ).status_code
+        == 204
+    )
     response = client.get(
         f"/elocaps/games/{game.id}",
         headers={"Authorization": f"Bearer {users[0]['token']}"},
@@ -157,6 +179,14 @@ def test_validate_and_end_game():
         and response.json()["id"] == game.id
         and response.json()["is_confirmed"]
     )
+
+
+def test_get_waiting_games():
+    response = client.get(
+        "/elocaps/games/waiting",
+        headers={"Authorization": f"Bearer {users[0]['token']}"},
+    )
+    assert response.status_code == 200
 
 
 def test_player_games():
@@ -189,23 +219,24 @@ def test_leaderboard():
 
 
 def test_create_game():
-    response = client.post(
-        "/elocaps/games",
-        headers={"Authorization": f"Bearer {users[0]['token']}"},
-        json={
-            "mode": CapsMode.SINGLE,
-            "players": [
-                {"user_id": users[0]["user"].id, "team": 1, "quarters": 1},
-                {"user_id": users[1]["user"].id, "team": 2, "quarters": 95},
-            ],
-        },
+    assert (
+        client.post(
+            "/elocaps/games",
+            headers={"Authorization": f"Bearer {users[0]['token']}"},
+            json={
+                "mode": CapsMode.SINGLE,
+                "players": [
+                    {"user_id": users[0]["user"].id, "team": 1, "quarters": 1},
+                    {"user_id": newUser.id, "team": 2, "quarters": 95},
+                ],
+            },
+        ).status_code
+        == 204
     )
-    assert response.status_code == 204
     response = client.get(
         "/elocaps/games/latest",
         headers={"Authorization": f"Bearer {users[0]['token']}"},
     )
-    print(response.json()[0])
     assert (
         response.status_code == 200
         and (
@@ -215,4 +246,32 @@ def test_create_game():
         )["quarters"]
         == 95
         and game_player["elo_gain"] is not None
+    )
+    assert (
+        client.post(
+            "/elocaps/games",
+            headers={"Authorization": f"Bearer {users[0]['token']}"},
+            json={
+                "mode": CapsMode.SINGLE,
+                "players": [
+                    {"user_id": users[0]["user"].id, "team": 1, "quarters": 1},
+                    {"user_id": users[0]["user"].id, "team": 2, "quarters": 95},
+                ],
+            },
+        ).status_code
+        == 400
+    )
+    assert (
+        client.post(
+            "/elocaps/games",
+            headers={"Authorization": f"Bearer {users[2]['token']}"},
+            json={
+                "mode": CapsMode.SINGLE,
+                "players": [
+                    {"user_id": users[0]["user"].id, "team": 1, "quarters": 1},
+                    {"user_id": users[1]["user"].id, "team": 2, "quarters": 95},
+                ],
+            },
+        ).status_code
+        == 400
     )

@@ -78,7 +78,7 @@ class GamePlayer(Base):
     has_confirmed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     elo_gain: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
-    game: Mapped[Game] = relationship("Game", viewonly=True)
+    game: Mapped[Game] = relationship("Game")
     player: Mapped[Player] = relationship(
         "Player", uselist=False, back_populates="game_players"
     )

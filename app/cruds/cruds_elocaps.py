@@ -9,6 +9,7 @@ from sqlalchemy.orm import selectinload
 
 from app.models import models_elocaps
 from app.schemas import schemas_elocaps
+from app.utils.tools import compute_elo_gain
 from app.utils.types.elocaps_types import CapsMode
 
 
@@ -109,7 +110,7 @@ async def register_game(
                 game_id=game.id, player_id=player.id, team=i.team, quarters=i.quarters
             )
             db.add(game_player)
-            await db.commit()
+        await db.commit()
         complete_game = (
             (
                 await db.execute(
@@ -131,17 +132,22 @@ async def register_game(
             game = complete_game
         for game_player in game.game_players:
             team = game_player.team
-            c = game.get_team_quarters(~team + 4)
+            c = game.get_team_quarters(-team + 3)
             s = game.get_team_quarters(team)
             a = game_player.quarters
-            f = a * (1 - c / s) / (c + s)
-            k = 15 * (2 - exp(-(f**2)))
-            w = game.get_winner_team() == team
-            d = game.get_team_elo(team) - game.get_team_elo(~team + 4)
-            game_player.elo_gain = int(k * (w - 1 / (1 + 10 ** (-d / 400))))
+            game_player.elo_gain = round(
+                compute_elo_gain(
+                    game.get_winner_team() == team,
+                    15 * (2 - exp(-((a * (1 - c / s) / (c + s)) ** 2))),
+                    game.get_team_elo(team),
+                    game.get_team_elo(-team + 3),
+                )
+            )
         await db.commit()
     except IntegrityError as error:
         await db.rollback()
+        await db.delete(game)
+        await db.commit()
         raise ValueError(error)
 
 
@@ -150,17 +156,14 @@ async def get_waiting_games(
 ) -> list[models_elocaps.Game]:
     result = await db.execute(
         select(models_elocaps.GamePlayer)
+        .join(models_elocaps.Player)
         .where(
             (models_elocaps.Player.user_id == user_id)
             & ~models_elocaps.GamePlayer.has_confirmed
         )
-        .options(
-            selectinload(models_elocaps.Game.game_players)
-            .selectinload(models_elocaps.GamePlayer.player)
-            .selectinload(models_elocaps.GamePlayer.game)
-        )
+        .options(selectinload(models_elocaps.GamePlayer.game))
     )
-    return [i.game for i in result.scalars().all()]
+    return [x.game for x in result.scalars().all()]
 
 
 async def confirm_game(db: AsyncSession, game_id: str, user_id: str) -> None:
@@ -209,8 +212,8 @@ async def end_game(db: AsyncSession, game_id: str) -> None:
     )
     if game is None:
         raise ValueError("This game does not exist")
-    for i in game.game_players:
-        i.player.elo += i.elo_gain
+    for x in game.game_players:
+        x.player.elo += x.elo_gain
     await db.commit()
 
 
@@ -230,10 +233,12 @@ async def get_winrate(
     db: AsyncSession,
     game_mode: CapsMode,
     user_id: str,
-) -> float:
+) -> float | None:
     result = await db.execute(
         (
             select(models_elocaps.Game)
+            .join(models_elocaps.GamePlayer)
+            .join(models_elocaps.Player)
             .where(
                 (models_elocaps.Game.mode == game_mode)
                 & (models_elocaps.Player.user_id == user_id)
@@ -246,8 +251,12 @@ async def get_winrate(
         )
     )
     games: list[models_elocaps.Game] = [
-        i for i in result.scalars().all() if i.is_confirmed
+        x for x in result.scalars().all() if x.is_confirmed
     ]
-    return sum(
-        1 for i in games if i.get_winner_team() == i.get_user_team(user_id)
-    ) / len(games)
+    if len(games) == 0:
+        return None
+    return round(
+        sum(1 for x in games if x.get_winner_team() == x.get_user_team(user_id))
+        / len(games),
+        2,
+    )

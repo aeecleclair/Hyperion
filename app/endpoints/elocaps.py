@@ -29,7 +29,7 @@ async def register_game(
     try:
         await cruds_elocaps.register_game(db, game, game_params.players)
     except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @router.get(
@@ -42,10 +42,20 @@ async def get_latest_games(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    x = await cruds_elocaps.get_latest_games(db)
-    print("=" * 50)
-    print(x[0].is_confirmed)
-    return x
+    return await cruds_elocaps.get_latest_games(db)
+
+
+@router.get(
+    "/elocaps/games/waiting",
+    response_model=list[schemas_elocaps.GameMode],
+    status_code=200,
+    tags=[Tags.elocaps],
+)
+async def get_waiting_games(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    return await cruds_elocaps.get_waiting_games(db, user.id)
 
 
 @router.get(
@@ -85,7 +95,10 @@ async def confirm_game(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    await cruds_elocaps.confirm_game(db, game_id=game_id, user_id=user.id)
+    try:
+        await cruds_elocaps.confirm_game(db, game_id=game_id, user_id=user.id)
+    except ValueError as error:
+        raise HTTPException(400, str(error))
 
 
 @router.get(
@@ -104,7 +117,7 @@ async def get_player_games(
 
 @router.get(
     "/elocaps/players/{user_id}",
-    response_model=list[schemas_elocaps.PlayerBase],
+    response_model=schemas_elocaps.DetailedPlayer,
     status_code=200,
     tags=[Tags.elocaps],
 )
@@ -113,7 +126,14 @@ async def get_player_info(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    return await cruds_elocaps.get_player_info(db, user_id)
+    db_player_modes = await cruds_elocaps.get_player_info(db, user_id)
+    mode_info = {
+        x.mode: schemas_elocaps.PlayerModeInfo(
+            elo=x.elo, winrate=await cruds_elocaps.get_winrate(db, x.mode, user_id)
+        )
+        for x in db_player_modes
+    }
+    return schemas_elocaps.DetailedPlayer(user_id=user_id, info=mode_info)
 
 
 @router.get(
