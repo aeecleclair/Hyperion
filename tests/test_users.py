@@ -146,7 +146,9 @@ def test_search_users():
     )
     assert response.status_code == 200
     data_users = set(user["id"] for user in response.json())
-    assert data_users == group_users
+    assert (
+        data_users <= group_users
+    )  # This endpoint is limited to 10 members, so we only need an inclusion between the two sets, in case there are more than 10 members in the group.
 
     response = client.get(
         f"/users/search?query=&excludedGroups={group}",
