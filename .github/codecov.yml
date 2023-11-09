@@ -1,0 +1,7 @@
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        # Codecov should allow coverage to be reduced by a few percent
+        threshold: 2%
