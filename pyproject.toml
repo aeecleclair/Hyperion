@@ -39,6 +39,10 @@ omit = [
     "mailworker.py", # We don't use send mails during tests
     "*matrix*",      # We don't send logs to matrix during tests
 ]
+concurrency = [
+    "thread",
+    "greenlet",
+] # Tell the tool that we also use greenlet, because sqlalchemy does
 
 
 [tool.coverage.report]
