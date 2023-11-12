@@ -183,12 +183,34 @@ async def get_bookings_for_manager(
 
 
 @router.get(
-    "/booking/bookings/confirmed",
+    "/booking/bookings/confirmed/users/me/manage",
     response_model=list[schemas_booking.BookingReturnApplicant],
     status_code=200,
     tags=[Tags.booking],
 )
 async def get_confirmed_bookings_for_manager(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Return all confirmed bookings a user can manage.
+    **The user must be authenticated to use this endpoint**
+    """
+
+    user_managers = await cruds_booking.get_user_managers(user=user, db=db)
+
+    bookings = await cruds_booking.get_confirmed_bookings(db=db)
+
+    return [booking for booking in bookings if booking.room.manager in user_managers]
+
+
+@router.get(
+    "/booking/bookings/confirmed",
+    response_model=list[schemas_booking.BookingReturn],
+    status_code=200,
+    tags=[Tags.booking],
+)
+async def get_confirmed_bookings(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
