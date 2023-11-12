@@ -226,28 +226,22 @@ async def get_confirmed_bookings(
 
 
 @router.get(
-    "/booking/bookings/users/{applicant_id}",
+    "/booking/bookings/users/me",
     response_model=list[schemas_booking.BookingReturn],
     status_code=200,
     tags=[Tags.booking],
 )
 async def get_applicant_bookings(
-    applicant_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
-    Get one user bookings.
+    Get the user bookings.
 
     **Only usable by the user**
     """
-    if user.id == applicant_id:
-        bookings = await cruds_booking.get_applicant_bookings(
-            db=db, applicant_id=applicant_id
-        )
-        return bookings
-    else:
-        raise HTTPException(status_code=403)
+    bookings = await cruds_booking.get_applicant_bookings(db=db, applicant_id=user.id)
+    return bookings
 
 
 @router.post(
