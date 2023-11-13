@@ -25,13 +25,17 @@ api_router.include_router(endpoints_notification.router)
 api_router.include_router(endpoints_users.router)
 
 for endpoints_file in glob.glob("./app/modules/*/endpoints_*.py"):
-    try:
-        module = importlib.import_module(endpoints_file[2:-3].replace("/", "."))
-        api_router.include_router(module.router)
-        module_list.extend(
-            module.module if isinstance(module.module, Iterable) else [module.module]
-        )
-    except AttributeError:
+    endpoint_module = importlib.import_module(endpoints_file[2:-3].replace("/", "."))
+    if hasattr(endpoint_module, "module"):
+        modules = endpoint_module.module
+        if not isinstance(modules, Iterable):
+            modules = [modules]
+        module_list.extend(modules)
+        for x in modules:
+            api_router.include_router(x.router)
+    elif hasattr(endpoint_module, "router"):
+        api_router.include_router(endpoint_module.router)
+    else:
         hyperion_error_logger.error(
-            f"Module {endpoints_file.split('/')[3]} does not declare a router and a module. It won't be enabled."
+            f"Module {endpoints_file.split('/')[3]} does not declare a module or a router. It won't be enabled."
         )

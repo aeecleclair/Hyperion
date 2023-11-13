@@ -19,10 +19,10 @@ module = (
     Module(
         root="home",
         default_allowed_groups_ids=[GroupType.student, GroupType.staff],
+        router=router,
     ),
     Module(
-        root="event",
-        default_allowed_groups_ids=[GroupType.student, GroupType.staff],
+        root="event", default_allowed_groups_ids=[GroupType.student, GroupType.staff]
     ),
 )
 tag = "Calendar"

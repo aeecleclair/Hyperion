@@ -2,7 +2,7 @@ import logging
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi import Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 from pytz import timezone
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,7 +30,6 @@ from app.utils.tools import (
     save_file_as_data,
 )
 
-router = APIRouter()
 module = Module(
     root="advert",
     default_allowed_groups_ids=[GroupType.student, GroupType.staff],
@@ -40,7 +39,7 @@ tag = "Advert"
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
-@router.get(
+@module.router.get(
     "/advert/advertisers",
     response_model=list[schemas_advert.AdvertiserComplete],
     status_code=200,
@@ -57,7 +56,7 @@ async def read_advertisers(
     return await cruds_advert.get_advertisers(db=db)
 
 
-@router.post(
+@module.router.post(
     "/advert/advertisers",
     response_model=schemas_advert.AdvertiserComplete,
     status_code=201,
@@ -95,7 +94,7 @@ async def create_advertiser(
         raise HTTPException(status_code=422, detail=str(error))
 
 
-@router.delete(
+@module.router.delete(
     "/advert/advertisers/{advertiser_id}",
     status_code=204,
     tags=[tag],
@@ -125,7 +124,7 @@ async def delete_advertiser(
     await cruds_advert.delete_advertiser(advertiser_id=advertiser_id, db=db)
 
 
-@router.patch(
+@module.router.patch(
     "/advert/advertisers/{advertiser_id}",
     status_code=204,
     tags=[tag],
@@ -155,7 +154,7 @@ async def update_advertiser(
     )
 
 
-@router.get(
+@module.router.get(
     "/advert/me/advertisers",
     response_model=list[schemas_advert.AdvertiserComplete],
     status_code=200,
@@ -179,7 +178,7 @@ async def get_current_user_advertisers(
     )
 
 
-@router.get(
+@module.router.get(
     "/advert/adverts",
     response_model=list[schemas_advert.AdvertReturnComplete],
     status_code=200,
@@ -204,7 +203,7 @@ async def read_adverts(
         return await cruds_advert.get_adverts(db=db)
 
 
-@router.get(
+@module.router.get(
     "/advert/adverts/{advert_id}",
     response_model=schemas_advert.AdvertReturnComplete,
     status_code=200,
@@ -224,7 +223,7 @@ async def read_advert(
     return await cruds_advert.get_advert_by_id(advert_id=advert_id, db=db)
 
 
-@router.post(
+@module.router.post(
     "/advert/adverts",
     response_model=schemas_advert.AdvertReturnComplete,
     status_code=201,
@@ -290,7 +289,7 @@ async def create_advert(
     return result
 
 
-@router.patch("/advert/adverts/{advert_id}", status_code=204, tags=[tag])
+@module.router.patch("/advert/adverts/{advert_id}", status_code=204, tags=[tag])
 async def update_advert(
     advert_id: str,
     advert_update: schemas_advert.AdvertUpdate,
@@ -322,7 +321,7 @@ async def update_advert(
     )
 
 
-@router.delete("/advert/adverts/{advert_id}", status_code=204, tags=[tag])
+@module.router.delete("/advert/adverts/{advert_id}", status_code=204, tags=[tag])
 async def delete_advert(
     advert_id: str,
     db: AsyncSession = Depends(get_db),
@@ -351,7 +350,7 @@ async def delete_advert(
     await cruds_advert.delete_advert(advert_id=advert_id, db=db)
 
 
-@router.get(
+@module.router.get(
     "/advert/adverts/{advert_id}/picture",
     response_class=FileResponse,
     status_code=200,
@@ -372,7 +371,7 @@ async def read_advert_image(
     )
 
 
-@router.post(
+@module.router.post(
     "/advert/adverts/{advert_id}/picture",
     response_model=standard_responses.Result,
     status_code=201,

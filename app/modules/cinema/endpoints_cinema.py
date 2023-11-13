@@ -2,7 +2,7 @@ import logging
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,7 +22,6 @@ from app.modules.cinema import cruds_cinema, schemas_cinema
 from app.utils.communication.notifications import NotificationTool
 from app.utils.tools import get_file_from_data, save_file_as_data
 
-router = APIRouter()
 module = Module(
     root="cinema",
     default_allowed_groups_ids=[GroupType.student, GroupType.staff],
@@ -32,7 +31,7 @@ tag = "Cinema"
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
-@router.get(
+@module.router.get(
     "/cinema/sessions",
     response_model=list[schemas_cinema.CineSessionComplete],
     status_code=200,
@@ -46,7 +45,7 @@ async def get_sessions(
     return result
 
 
-@router.post(
+@module.router.post(
     "/cinema/sessions",
     response_model=schemas_cinema.CineSessionComplete,
     status_code=201,
@@ -102,7 +101,7 @@ async def create_session(
     return result
 
 
-@router.patch("/cinema/sessions/{session_id}", status_code=200, tags=[tag])
+@module.router.patch("/cinema/sessions/{session_id}", status_code=200, tags=[tag])
 async def update_session(
     session_id: str,
     session_update: schemas_cinema.CineSessionUpdate,
@@ -114,7 +113,7 @@ async def update_session(
     )
 
 
-@router.delete("/cinema/sessions/{session_id}", status_code=204, tags=[tag])
+@module.router.delete("/cinema/sessions/{session_id}", status_code=204, tags=[tag])
 async def delete_session(
     session_id: str,
     db: AsyncSession = Depends(get_db),
@@ -123,7 +122,7 @@ async def delete_session(
     await cruds_cinema.delete_session(session_id=session_id, db=db)
 
 
-@router.post(
+@module.router.post(
     "/cinema/sessions/{session_id}/poster",
     response_model=standard_responses.Result,
     status_code=201,
@@ -155,7 +154,7 @@ async def create_campaigns_logo(
     return standard_responses.Result(success=True)
 
 
-@router.get(
+@module.router.get(
     "/cinema/sessions/{session_id}/poster",
     response_class=FileResponse,
     status_code=200,
