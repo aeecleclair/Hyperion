@@ -5,8 +5,8 @@ from datetime import timedelta
 import pytest_asyncio
 
 from app.core import models_core
+from app.core.groups.groups_type import GroupType
 from app.modules.loan import models_loan
-from app.utils.types.groups_type import GroupType
 from tests.commons import event_loop  # noqa
 from tests.commons import (
     add_object_to_db,

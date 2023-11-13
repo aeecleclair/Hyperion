@@ -41,9 +41,9 @@ from app.schemas import schemas_auth
 from app.utils.auth.providers import BaseAuthClient
 from app.utils.tools import is_user_member_of_an_allowed_group
 from app.utils.types.scopes_type import ScopeType
-from app.utils.types.tags import Tags
 
 router = APIRouter()
+tag = "Auth"
 
 templates = Jinja2Templates(directory="assets/templates")
 
@@ -60,7 +60,7 @@ hyperion_security_logger = logging.getLogger("hyperion.security")
     "/auth/simple_token",
     response_model=schemas_auth.AccessToken,
     status_code=200,
-    tags=[Tags.auth],
+    tags=[tag],
 )
 async def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(),
@@ -106,7 +106,7 @@ async def login_for_access_token(
 
 @router.get(
     "/auth/authorize",
-    tags=[Tags.auth],
+    tags=[tag],
     response_class=HTMLResponse,
 )
 async def get_authorize_page(
@@ -147,7 +147,7 @@ async def get_authorize_page(
 
 @router.post(
     "/auth/authorize",
-    tags=[Tags.auth],
+    tags=[tag],
     response_class=HTMLResponse,
 )
 async def post_authorize_page(
@@ -195,7 +195,7 @@ async def post_authorize_page(
 
 @router.post(
     "/auth/authorization-flow/authorize-validation",
-    tags=[Tags.auth],
+    tags=[tag],
     response_class=RedirectResponse,
 )
 async def authorize_validation(
@@ -384,7 +384,7 @@ async def authorize_validation(
 
 @router.post(
     "/auth/token",
-    tags=[Tags.auth],
+    tags=[tag],
     response_model=schemas_auth.TokenResponse,
     response_model_exclude_none=True,
 )
@@ -972,7 +972,7 @@ async def create_response_body(
 
 @router.get(
     "/auth/userinfo",
-    tags=[Tags.auth],
+    tags=[tag],
 )
 async def auth_get_userinfo(
     user: models_core.CoreUser = Depends(
@@ -1025,7 +1025,7 @@ async def auth_get_userinfo(
 
 @router.get(
     "/oidc/authorization-flow/jwks_uri",
-    tags=[Tags.auth],
+    tags=[tag],
 )
 def jwks_uri(
     settings: Settings = Depends(get_settings),
@@ -1035,7 +1035,7 @@ def jwks_uri(
 
 @router.get(
     "/.well-known/openid-configuration",
-    tags=[Tags.auth],
+    tags=[tag],
 )
 async def oidc_configuration(
     settings: Settings = Depends(get_settings),

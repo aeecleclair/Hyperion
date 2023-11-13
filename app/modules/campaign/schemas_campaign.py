@@ -1,7 +1,7 @@
 from pydantic import BaseModel, ConfigDict
 
 from app.core import schemas_core
-from app.utils.types.campaign_type import ListType, StatusType
+from app.modules.campaign.types_campaign import ListType, StatusType
 
 
 class SectionBase(BaseModel):

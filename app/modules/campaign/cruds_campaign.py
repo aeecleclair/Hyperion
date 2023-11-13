@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.modules.campaign import models_campaign, schemas_campaign
-from app.utils.types.campaign_type import ListType, StatusType
+from app.modules.campaign.types_campaign import ListType, StatusType
 
 
 async def get_status(

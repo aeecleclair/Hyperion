@@ -4,8 +4,8 @@ from typing import Any, Set
 import unidecode
 
 from app.core import models_core
+from app.core.groups.groups_type import GroupType
 from app.utils.tools import get_display_name, is_user_member_of_an_allowed_group
-from app.utils.types.groups_type import GroupType
 from app.utils.types.scopes_type import ScopeType
 
 

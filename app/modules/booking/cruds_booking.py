@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.modules.booking import models_booking, schemas_booking
-from app.utils.types.booking_type import Decision
+from app.modules.booking.types_booking import Decision
 
 
 async def get_managers(

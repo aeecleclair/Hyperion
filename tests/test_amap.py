@@ -4,9 +4,9 @@ from datetime import datetime
 import pytest_asyncio
 
 from app.core import models_core
+from app.core.groups.groups_type import GroupType
 from app.modules.amap import models_amap
-from app.utils.types.amap_types import AmapSlotType, DeliveryStatusType
-from app.utils.types.groups_type import GroupType
+from app.modules.amap.types_amap import AmapSlotType, DeliveryStatusType
 
 # We need to import event_loop for pytest-asyncio routine defined bellow
 from tests.commons import event_loop  # noqa

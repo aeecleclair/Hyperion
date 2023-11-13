@@ -6,20 +6,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import cruds_core, models_core, schemas_core
 from app.core.config import Settings
+from app.core.groups.groups_type import GroupType
 from app.dependencies import get_db, get_settings, is_user_a_member, is_user_a_member_of
 from app.utils.tools import is_group_id_valid
-from app.utils.types.groups_type import GroupType
-from app.utils.types.module_list import ModuleList
-from app.utils.types.tags import Tags
 
 router = APIRouter()
+tag = "Core"
 
 
 @router.get(
     "/information",
     response_model=schemas_core.CoreInformation,
     status_code=200,
-    tags=[Tags.core],
+    tags=[tag],
 )
 async def read_information(settings: Settings = Depends(get_settings)):
     """
@@ -38,7 +37,7 @@ async def read_information(settings: Settings = Depends(get_settings)):
     "/privacy",
     response_class=FileResponse,
     status_code=200,
-    tags=[Tags.core],
+    tags=[tag],
 )
 async def read_privacy():
     """
@@ -52,7 +51,7 @@ async def read_privacy():
     "/terms-and-conditions",
     response_class=FileResponse,
     status_code=200,
-    tags=[Tags.core],
+    tags=[tag],
 )
 async def read_terms_and_conditions():
     """
@@ -66,7 +65,7 @@ async def read_terms_and_conditions():
     "/support",
     response_class=FileResponse,
     status_code=200,
-    tags=[Tags.core],
+    tags=[tag],
 )
 async def read_support():
     """
@@ -80,7 +79,7 @@ async def read_support():
     "/security.txt",
     response_class=FileResponse,
     status_code=200,
-    tags=[Tags.core],
+    tags=[tag],
 )
 async def read_security_txt():
     """
@@ -94,7 +93,7 @@ async def read_security_txt():
     "/.well-known/security.txt",
     response_class=FileResponse,
     status_code=200,
-    tags=[Tags.core],
+    tags=[tag],
 )
 async def read_wellknown_security_txt():
     """
@@ -108,7 +107,7 @@ async def read_wellknown_security_txt():
     "/robots.txt",
     response_class=FileResponse,
     status_code=200,
-    tags=[Tags.core],
+    tags=[tag],
 )
 async def read_robots_txt():
     """
@@ -122,7 +121,7 @@ async def read_robots_txt():
     "/style/{file}.css",
     response_class=FileResponse,
     status_code=200,
-    tags=[Tags.core],
+    tags=[tag],
 )
 async def get_style_file(
     file: str,
@@ -149,7 +148,7 @@ async def get_style_file(
     "/favicon.ico",
     response_class=FileResponse,
     status_code=200,
-    tags=[Tags.core],
+    tags=[tag],
 )
 async def get_favicon():
     return FileResponse("assets/images/favicon.ico")
@@ -159,7 +158,7 @@ async def get_favicon():
     "/module-visibility/",
     response_model=list[schemas_core.ModuleVisibility],
     status_code=200,
-    tags=[Tags.core],
+    tags=[tag],
 )
 async def get_module_visibility(
     db: AsyncSession = Depends(get_db),
@@ -170,15 +169,18 @@ async def get_module_visibility(
 
     **This endpoint is only usable by administrators**
     """
+    from app.api import (  # We need to do it here, because the list is not initialized at startup
+        module_list,
+    )
 
     return_module_visibilities = []
-    for module in ModuleList:
+    for module in module_list:
         allowed_group_ids = await cruds_core.get_allowed_groups_by_root(
-            root=module.value.root, db=db
+            root=module.root, db=db
         )
         return_module_visibilities.append(
             schemas_core.ModuleVisibility(
-                root=module.value.root,
+                root=module.root,
                 allowed_group_ids=allowed_group_ids,
             )
         )
@@ -190,7 +192,7 @@ async def get_module_visibility(
     "/module-visibility/me",
     response_model=list[str],
     status_code=200,
-    tags=[Tags.core],
+    tags=[tag],
 )
 async def get_user_modules_visibility(
     db: AsyncSession = Depends(get_db),
@@ -209,7 +211,7 @@ async def get_user_modules_visibility(
     "/module-visibility/",
     response_model=schemas_core.ModuleVisibilityCreate,
     status_code=201,
-    tags=[Tags.core],
+    tags=[tag],
 )
 async def add_module_visibility(
     module_visibility: schemas_core.ModuleVisibilityCreate,
@@ -241,9 +243,7 @@ async def add_module_visibility(
         raise HTTPException(status_code=400, detail=str(error))
 
 
-@router.delete(
-    "/module-visibility/{root}/{group_id}", status_code=204, tags=[Tags.core]
-)
+@router.delete("/module-visibility/{root}/{group_id}", status_code=204, tags=[tag])
 async def delete_session(
     root: str,
     group_id: str,

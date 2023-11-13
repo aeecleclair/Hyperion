@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import noload, selectinload
 
 from app.modules.amap import models_amap, schemas_amap
-from app.utils.types.amap_types import DeliveryStatusType
+from app.modules.amap.types_amap import DeliveryStatusType
 
 hyperion_error_logger = logging.getLogger("hyperion_error")
 

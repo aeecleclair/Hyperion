@@ -3,8 +3,8 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, field_validator
 
 from app.core.schemas_core import CoreUserSimple
+from app.modules.calendar.types_calendar import CalendarEventType, Decision
 from app.utils import validators
-from app.utils.types.calendar_types import CalendarEventType, Decision
 
 
 # Schema de base. Contiens toutes les données communes à tous les schemas

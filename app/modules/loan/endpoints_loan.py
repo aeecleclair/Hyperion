@@ -6,6 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
+from app.core.groups.groups_type import GroupType
+from app.core.module import Module
 from app.dependencies import get_db, is_user_a_member, is_user_a_member_of
 from app.modules.loan import cruds_loan, models_loan, schemas_loan
 from app.utils.tools import (
@@ -13,17 +15,20 @@ from app.utils.tools import (
     is_user_id_valid,
     is_user_member_of_an_allowed_group,
 )
-from app.utils.types.groups_type import GroupType
-from app.utils.types.tags import Tags
 
 router = APIRouter()
+module = Module(
+    root="loan",
+    default_allowed_groups_ids=[GroupType.student, GroupType.staff],
+)
+tag = "Loans"
 
 
 @router.get(
     "/loans/loaners/",
     response_model=list[schemas_loan.Loaner],
     status_code=200,
-    tags=[Tags.loans],
+    tags=[tag],
 )
 async def read_loaners(
     db: AsyncSession = Depends(get_db),
@@ -42,7 +47,7 @@ async def read_loaners(
     "/loans/loaners/",
     response_model=schemas_loan.Loaner,
     status_code=201,
-    tags=[Tags.loans],
+    tags=[tag],
 )
 async def create_loaner(
     loaner: schemas_loan.LoanerBase,
@@ -79,7 +84,7 @@ async def create_loaner(
 @router.delete(
     "/loans/loaners/{loaner_id}",
     status_code=204,
-    tags=[Tags.loans],
+    tags=[tag],
 )
 async def delete_loaner(
     loaner_id: str,
@@ -114,7 +119,7 @@ async def delete_loaner(
 @router.patch(
     "/loans/loaners/{loaner_id}",
     status_code=204,
-    tags=[Tags.loans],
+    tags=[tag],
 )
 async def update_loaner(
     loaner_id: str,
@@ -137,7 +142,7 @@ async def update_loaner(
     "/loans/loaners/{loaner_id}/loans",
     response_model=list[schemas_loan.Loan],
     status_code=200,
-    tags=[Tags.loans],
+    tags=[tag],
 )
 async def get_loans_by_loaner(
     loaner_id: str,
@@ -200,7 +205,7 @@ async def get_loans_by_loaner(
     "/loans/loaners/{loaner_id}/items",
     response_model=list[schemas_loan.Item],
     status_code=200,
-    tags=[Tags.loans],
+    tags=[tag],
 )
 async def get_items_by_loaner(
     loaner_id: str,
@@ -243,7 +248,7 @@ async def get_items_by_loaner(
     "/loans/loaners/{loaner_id}/items",
     response_model=schemas_loan.Item,
     status_code=201,
-    tags=[Tags.loans],
+    tags=[tag],
 )
 async def create_items_for_loaner(
     loaner_id: str,
@@ -304,7 +309,7 @@ async def create_items_for_loaner(
 @router.patch(
     "/loans/loaners/{loaner_id}/items/{item_id}",
     status_code=204,
-    tags=[Tags.loans],
+    tags=[tag],
 )
 async def update_items_for_loaner(
     loaner_id: str,
@@ -354,7 +359,7 @@ async def update_items_for_loaner(
 @router.delete(
     "/loans/loaners/{loaner_id}/items/{item_id}",
     status_code=204,
-    tags=[Tags.loans],
+    tags=[tag],
 )
 async def delete_loaner_item(
     loaner_id: str,
@@ -397,7 +402,7 @@ async def delete_loaner_item(
     "/loans/users/me",
     response_model=list[schemas_loan.Loan],
     status_code=200,
-    tags=[Tags.loans],
+    tags=[tag],
 )
 async def get_current_user_loans(
     returned: bool | None = None,
@@ -443,7 +448,7 @@ async def get_current_user_loans(
     "/loans/users/me/loaners",
     response_model=list[schemas_loan.Loaner],
     status_code=200,
-    tags=[Tags.loans],
+    tags=[tag],
 )
 async def get_current_user_loaners(
     db: AsyncSession = Depends(get_db),
@@ -473,7 +478,7 @@ async def get_current_user_loaners(
     "/loans/",
     response_model=schemas_loan.Loan,
     status_code=201,
-    tags=[Tags.loans],
+    tags=[tag],
 )
 async def create_loan(
     loan_creation: schemas_loan.LoanCreation,
@@ -593,7 +598,7 @@ async def create_loan(
 @router.patch(
     "/loans/{loan_id}",
     status_code=204,
-    tags=[Tags.loans],
+    tags=[tag],
 )
 async def update_loan(  # noqa: C901
     loan_id: str,
@@ -711,7 +716,7 @@ async def update_loan(  # noqa: C901
 @router.delete(
     "/loans/{loan_id}",
     status_code=204,
-    tags=[Tags.loans],
+    tags=[tag],
 )
 async def delete_loan(
     loan_id: str,
@@ -761,7 +766,7 @@ async def delete_loan(
 @router.post(
     "/loans/{loan_id}/return",
     status_code=204,
-    tags=[Tags.loans],
+    tags=[tag],
 )
 async def return_loan(
     loan_id: str,
@@ -815,7 +820,7 @@ async def return_loan(
 @router.post(
     "/loans/{loan_id}/extend",
     status_code=204,
-    tags=[Tags.loans],
+    tags=[tag],
 )
 async def extend_loan(
     loan_id: str,

@@ -10,7 +10,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.config import Settings
 from app.modules.calendar import models_calendar, schemas_calendar
-from app.utils.types.calendar_types import Decision
+from app.modules.calendar.types_calendar import Decision
 
 calendar_file_path = "data/ics/ae_calendar.ics"
 

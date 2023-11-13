@@ -7,14 +7,26 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
 from app.core.config import Settings
+from app.core.groups.groups_type import GroupType
+from app.core.module import Module
 from app.dependencies import get_db, get_settings, is_user_a_member, is_user_a_member_of
 from app.modules.calendar import cruds_calendar, models_calendar, schemas_calendar
+from app.modules.calendar.types_calendar import Decision
 from app.utils.tools import is_user_member_of_an_allowed_group
-from app.utils.types.calendar_types import Decision
-from app.utils.types.groups_type import GroupType
-from app.utils.types.tags import Tags
 
 router = APIRouter()
+module = (
+    Module(
+        root="home",
+        default_allowed_groups_ids=[GroupType.student, GroupType.staff],
+    ),
+    Module(
+        root="event",
+        default_allowed_groups_ids=[GroupType.student, GroupType.staff],
+    ),
+)
+tag = "Calendar"
+
 ical_file_path = "data/ics/ae_calendar.ics"
 
 
@@ -22,7 +34,7 @@ ical_file_path = "data/ics/ae_calendar.ics"
     "/calendar/events/",
     response_model=list[schemas_calendar.EventReturn],
     status_code=200,
-    tags=[Tags.calendar],
+    tags=[tag],
 )
 async def get_events(
     db: AsyncSession = Depends(get_db),
@@ -37,7 +49,7 @@ async def get_events(
     "/calendar/events/confirmed",
     response_model=list[schemas_calendar.EventComplete],
     status_code=200,
-    tags=[Tags.calendar],
+    tags=[tag],
 )
 async def get_confirmed_events(
     db: AsyncSession = Depends(get_db),
@@ -56,7 +68,7 @@ async def get_confirmed_events(
     "/calendar/events/user/{applicant_id}",
     response_model=list[schemas_calendar.EventReturn],
     status_code=200,
-    tags=[Tags.calendar],
+    tags=[tag],
 )
 async def get_applicant_bookings(
     applicant_id: str,
@@ -83,7 +95,7 @@ async def get_applicant_bookings(
     "/calendar/events/{event_id}",
     response_model=schemas_calendar.EventComplete,
     status_code=200,
-    tags=[Tags.calendar],
+    tags=[tag],
 )
 async def get_event_by_id(
     event_id: str,
@@ -103,7 +115,7 @@ async def get_event_by_id(
     "calendar/events/{event_id}/applicant",
     response_model=schemas_calendar.EventApplicant,
     status_code=200,
-    tags=[Tags.calendar],
+    tags=[tag],
 )
 async def get_event_applicant(
     event_id: str,
@@ -121,7 +133,7 @@ async def get_event_applicant(
     "/calendar/events/",
     response_model=schemas_calendar.EventReturn,
     status_code=201,
-    tags=[Tags.calendar],
+    tags=[tag],
 )
 async def add_event(
     event: schemas_calendar.EventBase,
@@ -148,7 +160,7 @@ async def add_event(
 @router.patch(
     "/calendar/events/{event_id}",
     status_code=204,
-    tags=[Tags.calendar],
+    tags=[tag],
 )
 async def edit_bookings_id(
     event_id: str,
@@ -181,7 +193,7 @@ async def edit_bookings_id(
 @router.patch(
     "/calendar/events/{event_id}/reply/{decision}",
     status_code=204,
-    tags=[Tags.calendar],
+    tags=[tag],
 )
 async def confirm_booking(
     event_id: str,
@@ -200,7 +212,7 @@ async def confirm_booking(
     )
 
 
-@router.delete("/calendar/events/{event_id}", status_code=204, tags=[Tags.calendar])
+@router.delete("/calendar/events/{event_id}", status_code=204, tags=[tag])
 async def delete_bookings_id(
     event_id,
     db: AsyncSession = Depends(get_db),
@@ -230,7 +242,7 @@ async def delete_bookings_id(
 @router.post(
     "/calendar/ical/create",
     status_code=204,
-    tags=[Tags.calendar],
+    tags=[tag],
 )
 async def recreate_ical_file(
     db: AsyncSession = Depends(get_db),
@@ -250,7 +262,7 @@ async def recreate_ical_file(
     "/calendar/ical",
     response_class=FileResponse,
     status_code=200,
-    tags=[Tags.calendar],
+    tags=[tag],
 )
 async def get_icalendar_file(db: AsyncSession = Depends(get_db)):
     """Get the icalendar file corresponding to the event in the database."""

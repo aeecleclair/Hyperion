@@ -3,7 +3,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core import models_core
 from app.database import Base
-from app.utils.types.campaign_type import StatusType
+from app.modules.campaign.types_campaign import StatusType
 
 
 class ListMemberships(Base):

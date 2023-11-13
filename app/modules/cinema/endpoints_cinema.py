@@ -6,7 +6,10 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core
+from app.core import models_core, standard_responses
+from app.core.groups.groups_type import GroupType
+from app.core.module import Module
+from app.core.notification.notification_types import CustomTopic, Topic
 from app.core.notification.schemas_notification import Message
 from app.dependencies import (
     get_db,
@@ -18,12 +21,13 @@ from app.dependencies import (
 from app.modules.cinema import cruds_cinema, schemas_cinema
 from app.utils.communication.notifications import NotificationTool
 from app.utils.tools import get_file_from_data, save_file_as_data
-from app.utils.types import standard_responses
-from app.utils.types.groups_type import GroupType
-from app.utils.types.notification_types import CustomTopic, Topic
-from app.utils.types.tags import Tags
 
 router = APIRouter()
+module = Module(
+    root="cinema",
+    default_allowed_groups_ids=[GroupType.student, GroupType.staff],
+)
+tag = "Cinema"
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
@@ -32,7 +36,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
     "/cinema/sessions",
     response_model=list[schemas_cinema.CineSessionComplete],
     status_code=200,
-    tags=[Tags.cinema],
+    tags=[tag],
 )
 async def get_sessions(
     db: AsyncSession = Depends(get_db),
@@ -46,7 +50,7 @@ async def get_sessions(
     "/cinema/sessions",
     response_model=schemas_cinema.CineSessionComplete,
     status_code=201,
-    tags=[Tags.cinema],
+    tags=[tag],
 )
 async def create_session(
     session: schemas_cinema.CineSessionBase,
@@ -98,7 +102,7 @@ async def create_session(
     return result
 
 
-@router.patch("/cinema/sessions/{session_id}", status_code=200, tags=[Tags.cinema])
+@router.patch("/cinema/sessions/{session_id}", status_code=200, tags=[tag])
 async def update_session(
     session_id: str,
     session_update: schemas_cinema.CineSessionUpdate,
@@ -110,7 +114,7 @@ async def update_session(
     )
 
 
-@router.delete("/cinema/sessions/{session_id}", status_code=204, tags=[Tags.cinema])
+@router.delete("/cinema/sessions/{session_id}", status_code=204, tags=[tag])
 async def delete_session(
     session_id: str,
     db: AsyncSession = Depends(get_db),
@@ -123,7 +127,7 @@ async def delete_session(
     "/cinema/sessions/{session_id}/poster",
     response_model=standard_responses.Result,
     status_code=201,
-    tags=[Tags.users],
+    tags=[tag],
 )
 async def create_campaigns_logo(
     session_id: str,
@@ -155,7 +159,7 @@ async def create_campaigns_logo(
     "/cinema/sessions/{session_id}/poster",
     response_class=FileResponse,
     status_code=200,
-    tags=[Tags.users],
+    tags=[tag],
 )
 async def read_session_poster(
     session_id: str,

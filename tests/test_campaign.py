@@ -3,9 +3,9 @@ import uuid
 import pytest_asyncio
 
 from app.core import models_core
+from app.core.groups.groups_type import GroupType
 from app.modules.campaign import models_campaign
-from app.utils.types.campaign_type import ListType
-from app.utils.types.groups_type import GroupType
+from app.modules.campaign.types_campaign import ListType
 
 # We need to import event_loop for pytest-asyncio routine defined bellow
 from tests.commons import event_loop  # noqa

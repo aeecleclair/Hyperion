@@ -1,4 +1,4 @@
-from app.utils.types.groups_type import GroupType
+from app.core.groups.groups_type import GroupType
 
 
 class Module:

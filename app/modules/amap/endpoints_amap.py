@@ -9,6 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
 from app.core.config import Settings
+from app.core.groups.groups_type import GroupType
+from app.core.module import Module
 from app.core.notification.schemas_notification import Message
 from app.core.users import cruds_users
 from app.core.users.endpoints_users import read_user
@@ -22,14 +24,17 @@ from app.dependencies import (
     is_user_a_member_of,
 )
 from app.modules.amap import cruds_amap, models_amap, schemas_amap
+from app.modules.amap.types_amap import DeliveryStatusType
 from app.utils.communication.notifications import NotificationTool
 from app.utils.redis import locker_get, locker_set
 from app.utils.tools import is_user_member_of_an_allowed_group
-from app.utils.types.amap_types import DeliveryStatusType
-from app.utils.types.groups_type import GroupType
-from app.utils.types.tags import Tags
 
 router = APIRouter()
+module = Module(
+    root="amap",
+    default_allowed_groups_ids=[GroupType.student, GroupType.staff],
+)
+tag = "AMAP"
 
 hyperion_amap_logger = logging.getLogger("hyperion.amap")
 hyperion_error_logger = logging.getLogger("hyperion.error")
@@ -39,7 +44,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
     "/amap/products",
     response_model=list[schemas_amap.ProductComplete],
     status_code=200,
-    tags=[Tags.amap],
+    tags=[tag],
 )
 async def get_products(
     db: AsyncSession = Depends(get_db),
@@ -58,7 +63,7 @@ async def get_products(
     "/amap/products",
     response_model=schemas_amap.ProductComplete,
     status_code=201,
-    tags=[Tags.amap],
+    tags=[tag],
 )
 async def create_product(
     product: schemas_amap.ProductSimple,
@@ -83,7 +88,7 @@ async def create_product(
     "/amap/products/{product_id}",
     response_model=schemas_amap.ProductComplete,
     status_code=200,
-    tags=[Tags.amap],
+    tags=[tag],
 )
 async def get_product_by_id(
     product_id: str,
@@ -104,7 +109,7 @@ async def get_product_by_id(
 @router.patch(
     "/amap/products/{product_id}",
     status_code=204,
-    tags=[Tags.amap],
+    tags=[tag],
 )
 async def edit_product(
     product_id: str,
@@ -130,7 +135,7 @@ async def edit_product(
 @router.delete(
     "/amap/products/{product_id}",
     status_code=204,
-    tags=[Tags.amap],
+    tags=[tag],
 )
 async def delete_product(
     product_id: str,
@@ -159,7 +164,7 @@ async def delete_product(
     "/amap/deliveries",
     response_model=list[schemas_amap.DeliveryReturn],
     status_code=200,
-    tags=[Tags.amap],
+    tags=[tag],
 )
 async def get_deliveries(
     db: AsyncSession = Depends(get_db),
@@ -175,7 +180,7 @@ async def get_deliveries(
     "/amap/deliveries",
     response_model=schemas_amap.DeliveryReturn,
     status_code=201,
-    tags=[Tags.amap],
+    tags=[tag],
 )
 async def create_delivery(
     delivery: schemas_amap.DeliveryBase,
@@ -207,7 +212,7 @@ async def create_delivery(
 @router.delete(
     "/amap/deliveries/{delivery_id}",
     status_code=204,
-    tags=[Tags.amap],
+    tags=[tag],
 )
 async def delete_delivery(
     delivery_id: str,
@@ -236,7 +241,7 @@ async def delete_delivery(
 @router.patch(
     "/amap/deliveries/{delivery_id}",
     status_code=204,
-    tags=[Tags.amap],
+    tags=[tag],
 )
 async def edit_delivery(
     delivery_id: str,
@@ -266,7 +271,7 @@ async def edit_delivery(
 @router.post(
     "/amap/deliveries/{delivery_id}/products",
     status_code=201,
-    tags=[Tags.amap],
+    tags=[tag],
 )
 async def add_product_to_delivery(
     products_ids: schemas_amap.DeliveryProductsUpdate,
@@ -302,7 +307,7 @@ async def add_product_to_delivery(
 @router.delete(
     "/amap/deliveries/{delivery_id}/products",
     status_code=204,
-    tags=[Tags.amap],
+    tags=[tag],
 )
 async def remove_product_from_delivery(
     delivery_id: str,
@@ -334,7 +339,7 @@ async def remove_product_from_delivery(
     "/amap/deliveries/{delivery_id}/orders",
     response_model=list[schemas_amap.OrderReturn],
     status_code=200,
-    tags=[Tags.amap],
+    tags=[tag],
 )
 async def get_orders_from_delivery(
     delivery_id: str,
@@ -368,7 +373,7 @@ async def get_orders_from_delivery(
     "/amap/orders/{order_id}",
     response_model=schemas_amap.OrderReturn,
     status_code=200,
-    tags=[Tags.amap],
+    tags=[tag],
 )
 async def get_order_by_id(
     order_id: str,
@@ -393,7 +398,7 @@ async def get_order_by_id(
     "/amap/orders",
     response_model=schemas_amap.OrderReturn,
     status_code=201,
-    tags=[Tags.amap],
+    tags=[tag],
 )
 async def add_order_to_delievery(
     order: schemas_amap.OrderBase,
@@ -508,7 +513,7 @@ async def add_order_to_delievery(
 @router.patch(
     "/amap/orders/{order_id}",
     status_code=204,
-    tags=[Tags.amap],
+    tags=[tag],
 )
 async def edit_order_from_delivery(
     order_id: str,
@@ -625,7 +630,7 @@ async def edit_order_from_delivery(
 @router.delete(
     "/amap/orders/{order_id}",
     status_code=204,
-    tags=[Tags.amap],
+    tags=[tag],
 )
 async def remove_order(
     order_id: str,
@@ -700,7 +705,7 @@ async def remove_order(
 @router.post(
     "/amap/deliveries/{delivery_id}/openordering",
     status_code=204,
-    tags=[Tags.amap],
+    tags=[tag],
 )
 async def open_ordering_of_delivery(
     delivery_id: str,
@@ -723,7 +728,7 @@ async def open_ordering_of_delivery(
 @router.post(
     "/amap/deliveries/{delivery_id}/lock",
     status_code=204,
-    tags=[Tags.amap],
+    tags=[tag],
 )
 async def lock_delivery(
     delivery_id: str,
@@ -745,7 +750,7 @@ async def lock_delivery(
 @router.post(
     "/amap/deliveries/{delivery_id}/delivered",
     status_code=204,
-    tags=[Tags.amap],
+    tags=[tag],
 )
 async def mark_delivery_as_delivered(
     delivery_id: str,
@@ -767,7 +772,7 @@ async def mark_delivery_as_delivered(
 @router.post(
     "/amap/deliveries/{delivery_id}/archive",
     status_code=204,
-    tags=[Tags.amap],
+    tags=[tag],
 )
 async def archive_of_delivery(
     delivery_id: str,
@@ -791,7 +796,7 @@ async def archive_of_delivery(
     "/amap/users/cash",
     response_model=list[schemas_amap.CashComplete],
     status_code=200,
-    tags=[Tags.amap],
+    tags=[tag],
 )
 async def get_users_cash(
     db: AsyncSession = Depends(get_db),
@@ -810,7 +815,7 @@ async def get_users_cash(
     "/amap/users/{user_id}/cash",
     response_model=schemas_amap.CashComplete,
     status_code=200,
-    tags=[Tags.amap],
+    tags=[tag],
 )
 async def get_cash_by_id(
     user_id: str,
@@ -852,7 +857,7 @@ async def get_cash_by_id(
     "/amap/users/{user_id}/cash",
     response_model=schemas_amap.CashComplete,
     status_code=201,
-    tags=[Tags.amap],
+    tags=[tag],
 )
 async def create_cash_of_user(
     user_id: str,
@@ -922,7 +927,7 @@ async def create_cash_of_user(
 @router.patch(
     "/amap/users/{user_id}/cash",
     status_code=204,
-    tags=[Tags.amap],
+    tags=[tag],
 )
 async def edit_cash_by_id(
     user_id: str,
@@ -959,7 +964,7 @@ async def edit_cash_by_id(
     "/amap/users/{user_id}/orders",
     response_model=list[schemas_amap.OrderReturn],
     status_code=200,
-    tags=[Tags.amap],
+    tags=[tag],
 )
 async def get_orders_of_user(
     user_id: str,
@@ -996,7 +1001,7 @@ async def get_orders_of_user(
     "/amap/information",
     response_model=schemas_amap.Information,
     status_code=200,
-    tags=[Tags.amap],
+    tags=[tag],
 )
 async def get_information(
     db: AsyncSession = Depends(get_db),
@@ -1020,7 +1025,7 @@ async def get_information(
 @router.patch(
     "/amap/information",
     status_code=204,
-    tags=[Tags.amap],
+    tags=[tag],
 )
 async def edit_information(
     edit_information: schemas_amap.InformationEdit,

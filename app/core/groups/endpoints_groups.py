@@ -12,15 +12,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, schemas_core
 from app.core.groups import cruds_groups
+from app.core.groups.groups_type import GroupType
 from app.core.users import cruds_users
 from app.dependencies import get_db, get_request_id, is_user_a_member, is_user_a_member_of
-from app.utils.types.groups_type import GroupType
-from app.utils.types.tags import Tags
 
 router = APIRouter()
-
-hyperion_security_logger = logging.getLogger("hyperion.security")
-
+tag = "Groups"
 
 hyperion_security_logger = logging.getLogger("hyperion.security")
 
@@ -29,7 +26,7 @@ hyperion_security_logger = logging.getLogger("hyperion.security")
     "/groups/",
     response_model=list[schemas_core.CoreGroupSimple],
     status_code=200,
-    tags=[Tags.groups],
+    tags=[tag],
 )
 async def read_groups(
     db: AsyncSession = Depends(get_db),
@@ -49,7 +46,7 @@ async def read_groups(
     "/groups/{group_id}",
     response_model=schemas_core.CoreGroup,
     status_code=200,
-    tags=[Tags.groups],
+    tags=[tag],
 )
 async def read_group(
     group_id: str,
@@ -72,7 +69,7 @@ async def read_group(
     "/groups/",
     response_model=schemas_core.CoreGroupSimple,
     status_code=201,
-    tags=[Tags.groups],
+    tags=[tag],
 )
 async def create_group(
     group: schemas_core.CoreGroupCreate,
@@ -103,7 +100,7 @@ async def create_group(
 @router.patch(
     "/groups/{group_id}",
     status_code=204,
-    tags=[Tags.groups],
+    tags=[tag],
 )
 async def update_group(
     group_id: str,
@@ -139,7 +136,7 @@ async def update_group(
     "/groups/membership",
     response_model=schemas_core.CoreGroup,
     status_code=201,
-    tags=[Tags.groups],
+    tags=[tag],
 )
 async def create_membership(
     membership: schemas_core.CoreMembership,
@@ -180,7 +177,7 @@ async def create_membership(
 @router.post(
     "/groups/batch-membership",
     status_code=204,
-    tags=[Tags.groups],
+    tags=[tag],
 )
 async def create_batch_membership(
     batch_membership: schemas_core.CoreBatchMembership,
@@ -226,7 +223,7 @@ async def create_batch_membership(
 @router.delete(
     "/groups/membership",
     status_code=204,
-    tags=[Tags.groups],
+    tags=[tag],
 )
 async def delete_membership(
     membership: schemas_core.CoreMembershipDelete,
@@ -252,7 +249,7 @@ async def delete_membership(
 @router.delete(
     "/groups/batch-membership",
     status_code=204,
-    tags=[Tags.groups],
+    tags=[tag],
 )
 async def delete_batch_membership(
     batch_membership: schemas_core.CoreBatchDeleteMembership,
@@ -284,7 +281,7 @@ async def delete_batch_membership(
 @router.delete(
     "/groups/{group_id}",
     status_code=204,
-    tags=[Tags.groups],
+    tags=[tag],
 )
 async def delete_group(
     group_id: str,

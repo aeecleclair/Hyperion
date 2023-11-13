@@ -25,11 +25,11 @@ from sqlalchemy.ext.asyncio import (
 from app.core import models_core, security
 from app.core.auth import schemas_auth
 from app.core.config import Settings
+from app.core.groups.groups_type import GroupType
 from app.core.users import cruds_users
 from app.utils.communication.notifications import NotificationManager, NotificationTool
 from app.utils.redis import connect
 from app.utils.tools import is_user_member_of_an_allowed_group
-from app.utils.types.groups_type import GroupType
 from app.utils.types.scopes_type import ScopeType
 
 # We could maybe use hyperion.security

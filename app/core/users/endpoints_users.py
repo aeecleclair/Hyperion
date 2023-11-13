@@ -19,9 +19,10 @@ from fastapi.templating import Jinja2Templates
 from pytz import timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core, schemas_core, security
+from app.core import models_core, schemas_core, security, standard_responses
 from app.core.config import Settings
 from app.core.groups import cruds_groups
+from app.core.groups.groups_type import AccountType, GroupType
 from app.core.users import cruds_users
 from app.dependencies import (
     get_db,
@@ -32,11 +33,9 @@ from app.dependencies import (
 )
 from app.utils.mail.mailworker import send_email
 from app.utils.tools import fuzzy_search_user, get_file_from_data, save_file_as_data
-from app.utils.types import standard_responses
-from app.utils.types.groups_type import AccountType, GroupType
-from app.utils.types.tags import Tags
 
 router = APIRouter()
+tag = "Users"
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 hyperion_security_logger = logging.getLogger("hyperion.security")
@@ -48,7 +47,7 @@ templates = Jinja2Templates(directory="assets/templates")
     "/users/",
     response_model=list[schemas_core.CoreUserSimple],
     status_code=200,
-    tags=[Tags.users],
+    tags=[tag],
 )
 async def read_users(
     db: AsyncSession = Depends(get_db),
@@ -68,7 +67,7 @@ async def read_users(
     "/users/count",
     response_model=int,
     status_code=200,
-    tags=[Tags.users],
+    tags=[tag],
 )
 async def count_users(
     db: AsyncSession = Depends(get_db),
@@ -88,7 +87,7 @@ async def count_users(
     "/users/search",
     response_model=list[schemas_core.CoreUserSimple],
     status_code=200,
-    tags=[Tags.users],
+    tags=[tag],
 )
 async def search_users(
     query: str,
@@ -116,7 +115,7 @@ async def search_users(
     "/users/me",
     response_model=schemas_core.CoreUser,
     status_code=200,
-    tags=[Tags.users],
+    tags=[tag],
 )
 async def read_current_user(
     user: models_core.CoreUser = Depends(is_user_a_member),
@@ -134,7 +133,7 @@ async def read_current_user(
     "/users/create",
     response_model=standard_responses.Result,
     status_code=201,
-    tags=[Tags.users],
+    tags=[tag],
 )
 async def create_user_by_user(
     user_create: schemas_core.CoreUserCreateRequest,
@@ -225,7 +224,7 @@ async def create_user_by_user(
     "/users/batch-creation",
     response_model=standard_responses.BatchResult,
     status_code=201,
-    tags=[Tags.users],
+    tags=[tag],
 )
 async def batch_create_users(
     user_creates: list[schemas_core.CoreBatchUserCreateRequest],
@@ -326,7 +325,7 @@ async def create_user(
     "/users/activate",
     response_class=HTMLResponse,
     status_code=201,
-    tags=[Tags.users],
+    tags=[tag],
 )
 async def get_user_activation_page(
     # request need to be passed to Jinja2 to generate the HTML page
@@ -377,7 +376,7 @@ async def get_user_activation_page(
     "/users/activate",
     response_model=standard_responses.Result,
     status_code=201,
-    tags=[Tags.users],
+    tags=[tag],
 )
 async def activate_user(
     user: schemas_core.CoreUserActivateRequest,
@@ -461,7 +460,7 @@ async def activate_user(
     "/users/make-admin",
     response_model=standard_responses.Result,
     status_code=200,
-    tags=[Tags.users],
+    tags=[tag],
 )
 async def make_admin(
     db: AsyncSession = Depends(get_db),
@@ -498,7 +497,7 @@ async def make_admin(
     "/users/recover",
     response_model=standard_responses.Result,
     status_code=201,
-    tags=[Tags.users],
+    tags=[tag],
 )
 async def recover_user(
     # We use embed for email parameter: https://fastapi.tiangolo.com/tutorial/body-multiple-params/#embed-a-single-body-parameter
@@ -554,7 +553,7 @@ async def recover_user(
     "/users/reset-password",
     response_model=standard_responses.Result,
     status_code=201,
-    tags=[Tags.users],
+    tags=[tag],
 )
 async def reset_password(
     reset_password_request: schemas_core.ResetPasswordRequest,
@@ -592,7 +591,7 @@ async def reset_password(
 @router.post(
     "/users/migrate-mail",
     status_code=204,
-    tags=[Tags.users],
+    tags=[tag],
 )
 async def migrate_mail(
     mail_migration: schemas_core.MailMigrationRequest,
@@ -673,7 +672,7 @@ async def migrate_mail(
 @router.get(
     "/users/migrate-mail-confirm",
     status_code=200,
-    tags=[Tags.users],
+    tags=[tag],
 )
 async def migrate_mail_confirm(
     token: str,
@@ -736,7 +735,7 @@ async def migrate_mail_confirm(
     "/users/change-password",
     response_model=standard_responses.Result,
     status_code=201,
-    tags=[Tags.users],
+    tags=[tag],
 )
 async def change_password(
     change_password_request: schemas_core.ChangePasswordRequest,
@@ -775,7 +774,7 @@ async def change_password(
     "/users/{user_id}",
     response_model=schemas_core.CoreUser,
     status_code=200,
-    tags=[Tags.users],
+    tags=[tag],
 )
 async def read_user(
     user_id: str,
@@ -798,7 +797,7 @@ async def read_user(
 # @router.delete(
 #    "/users/{user_id}",
 #    status_code=204,
-#    tags=[Tags.users],
+#    tags=[tag],
 # )
 # async def delete_user(user_id: str, db: AsyncSession = Depends(get_db), user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin))):
 #    """Delete user from database by id"""
@@ -810,7 +809,7 @@ async def read_user(
 @router.post(
     "/users/me/ask-deletion",
     status_code=204,
-    tags=[Tags.users],
+    tags=[tag],
 )
 async def delete_user(
     db: AsyncSession = Depends(get_db),
@@ -831,7 +830,7 @@ async def delete_user(
 @router.patch(
     "/users/me",
     status_code=204,
-    tags=[Tags.users],
+    tags=[tag],
 )
 async def update_current_user(
     user_update: schemas_core.CoreUserUpdate,
@@ -850,7 +849,7 @@ async def update_current_user(
 @router.patch(
     "/users/{user_id}",
     status_code=204,
-    tags=[Tags.users],
+    tags=[tag],
 )
 async def update_user(
     user_id: str,
@@ -874,7 +873,7 @@ async def update_user(
     "/users/me/profile-picture",
     response_model=standard_responses.Result,
     status_code=201,
-    tags=[Tags.users],
+    tags=[tag],
 )
 async def create_current_user_profile_picture(
     image: UploadFile = File(...),
@@ -903,7 +902,7 @@ async def create_current_user_profile_picture(
     "/users/me/profile-picture",
     response_class=FileResponse,
     status_code=200,
-    tags=[Tags.users],
+    tags=[tag],
 )
 async def read_own_profile_picture(
     user: models_core.CoreUser = Depends(is_user_a_member),
@@ -923,7 +922,7 @@ async def read_own_profile_picture(
     "/users/{user_id}/profile-picture",
     response_class=FileResponse,
     status_code=200,
-    tags=[Tags.users],
+    tags=[tag],
 )
 async def read_user_profile_picture(
     user_id: str,

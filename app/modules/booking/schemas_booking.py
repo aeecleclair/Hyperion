@@ -5,7 +5,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 
 from app.core.schemas_core import CoreUserSimple
-from app.utils.types.booking_type import Decision
+from app.modules.booking.types_booking import Decision
 
 
 class Rights(BaseModel):

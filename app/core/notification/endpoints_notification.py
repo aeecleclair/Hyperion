@@ -4,11 +4,13 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Path
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
+from app.core.groups.groups_type import GroupType
 from app.core.notification import (
     cruds_notification,
     models_notification,
     schemas_notification,
 )
+from app.core.notification.notification_types import CustomTopic, Topic
 from app.dependencies import (
     get_db,
     get_notification_manager,
@@ -17,17 +19,15 @@ from app.dependencies import (
     is_user_a_member_of,
 )
 from app.utils.communication.notifications import NotificationManager, NotificationTool
-from app.utils.types.groups_type import GroupType
-from app.utils.types.notification_types import CustomTopic, Topic
-from app.utils.types.tags import Tags
 
 router = APIRouter()
+tag = "Notifications"
 
 
 @router.post(
     "/notification/devices",
     status_code=204,
-    tags=[Tags.notifications],
+    tags=[tag],
 )
 async def register_firebase_device(
     firebase_token: str = Body(embed=True),
@@ -89,7 +89,7 @@ async def register_firebase_device(
 @router.delete(
     "/notification/devices/{firebase_token}",
     status_code=204,
-    tags=[Tags.notifications],
+    tags=[tag],
 )
 async def unregister_firebase_device(
     firebase_token: str,
@@ -127,7 +127,7 @@ async def unregister_firebase_device(
     "/notification/messages/{firebase_token}",
     response_model=list[schemas_notification.Message],
     status_code=200,
-    tags=[Tags.notifications],
+    tags=[tag],
 )
 async def get_messages(
     firebase_token: str,
@@ -165,7 +165,7 @@ async def get_messages(
 @router.post(
     "/notification/topics/{topic_str}/subscribe",
     status_code=204,
-    tags=[Tags.notifications],
+    tags=[tag],
 )
 async def subscribe_to_topic(
     topic_str: str = Path(
@@ -197,7 +197,7 @@ async def subscribe_to_topic(
 @router.post(
     "/notification/topics/{topic_str}/unsubscribe",
     status_code=204,
-    tags=[Tags.notifications],
+    tags=[tag],
 )
 async def unsubscribe_to_topic(
     topic_str: str,
@@ -221,7 +221,7 @@ async def unsubscribe_to_topic(
 @router.get(
     "/notification/topics",
     status_code=200,
-    tags=[Tags.notifications],
+    tags=[tag],
     response_model=list[str],
 )
 async def get_topic(
@@ -249,7 +249,7 @@ async def get_topic(
 @router.get(
     "/notification/topics/{topic_str}",
     status_code=200,
-    tags=[Tags.notifications],
+    tags=[tag],
     response_model=list[str],
 )
 async def get_topic_identifier(
@@ -278,7 +278,7 @@ async def get_topic_identifier(
 @router.post(
     "/notification/send",
     status_code=201,
-    tags=[Tags.notifications],
+    tags=[tag],
 )
 async def send_notification(
     message: schemas_notification.Message,
@@ -300,7 +300,7 @@ async def send_notification(
     "/notification/devices",
     status_code=200,
     response_model=list[schemas_notification.FirebaseDevice],
-    tags=[Tags.notifications],
+    tags=[tag],
 )
 async def get_devices(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),

@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.notification import models_notification
-from app.utils.types.notification_types import CustomTopic, Topic
+from app.core.notification.notification_types import CustomTopic, Topic
 
 
 async def create_message(

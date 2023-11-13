@@ -6,7 +6,7 @@ from typing import Sequence
 from pydantic import BaseModel, ConfigDict
 
 from app.core.schemas_core import CoreUserSimple
-from app.utils.types.amap_types import AmapSlotType, DeliveryStatusType
+from app.modules.amap.types_amap import AmapSlotType, DeliveryStatusType
 
 
 class Rights(BaseModel):

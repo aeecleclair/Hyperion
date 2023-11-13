@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
 from app.modules.raffle import models_raffle, schemas_raffle
-from app.utils.types.raffle_types import RaffleStatusType
+from app.modules.raffle.types_raffle import RaffleStatusType
 
 hyperion_error_logger = logging.getLogger("hyperion_error")
 

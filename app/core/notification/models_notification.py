@@ -3,8 +3,8 @@ from datetime import date, datetime
 from sqlalchemy import Boolean, Date, DateTime, Enum, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.notification.notification_types import Topic
 from app.database import Base
-from app.utils.types.notification_types import Topic
 
 
 class Message(Base):
