@@ -33,9 +33,7 @@ for endpoints_file in glob.glob("./app/modules/*/endpoints_*.py"):
         module_list.extend(modules)
         for x in modules:
             api_router.include_router(x.router)
-    elif hasattr(endpoint_module, "router"):
-        api_router.include_router(endpoint_module.router)
     else:
         hyperion_error_logger.error(
-            f"Module {endpoints_file.split('/')[3]} does not declare a module or a router. It won't be enabled."
+            f"Module {endpoints_file.split('/')[3]} does not declare a module. It won't be enabled."
         )
