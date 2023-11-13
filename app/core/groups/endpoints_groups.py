@@ -14,7 +14,12 @@ from app.core import models_core, schemas_core
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
 from app.core.users import cruds_users
-from app.dependencies import get_db, get_request_id, is_user_a_member, is_user_a_member_of
+from app.dependencies import (
+    get_db,
+    get_request_id,
+    is_user_a_member,
+    is_user_a_member_of,
+)
 
 router = APIRouter()
 tag = "Groups"
