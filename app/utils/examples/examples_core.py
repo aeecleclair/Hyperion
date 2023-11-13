@@ -1,4 +1,6 @@
-example_CoreUserUpdate: dict[str, object] = {
+from pydantic.config import JsonDict
+
+example_CoreUserUpdate: JsonDict = {
     "name": "Backend",
     "firstname": "MyECL",
     "nickname": "Hyperion",
@@ -7,18 +9,18 @@ example_CoreUserUpdate: dict[str, object] = {
     "floor": "Adoma",
 }
 
-example_CoreUserCreateRequest: dict[str, object] = {
+example_CoreUserCreateRequest: JsonDict = {
     "email": "user@example.fr",
 }
 
 
-example_CoreBatchUserCreateRequest: dict[str, object] = {
+example_CoreBatchUserCreateRequest: JsonDict = {
     "email": "user@example.fr",
     "account_type": "39691052-2ae5-4e12-99d0-7a9f5f2b0136",
 }
 
 
-example_CoreUserActivateRequest: dict[str, object] = {
+example_CoreUserActivateRequest: JsonDict = {
     "name": "Name",
     "firstname": "Firstname",
     "nickname": "Antoine",
