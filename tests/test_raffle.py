@@ -2,7 +2,8 @@ import uuid
 
 import pytest_asyncio
 
-from app.models import models_core, models_raffle
+from app.core import models_core
+from app.modules.raffle import models_raffle
 from app.utils.types.groups_type import GroupType
 from app.utils.types.raffle_types import RaffleStatusType
 

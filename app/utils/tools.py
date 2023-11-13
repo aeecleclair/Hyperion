@@ -10,9 +10,10 @@ from fastapi.responses import FileResponse
 from rapidfuzz import process
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.cruds import cruds_groups, cruds_users
-from app.models import models_core
-from app.models.models_core import CoreUser
+from app.core import models_core
+from app.core.groups import cruds_groups
+from app.core.models_core import CoreUser
+from app.core.users import cruds_users
 from app.utils.types.groups_type import GroupType
 
 hyperion_error_logger = logging.getLogger("hyperion.error")

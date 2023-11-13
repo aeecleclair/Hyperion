@@ -1,6 +1,6 @@
 import pytest_asyncio
 
-from app.models import models_core
+from app.core import models_core
 from app.utils.types.groups_type import GroupType
 
 # We need to import event_loop for pytest-asyncio routine defined bellow

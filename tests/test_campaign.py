@@ -2,7 +2,8 @@ import uuid
 
 import pytest_asyncio
 
-from app.models import models_campaign, models_core
+from app.core import models_core
+from app.modules.campaign import models_campaign
 from app.utils.types.campaign_type import ListType
 from app.utils.types.groups_type import GroupType
 

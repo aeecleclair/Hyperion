@@ -3,7 +3,8 @@ import uuid
 
 import pytest_asyncio
 
-from app.models import models_advert, models_core
+from app.core import models_core
+from app.modules.advert import models_advert
 from app.utils.types.groups_type import GroupType
 from tests.commons import event_loop  # noqa
 from tests.commons import (

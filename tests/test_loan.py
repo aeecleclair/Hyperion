@@ -4,7 +4,8 @@ from datetime import timedelta
 
 import pytest_asyncio
 
-from app.models import models_core, models_loan
+from app.core import models_core
+from app.modules.loan import models_loan
 from app.utils.types.groups_type import GroupType
 from tests.commons import event_loop  # noqa
 from tests.commons import (

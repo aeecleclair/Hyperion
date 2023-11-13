@@ -1,6 +1,6 @@
 import pytest_asyncio
 
-from app.models import models_core
+from app.core import models_core
 from app.utils.types.groups_type import GroupType
 
 # We need to import event_loop for pytest-asyncio routine defined bellow
@@ -184,9 +184,10 @@ async def test_invalid_migrate_mail():
 
 async def test_migrate_mail(mocker):
     # NOTE: we don't want to mock app.core.security.generate_token but
-    # app.endpoints.users.security.generate_token which is the imported version of the function
+    # app.core.users.endpoints_users.security.generate_token which is the imported version of the function
     mocker.patch(
-        "app.endpoints.users.security.generate_token", return_value=UNIQUE_TOKEN
+        "app.core.users.endpoints_users.security.generate_token",
+        return_value=UNIQUE_TOKEN,
     )
 
     token = create_api_access_token(student_user_with_old_email)

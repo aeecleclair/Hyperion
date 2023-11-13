@@ -3,7 +3,8 @@ from datetime import datetime
 
 import pytest_asyncio
 
-from app.models import models_amap, models_core
+from app.core import models_core
+from app.modules.amap import models_amap
 from app.utils.types.amap_types import AmapSlotType, DeliveryStatusType
 from app.utils.types.groups_type import GroupType
 

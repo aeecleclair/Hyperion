@@ -3,7 +3,8 @@ import uuid
 
 import pytest_asyncio
 
-from app.models import models_calendar, models_core
+from app.core import models_core
+from app.modules.calendar import models_calendar
 from app.utils.types.booking_type import Decision
 from app.utils.types.groups_type import GroupType
 
