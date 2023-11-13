@@ -220,11 +220,6 @@ class Settings(BaseSettings):
         """
         All fields are optional, but the dotenv should configure SQLITE_DB or a Postgres database
         """
-        print(self)
-        print(self.model_config)
-        print()
-        print(self.SQLITE_DB)
-
         if not (
             self.SQLITE_DB
             or (
