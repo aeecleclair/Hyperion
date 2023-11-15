@@ -88,7 +88,7 @@ class Settings(BaseSettings):
     # Hyperion follows Semantic Versioning
     # https://semver.org/
     HYPERION_VERSION: str = "1.0.0"  # This value should never be modified by hand. See [Hyperion release] documentation
-    MINIMAL_TITAN_VERSION_CODE: int = 80
+    MINIMAL_TITAN_VERSION_CODE: int = 92
     # Depreciated, minimal_titan_version_code should be used
     MINIMAL_TITAN_VERSION: str = "0.0.1"
 
