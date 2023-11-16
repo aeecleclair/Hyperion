@@ -46,6 +46,7 @@ class BookingBase(BaseModel):
     reason: str
     start: datetime
     end: datetime
+    creation: datetime
     note: str | None
     room_id: str
     key: bool
