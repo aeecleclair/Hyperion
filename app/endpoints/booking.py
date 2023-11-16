@@ -360,7 +360,7 @@ async def confirm_booking(
     else:
         raise HTTPException(
             status_code=403,
-            detail="You are not allowed to delete this booking",
+            detail="You are not allowed to give a decision to this booking",
         )
 
 
