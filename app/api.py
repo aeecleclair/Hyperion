@@ -2,7 +2,6 @@
 import glob
 import importlib
 import logging
-from typing import Iterable
 
 from fastapi import APIRouter
 
@@ -27,12 +26,9 @@ api_router.include_router(endpoints_users.router)
 for endpoints_file in glob.glob("./app/modules/*/endpoints_*.py"):
     endpoint_module = importlib.import_module(endpoints_file[2:-3].replace("/", "."))
     if hasattr(endpoint_module, "module"):
-        modules = endpoint_module.module
-        if not isinstance(modules, Iterable):
-            modules = [modules]
-        module_list.extend(modules)
-        for x in modules:
-            api_router.include_router(x.router)
+        module: Module = endpoint_module.module
+        module_list.append(module)
+        api_router.include_router(module.router)
     else:
         hyperion_error_logger.error(
             f"Module {endpoints_file.split('/')[3]} does not declare a module. It won't be enabled."

@@ -1,7 +1,7 @@
 import os
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import Depends, HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,23 +14,15 @@ from app.modules.calendar import cruds_calendar, models_calendar, schemas_calend
 from app.modules.calendar.types_calendar import Decision
 from app.utils.tools import is_user_member_of_an_allowed_group
 
-router = APIRouter()
-module = (
-    Module(
-        root="home",
-        default_allowed_groups_ids=[GroupType.student, GroupType.staff],
-        router=router,
-    ),
-    Module(
-        root="event", default_allowed_groups_ids=[GroupType.student, GroupType.staff]
-    ),
+module = Module(
+    root="event", default_allowed_groups_ids=[GroupType.student, GroupType.staff]
 )
 tag = "Calendar"
 
 ical_file_path = "data/ics/ae_calendar.ics"
 
 
-@router.get(
+@module.router.get(
     "/calendar/events/",
     response_model=list[schemas_calendar.EventReturn],
     status_code=200,
@@ -45,7 +37,7 @@ async def get_events(
     return events
 
 
-@router.get(
+@module.router.get(
     "/calendar/events/confirmed",
     response_model=list[schemas_calendar.EventComplete],
     status_code=200,
@@ -64,7 +56,7 @@ async def get_confirmed_events(
     return events
 
 
-@router.get(
+@module.router.get(
     "/calendar/events/user/{applicant_id}",
     response_model=list[schemas_calendar.EventReturn],
     status_code=200,
@@ -91,7 +83,7 @@ async def get_applicant_bookings(
         raise HTTPException(status_code=403)
 
 
-@router.get(
+@module.router.get(
     "/calendar/events/{event_id}",
     response_model=schemas_calendar.EventComplete,
     status_code=200,
@@ -111,7 +103,7 @@ async def get_event_by_id(
         raise HTTPException(status_code=404)
 
 
-@router.get(
+@module.router.get(
     "calendar/events/{event_id}/applicant",
     response_model=schemas_calendar.EventApplicant,
     status_code=200,
@@ -129,7 +121,7 @@ async def get_event_applicant(
         raise HTTPException(status_code=404)
 
 
-@router.post(
+@module.router.post(
     "/calendar/events/",
     response_model=schemas_calendar.EventReturn,
     status_code=201,
@@ -157,7 +149,7 @@ async def add_event(
         raise HTTPException(status_code=422, detail=str(error))
 
 
-@router.patch(
+@module.router.patch(
     "/calendar/events/{event_id}",
     status_code=204,
     tags=[tag],
@@ -190,7 +182,7 @@ async def edit_bookings_id(
         raise HTTPException(status_code=422, detail=str(error))
 
 
-@router.patch(
+@module.router.patch(
     "/calendar/events/{event_id}/reply/{decision}",
     status_code=204,
     tags=[tag],
@@ -212,7 +204,7 @@ async def confirm_booking(
     )
 
 
-@router.delete("/calendar/events/{event_id}", status_code=204, tags=[tag])
+@module.router.delete("/calendar/events/{event_id}", status_code=204, tags=[tag])
 async def delete_bookings_id(
     event_id,
     db: AsyncSession = Depends(get_db),
@@ -239,7 +231,7 @@ async def delete_bookings_id(
         )
 
 
-@router.post(
+@module.router.post(
     "/calendar/ical/create",
     status_code=204,
     tags=[tag],
@@ -258,7 +250,7 @@ async def recreate_ical_file(
     await cruds_calendar.create_icalendar_file(db=db, settings=settings)
 
 
-@router.get(
+@module.router.get(
     "/calendar/ical",
     response_class=FileResponse,
     status_code=200,
