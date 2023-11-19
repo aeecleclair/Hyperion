@@ -73,6 +73,10 @@ class BookingReturn(BookingComplete):
         orm_mode = True
 
 
+class BookingReturnSimpleApplicant(BookingReturn):
+    applicant: CoreUserSimple
+
+
 class BookingReturnApplicant(BookingReturn):
     applicant: Applicant
 

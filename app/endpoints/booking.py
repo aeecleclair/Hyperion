@@ -206,7 +206,7 @@ async def get_confirmed_bookings_for_manager(
 
 @router.get(
     "/booking/bookings/confirmed",
-    response_model=list[schemas_booking.BookingReturn],
+    response_model=list[schemas_booking.BookingReturnSimpleApplicant],
     status_code=200,
     tags=[Tags.booking],
 )
