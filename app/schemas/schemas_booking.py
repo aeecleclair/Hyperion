@@ -1,4 +1,4 @@
-"""Schemas file for endpoint /bdebooking"""
+"""Schemas file for endpoint /booking"""
 
 from datetime import datetime
 

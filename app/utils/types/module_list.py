@@ -13,7 +13,7 @@ class ModuleList(Module, Enum):
         root="amap",
         default_allowed_groups_ids=[GroupType.student, GroupType.staff],
     )
-    bdebooking = Module(
+    booking = Module(
         root="booking",
         default_allowed_groups_ids=[GroupType.student, GroupType.staff],
     )
