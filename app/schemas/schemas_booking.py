@@ -86,7 +86,7 @@ class BookingEdit(BaseModel):
     start: datetime | None = None
     end: datetime | None = None
     note: str | None = None
-    room: str | None = None
+    room_id: str | None = None
     key: bool | None = None
     recurrence_rule: str | None = None
     entity: str | None = None
