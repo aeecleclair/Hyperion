@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel
 
-from app.schemas.schemas_core import CoreGroupSimple, CoreUserSimple
+from app.schemas.schemas_core import CoreUserSimple
 from app.utils.types.raffle_types import RaffleStatusType
 
 
@@ -28,7 +28,7 @@ class RaffleSimple(RaffleBase):
 
 
 class RaffleComplete(RaffleSimple):
-    group: CoreGroupSimple
+    group_id: str
 
     class Config:
         orm_mode = True
