@@ -20,15 +20,8 @@ class RaffleEdit(BaseModel):
     description: str | None = None
 
 
-class RaffleSimple(RaffleBase):
+class RaffleComplete(RaffleBase):
     id: str
-
-    class Config:
-        orm_mode = True
-
-
-class RaffleComplete(RaffleSimple):
-    group_id: str
 
     class Config:
         orm_mode = True
@@ -97,7 +90,7 @@ class PackTicketSimple(PackTicketBase):
 
 
 class PackTicketComplete(PackTicketSimple):
-    raffle: RaffleSimple
+    raffle: RaffleComplete
 
     class Config:
         orm_mode = True
