@@ -115,7 +115,7 @@ uvicorn app.main:app --reload
 ## OpenAPI specification
 API endpoints are parsed following the OpenAPI specifications at `http://127.0.0.1:8000/openapi.json`.
 
-A Swagger UI is available at `http://127.0.0.1:8000/docs`. For authentication to work, a valid `AUTH_CLIENT` must be defined in the `.env`, with `http://127.0.0.1:8000` as the redirect URI, and `scope=API` must be added to the authentication request.
+A Swagger UI is available at `http://127.0.0.1:8000/docs`. For authentication to work, a valid `AUTH_CLIENT` must be defined in the `.env`, with `http://127.0.0.1:8000/docs/oauth2-redirect` as the redirect URI, and `scope=API` must be added to the authentication request.
 
 ## Create the first user
 
