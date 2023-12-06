@@ -4,14 +4,9 @@
 
 ## Presentation
 
-Hyperion is the API of an open-source project launched by ÉCLAIR, the computer science association of Ecole Centrale de Lyon. This project aims to provide students of business and engineering schools a digital tool to simplify the association process. In a way, we could say that Hyperion is trying to create a social network for school associations. 
+Hyperion is the API of an open-source project launched by ÉCLAIR, the computer science association of Ecole Centrale de Lyon. This project aims to provide students of business and engineering schools a digital tool to simplify the association process. In a way, we could say that Hyperion is trying to create a social network for school associations.
 
 The structure of this project is modular. Hyperion has a core that performs vital functions (authentication, database migration, authorization, etc). The other functions of Hyperion are realized in what we call modules. You can contribute to the project by adding modules if you wish.
-
-## Install docker or an equivalent
-Install docker and the compose plugin (https://docs.docker.com/compose/install/)
-
-> During dev docker is used to run the database, the redis server etc ... If you really want to run the project without docker, you can do it but you will have to install the database, redis, etc ... yourself or disable some features in the .env file (which is not recommended).
 
 ## Creating a virtual environment for Python 3.10.x
 
@@ -50,7 +45,7 @@ eval "$(pyenv virtualenv-init -)"
 Create the virtual environment
 
 ```bash
-pyenv virtualenv 3.10.3 hyperion
+pyenv virtualenv 3.11.0 hyperion
 ```
 
 Activate it
@@ -67,51 +62,22 @@ pyenv activate hyperion
 pip install -r requirements-dev.txt
 ```
 
-### Production requirements
-
-```bash
-pip install -r requirements.txt
-```
-
-> We need to add
-> pep8-naming
-> Security requirements
-> Use a spell checker
-
-> Pip freeze
->
-> ```bash
-> pip freeze > requirements.txt
-> pip install -r requirements.txt
-> ```
-
-> Remove all modules
+> If you need to remove all modules from your virtual environnement, you may use the following command with caution
 >
 > ```bash
 > pip freeze | xargs pip uninstall -y
 > ```
-
-## Launch the API
-
-```bash
-uvicorn app.main:app --reload
-```
 
 ## Complete the dotenv (`.env`)
 
 > Hyperion settings are documented in [app/core/config.py](./app/core/config.py).
 > Check this file to know what can and should be set using the dotenv.
 
-`SQLITE_DB` is None by default. If you want to use SQLite (if you don't use docker or don't have a postgres running), set it with the name of the db file (app.db for example).
+`SQLITE_DB` is None by default. If you want to use SQLite (if you don't use docker or don't have a postgres running), set it with the name of the db file (`app.db` for example).
 
-`ACCESS_TOKEN_SECRET_KEY`
+`ACCESS_TOKEN_SECRET_KEY` should be a strong random key, which will be used to sign JWT tokens
 
-```python
-from app.core.security import generate_token
-generate_token(64)
-```
-
-`RSA_PRIVATE_PEM_STRING`
+`RSA_PRIVATE_PEM_STRING` will be used to sign JWS tokens
 
 ```bash
 # Generate a 2048 bits long PEM certificate and replace newlines by `\n`
@@ -120,7 +86,8 @@ openssl req -newkey rsa:2048 -nodes -x509 -days 365 | sed 's/$/\\n/g' | tr -d '\
 # openssl req -newkey rsa:2048 -nodes -keyout key.pem -x509 -days 365 -out certificate.pem
 ```
 
-`REDIS`: Numerical values are example, change it to your needs
+`REDIS` may be left blank to disable Redis during development
+Numerical values are example, change it to your needs
 
 ```python
 REDIS_HOST = "localhost" #May be left at "" during dev if you don't have a redis server running
@@ -131,12 +98,83 @@ REDIS_WINDOW = 60
 ```
 
 `POSTGRES`: This section will be ignored if `SQLITE_DB` is set to True.
+
 ```python
 POSTGRES_HOST = "localhost"
 POSTGRES_USER = "hyperion"
 POSTGRES_PASSWORD = "pass"
 POSTGRES_DB = "hyperion"
 ```
+
+## Launch the API
+
+```bash
+uvicorn app.main:app --reload
+```
+
+## OpenAPI specification
+API endpoints are parsed following the OpenAPI specifications at `http://127.0.0.1:8000/openapi.json`.
+
+A Swagger UI is available at `http://127.0.0.1:8000/docs`. For authentication to work, a valid `AUTH_CLIENT` must be defined in the `.env`, with `http://127.0.0.1:8000/docs/oauth2-redirect` as the redirect URI, and `scope=API` must be added to the authentication request.
+
+## Create the first user
+
+You can create the first user either using Titan or calling the API directly.
+
+> You need to use an email with the format `...@etu.ec-lyon.fr` or `...@ec-lyon.fr`
+
+To activate your account you will need an activation token which will be printed in the console.
+
+### With Titan
+
+Press "Créer un compte" on the first page and follow the process.
+
+### Using the API directly
+
+Create the account:
+
+```bash
+curl --location 'http://127.0.0.1:8000/users/create' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "email": "<...>@etu.ec-lyon.fr",
+    "account_type": "39691052-2ae5-4e12-99d0-7a9f5f2b0136"
+}'
+```
+
+Activate the account:
+
+```bash
+curl --location 'http://127.0.0.1:8000/users/activate' \
+--header 'Content-Type: application/json' \
+--data '{
+    "name": "<Name>",
+    "firstname": "<Firstname>",
+    "nickname": "<Nickname>",
+    "activation_token": "<ActivationToken>",
+    "password": "<Password>",
+    "birthday": "<2019-08-24>",
+    "phone": "<Phone>",
+    "promo": 0,
+    "floor": ""
+}'
+```
+
+## Make the first user admin
+
+If there is exactly one user in the database, you can make it admin using the following command:
+
+```bash
+curl --location --request POST 'http://127.0.0.1:8000/users/make-admin'
+```
+
+## Install docker or an equivalent
+
+Install docker and the compose plugin (https://docs.docker.com/compose/install/)
+
+> During dev docker is used to run the database, the redis server etc... If you really want to run the project without docker, you can do it but you will have to install the database, redis, etc ... yourself or disable some features in the .env file (which is not recommended).
+
+---
 
 ## Configure Firebase notifications
 
