@@ -9,7 +9,7 @@ from app.utils.types.elocaps_types import CapsMode
 
 
 class PlayerBase(BaseModel):
-    user_id: str
+    user: CoreUserSimple
     elo: int
     mode: CapsMode
 
@@ -23,7 +23,7 @@ class PlayerModeInfo(BaseModel):
 
 
 class DetailedPlayer(BaseModel):
-    user_id: str
+    user: CoreUserSimple
     info: dict[CapsMode, PlayerModeInfo]
 
 

@@ -46,7 +46,9 @@ async def get_player_info(
     db: AsyncSession, user_id: str
 ) -> Sequence[models_elocaps.Player]:
     result = await db.execute(
-        select(models_elocaps.Player).where(models_elocaps.Player.user_id == user_id)
+        select(models_elocaps.Player)
+        .where(models_elocaps.Player.user_id == user_id)
+        .options(selectinload(models_elocaps.Player.user))
     )
     return result.scalars().all()
 
@@ -225,6 +227,7 @@ async def get_leaderboard(
         .where(models_elocaps.Player.mode == game_mode)
         .order_by(desc(models_elocaps.Player.elo))
         .limit(count)
+        .options(selectinload(models_elocaps.Player.user))
     )
     return result.scalars().all()
 

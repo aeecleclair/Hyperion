@@ -133,7 +133,7 @@ async def get_player_info(
         )
         for x in db_player_modes
     }
-    return schemas_elocaps.DetailedPlayer(user_id=user_id, info=mode_info)
+    return schemas_elocaps.DetailedPlayer(user=db_player_modes[0].user, info=mode_info)
 
 
 @router.get(
