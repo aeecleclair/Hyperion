@@ -15,7 +15,8 @@ router = APIRouter()
 
 @router.post(
     "/elocaps/games",
-    status_code=204,
+    status_code=201,
+    response_model=schemas_elocaps.Game,
     tags=[Tags.elocaps],
 )
 async def register_game(
@@ -28,6 +29,7 @@ async def register_game(
     game = models_elocaps.Game(mode=game_params.mode)
     try:
         await cruds_elocaps.register_game(db, game, game_params.players)
+        return await cruds_elocaps.get_game_details(db, game.id)
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error))
 
@@ -89,7 +91,12 @@ async def get_game_detail(
     return game
 
 
-@router.post("/elocaps/games/{game_id}/validate", status_code=204, tags=[Tags.elocaps])
+@router.post(
+    "/elocaps/games/{game_id}/validate",
+    status_code=201,
+    response_model=schemas_elocaps.Game,
+    tags=[Tags.elocaps],
+)
 async def confirm_game(
     game_id: str,
     db: AsyncSession = Depends(get_db),
@@ -97,6 +104,7 @@ async def confirm_game(
 ):
     try:
         await cruds_elocaps.confirm_game(db, game_id=game_id, user_id=user.id)
+        return await cruds_elocaps.get_game_details(db, game_id)
     except ValueError as error:
         raise HTTPException(400, str(error))
 
