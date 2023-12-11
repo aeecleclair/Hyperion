@@ -161,14 +161,14 @@ def test_validate_and_end_game():
             f"/elocaps/games/{game.id}/validate",
             headers={"Authorization": f"Bearer {tokens[0]}"},
         ).status_code
-        == 204
+        == 201
     )
     assert (
         client.post(
             f"/elocaps/games/{game.id}/validate",
             headers={"Authorization": f"Bearer {tokens[1]}"},
         ).status_code
-        == 204
+        == 201
     )
     response = client.get(
         f"/elocaps/games/{game.id}",
@@ -231,7 +231,7 @@ def test_create_game():
                 ],
             },
         ).status_code
-        == 204
+        == 201
     )
     response = client.get(
         "/elocaps/games/latest",

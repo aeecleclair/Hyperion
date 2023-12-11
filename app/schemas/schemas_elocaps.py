@@ -56,6 +56,7 @@ class GamePlayerBase(BaseModel):
 
 class GamePlayer(GamePlayerBase):
     elo_gain: int | None
+    has_confirmed: bool
     user: CoreUserSimple
 
 
