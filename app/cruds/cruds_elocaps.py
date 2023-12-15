@@ -109,7 +109,7 @@ async def register_game(
                 db.add(player)
                 await db.commit()
             game_player = models_elocaps.GamePlayer(
-                game_id=game.id, player_id=player.id, team=i.team, quarters=i.quarters
+                game_id=game.id, player_id=player.id, team=i.team, score=i.score
             )
             db.add(game_player)
         await db.commit()
@@ -134,13 +134,10 @@ async def register_game(
             game = complete_game
         for game_player in game.game_players:
             team = game_player.team
-            c = game.get_team_quarters(-team + 3)
-            s = game.get_team_quarters(team)
-            a = game_player.quarters
             game_player.elo_gain = round(
                 compute_elo_gain(
-                    game.get_winner_team() == team,
-                    15 * (2 - exp(-((a * (1 - c / s) / (c + s)) ** 2))),
+                    game.get_team_score(team),
+                    20,
                     game.get_team_elo(team),
                     game.get_team_elo(-team + 3),
                 )

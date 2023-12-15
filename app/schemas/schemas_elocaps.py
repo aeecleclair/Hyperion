@@ -48,7 +48,7 @@ class Game(GameMode):
 class GamePlayerBase(BaseModel):
     user_id: str
     team: int
-    quarters: int
+    score: int
 
     class Config:
         orm_mode = True

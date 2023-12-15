@@ -48,8 +48,10 @@ class Game(Base):
     def is_confirmed(self) -> bool:
         return all([i.has_confirmed for i in self.game_players])
 
-    def get_team_quarters(self, team: int) -> int:
-        return sum(i.quarters for i in self.game_players if i.team == team)
+    def get_team_score(self, team: int) -> float:
+        """Returns 0, 0.5, or 1."""
+        players = [i for i in self.game_players if i.team == team]
+        return (sum(i.score for i in players) / len(players) + 1) / 2
 
     def get_team_elo(self, team: int) -> float:
         players_elo = [i.player.elo for i in self.game_players if i.team == team]
@@ -59,9 +61,7 @@ class Game(Base):
         return next(i for i in self.game_players if i.player.user_id == user_id).team
 
     def get_winner_team(self) -> int:
-        return max(
-            ((i, self.get_team_quarters(i)) for i in range(2)), key=lambda x: x[1]
-        )[0]
+        return max(((i, self.get_team_score(i)) for i in [1, 2]), key=lambda x: x[1])[0]
 
 
 class GamePlayer(Base):
@@ -74,7 +74,7 @@ class GamePlayer(Base):
         ForeignKey("elocaps_player.id"), nullable=False, primary_key=True
     )
     team: Mapped[int] = mapped_column(Integer, nullable=False)
-    quarters: Mapped[int] = mapped_column(Integer, nullable=False)
+    score: Mapped[int] = mapped_column(Integer, nullable=False)
     has_confirmed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     elo_gain: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 

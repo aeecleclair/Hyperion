@@ -47,19 +47,19 @@ async def create_games(db, n):
         games.append(game)
         db.add(game)
         await db.commit()
-        quarters = randint(0, 96)
+        win = randint(-1, 1)
         one_game_players = [
             models_elocaps.GamePlayer(
                 game_id=game.id,
                 player_id=users[randint(0, 2)]["players"][CapsMode.CD].id,
                 team=1,
-                quarters=quarters,
+                score=win,
             ),
             models_elocaps.GamePlayer(
                 game_id=game.id,
                 player_id=users[3]["players"][CapsMode.CD].id,
                 team=2,
-                quarters=96 - quarters,
+                score=-win,
             ),
         ]
         db.add_all(one_game_players)
@@ -226,8 +226,8 @@ def test_create_game():
             json={
                 "mode": CapsMode.SINGLE,
                 "players": [
-                    {"user_id": users[0]["user"].id, "team": 1, "quarters": 1},
-                    {"user_id": newUser.id, "team": 2, "quarters": 95},
+                    {"user_id": users[0]["user"].id, "team": 1, "score": 1},
+                    {"user_id": newUser.id, "team": 2, "score": -1},
                 ],
             },
         ).status_code
@@ -243,8 +243,8 @@ def test_create_game():
             game_player := next(
                 i for i in response.json()[0]["game_players"] if i["team"] == 2
             )
-        )["quarters"]
-        == 95
+        )["score"]
+        == -1
         and game_player["elo_gain"] is not None
     )
     assert (
@@ -254,8 +254,8 @@ def test_create_game():
             json={
                 "mode": CapsMode.SINGLE,
                 "players": [
-                    {"user_id": users[0]["user"].id, "team": 1, "quarters": 1},
-                    {"user_id": users[0]["user"].id, "team": 2, "quarters": 95},
+                    {"user_id": users[0]["user"].id, "team": 1, "score": 1},
+                    {"user_id": users[0]["user"].id, "team": 2, "score": -1},
                 ],
             },
         ).status_code
@@ -268,8 +268,8 @@ def test_create_game():
             json={
                 "mode": CapsMode.SINGLE,
                 "players": [
-                    {"user_id": users[0]["user"].id, "team": 1, "quarters": 1},
-                    {"user_id": users[1]["user"].id, "team": 2, "quarters": 95},
+                    {"user_id": users[0]["user"].id, "team": 1, "score": 1},
+                    {"user_id": users[1]["user"].id, "team": 2, "score": -1},
                 ],
             },
         ).status_code
