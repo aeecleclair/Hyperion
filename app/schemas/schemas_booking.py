@@ -1,4 +1,4 @@
-"""Schemas file for endpoint /bdebooking"""
+"""Schemas file for endpoint /booking"""
 
 from datetime import datetime
 
@@ -46,6 +46,7 @@ class BookingBase(BaseModel):
     reason: str
     start: datetime
     end: datetime
+    creation: datetime
     note: str | None
     room_id: str
     key: bool
@@ -72,6 +73,10 @@ class BookingReturn(BookingComplete):
         orm_mode = True
 
 
+class BookingReturnSimpleApplicant(BookingReturn):
+    applicant: CoreUserSimple
+
+
 class BookingReturnApplicant(BookingReturn):
     applicant: Applicant
 
@@ -81,7 +86,7 @@ class BookingEdit(BaseModel):
     start: datetime | None = None
     end: datetime | None = None
     note: str | None = None
-    room: str | None = None
+    room_id: str | None = None
     key: bool | None = None
     recurrence_rule: str | None = None
     entity: str | None = None

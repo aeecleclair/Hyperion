@@ -183,12 +183,34 @@ async def get_bookings_for_manager(
 
 
 @router.get(
-    "/booking/bookings/confirmed",
-    response_model=list[schemas_booking.BookingReturn],
+    "/booking/bookings/confirmed/users/me/manage",
+    response_model=list[schemas_booking.BookingReturnApplicant],
     status_code=200,
     tags=[Tags.booking],
 )
 async def get_confirmed_bookings_for_manager(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Return all confirmed bookings a user can manage.
+    **The user must be authenticated to use this endpoint**
+    """
+
+    user_managers = await cruds_booking.get_user_managers(user=user, db=db)
+
+    bookings = await cruds_booking.get_confirmed_bookings(db=db)
+
+    return [booking for booking in bookings if booking.room.manager in user_managers]
+
+
+@router.get(
+    "/booking/bookings/confirmed",
+    response_model=list[schemas_booking.BookingReturnSimpleApplicant],
+    status_code=200,
+    tags=[Tags.booking],
+)
+async def get_confirmed_bookings(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
@@ -204,28 +226,22 @@ async def get_confirmed_bookings_for_manager(
 
 
 @router.get(
-    "/booking/bookings/users/{applicant_id}",
+    "/booking/bookings/users/me",
     response_model=list[schemas_booking.BookingReturn],
     status_code=200,
     tags=[Tags.booking],
 )
 async def get_applicant_bookings(
-    applicant_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
-    Get one user bookings.
+    Get the user bookings.
 
     **Only usable by the user**
     """
-    if user.id == applicant_id:
-        bookings = await cruds_booking.get_applicant_bookings(
-            db=db, applicant_id=applicant_id
-        )
-        return bookings
-    else:
-        raise HTTPException(status_code=403)
+    bookings = await cruds_booking.get_applicant_bookings(db=db, applicant_id=user.id)
+    return bookings
 
 
 @router.post(
@@ -344,7 +360,7 @@ async def confirm_booking(
     else:
         raise HTTPException(
             status_code=403,
-            detail="You are not allowed to delete this booking",
+            detail="You are not allowed to give a decision to this booking",
         )
 
 

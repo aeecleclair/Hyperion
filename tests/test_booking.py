@@ -81,12 +81,16 @@ async def init_objects():
     )
     await add_object_to_db(room_to_delete)
 
+    global booking_id
+    booking_id = str(uuid.uuid4())
+
     global booking
     booking = models_booking.Booking(
-        id=str(uuid.uuid4()),
+        id=booking_id,
         reason="HH",
         start=datetime.datetime.fromisoformat("2023-09-22T20:00:00"),
         end=datetime.datetime.fromisoformat("2023-09-22T23:00:00"),
+        creation=datetime.datetime.fromisoformat("2023-09-10T10:00:00"),
         room_id=room.id,
         key=True,
         decision="approved",
@@ -101,6 +105,7 @@ async def init_objects():
         reason="Test",
         start=datetime.datetime.fromisoformat("2023-09-22T20:00:00"),
         end=datetime.datetime.fromisoformat("2023-09-22T23:00:00"),
+        creation=datetime.datetime.fromisoformat("2023-09-10T10:00:00"),
         room_id=room.id,
         key=True,
         decision="pending",
@@ -172,6 +177,15 @@ def test_get_user_bookings_manage():
 
 def test_get_user_bookings_manage_confirmed():
     response = client.get(
+        "/booking/bookings/confirmed/users/me/manage",
+        headers={"Authorization": f"Bearer {token_manager}"},
+    )
+    assert response.status_code == 200
+    assert booking_id in map(lambda booking: booking["id"], response.json())
+
+
+def test_get_bookings_confirmed():
+    response = client.get(
         "/booking/bookings/confirmed",
         headers={"Authorization": f"Bearer {token_manager}"},
     )
@@ -180,7 +194,7 @@ def test_get_user_bookings_manage_confirmed():
 
 def test_get_user_bookings():
     response = client.get(
-        f"/booking/bookings/users/{simple_user.id}",
+        "/booking/bookings/users/me",
         headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response.status_code == 200
@@ -193,6 +207,7 @@ def test_post_bookings():
             "reason": "Test",
             "start": "2022-09-15T08:00:00Z",
             "end": "2022-09-15T09:00:00Z",
+            "creation": "2022-09-15T07:00:00Z",
             "note": "do",
             "room_id": room.id,
             "key": True,
