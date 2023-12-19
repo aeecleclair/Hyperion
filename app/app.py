@@ -132,8 +132,8 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         SessionLocal = app.dependency_overrides.get(
             get_session_maker, get_session_maker
         )()
-        await initialize_groups(SessionLocal, hyperion_error_logger)
-        await initialize_module_visibility(SessionLocal, hyperion_error_logger)
+        # await initialize_groups(SessionLocal, hyperion_error_logger)
+        # await initialize_module_visibility(SessionLocal, hyperion_error_logger)
 
         yield
         hyperion_error_logger.info("Shutting down")
