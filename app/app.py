@@ -127,7 +127,7 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
             hyperion_error_logger.info("Redis client not configured")
 
         engine = get_db_engine(settings=settings)
-        await create_db_tables(engine, drop_db, hyperion_error_logger)
+        # await create_db_tables(engine, drop_db, hyperion_error_logger)
 
         SessionLocal = app.dependency_overrides.get(
             get_session_maker, get_session_maker
