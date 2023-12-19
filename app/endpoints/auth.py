@@ -28,7 +28,7 @@ from app.core.security import (
     create_access_token_RS256,
     generate_token,
 )
-from app.cruds import cruds_auth
+from app.cruds import cruds_auth, cruds_users
 from app.dependencies import (
     get_db,
     get_request_id,
@@ -682,13 +682,14 @@ async def authorization_code_grant(  # noqa: C901 # The function is too complex 
     )
     await cruds_auth.create_refresh_token(db=db, db_refresh_token=new_db_refresh_token)
 
-    response_body = create_response_body(
+    response_body = await create_response_body(
         db_authorization_code,
         tokenreq.client_id,
         refresh_token,
         auth_client,
         settings,
         request_id,
+        db,
     )
 
     # Required headers by Oauth and oidc
@@ -842,13 +843,14 @@ async def refresh_token_grant(
     )
     await cruds_auth.create_refresh_token(db=db, db_refresh_token=new_db_refresh_token)
 
-    response_body = create_response_body(
+    response_body = await create_response_body(
         db_refresh_token,
         tokenreq.client_id,
         refresh_token,
         auth_client,
         settings,
         request_id,
+        db,
     )
 
     # Required headers by Oauth and oidc
@@ -857,13 +859,14 @@ async def refresh_token_grant(
     return response_body
 
 
-def create_response_body(
+async def create_response_body(
     db_row: models_auth.AuthorizationCode | models_auth.RefreshToken,
     client_id: str,
     refresh_token: str,
     auth_client: BaseAuthClient,
     settings: Settings,
     request_id: str,
+    db: AsyncSession,
 ):
     # In the request, the client ask for some scopes. The auth provider decides which scopes he grants to the client.
 
@@ -875,7 +878,7 @@ def create_response_body(
 
     # We create a list of all the scopes we accept to grant to the user to include them in the access token.
 
-    granted_scopes_set: Set[ScopeType] = auth_client.filter_scopes(
+    granted_scopes_set: Set[ScopeType | str] = auth_client.filter_scopes(
         requested_scopes=requested_scopes_set
     )
     refused_scopes = requested_scopes_set - granted_scopes_set
@@ -933,7 +936,24 @@ def create_response_body(
         # For that, we include a public cid claim in the access token
         access_token_data.cid = client_id
 
-        id_token = create_access_token_RS256(data=id_token_data, settings=settings)
+        # Some rare oidc providers (like NextAuth.js) does not support getting userinfo from userinfo endpoints
+        # but instead require to include the user information in the id_token
+        additional_data = {}
+        if auth_client.return_userinfo_in_id_token:
+            user = await cruds_users.get_user_by_id(db=db, user_id=db_row.user_id)
+            if user is None:
+                hyperion_security_logger.error(
+                    f"Create oidc response body: Could not find user {db_row.user_id} when trying the get userinfo but it should exist ({request_id})"
+                )
+                raise HTTPException(
+                    status_code=500,
+                    detail="Could not find user when trying the get userinfo but it should exist",
+                )
+            additional_data = auth_client.get_userinfo(user=user)
+
+        id_token = create_access_token_RS256(
+            data=id_token_data, additional_data=additional_data, settings=settings
+        )
 
     # Expiration date is included by `create_access_token` function
     access_token = create_access_token(data=access_token_data, settings=settings)
