@@ -29,20 +29,19 @@ from app.utils.redis import limiter
 from app.utils.types.groups_type import GroupType
 from app.utils.types.module_list import ModuleList
 
-
-async def create_db_tables(engine, drop_db, hyperion_error_logger):
-    """Create db tables
-    Alembic should be used for any migration, this function can only create new tables and ensure that the necessary groups are available
-    """
-    async with engine.begin() as conn:
-        try:
-            if drop_db:
-                await conn.run_sync(Base.metadata.drop_all)
-            await conn.run_sync(Base.metadata.create_all)
-        except Exception as error:
-            hyperion_error_logger.fatal(
-                f"Startup: Could not create tables in the database: {error}"
-            )
+# async def create_db_tables(engine, drop_db, hyperion_error_logger):
+#     """Create db tables
+#     Alembic should be used for any migration, this function can only create new tables and ensure that the necessary groups are available
+#     """
+#     async with engine.begin() as conn:
+#         try:
+#             if drop_db:
+#                 await conn.run_sync(Base.metadata.drop_all)
+#             await conn.run_sync(Base.metadata.create_all)
+#         except Exception as error:
+#             hyperion_error_logger.fatal(
+#                 f"Startup: Could not create tables in the database: {error}"
+#             )
 
 
 async def initialize_groups(SessionLocal, hyperion_error_logger):
@@ -126,14 +125,17 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         ):
             hyperion_error_logger.info("Redis client not configured")
 
+        # Create database tables
         engine = get_db_engine(settings=settings)
-        # await create_db_tables(engine, drop_db, hyperion_error_logger)
+        # await create_db_tables(engine, drop_db, hyperion_error_logger)        old system - uses SQLAlchemy autogeneration
+        os.system("alembic upgrade head")  # new system - uses Alembic migrations
 
+        # Initialize database tables
         SessionLocal = app.dependency_overrides.get(
             get_session_maker, get_session_maker
         )()
-        # await initialize_groups(SessionLocal, hyperion_error_logger)
-        # await initialize_module_visibility(SessionLocal, hyperion_error_logger)
+        await initialize_groups(SessionLocal, hyperion_error_logger)
+        await initialize_module_visibility(SessionLocal, hyperion_error_logger)
 
         yield
         hyperion_error_logger.info("Shutting down")
