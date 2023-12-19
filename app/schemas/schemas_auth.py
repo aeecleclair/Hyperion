@@ -133,6 +133,6 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     expires_in: int = 1800
-    scopes: str = ""
+    scope: str = ""
     refresh_token: str
     id_token: str | None = None

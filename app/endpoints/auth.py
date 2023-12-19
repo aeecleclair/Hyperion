@@ -942,7 +942,7 @@ def create_response_body(
     response_body = schemas_auth.TokenResponse(
         access_token=access_token,
         expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # in seconds
-        scopes=granted_scopes,
+        scope=granted_scopes,
         refresh_token=refresh_token,
         id_token=id_token,
     )
