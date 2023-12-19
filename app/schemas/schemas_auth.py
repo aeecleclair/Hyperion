@@ -57,6 +57,9 @@ class AuthorizeValidation(Authorize):
         email: str = Form(...),
         password: str = Form(...),
     ):
+        if nonce == "None":
+            nonce = None
+
         return cls(
             client_id=client_id,
             redirect_uri=redirect_uri,
