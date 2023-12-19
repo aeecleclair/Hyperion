@@ -284,3 +284,22 @@ class OpenProjectAuthClient(BaseAuthClient):
             "email": user.email,
             "email_verified": True,
         }
+
+
+class RalllyAuthClient(BaseAuthClient):
+    allowed_scopes: Set[ScopeType | str] = {
+        ScopeType.openid,
+        ScopeType.profile,
+        "email",
+    }
+    return_userinfo_in_id_token: bool = True
+
+    @classmethod
+    def get_userinfo(cls, user: models_core.CoreUser):
+        return {
+            "sub": user.id,
+            "name": get_display_name(
+                firstname=user.firstname, name=user.name, nickname=user.nickname
+            ),
+            "email": user.email,
+        }
