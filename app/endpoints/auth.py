@@ -1034,12 +1034,10 @@ async def oidc_configuration(
         # TODO: what do we put? All scopes can be used with custom auth_provider class.
         # Do we put basic scopes that are always supported or do we concatenate all available scopes
         "scopes_supported": [
+            "API",
+            "auth",
             "profile",
             "openid",
-            "email",
-            "address",
-            "phone",
-            "offline_access",
         ],
         # REQUIRED Must be code as wa only support authorization code grant
         "response_types_supported": [
