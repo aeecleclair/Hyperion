@@ -10,5 +10,6 @@ RUN pip install --upgrade -r /requirements.txt
 COPY ./assets /app/assets
 COPY ./alembic.ini /app/alembic.ini
 COPY ./migrations /app/migrations
+COPY ./prestart.sh /app/prestart.sh
 
 COPY ./app/ /app/app/

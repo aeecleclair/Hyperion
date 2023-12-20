@@ -128,7 +128,7 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         # Create database tables
         engine = get_db_engine(settings=settings)
         # await create_db_tables(engine, drop_db, hyperion_error_logger)        old system - uses SQLAlchemy autogeneration
-        os.system("alembic upgrade head")  # new system - uses Alembic migrations
+        # os.system("alembic upgrade head")  # new system - uses Alembic migrations
 
         # Initialize database tables
         SessionLocal = app.dependency_overrides.get(
