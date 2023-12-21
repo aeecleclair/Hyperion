@@ -36,6 +36,26 @@ async def init_objects():
     await add_object_to_db(recommendation)
 
 
+def test_create_picture():
+    with open("assets/images/default_recommendation.png", "rb") as image:
+        response = client.post(
+            f"/recommendation/recommendations/{recommendation.id}/picture",
+            files={"image": ("recommendation.png", image, "image/png")},
+            headers={"Authorization": f"Bearer {token_BDE}"},
+        )
+
+    assert response.status_code == 201
+
+
+def test_get_picture():
+    response = client.get(
+        f"/recommendation/recommendations/{recommendation.id}/picture",
+        headers={"Authorization": f"Bearer {token_simple}"},
+    )
+
+    assert response.status_code == 200
+
+
 def test_get_recommendation():
     response = client.get(
         "/recommendation/recommendations",

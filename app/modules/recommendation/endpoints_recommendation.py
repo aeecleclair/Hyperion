@@ -1,11 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core
+from app.core import models_core, standard_responses
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
-from app.dependencies import get_db, is_user_a_member, is_user_a_member_of
+from app.dependencies import (
+    get_db,
+    get_request_id,
+    is_user_a_member,
+    is_user_a_member_of,
+)
 from app.modules.recommendation import cruds_recommendation, schemas_recommendation
+from app.utils.tools import get_file_from_data, save_file_as_data
 
 router = APIRouter()
 
@@ -102,3 +109,63 @@ async def delete_recommendation(
         db=db,
         recommendation_id=recommendation_id,
     )
+
+
+@module.router.get(
+    "/recommendation/recommendations/{recommendation_id}/picture",
+    response_class=FileResponse,
+    status_code=200,
+)
+async def read_recommendation_image(
+    recommendation_id: str,
+):
+    """
+    Get the image of a recommendation.
+
+    **The user must be authenticated to use this endpoint**
+    """
+    return get_file_from_data(
+        default_asset="assets/images/default_recommendation.png",
+        directory="recommendations",
+        filename=str(recommendation_id),
+    )
+
+
+@module.router.post(
+    "/recommendation/recommendations/{recommendation_id}/picture",
+    response_model=standard_responses.Result,
+    status_code=201,
+)
+async def create_recommendation_image(
+    recommendation_id: str,
+    image: UploadFile = File(),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
+    request_id: str = Depends(get_request_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Add an image to a recommendation.
+
+    **This endpoint is only usable by members of the group BDE**
+    """
+    recommendation = await cruds_recommendation.get_recommendation_by_id(
+        recommendation_id=recommendation_id,
+        db=db,
+    )
+
+    if recommendation is None:
+        raise HTTPException(
+            status_code=404,
+            detail="The recommendation does not exist",
+        )
+
+    await save_file_as_data(
+        image=image,
+        directory="recommendations",
+        filename=str(recommendation_id),
+        request_id=request_id,
+        max_file_size=4 * 1024 * 1024,
+        accepted_content_types=["image/jpeg", "image/png", "image/webp"],
+    )
+
+    return standard_responses.Result(success=True)

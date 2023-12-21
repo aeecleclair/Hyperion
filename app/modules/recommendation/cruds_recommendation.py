@@ -63,3 +63,15 @@ async def delete_recommendation(
     except IntegrityError as error:
         await db.rollback()
         raise ValueError(error)
+
+
+async def get_recommendation_by_id(
+    recommendation_id: str,
+    db: AsyncSession,
+) -> models_recommendation.Recommendation:
+    result = await db.execute(
+        select(models_recommendation.Recommendation).where(
+            models_recommendation.Recommendation.id == recommendation_id
+        )
+    )
+    return result.scalars().one()
