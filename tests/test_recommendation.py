@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 
 import pytest_asyncio
 
@@ -28,6 +29,7 @@ async def init_objects():
     global recommendation
     recommendation = models_recommendation.Recommendation(
         id=str(uuid.uuid4()),
+        creation=datetime.now(),
         title="Un titre",
         code="Un code",
         summary="Un résumé",
