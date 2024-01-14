@@ -11,9 +11,12 @@ from app.utils.types.floors_type import FloorsType
 from tests.commons import event_loop  # noqa
 from tests.commons import add_object_to_db, client
 
+user: models_core.CoreUser
+
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects():
+    global user
     user = models_core.CoreUser(
         id=str(uuid.uuid4()),
         email="email@myecl.fr",
@@ -55,7 +58,7 @@ def test_authorization_code_flow_PKCE():
     code_verifier = "AntoineMonBelAntoine"
     code_challenge = "ws9GS3kBIFwDfNghvEk7GRlDvbUkSmZen8q2R4v3lBU="  # base64.urlsafe_b64encode(hashlib.sha256("AntoineMonBelAntoine".encode()).digest())
     data = {
-        "client_id": "5507cc3a-fd29-11ec-b939-0242ac120002",
+        "client_id": "AppAuthClientWithPKCE",
         "redirect_uri": "http://127.0.0.1:8000/docs",
         "response_type": "code",
         "scope": "API openid",
@@ -82,7 +85,7 @@ def test_authorization_code_flow_PKCE():
         "grant_type": "authorization_code",
         "code": code,
         "redirect_uri": "http://127.0.0.1:8000/docs",
-        "client_id": "5507cc3a-fd29-11ec-b939-0242ac120002",
+        "client_id": "AppAuthClientWithPKCE",
         "code_verifier": code_verifier,
     }
 
@@ -99,7 +102,7 @@ def test_authorization_code_flow_PKCE():
     data = {
         "grant_type": "refresh_token",
         "refresh_token": refresh_token,
-        "client_id": "5507cc3a-fd29-11ec-b939-0242ac120002",
+        "client_id": "AppAuthClientWithPKCE",
     }
     response = client.post("/auth/token", data=data)
 
@@ -113,7 +116,7 @@ def test_authorization_code_flow_PKCE():
     data = {
         "grant_type": "refresh_token",
         "refresh_token": used_refresh_token,
-        "client_id": "5507cc3a-fd29-11ec-b939-0242ac120002",
+        "client_id": "AppAuthClientWithPKCE",
     }
     response = client.post("/auth/token", data=data)  # Try token reuse
 
@@ -122,7 +125,7 @@ def test_authorization_code_flow_PKCE():
     data = {
         "grant_type": "refresh_token",
         "refresh_token": valid_refresh_token,
-        "client_id": "5507cc3a-fd29-11ec-b939-0242ac120002",
+        "client_id": "AppAuthClientWithPKCE",
     }
     response = client.post(
         "/auth/token", data=data
@@ -133,7 +136,7 @@ def test_authorization_code_flow_PKCE():
 
 def test_authorization_code_flow_secret():
     data = {
-        "client_id": "453be50-326a-465b-ad50-d4a87e1e487a",
+        "client_id": "AppAuthClientWithClientSecret",
         "client_secret": "secret",
         "redirect_uri": "http://127.0.0.1:8000/docs",
         "response_type": "code",
@@ -159,7 +162,7 @@ def test_authorization_code_flow_secret():
         "grant_type": "authorization_code",
         "code": code,
         "redirect_uri": "http://127.0.0.1:8000/docs",
-        "client_id": "453be50-326a-465b-ad50-d4a87e1e487a",
+        "client_id": "AppAuthClientWithClientSecret",
         "client_secret": "secret",
     }
 
@@ -176,7 +179,7 @@ def test_authorization_code_flow_secret():
     data = {
         "grant_type": "refresh_token",
         "refresh_token": refresh_token,
-        "client_id": "453be50-326a-465b-ad50-d4a87e1e487a",
+        "client_id": "AppAuthClientWithClientSecret",
         "client_secret": "secret",
     }
     response = client.post("/auth/token", data=data)
@@ -191,7 +194,7 @@ def test_authorization_code_flow_secret():
     data = {
         "grant_type": "refresh_token",
         "refresh_token": used_refresh_token,
-        "client_id": "453be50-326a-465b-ad50-d4a87e1e487a",
+        "client_id": "AppAuthClientWithClientSecret",
         "client_secret": "secret",
     }
     response = client.post("/auth/token", data=data)  # Try token reuse
@@ -201,7 +204,7 @@ def test_authorization_code_flow_secret():
     data = {
         "grant_type": "refresh_token",
         "refresh_token": valid_refresh_token,
-        "client_id": "453be50-326a-465b-ad50-d4a87e1e487a",
+        "client_id": "AppAuthClientWithClientSecret",
         "client_secret": "secret",
     }
     response = client.post(
@@ -209,3 +212,53 @@ def test_authorization_code_flow_secret():
     )  # Verify that the token has been revoked due to the reuse attempt
 
     assert response.status_code == 400
+
+
+def test_get_user_info():
+    # We first need an access token to query user info endpoints #
+    data = {
+        "client_id": "BaseAuthClient",
+        "client_secret": "secret",
+        "redirect_uri": "http://127.0.0.1:8000/docs",
+        "response_type": "code",
+        "scope": "openid",
+        "state": "azerty",
+        "email": "email@myecl.fr",
+        "password": "azerty",
+    }
+    response = client.post(
+        "/auth/authorization-flow/authorize-validation",
+        data=data,
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+
+    url = urlparse(response.headers["Location"])
+    query = parse_qs(url.query)
+    code = query["code"][0]
+
+    data = {
+        "grant_type": "authorization_code",
+        "code": code,
+        "redirect_uri": "http://127.0.0.1:8000/docs",
+        "client_id": "BaseAuthClient",
+        "client_secret": "secret",
+    }
+
+    response = client.post("/auth/token", data=data)
+    assert response.status_code == 200
+    json = response.json()
+
+    access_token = json["access_token"]
+
+    # Query user info endpoint #
+    response = client.get(
+        "/auth/userinfo",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    assert response.status_code == 200
+    json = response.json()
+
+    global user
+    assert json["name"] == user.firstname
