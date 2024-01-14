@@ -1,5 +1,3 @@
-"""Schemas file for endpoint /amap"""
-
 from pydantic import BaseModel, ConfigDict
 
 from app.schemas.schemas_core import CoreUserSimple
