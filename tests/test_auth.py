@@ -5,7 +5,6 @@ from urllib.parse import parse_qs, urlparse
 import pytest_asyncio
 
 from app.models import models_core
-from app.utils.examples import examples_auth
 from app.utils.types.floors_type import FloorsType
 
 # We need to import event_loop for pytest-asyncio routine defined bellow
@@ -55,8 +54,17 @@ async def init_objects():
 def test_authorization_code_flow_PKCE():
     code_verifier = "AntoineMonBelAntoine"
     code_challenge = "ws9GS3kBIFwDfNghvEk7GRlDvbUkSmZen8q2R4v3lBU="  # base64.urlsafe_b64encode(hashlib.sha256("AntoineMonBelAntoine".encode()).digest())
-    data = examples_auth.example_AuthorizeValidation
-    data["code_challenge"] = code_challenge
+    data = {
+        "client_id": "5507cc3a-fd29-11ec-b939-0242ac120002",
+        "redirect_uri": "http://127.0.0.1:8000/docs",
+        "response_type": "code",
+        "scope": "API openid",
+        "state": "azerty",
+        "code_challenge": code_challenge,
+        "code_challenge_method": "S256",
+        "email": "email@myecl.fr",
+        "password": "azerty",
+    }
     response = client.post(
         "/auth/authorization-flow/authorize-validation",
         data=data,
@@ -70,9 +78,13 @@ def test_authorization_code_flow_PKCE():
     assert query["code"][0] is not None
     code = query["code"][0]
 
-    data = examples_auth.example_TokenReq_access_token
-    data["code"] = code
-    data["code_verifier"] = code_verifier
+    data = {
+        "grant_type": "authorization_code",
+        "code": code,
+        "redirect_uri": "http://127.0.0.1:8000/docs",
+        "client_id": "5507cc3a-fd29-11ec-b939-0242ac120002",
+        "code_verifier": code_verifier,
+    }
 
     response = client.post("/auth/token", data=data)
     assert response.status_code == 200
@@ -84,8 +96,11 @@ def test_authorization_code_flow_PKCE():
     assert json["refresh_token"] is not None
 
     refresh_token = json["refresh_token"]
-    data = examples_auth.example_TokenReq_refresh_token
-    data["refresh_token"] = refresh_token
+    data = {
+        "grant_type": "refresh_token",
+        "refresh_token": refresh_token,
+        "client_id": "5507cc3a-fd29-11ec-b939-0242ac120002",
+    }
     response = client.post("/auth/token", data=data)
 
     assert response.status_code == 200
@@ -95,16 +110,100 @@ def test_authorization_code_flow_PKCE():
     used_refresh_token = refresh_token
     valid_refresh_token = json["refresh_token"]
 
-    data = examples_auth.example_TokenReq_refresh_token
-    data["refresh_token"] = used_refresh_token
-    data["client_secret"] = "secret"
+    data = {
+        "grant_type": "refresh_token",
+        "refresh_token": used_refresh_token,
+        "client_id": "5507cc3a-fd29-11ec-b939-0242ac120002",
+    }
     response = client.post("/auth/token", data=data)  # Try token reuse
 
     assert response.status_code == 400
 
-    data = examples_auth.example_TokenReq_refresh_token
-    data["refresh_token"] = valid_refresh_token
-    data["client_secret"] = "secret"
+    data = {
+        "grant_type": "refresh_token",
+        "refresh_token": valid_refresh_token,
+        "client_id": "5507cc3a-fd29-11ec-b939-0242ac120002",
+    }
+    response = client.post(
+        "/auth/token", data=data
+    )  # Verify that the token has been revoked due to the reuse attempt
+
+    assert response.status_code == 400
+
+
+def test_authorization_code_flow_secret():
+    data = {
+        "client_id": "453be50-326a-465b-ad50-d4a87e1e487a",
+        "client_secret": "secret",
+        "redirect_uri": "http://127.0.0.1:8000/docs",
+        "response_type": "code",
+        "scope": "API openid",
+        "state": "azerty",
+        "email": "email@myecl.fr",
+        "password": "azerty",
+    }
+    response = client.post(
+        "/auth/authorization-flow/authorize-validation",
+        data=data,
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+
+    url = urlparse(response.headers["Location"])
+    query = parse_qs(url.query)
+    assert (url.path, query["state"][0]) == ("/docs", "azerty")
+    assert query["code"][0] is not None
+    code = query["code"][0]
+
+    data = {
+        "grant_type": "authorization_code",
+        "code": code,
+        "redirect_uri": "http://127.0.0.1:8000/docs",
+        "client_id": "453be50-326a-465b-ad50-d4a87e1e487a",
+        "client_secret": "secret",
+    }
+
+    response = client.post("/auth/token", data=data)
+    assert response.status_code == 200
+    json = response.json()
+
+    assert json["access_token"] is not None
+    assert json["token_type"] == "bearer"
+    assert json["expires_in"] == 1800
+    assert json["refresh_token"] is not None
+
+    refresh_token = json["refresh_token"]
+    data = {
+        "grant_type": "refresh_token",
+        "refresh_token": refresh_token,
+        "client_id": "453be50-326a-465b-ad50-d4a87e1e487a",
+        "client_secret": "secret",
+    }
+    response = client.post("/auth/token", data=data)
+
+    assert response.status_code == 200
+    json = response.json()
+    assert json["refresh_token"] is not None
+
+    used_refresh_token = refresh_token
+    valid_refresh_token = json["refresh_token"]
+
+    data = {
+        "grant_type": "refresh_token",
+        "refresh_token": used_refresh_token,
+        "client_id": "453be50-326a-465b-ad50-d4a87e1e487a",
+        "client_secret": "secret",
+    }
+    response = client.post("/auth/token", data=data)  # Try token reuse
+
+    assert response.status_code == 400
+
+    data = {
+        "grant_type": "refresh_token",
+        "refresh_token": valid_refresh_token,
+        "client_id": "453be50-326a-465b-ad50-d4a87e1e487a",
+        "client_secret": "secret",
+    }
     response = client.post(
         "/auth/token", data=data
     )  # Verify that the token has been revoked due to the reuse attempt
