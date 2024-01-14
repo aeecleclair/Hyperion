@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel
 
-from app.schemas.schemas_core import CoreGroupSimple, CoreUserSimple
+from app.schemas.schemas_core import CoreUserSimple
 from app.utils.types.raffle_types import RaffleStatusType
 
 
@@ -20,15 +20,8 @@ class RaffleEdit(BaseModel):
     description: str | None = None
 
 
-class RaffleSimple(RaffleBase):
+class RaffleComplete(RaffleBase):
     id: str
-
-    class Config:
-        orm_mode = True
-
-
-class RaffleComplete(RaffleSimple):
-    group: CoreGroupSimple
 
     class Config:
         orm_mode = True
@@ -97,7 +90,7 @@ class PackTicketSimple(PackTicketBase):
 
 
 class PackTicketComplete(PackTicketSimple):
-    raffle: RaffleSimple
+    raffle: RaffleComplete
 
     class Config:
         orm_mode = True
