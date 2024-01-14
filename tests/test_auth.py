@@ -1,3 +1,5 @@
+import base64
+import json
 import uuid
 from datetime import date
 from urllib.parse import parse_qs, urlparse
@@ -262,3 +264,53 @@ def test_get_user_info():
 
     global user
     assert json["name"] == user.firstname
+
+
+def test_get_user_info_in_id_token():
+    # We first need an access token to query user info endpoints #
+    data = {
+        "client_id": "RalllyAuthClient",
+        "client_secret": "secret",
+        "redirect_uri": "http://127.0.0.1:8000/docs",
+        "response_type": "code",
+        "scope": "openid",
+        "state": "azerty",
+        "email": "email@myecl.fr",
+        "password": "azerty",
+    }
+    response = client.post(
+        "/auth/authorization-flow/authorize-validation",
+        data=data,
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+
+    url = urlparse(response.headers["Location"])
+    query = parse_qs(url.query)
+    code = query["code"][0]
+
+    data = {
+        "grant_type": "authorization_code",
+        "code": code,
+        "redirect_uri": "http://127.0.0.1:8000/docs",
+        "client_id": "RalllyAuthClient",
+        "client_secret": "secret",
+    }
+
+    response = client.post("/auth/token", data=data)
+    assert response.status_code == 200
+    response_json = response.json()
+
+    id_token = response_json["id_token"]
+
+    # In a real application we should verify the jws signature using the provided jwk
+    # Here we will just make sure the content of the token contains user info without checking the token signature
+
+    payload = id_token.split(".")[1]
+    # The string needs to be correctly padded to be able to decode it.
+    # See https://stackoverflow.com/a/49459036
+    decoded_payload = base64.b64decode(payload.encode("utf-8") + b"==")
+    json_payload = json.loads(decoded_payload)
+
+    global user
+    assert json_payload["email"] == user.email
