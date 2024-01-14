@@ -1,4 +1,5 @@
 import uuid
+from datetime import timedelta
 from typing import Sequence
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -852,7 +853,7 @@ async def extend_loan(
         )
     elif loan_extend.duration is not None:
         loan_update = schemas_loan.LoanUpdate(
-            end=loan.end + loan_extend.duration,
+            end=loan.end + timedelta(seconds=loan_extend.duration),
         )
 
     await cruds_loan.update_loan(

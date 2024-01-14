@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -28,7 +28,7 @@ class ItemBase(BaseModel):
     name: str
     suggested_caution: int
     total_quantity: int
-    suggested_lending_duration: timedelta
+    suggested_lending_duration: int = Field(description="duration in seconds")
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -36,7 +36,9 @@ class ItemUpdate(BaseModel):
     name: str | None = None
     suggested_caution: int | None = None
     total_quantity: int | None = None
-    suggested_lending_duration: timedelta | None = None
+    suggested_lending_duration: int | None = Field(
+        description="duration in seconds", default=None
+    )
 
 
 class Item(ItemBase):
@@ -130,6 +132,6 @@ class Loan(LoanBase):
 class LoanExtend(BaseModel):
     # The client can either provide a new end date or a timedelta to be added to the old end date.
     end: date | None = Field(None, description="A new return date for the Loan")
-    duration: timedelta | None = Field(
-        None, description="The duration by which the loan should be extended"
+    duration: int | None = Field(
+        None, description="The duration by which the loan should be extended in seconds"
     )

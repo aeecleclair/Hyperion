@@ -62,7 +62,7 @@ async def init_objects():
         loaner_id=loaner.id,
         suggested_lending_duration=timedelta(
             days=50,
-        ),
+        ).seconds,
         suggested_caution=10,
         total_quantity=8,
         loaner=loaner,
@@ -75,7 +75,7 @@ async def init_objects():
         loaner_id=loaner.id,
         suggested_lending_duration=timedelta(
             days=50,
-        ),
+        ).seconds,
         suggested_caution=10,
         total_quantity=5,
         loaner=loaner,
