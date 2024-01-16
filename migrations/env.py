@@ -1,17 +1,20 @@
-"""Environment file defining the required functions for the alembic migration to work"""
-
 import asyncio
-import os
-import re
 from logging.config import fileConfig
 
+from sqlalchemy.engine import Connection
+
+from app.dependencies import get_db_engine, get_settings
+
 from alembic import context
+from alembic.config import Config as alConfig
 
 from app.database import Base
-from app.dependencies import get_settings, get_db_engine
+
+# this is the Alembic Config object, which provides
+# access to the values within the .ini file in use.
+config = alConfig("alembic.ini")
 
 settings = get_settings()
-engine = get_db_engine(settings=settings)
 
 if settings.SQLITE_DB:
     SQLALCHEMY_DATABASE_URL = (
@@ -19,19 +22,6 @@ if settings.SQLITE_DB:
     )
 else:
     SQLALCHEMY_DATABASE_URL = f"postgresql+asyncpg://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}/{settings.POSTGRES_DB}"
-
-# from sqlalchemy import engine_from_config, pool
-# from sqlalchemy.ext.asyncio import AsyncEngine
-
-
-models_files = [x for x in os.listdir("./app/models") if re.match("models*", x)]
-for models_file in models_files:
-    __import__(f"app.models.{models_file[:-3]}")
-# from app.models import models_core
-
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
-config = context.config
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -44,13 +34,17 @@ if config.config_file_name is not None:
 # target_metadata = mymodel.Base.metadata
 target_metadata = Base.metadata
 
+# models_files = [x for x in os.listdir("./app/models") if re.match("models*", x)]
+# for models_file in models_files:
+#     __import__(f"app.models.{models_file[:-3]}")
+
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
 
-def run_migrations_offline():
+def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
 
     This configures the context with just a URL
@@ -62,36 +56,32 @@ def run_migrations_offline():
     script output.
 
     """
-    url = SQLALCHEMY_DATABASE_URL
+    url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        compare_type=True,
     )
 
     with context.begin_transaction():
         context.run_migrations()
 
 
-def do_run_migrations(connection):
-    context.configure(
-        connection=connection, target_metadata=target_metadata, compare_type=True
-    )
+def do_run_migrations(connection: Connection) -> None:
+    context.configure(connection=connection, target_metadata=target_metadata)
 
     with context.begin_transaction():
         context.run_migrations()
 
 
-async def run_migrations_online():
-    """Run migrations in 'online' mode.
-
-    In this scenario we need to create an Engine
+async def run_async_migrations() -> None:
+    """In this scenario we need to create an Engine
     and associate a connection with the context.
 
     """
-    connectable = engine
+
+    connectable = get_db_engine(settings)
 
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)
@@ -99,7 +89,7 @@ async def run_migrations_online():
     await connectable.dispose()
 
 
-if context.is_offline_mode():
-    run_migrations_offline()
-else:
-    asyncio.run(run_migrations_online())
+def run_migrations_online() -> None:
+    """Run migrations in 'online' mode."""
+
+    asyncio.run(run_async_migrations())

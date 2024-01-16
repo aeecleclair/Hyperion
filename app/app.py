@@ -6,6 +6,9 @@ from contextlib import asynccontextmanager
 from typing import Literal
 
 import redis
+from alembic import command as alCommand
+from alembic import context
+from alembic.config import Config as alConfig
 from fastapi import FastAPI, Request, Response, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
@@ -30,16 +33,19 @@ from app.utils.types.groups_type import GroupType
 from app.utils.types.module_list import ModuleList
 
 
-async def create_db_tables(engine, drop_db, hyperion_error_logger):
+async def update_db_tables(engine, drop_db, hyperion_error_logger):
     """Create db tables
     Alembic should be used for any migration, this function can only create new tables and ensure that the necessary groups are available
     """
+    alembic_cfg = alConfig("alembic.ini")
     async with engine.begin() as conn:
         try:
             if drop_db:
                 await conn.run_sync(Base.metadata.drop_all)
-            # await conn.run_sync(Base.metadata.create_all) old system - uses SQLAlchemy autogeneration
-            os.system("alembic upgrade head")  # new system - uses Alembic migrations
+                # await conn.run_sync(Base.metadata.create_all) old system - uses SQLAlchemy autogeneration
+            alembic_cfg.attributes["connection"] = conn
+            alCommand.upgrade(alembic_cfg, "head")
+            hyperion_error_logger.info("Startup: Database tables updated")
         except Exception as error:
             hyperion_error_logger.fatal(
                 f"Startup: Could not create tables in the database: {error}"
@@ -127,9 +133,9 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         ):
             hyperion_error_logger.info("Redis client not configured")
 
-        # Create database tables
+        # Update database tables
         engine = get_db_engine(settings=settings)
-        await create_db_tables(engine, drop_db, hyperion_error_logger)
+        await update_db_tables(engine, drop_db, hyperion_error_logger)
 
         # Initialize database tables
         SessionLocal = app.dependency_overrides.get(
