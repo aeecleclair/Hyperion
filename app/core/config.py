@@ -258,3 +258,17 @@ class Settings(BaseSettings):
             raise ValueError("RSA_PRIVATE_PEM_STRING is not a valid RSA key", e)
 
         return self
+
+    @model_validator(mode="after")
+    def init_cached_property(self) -> "Settings":
+        """
+        Cached property are not computed during the instantiation of the class, but when they are accessed for the first time.
+        By calling them in this validator, we force their initialization during the instantiation of the class.
+        This allow them to raise error on Hyperion startup if they are not correctly configured instead of creating an error on runtime.
+        """
+        self.KNOWN_AUTH_CLIENTS
+        self.RSA_PRIVATE_KEY
+        self.RSA_PUBLIC_KEY
+        self.RSA_PUBLIC_JWK
+
+        return self
