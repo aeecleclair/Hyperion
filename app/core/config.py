@@ -1,8 +1,9 @@
 from functools import cached_property
+from typing import Any
 
 from jose import jwk
 from jose.exceptions import JWKError
-from pydantic import model_validator
+from pydantic import computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.utils.auth import providers
@@ -159,16 +160,19 @@ class Settings(BaseSettings):
     # The combination of `@property` and `@lru_cache` should be replaced by `@cached_property`
     # See https://docs.python.org/3.8/library/functools.html?highlight=#functools.cached_property
 
+    @computed_field
     @cached_property
-    def RSA_PRIVATE_KEY(cls):
+    def RSA_PRIVATE_KEY(cls) -> Any:
         return jwk.construct(cls.RSA_PRIVATE_PEM_STRING, algorithm="RS256")
 
+    @computed_field
     @cached_property
-    def RSA_PUBLIC_KEY(cls):
+    def RSA_PUBLIC_KEY(cls) -> Any:
         return cls.RSA_PRIVATE_KEY.public_key()
 
+    @computed_field
     @cached_property
-    def RSA_PUBLIC_JWK(cls):
+    def RSA_PUBLIC_JWK(cls) -> dict[str, dict[str, str]]:
         JWK = cls.RSA_PUBLIC_KEY.to_dict()
         JWK.update(
             {
@@ -184,6 +188,7 @@ class Settings(BaseSettings):
 
     # This property parse AUTH_CLIENTS to create a dictionary of auth clients:
     # {"client_id": AuthClientClassInstance}
+    @computed_field
     @cached_property
     def KNOWN_AUTH_CLIENTS(cls) -> dict[str, providers.BaseAuthClient]:
         clients = {}
