@@ -160,19 +160,19 @@ class Settings(BaseSettings):
     # The combination of `@property` and `@lru_cache` should be replaced by `@cached_property`
     # See https://docs.python.org/3.8/library/functools.html?highlight=#functools.cached_property
 
-    @computed_field
+    @computed_field  # type: ignore[misc] # Current issue with mypy, see https://docs.pydantic.dev/2.0/usage/computed_fields/ and https://github.com/python/mypy/issues/1362
     @cached_property
     def RSA_PRIVATE_KEY(cls) -> Any:
         return jwk.construct(cls.RSA_PRIVATE_PEM_STRING, algorithm="RS256")
 
-    @computed_field
+    @computed_field  # type: ignore[misc]
     @cached_property
     def RSA_PUBLIC_KEY(cls) -> Any:
         return cls.RSA_PRIVATE_KEY.public_key()
 
-    @computed_field
+    @computed_field  # type: ignore[misc]
     @cached_property
-    def RSA_PUBLIC_JWK(cls) -> dict[str, dict[str, str]]:
+    def RSA_PUBLIC_JWK(cls) -> dict[str, list[dict[str, str]]]:
         JWK = cls.RSA_PUBLIC_KEY.to_dict()
         JWK.update(
             {
@@ -188,7 +188,7 @@ class Settings(BaseSettings):
 
     # This property parse AUTH_CLIENTS to create a dictionary of auth clients:
     # {"client_id": AuthClientClassInstance}
-    @computed_field
+    @computed_field  # type: ignore[misc]
     @cached_property
     def KNOWN_AUTH_CLIENTS(cls) -> dict[str, providers.BaseAuthClient]:
         clients = {}
