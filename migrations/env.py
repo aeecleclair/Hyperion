@@ -1,19 +1,15 @@
 import asyncio
 from logging.config import fileConfig
-
 from sqlalchemy.engine import Connection
-
 from app.dependencies import get_db_engine, get_settings
-
 from alembic import context
-from alembic.config import Config as alConfig
-
 from app.database import Base
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
 
+# TODO: change this to use the dependency correctly
 settings = get_settings()
 
 if settings.SQLITE_DB:
@@ -22,6 +18,7 @@ if settings.SQLITE_DB:
     )
 else:
     SQLALCHEMY_DATABASE_URL = f"postgresql+asyncpg://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}/{settings.POSTGRES_DB}"
+
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -83,17 +80,52 @@ async def run_async_migrations() -> None:
     """In this scenario we need to create an Engine
     and associate a connection with the context.
 
+    If a connection is already present in the context config,
+    we will use it instead of creating a new one.
+    This connection should be set when invoking alembic programmatically.
+    See https://alembic.sqlalchemy.org/en/latest/cookbook.html#connection-sharing
+
+    When calling alembic from the CLI,we need to create a new connection
     """
 
-    connectable = get_db_engine(settings)
+    connection = config.attributes.get("connection", None)
 
-    async with connectable.connect() as connection:
+    if connection is None:
+        # only create Engine if we don't have a Connection
+        # from the outside
+        # TODO: use the dependency correctly
+        connectable = get_db_engine(settings)
+
+        async with connectable.connect() as connection:
+            await connection.run_sync(do_run_migrations)
+        await connectable.dispose()
+    else:
         await connection.run_sync(do_run_migrations)
-
-    await connectable.dispose()
 
 
 def run_migrations_online() -> None:
-    """Run migrations in 'online' mode."""
+    """
+    Run migrations in 'online' mode.
 
-    asyncio.run(run_async_migrations())
+    If a connection is already present in the context config, it means that we already are in an event loop.
+    We can not create a second event loop in the same thread so we can not call `asyncio.run(run_async_migrations())`.
+    Instead we need to call `run_async_migrations()` directly.
+    This `connection` attributes should be set when invoking alembic programmatically.
+    WARNING: SQLAlchemy does not support `Inspection on an AsyncConnection`. The call to Alembic must be wrapped in a `run_sync` call.
+    See https://alembic.sqlalchemy.org/en/latest/cookbook.html#programmatic-api-use-connection-sharing-with-asyncio for more information.
+
+    If not connection were provided, we may assume we are not in an existing event loop (ie. alembic was invoking from the cli). We create a new event loop and run the migrations in it.
+    """
+
+    connectable = config.attributes.get("connection", None)
+
+    if connectable is None:
+        asyncio.run(run_async_migrations())
+    else:
+        do_run_migrations(connectable)
+
+
+if context.is_offline_mode():
+    run_migrations_offline()
+else:
+    run_migrations_online()

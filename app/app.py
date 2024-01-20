@@ -5,16 +5,15 @@ import uuid
 from contextlib import asynccontextmanager
 from typing import Literal
 
+import alembic
 import redis
-from alembic import command as alCommand
-from alembic import context
-from alembic.config import Config as alConfig
 from fastapi import FastAPI, Request, Response, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
 from app import api
 from app.core.config import Settings
@@ -32,24 +31,50 @@ from app.utils.redis import limiter
 from app.utils.types.groups_type import GroupType
 from app.utils.types.module_list import ModuleList
 
+# NOTE: We can not get loggers at the top of this file like we do in other files
+# as the loggers are not yet initialized
 
-async def update_db_tables(engine, drop_db, hyperion_error_logger):
+
+def run_alembic_upgrade(connection: AsyncConnection) -> None:
+    """
+    Run the alembic upgrade command to upgrade the database to the latest version (`head`)
+
+    WARNING: SQLAlchemy does not support `Inspection on an AsyncConnection`. The call to Alembic must be wrapped in a `run_sync` call.
+    See https://alembic.sqlalchemy.org/en/latest/cookbook.html#programmatic-api-use-connection-sharing-with-asyncio for more information.
+
+    Exemple usage:
+    ```python
+    async with engine.connect() as conn:
+        await conn.run_sync(run_alembic_upgrade)
+    ```
+    """
+    alembic_cfg = alembic.config.Config("alembic.ini")
+    alembic_cfg.attributes["connection"] = connection
+
+    alembic.command.upgrade(alembic_cfg, "head")
+
+
+async def update_db_tables(engine: AsyncEngine, drop_db: bool = False):
     """Create db tables
     Alembic should be used for any migration, this function can only create new tables and ensure that the necessary groups are available
     """
-    alembic_cfg = alConfig("alembic.ini")
-    async with engine.begin() as conn:
-        try:
+
+    hyperion_error_logger = logging.getLogger("hyperion.error")
+
+    try:
+        async with engine.connect() as conn:
             if drop_db:
                 await conn.run_sync(Base.metadata.drop_all)
-                # await conn.run_sync(Base.metadata.create_all) old system - uses SQLAlchemy autogeneration
-            alembic_cfg.attributes["connection"] = conn
-            alCommand.upgrade(alembic_cfg, "head")
+
+            # Run the migration
+            await conn.run_sync(run_alembic_upgrade)
+
             hyperion_error_logger.info("Startup: Database tables updated")
-        except Exception as error:
-            hyperion_error_logger.fatal(
-                f"Startup: Could not create tables in the database: {error}"
-            )
+    except Exception as error:
+        hyperion_error_logger.fatal(
+            f"Startup: Could not create tables in the database: {error}"
+        )
+        raise
 
 
 async def initialize_groups(SessionLocal, hyperion_error_logger):
@@ -134,8 +159,9 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
             hyperion_error_logger.info("Redis client not configured")
 
         # Update database tables
+        # TODO: use the dependency correctly
         engine = get_db_engine(settings=settings)
-        await update_db_tables(engine, drop_db, hyperion_error_logger)
+        await update_db_tables(engine, drop_db)
 
         # Initialize database tables
         SessionLocal = app.dependency_overrides.get(
