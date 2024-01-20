@@ -6,6 +6,8 @@ from contextlib import asynccontextmanager
 from typing import Literal
 
 import alembic
+import alembic.command as alCommand
+import alembic.config as alConfig
 import redis
 from fastapi import FastAPI, Request, Response, status
 from fastapi.encoders import jsonable_encoder
@@ -48,10 +50,10 @@ def run_alembic_upgrade(connection: AsyncConnection) -> None:
         await conn.run_sync(run_alembic_upgrade)
     ```
     """
-    alembic_cfg = alembic.config.Config("alembic.ini")
+    alembic_cfg = alConfig.Config("alembic.ini")
     alembic_cfg.attributes["connection"] = connection
 
-    alembic.command.upgrade(alembic_cfg, "head")
+    alCommand.upgrade(alembic_cfg, "head")
 
 
 async def update_db_tables(engine: AsyncEngine, drop_db: bool = False):
