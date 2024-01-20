@@ -18,9 +18,9 @@ class Topic(str, Enum):
 
 
 class CustomTopic:
-    def __init__(self, topic: Topic, topic_identifier: str | None = None):
+    def __init__(self, topic: Topic, topic_identifier: str = ""):
         self.topic = topic
-        self.topic_identifier = topic_identifier or ""
+        self.topic_identifier = topic_identifier
 
     def to_str(self) -> str:
         if self.topic_identifier:
@@ -34,6 +34,6 @@ class CustomTopic:
             topic, topic_identifier = topic_str.split("_")
         else:
             topic = topic_str
-            topic_identifier = None
+            topic_identifier = ""
         topic = Topic(topic)
         return cls(topic=topic, topic_identifier=topic_identifier)

@@ -57,6 +57,6 @@ class TopicMembership(Base):
     topic: Mapped[Topic] = mapped_column(
         Enum(Topic), index=True, nullable=False, primary_key=True
     )
-    topic_identifier: Mapped[str | None] = mapped_column(
-        String, nullable=True, primary_key=True
+    topic_identifier: Mapped[str] = mapped_column(
+        String, nullable=False, primary_key=True
     )
