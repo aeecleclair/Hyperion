@@ -63,7 +63,7 @@ async def update_db_tables(engine: AsyncEngine, drop_db: bool = False):
     hyperion_error_logger = logging.getLogger("hyperion.error")
 
     try:
-        async with engine.connect() as conn:
+        async with engine.begin() as conn:
             if drop_db:
                 await conn.run_sync(Base.metadata.drop_all)
 
