@@ -93,6 +93,10 @@ async def update_db_tables(engine: AsyncEngine, drop_db: bool = False):
     try:
         async with engine.begin() as conn:
             if drop_db:
+                # All tables should be dropped, including the alembic_version table
+                # or Hyperion will think that the database is up to date and will not initialize it
+                # when running tests a second time.
+                # To let SQLAlchemy drop the alembic_version table, we created a AlembicVersion model.
                 await conn.run_sync(Base.metadata.drop_all)
 
             alembic_current_revision = await conn.run_sync(get_alembic_current_revision)
