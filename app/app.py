@@ -7,6 +7,7 @@ from typing import Literal
 
 import alembic.command as alembic_command
 import alembic.config as alembic_config
+import alembic.migration as alembic_migration
 import redis
 from fastapi import FastAPI, Request, Response, status
 from fastapi.encoders import jsonable_encoder
@@ -36,6 +37,33 @@ from app.utils.types.module_list import ModuleList
 # as the loggers are not yet initialized
 
 
+def get_alembic_config(connection: AsyncConnection) -> alembic_config.Config:
+    """
+    Return the alembic configuration object
+    """
+    alembic_cfg = alembic_config.Config("alembic.ini")
+    alembic_cfg.attributes["connection"] = connection
+
+    return alembic_cfg
+
+
+def get_alembic_current_revision(connection: AsyncConnection) -> str | None:
+    """
+    Return the current revision of the database
+    """
+
+    context = alembic_migration.MigrationContext.configure(connection)
+    return context.get_current_revision()
+
+
+def stamp_alembic_head(connection: AsyncConnection) -> None:
+    """
+    Stamp the database with the latest revision
+    """
+    alembic_cfg = get_alembic_config(connection)
+    alembic_command.stamp(alembic_cfg, "head")
+
+
 def run_alembic_upgrade(connection: AsyncConnection) -> None:
     """
     Run the alembic upgrade command to upgrade the database to the latest version (`head`)
@@ -49,8 +77,8 @@ def run_alembic_upgrade(connection: AsyncConnection) -> None:
         await conn.run_sync(run_alembic_upgrade)
     ```
     """
-    alembic_cfg = alembic_config.Config("alembic.ini")
-    alembic_cfg.attributes["connection"] = connection
+
+    alembic_cfg = get_alembic_config(connection)
 
     alembic_command.upgrade(alembic_cfg, "head")
 
@@ -67,8 +95,26 @@ async def update_db_tables(engine: AsyncEngine, drop_db: bool = False):
             if drop_db:
                 await conn.run_sync(Base.metadata.drop_all)
 
-            # Run the migration
-            await conn.run_sync(run_alembic_upgrade)
+            alembic_current_revision = await conn.run_sync(get_alembic_current_revision)
+
+            if alembic_current_revision is None:
+                # We generate the database using SQLAlchemy
+                # in order not to have to run all migrations ont by one
+                # See https://alembic.sqlalchemy.org/en/latest/cookbook.html#building-an-up-to-date-database-from-scratch
+                hyperion_error_logger.info(
+                    "Startup: Database tables not created yet, creating them"
+                )
+
+                # Create all tables
+                await conn.run_sync(Base.metadata.create_all)
+                # We stamp the database with the latest revision so that
+                # alembic knows that the database is up to date
+                await conn.run_sync(stamp_alembic_head)
+            else:
+                hyperion_error_logger.info(
+                    f"Startup: Database tables already created (current revision: {alembic_current_revision}), running migrations"
+                )
+                await conn.run_sync(run_alembic_upgrade)
 
             hyperion_error_logger.info("Startup: Database tables updated")
     except Exception as error:
