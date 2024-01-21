@@ -9,16 +9,6 @@ from app.database import Base
 # access to the values within the .ini file in use.
 config = context.config
 
-# TODO: change this to use the dependency correctly
-settings = get_settings()
-
-if settings.SQLITE_DB:
-    SQLALCHEMY_DATABASE_URL = (
-        f"sqlite+aiosqlite:///./{settings.SQLITE_DB}"  # Connect to the test's database
-    )
-else:
-    SQLALCHEMY_DATABASE_URL = f"postgresql+asyncpg://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}/{settings.POSTGRES_DB}"
-
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -93,7 +83,12 @@ async def run_async_migrations() -> None:
     if connection is None:
         # only create Engine if we don't have a Connection
         # from the outside
-        # TODO: use the dependency correctly
+
+        # If we don't have a connection, we can safely assume that Hyperion is not running
+        # Migrations should have been called from the CLI. We thus want to point to the production database
+        # As we want to use the production database, we can call the `get_settings` function directly
+        # instead of using it as a dependency (`app.dependency_overrides.get(get_settings, get_settings)()`)
+        settings = get_settings()
         connectable = get_db_engine(settings)
 
         async with connectable.connect() as connection:
