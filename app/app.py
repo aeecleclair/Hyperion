@@ -99,7 +99,7 @@ async def update_db_tables(engine: AsyncEngine, drop_db: bool = False):
 
             if alembic_current_revision is None:
                 # We generate the database using SQLAlchemy
-                # in order not to have to run all migrations ont by one
+                # in order not to have to run all migrations one by one
                 # See https://alembic.sqlalchemy.org/en/latest/cookbook.html#building-an-up-to-date-database-from-scratch
                 hyperion_error_logger.info(
                     "Startup: Database tables not created yet, creating them"
