@@ -210,8 +210,9 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
             hyperion_error_logger.info("Redis client not configured")
 
         # Update database tables
-        # TODO: use the dependency correctly
-        engine = get_db_engine(settings=settings)
+        engine = app.dependency_overrides.get(get_db_engine, get_db_engine)(
+            settings=settings
+        )
         await update_db_tables(engine, drop_db)
 
         # Initialize database tables
