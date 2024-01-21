@@ -14,6 +14,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy.engine import Connection
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
@@ -37,7 +38,7 @@ from app.utils.types.module_list import ModuleList
 # as the loggers are not yet initialized
 
 
-def get_alembic_config(connection: AsyncConnection) -> alembic_config.Config:
+def get_alembic_config(connection: Connection) -> alembic_config.Config:
     """
     Return the alembic configuration object
     """
@@ -47,7 +48,7 @@ def get_alembic_config(connection: AsyncConnection) -> alembic_config.Config:
     return alembic_cfg
 
 
-def get_alembic_current_revision(connection: AsyncConnection) -> str | None:
+def get_alembic_current_revision(connection: Connection) -> str | None:
     """
     Return the current revision of the database
     """
@@ -56,7 +57,7 @@ def get_alembic_current_revision(connection: AsyncConnection) -> str | None:
     return context.get_current_revision()
 
 
-def stamp_alembic_head(connection: AsyncConnection) -> None:
+def stamp_alembic_head(connection: Connection) -> None:
     """
     Stamp the database with the latest revision
     """
@@ -64,7 +65,7 @@ def stamp_alembic_head(connection: AsyncConnection) -> None:
     alembic_command.stamp(alembic_cfg, "head")
 
 
-def run_alembic_upgrade(connection: AsyncConnection) -> None:
+def run_alembic_upgrade(connection: Connection) -> None:
     """
     Run the alembic upgrade command to upgrade the database to the latest version (`head`)
 
@@ -99,6 +100,9 @@ async def update_db_tables(engine: AsyncEngine, drop_db: bool = False):
                 # To let SQLAlchemy drop the alembic_version table, we created a AlembicVersion model.
                 await conn.run_sync(Base.metadata.drop_all)
 
+            # run_sync is used to run a synchronous function in an asynchronous context
+            # the function `get_alembic_current_revision` will be called with "a synchronous-style Connection as the first argument"
+            # See https://docs.sqlalchemy.org/en/20/orm/extensions/asyncio.html#sqlalchemy.ext.asyncio.AsyncConnection.run_sync
             alembic_current_revision = await conn.run_sync(get_alembic_current_revision)
 
             if alembic_current_revision is None:
