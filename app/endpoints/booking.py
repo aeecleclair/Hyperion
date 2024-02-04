@@ -18,6 +18,7 @@ from app.dependencies import (
 from app.models import models_booking, models_core
 from app.schemas import schemas_booking
 from app.schemas.schemas_notification import Message
+from app.utils.communication.notifications import NotificationTool
 from app.utils.tools import is_group_id_valid, is_user_member_of_an_allowed_group
 from app.utils.types.booking_type import Decision
 from app.utils.types.groups_type import GroupType
@@ -255,7 +256,7 @@ async def create_booking(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
     settings: Settings = Depends(get_settings),
-    notification_tool=Depends(get_notification_tool),
+    notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
     Create a booking.
@@ -284,7 +285,7 @@ async def create_booking(
                 expire_on=now.replace(day=now.day + 3),
             )
             await notification_tool.send_notification_to_topic(
-                topic=CustomTopic(topic=Topic.bookingadmin),
+                custom_topic=CustomTopic(topic=Topic.bookingadmin),
                 message=message,
             )
     except Exception as error:
