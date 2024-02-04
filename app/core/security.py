@@ -1,5 +1,6 @@
 import secrets
 from datetime import datetime, timedelta
+from typing import Any
 
 import bcrypt
 from fastapi.security import OAuth2AuthorizationCodeBearer
@@ -110,12 +111,21 @@ def create_access_token(
 def create_access_token_RS256(
     settings: Settings,
     data: schemas_auth.TokenData,
+    additional_data: dict[str, Any] = {},
     expires_delta: timedelta | None = None,
 ) -> str:
+    """
+    Create a JWT. The token is generated using the RSA_PRIVATE_KEY secret.
+
+    The token will contain the data from `data` and `additional_data`.
+    """
     if expires_delta is None:
         # We use the default value
         expires_delta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode = data.dict(exclude_none=True)
+
+    to_encode: dict[str, Any] = additional_data
+    to_encode.update(data.dict(exclude_none=True))
+
     iat = datetime.utcnow()
     expire_on = datetime.utcnow() + expires_delta
     to_encode.update({"exp": expire_on, "iat": iat})

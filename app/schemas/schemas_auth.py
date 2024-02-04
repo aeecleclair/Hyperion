@@ -57,6 +57,9 @@ class AuthorizeValidation(Authorize):
         email: str = Form(...),
         password: str = Form(...),
     ):
+        if nonce == "None":
+            nonce = None
+
         return cls(
             client_id=client_id,
             redirect_uri=redirect_uri,
@@ -133,6 +136,6 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     expires_in: int = 1800
-    scopes: str = ""
+    scope: str = ""
     refresh_token: str
     id_token: str | None = None
