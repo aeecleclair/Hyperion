@@ -51,6 +51,15 @@ def get_alembic_config(connection: Connection) -> alembic_config.Config:
 def get_alembic_current_revision(connection: Connection) -> str | None:
     """
     Return the current revision of the database
+
+    WARNING: SQLAlchemy does not support `Inspection on an AsyncConnection`. The call to Alembic must be wrapped in a `run_sync` call.
+    See https://alembic.sqlalchemy.org/en/latest/cookbook.html#programmatic-api-use-connection-sharing-with-asyncio for more information.
+
+    Exemple usage:
+    ```python
+    async with engine.connect() as conn:
+        await conn.run_sync(run_alembic_upgrade)
+    ```
     """
 
     context = alembic_migration.MigrationContext.configure(connection)
@@ -60,6 +69,15 @@ def get_alembic_current_revision(connection: Connection) -> str | None:
 def stamp_alembic_head(connection: Connection) -> None:
     """
     Stamp the database with the latest revision
+
+    WARNING: SQLAlchemy does not support `Inspection on an AsyncConnection`. The call to Alembic must be wrapped in a `run_sync` call.
+    See https://alembic.sqlalchemy.org/en/latest/cookbook.html#programmatic-api-use-connection-sharing-with-asyncio for more information.
+
+    Exemple usage:
+    ```python
+    async with engine.connect() as conn:
+        await conn.run_sync(run_alembic_upgrade)
+    ```
     """
     alembic_cfg = get_alembic_config(connection)
     alembic_command.stamp(alembic_cfg, "head")
@@ -85,8 +103,11 @@ def run_alembic_upgrade(connection: Connection) -> None:
 
 
 async def update_db_tables(engine: AsyncEngine, drop_db: bool = False):
-    """Create db tables
-    Alembic should be used for any migration, this function can only create new tables and ensure that the necessary groups are available
+    """
+    If the database is not initialized, create the tables and stamp the database with the latest revision.
+    Otherwise, run the alembic upgrade command to upgrade the database to the latest version (`head`).
+
+    if drop_db is True, we will drop all tables before creating them again
     """
 
     hyperion_error_logger = logging.getLogger("hyperion.error")
