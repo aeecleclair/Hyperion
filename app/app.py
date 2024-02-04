@@ -5,13 +5,18 @@ import uuid
 from contextlib import asynccontextmanager
 from typing import Literal
 
+import alembic.command as alembic_command
+import alembic.config as alembic_config
+import alembic.migration as alembic_migration
 import redis
 from fastapi import FastAPI, Request, Response, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy.engine import Connection
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 from app import api
 from app.core.config import Settings
@@ -29,20 +34,123 @@ from app.utils.redis import limiter
 from app.utils.types.groups_type import GroupType
 from app.utils.types.module_list import ModuleList
 
+# NOTE: We can not get loggers at the top of this file like we do in other files
+# as the loggers are not yet initialized
 
-async def create_db_tables(engine, drop_db, hyperion_error_logger):
-    """Create db tables
-    Alembic should be used for any migration, this function can only create new tables and ensure that the necessary groups are available
+
+def get_alembic_config(connection: Connection) -> alembic_config.Config:
     """
-    async with engine.begin() as conn:
-        try:
+    Return the alembic configuration object
+    """
+    alembic_cfg = alembic_config.Config("alembic.ini")
+    alembic_cfg.attributes["connection"] = connection
+
+    return alembic_cfg
+
+
+def get_alembic_current_revision(connection: Connection) -> str | None:
+    """
+    Return the current revision of the database
+
+    WARNING: SQLAlchemy does not support `Inspection on an AsyncConnection`. The call to Alembic must be wrapped in a `run_sync` call.
+    See https://alembic.sqlalchemy.org/en/latest/cookbook.html#programmatic-api-use-connection-sharing-with-asyncio for more information.
+
+    Exemple usage:
+    ```python
+    async with engine.connect() as conn:
+        await conn.run_sync(run_alembic_upgrade)
+    ```
+    """
+
+    context = alembic_migration.MigrationContext.configure(connection)
+    return context.get_current_revision()
+
+
+def stamp_alembic_head(connection: Connection) -> None:
+    """
+    Stamp the database with the latest revision
+
+    WARNING: SQLAlchemy does not support `Inspection on an AsyncConnection`. The call to Alembic must be wrapped in a `run_sync` call.
+    See https://alembic.sqlalchemy.org/en/latest/cookbook.html#programmatic-api-use-connection-sharing-with-asyncio for more information.
+
+    Exemple usage:
+    ```python
+    async with engine.connect() as conn:
+        await conn.run_sync(run_alembic_upgrade)
+    ```
+    """
+    alembic_cfg = get_alembic_config(connection)
+    alembic_command.stamp(alembic_cfg, "head")
+
+
+def run_alembic_upgrade(connection: Connection) -> None:
+    """
+    Run the alembic upgrade command to upgrade the database to the latest version (`head`)
+
+    WARNING: SQLAlchemy does not support `Inspection on an AsyncConnection`. The call to Alembic must be wrapped in a `run_sync` call.
+    See https://alembic.sqlalchemy.org/en/latest/cookbook.html#programmatic-api-use-connection-sharing-with-asyncio for more information.
+
+    Exemple usage:
+    ```python
+    async with engine.connect() as conn:
+        await conn.run_sync(run_alembic_upgrade)
+    ```
+    """
+
+    alembic_cfg = get_alembic_config(connection)
+
+    alembic_command.upgrade(alembic_cfg, "head")
+
+
+async def update_db_tables(engine: AsyncEngine, drop_db: bool = False):
+    """
+    If the database is not initialized, create the tables and stamp the database with the latest revision.
+    Otherwise, run the alembic upgrade command to upgrade the database to the latest version (`head`).
+
+    if drop_db is True, we will drop all tables before creating them again
+    """
+
+    hyperion_error_logger = logging.getLogger("hyperion.error")
+
+    try:
+        async with engine.begin() as conn:
             if drop_db:
+                # All tables should be dropped, including the alembic_version table
+                # or Hyperion will think that the database is up to date and will not initialize it
+                # when running tests a second time.
+                # To let SQLAlchemy drop the alembic_version table, we created a AlembicVersion model.
                 await conn.run_sync(Base.metadata.drop_all)
-            await conn.run_sync(Base.metadata.create_all)
-        except Exception as error:
-            hyperion_error_logger.fatal(
-                f"Startup: Could not create tables in the database: {error}"
-            )
+
+            # run_sync is used to run a synchronous function in an asynchronous context
+            # the function `get_alembic_current_revision` will be called with "a synchronous-style Connection as the first argument"
+            # See https://docs.sqlalchemy.org/en/20/orm/extensions/asyncio.html#sqlalchemy.ext.asyncio.AsyncConnection.run_sync
+            alembic_current_revision = await conn.run_sync(get_alembic_current_revision)
+
+            if alembic_current_revision is None:
+                # We generate the database using SQLAlchemy
+                # in order not to have to run all migrations one by one
+                # See https://alembic.sqlalchemy.org/en/latest/cookbook.html#building-an-up-to-date-database-from-scratch
+                hyperion_error_logger.info(
+                    "Startup: Database tables not created yet, creating them"
+                )
+
+                # Create all tables
+                await conn.run_sync(Base.metadata.create_all)
+                # We stamp the database with the latest revision so that
+                # alembic knows that the database is up to date
+                await conn.run_sync(stamp_alembic_head)
+            else:
+                hyperion_error_logger.info(
+                    f"Startup: Database tables already created (current revision: {alembic_current_revision}), running migrations"
+                )
+                await conn.run_sync(run_alembic_upgrade)
+
+            hyperion_error_logger.info("Startup: Database tables updated")
+    except Exception as error:
+        hyperion_error_logger.fatal(
+            f"Startup: Could not create tables in the database: {error}"
+        )
+        raise
 
 
 async def initialize_groups(SessionLocal, hyperion_error_logger):
@@ -126,9 +234,13 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         ):
             hyperion_error_logger.info("Redis client not configured")
 
-        engine = get_db_engine(settings=settings)
-        await create_db_tables(engine, drop_db, hyperion_error_logger)
+        # Update database tables
+        engine = app.dependency_overrides.get(get_db_engine, get_db_engine)(
+            settings=settings
+        )
+        await update_db_tables(engine, drop_db)
 
+        # Initialize database tables
         SessionLocal = app.dependency_overrides.get(
             get_session_maker, get_session_maker
         )()

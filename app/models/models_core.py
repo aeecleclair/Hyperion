@@ -110,3 +110,17 @@ class ModuleVisibility(Base):
 
     root: Mapped[str] = mapped_column(String, primary_key=True)
     allowed_group_id: Mapped[str] = mapped_column(String, primary_key=True)
+
+
+class AlembicVersion(Base):
+    """
+    A table managed exclusively by Alembic, used to keep track of the database schema version.
+    This model allows to have exactly the same tables in the models and in the database.
+    Without this model, SQLAlchemy `conn.run_sync(Base.metadata.drop_all)` will ignore this table.
+
+    WARNING: Hyperion should not modify this table.
+    """
+
+    __tablename__ = "alembic_version"
+
+    version_num: Mapped[str] = mapped_column(String, primary_key=True)
