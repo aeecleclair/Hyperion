@@ -1,5 +1,4 @@
 from datetime import date
-from math import exp
 from typing import Sequence
 
 from sqlalchemy import desc, func, select
