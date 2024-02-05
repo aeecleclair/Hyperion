@@ -3,6 +3,7 @@ from random import randint
 from typing import TypedDict
 
 import pytest_asyncio
+from pytest import mark
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
@@ -189,25 +190,25 @@ def test_get_waiting_games():
     assert response.status_code == 200
 
 
-def test_player_games():
-    for i in range(4):
-        user = users[0]
-        response = client.get(
-            f"/elocaps/players/{user['user'].id}/games",
-            headers={"Authorization": f"Bearer {user['token']}"},
-        )
-        assert response.status_code == 200 and len(response.json()) == len(
-            [i for i in game_players if i.user_id == user["user"].id]
-        )
+@mark.parametrize("player_nb", range(4))
+def test_player_games(player_nb: int):
+    user = users[player_nb]
+    response = client.get(
+        f"/elocaps/players/{user['user'].id}/games",
+        headers={"Authorization": f"Bearer {user['token']}"},
+    )
+    assert response.status_code == 200 and len(response.json()) == len(
+        [i for i in game_players if i.user_id == user["user"].id]
+    )
 
 
-def test_player_info():
-    for i in range(4):
-        response = client.get(
-            f"/elocaps/players/{users[i]['user'].id}",
-            headers={"Authorization": f"Bearer {users[i]['token']}"},
-        )
-        assert response.status_code == 200
+@mark.parametrize("player_nb", range(4))
+def test_player_info(player_nb: int):
+    response = client.get(
+        f"/elocaps/players/{users[player_nb]['user'].id}",
+        headers={"Authorization": f"Bearer {users[player_nb]['token']}"},
+    )
+    assert response.status_code == 200
 
 
 def test_leaderboard():
