@@ -1,7 +1,7 @@
 """Models file for module_raid"""
-from datetime import datetime
+from datetime import date
 
-from sqlalchemy import Boolean, DateTime, Enum, Float, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Date, Enum, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -13,7 +13,7 @@ class Document(Base):
         String, primary_key=True, index=True, nullable=False
     )
     name: Mapped[str] = mapped_column(String, nullable=False)
-    uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    uploaded_at: Mapped[date] = mapped_column(Date, nullable=False)
     validated: Mapped[bool] = mapped_column(Boolean, nullable=False)
     type: Mapped[DocumentType] = mapped_column(Enum(DocumentType), nullable=False)
 
@@ -24,17 +24,17 @@ class SecurityFile(Base):
     )
     name: Mapped[str] = mapped_column(String, nullable=False)
     firstname: Mapped[str] = mapped_column(String, nullable=False)
-    birthday: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    birthday: Mapped[date] = mapped_column(Date, nullable=False)
     address: Mapped[str] = mapped_column(String, nullable=False)
     phone: Mapped[str] = mapped_column(String, nullable=False)
     allergy: Mapped[str] = mapped_column(String, nullable=True)
     asthma: Mapped[bool] = mapped_column(Boolean, nullable=False)
-    intensiveCareUnit: Mapped[bool] = mapped_column(Boolean, nullable=True)
-    intensiveCareUnitWhen: Mapped[str] = mapped_column(String, nullable=True)
-    ongoingTreatment: Mapped[str] = mapped_column(String, nullable=True)
+    intensive_care_unit: Mapped[bool] = mapped_column(Boolean, nullable=True)
+    intensive_care_unit_when: Mapped[str] = mapped_column(String, nullable=True)
+    ongoing_treatment: Mapped[str] = mapped_column(String, nullable=True)
     sicknesses: Mapped[str] = mapped_column(String, nullable=True)
     hospitalization: Mapped[str] = mapped_column(String, nullable=True)
-    surgicalOperation: Mapped[str] = mapped_column(String, nullable=True)
+    surgical_operation: Mapped[str] = mapped_column(String, nullable=True)
     trauma: Mapped[str] = mapped_column(String, nullable=True)
     family: Mapped[str] = mapped_column(String, nullable=True)
 
@@ -45,23 +45,23 @@ class Participant(Base):
     )
     name: Mapped[str] = mapped_column(String, nullable=False)
     firstname: Mapped[str] = mapped_column(String, nullable=False)
-    birthday: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    birthday: Mapped[date] = mapped_column(Date, nullable=False)
     address: Mapped[str] = mapped_column(String, nullable=False)
     phone: Mapped[str] = mapped_column(String, nullable=False)
     email: Mapped[str] = mapped_column(String, nullable=False)
-    bikeSize: Mapped[Size] = mapped_column(Enum(Size), nullable=False)
-    tShirtSize: Mapped[Size] = mapped_column(Enum(Size), nullable=False)
+    bike_size: Mapped[Size] = mapped_column(Enum(Size), nullable=False)
+    t_shirt_size: Mapped[Size] = mapped_column(Enum(Size), nullable=False)
     situation: Mapped[str] = mapped_column(String, nullable=False)
-    otherSchool: Mapped[str] = mapped_column(String, nullable=True)
+    other_school: Mapped[str] = mapped_column(String, nullable=True)
     company: Mapped[str] = mapped_column(String, nullable=True)
     diet: Mapped[str] = mapped_column(String, nullable=True)
-    idCard: Mapped[Document] = relationship("Document")
-    medicalCertificate: Mapped[Document] = relationship("Document")
-    securityFile: Mapped[SecurityFile] = relationship("SecurityFile")
-    studentCard: Mapped[Document] = relationship("Document")
-    raidRules: Mapped[Document] = relationship("Document")
-    certificateOfHonour: Mapped[bool] = mapped_column(Boolean, nullable=False)
-    validationProgress: Mapped[float] = mapped_column(Float, nullable=False)
+    id_card: Mapped[Document] = relationship("Document")
+    medical_certificate: Mapped[Document] = relationship("Document")
+    security_file: Mapped[SecurityFile] = relationship("SecurityFile")
+    student_card: Mapped[Document] = relationship("Document")
+    raid_rules: Mapped[Document] = relationship("Document")
+    attestation_on_honour: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    validation_progress: Mapped[float] = mapped_column(Float, nullable=False)
 
 
 class Team(Base):
