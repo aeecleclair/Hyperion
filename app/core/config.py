@@ -69,9 +69,7 @@ class Settings(BaseSettings):
     # PostgreSQL configuration #
     ############################
     # PostgreSQL configuration is needed to use the database
-    SQLITE_DB: str | None = (
-        None  # If set, the application use a SQLite database instead of PostgreSQL, for testing or development purposes (should not be used if possible)
-    )
+    SQLITE_DB: str | None = None  # If set, the application use a SQLite database instead of PostgreSQL, for testing or development purposes (should not be used if possible)
     POSTGRES_HOST: str
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str
@@ -89,9 +87,7 @@ class Settings(BaseSettings):
     LOG_DEBUG_MESSAGES: bool | None
     # Hyperion follows Semantic Versioning
     # https://semver.org/
-    HYPERION_VERSION: str = (
-        "1.0.0"  # This value should never be modified by hand. See [Hyperion release] documentation
-    )
+    HYPERION_VERSION: str = "1.0.0"  # This value should never be modified by hand. See [Hyperion release] documentation
     MINIMAL_TITAN_VERSION_CODE: int = 100
     # Depreciated, minimal_titan_version_code should be used
     MINIMAL_TITAN_VERSION: str = "0.0.1"
