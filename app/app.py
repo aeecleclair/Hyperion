@@ -1,4 +1,5 @@
 """File defining the Metadata. And the basic functions creating the database tables and calling the router"""
+
 import logging
 import os
 import uuid
@@ -14,20 +15,19 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from sqlalchemy.engine import Connection
+from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncEngine
+from sqlalchemy.orm import Session
 
 from app import api
 from app.core.config import Settings
 from app.core.log import LogConfig
-from app.cruds import cruds_core, cruds_groups
 from app.database import Base
 from app.dependencies import (
     get_db_engine,
     get_redis_client,
-    get_session_maker,
     get_settings,
+    get_sync_db_engine,
 )
 from app.models import models_core
 from app.utils.redis import limiter
@@ -102,7 +102,7 @@ def run_alembic_upgrade(connection: Connection) -> None:
     alembic_command.upgrade(alembic_cfg, "head")
 
 
-async def update_db_tables(engine: AsyncEngine, drop_db: bool = False):
+def update_db_tables(engine: Engine, drop_db: bool = False) -> None:
     """
     If the database is not initialized, create the tables and stamp the database with the latest revision.
     Otherwise, run the alembic upgrade command to upgrade the database to the latest version (`head`).
@@ -113,18 +113,15 @@ async def update_db_tables(engine: AsyncEngine, drop_db: bool = False):
     hyperion_error_logger = logging.getLogger("hyperion.error")
 
     try:
-        async with engine.begin() as conn:
+        with engine.begin() as conn:
             if drop_db:
                 # All tables should be dropped, including the alembic_version table
                 # or Hyperion will think that the database is up to date and will not initialize it
                 # when running tests a second time.
                 # To let SQLAlchemy drop the alembic_version table, we created a AlembicVersion model.
-                await conn.run_sync(Base.metadata.drop_all)
+                Base.metadata.drop_all(conn)
 
-            # run_sync is used to run a synchronous function in an asynchronous context
-            # the function `get_alembic_current_revision` will be called with "a synchronous-style Connection as the first argument"
-            # See https://docs.sqlalchemy.org/en/20/orm/extensions/asyncio.html#sqlalchemy.ext.asyncio.AsyncConnection.run_sync
-            alembic_current_revision = await conn.run_sync(get_alembic_current_revision)
+            alembic_current_revision = get_alembic_current_revision(conn)
 
             if alembic_current_revision is None:
                 # We generate the database using SQLAlchemy
@@ -135,15 +132,15 @@ async def update_db_tables(engine: AsyncEngine, drop_db: bool = False):
                 )
 
                 # Create all tables
-                await conn.run_sync(Base.metadata.create_all)
+                Base.metadata.create_all(conn)
                 # We stamp the database with the latest revision so that
                 # alembic knows that the database is up to date
-                await conn.run_sync(stamp_alembic_head)
+                stamp_alembic_head(conn)
             else:
                 hyperion_error_logger.info(
                     f"Startup: Database tables already created (current revision: {alembic_current_revision}), running migrations"
                 )
-                await conn.run_sync(run_alembic_upgrade)
+                run_alembic_upgrade(conn)
 
             hyperion_error_logger.info("Startup: Database tables updated")
     except Exception as error:
@@ -153,11 +150,17 @@ async def update_db_tables(engine: AsyncEngine, drop_db: bool = False):
         raise
 
 
-async def initialize_groups(SessionLocal, hyperion_error_logger):
+def initialize_groups(engine: Engine) -> None:
     """Add the necessary groups for account types"""
-    async with SessionLocal() as db:
+
+    hyperion_error_logger = logging.getLogger("hyperion.error")
+
+    hyperion_error_logger.info("Startup: Adding new groups to the database")
+    with Session(engine) as db:
         for id in GroupType:
-            exists = await cruds_groups.get_group_by_id(group_id=id, db=db)
+            exists = (
+                db.query(models_core.CoreGroup).filter_by(id=id).first() is not None
+            )
             # We don't want to recreate the groups if they already exist
             if not exists:
                 group = models_core.CoreGroup(
@@ -166,47 +169,50 @@ async def initialize_groups(SessionLocal, hyperion_error_logger):
 
                 try:
                     db.add(group)
-                    await db.commit()
+                    db.commit()
                 except IntegrityError as error:
                     hyperion_error_logger.fatal(
                         f"Startup: Could not add group {group.name}<{group.id}> in the database: {error}"
                     )
-                    await db.rollback()
+                    db.rollback()
 
 
-async def initialize_module_visibility(SessionLocal, hyperion_error_logger):
+def initialize_module_visibility(engine: Engine) -> None:
     """Add the default module visibilities for Titan"""
-    async with SessionLocal() as db:
+
+    hyperion_error_logger = logging.getLogger("hyperion.error")
+
+    with Session(engine) as db:
         # Is run to create default module visibilies or when the table is empty
-        haveBeenInitialized = (
-            len(await cruds_core.get_all_module_visibility_membership(db)) > 0
-        )
+        haveBeenInitialized = db.query(models_core.ModuleVisibility).first() is not None
         if haveBeenInitialized:
+            hyperion_error_logger.info(
+                "Startup: Modules visibility settings have already been initialized"
+            )
             return
+
+        hyperion_error_logger.info(
+            "Startup: Modules visibility settings are empty, initializing them"
+        )
         for module in ModuleList:
             for default_group_id in module.value.default_allowed_groups_ids:
-                module_visibility_exists = await cruds_core.get_module_visibility(
-                    root=module.value.root, group_id=default_group_id, db=db
+                module_visibility = models_core.ModuleVisibility(
+                    root=module.value.root, allowed_group_id=default_group_id.value
                 )
-
-                # We don't want to recreate the module visibility if they already exist
-                if not module_visibility_exists:
-                    module_visibility = models_core.ModuleVisibility(
-                        root=module.value.root, allowed_group_id=default_group_id.value
+                try:
+                    db.add(module_visibility)
+                    db.commit()
+                except IntegrityError as error:
+                    hyperion_error_logger.fatal(
+                        f"Startup: Could not add module visibility {module.root}<{default_group_id}> in the database: {error}"
                     )
-                    try:
-                        db.add(module_visibility)
-                        await db.commit()
-                    except IntegrityError as error:
-                        hyperion_error_logger.fatal(
-                            f"Startup: Could not add module visibility {module.root}<{default_group_id}> in the database: {error}"
-                        )
-                        await db.rollback()
+                    db.rollback()
 
 
 # We wrap the application in a function to be able to pass the settings and drop_db parameters
 # The drop_db parameter is used to drop the database tables before creating them again
 def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
+    # Initialize loggers
     LogConfig().initialize_loggers(settings=settings)
 
     hyperion_access_logger = logging.getLogger("hyperion.access")
@@ -223,34 +229,12 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     # Creating a lifespan which will be called when the application starts then shuts down
     # https://fastapi.tiangolo.com/advanced/events/
     @asynccontextmanager
-    async def startup(app: FastAPI):
-        # Initialize loggers
-
-        if (
-            app.dependency_overrides.get(get_redis_client, get_redis_client)(
-                settings=settings
-            )
-            is False
-        ):
-            hyperion_error_logger.info("Redis client not configured")
-
-        # Update database tables
-        engine = app.dependency_overrides.get(get_db_engine, get_db_engine)(
-            settings=settings
-        )
-        await update_db_tables(engine, drop_db)
-
-        # Initialize database tables
-        SessionLocal = app.dependency_overrides.get(
-            get_session_maker, get_session_maker
-        )()
-        await initialize_groups(SessionLocal, hyperion_error_logger)
-        await initialize_module_visibility(SessionLocal, hyperion_error_logger)
-
+    async def lifespan(app: FastAPI):
         yield
         hyperion_error_logger.info("Shutting down")
 
-    app = FastAPI(lifespan=startup)
+    # Initialize app
+    app = FastAPI(lifespan=lifespan)
     app.include_router(api.api_router)
 
     app.add_middleware(
@@ -260,6 +244,26 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # Initialize database connection
+    app.dependency_overrides.get(get_db_engine, get_db_engine)(settings=settings)
+    sync_engine = get_sync_db_engine(settings=settings)
+
+    # Update database tables
+    update_db_tables(sync_engine, drop_db)
+
+    # Initialize database tables
+    initialize_groups(sync_engine)
+    initialize_module_visibility(sync_engine)
+
+    # Initialize Redis
+    if (
+        app.dependency_overrides.get(get_redis_client, get_redis_client)(
+            settings=settings
+        )
+        is False
+    ):
+        hyperion_error_logger.info("Redis client not configured")
 
     @app.middleware("http")
     async def logging_middleware(

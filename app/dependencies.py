@@ -15,6 +15,7 @@ import redis
 from fastapi import BackgroundTasks, Depends, HTTPException, Request, status
 from jose import jwt
 from pydantic import ValidationError
+from sqlalchemy.engine import Engine, create_engine
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -56,12 +57,27 @@ async def get_request_id(request: Request) -> str:
     return request.state.request_id
 
 
+def get_sync_db_engine(settings: Settings) -> Engine:
+    """
+    Create a synchronous database engine
+    """
+    if settings.SQLITE_DB:
+        SQLALCHEMY_DATABASE_URL = f"sqlite:///./{settings.SQLITE_DB}"
+    else:
+        SQLALCHEMY_DATABASE_URL = f"postgresql://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}/{settings.POSTGRES_DB}"
+
+    engine = create_engine(SQLALCHEMY_DATABASE_URL, echo=settings.DATABASE_DEBUG)
+    return engine
+
+
 def get_db_engine(settings: Settings) -> AsyncEngine:
-    """Return the database engine, if the engine doesn't exit yet it will create one based on the settings"""
+    """
+    Return the (asynchronous) database engine, if the engine doesn't exit yet it will create one based on the settings
+    """
     global engine
     global SessionLocal
     if settings.SQLITE_DB:
-        SQLALCHEMY_DATABASE_URL = f"sqlite+aiosqlite:///./{settings.SQLITE_DB}"  # Connect to the test's database
+        SQLALCHEMY_DATABASE_URL = f"sqlite+aiosqlite:///./{settings.SQLITE_DB}"
     else:
         SQLALCHEMY_DATABASE_URL = f"postgresql+asyncpg://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}/{settings.POSTGRES_DB}"
 
