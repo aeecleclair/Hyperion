@@ -172,7 +172,9 @@ curl --location --request POST 'http://127.0.0.1:8000/users/make-admin'
 
 Install docker and the compose plugin (https://docs.docker.com/compose/install/)
 
-> During dev docker is used to run the database, the redis server etc... If you really want to run the project without docker, you can do it but you will have to install the database, redis, etc ... yourself or disable some features in the .env file (which is not recommended).
+`docker-compose.yaml` includes the minimal settings required to run Hyperion using docker compose. Docker images are based on [tiangolo/uvicorn-gunicorn-fastapi](https://github.com/tiangolo/uvicorn-gunicorn-fastapi-docker), and preloading the app is required to perform migrations and database initializations when runing multiple workers.
+
+> During dev, `docker-compose-dev.yaml` can be used to run the database, the redis server etc... If you really want to run the project without docker, you can do it but you will have to install the database, redis, etc ... yourself or disable corresponding features in the .env file (which is not recommended).
 
 ---
 
