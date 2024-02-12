@@ -8,6 +8,7 @@ COPY ./requirements.txt /requirements.txt
 RUN pip install --upgrade -r /requirements.txt
 
 COPY ./assets /app/assets
+COPY ./gunicorn_conf.py /app/gunicorn_conf.py
 COPY ./alembic.ini /app/alembic.ini
 COPY ./migrations /app/migrations
 
