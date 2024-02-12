@@ -44,4 +44,3 @@ services:
       - ./data:/app/data:Z
       - ./.env:/app/.env:Z
       - ./firebase.json:/app/firebase.json:Z
-      - ./migrations/versions:/app/migrations/versions:Z
