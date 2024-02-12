@@ -45,8 +45,14 @@ def test_create_picture():
             files={"image": ("recommendation.png", image, "image/png")},
             headers={"Authorization": f"Bearer {token_BDE}"},
         )
-
     assert response.status_code == 201
+    with open("assets/images/default_recommendation.png", "rb") as image:
+        response = client.post(
+            "/recommendation/recommendations/false_id/picture",
+            files={"image": ("recommendation.png", image, "image/png")},
+            headers={"Authorization": f"Bearer {token_BDE}"},
+        )
+    assert response.status_code == 404
 
 
 def test_get_picture():
@@ -54,7 +60,6 @@ def test_get_picture():
         f"/recommendation/recommendations/{recommendation.id}/picture",
         headers={"Authorization": f"Bearer {token_simple}"},
     )
-
     assert response.status_code == 200
 
 
@@ -93,6 +98,18 @@ def test_edit_recommendation():
         headers={"Authorization": f"Bearer {token_BDE}"},
     )
     assert response.status_code == 204
+    response = client.patch(
+        f"/recommendation/recommendations/{recommendation.id}",
+        json={},
+        headers={"Authorization": f"Bearer {token_BDE}"},
+    )
+    assert response.status_code == 204
+    response = client.patch(
+        "/recommendation/recommendations/false_id",
+        json={"title": "Nouveau titre"},
+        headers={"Authorization": f"Bearer {token_BDE}"},
+    )
+    assert response.status_code == 404
 
 
 def test_delete_recommendation():
@@ -101,3 +118,8 @@ def test_delete_recommendation():
         headers={"Authorization": f"Bearer {token_BDE}"},
     )
     assert response.status_code == 204
+    response = client.delete(
+        "/recommendation/recommendations/false_id",
+        headers={"Authorization": f"Bearer {token_BDE}"},
+    )
+    assert response.status_code == 404

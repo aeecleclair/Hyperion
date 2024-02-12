@@ -61,14 +61,11 @@ async def create_recommendation(
     **This endpoint is only usable by members of the group BDE**
     """
 
-    try:
-        return await cruds_recommendation.create_recommendation(
-            recommendation=recommendation,
-            db=db,
-            settings=settings,
-        )
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+    return await cruds_recommendation.create_recommendation(
+        recommendation=recommendation,
+        db=db,
+        settings=settings,
+    )
 
 
 @module.router.patch(
@@ -87,11 +84,17 @@ async def edit_recommendation(
     **This endpoint is only usable by members of the group BDE**
     """
 
-    await cruds_recommendation.update_recommendation(
-        recommendation_id=recommendation_id,
-        recommendation=recommendation,
-        db=db,
-    )
+    if any(recommendation.dict().values()):
+        try:
+            await cruds_recommendation.update_recommendation(
+                recommendation_id=recommendation_id,
+                recommendation=recommendation,
+                db=db,
+            )
+        except ValueError:
+            raise HTTPException(
+                status_code=404, detail="The recommendation does not exist"
+            )
 
 
 @module.router.delete(
@@ -109,10 +112,13 @@ async def delete_recommendation(
     **This endpoint is only usable by members of the group BDE**
     """
 
-    await cruds_recommendation.delete_recommendation(
-        db=db,
-        recommendation_id=recommendation_id,
-    )
+    try:
+        await cruds_recommendation.delete_recommendation(
+            db=db,
+            recommendation_id=recommendation_id,
+        )
+    except ValueError:
+        raise HTTPException(status_code=404, detail="The recommendation does not exist")
 
 
 @module.router.get(
@@ -152,16 +158,13 @@ async def create_recommendation_image(
 
     **This endpoint is only usable by members of the group BDE**
     """
-    recommendation = await cruds_recommendation.get_recommendation_by_id(
-        recommendation_id=recommendation_id,
-        db=db,
-    )
-
-    if recommendation is None:
-        raise HTTPException(
-            status_code=404,
-            detail="The recommendation does not exist",
+    try:
+        await cruds_recommendation.get_recommendation_by_id(
+            recommendation_id=recommendation_id,
+            db=db,
         )
+    except ValueError:
+        raise HTTPException(status_code=404, detail="The recommendation does not exist")
 
     await save_file_as_data(
         image=image,

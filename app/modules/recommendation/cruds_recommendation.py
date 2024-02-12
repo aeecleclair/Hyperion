@@ -4,7 +4,7 @@ from typing import Sequence
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import delete, select, update
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
@@ -29,11 +29,7 @@ async def create_recommendation(
         **recommendation.dict(),
     )
     db.add(recommendation_db)
-    try:
-        await db.commit()
-    except IntegrityError as error:
-        await db.rollback()
-        raise ValueError(error)
+    await db.commit()
     return recommendation_db
 
 
@@ -42,32 +38,32 @@ async def update_recommendation(
     recommendation: schemas_recommendation.RecommendationEdit,
     db: AsyncSession,
 ):
-    await db.execute(
+    result = await db.execute(
         update(models_recommendation.Recommendation)
         .where(models_recommendation.Recommendation.id == recommendation_id)
         .values(**recommendation.dict(exclude_none=True))
     )
-    try:
+    if result.rowcount == 1:
         await db.commit()
-    except IntegrityError:
+    else:
         await db.rollback()
-        raise ValueError()
+        raise ValueError
 
 
 async def delete_recommendation(
     recommendation_id: str,
     db: AsyncSession,
 ):
-    await db.execute(
+    result = await db.execute(
         delete(models_recommendation.Recommendation).where(
             models_recommendation.Recommendation.id == recommendation_id
         )
     )
-    try:
+    if result.rowcount == 1:
         await db.commit()
-    except IntegrityError as error:
+    else:
         await db.rollback()
-        raise ValueError(error)
+        raise ValueError
 
 
 async def get_recommendation_by_id(
@@ -79,4 +75,7 @@ async def get_recommendation_by_id(
             models_recommendation.Recommendation.id == recommendation_id
         )
     )
-    return result.scalars().one()
+    try:
+        return result.scalars().one()
+    except NoResultFound:
+        raise ValueError
