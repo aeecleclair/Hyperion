@@ -1,14 +1,13 @@
 from datetime import date
 from typing import Sequence
 
-from sqlalchemy import desc, func, select
+from sqlalchemy import desc, func, not_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models import models_elocaps
 from app.schemas import schemas_elocaps
-from app.utils.tools import compute_elo_gain
 from app.utils.types.elocaps_types import CapsMode
 
 
@@ -82,90 +81,80 @@ async def get_game_details(
     return result.scalars().first()
 
 
-async def register_game(
-    db: AsyncSession,
-    game: models_elocaps.Game,
-    game_players_info: list[schemas_elocaps.GamePlayerBase],
-) -> None:
+async def create_game(db: AsyncSession, game: models_elocaps.Game) -> None:
     try:
         db.add(game)
         await db.commit()
-        for i in game_players_info:
-            player = (
-                (
-                    await db.execute(
-                        select(models_elocaps.Player).where(
-                            (models_elocaps.Player.user_id == i.user_id)
-                            & (models_elocaps.Player.mode == game.mode)
-                        )
-                    )
-                )
-                .scalars()
-                .first()
-            )
-            if not player:
-                player = models_elocaps.Player(user_id=i.user_id, mode=game.mode)
-                db.add(player)
-                await db.commit()
-            game_player = models_elocaps.GamePlayer(
-                game_id=game.id, player_id=player.id, team=i.team, score=i.score
-            )
-            db.add(game_player)
-        await db.commit()
-        complete_game = (
+    except IntegrityError as error:
+        await db.rollback()
+        raise ValueError(error)
+
+
+async def insert_player_into_game(
+    db: AsyncSession,
+    game: models_elocaps.Game,
+    player_info: schemas_elocaps.GamePlayerBase,
+) -> None:
+    try:
+        player = (
             (
                 await db.execute(
-                    select(models_elocaps.Game)
-                    .where(models_elocaps.Game.id == game.id)
-                    .options(
-                        selectinload(models_elocaps.Game.game_players).selectinload(
-                            models_elocaps.GamePlayer.player
-                        )
+                    select(models_elocaps.Player).where(
+                        (models_elocaps.Player.user_id == player_info.user_id)
+                        & (models_elocaps.Player.mode == game.mode)
                     )
                 )
             )
             .scalars()
             .first()
         )
-        if complete_game is None:
-            raise Exception("The game that was there just disappeared, we are screwed")
-        else:
-            game = complete_game
-        for game_player in game.game_players:
-            team = game_player.team
-            game_player.elo_gain = round(
-                compute_elo_gain(
-                    game.get_team_score(team),
-                    20,
-                    game.get_team_elo(team),
-                    game.get_team_elo(-team + 3),
-                )
-            )
+        if not player:
+            player = models_elocaps.Player(user_id=player_info.user_id, mode=game.mode)
+            db.add(player)
+            await db.commit()
+        game_player = models_elocaps.GamePlayer(
+            game_id=game.id,
+            player_id=player.id,
+            team=player_info.team,
+            score=player_info.score,
+        )
+        db.add(game_player)
         await db.commit()
     except IntegrityError as error:
         await db.rollback()
-        await db.delete(game)
+        raise ValueError(error)
+
+
+async def set_player_elo_gain(
+    db: AsyncSession, game_player: models_elocaps.GamePlayer, gain: int
+) -> None:
+    try:
+        game_player.elo_gain = gain
         await db.commit()
+    except IntegrityError as error:
+        await db.rollback()
         raise ValueError(error)
 
 
 async def get_waiting_games(
     db: AsyncSession, user_id: str
-) -> list[models_elocaps.Game]:
+) -> Sequence[models_elocaps.Game]:
     result = await db.execute(
-        select(models_elocaps.GamePlayer)
+        select(models_elocaps.Game)
+        .join(models_elocaps.GamePlayer)
         .join(models_elocaps.Player)
         .where(
             (models_elocaps.Player.user_id == user_id)
-            & ~models_elocaps.GamePlayer.has_confirmed
+            & not_(models_elocaps.GamePlayer.has_confirmed)
         )
-        .options(selectinload(models_elocaps.GamePlayer.game))
     )
-    return [x.game for x in result.scalars().all()]
+    return result.scalars().all()
 
 
-async def confirm_game(db: AsyncSession, game_id: str, user_id: str) -> None:
-    game_player: models_elocaps.GamePlayer | None = (
+async def get_game_player(
+    db: AsyncSession, game_id: str, user_id: str
+) -> models_elocaps.GamePlayer | None:
+    return (
         (
             await db.execute(
                 select(models_elocaps.GamePlayer)
@@ -184,12 +173,13 @@ async def confirm_game(db: AsyncSession, game_id: str, user_id: str) -> None:
         .scalars()
         .first()
     )
-    if game_player is None:
-        raise ValueError("This player has not played in here")
+
+
+async def user_game_validation(
+    db: AsyncSession, game_player: models_elocaps.GamePlayer
+) -> None:
     game_player.has_confirmed = True
     await db.commit()
-    if game_player.game.is_confirmed:
-        await end_game(db, game_id)
 
 
 async def end_game(db: AsyncSession, game_id: str) -> None:

@@ -7,6 +7,7 @@ from app.cruds import cruds_elocaps
 from app.dependencies import get_db, is_user_a_member
 from app.models import models_core, models_elocaps
 from app.schemas import schemas_elocaps
+from app.utils.tools import compute_elo_gain
 from app.utils.types.elocaps_types import CapsMode
 from app.utils.types.tags import Tags
 
@@ -24,12 +25,34 @@ async def register_game(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    if not any(user.id == i.user_id for i in game_params.players):
+    if all(
+        user.id != player.user_id for player in game_params.players
+    ):  # User is not part of players
         raise HTTPException(400, "You must be part of the game")
+    for player in game_params.players:
+        for sub_player in game_params.players:
+            if player != sub_player and player.user_id == sub_player.user_id:
+                raise HTTPException(400, "You can't have the same player twice")
     game = models_elocaps.Game(mode=game_params.mode)
     try:
-        await cruds_elocaps.register_game(db, game, game_params.players)
-        return await cruds_elocaps.get_game_details(db, game.id)
+        await cruds_elocaps.create_game(db, game)
+        for player in game_params.players:
+            await cruds_elocaps.insert_player_into_game(db, game, player)
+        complete_game = await cruds_elocaps.get_game_details(db, game.id)
+        if complete_game is None:
+            raise HTTPException(500, "We are screwed, the game has disappeared")
+        for game_player in complete_game.game_players:
+            team = game_player.team
+            elo_gain = round(
+                compute_elo_gain(
+                    complete_game.get_team_score(team),
+                    20,
+                    complete_game.get_team_elo(team),
+                    complete_game.get_team_elo(-team + 3),
+                )
+            )
+            await cruds_elocaps.set_player_elo_gain(db, game_player, elo_gain)
+        return complete_game
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error))
 
@@ -103,7 +126,16 @@ async def confirm_game(
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     try:
-        await cruds_elocaps.confirm_game(db, game_id=game_id, user_id=user.id)
+        player = await cruds_elocaps.get_game_player(
+            db, game_id=game_id, user_id=user.id
+        )
+        if not player:
+            raise HTTPException(
+                400, "You are not part of that game, or it doesn't exist"
+            )
+        await cruds_elocaps.user_game_validation(db, player)
+        if player.game.is_confirmed:
+            await cruds_elocaps.end_game(db, game_id)
         return await cruds_elocaps.get_game_details(db, game_id)
     except ValueError as error:
         raise HTTPException(400, str(error))
@@ -135,6 +167,7 @@ async def get_player_info(
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     db_player_modes = await cruds_elocaps.get_player_info(db, user_id)
+    # Build a DetailedPlayer object (a dict that looks like {mode: {elo, winrate}})
     mode_info = {
         x.mode: schemas_elocaps.PlayerModeInfo(
             elo=x.elo, winrate=await cruds_elocaps.get_winrate(db, x.mode, user_id)

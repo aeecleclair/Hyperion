@@ -60,5 +60,6 @@ class GamePlayer(GamePlayerBase):
     user: CoreUserSimple
 
 
+# Needed because these are created before GamePlayer is
 Game.update_forward_refs()
 GameCreateRequest.update_forward_refs()

@@ -1,4 +1,6 @@
-from __future__ import annotations
+from __future__ import (  # Permit the use of class names not declared yet in the annotations
+    annotations,
+)
 
 from datetime import datetime
 from uuid import uuid4
