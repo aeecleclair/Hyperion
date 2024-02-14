@@ -22,6 +22,7 @@ from sqlalchemy.orm import Session
 from app import api
 from app.core.config import Settings
 from app.core.log import LogConfig
+from app.cruds import cruds_core, cruds_groups
 from app.database import Base
 from app.dependencies import (
     get_db_engine,
@@ -158,9 +159,7 @@ def initialize_groups(engine: Engine) -> None:
     hyperion_error_logger.info("Startup: Adding new groups to the database")
     with Session(engine) as db:
         for id in GroupType:
-            exists = (
-                db.query(models_core.CoreGroup).filter_by(id=id).first() is not None
-            )
+            exists = cruds_groups.get_group_by_id_sync(group_id=id, db=db)
             # We don't want to recreate the groups if they already exist
             if not exists:
                 group = models_core.CoreGroup(
@@ -168,7 +167,7 @@ def initialize_groups(engine: Engine) -> None:
                 )
 
                 try:
-                    db.add(group)
+                    cruds_groups.create_group_sync(group=group, db=db)
                     db.commit()
                 except IntegrityError as error:
                     hyperion_error_logger.fatal(
@@ -184,7 +183,9 @@ def initialize_module_visibility(engine: Engine) -> None:
 
     with Session(engine) as db:
         # Is run to create default module visibilies or when the table is empty
-        haveBeenInitialized = db.query(models_core.ModuleVisibility).first() is not None
+        haveBeenInitialized = (
+            len(cruds_core.get_all_module_visibility_membership_sync(db)) > 0
+        )
         if haveBeenInitialized:
             hyperion_error_logger.info(
                 "Startup: Modules visibility settings have already been initialized"
@@ -200,13 +201,11 @@ def initialize_module_visibility(engine: Engine) -> None:
                     root=module.value.root, allowed_group_id=default_group_id.value
                 )
                 try:
-                    db.add(module_visibility)
-                    db.commit()
+                    cruds_core.create_module_visibility_sync(module_visibility, db)
                 except IntegrityError as error:
                     hyperion_error_logger.fatal(
                         f"Startup: Could not add module visibility {module.root}<{default_group_id}> in the database: {error}"
                     )
-                    db.rollback()
 
 
 # We wrap the application in a function to be able to pass the settings and drop_db parameters

@@ -3,8 +3,32 @@ from typing import Sequence
 from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
 from app.models import models_core
+
+
+# Sync cruds are run at startup to initialize the database
+def get_all_module_visibility_membership_sync(
+    db: Session,
+):
+    result = db.execute(select(models_core.ModuleVisibility))
+    return result.unique().scalars().all()
+
+
+def create_module_visibility_sync(
+    module_visibility: models_core.ModuleVisibility,
+    db: Session,
+) -> models_core.ModuleVisibility:
+    """Create a new module visibility in database and return it"""
+
+    db.add(module_visibility)
+    try:
+        db.commit()
+        return module_visibility
+    except IntegrityError as error:
+        db.rollback()
+        raise ValueError(error)
 
 
 async def get_all_module_visibility_membership(
