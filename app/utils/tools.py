@@ -8,14 +8,29 @@ from typing import Sequence
 from fastapi import HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from rapidfuzz import process
+from sqlalchemy.engine import Engine, create_engine
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import Settings
 from app.cruds import cruds_groups, cruds_users
 from app.models import models_core
 from app.models.models_core import CoreUser
 from app.utils.types.groups_type import GroupType
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
+
+
+def get_sync_db_engine(settings: Settings) -> Engine:
+    """
+    Create a synchronous database engine, which is used at startup to run database initializations and migrations
+    """
+    if settings.SQLITE_DB:
+        SQLALCHEMY_DATABASE_URL = f"sqlite:///./{settings.SQLITE_DB}"
+    else:
+        SQLALCHEMY_DATABASE_URL = f"postgresql://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}/{settings.POSTGRES_DB}"
+
+    engine = create_engine(SQLALCHEMY_DATABASE_URL, echo=settings.DATABASE_DEBUG)
+    return engine
 
 
 def is_user_member_of_an_allowed_group(

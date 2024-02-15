@@ -24,14 +24,10 @@ from app.core.config import Settings
 from app.core.log import LogConfig
 from app.cruds import cruds_core, cruds_groups
 from app.database import Base
-from app.dependencies import (
-    get_db_engine,
-    get_redis_client,
-    get_settings,
-    get_sync_db_engine,
-)
+from app.dependencies import get_db_engine, get_redis_client, get_settings
 from app.models import models_core
 from app.utils.redis import limiter
+from app.utils.tools import get_sync_db_engine
 from app.utils.types.groups_type import GroupType
 from app.utils.types.module_list import ModuleList
 
