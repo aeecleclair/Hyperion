@@ -3,37 +3,14 @@ from typing import Sequence
 from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 
 from app.models import models_core
-
-
-# Sync cruds are run at startup to initialize the database
-def get_all_module_visibility_membership_sync(
-    db: Session,
-):
-    result = db.execute(select(models_core.ModuleVisibility))
-    return result.unique().scalars().all()
-
-
-def create_module_visibility_sync(
-    module_visibility: models_core.ModuleVisibility,
-    db: Session,
-) -> models_core.ModuleVisibility:
-    """Create a new module visibility in database and return it"""
-
-    db.add(module_visibility)
-    try:
-        db.commit()
-        return module_visibility
-    except IntegrityError as error:
-        db.rollback()
-        raise ValueError(error)
 
 
 async def get_all_module_visibility_membership(
     db: AsyncSession,
 ):
+    """Return the every module with their visibility"""
     result = await db.execute(select(models_core.ModuleVisibility))
     return result.unique().scalars().all()
 
@@ -42,7 +19,7 @@ async def get_modules_by_user(
     user: models_core.CoreUser,
     db: AsyncSession,
 ) -> Sequence[str]:
-    """Return the every module with their visibility"""
+    """Return the modules a user has access to"""
 
     userGroupIds = list(map(lambda group: group.id, user.groups))
 
@@ -59,7 +36,7 @@ async def get_allowed_groups_by_root(
     root: str,
     db: AsyncSession,
 ) -> Sequence[str]:
-    """Return the every module with their visibility"""
+    """Return the groups allowed to access to a specific root"""
 
     result = await db.execute(
         select(

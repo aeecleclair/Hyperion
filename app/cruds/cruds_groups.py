@@ -5,37 +5,10 @@ from typing import Sequence
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import selectinload
 
 from app.models import models_core
 from app.schemas import schemas_core
-
-
-# Sync cruds are run at startup to initialize the database
-def get_group_by_id_sync(group_id: str, db: Session) -> models_core.CoreGroup | None:
-    """Return group with id from database"""
-    result = db.execute(
-        select(models_core.CoreGroup)
-        .where(models_core.CoreGroup.id == group_id)
-        .options(
-            selectinload(models_core.CoreGroup.members)
-        )  # needed to load the members from the relationship
-    )
-    return result.scalars().first()
-
-
-def create_group_sync(
-    group: models_core.CoreGroup, db: Session
-) -> models_core.CoreGroup:
-    """Create a new group in database and return it"""
-
-    db.add(group)
-    try:
-        db.commit()
-        return group
-    except IntegrityError:
-        db.rollback()
-        raise
 
 
 async def get_groups(db: AsyncSession) -> Sequence[models_core.CoreGroup]:
