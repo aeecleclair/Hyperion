@@ -168,12 +168,10 @@ def initialize_groups(engine: Engine) -> None:
 
                 try:
                     cruds_groups.create_group_sync(group=group, db=db)
-                    db.commit()
                 except IntegrityError as error:
                     hyperion_error_logger.fatal(
                         f"Startup: Could not add group {group.name}<{group.id}> in the database: {error}"
                     )
-                    db.rollback()
 
 
 def initialize_module_visibility(engine: Engine) -> None:
@@ -245,7 +243,9 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     )
 
     # Initialize database connection
-    app.dependency_overrides.get(get_db_engine, get_db_engine)(settings=settings)
+    app.dependency_overrides.get(get_db_engine, get_db_engine)(
+        settings=settings
+    )  # Initialize the async engine
     sync_engine = get_sync_db_engine(settings=settings)
 
     # Update database tables
@@ -256,11 +256,8 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     initialize_module_visibility(sync_engine)
 
     # Initialize Redis
-    if (
-        app.dependency_overrides.get(get_redis_client, get_redis_client)(
-            settings=settings
-        )
-        is False
+    if not app.dependency_overrides.get(get_redis_client, get_redis_client)(
+        settings=settings
     ):
         hyperion_error_logger.info("Redis client not configured")
 
