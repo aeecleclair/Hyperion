@@ -35,6 +35,8 @@ services:
         condition: service_healthy
       hyperion-redis:
         condition: service_started
+    environment:
+      - GUNICORN_CMD_ARGS="--preload"
     ports:
       - 8000:80
     volumes:
@@ -42,4 +44,3 @@ services:
       - ./data:/app/data:Z
       - ./.env:/app/.env:Z
       - ./firebase.json:/app/firebase.json:Z
-      - ./migrations/versions:/app/migrations/versions:Z

@@ -57,11 +57,13 @@ async def get_request_id(request: Request) -> str:
 
 
 def get_db_engine(settings: Settings) -> AsyncEngine:
-    """Return the database engine, if the engine doesn't exit yet it will create one based on the settings"""
+    """
+    Return the (asynchronous) database engine, if the engine doesn't exit yet it will create one based on the settings
+    """
     global engine
     global SessionLocal
     if settings.SQLITE_DB:
-        SQLALCHEMY_DATABASE_URL = f"sqlite+aiosqlite:///./{settings.SQLITE_DB}"  # Connect to the test's database
+        SQLALCHEMY_DATABASE_URL = f"sqlite+aiosqlite:///./{settings.SQLITE_DB}"
     else:
         SQLALCHEMY_DATABASE_URL = f"postgresql+asyncpg://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}/{settings.POSTGRES_DB}"
 

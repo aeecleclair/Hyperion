@@ -10,6 +10,7 @@ from app.models import models_core
 async def get_all_module_visibility_membership(
     db: AsyncSession,
 ):
+    """Return the every module with their visibility"""
     result = await db.execute(select(models_core.ModuleVisibility))
     return result.unique().scalars().all()
 
@@ -18,7 +19,7 @@ async def get_modules_by_user(
     user: models_core.CoreUser,
     db: AsyncSession,
 ) -> Sequence[str]:
-    """Return the every module with their visibility"""
+    """Return the modules a user has access to"""
 
     userGroupIds = list(map(lambda group: group.id, user.groups))
 
@@ -35,7 +36,7 @@ async def get_allowed_groups_by_root(
     root: str,
     db: AsyncSession,
 ) -> Sequence[str]:
-    """Return the every module with their visibility"""
+    """Return the groups allowed to access to a specific root"""
 
     result = await db.execute(
         select(
