@@ -1,4 +1,5 @@
 """Models file for amap"""
+
 from datetime import date, datetime
 
 from sqlalchemy import Date, DateTime, Enum, Float, ForeignKey, Integer, String

@@ -4,7 +4,6 @@ File defining the API itself, using fastAPI and schemas, and calling the cruds f
 Group management is part of the core of Hyperion. These endpoints allow managing membership between users and groups.
 """
 
-
 import logging
 import uuid
 

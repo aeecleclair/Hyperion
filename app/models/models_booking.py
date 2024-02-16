@@ -1,4 +1,5 @@
 """model file for booking"""
+
 from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, String

@@ -1,4 +1,5 @@
 """Models file for module_tombola"""
+
 from sqlalchemy import Enum, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
