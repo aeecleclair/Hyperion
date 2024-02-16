@@ -1,4 +1,5 @@
 """File used to start the application. It is used by uvicorn and gunicorn"""
+
 from app.app import get_application
 from app.dependencies import get_settings
 

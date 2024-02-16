@@ -1,6 +1,5 @@
 """File defining the functions called by the endpoints, making queries to the table using the models"""
 
-
 import logging
 from datetime import date
 from typing import Sequence

@@ -1,4 +1,5 @@
 """File defining the Metadata."""
+
 from sqlalchemy.orm import DeclarativeBase
 
 

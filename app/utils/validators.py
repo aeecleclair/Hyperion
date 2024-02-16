@@ -3,7 +3,6 @@ A collection of Pydantic validators
 See https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
 """
 
-
 from datetime import datetime
 
 from pytz import timezone

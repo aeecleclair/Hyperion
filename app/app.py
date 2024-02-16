@@ -282,10 +282,10 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
             client_address = "unknown"
 
         settings: Settings = app.dependency_overrides.get(get_settings, get_settings)()
-        redis_client: redis.Redis | Literal[
-            False
-        ] | None = app.dependency_overrides.get(get_redis_client, get_redis_client)(
-            settings=settings
+        redis_client: redis.Redis | Literal[False] | None = (
+            app.dependency_overrides.get(get_redis_client, get_redis_client)(
+                settings=settings
+            )
         )
 
         # We test the ip address with the redis limiter
