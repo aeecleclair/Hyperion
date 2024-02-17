@@ -147,9 +147,7 @@ class PiwigoAuthClient(BaseAuthClient):
     # `override_redirect_uri` allows to bypass all redirect_uri verifications and override the returned redirect_uri.
     # This setting will override the previous `BaseAuthClient.redirect_uri``
     # WARNING: This property is not part of OAuth or Openid connect specifications and should be used with caution.
-    override_redirect_uri: str | None = (
-        "http://localhost:8080/plugins/OpenIdConnect/auth.php"
-    )
+    override_redirect_uri: str | None = None
 
     def get_userinfo(self, user: models_core.CoreUser) -> dict[str, Any]:
         """
