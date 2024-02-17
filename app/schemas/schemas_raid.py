@@ -118,7 +118,7 @@ class TeamBase(BaseModel):
     number: int
     difficulty: Difficulty
     captain_id: str
-    second_id: str
+    second_id: str | None = None
     validation_progress: float
 
 
