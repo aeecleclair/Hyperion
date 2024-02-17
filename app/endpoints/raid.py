@@ -153,7 +153,7 @@ async def upload_document(
     """
     await save_file_as_data(
         image=image,
-        directory="adverts",
+        directory="raid",
         filename=str(document_id),
         request_id=request_id,
         max_file_size=4 * 1024 * 1024,  # TODO : Change this value
