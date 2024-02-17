@@ -974,6 +974,26 @@ async def create_response_body(
     return response_body
 
 
+@router.post(
+    "/auth/introspect",
+    tags=[Tags.auth],
+    response_model=schemas_auth.IntrospectTokenResponse,
+)
+async def introspect(
+    response: Response,
+    # OAuth and Openid connect parameters
+    # The client id and secret must be passed either in the authorization header or with client_id and client_secret parameters
+    tokenreq: schemas_auth.IntrospectTokenReq = Depends(
+        schemas_auth.IntrospectTokenReq.as_form
+    ),
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+    request_id: str = Depends(get_request_id),
+):
+    print(tokenreq)
+    return schemas_auth.IntrospectTokenResponse(active=True)
+
+
 @router.get(
     "/auth/userinfo",
 )
@@ -1047,6 +1067,7 @@ async def oidc_configuration(
         "authorization_endpoint": settings.CLIENT_URL + "auth/authorize",
         "token_endpoint": settings.DOCKER_URL + "auth/token",
         "userinfo_endpoint": settings.DOCKER_URL + "auth/userinfo",
+        "introspection_endpoint": settings.DOCKER_URL + "auth/introspect",
         "jwks_uri": settings.DOCKER_URL + "oidc/authorization-flow/jwks_uri",
         # RECOMMENDED The OAuth 2.0 / OpenID Connect URL of the OP's Dynamic Client Registration Endpoint OpenID.Registration.
         # TODO: is this relevant?
