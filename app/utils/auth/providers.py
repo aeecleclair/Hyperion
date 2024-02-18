@@ -210,6 +210,8 @@ class SynapseAuthClient(BaseAuthClient):
     # See app.types.scopes_type.ScopeType for possible values
     allowed_scopes: set[ScopeType | str] = {ScopeType.openid, ScopeType.profile}
 
+    return_userinfo_in_id_token: bool = True
+
     @classmethod
     def get_userinfo(cls, user: models_core.CoreUser):
         # Accepted characters are [a-z] [0-9] `.` and `-`. Spaces are replaced by `-` and accents are removed.
@@ -222,7 +224,7 @@ class SynapseAuthClient(BaseAuthClient):
 
         return {
             "sub": user.id,
-            "picture": f"https://hyperion.myecl.fr/users/{user.id}/profile-picture",
+            # "picture": f"https://hyperion.myecl.fr/users/{user.id}/profile-picture",
             # Matrix does not support special characters in username
             "username": username,
             "displayname": get_display_name(
