@@ -1,5 +1,7 @@
 import asyncio
 from logging.config import fileConfig
+import os
+import re
 from sqlalchemy.engine import Connection
 from app.dependencies import get_db_engine, get_settings
 from alembic import context
@@ -25,9 +27,9 @@ if config.config_file_name is not None:
 # target_metadata = mymodel.Base.metadata
 target_metadata = Base.metadata
 
-# models_files = [x for x in os.listdir("./app/models") if re.match("models*", x)]
-# for models_file in models_files:
-#     __import__(f"app.models.{models_file[:-3]}")
+models_files = [x for x in os.listdir("./app/models") if re.match("models*", x)]
+for models_file in models_files:
+    __import__(f"app.models.{models_file[:-3]}")
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
