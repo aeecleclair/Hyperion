@@ -33,11 +33,7 @@ async def init_objects():
     token_BDE = create_api_access_token(phonebook_user_BDE)
 
     global phonebook_user_simple
-    phonebook_user_simple = await create_user_with_groups(
-            [GroupType.student], db=db
-        )
-        
-
+    phonebook_user_simple = await create_user_with_groups([GroupType.student], db=db)
 
     global token_simple
     token_simple = create_api_access_token(phonebook_user_simple)
@@ -49,26 +45,24 @@ async def init_objects():
     #     await db.commit()
 
     global association
-   
+
     association = models_phonebook.Association(
-            id=str(uuid.uuid4()), kind="Section", name="ECLAIR", mandate_year=2023
-        )
+        id=str(uuid.uuid4()), kind="Section", name="ECLAIR", mandate_year=2023
+    )
 
     await add_object_to_db(association)
     global membership
 
     membership = models_phonebook.Membership(
-            id=membership_id,
-            user_id=phonebook_user_simple.id,
-            association_id=association.id,
-            # role_id=role.id,
-            role_tags="VP Emprunts",
-            role_name="VP Emprunts",
-            mandate_year=2023,
-        )
+        id=membership_id,
+        user_id=phonebook_user_simple.id,
+        association_id=association.id,
+        # role_id=role.id,
+        role_tags="VP Emprunts",
+        role_name="VP Emprunts",
+        mandate_year=2023,
+    )
     await add_object_to_db(membership)
-
-
 
 
 # ---------------------------------------------------------------------------- #
@@ -107,13 +101,14 @@ def test_create_association_admin():
 def test_create_association_simple():
 
     response = client.post(
-        '/phonebook/associations/',
+        "/phonebook/associations/",
         json={
             "name": "Bazar",
             "kind": "Gros Club",
             "description": "Bazar description",
         },
-        headers={"Authorization": f"Bearer {token_BDE}"},)
+        headers={"Authorization": f"Bearer {token_BDE}"},
+    )
     id = response.json()["id"]
     response = client.post(
         "/phonebook/associations/",
@@ -130,13 +125,14 @@ def test_create_association_simple():
 
 def test_update_association_admin():
     response = client.post(
-        '/phonebook/associations/',
+        "/phonebook/associations/",
         json={
             "name": "Bazar",
             "kind": "Gros Club",
             "description": "Bazar description",
         },
-        headers={"Authorization": f"Bearer {token_BDE}"},)
+        headers={"Authorization": f"Bearer {token_BDE}"},
+    )
     id = response.json()["id"]
 
     response = client.patch(
@@ -240,7 +236,6 @@ def test_add_membership_admin():
             "association_id": association_id,
             "role_name": "VP Emprunts",
             "role_tags": "VP Emprunts",
-
         },
         headers={"Authorization": f"Bearer {token_BDE}"},
     )
@@ -300,7 +295,8 @@ def test_update_membership_admin():
     membership_id = response.json()["id"]
 
     response = client.patch(
-        f"/phonebook/associations/memberships/{membership_id}", json={"role_name": "Autre rôle"},
+        f"/phonebook/associations/memberships/{membership_id}",
+        json={"role_name": "Autre rôle"},
         headers={"Authorization": f"Bearer {token_BDE}"},
     )
     assert response.status_code == 204
@@ -375,7 +371,6 @@ def test_delete_membership_simple():
     assert response.status_code == 403
 
 
-
 # ---------------------------------------------------------------------------- #
 #                                  Get X by Y                                  #
 # ---------------------------------------------------------------------------- #
@@ -384,14 +379,12 @@ def test_delete_membership_simple():
 def test_get_members_by_association_id_admin():
     response = client.get(
         f"/phonebook/associations/{association.id}/members/{association.mandate_year}",
-        headers={"Authorization": f"Bearer {token_BDE}"
-                 },
+        headers={"Authorization": f"Bearer {token_BDE}"},
     )
     assert response.status_code == 200
-    assert isinstance(response.json(),list)
+    assert isinstance(response.json(), list)
     for k in response.json():
         assert isinstance(response.json()[k], schemas_phonebook.MemberComplete)
-
 
 
 def test_get_members_by_association_id_simple():
@@ -400,7 +393,7 @@ def test_get_members_by_association_id_simple():
         headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response.status_code == 200
-    assert isinstance(response.json(),list)
+    assert isinstance(response.json(), list)
     for k in response.json():
         assert isinstance(response.json()[k], schemas_phonebook.MemberComplete)
 
@@ -408,31 +401,34 @@ def test_get_members_by_association_id_simple():
 def test_get_member_by_id_admin():
     response = client.get(
         f"phonebook/member/{phonebook_user_simple.id}",
-        headers={"Authorization": f"Bearer {token_BDE}"}
+        headers={"Authorization": f"Bearer {token_BDE}"},
     )
     assert response.status_code == 200
     assert isinstance(response.json(), schemas_phonebook.MemberBase)
+
 
 def test_get_member_by_id_simple():
     response = client.get(
         f"phonebook/member/{phonebook_user_simple.id}",
-        headers={"Authorization": f"Bearer {token_simple}"}
+        headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response.status_code == 200
     assert isinstance(response.json(), schemas_phonebook.MemberBase)
 
+
 def test_get_member_complete_by_id_admin():
     response = client.get(
         f"phonebook/member/{phonebook_user_simple.id}/complete",
-        headers={"Authorization": f"Bearer {token_BDE}"}
+        headers={"Authorization": f"Bearer {token_BDE}"},
     )
     assert response.status_code == 200
     assert isinstance(response.json(), schemas_phonebook.MemberComplete)
 
+
 def test_get_member_complete_by_id_simple():
     response = client.get(
         f"phonebook/member/{phonebook_user_simple.id}/complete",
-        headers={"Authorization": f"Bearer {token_simple}"}
+        headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response.status_code == 200
     assert isinstance(response.json(), schemas_phonebook.MemberComplete)
