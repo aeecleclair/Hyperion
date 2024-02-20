@@ -72,6 +72,7 @@ class MembershipEdit(BaseModel):
 class MemberBase(schemas_core.CoreUserSimple):
     id: str
     email: str
+    phone: str | None = None
     nickname: str | None = None
     firstname: str
     name: str

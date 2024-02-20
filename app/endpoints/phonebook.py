@@ -263,7 +263,7 @@ async def create_membership(
     # Add the membership
     await cruds_phonebook.create_membership(membership_model, db)
     # Add the roletags to the attributed roletags table
-    await cruds_phonebook.add_new_roles(role_tags, id, db)
+    await cruds_phonebook.add_new_role(role_tags, id, db)
     return schemas_phonebook.MembershipBase(id=id, **membership.dict())
 
 
