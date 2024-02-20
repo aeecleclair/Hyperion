@@ -19,60 +19,19 @@ class AssociationBase(BaseModel):
     description: str | None = None
 
 
-class AssociationComplete(BaseModel):
+class AssociationComplete(AssociationBase):
     id: str
+
+    class Config:
+        orm_mode = True
+
+
+class RoleBase(BaseModel):
     name: str
-    type: str
-    description: str | None = None
 
 
-class Role(BaseModel):
+class RoleComplete(BaseModel):
     id: str
-    name: str
 
-
-class RoleCreate(BaseModel):
-    name: str
-
-
-class Post(BaseModel):
-    association: AssociationComplete
-    role: Role
-
-
-class CompleteMember(BaseModel):
-    member: Member
-    posts: list[Post]
-
-
-# class AssociationMemberBase(BaseModel):
-#     user_id: str
-#     role: str
-
-
-# class AssociationMemberComplete(AssociationMemberBase):
-#     user: schemas_core.CoreUserSimple
-
-#     class Config:
-#         orm_mode = True
-
-
-# class AssociationMemberEdit(BaseModel):
-#     role_id: str | None = None
-#     association_id: str | None = None
-#     user_id: str | None = None
-
-
-# class AssociationReturn(BaseModel):
-#     name: str
-#     id: str
-#     members: list[AssociationMemberComplete]
-
-
-# class UserReturn(BaseModel):
-#     user: Member
-#     roles: list[RoleComplete]
-#     associations: list[AssociationComplete]
-
-#     class Config:
-#         orm_mode = True
+    class Config:
+        orm_mode = True
