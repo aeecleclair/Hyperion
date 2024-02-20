@@ -193,7 +193,7 @@ class NotificationManager:
         response = messaging.subscribe_to_topic(tokens, custom_topic.to_str())
         if response.failure_count > 0:
             hyperion_error_logger.info(
-                f"Notification: Failed to subscribe to topic {custom_topic} due to {list(map(lambda e: e.reason, response.errors))}"
+                f"Notification: Failed to subscribe to topic {custom_topic} due to {list(map(lambda e: e.reason,response.errors))}"
             )
 
     async def unsubscribe_tokens_to_topic(
