@@ -63,7 +63,6 @@ async def get_all_role_tags(
 )
 async def get_all_kinds(
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """
     Return all available kinds of from database.
@@ -71,7 +70,7 @@ async def get_all_kinds(
     **This endpoint is only usable by CAA**
     """
     kinds = await cruds_phonebook.get_all_kinds(db)
-    kinds_schema = schemas_phonebook.KindsReturn.from_orm(kinds)
+    kinds_schema = schemas_phonebook.KindsReturn(kinds=kinds)
     return kinds_schema
 
 

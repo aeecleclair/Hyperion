@@ -2,6 +2,7 @@ import uuid
 
 from app.main import app
 from app.models import models_core, models_phonebook
+from app.schemas import schemas_phonebook
 from app.utils.types.groups_type import GroupType
 from tests.commons import (
     TestingSessionLocal,
@@ -17,6 +18,7 @@ phonebook_user_caa: models_core.CoreUser | None = None
 phonebook_user_simple: models_core.CoreUser | None = None
 token_caa: str = ""
 token_simple: str = ""
+membership_id: str = str(uuid.uuid4())
 
 
 @app.on_event("startup")  # create the datas needed in the tests
@@ -56,6 +58,7 @@ async def startuptest():
     global membership
     async with TestingSessionLocal() as db:
         membership = models_phonebook.Membership(
+            id=membership_id,
             user_id=phonebook_user_simple.id,
             association_id=association.id,
             # role_id=role.id,
@@ -178,6 +181,7 @@ def test_get_all_association_kinds_admin():
     )
     assert response.status_code == 200
 
+
 def test_get_all_association_kinds_simple():
     response = client.get(
         "/phonebook/associations/kinds",
@@ -202,17 +206,20 @@ def test_add_membership_admin():
     assert response.status_code == 201
     association_id = response.json()["id"]
 
+    membership_test = schemas_phonebook.MembershipBase(
+        user_id=phonebook_user_simple.id,
+        association_id=association_id,
+        role_name="VP Emprunts",
+        role_tags=["VP Emprunts"],
+    )
     response = client.post(
         "/phonebook/associations/memberships",
-        json={
-            "user_id": phonebook_user_simple.id,
-            "association_id": association_id,
-            "role_name": "VP Emprunts",
-            "role_tags": "VP Emprunts",
-        },
+        json={"membership": membership_test
+
+              },
         headers={"Authorization": f"Bearer {token_caa}"},
     )
-    assert response.status_code == 201
+    assert response.status_code == 2010
 
 
 def test_add_membership_simple():
@@ -292,7 +299,7 @@ def test_delete_membership_admin():
             "user_id": phonebook_user_simple.id,
             "association_id": association_id,
             "role_name": "VP Emprunts",
-            "role_tags":"VP Emprunts",
+            "role_tags": "VP Emprunts",
             "mandate_year": 2023,
         },
         headers={"Authorization": f"Bearer {token_caa}"},
@@ -326,7 +333,7 @@ def test_delete_membership_simple():
             "user_id": phonebook_user_simple.id,
             "association_id": association_id,
             "role_name": "VP Emprunts",
-            "role_tags":"VP Emprunts",
+            "role_tags": "VP Emprunts",
             "mandate_year": 2023,
         },
         headers={"Authorization": f"Bearer {token_caa}"},

@@ -17,6 +17,7 @@ class Membership(Base):
     )
     mandate_year: int = Column(Integer, nullable=False)
     role_name: str = Column(String, nullable=False)
+    role_tags: str = Column(String, nullable=False)
 
 
 class Association(Base):
@@ -32,7 +33,7 @@ class Association(Base):
 class AttributedRoleTags(Base):
     __tablename__ = "phonebook_role_tags"
 
-    tag: str = Column(String, ForeignKey("phonebook_role_tags.name"), primary_key=True)
+    tag: str = Column(String, primary_key=True)
     membership_id: str = Column(
-        String, ForeignKey("phonebook_role_tags.name"), primary_key=True
+        String, primary_key=True
     )
