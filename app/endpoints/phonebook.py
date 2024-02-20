@@ -284,7 +284,7 @@ async def update_membership(
     **This endpoint is only usable by CAA, BDE and association's president**
     """
     Depends(cruds_phonebook.can_user_modify_association(membership.association_id, db))
-    role_tags = dict(membership).pop("role_tags")
+    role_tags = dict(membership).pop("role_tags").split(";")
     if role_tags is not None:
         db_role_tags = await cruds_phonebook.get_membership_roletags(membership_id, db)
         for role in role_tags:
