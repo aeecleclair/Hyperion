@@ -78,6 +78,68 @@ def fuzzy_search_user(
     return [users[res[2]] for res in results]
 
 
+def fuzzy_search_association(
+    query: str,
+    associations: list[Association],
+    limit: int = 10,
+) -> list[Association]:
+    """
+    Search for users using Fuzzy String Matching
+
+    `query` will be compared against `users` name, firstname and nickname.
+    The size of the answer can be limited using `limit` parameter.
+
+    Use RapidFuzz library
+    """
+
+    # We can give a dictionary of {object: string used for the comparison} to the extract function
+    # https://maxbachmann.github.io/RapidFuzz/Usage/process.html#extract
+
+    # TODO: we may want to cache this object. Its generation may take some time if there is a big user base
+    choices = {}
+
+    for asso in associations:
+        choices[asso] = f"{asso.name}"
+
+    results: list[tuple[str, int | float, Association]] = process.extract(
+        query, choices, limit=limit
+    )
+
+    # results has the format : (string used for the comparison, similarity score, object)
+    return [res[2] for res in results]
+
+
+def fuzzy_search_role(
+    query: str,
+    roles: list[Role],
+    limit: int = 10,
+) -> list[Role]:
+    """
+    Search for users using Fuzzy String Matching
+
+    `query` will be compared against `users` name, firstname and nickname.
+    The size of the answer can be limited using `limit` parameter.
+
+    Use RapidFuzz library
+    """
+
+    # We can give a dictionary of {object: string used for the comparison} to the extract function
+    # https://maxbachmann.github.io/RapidFuzz/Usage/process.html#extract
+
+    # TODO: we may want to cache this object. Its generation may take some time if there is a big user base
+    choices = {}
+
+    for role in roles:
+        choices[role] = f"{role.name}"
+
+    results: list[tuple[str, int | float, Role]] = process.extract(
+        query, choices, limit=limit
+    )
+
+    # results has the format : (string used for the comparison, similarity score, object)
+    return [res[2] for res in results]
+
+
 async def is_group_id_valid(group_id: str, db: AsyncSession) -> bool:
     """
     Test if the provided group_id is a valid group.
