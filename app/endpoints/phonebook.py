@@ -399,6 +399,6 @@ async def read_association_logo(
 
     return get_file_from_data(
         directory="associations",
-        filename=str(association_id) + ".png",
-        default_asset=r"assets\images\default_association_picture.png",
+        filename=str(association_id),
+        default_asset="assets/images/default_association_picture.png",
     )
