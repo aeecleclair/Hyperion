@@ -10,8 +10,6 @@ from tests.commons import (
     create_user_with_groups,
 )
 
-global association
-
 membership: models_phonebook.Membership | None = None
 association: models_phonebook.Association | None = None
 member: models_core.CoreUser | None = None
