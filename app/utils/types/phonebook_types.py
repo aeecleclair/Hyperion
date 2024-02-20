@@ -2,11 +2,14 @@ from enum import Enum
 
 
 class RoleTags(Enum):
-    president = "Prez'"
-    treso = "Trez'"
+    president = "Prez\'"
+    treso = "Trez\'"
     sg = "SG"
-    resp_co = "Respo Comm'"
+    resp_co = "Respo Comm\'"
     resp_part = "Respo Partenariats"
+
+    def __str__(self):
+        return self.value
 
 
 class Kinds(Enum):
@@ -14,6 +17,9 @@ class Kinds(Enum):
     section = "Section"
     association = "Association"
     association_independante = "Association indépendante"
+
+    def __str__(self):
+        return self.value
 
 
 if __name__ == "__main__":
