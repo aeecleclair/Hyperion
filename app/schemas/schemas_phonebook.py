@@ -73,8 +73,8 @@ class MembershipComplete(MembershipBase):
 
 
 class MembershipEdit(BaseModel):
-    association_id: str
-    role_name: str
+    association_id: str | None
+    role_name: str | None
     role_tags: str | None
 
 

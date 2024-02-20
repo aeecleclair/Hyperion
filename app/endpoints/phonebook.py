@@ -36,14 +36,14 @@ async def get_all_associations(
 
 
 @router.get(
-    "/phonebook/roletags/",
+    "/phonebook/roletags",
     response_model=schemas_phonebook.RoleTagsReturn | None,
     status_code=200,
     tags=[Tags.phonebook],
 )
 async def get_all_role_tags(
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_a_member_of(GroupType.CAA)),
+    user=Depends(is_user_a_member_of(GroupType.BDE)),
 ):
     """
     Return all available role tags from database.
@@ -86,7 +86,7 @@ async def get_all_kinds(
 async def create_association(
     association: schemas_phonebook.AssociationBase,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_a_member_of(GroupType.CAA)),
+    user=Depends(is_user_a_member_of(GroupType.BDE)),
 ):
     """
     Create a new association by giving an AssociationBase scheme (contains the association name, desctription and type)
@@ -113,7 +113,7 @@ async def update_association(
     association_id: str,
     association: schemas_phonebook.AssociationEditComplete,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_a_member_of(GroupType.CAA)),
+    user=Depends(is_user_a_member_of(GroupType.BDE)),
 ):
     """
     Update an association
@@ -136,7 +136,7 @@ async def update_association(
 async def delete_association(
     association_id: str,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_a_member_of(GroupType.CAA)),
+    user=Depends(is_user_a_member_of(GroupType.BDE)),
 ):
     """
     Delete an association
@@ -205,7 +205,7 @@ async def get_association_members(
 async def create_membership(
     membership: schemas_phonebook.MembershipBase,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_a_member_of(GroupType.CAA)),
+    user=Depends(is_user_a_member_of(GroupType.BDE)),
 ):
     """
     Create a new membership for a given association, a given user. Tags are used to indicate if
@@ -255,7 +255,7 @@ async def update_membership(
     membership: schemas_phonebook.MembershipEdit,
     membership_id: str,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_a_member_of(GroupType.CAA)),
+    user=Depends(is_user_a_member_of(GroupType.BDE)),
 ):
     """
     Update a membership.
@@ -284,7 +284,7 @@ async def update_membership(
 async def delete_membership(
     membership_id: str,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_a_member_of(GroupType.CAA)),
+    user=Depends(is_user_a_member_of(GroupType.BDE)),
 ):
     """
     Delete a membership.
@@ -308,7 +308,7 @@ async def delete_membership(
 async def create_association_logo(
     association_id: str,
     image: UploadFile = File(...),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
     request_id: str = Depends(get_request_id),
     db: AsyncSession = Depends(get_db),
 ):

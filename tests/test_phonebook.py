@@ -13,22 +13,22 @@ from tests.commons import (
 membership: models_phonebook.Membership | None = None
 association: models_phonebook.Association | None = None
 # role: models_phonebook.Role | None = None
-phonebook_user_caa: models_core.CoreUser | None = None
+phonebook_user_BDE: models_core.CoreUser | None = None
 phonebook_user_simple: models_core.CoreUser | None = None
-token_caa: str = ""
+token_BDE: str = ""
 token_simple: str = ""
 membership_id: str = str(uuid.uuid4())
 
 
 @app.on_event("startup")  # create the datas needed in the tests
 async def startuptest():
-    global phonebook_user_caa
+    global phonebook_user_BDE
     async with TestingSessionLocal() as db:
-        phonebook_user_caa = await create_user_with_groups([GroupType.CAA], db=db)
+        phonebook_user_BDE = await create_user_with_groups([GroupType.BDE], db=db)
         await db.commit()
 
-    global token_caa
-    token_caa = create_api_access_token(phonebook_user_caa)
+    global token_BDE
+    token_BDE = create_api_access_token(phonebook_user_BDE)
 
     global phonebook_user_simple
     async with TestingSessionLocal() as db:
@@ -75,7 +75,7 @@ async def startuptest():
 def test_get_all_associations_admin():
     response = client.get(
         "/phonebook/associations/",
-        headers={"Authorization": f"Bearer {token_caa}"},
+        headers={"Authorization": f"Bearer {token_BDE}"},
     )
     assert response.status_code == 200
 
@@ -89,7 +89,7 @@ def test_get_all_associations_simple():
 
 
 def test_create_association_admin():
-    print("----------->", token_caa)
+    print("----------->", token_BDE)
     response = client.post(
         "/phonebook/associations/",
         json={
@@ -97,15 +97,26 @@ def test_create_association_admin():
             "kind": "Gros Club",
             "description": "Bazar description",
         },
-        headers={"Authorization": f"Bearer {token_caa}"},
+        headers={"Authorization": f"Bearer {token_BDE}"},
     )
     assert response.status_code == 201
 
 
 def test_create_association_simple():
+
+    response = client.post(
+        '/phonebook/associations/',
+        json={
+            "name": "Bazar",
+            "kind": "Gros Club",
+            "description": "Bazar description",
+        },
+        headers={"Authorization": f"Bearer {token_BDE}"},)
+    id = response.json()["id"]
     response = client.post(
         "/phonebook/associations/",
         json={
+            "id": id,
             "name": "Bazar",
             "kind": "Gros Club",
             "description": "Bazar description",
@@ -116,10 +127,25 @@ def test_create_association_simple():
 
 
 def test_update_association_admin():
+    response = client.post(
+        '/phonebook/associations/',
+        json={
+            "name": "Bazar",
+            "kind": "Gros Club",
+            "description": "Bazar description",
+        },
+        headers={"Authorization": f"Bearer {token_BDE}"},)
+    id = response.json()["id"]
+
     response = client.patch(
-        f"/phonebook/associations/{association.id}/",
-        json={"name": "Éclair"},
-        headers={"Authorization": f"Bearer {token_caa}"},
+        f"/phonebook/associations/{id}",
+        json={
+            "id": id,
+            "name": "Bazar",
+            "kind": "Gros Club",
+            "description": "Bazar description",
+        },
+        headers={"Authorization": f"Bearer {token_BDE}"},
     )
     assert response.status_code == 204
 
@@ -141,14 +167,14 @@ def test_delete_association_admin():
             "name": "Piston Hebdo",
             "kind": "Gros Club",
         },
-        headers={"Authorization": f"Bearer {token_caa}"},
+        headers={"Authorization": f"Bearer {token_BDE}"},
     )
     assert response.status_code == 201
     association_id = response.json()["id"]
 
     response = client.delete(
         f"/phonebook/associations/{association_id}/",
-        headers={"Authorization": f"Bearer {token_caa}"},
+        headers={"Authorization": f"Bearer {token_BDE}"},
     )
     assert response.status_code == 204
 
@@ -161,7 +187,7 @@ def test_delete_association_simple():
             "name": "Piston Hebdo",
             "kind": "Gros Club",
         },
-        headers={"Authorization": f"Bearer {token_caa}"},
+        headers={"Authorization": f"Bearer {token_BDE}"},
     )
     assert response.status_code == 201
     association_id = response.json()["id"]
@@ -176,7 +202,7 @@ def test_delete_association_simple():
 def test_get_all_association_kinds_admin():
     response = client.get(
         "/phonebook/associations/kinds",
-        headers={"Authorization": f"Bearer {token_caa}"},
+        headers={"Authorization": f"Bearer {token_BDE}"},
     )
     assert response.status_code == 200
 
@@ -200,7 +226,7 @@ def test_add_membership_admin():
             "name": "Bazar",
             "kind": "Gros Club",
         },
-        headers={"Authorization": f"Bearer {token_caa}"},
+        headers={"Authorization": f"Bearer {token_BDE}"},
     )
     assert response.status_code == 201
     association_id = response.json()["id"]
@@ -214,7 +240,7 @@ def test_add_membership_admin():
             "role_tags": "VP Emprunts",
 
         },
-        headers={"Authorization": f"Bearer {token_caa}"},
+        headers={"Authorization": f"Bearer {token_BDE}"},
     )
     assert response.status_code == 201
 
@@ -227,7 +253,7 @@ def test_add_membership_simple():
             "name": "Bazar",
             "kind": "Gros Club",
         },
-        headers={"Authorization": f"Bearer {token_caa}"},
+        headers={"Authorization": f"Bearer {token_BDE}"},
     )
     assert response.status_code == 201
     association_id = response.json()["id"]
@@ -253,7 +279,7 @@ def test_update_membership_admin():
             "name": "Bazar",
             "kind": "Gros Club",
         },
-        headers={"Authorization": f"Bearer {token_caa}"},
+        headers={"Authorization": f"Bearer {token_BDE}"},
     )
     assert response.status_code == 201
     association_id = response.json()["id"]
@@ -266,13 +292,14 @@ def test_update_membership_admin():
             "role_name": "VP Emprunts",
             "role_tags": "VP Emprunts",
         },
-        headers={"Authorization": f"Bearer {token_caa}"},
+        headers={"Authorization": f"Bearer {token_BDE}"},
     )
     assert response.status_code == 201
+    membership_id = response.json()["id"]
 
     response = client.patch(
-        "/phonebook/associations/memberships", json={"role_name": "Autre rôle"},
-        headers={"Authorization": f"Bearer {token_caa}"},
+        f"/phonebook/associations/memberships/{membership_id}", json={"role_name": "Autre rôle"},
+        headers={"Authorization": f"Bearer {token_BDE}"},
     )
     assert response.status_code == 204
 
@@ -285,7 +312,7 @@ def test_delete_membership_admin():
             "name": "Bazar",
             "kind": "Gros Club",
         },
-        headers={"Authorization": f"Bearer {token_caa}"},
+        headers={"Authorization": f"Bearer {token_BDE}"},
     )
     assert response.status_code == 201
     association_id = response.json()["id"]
@@ -298,18 +325,17 @@ def test_delete_membership_admin():
             "role_name": "VP Emprunts",
             "role_tags": "VP Emprunts",
         },
-        headers={"Authorization": f"Bearer {token_caa}"},
+        headers={"Authorization": f"Bearer {token_BDE}"},
     )
     assert response.status_code == 201
 
     membership_id = response.json()["id"]
     print("+++>", membership_id, type(membership_id))
-    membership_mandate_year = response.json()["mandate_year"]
 
     response = client.request(
         method="DELETE",
         url=f"/phonebook/associations/memberships/{membership_id}",
-        headers={"Authorization": f"Bearer {token_caa}"},
+        headers={"Authorization": f"Bearer {token_BDE}"},
     )
     assert response.status_code == 204
 
@@ -319,7 +345,7 @@ def test_delete_membership_simple():
     response = client.post(
         "/phonebook/associations/",
         json={"name": "Bazar", "kind": "Gros Club", "mandate_year": 2023},
-        headers={"Authorization": f"Bearer {token_caa}"},
+        headers={"Authorization": f"Bearer {token_BDE}"},
     )
     assert response.status_code == 201
     association_id = response.json()["id"]
@@ -332,7 +358,7 @@ def test_delete_membership_simple():
             "role_name": "VP Emprunts",
             "role_tags": "VP Emprunts",
         },
-        headers={"Authorization": f"Bearer {token_caa}"},
+        headers={"Authorization": f"Bearer {token_BDE}"},
     )
     assert response.status_code == 201
     membership_id = response.json()["id"]
@@ -355,7 +381,7 @@ def test_delete_membership_simple():
 def test_get_members_by_association_id_admin():
     response = client.get(
         f"/phonebook/associations/{association.id}/members",
-        headers={"Authorization": f"Bearer {token_caa}"
+        headers={"Authorization": f"Bearer {token_BDE}"
                  },
     )
     assert response.status_code == 200
@@ -374,7 +400,7 @@ def test_get_members_by_association_id_simple():
 # ---------------------------------------------------------------------------- #
 def test_get_all_roletags_admin():
     response = client.get(
-        "/phonebook/roletags/", headers={"Authorization": f"Bearer {token_caa}"}
+        "/phonebook/roletags/", headers={"Authorization": f"Bearer {token_BDE}"}
     )
     assert response.status_code == 200
 
@@ -394,7 +420,7 @@ def test_create_association_picture_admin():
         response = client.post(
             f"/phonebook/associations/{association.id}/picture",
             files={"image": ("logo.png", image, "image/png")},
-            headers={"Authorization": f"Bearer {token_caa}"},
+            headers={"Authorization": f"Bearer {token_BDE}"},
         )
 
     assert response.status_code == 201
@@ -414,7 +440,7 @@ def test_create_association_picture_simple():
 def test_get_association_picture_admin():
     response = client.get(
         f"/phonebook/associations/{association.id}/picture",
-        headers={"Authorization": f"Bearer {token_caa}"},
+        headers={"Authorization": f"Bearer {token_BDE}"},
     )
 
     assert response.status_code == 200
