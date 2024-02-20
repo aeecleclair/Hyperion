@@ -301,3 +301,60 @@ def test_update_role_simple():
         headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response.status_code == 403
+
+
+def test_create_role_admin():
+    print("----------->", token_caa)
+    response = client.post(
+        "/phonebook/roles/",
+        json={"name": "VP Rien"},
+        headers={"Authorization": f"Bearer {token_caa}"},
+    )
+    assert response.status_code == 201
+
+
+def test_create_role_simple():
+    response = client.post(
+        "/phonebook/roles/",
+        json={"name": "VP Rien"},
+        headers={"Authorization": f"Bearer {token_simple}"},
+    )
+    assert response.status_code == 403
+
+
+def test_delete_role_admin():
+    # create role to delete
+    print("----------->", token_caa)
+    response = client.post(
+        "/phonebook/roles/",
+        json={"name": "VP Rien"},
+        headers={"Authorization": f"Bearer {token_caa}"},
+    )
+    assert response.status_code == 201
+
+    role_id = response.json()["id"]
+
+    response = client.delete(
+        f"/phonebook/roles/{role_id}",
+        headers={"Authorization": f"Bearer {token_caa}"},
+    )
+    assert response.status_code == 204
+
+
+def test_delete_role_simple():
+    # create role to delete
+    print("----------->", token_caa)
+    response = client.post(
+        "/phonebook/roles/",
+        json={"name": "VP Rien"},
+        headers={"Authorization": f"Bearer {token_caa}"},
+    )
+    assert response.status_code == 201
+
+    role_id = response.json()["id"]
+
+    response = client.delete(
+        f"/phonebook/roles/{role_id}",
+        headers={"Authorization": f"Bearer {token_simple}"},
+    )
+    assert response.status_code == 403
