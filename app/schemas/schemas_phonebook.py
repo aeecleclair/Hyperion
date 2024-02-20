@@ -6,13 +6,15 @@ from app.schemas import schemas_core
 class RoleTagsReturn(BaseModel):
     tags: list[str]
 
-    class config:
-        orm_mode = True
+    orm_mode = True
 
 
 class add_roletag(BaseModel):
     role_tag: str
     membership_id: str
+
+    class config:
+        orm_mode = True
 
 
 class AssociationBase(BaseModel):
@@ -46,7 +48,15 @@ class MembershipBase(BaseModel):
     user_id: str
     association_id: str
     role_name: str
-    role_tags: list[str] | None
+    role_tags: str | None  # "roletag1;roletag2;..."
+
+    class Config:
+        orm_mode = True
+
+
+class MembershipBase2Complete(MembershipBase):
+    id: str
+    mandate_year: int
 
     class Config:
         orm_mode = True
@@ -55,6 +65,7 @@ class MembershipBase(BaseModel):
 class MembershipComplete(MembershipBase):
     association: AssociationComplete
     id: str
+    mandate_year: int
 
     class Config:
         orm_mode = True

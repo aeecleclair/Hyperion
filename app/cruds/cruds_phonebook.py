@@ -175,11 +175,11 @@ async def update_membership(membership: schemas_phonebook.MembershipEdit, member
 
 
 async def delete_membership(
-    membership: schemas_phonebook.MembershipBase, mandate_year: int, db: AsyncSession
+    membership_id: str, db: AsyncSession
 ):
     """Delete a membership in database"""
     delete(models_phonebook.Membership).where(
-        membership.association_id == models_phonebook.Membership.association_id and membership.user_id == models_phonebook.Membership.user_id and mandate_year == models_phonebook.Membership.mandate_year
+        membership_id == models_phonebook.Membership.id
     )
     try:
         await db.commit()

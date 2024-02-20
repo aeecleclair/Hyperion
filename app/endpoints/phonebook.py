@@ -51,7 +51,7 @@ async def get_all_role_tags(
     **This endpoint is only usable by CAA**
     """
     roles = await cruds_phonebook.get_all_role_tags(db)
-    roles_schema = schemas_phonebook.RoleTagsReturn.from_orm(roles)
+    roles_schema = schemas_phonebook.RoleTagsReturn(tags=roles)
     return roles_schema
 
 
@@ -148,7 +148,7 @@ async def delete_association(
 #                                    Members                                   #
 # ---------------------------------------------------------------------------- #
 @router.get(
-    "/phonebook/associations/{association_id}/members/",
+    "/phonebook/associations/{association_id}/members",
     response_model=list[schemas_phonebook.MemberComplete] | None,
     status_code=200,
     tags=[Tags.phonebook],
@@ -167,10 +167,15 @@ async def get_association_members(
             association = await cruds_phonebook.get_association_by_id(
                 membership.association_id, db
             )
-            membership_base = schemas_phonebook.MembershipBase.from_orm(membership)
+
+            membership_base = schemas_phonebook.MembershipBase2Complete.from_orm(
+                membership)
             membership_complete = schemas_phonebook.MembershipComplete(
-                association=association, **membership_base.dict()
+                association=association,
+                **membership_base.dict()
             )
+
+            print("---->  ", membership_complete.dict())
 
             member = await cruds_phonebook.get_member_by_id(membership.user_id, db)
             member_schema = schemas_phonebook.MemberBase.from_orm(member)
@@ -191,7 +196,7 @@ async def get_association_members(
 # ---------------------------------------------------------------------------- #
 @router.post(
     "/phonebook/associations/memberships",
-    response_model=schemas_phonebook.MembershipBase,
+    response_model=schemas_phonebook.MembershipComplete,
     status_code=201,
     tags=[Tags.phonebook],
 )
@@ -208,6 +213,7 @@ async def create_membership(
     **This endpoint is only usable by CAA**
     """
     role_tags = dict(membership).pop("role_tags")
+    role_tags = role_tags.split(";")
     association = await cruds_phonebook.get_association_by_id(
         membership.association_id, db
     )
@@ -221,13 +227,20 @@ async def create_membership(
     mandate_year = association.mandate_year
 
     membership_model = models_phonebook.Membership(
-        id=id, mandate_year=mandate_year, **membership.dict()
+        id=id,
+        mandate_year=mandate_year,
+        **membership.dict()
     )
     # Add the membership
     await cruds_phonebook.create_membership(membership_model, db)
     # Add the roletags to the attributed roletags table
     await cruds_phonebook.add_new_roles(role_tags, id, db)
-    return membership
+    return schemas_phonebook.MembershipComplete(
+        association=association,
+        mandate_year=mandate_year,
+        id=id,
+        **membership.dict()
+    )
 
 
 @router.patch(
@@ -261,14 +274,13 @@ async def update_membership(
 
 
 @router.delete(
-    "/phonebook/associations/memberships/{mandate_year}",
+    "/phonebook/associations/memberships/{membership_id}",
     # response_model=schemas_phonebook.MembershipBase,
     status_code=204,
     tags=[Tags.phonebook],
 )
 async def delete_membership(
-    membership: schemas_phonebook.MembershipComplete,
-    mandate_year: int,
+    membership_id: str,
     db: AsyncSession = Depends(get_db),
     user=Depends(is_user_a_member_of(GroupType.CAA)),
 ):
@@ -278,8 +290,8 @@ async def delete_membership(
     **This endpoint is only usable by CAA**
     """
 
-    await cruds_phonebook.delete_role_tag(membership.id, db)
-    await cruds_phonebook.delete_membership(membership, mandate_year, db)
+    await cruds_phonebook.delete_role_tag(membership_id, db)
+    await cruds_phonebook.delete_membership(membership_id, db)
 
 
 # ---------------------------------------------------------------------------- #
