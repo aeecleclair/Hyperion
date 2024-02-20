@@ -6,12 +6,12 @@ import pytest_asyncio
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from app.modules.advert import models_advert
-from tests.commons import event_loop  # noqa
 from tests.commons import (
     add_object_to_db,
     client,
     create_api_access_token,
     create_user_with_groups,
+    event_loop,  # noqa
 )
 
 advert: models_advert.Advert | None = None

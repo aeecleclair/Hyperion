@@ -9,13 +9,13 @@ from app.modules.amap import models_amap
 from app.modules.amap.types_amap import AmapSlotType, DeliveryStatusType
 
 # We need to import event_loop for pytest-asyncio routine defined bellow
-from tests.commons import event_loop  # noqa
 from tests.commons import (
     add_object_to_db,
     change_redis_client_status,
     client,
     create_api_access_token,
     create_user_with_groups,
+    event_loop,  # noqa
 )
 
 amap_user: models_core.CoreUser | None = None

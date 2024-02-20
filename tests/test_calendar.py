@@ -9,12 +9,12 @@ from app.modules.booking.types_booking import Decision
 from app.modules.calendar import models_calendar
 
 # We need to import event_loop for pytest-asyncio routine defined bellow
-from tests.commons import event_loop  # noqa
 from tests.commons import (
     add_object_to_db,
     client,
     create_api_access_token,
     create_user_with_groups,
+    event_loop,  # noqa
 )
 
 calendar_event: models_calendar.Event | None = None

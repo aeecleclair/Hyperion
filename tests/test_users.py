@@ -4,8 +4,12 @@ from app.core import models_core
 from app.core.groups.groups_type import GroupType
 
 # We need to import event_loop for pytest-asyncio routine defined bellow
-from tests.commons import event_loop  # noqa
-from tests.commons import client, create_api_access_token, create_user_with_groups
+from tests.commons import (
+    client,
+    create_api_access_token,
+    create_user_with_groups,
+    event_loop,  # noqa
+)
 
 admin_user: models_core.CoreUser | None = None
 student_user: models_core.CoreUser | None = None

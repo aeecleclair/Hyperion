@@ -8,12 +8,12 @@ from app.core.groups.groups_type import GroupType
 from app.modules.cinema import models_cinema
 
 # We need to import event_loop for pytest-asyncio routine defined bellow
-from tests.commons import event_loop  # noqa
 from tests.commons import (
     add_object_to_db,
     client,
     create_api_access_token,
     create_user_with_groups,
+    event_loop,  # noqa
 )
 
 session: models_cinema.Session | None = None
