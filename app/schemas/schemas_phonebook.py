@@ -54,6 +54,7 @@ class MembershipBase(BaseModel):
 
 class MembershipComplete(MembershipBase):
     association: AssociationComplete
+    id: str
 
     class Config:
         orm_mode = True
