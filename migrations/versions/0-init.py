@@ -291,7 +291,7 @@ def upgrade() -> None:
     op.create_table('notification_topic_membership',
     sa.Column('user_id', sa.String(), nullable=False),
     sa.Column('topic', sa.Enum('cinema', 'advert', 'bookingadmin', 'amap', 'booking', 'event', 'loan', 'raffle', 'vote', name='topic'), nullable=False),
-    sa.Column('topic_identifier', sa.String(), nullable=True),
+    sa.Column('topic_identifier', sa.String(), nullable=False),
     sa.ForeignKeyConstraint(['user_id'], ['core_user.id'], ),
     sa.PrimaryKeyConstraint('user_id', 'topic', 'topic_identifier')
     )
