@@ -12,9 +12,11 @@ class Membership(Base):
     __tablename__ = "phonebook_membership"
 
     id: Mapped[str] = mapped_column(
-        String, primary_key=True, index=True, nullable=False)
+        String, primary_key=True, index=True, nullable=False
+    )
     user_id: Mapped[str] = mapped_column(
-        String, ForeignKey("core_user.id"), primary_key=True)
+        String, ForeignKey("core_user.id"), primary_key=True
+    )
     association_id: Mapped[str] = mapped_column(
         String, ForeignKey("phonebook_association.id"), primary_key=True
     )
@@ -27,7 +29,8 @@ class Association(Base):
     __tablename__ = "phonebook_association"
 
     id: Mapped[str] = mapped_column(
-        String, primary_key=True, index=True, nullable=False)
+        String, primary_key=True, index=True, nullable=False
+    )
     name: Mapped[str] = mapped_column(String, nullable=False, index=True)
     description: Mapped[str] = mapped_column(String, nullable=True)
     kind: Mapped[str] = mapped_column(String, nullable=False)
@@ -38,6 +41,4 @@ class AttributedRoleTags(Base):
     __tablename__ = "phonebook_role_tags"
 
     tag: Mapped[str] = mapped_column(String, primary_key=True)
-    membership_id: Mapped[str] = mapped_column(
-        String, primary_key=True
-    )
+    membership_id: Mapped[str] = mapped_column(String, primary_key=True)

@@ -23,12 +23,18 @@ async def get_all_associations(
 
 async def get_all_role_tags(db: AsyncSession) -> list[str] | None:
     """Return all roles from database"""
-    return [str(phonebook_types.RoleTags[el[0]]) for el in list(phonebook_types.RoleTags.__members__.items())]
+    return [
+        str(phonebook_types.RoleTags[el[0]])
+        for el in list(phonebook_types.RoleTags.__members__.items())
+    ]
 
 
 async def get_all_kinds(db: AsyncSession) -> list[str] | None:
     """Return all kinds from database"""
-    return [str(phonebook_types.Kinds[el[0]]) for el in list(phonebook_types.Kinds.__members__.items())]
+    return [
+        str(phonebook_types.Kinds[el[0]])
+        for el in list(phonebook_types.Kinds.__members__.items())
+    ]
 
 
 async def get_all_memberships(
@@ -114,9 +120,9 @@ async def update_association(
 ):
     """Update an association in database"""
     await db.execute(
-        update(models_phonebook.Association).where(
-            association.id == models_phonebook.Association.id
-        ).values(**association.dict(exclude_none=True))
+        update(models_phonebook.Association)
+        .where(association.id == models_phonebook.Association.id)
+        .values(**association.dict(exclude_none=True))
     )
     try:
         await db.commit()
@@ -152,11 +158,14 @@ async def create_membership(membership: models_phonebook.Membership, db: AsyncSe
         raise
 
 
-async def update_membership(membership: schemas_phonebook.MembershipEdit, membership_id: str, db: AsyncSession):
+async def update_membership(
+    membership: schemas_phonebook.MembershipEdit, membership_id: str, db: AsyncSession
+):
     """Update a membership in database"""
     await db.execute(
-        update(models_phonebook.Membership).where(
-            membership_id == models_phonebook.Membership.id).values(**membership.dict(exclude_none=True))
+        update(models_phonebook.Membership)
+        .where(membership_id == models_phonebook.Membership.id)
+        .values(**membership.dict(exclude_none=True))
     )
     try:
         await db.commit()
@@ -165,9 +174,7 @@ async def update_membership(membership: schemas_phonebook.MembershipEdit, member
         raise
 
 
-async def delete_membership(
-    membership_id: str, db: AsyncSession
-):
+async def delete_membership(membership_id: str, db: AsyncSession):
     """Delete a membership in database"""
     await db.execute(
         delete(models_phonebook.Membership).where(
@@ -198,7 +205,9 @@ async def add_new_roles(role_tags: list[str], id: str, db: AsyncSession):
 async def delete_role(role_tag: list[str], id: str, db: AsyncSession):
     await db.execute(
         delete(models_phonebook.AttributedRoleTags).where(
-            models_phonebook.AttributedRoleTags.membership_id == id and models_phonebook.AttributedRoleTags.tag == role_tag)
+            models_phonebook.AttributedRoleTags.membership_id == id
+            and models_phonebook.AttributedRoleTags.tag == role_tag
+        )
     )
     try:
         await db.commit()
@@ -219,7 +228,8 @@ async def get_membership_roletags(membership_id: str, db: AsyncSession):
 async def delete_role_tag(membership_id: str, db: AsyncSession):
     await db.execute(
         delete(models_phonebook.AttributedRoleTags).where(
-            membership_id == models_phonebook.AttributedRoleTags.membership_id)
+            membership_id == models_phonebook.AttributedRoleTags.membership_id
+        )
     )
     try:
         await db.commit()

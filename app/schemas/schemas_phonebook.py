@@ -45,7 +45,7 @@ class AssociationComplete(AssociationBase):
         orm_mode = True
 
 
-class MembershipBase(BaseModel):
+class MembershipPost(BaseModel):
     user_id: str
     association_id: str
     role_name: str
@@ -55,18 +55,9 @@ class MembershipBase(BaseModel):
         orm_mode = True
 
 
-class MembershipBase2Complete(MembershipBase):
+class MembershipBase(MembershipPost):
     id: str
-    mandate_year: int
-
-    class Config:
-        orm_mode = True
-
-
-class MembershipComplete(MembershipBase):
-    association: AssociationComplete
-    id: str
-    mandate_year: int
+    mandate_year = int
 
     class Config:
         orm_mode = True
@@ -90,7 +81,7 @@ class MemberBase(schemas_core.CoreUserSimple):
 
 
 class MemberComplete(MemberBase):
-    memberships: list[MembershipComplete]
+    memberships: list[MembershipBase]
 
     class Config:
         orm_mode = True
@@ -109,7 +100,7 @@ class Members(schemas_core.CoreUserSimple):
 
 class ReturnMembers(BaseModel):
     members: list[Members]
-    memberships: list[MembershipComplete]
+    memberships: list[MembershipBase]
 
 
 class KindsReturn(BaseModel):

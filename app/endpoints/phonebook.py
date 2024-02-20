@@ -43,7 +43,9 @@ async def get_all_associations(
 )
 async def get_all_role_tags(
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_a_member_of(GroupType.BDE)),
+    user=Depends(
+        is_user_a_member_of(GroupType.BDE) or is_user_a_member_of(GroupType.CAA)
+    ),
 ):
     """
     Return all available role tags from database.
@@ -86,7 +88,9 @@ async def get_all_kinds(
 async def create_association(
     association: schemas_phonebook.AssociationBase,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_a_member_of(GroupType.BDE)),
+    user=Depends(
+        is_user_a_member_of(GroupType.BDE) or is_user_a_member_of(GroupType.CAA)
+    ),
 ):
     """
     Create a new association by giving an AssociationBase scheme (contains the association name, desctription and type)
@@ -113,7 +117,9 @@ async def update_association(
     association_id: str,
     association: schemas_phonebook.AssociationEditComplete,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_a_member_of(GroupType.BDE)),
+    user=Depends(
+        is_user_a_member_of(GroupType.BDE) or is_user_a_member_of(GroupType.CAA)
+    ),
 ):
     """
     Update an association
@@ -136,7 +142,9 @@ async def update_association(
 async def delete_association(
     association_id: str,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_a_member_of(GroupType.BDE)),
+    user=Depends(
+        is_user_a_member_of(GroupType.BDE) or is_user_a_member_of(GroupType.CAA)
+    ),
 ):
     """
     Delete an association
@@ -168,72 +176,50 @@ async def get_association_members(
     all_memberships = await cruds_phonebook.get_all_memberships(mandate_year, db)
     if all_memberships is None:
         return
-    if asso_memberships is not None:
-        for asso_membership in asso_memberships:  # Process every Membership of an association
-            # Get the user id
-            user_id = asso_membership.user_id
-            member = await cruds_phonebook.get_member_by_id(asso_membership.user_id, db)
-            member_memberships = []
-            for membership in all_memberships:
-                if membership.user_id == user_id:
-                    association = await cruds_phonebook.get_association_by_id(
-                        membership.association_id, db
-                    )
-                    if association is None:
-                        continue
-                    membership_base = schemas_phonebook.MembershipBase2Complete.from_orm(
-                        membership)
-                    membership_complete = schemas_phonebook.MembershipComplete(
-                        association=association,
-                        **membership_base.dict()
-                    )
-                    member_memberships.append(membership_complete)
 
-            member_schema = schemas_phonebook.MemberBase.from_orm(member)
+    for (
+        asso_membership
+    ) in asso_memberships:  # Process every Membership of an association
+        # Get the user id
+        user_id = asso_membership.user_id
+        member = await cruds_phonebook.get_member_by_id(asso_membership.user_id, db)
+        member_memberships = []
+        for membership in all_memberships:
+            if membership.user_id == user_id:
+                member_memberships.append(membership)
 
-            members_complete.append(
-                schemas_phonebook.MemberComplete(
-                    memberships=[member_memberships], **member_schema.dict()
-                )
+        member_schema = schemas_phonebook.MemberBase.from_orm(member)
+        print(member_schema, "member_schema")
+        print(member_memberships, "member_memberships")
+        members_complete.append(
+            schemas_phonebook.MemberComplete(
+                memberships=member_memberships, **member_schema.dict()
             )
-
-        return members_complete
+        )
+        print(members_complete)
+    return members_complete
 
 
 @router.get(
     "/phonebook/member/{user_id}/{mandate_year}",
     response_model=schemas_phonebook.MemberComplete,
     status_code=200,
-    tags=[Tags.phonebook]
+    tags=[Tags.phonebook],
 )
-async def get_member_details(user_id: str, mandate_year: int, db: AsyncSession = Depends(get_db)):
-    all_memberships = await cruds_phonebook.get_all_memberships(mandate_year, db)
+async def get_member_details(
+    user_id: str, mandate_year: int, db: AsyncSession = Depends(get_db)
+):
+    all_memberships = await cruds_phonebook.get_mbrship_by_user_id(user_id, db)
     member = await cruds_phonebook.get_member_by_id(user_id, db)
     member_memberships = []
-
-    if all_memberships is None:
-        raise HTTPException(
-            status_code=404,
-            detail="No membership returned",
-        )
+    member_schema = schemas_phonebook.MemberBase.from_orm(member)
 
     for membership in all_memberships:
-        association = await cruds_phonebook.get_association_by_id(
-            membership.association_id, db
-        )
-        if association is None:
-            continue
-        membership_base = schemas_phonebook.MembershipBase2Complete.from_orm(
-            membership)
-        membership_complete = schemas_phonebook.MembershipComplete(
-            association=association,
-            **membership_base.dict()
-        )
-        member_memberships.append(membership_complete)
-        member_schema = schemas_phonebook.MemberBase.from_orm(member)
-        return schemas_phonebook.MemberComplete(
-            memberships=[member_memberships], **member_schema.dict()
-        )
+        if membership.mandate_year == mandate_year:
+            member_memberships.append(membership)
+    return schemas_phonebook.MemberComplete(
+        memberships=member_memberships, **member_schema.dict()
+    )
 
 
 # @router.get(
@@ -254,14 +240,16 @@ async def get_member_details(user_id: str, mandate_year: int, db: AsyncSession =
 # ---------------------------------------------------------------------------- #
 @router.post(
     "/phonebook/associations/memberships",
-    # response_model=schemas_phonebook.MembershipComplete,
+    # response_model=schemas_phonebook.MembershipBase,
     status_code=204,
     tags=[Tags.phonebook],
 )
 async def create_membership(
-    membership: schemas_phonebook.MembershipBase,
+    membership: schemas_phonebook.MembershipPost,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_a_member_of(GroupType.BDE)),
+    user=Depends(
+        is_user_a_member_of(GroupType.BDE) or is_user_a_member_of(GroupType.CAA)
+    ),
 ):
     """
     Create a new membership for a given association, a given user. Tags are used to indicate if
@@ -280,25 +268,17 @@ async def create_membership(
             400,
             "Error : No association in the scheme. Can't create the membership. Please add an association id in your membership scheme",
         )
-
     id = str(uuid.uuid4())
     mandate_year = association.mandate_year
 
     membership_model = models_phonebook.Membership(
-        id=id,
-        mandate_year=mandate_year,
-        **membership.dict()
+        id=id, mandate_year=mandate_year, **membership.dict()
     )
     # Add the membership
     await cruds_phonebook.create_membership(membership_model, db)
     # Add the roletags to the attributed roletags table
     await cruds_phonebook.add_new_roles(role_tags, id, db)
-    return schemas_phonebook.MembershipComplete(
-        association=association,
-        mandate_year=mandate_year,
-        id=id,
-        **membership.dict()
-    )
+    return schemas_phonebook.MembershipBase(id=id, **membership.dict())
 
 
 @router.patch(
@@ -311,7 +291,9 @@ async def update_membership(
     membership: schemas_phonebook.MembershipEdit,
     membership_id: str,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_a_member_of(GroupType.BDE)),
+    user=Depends(
+        is_user_a_member_of(GroupType.BDE) or is_user_a_member_of(GroupType.CAA)
+    ),
 ):
     """
     Update a membership.
@@ -340,7 +322,9 @@ async def update_membership(
 async def delete_membership(
     membership_id: str,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_a_member_of(GroupType.BDE)),
+    user=Depends(
+        is_user_a_member_of(GroupType.BDE) or is_user_a_member_of(GroupType.CAA)
+    ),
 ):
     """
     Delete a membership.
@@ -364,7 +348,9 @@ async def delete_membership(
 async def create_association_logo(
     association_id: str,
     image: UploadFile = File(...),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
+    user: models_core.CoreUser = Depends(
+        is_user_a_member_of(GroupType.BDE) or is_user_a_member_of(GroupType.CAA)
+    ),
     request_id: str = Depends(get_request_id),
     db: AsyncSession = Depends(get_db),
 ):

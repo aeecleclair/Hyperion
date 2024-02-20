@@ -2,10 +2,10 @@ from enum import Enum
 
 
 class RoleTags(Enum):
-    president = "Prez\'"
-    treso = "Trez\'"
+    president = "Prez'"
+    treso = "Trez'"
     sg = "SG"
-    resp_co = "Respo Comm\'"
+    resp_co = "Respo Comm'"
     resp_part = "Respo Partenariats"
 
     def __str__(self):
@@ -13,10 +13,14 @@ class RoleTags(Enum):
 
 
 class Kinds(Enum):
-    club = "Club"
-    section = "Section"
-    association = "Association"
-    association_independante = "Association indépendante"
+    comity = "Comité"
+    section_ae = "Section AE"
+    club_ae = "Club AE"
+    section_use = "Section USE"
+    club_use = "Club USE"
+    section_uca = "Section UCA"
+    club_uca = "Club UCA"
+    association_independant = "Indés"
 
     def __str__(self):
         return self.value
