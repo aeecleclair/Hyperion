@@ -11,7 +11,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.dependencies import get_db, get_request_id, get_user_from_token_with_scopes
 from app.models import models_core, models_phonebook  # , models_core
 from app.schemas import schemas_phonebook
+from app.utils.tools import is_user_member_of_an_allowed_group
 from app.utils.types import phonebook_types
+from app.utils.types.groups_type import GroupType
 from app.utils.types.scopes_type import ScopeType
 
 # ---------------------------------------------------------------------------- #
@@ -22,8 +24,8 @@ hyperion_access_logger = logging.getLogger("hyperion.access")
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
-def is_user_the_president_of(
-    association_id: str,
+def can_user_modify_association(
+    association_id: str = None,
     db: AsyncSession = Depends(get_db),
 ) -> Callable[[models_core.CoreUser], Coroutine[Any, Any, models_core.CoreUser]]:
     """
@@ -33,7 +35,7 @@ def is_user_the_president_of(
         * return the corresponding user `models_core.CoreUser` object
     """
 
-    async def is_user_the_president_of(
+    async def can_user_modify_association(
         user: models_core.CoreUser = Depends(
             get_user_from_token_with_scopes([[ScopeType.API]])
         ),
@@ -42,25 +44,39 @@ def is_user_the_president_of(
         """
         A dependency that checks that user is the president of the association with the given id then returns the corresponding user.
         """
-        memberships = get_memberships_by_association_id(association_id, db)
-        for membership in memberships:
-            if (
-                membership.user_id == user.id
-                and phonebook_types.RoleTags.president
-                in membership.role_tags.split(";")
-            ):
-                return user
+        if is_user_member_of_an_allowed_group(
+            user=user, allowed_groups=[GroupType.CAA, GroupType.BDE]
+        ):
+            # We know the user is a member of the group, we don't need to return an error and can return the CoreUser object
+            return user
 
-        hyperion_access_logger.warning(
-            f"Is_user_the_president_of: user is not the president of the association {association_id} ({request_id})"
-        )
+        if association_id is not None:
+            memberships = get_memberships_by_association_id(association_id, db)
+            for membership in memberships:
+                if (
+                    membership.user_id == user.id
+                    and phonebook_types.RoleTags.president
+                    in membership.role_tags.split(";")
+                ):
+                    return user
 
-        raise HTTPException(
-            status_code=403,
-            detail=f"Unauthorized, user is not the president of the association {association_id}",
-        )
+            hyperion_access_logger.warning(
+                f"Can_user_modify_association: user is not authorized to modify the association {association_id} ({request_id})"
+            )
+            raise HTTPException(
+                status_code=403,
+                detail=f"Unauthorized, user is not authorized to modify the association {association_id}",
+            )
+        else:
+            hyperion_access_logger.warning(
+                f"Can_user_modify_association: user is not authorized to modify associations ({request_id})"
+            )
+            raise HTTPException(
+                status_code=403,
+                detail=f"Unauthorized, user is not authorized to modify associations {association_id}",
+            )
 
-    return is_user_the_president_of
+    return can_user_modify_association
 
 
 # ---------------------------------------------------------------------------- #
