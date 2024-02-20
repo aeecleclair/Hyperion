@@ -45,21 +45,6 @@ async def get_all_memberships(
 
 
 # ---------------------------------------------------------------------------- #
-#                                   Get by <param>                             #
-# ---------------------------------------------------------------------------- #
-async def get_membership_by_user_id(
-    user_id: str, db: AsyncSession
-) -> list[models_phonebook.Membership] | None:
-    """Return all associations with user_id from database"""
-    result = await db.execute(
-        select(models_phonebook.Membership).where(
-            models_phonebook.Membership.user_id == user_id
-        )
-    )
-    return result.scalars().all()
-
-
-# ---------------------------------------------------------------------------- #
 #                                  Get By X ID                                 #
 # ---------------------------------------------------------------------------- #
 async def get_association_by_id(
@@ -228,7 +213,7 @@ async def get_membership_roletags(membership_id: str, db: AsyncSession):
             models_phonebook.AttributedRoleTags.membership_id == membership_id
         )
     )
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 async def delete_role_tag(membership_id: str, db: AsyncSession):

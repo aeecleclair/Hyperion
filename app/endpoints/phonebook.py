@@ -150,47 +150,66 @@ async def delete_association(
 #                                    Members                                   #
 # ---------------------------------------------------------------------------- #
 @router.get(
-    "/phonebook/associations/{association_id}/members",
+    "/phonebook/associations/{association_id}/members/{mandate_year}",
     response_model=list[schemas_phonebook.MemberComplete] | None,
     status_code=200,
     tags=[Tags.phonebook],
 )
 async def get_association_members(
     association_id: str,
+    mandate_year: int,
     db: AsyncSession = Depends(get_db),
 ):
     """Get the list of memberships of an association."""
-    memberships = await cruds_phonebook.get_mbmrships_by_association_id(
+    asso_memberships = await cruds_phonebook.get_mbmrships_by_association_id(
         association_id, db
     )
     members_complete = []
-    if memberships is not None:
-        for membership in memberships:
-            association = await cruds_phonebook.get_association_by_id(
-                membership.association_id, db
-            )
-
-            membership_base = schemas_phonebook.MembershipBase2Complete.from_orm(
-                membership)
-            membership_complete = schemas_phonebook.MembershipComplete(
-                association=association,
-                **membership_base.dict()
-            )
-
-            print("---->  ", membership_complete.dict())
-
-            member = await cruds_phonebook.get_member_by_id(membership.user_id, db)
-            member_schema = schemas_phonebook.MemberBase.from_orm(member)
-            if association is None:
-                continue
-            if association.mandate_year == membership.mandate_year:
-                members_complete.append(
-                    schemas_phonebook.MemberComplete(
-                        memberships=[membership_complete], **member_schema.dict()
+    all_memberships = await cruds_phonebook.get_all_memberships(mandate_year, db)
+    if all_memberships is None:
+        return
+    if asso_memberships is not None:
+        for asso_membership in asso_memberships:  # Process every Membership of an association
+            # Get the user id
+            user_id = asso_membership.user_id
+            member = await cruds_phonebook.get_member_by_id(asso_membership.user_id, db)
+            member_memberships = []
+            for membership in all_memberships:
+                if membership.user_id == user_id:
+                    association = await cruds_phonebook.get_association_by_id(
+                        membership.association_id, db
                     )
+                    if association is None:
+                        continue
+                    membership_base = schemas_phonebook.MembershipBase2Complete.from_orm(
+                        membership)
+                    membership_complete = schemas_phonebook.MembershipComplete(
+                        association=association,
+                        **membership_base.dict()
+                    )
+                    member_memberships.append(membership_complete)
+
+            member_schema = schemas_phonebook.MemberBase.from_orm(member)
+
+            members_complete.append(
+                schemas_phonebook.MemberComplete(
+                    memberships=[member_memberships], **member_schema.dict()
                 )
+            )
 
         return members_complete
+
+# @router.get(
+#     "/phonebook/associations/memberships/{membership_id}",
+#     response_model=schemas_phonebook.MembershipBase,
+#     status_code=200,
+#     tags=[Tags.phonebook]
+# )
+# async def get_member_details(
+#     membership_id: str,
+#     db: AsyncSession
+# ) -> schemas_phonebook.MemberBase:
+#     return await cruds_phonebook.get_mbrship_by_X
 
 
 # ---------------------------------------------------------------------------- #
@@ -198,8 +217,8 @@ async def get_association_members(
 # ---------------------------------------------------------------------------- #
 @router.post(
     "/phonebook/associations/memberships",
-    response_model=schemas_phonebook.MembershipComplete,
-    status_code=201,
+    # response_model=schemas_phonebook.MembershipComplete,
+    status_code=204,
     tags=[Tags.phonebook],
 )
 async def create_membership(

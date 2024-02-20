@@ -243,7 +243,7 @@ def test_add_membership_admin():
         },
         headers={"Authorization": f"Bearer {token_BDE}"},
     )
-    assert response.status_code == 201
+    assert response.status_code == 204
 
 
 def test_add_membership_simple():
@@ -295,7 +295,7 @@ def test_update_membership_admin():
         },
         headers={"Authorization": f"Bearer {token_BDE}"},
     )
-    assert response.status_code == 201
+    assert response.status_code == 204
     membership_id = response.json()["id"]
 
     response = client.patch(
@@ -328,7 +328,7 @@ def test_delete_membership_admin():
         },
         headers={"Authorization": f"Bearer {token_BDE}"},
     )
-    assert response.status_code == 201
+    assert response.status_code == 204
 
     membership_id = response.json()["id"]
     print("+++>", membership_id, type(membership_id))
@@ -361,7 +361,7 @@ def test_delete_membership_simple():
         },
         headers={"Authorization": f"Bearer {token_BDE}"},
     )
-    assert response.status_code == 201
+    assert response.status_code == 204
     membership_id = response.json()["id"]
     membership_mandate_year = response.json()["mandate_year"]
 
