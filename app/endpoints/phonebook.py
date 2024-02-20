@@ -199,17 +199,48 @@ async def get_association_members(
 
         return members_complete
 
-# @router.get(
-#     "/phonebook/associations/memberships/{membership_id}",
-#     response_model=schemas_phonebook.MembershipBase,
-#     status_code=200,
-#     tags=[Tags.phonebook]
-# )
-# async def get_member_details(
-#     membership_id: str,
-#     db: AsyncSession
-# ) -> schemas_phonebook.MemberBase:
-#     return await cruds_phonebook.get_mbrship_by_X
+
+@router.get(
+    "/phonebook/member/{user_id}/{mandate_year}",
+    response_model=schemas_phonebook.MemberComplete,
+    status_code=200,
+    tags=[Tags.Phonebook]
+)
+async def get_member_details(user_id: str, mandate_year: int, db: AsyncSession):
+    all_memberships = await cruds_phonebook.get_all_memberships(mandate_year)
+    member = await cruds_phonebook.get_member_by_id(user_id, db)
+    member_memberships = []
+
+    for membership in all_memberships:
+        association = await cruds_phonebook.get_association_by_id(
+            membership.association_id, db
+        )
+        if association is None:
+            continue
+        membership_base = schemas_phonebook.MembershipBase2Complete.from_orm(
+            membership)
+        membership_complete = schemas_phonebook.MembershipComplete(
+            association=association,
+            **membership_base.dict()
+        )
+        member_memberships.append(membership_complete)
+        member_schema = schemas_phonebook.MemberBase.from_orm(member)
+        return schemas_phonebook.MemberComplete(
+            memberships=[member_memberships], **member_schema.dict()
+        )
+
+
+@router.get(
+    "/phonebook/associations/memberships/{membership_id}",
+    response_model=schemas_phonebook.MembershipBase,
+    status_code=200,
+    tags=[Tags.phonebook]
+)
+async def get_member_details(
+    membership_id: str,
+    db: AsyncSession
+) -> schemas_phonebook.MemberBase:
+    return await cruds_phonebook.get_mbrship_by_X
 
 
 # ---------------------------------------------------------------------------- #
