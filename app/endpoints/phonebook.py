@@ -204,9 +204,9 @@ async def get_association_members(
     "/phonebook/member/{user_id}/{mandate_year}",
     response_model=schemas_phonebook.MemberComplete,
     status_code=200,
-    tags=[Tags.Phonebook]
+    tags=[Tags.phonebook]
 )
-async def get_member_details(user_id: str, mandate_year: int, db: AsyncSession):
+async def get_member_details(user_id: str, mandate_year: int, db: AsyncSession = Depends(get_db)):
     all_memberships = await cruds_phonebook.get_all_memberships(mandate_year)
     member = await cruds_phonebook.get_member_by_id(user_id, db)
     member_memberships = []
@@ -230,17 +230,17 @@ async def get_member_details(user_id: str, mandate_year: int, db: AsyncSession):
         )
 
 
-@router.get(
-    "/phonebook/associations/memberships/{membership_id}",
-    response_model=schemas_phonebook.MembershipBase,
-    status_code=200,
-    tags=[Tags.phonebook]
-)
-async def get_member_details(
-    membership_id: str,
-    db: AsyncSession
-) -> schemas_phonebook.MemberBase:
-    return await cruds_phonebook.get_mbrship_by_X
+# @router.get(
+#     "/phonebook/associations/memberships/{membership_id}",
+#     response_model=schemas_phonebook.MembershipBase,
+#     status_code=200,
+#     tags=[Tags.phonebook]
+# )
+# async def get_membership_details(
+#     membership_id: str,
+#     db: AsyncSession = Depends(get_db)
+# ) -> schemas_phonebook.MemberBase:
+#     return await cruds_phonebook.get_mbrship_by_
 
 
 # ---------------------------------------------------------------------------- #
