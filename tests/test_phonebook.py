@@ -171,6 +171,21 @@ def test_delete_association_simple():
     assert response.status_code == 403
 
 
+def test_get_all_association_kinds_admin():
+    response = client.get(
+        "/phonebook/associations/kinds",
+        headers={"Authorization": f"Bearer {token_caa}"},
+    )
+    assert response.status_code == 200
+
+def test_get_all_association_kinds_simple():
+    response = client.get(
+        "/phonebook/associations/kinds",
+        headers={"Authorization": f"Bearer {token_simple}"},
+    )
+    assert response.status_code == 200
+
+
 # ---------------------------------------------------------------------------- #
 #                               Memberships tests                              #
 # ---------------------------------------------------------------------------- #
@@ -257,7 +272,7 @@ def test_update_membership_admin():
     )
     assert response.status_code == 204
 
-
+#A modifier en ajoutant mandate_year
 def test_delete_membership_admin():
     # create a membership to delete
     response = client.post(
