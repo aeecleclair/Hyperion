@@ -27,14 +27,15 @@ jobs:
           pip install -r requirements-dev.txt
           pip install "fastapi[all]"
 
-      - name: Lint with flake8
-        run: python -m flake8
+      - name: Cache .ruff_cache folder
+        id: ruff_cache
+        uses: actions/cache@v4
+        with:
+          path: .ruff_cache
+          key: ruff_cache-${{ github.head_ref }}
 
-      - name: Format with black
-        run: black . --check --diff
-
-      - name: Sort imports with isort
-        run: "isort . --check-only --diff"
+      - name: Lint with ruff
+        run: ruff .
 
       - name: Cache .mypy_cache folder
         id: mypy_cache
