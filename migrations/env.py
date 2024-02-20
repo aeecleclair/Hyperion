@@ -27,6 +27,7 @@ if config.config_file_name is not None:
 # target_metadata = mymodel.Base.metadata
 target_metadata = Base.metadata
 
+# This allow alembic to find our models and take them into account when generating migrations (do not remove)
 models_files = [x for x in os.listdir("./app/models") if re.match("models*", x)]
 for models_file in models_files:
     __import__(f"app.models.{models_file[:-3]}")
