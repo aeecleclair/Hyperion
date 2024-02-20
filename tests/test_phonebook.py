@@ -1,11 +1,14 @@
 import uuid
 
-from app.main import app
+import pytest_asyncio
+
 from app.models import models_core, models_phonebook
 from app.schemas import schemas_phonebook
 from app.utils.types.groups_type import GroupType
+from tests.commons import event_loop  # noqa
 from tests.commons import (
-    TestingSessionLocal,
+    add_object_to_db,
+    change_redis_client_status,
     client,
     create_api_access_token,
     create_user_with_groups,
@@ -21,22 +24,20 @@ token_simple: str = ""
 membership_id: str = str(uuid.uuid4())
 
 
-@app.on_event("startup")  # create the datas needed in the tests
-async def startuptest():
+@pytest_asyncio.fixture(scope="module", autouse=True)
+async def init_objects():
     global phonebook_user_BDE
-    async with TestingSessionLocal() as db:
-        phonebook_user_BDE = await create_user_with_groups([GroupType.BDE], db=db)
-        await db.commit()
+    phonebook_user_BDE = await create_user_with_groups([GroupType.BDE], db=db)
 
     global token_BDE
     token_BDE = create_api_access_token(phonebook_user_BDE)
 
     global phonebook_user_simple
-    async with TestingSessionLocal() as db:
-        phonebook_user_simple = await create_user_with_groups(
+    phonebook_user_simple = await create_user_with_groups(
             [GroupType.student], db=db
         )
-        await db.commit()
+        
+
 
     global token_simple
     token_simple = create_api_access_token(phonebook_user_simple)
@@ -48,16 +49,15 @@ async def startuptest():
     #     await db.commit()
 
     global association
-    async with TestingSessionLocal() as db:
-        association = models_phonebook.Association(
+   
+    association = models_phonebook.Association(
             id=str(uuid.uuid4()), kind="Section", name="ECLAIR", mandate_year=2023
         )
-        db.add(association)
-        await db.commit()
 
+    await add_object_to_db(association)
     global membership
-    async with TestingSessionLocal() as db:
-        membership = models_phonebook.Membership(
+
+    membership = models_phonebook.Membership(
             id=membership_id,
             user_id=phonebook_user_simple.id,
             association_id=association.id,
@@ -66,8 +66,9 @@ async def startuptest():
             role_name="VP Emprunts",
             mandate_year=2023,
         )
-        db.add(membership)
-        await db.commit()
+    await add_object_to_db(membership)
+
+
 
 
 # ---------------------------------------------------------------------------- #
