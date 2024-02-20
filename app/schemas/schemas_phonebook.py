@@ -27,6 +27,7 @@ class AssociationEdit(BaseModel):
     name: str | None
     kind: str | None
     description: str | None
+    mandate_year: str | None
 
 
 class AssociationEditComplete(AssociationEdit):
