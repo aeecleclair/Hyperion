@@ -2,6 +2,7 @@ import uuid
 
 from app.main import app
 from app.models import models_core, models_phonebook
+from app.schemas import schemas_phonebook
 from app.utils.types.groups_type import GroupType
 from tests.commons import (
     TestingSessionLocal,
@@ -373,6 +374,7 @@ def test_delete_membership_simple():
     assert response.status_code == 403
 
 
+
 # ---------------------------------------------------------------------------- #
 #                                  Get X by Y                                  #
 # ---------------------------------------------------------------------------- #
@@ -380,19 +382,59 @@ def test_delete_membership_simple():
 
 def test_get_members_by_association_id_admin():
     response = client.get(
-        f"/phonebook/associations/{association.id}/members",
+        f"/phonebook/associations/{association.id}/members/{association.mandate_year}",
         headers={"Authorization": f"Bearer {token_BDE}"
                  },
     )
     assert response.status_code == 200
+    assert isinstance(response.json(),list)
+    for k in response.json():
+        assert isinstance(response.json()[k], schemas_phonebook.MemberComplete)
+
 
 
 def test_get_members_by_association_id_simple():
     response = client.get(
-        f"/phonebook/associations/{association.id}/members",
+        f"/phonebook/associations/{association.id}/members/{association.mandate_year}",
         headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response.status_code == 200
+    assert isinstance(response.json(),list)
+    for k in response.json():
+        assert isinstance(response.json()[k], schemas_phonebook.MemberComplete)
+
+
+def test_get_member_by_id_admin():
+    response = client.get(
+        f"phonebook/member/{phonebook_user_simple.id}",
+        headers={"Authorization": f"Bearer {token_BDE}"}
+    )
+    assert response.status_code == 200
+    assert isinstance(response.json(), schemas_phonebook.MemberBase)
+
+def test_get_member_by_id_simple():
+    response = client.get(
+        f"phonebook/member/{phonebook_user_simple.id}",
+        headers={"Authorization": f"Bearer {token_simple}"}
+    )
+    assert response.status_code == 200
+    assert isinstance(response.json(), schemas_phonebook.MemberBase)
+
+def test_get_member_complete_by_id_admin():
+    response = client.get(
+        f"phonebook/member/{phonebook_user_simple.id}/complete",
+        headers={"Authorization": f"Bearer {token_BDE}"}
+    )
+    assert response.status_code == 200
+    assert isinstance(response.json(), schemas_phonebook.MemberComplete)
+
+def test_get_member_complete_by_id_simple():
+    response = client.get(
+        f"phonebook/member/{phonebook_user_simple.id}/complete",
+        headers={"Authorization": f"Bearer {token_simple}"}
+    )
+    assert response.status_code == 200
+    assert isinstance(response.json(), schemas_phonebook.MemberComplete)
 
 
 # ---------------------------------------------------------------------------- #
