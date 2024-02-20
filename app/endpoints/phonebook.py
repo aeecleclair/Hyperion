@@ -44,6 +44,7 @@ async def get_all_associations(
 )
 async def get_all_roles(
     db: AsyncSession = Depends(get_db),
+    user=Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """
     Return all roles from database as a list ofRoleComplete schemas
@@ -250,7 +251,7 @@ async def delete_membership(
 async def create_role(
     role: schemas_phonebook.RoleBase,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_a_member_of(GroupType.admin)),
+    user=Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """
     Create a new role
@@ -258,31 +259,34 @@ async def create_role(
     **This endpoint is only usable by administrators**
     """
     role_id = str(uuid.uuid4())
-    role_complete = schemas_phonebook.RoleComplete(id=role_id, **role.dict())
-    return await cruds_phonebook.create_role(role_complete, db)
+    role_model = models_phonebook.Role(id=role_id, **role.dict())
+    await cruds_phonebook.create_role(role_model, db)
+    return schemas_phonebook.RoleComplete(id=role_id, **role.dict())
 
 
 @router.patch(
-    "/phonebook/roles/{role_id}",
+    "/phonebook/roles/{role_id}/",
     # response_model=schemas_phonebook.RoleComplete,
     status_code=204,
     tags=[Tags.phonebook],
 )
 async def update_role(
-    role: schemas_phonebook.RoleComplete,
+    role_id: str,
+    role: schemas_phonebook.RoleBase,
     db: AsyncSession = Depends(get_db),
+    user=Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """
     Update a role
 
     **This endpoint is only usable by administrators**
     """
-
-    return await cruds_phonebook.update_role(role, db)
+    role_complete = schemas_phonebook.RoleComplete(id=role_id, **role.dict())
+    return await cruds_phonebook.update_role(role_complete, db)
 
 
 @router.delete(
-    "/phonebook/roles/{role_id}",
+    "/phonebook/roles/{role_id}/",
     # response_model=schemas_phonebook.RoleBase,
     status_code=204,
     tags=[Tags.phonebook],
@@ -290,21 +294,19 @@ async def update_role(
 async def delete_role(
     role_id: str,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_a_member_of(GroupType.admin)),
+    user=Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """
     Delete a role by giving its ID
 
     **This endpoint is only usable by administrators**
     """
-    return await cruds_phonebook.delete_role(role_id, db)
+    await cruds_phonebook.delete_role(role_id, db)
 
 
 # ---------------------------------------------------------------------------- #
 #                                     Logos                                    #
 # ---------------------------------------------------------------------------- #
-
-
 @router.post(
     "/phonebook/associations/{association_id}/picture",
     # response_model=standard_responses.Result,
