@@ -49,7 +49,7 @@ async def startuptest():
     global association
     async with TestingSessionLocal() as db:
         association = models_phonebook.Association(
-            id=str(uuid.uuid4()), type="Section", name="ECLAIR", mandate_year=2023
+            id=str(uuid.uuid4()), kind="Section", name="ECLAIR", mandate_year=2023
         )
         db.add(association)
         await db.commit()
@@ -94,7 +94,7 @@ def test_create_association_admin():
         "/phonebook/associations/",
         json={
             "name": "Bazar",
-            "type": "Gros Club",
+            "kind": "Gros Club",
             "description": "Bazar description",
         },
         headers={"Authorization": f"Bearer {token_caa}"},
@@ -107,7 +107,7 @@ def test_create_association_simple():
         "/phonebook/associations/",
         json={
             "name": "Bazar",
-            "type": "Gros Club",
+            "kind": "Gros Club",
             "description": "Bazar description",
         },
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -139,7 +139,7 @@ def test_delete_association_admin():
         "/phonebook/associations/",
         json={
             "name": "Piston Hebdo",
-            "type": "Gros Club",
+            "kind": "Gros Club",
         },
         headers={"Authorization": f"Bearer {token_caa}"},
     )
@@ -159,7 +159,7 @@ def test_delete_association_simple():
         "/phonebook/associations/",
         json={
             "name": "Piston Hebdo",
-            "type": "Gros Club",
+            "kind": "Gros Club",
         },
         headers={"Authorization": f"Bearer {token_caa}"},
     )
@@ -198,7 +198,7 @@ def test_add_membership_admin():
         "/phonebook/associations/",
         json={
             "name": "Bazar",
-            "type": "Gros Club",
+            "kind": "Gros Club",
         },
         headers={"Authorization": f"Bearer {token_caa}"},
     )
@@ -225,7 +225,7 @@ def test_add_membership_simple():
         "/phonebook/associations/",
         json={
             "name": "Bazar",
-            "type": "Gros Club",
+            "kind": "Gros Club",
         },
         headers={"Authorization": f"Bearer {token_caa}"},
     )
@@ -251,7 +251,7 @@ def test_update_membership_admin():
         "/phonebook/associations/",
         json={
             "name": "Bazar",
-            "type": "Gros Club",
+            "kind": "Gros Club",
         },
         headers={"Authorization": f"Bearer {token_caa}"},
     )
@@ -283,7 +283,7 @@ def test_delete_membership_admin():
         "/phonebook/associations/",
         json={
             "name": "Bazar",
-            "type": "Gros Club",
+            "kind": "Gros Club",
         },
         headers={"Authorization": f"Bearer {token_caa}"},
     )
@@ -318,7 +318,7 @@ def test_delete_membership_simple():
     # create a membership to delete
     response = client.post(
         "/phonebook/associations/",
-        json={"name": "Bazar", "type": "Gros Club", "mandate_year": 2023},
+        json={"name": "Bazar", "kind": "Gros Club", "mandate_year": 2023},
         headers={"Authorization": f"Bearer {token_caa}"},
     )
     assert response.status_code == 201

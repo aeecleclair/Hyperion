@@ -26,7 +26,7 @@ class Association(Base):
     id: str = Column(String, primary_key=True, index=True, nullable=False)
     name: str = Column(String, nullable=False, index=True)
     description: str = Column(String, nullable=True)
-    type: str = Column(String, nullable=False)
+    kind: str = Column(String, nullable=False)
     mandate_year: int = Column(Integer, nullable=False)
 
 

@@ -19,13 +19,13 @@ class add_roletag(BaseModel):
 
 class AssociationBase(BaseModel):
     name: str
-    type: str
+    kind: str
     description: str | None = None
 
 
 class AssociationEdit(BaseModel):
     name: str | None
-    type: str | None
+    kind: str | None
     description: str | None
 
 
