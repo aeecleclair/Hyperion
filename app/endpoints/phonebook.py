@@ -268,7 +268,7 @@ async def update_membership(
     tags=[Tags.phonebook],
 )
 async def delete_membership(
-    membership: schemas_phonebook.MembershipBase,
+    membership: schemas_phonebook.MembershipComplete,
     mandate_year: int,
     db: AsyncSession = Depends(get_db),
     user=Depends(is_user_a_member_of(GroupType.CAA)),
@@ -278,6 +278,8 @@ async def delete_membership(
 
     **This endpoint is only usable by CAA**
     """
+
+    await cruds_phonebook.delete_role_tag(membership.id, db)
     await cruds_phonebook.delete_membership(membership, mandate_year, db)
 
 

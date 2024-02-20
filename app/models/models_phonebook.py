@@ -29,12 +29,6 @@ class Association(Base):
     mandate_year: int = Column(Integer, nullable=False)
 
 
-class RoleTags(Base):
-    __tablename__ = "phonebook_role_tags"
-
-    name: str = Column(String, nullable=False, primary_key=True)
-
-
 class AttributedRoleTags(Base):
     __tablename__ = "phonebook_role_tags"
 

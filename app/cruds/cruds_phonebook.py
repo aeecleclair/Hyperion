@@ -219,3 +219,14 @@ async def get_membership_roletags(membership_id: str, db: AsyncSession):
         )
     )
     return result.scalars().all()
+
+
+async def delete_role_tag(membership_id: str, db: AsyncSession):
+    delete(models_phonebook.AttributedRoleTags).where(
+        membership_id == models_phonebook.AttributedRoleTags.membership_id)
+
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise
