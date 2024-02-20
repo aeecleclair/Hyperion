@@ -358,3 +358,43 @@ def test_delete_role_simple():
         headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response.status_code == 403
+
+
+def test_create_association_picture_admin():
+    with open("assets/images/default_association_picture.png", "rb") as image:
+        response = client.post(
+            f"/phonebook/associations/{association.id}/picture",
+            files={"image": ("logo.png", image, "image/png")},
+            headers={"Authorization": f"Bearer {token_caa}"},
+        )
+
+    assert response.status_code == 201
+
+
+def test_create_association_picture_simple():
+    with open("assets/images/default_association_picture.png", "rb") as image:
+        response = client.post(
+            f"/phonebook/associations/{association.id}/picture",
+            files={"image": ("logo.png", image, "image/png")},
+            headers={"Authorization": f"Bearer {token_simple}"},
+        )
+
+    assert response.status_code == 403
+
+
+def test_get_association_picture_admin():
+    response = client.get(
+        f"/phonebook/associations/{association.id}/picture",
+        headers={"Authorization": f"Bearer {token_caa}"},
+    )
+
+    assert response.status_code == 200
+
+
+def test_get_association_picture_simple():
+    response = client.get(
+        f"/phonebook/associations/{association.id}/picture",
+        headers={"Authorization": f"Bearer {token_simple}"},
+    )
+
+    assert response.status_code == 200
