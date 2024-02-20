@@ -111,7 +111,7 @@ async def create_association(
 )
 async def update_association(
     association_id: str,
-    association: schemas_phonebook.AssociationEdit,
+    association: schemas_phonebook.AssociationEditComplete,
     db: AsyncSession = Depends(get_db),
     user=Depends(is_user_a_member_of(GroupType.CAA)),
 ):
@@ -120,10 +120,12 @@ async def update_association(
 
     **This endpoint is only usable by CAA**
     """
-    association_complete = schemas_phonebook.AssociationEditComplete(
-        id=association_id, **association.dict()
-    )
-    await cruds_phonebook.update_association(association_complete, db)
+    if association_id != association.id:
+        raise HTTPException(
+            status_code=404,
+            detail="association_id and association's ID don't match",
+        )
+    await cruds_phonebook.update_association(association, db)
 
 
 @router.delete(
