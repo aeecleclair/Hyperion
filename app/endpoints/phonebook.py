@@ -262,7 +262,7 @@ async def create_membership(
     the members has a main role in the association (president, secretary ...) and
     'role_name' is the display name for this membership
 
-    **This endpoint is only usable by CAA**
+    **This endpoint is only usable by BDE**
     """
     role_tags = dict(membership).pop("role_tags")
     role_tags = role_tags.split(";")
