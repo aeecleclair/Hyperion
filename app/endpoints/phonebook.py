@@ -1,4 +1,5 @@
 import datetime
+import logging
 import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
@@ -15,6 +16,7 @@ from app.utils.types.groups_type import GroupType
 from app.utils.types.tags import Tags
 
 router = APIRouter()
+hyperion_phonebook_logger = logging.getLogger("hyperion.phonebook")
 
 
 # ---------------------------------------------------------------------------- #
@@ -177,14 +179,11 @@ async def get_association_members(
                 member_memberships.append(membership)
 
         member_schema = schemas_phonebook.MemberBase.from_orm(member)
-        print(member_schema, "member_schema")
-        print(member_memberships, "member_memberships")
         members_complete.append(
             schemas_phonebook.MemberComplete(
                 memberships=member_memberships, **member_schema.dict()
             )
         )
-        print(members_complete)
     return members_complete
 
 
@@ -290,13 +289,13 @@ async def update_membership(
         db_role_tags = await cruds_phonebook.get_membership_roletags(membership_id, db)
         for role in role_tags:
             if role not in db_role_tags:
-                print("New role", role)
+                hyperion_phonebook_logger.info("Add role", role)
                 await cruds_phonebook.add_new_roles(role, membership_id, db)
         for role in db_role_tags:
             if role not in role_tags:
-                print("Delete role", role)
+                hyperion_phonebook_logger.info("Delete role", role)
                 await cruds_phonebook.delete_role(role, membership_id, db)
-    print("Update membership")
+    hyperion_phonebook_logger.info("Update membership", membership.dict())
     membership_complete = schemas_phonebook.MembershipEdit(**membership.dict())
     await cruds_phonebook.update_membership(membership_complete, membership_id, db)
 
