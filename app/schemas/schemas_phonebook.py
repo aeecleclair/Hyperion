@@ -4,6 +4,7 @@ from app.schemas import schemas_core
 
 
 class Member(schemas_core.CoreUserSimple):
+    id: str
     email: str
     nickname: str | None = None
     firstname: str
