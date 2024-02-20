@@ -284,13 +284,14 @@ async def update_membership(
     **This endpoint is only usable by CAA, BDE and association's president**
     """
     Depends(cruds_phonebook.can_user_modify_association(membership.association_id, db))
-    role_tags = dict(membership).pop("role_tags").split(";")
+    role_tags = dict(membership).pop("role_tags")
     if role_tags is not None:
+        role_tags = role_tags.split(";")
         db_role_tags = await cruds_phonebook.get_membership_roletags(membership_id, db)
         for role in role_tags:
             if role not in db_role_tags:
                 hyperion_phonebook_logger.info("Add role", role)
-                await cruds_phonebook.add_new_roles(role, membership_id, db)
+                await cruds_phonebook.add_new_role(role, membership_id, db)
         for role in db_role_tags:
             if role not in role_tags:
                 hyperion_phonebook_logger.info("Delete role", role)

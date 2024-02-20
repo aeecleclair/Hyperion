@@ -273,10 +273,9 @@ async def delete_membership(membership_id: str, db: AsyncSession):
 # ---------------------------------------------------------------------------- #
 #                                   RoleTags                                   #
 # ---------------------------------------------------------------------------- #
-async def add_new_roles(role_tags: list[str], id: str, db: AsyncSession):
-    for tag in role_tags:
-        role = models_phonebook.AttributedRoleTags(membership_id=id, tag=tag)
-        db.add(role)
+async def add_new_role(role_tag: str, id: str, db: AsyncSession):
+    role = models_phonebook.AttributedRoleTags(membership_id=id, tag=role_tag)
+    db.add(role)
     try:
         await db.commit()
     except IntegrityError:
@@ -284,7 +283,7 @@ async def add_new_roles(role_tags: list[str], id: str, db: AsyncSession):
         raise
 
 
-async def delete_role(role_tag: list[str], id: str, db: AsyncSession):
+async def delete_role(role_tag: str, id: str, db: AsyncSession):
     await db.execute(
         delete(models_phonebook.AttributedRoleTags).where(
             models_phonebook.AttributedRoleTags.membership_id == id
