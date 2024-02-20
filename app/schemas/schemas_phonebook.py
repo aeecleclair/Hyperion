@@ -3,6 +3,18 @@ from pydantic import BaseModel
 from app.schemas import schemas_core
 
 
+class RoleTagsReturn(BaseModel):
+    tags: list[str]
+
+    class config:
+        orm_mode = True
+
+
+class add_roletag(BaseModel):
+    role_tag: str
+    membership_id: str
+
+
 class AssociationBase(BaseModel):
     name: str
     type: str
@@ -24,17 +36,7 @@ class AssociationEditComplete(AssociationEdit):
 
 class AssociationComplete(AssociationBase):
     id: str
-
-    class Config:
-        orm_mode = True
-
-
-class RoleBase(BaseModel):
-    name: str
-
-
-class RoleComplete(BaseModel):
-    id: str
+    mandate_year: int
 
     class Config:
         orm_mode = True
@@ -43,7 +45,8 @@ class RoleComplete(BaseModel):
 class MembershipBase(BaseModel):
     user_id: str
     association_id: str
-    role_id: str
+    role_name: str
+    role_tags: list[str] | None
 
     class Config:
         orm_mode = True
@@ -51,10 +54,15 @@ class MembershipBase(BaseModel):
 
 class MembershipComplete(MembershipBase):
     association: AssociationComplete
-    role: RoleComplete
 
     class Config:
         orm_mode = True
+
+
+class MembershipEdit(BaseModel):
+    association_id: str
+    role_name: str
+    role_tags: str | None
 
 
 class MemberBase(schemas_core.CoreUserSimple):
@@ -73,3 +81,23 @@ class MemberComplete(MemberBase):
 
     class Config:
         orm_mode = True
+
+
+class Members(schemas_core.CoreUserSimple):
+    name: str
+    nickname: str | None = None
+    firstname: str
+    email: str
+    promotion: int
+
+    class config:
+        orm_mode = True
+
+
+class ReturnMembers(BaseModel):
+    members: list[Members]
+    memberships: list[MembershipComplete]
+
+
+class KindsReturn(BaseModel):
+    kinds: list[str]

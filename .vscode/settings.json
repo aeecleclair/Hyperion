@@ -1,4 +1,6 @@
 {
+    "python.formatting.provider": "black",
+    "python.linting.flake8Enabled": true,
     "editor.formatOnSave": true,
     "editor.tabSize": 4,
     "editor.insertSpaces": true,
