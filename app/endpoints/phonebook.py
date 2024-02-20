@@ -207,9 +207,15 @@ async def get_association_members(
     tags=[Tags.phonebook]
 )
 async def get_member_details(user_id: str, mandate_year: int, db: AsyncSession = Depends(get_db)):
-    all_memberships = await cruds_phonebook.get_all_memberships(mandate_year)
+    all_memberships = await cruds_phonebook.get_all_memberships(mandate_year, db)
     member = await cruds_phonebook.get_member_by_id(user_id, db)
     member_memberships = []
+
+    if all_memberships is None:
+        raise HTTPException(
+            status_code=404,
+            detail="No membership returned",
+        )
 
     for membership in all_memberships:
         association = await cruds_phonebook.get_association_by_id(
