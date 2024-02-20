@@ -12,7 +12,6 @@ from tests.commons import (
 
 membership: models_phonebook.Membership | None = None
 association: models_phonebook.Association | None = None
-member: models_core.CoreUser | None = None
 role: models_phonebook.Role | None = None
 phonebook_user_caa: models_core.CoreUser | None = None
 phonebook_user_simple: models_core.CoreUser | None = None
@@ -57,7 +56,9 @@ async def startuptest():
     global membership
     async with TestingSessionLocal() as db:
         membership = models_phonebook.Membership(
-            user_id=member.id, association_id=association.id, role_id=role.id
+            user_id=phonebook_user_simple.id,
+            association_id=association.id,
+            role_id=role.id,
         )
         db.add(membership)
         await db.commit()
@@ -80,9 +81,10 @@ def test_get_all_associations_simple():
 
 
 def test_create_association_admin():
+    print("----------->", token_caa)
     response = client.post(
         "/phonebook/associations/",
-        json={"name": "Bazar", "type": "Gros Club"},
+        json={"name": "Bazar", "type": "Gros Club", "description": "Bazar description"},
         headers={"Authorization": f"Bearer {token_caa}"},
     )
     assert response.status_code == 201
@@ -108,9 +110,9 @@ def test_add_membership_admin():
     association_id = response.json()["id"]
 
     response = client.post(
-        "phonebook/associations/membership",
+        "/phonebook/associations/memberships",
         json={
-            "user_id": member.id,
+            "user_id": phonebook_user_simple.id,
             "association_id": association_id,
             "role_id": role.id,
         },
@@ -130,9 +132,9 @@ def test_add_membership_simple():
     association_id = response.json()["id"]
 
     response = client.post(
-        "phonebook/associations/membership",
+        "/phonebook/associations/memberships",
         json={
-            "user_id": member.id,
+            "user_id": phonebook_user_simple.id,
             "association_id": association_id,
             "role_id": role.id,
         },
@@ -152,20 +154,19 @@ def test_delete_membership_admin():
     association_id = response.json()["id"]
 
     response = client.post(
-        "phonebook/associations/membership",
+        "/phonebook/associations/memberships",
         json={
-            "user_id": member.id,
+            "user_id": phonebook_user_simple.id,
             "association_id": association_id,
             "role_id": role.id,
         },
         headers={"Authorization": f"Bearer {token_caa}"},
     )
     assert response.status_code == 201
-    member_id = response.json()["user_id"]
 
-    response = client.delete(
-        "/phonebook/associations/membership",
-        json={"association_id": association_id, "user_id": member_id},
+    response = client.request(
+        method="DELETE",
+        url="/phonebook/associations/memberships",
         headers={"Authorization": f"Bearer {token_caa}"},
     )
     assert response.status_code == 204
@@ -182,9 +183,9 @@ def test_delete_membership_simple():
     association_id = response.json()["id"]
 
     response = client.post(
-        "phonebook/associations/membership",
+        "/phonebook/associations/memberships",
         json={
-            "user_id": member.id,
+            "user_id": phonebook_user_simple.id,
             "association_id": association_id,
             "role_id": role.id,
         },
@@ -193,8 +194,9 @@ def test_delete_membership_simple():
     assert response.status_code == 201
     member_id = response.json()["user_id"]
 
-    response = client.delete(
-        "/phonebook/associations/membership",
+    response = client.request(
+        method="DELETE",
+        url="/phonebook/associations/memberships",
         json={"association_id": association_id, "user_id": member_id},
         headers={"Authorization": f"Bearer {token_simple}"},
     )
@@ -255,7 +257,7 @@ def test_delete_association_simple():
 
 def test_get_members_by_association_id_admin():
     response = client.get(
-        f"/phonebook/associations/{association.id}/members/",
+        f"/phonebook/associations/{association.id}/members",
         headers={"Authorization": f"Bearer {token_caa}"},
     )
     assert response.status_code == 200
@@ -263,7 +265,7 @@ def test_get_members_by_association_id_admin():
 
 def test_get_members_by_association_id_simple():
     response = client.get(
-        f"/phonebook/associations/{association.id}/members/",
+        f"/phonebook/associations/{association.id}/members",
         headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response.status_code == 200

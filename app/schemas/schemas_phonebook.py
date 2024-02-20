@@ -9,6 +9,19 @@ class AssociationBase(BaseModel):
     description: str | None = None
 
 
+class AssociationEdit(BaseModel):
+    name: str | None
+    type: str | None
+    description: str | None
+
+
+class AssociationEditComplete(AssociationEdit):
+    id: str
+
+    class Config:
+        orm_mode = True
+
+
 class AssociationComplete(AssociationBase):
     id: str
 
@@ -32,13 +45,19 @@ class MembershipBase(BaseModel):
     association_id: str
     role_id: str
 
+    class Config:
+        orm_mode = True
+
 
 class MembershipComplete(MembershipBase):
     association: AssociationComplete
     role: RoleComplete
 
+    class Config:
+        orm_mode = True
 
-class Member(schemas_core.CoreUserSimple):
+
+class MemberBase(schemas_core.CoreUserSimple):
     id: str
     email: str
     nickname: str | None = None
@@ -49,7 +68,7 @@ class Member(schemas_core.CoreUserSimple):
         orm_mode = True
 
 
-class MemberComplete(Member):
+class MemberComplete(MemberBase):
     memberships: list[MembershipComplete]
 
     class Config:
