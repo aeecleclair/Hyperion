@@ -4,7 +4,6 @@ from sqlalchemy import Column, ForeignKey, String
 from sqlalchemy.orm import relationship
 
 from app.database import Base
-from app.models.models_core import CoreUser
 
 
 class Membership(Base):
