@@ -43,14 +43,9 @@ async def get_all_associations(
 )
 async def get_all_role_tags(
     db: AsyncSession = Depends(get_db),
-    user=Depends(
-        is_user_a_member_of(GroupType.BDE) or is_user_a_member_of(GroupType.CAA)
-    ),
 ):
     """
     Return all available role tags from database.
-
-    **This endpoint is only usable by CAA**
     """
     roles = await cruds_phonebook.get_all_role_tags(db)
     roles_schema = schemas_phonebook.RoleTagsReturn(tags=roles)
@@ -68,8 +63,6 @@ async def get_all_kinds(
 ):
     """
     Return all available kinds of from database.
-
-    **This endpoint is only usable by CAA**
     """
     kinds = await cruds_phonebook.get_all_kinds(db)
     kinds_schema = schemas_phonebook.KindsReturn(kinds=kinds)
@@ -95,7 +88,7 @@ async def create_association(
     """
     Create a new association by giving an AssociationBase scheme (contains the association name, desctription and type)
 
-    **This endpoint is only usable by administrators**
+    **This endpoint is only usable by CAA and BDE**
     """
     id = str(uuid.uuid4())
     date = datetime.date.today()
@@ -117,15 +110,18 @@ async def update_association(
     association_id: str,
     association: schemas_phonebook.AssociationEditComplete,
     db: AsyncSession = Depends(get_db),
-    user=Depends(
-        is_user_a_member_of(GroupType.BDE) or is_user_a_member_of(GroupType.CAA)
-    ),
 ):
     """
     Update an association
 
-    **This endpoint is only usable by CAA**
+    **This endpoint is only usable by CAA, BDE and association's president**
     """
+    Depends(
+        is_user_a_member_of(GroupType.BDE)
+        or is_user_a_member_of(GroupType.CAA)
+        or cruds_phonebook.is_user_the_president_of(association_id, db)
+    )
+
     if association_id != association.id:
         raise HTTPException(
             status_code=404,
@@ -149,7 +145,7 @@ async def delete_association(
     """
     Delete an association
 
-    **This endpoint is only usable by CAA**
+    **This endpoint is only usable by CAA and BDE**
     """
     return await cruds_phonebook.delete_association(association_id, db)
 
@@ -169,7 +165,7 @@ async def get_association_members(
     db: AsyncSession = Depends(get_db),
 ):
     """Get the list of memberships of an association."""
-    asso_memberships = await cruds_phonebook.get_mbmrships_by_association_id(
+    asso_memberships = await cruds_phonebook.get_memberships_by_association_id(
         association_id, db
     )
     members_complete = []
@@ -209,7 +205,7 @@ async def get_association_members(
 async def get_member_details(
     user_id: str, mandate_year: int, db: AsyncSession = Depends(get_db)
 ):
-    all_memberships = await cruds_phonebook.get_mbrship_by_user_id(user_id, db)
+    all_memberships = await cruds_phonebook.get_membership_by_user_id(user_id, db)
     member = await cruds_phonebook.get_member_by_id(user_id, db)
     member_memberships = []
     member_schema = schemas_phonebook.MemberBase.from_orm(member)
@@ -232,7 +228,7 @@ async def get_member_details(
 #     membership_id: str,
 #     db: AsyncSession = Depends(get_db)
 # ) -> schemas_phonebook.MemberBase:
-#     return await cruds_phonebook.get_mbrship_by_
+#     return await cruds_phonebook.get_membership_by_
 
 
 # ---------------------------------------------------------------------------- #
@@ -247,17 +243,20 @@ async def get_member_details(
 async def create_membership(
     membership: schemas_phonebook.MembershipPost,
     db: AsyncSession = Depends(get_db),
-    user=Depends(
-        is_user_a_member_of(GroupType.BDE) or is_user_a_member_of(GroupType.CAA)
-    ),
 ):
     """
     Create a new membership for a given association, a given user. Tags are used to indicate if
     the members has a main role in the association (president, secretary ...) and
     'role_name' is the display name for this membership
 
-    **This endpoint is only usable by BDE**
+    **This endpoint is only usable by CAA, BDE and association's president**
     """
+    Depends(
+        is_user_a_member_of(GroupType.BDE)
+        or is_user_a_member_of(GroupType.CAA)
+        or cruds_phonebook.is_user_the_president_of(membership.association_id, db)
+    )
+
     role_tags = dict(membership).pop("role_tags")
     role_tags = role_tags.split(";")
     association = await cruds_phonebook.get_association_by_id(
@@ -291,15 +290,17 @@ async def update_membership(
     membership: schemas_phonebook.MembershipEdit,
     membership_id: str,
     db: AsyncSession = Depends(get_db),
-    user=Depends(
-        is_user_a_member_of(GroupType.BDE) or is_user_a_member_of(GroupType.CAA)
-    ),
 ):
     """
     Update a membership.
 
-    **This endpoint is only usable by CAA**
+    **This endpoint is only usable by CAA, BDE and association's president**
     """
+    Depends(
+        is_user_a_member_of(GroupType.BDE)
+        or is_user_a_member_of(GroupType.CAA)
+        or cruds_phonebook.is_user_the_president_of(membership.association_id, db)
+    )
     role_tags = dict(membership).pop("role_tags")
     if role_tags is not None:
         db_role_tags = await cruds_phonebook.get_membership_roletags(membership_id, db)
@@ -322,15 +323,18 @@ async def update_membership(
 async def delete_membership(
     membership_id: str,
     db: AsyncSession = Depends(get_db),
-    user=Depends(
-        is_user_a_member_of(GroupType.BDE) or is_user_a_member_of(GroupType.CAA)
-    ),
 ):
     """
     Delete a membership.
 
-    **This endpoint is only usable by CAA**
+    **This endpoint is only usable by CAA, BDE and association's president**
     """
+    membership = await cruds_phonebook.get_membership_by_id(membership_id, db)
+    Depends(
+        is_user_a_member_of(GroupType.BDE)
+        or is_user_a_member_of(GroupType.CAA)
+        or cruds_phonebook.is_user_the_president_of(membership.association_id, db)
+    )
 
     await cruds_phonebook.delete_role_tag(membership_id, db)
     await cruds_phonebook.delete_membership(membership_id, db)
@@ -348,9 +352,6 @@ async def delete_membership(
 async def create_association_logo(
     association_id: str,
     image: UploadFile = File(...),
-    user: models_core.CoreUser = Depends(
-        is_user_a_member_of(GroupType.BDE) or is_user_a_member_of(GroupType.CAA)
-    ),
     request_id: str = Depends(get_request_id),
     db: AsyncSession = Depends(get_db),
 ):
@@ -358,6 +359,11 @@ async def create_association_logo(
     Upload a logo for an association.
     **The user must be a member of the group CAA to use this endpoint**
     """
+    Depends(
+        is_user_a_member_of(GroupType.BDE)
+        or is_user_a_member_of(GroupType.CAA)
+        or cruds_phonebook.is_user_the_president_of(association_id, db)
+    )
 
     association = await cruds_phonebook.get_association_by_id(association_id, db)
     if association is None:

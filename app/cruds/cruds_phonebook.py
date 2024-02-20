@@ -1,12 +1,66 @@
 # from sqlalchemy.orm import selectinload
 
+import logging
+from typing import Any, Callable, Coroutine
+
+from fastapi import Depends, HTTPException
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.dependencies import get_db, get_request_id, get_user_from_token_with_scopes
 from app.models import models_core, models_phonebook  # , models_core
 from app.schemas import schemas_phonebook
 from app.utils.types import phonebook_types
+from app.utils.types.scopes_type import ScopeType
+
+# ---------------------------------------------------------------------------- #
+#                               President test                                 #
+# ---------------------------------------------------------------------------- #
+
+hyperion_access_logger = logging.getLogger("hyperion.access")
+hyperion_error_logger = logging.getLogger("hyperion.error")
+
+
+def is_user_the_president_of(
+    association_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> Callable[[models_core.CoreUser], Coroutine[Any, Any, models_core.CoreUser]]:
+    """
+    Generate a dependency which will:
+        * check if the request header contains a valid API JWT token (a token that can be used to call endpoints from the API)
+        * make sure the user making the request exists and is the president of the association with the given id
+        * return the corresponding user `models_core.CoreUser` object
+    """
+
+    async def is_user_the_president_of(
+        user: models_core.CoreUser = Depends(
+            get_user_from_token_with_scopes([[ScopeType.API]])
+        ),
+        request_id: str = Depends(get_request_id),
+    ) -> models_core.CoreUser:
+        """
+        A dependency that checks that user is the president of the association with the given id then returns the corresponding user.
+        """
+        memberships = get_memberships_by_association_id(association_id, db)
+        for membership in memberships:
+            if (
+                membership.user_id == user.id
+                and phonebook_types.RoleTags.president
+                in membership.role_tags.split(";")
+            ):
+                return user
+
+        hyperion_access_logger.warning(
+            f"Is_user_the_president_of: user is not the president of the association {association_id} ({request_id})"
+        )
+
+        raise HTTPException(
+            status_code=403,
+            detail=f"Unauthorized, user is not the president of the association {association_id}",
+        )
+
+    return is_user_the_president_of
 
 
 # ---------------------------------------------------------------------------- #
@@ -75,7 +129,7 @@ async def get_member_by_id(
     return result.scalars().first()
 
 
-async def get_mbrship_by_user_id(
+async def get_membership_by_user_id(
     user_id: str, db: AsyncSession
 ) -> list[models_phonebook.Membership] | None:
     """Return all memberships with id from database"""
@@ -87,7 +141,7 @@ async def get_mbrship_by_user_id(
     return result.scalars().all()
 
 
-async def get_mbmrships_by_association_id(
+async def get_memberships_by_association_id(
     association_id: str, db: AsyncSession
 ) -> list[models_phonebook.Membership] | None:
     """Return all memberships with id from database"""
@@ -97,6 +151,18 @@ async def get_mbmrships_by_association_id(
         )
     )
     return result.scalars().all()
+
+
+async def get_membership_by_id(
+    membership_id: str, db: AsyncSession
+) -> models_phonebook.Membership | None:
+    """Return the membership with id from database"""
+    result = await db.execute(
+        select(models_phonebook.Membership).where(
+            models_phonebook.Membership.id == membership_id
+        )
+    )
+    return result.scalars().first()
 
 
 # ---------------------------------------------------------------------------- #

@@ -75,6 +75,7 @@ class MemberBase(schemas_core.CoreUserSimple):
     nickname: str | None = None
     firstname: str
     name: str
+    promo: int
 
     class Config:
         orm_mode = True
@@ -92,7 +93,7 @@ class Members(schemas_core.CoreUserSimple):
     nickname: str | None = None
     firstname: str
     email: str
-    promotion: int
+    promo: int
 
     class config:
         orm_mode = True
