@@ -272,7 +272,7 @@ def test_update_membership_admin():
     )
     assert response.status_code == 204
 
-#A modifier en ajoutant mandate_year
+
 def test_delete_membership_admin():
     # create a membership to delete
     response = client.post(
@@ -292,15 +292,19 @@ def test_delete_membership_admin():
             "user_id": phonebook_user_simple.id,
             "association_id": association_id,
             "role_name": "VP Emprunts",
+            "role_tags":"VP Emprunts",
             "mandate_year": 2023,
         },
         headers={"Authorization": f"Bearer {token_caa}"},
     )
     assert response.status_code == 201
+    member_id = response.json()["user_id"]
+    membership_mandate_year = response.json()["mandate_year"]
 
     response = client.request(
         method="DELETE",
-        url="/phonebook/associations/memberships",
+        url=f"/phonebook/associations/memberships/{membership_mandate_year}",
+        json={"association_id": association_id, "user_id": member_id},
         headers={"Authorization": f"Bearer {token_caa}"},
     )
     assert response.status_code == 204
@@ -322,16 +326,18 @@ def test_delete_membership_simple():
             "user_id": phonebook_user_simple.id,
             "association_id": association_id,
             "role_name": "VP Emprunts",
+            "role_tags":"VP Emprunts",
             "mandate_year": 2023,
         },
         headers={"Authorization": f"Bearer {token_caa}"},
     )
     assert response.status_code == 201
     member_id = response.json()["user_id"]
+    membership_mandate_year = response.json()["mandate_year"]
 
     response = client.request(
         method="DELETE",
-        url="/phonebook/associations/memberships",
+        url=f"/phonebook/associations/memberships/{membership_mandate_year}",
         json={"association_id": association_id, "user_id": member_id},
         headers={"Authorization": f"Bearer {token_simple}"},
     )
