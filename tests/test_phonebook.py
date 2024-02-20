@@ -269,3 +269,35 @@ def test_get_members_by_association_id_simple():
         headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response.status_code == 200
+
+
+def test_get_all_roles_admin():
+    response = client.get(
+        "/phonebook/roles/", headers={"Authorization": f"Bearer {token_caa}"}
+    )
+    assert response.status_code == 200
+
+
+def test_get_all_roles_simple():
+    response = client.get(
+        "/phonebook/roles/", headers={"Authorization": f"Bearer {token_simple}"}
+    )
+    assert response.status_code == 403
+
+
+def test_update_role_admin():
+    response = client.patch(
+        f"/phonebook/roles/{role.id}/",
+        json={"name": "VP Prêts"},
+        headers={"Authorization": f"Bearer {token_caa}"},
+    )
+    assert response.status_code == 204
+
+
+def test_update_role_simple():
+    response = client.patch(
+        f"/phonebook/roles/{role.id}/",
+        json={"name": "VP Prêts"},
+        headers={"Authorization": f"Bearer {token_simple}"},
+    )
+    assert response.status_code == 403
