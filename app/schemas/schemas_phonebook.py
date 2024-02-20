@@ -27,7 +27,7 @@ class AssociationEdit(BaseModel):
     name: str | None
     kind: str | None
     description: str | None
-    mandate_year: str | None
+    mandate_year: int | None
 
 
 class AssociationEditComplete(AssociationEdit):
@@ -88,20 +88,20 @@ class MemberComplete(MemberBase):
         orm_mode = True
 
 
-class Members(schemas_core.CoreUserSimple):
-    name: str
-    nickname: str | None = None
-    firstname: str
-    email: str
-    promo: int
+# class Members(schemas_core.CoreUserSimple):
+#     name: str
+#     nickname: str | None = None
+#     firstname: str
+#     email: str
+#     promo: int
 
-    class config:
-        orm_mode = True
+#     class config:
+#         orm_mode = True
 
 
-class ReturnMembers(BaseModel):
-    members: list[Members]
-    memberships: list[MembershipBase]
+# class ReturnMembers(BaseModel):
+#     members: list[Members]
+#     memberships: list[MembershipBase]
 
 
 class KindsReturn(BaseModel):
