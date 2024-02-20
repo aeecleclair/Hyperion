@@ -303,7 +303,8 @@ async def get_membership_roletags(membership_id: str, db: AsyncSession):
             models_phonebook.AttributedRoleTags.membership_id == membership_id
         )
     )
-    return list(result.scalars().all())
+    result = result.scalars().all()
+    return [el.tag for el in result]
 
 
 async def delete_role_tag(membership_id: str, db: AsyncSession):
