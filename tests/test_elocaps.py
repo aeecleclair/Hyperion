@@ -274,62 +274,48 @@ def test_cancel_game():
 
 
 def test_create_game():
-    # assert (
-    #     client.post(
-    #         "/elocaps/games",
-    #         headers={"Authorization": f"Bearer {users[0]['token']}"},
-    #         json={
-    #             "mode": CapsMode.SINGLE,
-    #             "players": [
-    #                 {"user_id": users[0]["user"].id, "team": 1, "score": 1},
-    #                 {"user_id": newUser.id, "team": 2, "score": -1},
-    #             ],
-    #         },
-    #     ).status_code
-    #     == 201
-    # )
-    # response = client.get(
-    #     "/elocaps/games/latest",
-    #     headers={"Authorization": f"Bearer {users[0]['token']}"},
-    # )
-    # assert (
-    #     response.status_code == 200
-    #     and (
-    #         game_player := next(
-    #             i for i in response.json()[0]["game_players"] if i["team"] == 2
-    #         )
-    #     )["score"]
-    #     == -1
-    #     and game_player["elo_gain"] is not None
-    # )
-    # assert (
-    #     client.post(
-    #         "/elocaps/games",
-    #         headers={"Authorization": f"Bearer {users[0]['token']}"},
-    #         json={
-    #             "mode": CapsMode.SINGLE,
-    #             "players": [
-    #                 {"user_id": users[0]["user"].id, "team": 1, "score": 1},
-    #                 {"user_id": users[0]["user"].id, "team": 2, "score": -1},
-    #             ],
-    #         },
-    #     ).status_code
-    #     == 400
-    # )
-    # assert (
-    #     client.post(
-    #         "/elocaps/games",
-    #         headers={"Authorization": f"Bearer {users[2]['token']}"},
-    #         json={
-    #             "mode": CapsMode.SINGLE,
-    #             "players": [
-    #                 {"user_id": users[0]["user"].id, "team": 1, "score": 1},
-    #                 {"user_id": users[1]["user"].id, "team": 2, "score": -1},
-    #             ],
-    #         },
-    #     ).status_code
-    #     == 400
-    # )
+    assert (
+        client.post(
+            "/elocaps/games",
+            headers={"Authorization": f"Bearer {users[0]['token']}"},
+            json={
+                "mode": CapsMode.SINGLE,
+                "players": [
+                    {"user_id": users[0]["user"].id, "team": 1, "score": 1},
+                    {"user_id": newUser.id, "team": 2, "score": -1},
+                ],
+            },
+        ).status_code
+        == 201
+    )
+    response = client.get(
+        "/elocaps/games/latest",
+        headers={"Authorization": f"Bearer {users[0]['token']}"},
+    )
+    assert (
+        response.status_code == 200
+        and (
+            game_player := next(
+                i for i in response.json()[0]["game_players"] if i["team"] == 2
+            )
+        )["score"]
+        == -1
+        and game_player["elo_gain"] is not None
+    )
+    assert (
+        client.post(
+            "/elocaps/games",
+            headers={"Authorization": f"Bearer {users[0]['token']}"},
+            json={
+                "mode": CapsMode.SINGLE,
+                "players": [
+                    {"user_id": users[0]["user"].id, "team": 1, "score": 1},
+                    {"user_id": users[0]["user"].id, "team": 2, "score": -1},
+                ],
+            },
+        ).status_code
+        == 400
+    )
     assert (
         client.post(
             "/elocaps/games",
@@ -337,10 +323,26 @@ def test_create_game():
             json={
                 "mode": CapsMode.SINGLE,
                 "players": [
-                    {"user_id": "baguette", "team": 1, "score": 1},
-                    {"user_id": users[2]["user"].id, "team": 2, "score": -1},
+                    {"user_id": users[0]["user"].id, "team": 1, "score": 1},
+                    {"user_id": users[1]["user"].id, "team": 2, "score": -1},
                 ],
             },
         ).status_code
         == 400
     )
+    # The test below works only with postgresql
+
+    # assert (
+    #     client.post(
+    #         "/elocaps/games",
+    #         headers={"Authorization": f"Bearer {users[2]['token']}"},
+    #         json={
+    #             "mode": CapsMode.SINGLE,
+    #             "players": [
+    #                 {"user_id": "baguette", "team": 1, "score": 1},
+    #                 {"user_id": users[2]["user"].id, "team": 2, "score": -1},
+    #             ],
+    #         },
+    #     ).status_code
+    #     == 400
+    # )
