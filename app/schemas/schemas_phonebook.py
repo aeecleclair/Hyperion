@@ -74,10 +74,10 @@ class MemberBase(schemas_core.CoreUserSimple):
     id: str
     email: str
     phone: str | None = None
-    nickname: str
+    nickname: str | None = None
     firstname: str
     name: str
-    promo: int
+    promo: int | None = None
 
     class Config:
         orm_mode = True
