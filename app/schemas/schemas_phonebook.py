@@ -6,7 +6,8 @@ from app.schemas import schemas_core
 class RoleTagsReturn(BaseModel):
     tags: list[str]
 
-    orm_mode = True
+    class config:
+        orm_mode = True
 
 
 class add_roletag(BaseModel):
@@ -57,7 +58,7 @@ class MembershipPost(BaseModel):
 
 class MembershipBase(MembershipPost):
     id: str
-    mandate_year = int
+    mandate_year: int
 
     class Config:
         orm_mode = True
@@ -73,7 +74,7 @@ class MemberBase(schemas_core.CoreUserSimple):
     id: str
     email: str
     phone: str | None = None
-    nickname: str | None = None
+    nickname: str
     firstname: str
     name: str
     promo: int

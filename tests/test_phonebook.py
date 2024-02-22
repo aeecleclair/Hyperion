@@ -8,7 +8,6 @@ from app.utils.types.groups_type import GroupType
 from tests.commons import event_loop  # noqa
 from tests.commons import (
     add_object_to_db,
-    change_redis_client_status,
     client,
     create_api_access_token,
     create_user_with_groups,
@@ -27,13 +26,13 @@ membership_id: str = str(uuid.uuid4())
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects():
     global phonebook_user_BDE
-    phonebook_user_BDE = await create_user_with_groups([GroupType.BDE], db=db)
+    phonebook_user_BDE = await create_user_with_groups([GroupType.BDE])
 
     global token_BDE
     token_BDE = create_api_access_token(phonebook_user_BDE)
 
     global phonebook_user_simple
-    phonebook_user_simple = await create_user_with_groups([GroupType.student], db=db)
+    phonebook_user_simple = await create_user_with_groups([GroupType.student])
 
     global token_simple
     token_simple = create_api_access_token(phonebook_user_simple)
