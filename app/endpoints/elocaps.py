@@ -39,8 +39,8 @@ async def register_game(
         for player in game_params.players:
             await cruds_elocaps.insert_player_into_game(db, game, player)
         complete_game = await cruds_elocaps.get_game_details(db, game.id)
-        if complete_game is None:
-            raise HTTPException(500, "We are screwed, the game has disappeared")
+        # Since it has just been inserted, it should still be there
+        assert complete_game is not None
         for game_player in complete_game.game_players:
             team = game_player.team
             elo_gain = round(
@@ -52,6 +52,9 @@ async def register_game(
                 )
             )
             await cruds_elocaps.set_player_elo_gain(db, game_player, elo_gain)
+        creator = await cruds_elocaps.get_game_player(db, game.id, user.id)
+        assert creator is not None
+        await cruds_elocaps.user_game_validation(db, creator)
         return complete_game
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error))
@@ -133,12 +136,34 @@ async def confirm_game(
             raise HTTPException(
                 400, "You are not part of that game, or it doesn't exist"
             )
+        if player.game.cancelled:
+            raise HTTPException(400, "This game has been cancelled")
         await cruds_elocaps.user_game_validation(db, player)
         if player.game.is_confirmed:
             await cruds_elocaps.end_game(db, game_id)
         return await cruds_elocaps.get_game_details(db, game_id)
     except ValueError as error:
         raise HTTPException(400, str(error))
+
+
+@router.post(
+    "/elocaps/games/{game_id}/cancel",
+    status_code=201,
+    response_model=schemas_elocaps.Game,
+    tags=[Tags.elocaps],
+)
+async def cancel_game(
+    game_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    player = await cruds_elocaps.get_game_player(db, game_id=game_id, user_id=user.id)
+    if not player:
+        raise HTTPException(400, "You are not part of that game, or it doesn't exist")
+    if player.game.is_confirmed:
+        raise HTTPException(400, "This game has already been confirmed")
+    await cruds_elocaps.cancel_game(db, player.game)
+    return await cruds_elocaps.get_game_details(db, game_id)
 
 
 @router.get(

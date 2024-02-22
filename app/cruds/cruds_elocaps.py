@@ -82,12 +82,8 @@ async def get_game_details(
 
 
 async def create_game(db: AsyncSession, game: models_elocaps.Game) -> None:
-    try:
-        db.add(game)
-        await db.commit()
-    except IntegrityError as error:
-        await db.rollback()
-        raise ValueError(error)
+    db.add(game)
+    await db.commit()
 
 
 async def insert_player_into_game(
@@ -128,12 +124,8 @@ async def insert_player_into_game(
 async def set_player_elo_gain(
     db: AsyncSession, game_player: models_elocaps.GamePlayer, gain: int
 ) -> None:
-    try:
-        game_player.elo_gain = gain
-        await db.commit()
-    except IntegrityError as error:
-        await db.rollback()
-        raise ValueError(error)
+    game_player.elo_gain = gain
+    await db.commit()
 
 
 async def get_waiting_games(
@@ -146,6 +138,7 @@ async def get_waiting_games(
         .where(
             (models_elocaps.Player.user_id == user_id)
             & not_(models_elocaps.GamePlayer.has_confirmed)
+            & not_(models_elocaps.Game.cancelled)
         )
     )
     return result.scalars().all()
@@ -249,3 +242,8 @@ async def get_winrate(
         / len(games),
         2,
     )
+
+
+async def cancel_game(db: AsyncSession, game: models_elocaps.Game) -> None:
+    game.cancelled = True
+    await db.commit()
