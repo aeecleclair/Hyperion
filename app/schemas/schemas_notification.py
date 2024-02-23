@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Message(BaseModel):
@@ -15,26 +15,23 @@ class Message(BaseModel):
         description="A message can be visible or not, if it is not visible, it should only trigger an action"
     )
 
-    title: str | None
-    content: str | None
+    title: str | None = None
+    content: str | None = None
 
     action_module: str | None = Field(
-        description="An identifier for the module that should be triggered when the notification is clicked"
+        None,
+        description="An identifier for the module that should be triggered when the notification is clicked",
     )
-    action_table: str | None
+    action_table: str | None = None
 
     delivery_datetime: datetime | None = Field(
-        description="The date the notification should be shown"
+        None, description="The date the notification should be shown"
     )
     expire_on: date
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class FirebaseDevice(BaseModel):
     user_id: str = Field(description="The Hyperion user id")
     firebase_device_token: str = Field("Firebase device token")
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)

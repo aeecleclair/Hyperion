@@ -56,7 +56,7 @@ async def edit_product(
     await db.execute(
         update(models_amap.Product)
         .where(models_amap.Product.id == product_id)
-        .values(**product_update.dict(exclude_none=True))
+        .values(**product_update.model_dump(exclude_none=True))
     )
     await db.commit()
 
@@ -139,7 +139,7 @@ async def create_delivery(
     db: AsyncSession,
 ) -> models_amap.Delivery | None:
     """Create a new delivery in database and return it"""
-    db.add(models_amap.Delivery(**delivery.dict(exclude={"products_ids"})))
+    db.add(models_amap.Delivery(**delivery.model_dump(exclude={"products_ids"})))
     try:
         await db.commit()
     except IntegrityError:
@@ -208,7 +208,7 @@ async def edit_delivery(
     await db.execute(
         update(models_amap.Delivery)
         .where(models_amap.Delivery.id == delivery_id)
-        .values(**delivery.dict(exclude_none=True))
+        .values(**delivery.model_dump(exclude_none=True))
     )
     await db.commit()
 
@@ -254,7 +254,9 @@ async def add_order_to_delivery(
     order: schemas_amap.OrderComplete,
 ):
     db.add(
-        models_amap.Order(**order.dict(exclude={"products_ids", "products_quantity"}))
+        models_amap.Order(
+            **order.model_dump(exclude={"products_ids", "products_quantity"})
+        )
     )
     try:
         await db.commit()
@@ -278,7 +280,7 @@ async def edit_order_without_products(
     await db.execute(
         update(models_amap.Order)
         .where(models_amap.Order.order_id == order_id)
-        .values(**order.dict(exclude_none=True))
+        .values(**order.model_dump(exclude_none=True))
     )
     try:
         await db.commit()
@@ -477,6 +479,6 @@ async def edit_information(
     await db.execute(
         update(models_amap.AmapInformation)
         .where(models_amap.AmapInformation.unique_id == "information")
-        .values(**information_update.dict(exclude_none=True))
+        .values(**information_update.model_dump(exclude_none=True))
     )
     await db.commit()

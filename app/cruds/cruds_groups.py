@@ -116,6 +116,6 @@ async def update_group(
     await db.execute(
         update(models_core.CoreGroup)
         .where(models_core.CoreGroup.id == group_id)
-        .values(**group_update.dict(exclude_none=True))
+        .values(**group_update.model_dump(exclude_none=True))
     )
     await db.commit()

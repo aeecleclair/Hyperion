@@ -70,7 +70,7 @@ async def create_product(
 
     **The user must be a member of the group AMAP to use this endpoint**
     """
-    db_product = models_amap.Product(id=str(uuid.uuid4()), **product.dict())
+    db_product = models_amap.Product(id=str(uuid.uuid4()), **product.__dict__)
 
     try:
         result = await cruds_amap.create_product(product=db_product, db=db)
@@ -191,7 +191,7 @@ async def create_delivery(
     db_delivery = schemas_amap.DeliveryComplete(
         id=str(uuid.uuid4()),
         status=DeliveryStatusType.creation,
-        **delivery.dict(),
+        **delivery.model_dump(),
     )
     if await cruds_amap.is_there_a_delivery_on(
         db=db, delivery_date=db_delivery.delivery_date
@@ -446,7 +446,7 @@ async def add_order_to_delievery(
         amount=amount,
         ordering_date=ordering_date,
         delivery_date=delivery.delivery_date,
-        **order.dict(),
+        **order.model_dump(),
     )
     balance: models_amap.Cash | None = await cruds_amap.get_cash_by_id(
         db=db,
@@ -460,7 +460,7 @@ async def add_order_to_delievery(
             user_id=order.user_id,
         )
         balance = models_amap.Cash(
-            **new_cash_db.dict(),
+            **new_cash_db.model_dump(),
         )
         await cruds_amap.create_cash_of_user(
             cash=balance,
@@ -510,7 +510,7 @@ async def add_order_to_delievery(
     status_code=204,
     tags=[Tags.amap],
 )
-async def edit_order_from_delievery(
+async def edit_order_from_delivery(
     order_id: str,
     order: schemas_amap.OrderEdit,
     db: AsyncSession = Depends(get_db),
@@ -580,7 +580,7 @@ async def edit_order_from_delievery(
             delivery_id=previous_order.delivery_id,
             user_id=previous_order.user_id,
             amount=amount,
-            **order.dict(),
+            **order.model_dump(),
         )
 
         previous_amount = previous_order.amount

@@ -1,8 +1,10 @@
 from functools import cached_property
+from typing import Any
 
 from jose import jwk
 from jose.exceptions import JWKError
-from pydantic import BaseSettings, root_validator
+from pydantic import computed_field, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.utils.auth import providers
 
@@ -20,13 +22,22 @@ class Settings(BaseSettings):
     To access these settings, the `get_settings` dependency should be used.
     """
 
+    # By default, the settings are loaded from the `.env` file but this behaviour can be overridden by using
+    # `_env_file` parameter during instantiation
+    # Ex: `Settings(_env_file=".env.dev")`
+    # Without this property, @cached_property decorator raise "TypeError: cannot pickle '_thread.RLock' object"
+    # See https://github.com/samuelcolvin/pydantic/issues/1241
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="ignore"
+    )
+
     # NOTE: Variables without a value should not be configured in this class, but added to the dotenv .env file
 
     #####################################
     # SMTP configuration using starttls #
     #####################################
 
-    SMTP_ACTIVE: bool
+    SMTP_ACTIVE: bool = False
     SMTP_PORT: int
     SMTP_SERVER: str
     SMTP_USERNAME: str
@@ -41,10 +52,10 @@ class Settings(BaseSettings):
     # If the following parameters are not set, logging won't use the Matrix handler
     # MATRIX_SERVER_BASE_URL is optional, the official Matrix server will be used if not configured
     # Advanced note: Username and password will be used to ask for an access token. A Matrix custom client `Hyperion` is used to make all requests
-    MATRIX_SERVER_BASE_URL: str | None
-    MATRIX_TOKEN: str | None
-    MATRIX_LOG_ERROR_ROOM_ID: str | None
-    MATRIX_LOG_AMAP_ROOM_ID: str | None
+    MATRIX_SERVER_BASE_URL: str | None = None
+    MATRIX_TOKEN: str | None = None
+    MATRIX_LOG_ERROR_ROOM_ID: str | None = None
+    MATRIX_LOG_AMAP_ROOM_ID: str | None = None
 
     ########################
     # Redis configuration #
@@ -54,7 +65,7 @@ class Settings(BaseSettings):
     # If you want to use a custom configuration, a password and a specific binds should be used to avoid security issues
     REDIS_HOST: str
     REDIS_PORT: int
-    REDIS_PASSWORD: str | None
+    REDIS_PASSWORD: str | None = None
     REDIS_LIMIT: int
     REDIS_WINDOW: int
 
@@ -72,11 +83,11 @@ class Settings(BaseSettings):
     SQLITE_DB: str | None = (
         None  # If set, the application use a SQLite database instead of PostgreSQL, for testing or development purposes (should not be used if possible)
     )
-    POSTGRES_HOST: str
-    POSTGRES_USER: str
-    POSTGRES_PASSWORD: str
-    POSTGRES_DB: str
-    DATABASE_DEBUG: bool  # If True, the database will log all queries
+    POSTGRES_HOST: str = ""
+    POSTGRES_USER: str = ""
+    POSTGRES_PASSWORD: str = ""
+    POSTGRES_DB: str = ""
+    DATABASE_DEBUG: bool = False  # If True, the database will log all queries
 
     #####################
     # Hyperion settings #
@@ -105,11 +116,11 @@ class Settings(BaseSettings):
     # Tokens validity #
     ###################
 
-    USER_ACTIVATION_TOKEN_EXPIRE_HOURS = 24
-    PASSWORD_RESET_TOKEN_EXPIRE_HOURS = 12
-    ACCESS_TOKEN_EXPIRE_MINUTES = 30
-    REFRESH_TOKEN_EXPIRE_MINUTES = 60 * 24 * 14  # 14 days
-    AUTHORIZATION_CODE_EXPIRE_MINUTES = 7
+    USER_ACTIVATION_TOKEN_EXPIRE_HOURS: int = 24
+    PASSWORD_RESET_TOKEN_EXPIRE_HOURS: int = 12
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 14  # 14 days
+    AUTHORIZATION_CODE_EXPIRE_MINUTES: int = 7
 
     ###############################################
     # Authorization using OAuth or Openid connect #
@@ -129,7 +140,7 @@ class Settings(BaseSettings):
     )
 
     # Openid connect issuer name
-    AUTH_ISSUER = "hyperion"
+    AUTH_ISSUER: str = "hyperion"
 
     # Add an AUTH_CLIENTS variable to the .env dotenv to configure auth clients
     # This variable should have the format: [["client id", "client secret", "redirect_uri", "app.utils.auth.providers class name"]]
@@ -149,16 +160,19 @@ class Settings(BaseSettings):
     # The combination of `@property` and `@lru_cache` should be replaced by `@cached_property`
     # See https://docs.python.org/3.8/library/functools.html?highlight=#functools.cached_property
 
+    @computed_field  # type: ignore[misc] # Current issue with mypy, see https://docs.pydantic.dev/2.0/usage/computed_fields/ and https://github.com/python/mypy/issues/1362
     @cached_property
-    def RSA_PRIVATE_KEY(cls):
+    def RSA_PRIVATE_KEY(cls) -> Any:
         return jwk.construct(cls.RSA_PRIVATE_PEM_STRING, algorithm="RS256")
 
+    @computed_field  # type: ignore[misc]
     @cached_property
-    def RSA_PUBLIC_KEY(cls):
+    def RSA_PUBLIC_KEY(cls) -> Any:
         return cls.RSA_PRIVATE_KEY.public_key()
 
+    @computed_field  # type: ignore[misc]
     @cached_property
-    def RSA_PUBLIC_JWK(cls):
+    def RSA_PUBLIC_JWK(cls) -> dict[str, list[dict[str, str]]]:
         JWK = cls.RSA_PUBLIC_KEY.to_dict()
         JWK.update(
             {
@@ -169,11 +183,12 @@ class Settings(BaseSettings):
         return {"keys": [JWK]}
 
     # Tokens validity
-    USER_ACTIVATION_TOKEN_EXPIRES_HOURS = 24
-    PASSWORD_RESET_TOKEN_EXPIRES_HOURS = 12
+    USER_ACTIVATION_TOKEN_EXPIRES_HOURS: int = 24
+    PASSWORD_RESET_TOKEN_EXPIRES_HOURS: int = 12
 
     # This property parse AUTH_CLIENTS to create a dictionary of auth clients:
     # {"client_id": AuthClientClassInstance}
+    @computed_field  # type: ignore[misc]
     @cached_property
     def KNOWN_AUTH_CLIENTS(cls) -> dict[str, providers.BaseAuthClient]:
         clients = {}
@@ -205,58 +220,55 @@ class Settings(BaseSettings):
     # Validators may be used to perform more complexe validation
     # For example, we can check that at least one of two optional fields is set or that the RSA key is provided and valid
 
-    # TODO: Pydantic 2.0 will allow to use `@model_validator`
-
-    @root_validator
-    def check_database_settings(cls, settings: dict):
+    @model_validator(mode="after")
+    def check_database_settings(self) -> "Settings":
         """
         All fields are optional, but the dotenv should configure SQLITE_DB or a Postgres database
         """
-        SQLITE_DB = settings.get("SQLITE_DB")
-        POSTGRES_HOST = settings.get("POSTGRES_HOST")
-        POSTGRES_USER = settings.get("POSTGRES_USER")
-        POSTGRES_PASSWORD = settings.get("POSTGRES_PASSWORD")
-        POSTGRES_DB = settings.get("POSTGRES_DB")
-
         if not (
-            SQLITE_DB
-            or (POSTGRES_HOST and POSTGRES_USER and POSTGRES_PASSWORD and POSTGRES_DB)
+            self.SQLITE_DB
+            or (
+                self.POSTGRES_HOST
+                and self.POSTGRES_USER
+                and self.POSTGRES_PASSWORD
+                and self.POSTGRES_DB
+            )
         ):
             raise ValueError(
                 "Either SQLITE_DB or POSTGRES_HOST, POSTGRES_USER, POSTGRES_PASSWORD and POSTGRES_DB should be configured in the dotenv"
             )
 
-        return settings
+        return self
 
-    @root_validator
-    def check_secrets(cls, settings: dict):
-        ACCESS_TOKEN_SECRET_KEY = settings.get("ACCESS_TOKEN_SECRET_KEY")
-        RSA_PRIVATE_PEM_STRING = settings.get("RSA_PRIVATE_PEM_STRING")
-
-        if not ACCESS_TOKEN_SECRET_KEY:
+    @model_validator(mode="after")
+    def check_secrets(self) -> "Settings":
+        if not self.ACCESS_TOKEN_SECRET_KEY:
             raise ValueError(
                 "ACCESS_TOKEN_SECRET_KEY should be configured in the dotenv"
             )
 
-        if not RSA_PRIVATE_PEM_STRING:
+        if not self.RSA_PRIVATE_PEM_STRING:
             raise ValueError(
                 "RSA_PRIVATE_PEM_STRING should be configured in the dotenv"
             )
 
         try:
-            jwk.construct(RSA_PRIVATE_PEM_STRING, algorithm="RS256")
+            jwk.construct(self.RSA_PRIVATE_PEM_STRING, algorithm="RS256")
         except JWKError as e:
             raise ValueError("RSA_PRIVATE_PEM_STRING is not a valid RSA key", e)
 
-        return settings
+        return self
 
-    class Config:
-        # By default, the settings are loaded from the `.env` file but this behaviour can be overridden by using
-        # `_env_file` parameter during instantiation
-        # Ex: `Settings(_env_file=".env.dev")`
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    @model_validator(mode="after")
+    def init_cached_property(self) -> "Settings":
+        """
+        Cached property are not computed during the instantiation of the class, but when they are accessed for the first time.
+        By calling them in this validator, we force their initialization during the instantiation of the class.
+        This allow them to raise error on Hyperion startup if they are not correctly configured instead of creating an error on runtime.
+        """
+        self.KNOWN_AUTH_CLIENTS
+        self.RSA_PRIVATE_KEY
+        self.RSA_PUBLIC_KEY
+        self.RSA_PUBLIC_JWK
 
-        # Without this property, @cached_property decorator raise "TypeError: cannot pickle '_thread.RLock' object"
-        # See https://github.com/samuelcolvin/pydantic/issues/1241
-        keep_untouched = (cached_property,)
+        return self

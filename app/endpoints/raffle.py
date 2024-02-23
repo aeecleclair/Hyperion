@@ -72,7 +72,7 @@ async def create_raffle(
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
     raffle.status = RaffleStatusType.creation
-    db_raffle = models_raffle.Raffle(id=str(uuid.uuid4()), **raffle.dict())
+    db_raffle = models_raffle.Raffle(id=str(uuid.uuid4()), **raffle.model_dump())
 
     try:
         result = await cruds_raffle.create_raffle(raffle=db_raffle, db=db)
@@ -309,7 +309,9 @@ async def create_packticket(
             detail=f"{user.id} user is unauthorized to manage the raffle {packticket.raffle_id}",
         )
 
-    db_packticket = models_raffle.PackTicket(id=str(uuid.uuid4()), **packticket.dict())
+    db_packticket = models_raffle.PackTicket(
+        id=str(uuid.uuid4()), **packticket.model_dump()
+    )
 
     try:
         result = await cruds_raffle.create_packticket(packticket=db_packticket, db=db)
@@ -638,7 +640,7 @@ async def create_prize(
             detail=f"Raffle {raffle.id} is not in Creation Mode",
         )
 
-    db_prize = models_raffle.Prize(id=str(uuid.uuid4()), **prize.dict())
+    db_prize = models_raffle.Prize(id=str(uuid.uuid4()), **prize.model_dump())
 
     try:
         result = await cruds_raffle.create_prize(prize=db_prize, db=db)

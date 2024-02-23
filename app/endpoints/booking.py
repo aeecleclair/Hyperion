@@ -267,7 +267,7 @@ async def create_booking(
         id=str(uuid.uuid4()),
         decision=Decision.pending,
         applicant_id=user.id,
-        **booking.dict(),
+        **booking.model_dump(),
     )
     await cruds_booking.create_booking(booking=db_booking, db=db)
     result = await cruds_booking.get_booking_by_id(db=db, booking_id=db_booking.id)
@@ -434,7 +434,7 @@ async def create_room(
     try:
         room_db = models_booking.Room(
             id=str(uuid.uuid4()),
-            **room.dict(),
+            **room.model_dump(),
         )
         return await cruds_booking.create_room(db=db, room=room_db)
     except ValueError as error:

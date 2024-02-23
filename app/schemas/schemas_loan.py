@@ -1,6 +1,6 @@
-from datetime import date, timedelta
+from datetime import date
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas import schemas_core
 
@@ -10,9 +10,7 @@ class LoanerBase(BaseModel):
     group_manager_id: str = Field(
         description="The group manager id should by a group identifier"
     )
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class LoanerUpdate(BaseModel):
@@ -30,17 +28,17 @@ class ItemBase(BaseModel):
     name: str
     suggested_caution: int
     total_quantity: int
-    suggested_lending_duration: timedelta
-
-    class Config:
-        orm_mode = True
+    suggested_lending_duration: int = Field(description="duration in seconds")
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ItemUpdate(BaseModel):
     name: str | None = None
     suggested_caution: int | None = None
     total_quantity: int | None = None
-    suggested_lending_duration: timedelta | None = None
+    suggested_lending_duration: int | None = Field(
+        description="duration in seconds", default=None
+    )
 
 
 class Item(ItemBase):
@@ -66,9 +64,7 @@ class LoanBase(BaseModel):
     end: date
     notes: str | None = None
     caution: str | None = None
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ItemBorrowed(BaseModel):
@@ -136,6 +132,6 @@ class Loan(LoanBase):
 class LoanExtend(BaseModel):
     # The client can either provide a new end date or a timedelta to be added to the old end date.
     end: date | None = Field(None, description="A new return date for the Loan")
-    duration: timedelta | None = Field(
-        None, description="The duration by which the loan should be extended"
+    duration: int | None = Field(
+        None, description="The duration by which the loan should be extended in seconds"
     )

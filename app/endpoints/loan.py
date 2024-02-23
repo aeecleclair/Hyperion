@@ -1,4 +1,5 @@
 import uuid
+from datetime import timedelta
 from typing import Sequence
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -693,7 +694,7 @@ async def update_loan(  # noqa: C901
 
     try:
         # We need to remove the item_ids list from the schema before calling the update_loan crud function
-        loan_in_db_update = schemas_loan.LoanInDBUpdate(**loan_update.dict())
+        loan_in_db_update = schemas_loan.LoanInDBUpdate(**loan_update.model_dump())
         await cruds_loan.update_loan(
             loan_id=loan_id, loan_update=loan_in_db_update, db=db
         )
@@ -852,7 +853,7 @@ async def extend_loan(
         )
     elif loan_extend.duration is not None:
         loan_update = schemas_loan.LoanUpdate(
-            end=loan.end + loan_extend.duration,
+            end=loan.end + timedelta(seconds=loan_extend.duration),
         )
 
     await cruds_loan.update_loan(

@@ -3,7 +3,7 @@
 from datetime import datetime
 
 from fastapi import Form
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, field_validator
 
 from app.utils import validators
 from app.utils.examples import examples_auth
@@ -36,9 +36,20 @@ class AuthorizeValidation(Authorize):
     email: str
     password: str
 
+    # If we don't add these parameters
+    # the heritage from Authorize does not allow Mypy to infer the str | None
+    redirect_uri: str | None = None
+    scope: str | None = None
+    state: str | None = None
+    nonce: str | None = None
+    code_challenge: str | None = None
+    code_challenge_method: str | None = None
+
     # Email normalization, this will modify the email variable
     # https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
-    _normalize_email = validator("email", allow_reuse=True)(validators.email_normalizer)
+    _normalize_email = field_validator(
+        "email",
+    )(validators.email_normalizer)
 
     class config:
         schema_extra = {"example": examples_auth.example_AuthorizeValidation}

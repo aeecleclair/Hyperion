@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from app.utils import validators
 
@@ -9,9 +9,7 @@ class CineSessionTime(BaseModel):
     start: datetime
     duration: int
 
-    _normalize_start = validator("start", allow_reuse=True)(
-        validators.time_zone_converter
-    )
+    _normalize_start = field_validator("start")(validators.time_zone_converter)
 
 
 class CineSessionBase(CineSessionTime):
@@ -23,9 +21,7 @@ class CineSessionBase(CineSessionTime):
 
 class CineSessionComplete(CineSessionBase):
     id: str
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CineSessionUpdate(BaseModel):
@@ -36,6 +32,4 @@ class CineSessionUpdate(BaseModel):
     genre: str | None = None
     tagline: str | None = None
 
-    _normalize_start = validator("start", allow_reuse=True)(
-        validators.time_zone_converter
-    )
+    _normalize_start = field_validator("start")(validators.time_zone_converter)

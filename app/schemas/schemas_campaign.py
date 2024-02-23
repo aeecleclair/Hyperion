@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from app.schemas import schemas_core
 from app.utils.types.campaign_type import ListType, StatusType
@@ -13,24 +13,18 @@ class SectionBase(BaseModel):
 
 class SectionComplete(SectionBase):
     id: str
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ListMemberBase(BaseModel):
     user_id: str
     role: str
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ListMemberComplete(ListMemberBase):
     user: schemas_core.CoreUserSimple
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ListBase(BaseModel):
@@ -41,14 +35,12 @@ class ListBase(BaseModel):
     type: ListType
     section_id: str
     members: list[ListMemberBase]
-    program: str | None
+    program: str | None = None
 
 
 class ListComplete(ListBase):
     id: str
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class SectionReturn(BaseModel):
@@ -56,9 +48,7 @@ class SectionReturn(BaseModel):
     description: str
     id: str
     lists: list[ListComplete]
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ListReturn(BaseModel):
@@ -68,10 +58,8 @@ class ListReturn(BaseModel):
     type: ListType
     section: SectionComplete
     members: list[ListMemberComplete]
-    program: str | None
-
-    class Config:
-        orm_mode = True
+    program: str | None = None
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ListEdit(BaseModel):
@@ -86,33 +74,25 @@ class VoterGroup(BaseModel):
     """Base schema for voters (groups allowed to vote)."""
 
     group_id: str
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class VoteBase(BaseModel):
     """Base schema for a vote."""
 
     list_id: str
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class VoteStatus(BaseModel):
     status: StatusType
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class Result(BaseModel):
     list_id: str
     count: int
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class VoteStats(BaseModel):

@@ -2,7 +2,8 @@
 
 from datetime import date, datetime
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, ConfigDict, Field
+from pydantic.functional_validators import field_validator
 
 from app.utils import validators
 from app.utils.examples import examples_core
@@ -28,13 +29,11 @@ class CoreUserBase(BaseModel):
     firstname: str
     nickname: str | None = None
 
-    _normalize_name = validator("name", allow_reuse=True)(
+    _normalize_name = field_validator("name")(validators.trailing_spaces_remover)
+    _normalize_firstname = field_validator("firstname")(
         validators.trailing_spaces_remover
     )
-    _normalize_firstname = validator("firstname", allow_reuse=True)(
-        validators.trailing_spaces_remover
-    )
-    _normalize_nickname = validator("nickname", allow_reuse=True)(
+    _normalize_nickname = field_validator("nickname")(
         validators.trailing_spaces_remover
     )
 
@@ -45,27 +44,21 @@ class CoreGroupBase(BaseModel):
     name: str
     description: str | None = None
 
-    _normalize_name = validator("name", allow_reuse=True)(
-        validators.trailing_spaces_remover
-    )
+    _normalize_name = field_validator("name")(validators.trailing_spaces_remover)
 
 
 class CoreUserSimple(CoreUserBase):
     """Simplified schema for user's model, used when getting all users"""
 
     id: str
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CoreGroupSimple(CoreGroupBase):
     """Simplified schema for group's model, used when getting all groups"""
 
     id: str
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CoreUser(CoreUserSimple):
@@ -88,12 +81,10 @@ class CoreUserUpdate(BaseModel):
     phone: str | None = None
     floor: FloorsType | None = None
 
-    _normalize_nickname = validator("nickname", allow_reuse=True)(
+    _normalize_nickname = field_validator("nickname")(
         validators.trailing_spaces_remover
     )
-
-    class Config:
-        schema_extra = examples_core.example_CoreUserUpdate
+    model_config = ConfigDict(json_schema_extra=examples_core.example_CoreUserUpdate)
 
 
 class CoreUserUpdateAdmin(BaseModel):
@@ -105,18 +96,14 @@ class CoreUserUpdateAdmin(BaseModel):
     phone: str | None = None
     floor: FloorsType | None = None
 
-    _normalize_name = validator("name", allow_reuse=True)(
+    _normalize_name = field_validator("name")(validators.trailing_spaces_remover)
+    _normalize_firstname = field_validator("firstname")(
         validators.trailing_spaces_remover
     )
-    _normalize_firstname = validator("firstname", allow_reuse=True)(
+    _normalize_nickname = field_validator("nickname")(
         validators.trailing_spaces_remover
     )
-    _normalize_nickname = validator("nickname", allow_reuse=True)(
-        validators.trailing_spaces_remover
-    )
-
-    class Config:
-        schema_extra = examples_core.example_CoreUserUpdate
+    model_config = ConfigDict(json_schema_extra=examples_core.example_CoreUserUpdate)
 
 
 class CoreUserCreateRequest(BaseModel):
@@ -128,12 +115,11 @@ class CoreUserCreateRequest(BaseModel):
 
     # Email normalization, this will modify the email variable
     # https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
-    _normalize_email = validator("email", allow_reuse=True)(validators.email_normalizer)
-
-    class Config:
-        orm_mode = True
-
-        schema_extra = examples_core.example_CoreUserCreateRequest
+    _normalize_email = field_validator("email")(validators.email_normalizer)
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra=examples_core.example_CoreUserCreateRequest,
+    )
 
 
 class CoreBatchUserCreateRequest(BaseModel):
@@ -146,12 +132,11 @@ class CoreBatchUserCreateRequest(BaseModel):
 
     # Email normalization, this will modify the email variable
     # https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
-    _normalize_email = validator("email", allow_reuse=True)(validators.email_normalizer)
-
-    class Config:
-        orm_mode = True
-
-        schema_extra = examples_core.example_CoreBatchUserCreateRequest
+    _normalize_email = field_validator("email")(validators.email_normalizer)
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra=examples_core.example_CoreBatchUserCreateRequest,
+    )
 
 
 class CoreUserActivateRequest(CoreUserBase):
@@ -166,13 +151,11 @@ class CoreUserActivateRequest(CoreUserBase):
 
     # Password validator
     # https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
-    _normalize_password = validator("password", allow_reuse=True)(
-        validators.password_validator
+    _normalize_password = field_validator("password")(validators.password_validator)
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra=examples_core.example_CoreUserActivateRequest,
     )
-
-    class Config:
-        orm_mode = True
-        schema_extra = examples_core.example_CoreUserActivateRequest
 
 
 class CoreGroup(CoreGroupSimple):
@@ -191,9 +174,7 @@ class CoreGroupInDB(CoreGroupBase):
     """Schema for user activation"""
 
     id: str
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CoreGroupUpdate(BaseModel):
@@ -202,9 +183,7 @@ class CoreGroupUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
 
-    _normalize_name = validator("name", allow_reuse=True)(
-        validators.trailing_spaces_remover
-    )
+    _normalize_name = field_validator("name")(validators.trailing_spaces_remover)
 
 
 class CoreUserRecoverRequest(BaseModel):
@@ -214,10 +193,8 @@ class CoreUserRecoverRequest(BaseModel):
     created_on: datetime
     expire_on: datetime
 
-    _normalize_email = validator("email", allow_reuse=True)(validators.email_normalizer)
-
-    class Config:
-        orm_mode = True
+    _normalize_email = field_validator("email")(validators.email_normalizer)
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ChangePasswordRequest(BaseModel):
@@ -227,9 +204,7 @@ class ChangePasswordRequest(BaseModel):
 
     # Password validator
     # https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
-    _normalize_password = validator("new_password", allow_reuse=True)(
-        validators.password_validator
-    )
+    _normalize_password = field_validator("new_password")(validators.password_validator)
 
 
 class ResetPasswordRequest(BaseModel):
@@ -238,9 +213,7 @@ class ResetPasswordRequest(BaseModel):
 
     # Password validator
     # https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
-    _normalize_password = validator("new_password", allow_reuse=True)(
-        validators.password_validator
-    )
+    _normalize_password = field_validator("new_password")(validators.password_validator)
 
 
 class MailMigrationRequest(BaseModel):
@@ -281,14 +254,10 @@ class CoreMembershipDelete(BaseModel):
 class ModuleVisibility(BaseModel):
     root: str
     allowed_group_ids: list[str]
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ModuleVisibilityCreate(BaseModel):
     root: str
     allowed_group_id: str
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)

@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from app.schemas.schemas_core import CoreUserSimple
 from app.utils.types.booking_type import Decision
@@ -16,9 +16,7 @@ class Rights(BaseModel):
 class ManagerBase(BaseModel):
     name: str
     group_id: str
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ManagerUpdate(BaseModel):
@@ -37,9 +35,7 @@ class RoomBase(BaseModel):
 
 class RoomComplete(RoomBase):
     id: str
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class BookingBase(BaseModel):
@@ -47,7 +43,7 @@ class BookingBase(BaseModel):
     start: datetime
     end: datetime
     creation: datetime
-    note: str | None
+    note: str | None = None
     room_id: str
     key: bool
     recurrence_rule: str | None = None
@@ -68,9 +64,7 @@ class Applicant(CoreUserSimple):
 
 class BookingReturn(BookingComplete):
     room: RoomComplete
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class BookingReturnSimpleApplicant(BookingReturn):

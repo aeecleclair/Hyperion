@@ -1,6 +1,6 @@
-from datetime import date, timedelta
+from datetime import date
 
-from sqlalchemy import TEXT, Boolean, Date, ForeignKey, Integer, Interval, String
+from sqlalchemy import TEXT, Boolean, Date, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -41,9 +41,9 @@ class Item(Base):
     loaner_id: Mapped[str] = mapped_column(String, ForeignKey("loaner.id"))
     suggested_caution: Mapped[int] = mapped_column(Integer)
     total_quantity: Mapped[int] = mapped_column(Integer, nullable=False)
-    suggested_lending_duration: Mapped[timedelta] = mapped_column(
-        Interval, nullable=False
-    )
+    suggested_lending_duration: Mapped[int] = mapped_column(
+        Integer, nullable=False
+    )  # duration in seconds
     loaner: Mapped[Loaner] = relationship(Loaner, lazy="joined", back_populates="items")
 
 

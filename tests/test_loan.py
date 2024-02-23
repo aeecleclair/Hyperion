@@ -62,7 +62,7 @@ async def init_objects():
         loaner_id=loaner.id,
         suggested_lending_duration=timedelta(
             days=50,
-        ),
+        ).seconds,
         suggested_caution=10,
         total_quantity=8,
         loaner=loaner,
@@ -75,7 +75,7 @@ async def init_objects():
         loaner_id=loaner.id,
         suggested_lending_duration=timedelta(
             days=50,
-        ),
+        ).seconds,
         suggested_caution=10,
         total_quantity=5,
         loaner=loaner,
@@ -166,7 +166,7 @@ def test_create_items_for_loaner():
             "name": "TestItem",
             "suggested_caution": 100,
             "total_quantity": 4,
-            "suggested_lending_duration": str(timedelta(days=10)),
+            "suggested_lending_duration": timedelta(days=10).seconds,
         },
         headers={"Authorization": f"Bearer {token_loaner}"},
     )
@@ -180,7 +180,7 @@ def test_update_items_for_loaner():
             "name": "TestItem",
             "suggested_caution": 100,
             "total_quantity": 7,
-            "suggested_lending_duration": str(timedelta(days=10)),
+            "suggested_lending_duration": timedelta(days=10).seconds,
         },
         headers={"Authorization": f"Bearer {token_loaner}"},
     )

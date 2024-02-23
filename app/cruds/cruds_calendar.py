@@ -79,7 +79,7 @@ async def edit_event(
     await db.execute(
         update(models_calendar.Event)
         .where(models_calendar.Event.id == event_id)
-        .values(**event.dict(exclude_none=True))
+        .values(**event.model_dump(exclude_none=True))
     )
     try:
         await db.commit()
