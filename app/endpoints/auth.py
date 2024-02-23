@@ -81,6 +81,11 @@ async def login_for_access_token(
             detail="Incorrect login or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    if not user.enabled:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Disabled account. Contact eclair@myecl.fr for more informations.",
+        )
     # We put the user id in the subject field of the token.
     # The subject `sub` is a JWT registered claim name, see https://datatracker.ietf.org/doc/html/rfc7519#section-4.1
     data = schemas_auth.TokenData(sub=user.id, scopes=ScopeType.API)
