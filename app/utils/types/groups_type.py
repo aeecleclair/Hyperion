@@ -16,6 +16,7 @@ class GroupType(str, Enum):
     formerstudent = "ab4c7503-41b3-11ee-8177-089798f1a4a5"
     staff = "703056c4-be9d-475c-aa51-b7fc62a96aaa"
     association = "29751438-103c-42f2-b09b-33fbb20758a7"
+    external = "e9f1085f-50e5-440c-80c7-b36c9ad4d6fb"
 
     # Core groups
     admin = "0a25cb76-4b63-4fd3-b939-da6d9feabf28"
@@ -43,6 +44,7 @@ class AccountType(str, Enum):
     formerstudent = GroupType.formerstudent.value
     staff = GroupType.staff.value
     association = GroupType.association.value
+    external = GroupType.external.value
 
     def __str__(self):
         return f"{self.name}<{self.value}>"

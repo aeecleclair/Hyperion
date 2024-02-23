@@ -178,9 +178,10 @@ async def create_user_by_user(
         # Its a former student email address
         account_type = AccountType.formerstudent
     else:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid ECL email address.",
+        # Its a external student email address
+        account_type = AccountType.external
+        hyperion_security_logger.info(
+            "External account created. Will maybe be disabled."
         )
 
     # Make sure a confirmed account does not already exist
