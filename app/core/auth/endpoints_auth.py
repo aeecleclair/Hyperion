@@ -21,6 +21,8 @@ from fastapi.templating import Jinja2Templates
 from pytz import timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import models_core
+from app.core.auth import cruds_auth, models_auth, schemas_auth
 from app.core.config import Settings
 from app.core.security import (
     authenticate_user,
@@ -28,7 +30,7 @@ from app.core.security import (
     create_access_token_RS256,
     generate_token,
 )
-from app.cruds import cruds_auth, cruds_users
+from app.core.users import cruds_users
 from app.dependencies import (
     get_db,
     get_request_id,
@@ -36,8 +38,6 @@ from app.dependencies import (
     get_token_data,
     get_user_from_token_with_scopes,
 )
-from app.models import models_auth, models_core
-from app.schemas import schemas_auth
 from app.utils.auth.providers import BaseAuthClient
 from app.utils.tools import is_user_member_of_an_allowed_group
 from app.utils.types.scopes_type import ScopeType

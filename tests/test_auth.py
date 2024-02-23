@@ -6,7 +6,7 @@ from urllib.parse import parse_qs, urlparse
 
 import pytest_asyncio
 
-from app.models import models_core
+from app.core import models_core
 from app.utils.types.floors_type import FloorsType
 
 # We need to import event_loop for pytest-asyncio routine defined bellow

@@ -1,4 +1,5 @@
 """File defining all the routes for the module, to configure the router"""
+
 import glob
 import importlib
 import logging

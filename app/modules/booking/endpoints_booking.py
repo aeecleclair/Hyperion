@@ -3,11 +3,15 @@ import uuid
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import models_core
 from app.core.config import Settings
-from app.cruds import cruds_booking
+from app.core.groups.groups_type import GroupType
+from app.core.module import Module
+from app.core.notification.notification_types import CustomTopic, Topic
+from app.core.notification.schemas_notification import Message
 from app.dependencies import (
     get_db,
     get_notification_tool,
@@ -15,26 +19,25 @@ from app.dependencies import (
     is_user_a_member,
     is_user_a_member_of,
 )
-from app.models import models_booking, models_core
-from app.schemas import schemas_booking
-from app.schemas.schemas_notification import Message
+from app.modules.booking import cruds_booking, models_booking, schemas_booking
+from app.modules.booking.types_booking import Decision
 from app.utils.communication.notifications import NotificationTool
 from app.utils.tools import is_group_id_valid, is_user_member_of_an_allowed_group
-from app.utils.types.booking_type import Decision
-from app.utils.types.groups_type import GroupType
-from app.utils.types.notification_types import CustomTopic, Topic
-from app.utils.types.tags import Tags
 
-router = APIRouter()
+module = Module(
+    root="booking",
+    default_allowed_groups_ids=[GroupType.student, GroupType.staff],
+)
+tag = "AMAP"
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
-@router.get(
+@module.router.get(
     "/booking/managers",
     response_model=list[schemas_booking.Manager],
     status_code=200,
-    tags=[Tags.booking],
+    tags=[tag],
 )
 async def get_managers(
     db: AsyncSession = Depends(get_db),
@@ -49,11 +52,11 @@ async def get_managers(
     return await cruds_booking.get_managers(db=db)
 
 
-@router.post(
+@module.router.post(
     "/booking/managers",
     response_model=schemas_booking.Manager,
     status_code=201,
-    tags=[Tags.booking],
+    tags=[tag],
 )
 async def create_manager(
     manager: schemas_booking.ManagerBase,
@@ -85,10 +88,10 @@ async def create_manager(
         raise HTTPException(status_code=422, detail=str(error))
 
 
-@router.patch(
+@module.router.patch(
     "/booking/managers/{manager_id}",
     status_code=204,
-    tags=[Tags.booking],
+    tags=[tag],
 )
 async def update_manager(
     manager_id: str,
@@ -116,10 +119,10 @@ async def update_manager(
     )
 
 
-@router.delete(
+@module.router.delete(
     "/booking/managers/{manager_id}",
     status_code=204,
-    tags=[Tags.booking],
+    tags=[tag],
 )
 async def delete_manager(
     manager_id: str,
@@ -141,11 +144,11 @@ async def delete_manager(
         await cruds_booking.delete_manager(manager_id=manager_id, db=db)
 
 
-@router.get(
+@module.router.get(
     "/booking/managers/users/me",
     response_model=list[schemas_booking.Manager],
     status_code=200,
-    tags=[Tags.booking],
+    tags=[tag],
 )
 async def get_current_user_managers(
     db: AsyncSession = Depends(get_db),
@@ -160,11 +163,11 @@ async def get_current_user_managers(
     return await cruds_booking.get_user_managers(user=user, db=db)
 
 
-@router.get(
+@module.router.get(
     "/booking/bookings/users/me/manage",
     response_model=list[schemas_booking.BookingReturnApplicant],
     status_code=200,
-    tags=[Tags.booking],
+    tags=[tag],
 )
 async def get_bookings_for_manager(
     db: AsyncSession = Depends(get_db),
@@ -183,11 +186,11 @@ async def get_bookings_for_manager(
     return [booking for booking in bookings if booking.room.manager in user_managers]
 
 
-@router.get(
+@module.router.get(
     "/booking/bookings/confirmed/users/me/manage",
     response_model=list[schemas_booking.BookingReturnApplicant],
     status_code=200,
-    tags=[Tags.booking],
+    tags=[tag],
 )
 async def get_confirmed_bookings_for_manager(
     db: AsyncSession = Depends(get_db),
@@ -205,11 +208,11 @@ async def get_confirmed_bookings_for_manager(
     return [booking for booking in bookings if booking.room.manager in user_managers]
 
 
-@router.get(
+@module.router.get(
     "/booking/bookings/confirmed",
     response_model=list[schemas_booking.BookingReturnSimpleApplicant],
     status_code=200,
-    tags=[Tags.booking],
+    tags=[tag],
 )
 async def get_confirmed_bookings(
     db: AsyncSession = Depends(get_db),
@@ -226,11 +229,11 @@ async def get_confirmed_bookings(
     return bookings
 
 
-@router.get(
+@module.router.get(
     "/booking/bookings/users/me",
     response_model=list[schemas_booking.BookingReturn],
     status_code=200,
-    tags=[Tags.booking],
+    tags=[tag],
 )
 async def get_applicant_bookings(
     db: AsyncSession = Depends(get_db),
@@ -245,11 +248,11 @@ async def get_applicant_bookings(
     return bookings
 
 
-@router.post(
+@module.router.post(
     "/booking/bookings",
     response_model=schemas_booking.BookingReturn,
     status_code=201,
-    tags=[Tags.booking],
+    tags=[tag],
 )
 async def create_booking(
     booking: schemas_booking.BookingBase,
@@ -296,10 +299,10 @@ async def create_booking(
     return result
 
 
-@router.patch(
+@module.router.patch(
     "/booking/bookings/{booking_id}",
     status_code=204,
-    tags=[Tags.booking],
+    tags=[tag],
 )
 async def edit_booking(
     booking_id: str,
@@ -333,10 +336,10 @@ async def edit_booking(
         raise HTTPException(status_code=422, detail=str(error))
 
 
-@router.patch(
+@module.router.patch(
     "/booking/bookings/{booking_id}/reply/{decision}",
     status_code=204,
-    tags=[Tags.booking],
+    tags=[tag],
 )
 async def confirm_booking(
     booking_id: str,
@@ -365,10 +368,10 @@ async def confirm_booking(
         )
 
 
-@router.delete(
+@module.router.delete(
     "/booking/bookings/{booking_id}",
     status_code=204,
-    tags=[Tags.booking],
+    tags=[tag],
 )
 async def delete_booking(
     booking_id: str,
@@ -395,11 +398,11 @@ async def delete_booking(
         )
 
 
-@router.get(
+@module.router.get(
     "/booking/rooms",
     response_model=list[schemas_booking.RoomComplete],
     status_code=200,
-    tags=[Tags.booking],
+    tags=[tag],
 )
 async def get_rooms(
     db: AsyncSession = Depends(get_db),
@@ -414,11 +417,11 @@ async def get_rooms(
     return await cruds_booking.get_rooms(db=db)
 
 
-@router.post(
+@module.router.post(
     "/booking/rooms",
     response_model=schemas_booking.RoomComplete,
     status_code=201,
-    tags=[Tags.booking],
+    tags=[tag],
 )
 async def create_room(
     room: schemas_booking.RoomBase,
@@ -441,10 +444,10 @@ async def create_room(
         raise HTTPException(status_code=422, detail=str(error))
 
 
-@router.patch(
+@module.router.patch(
     "/booking/rooms/{room_id}",
     status_code=204,
-    tags=[Tags.booking],
+    tags=[tag],
 )
 async def edit_room(
     room_id: str,
@@ -461,10 +464,10 @@ async def edit_room(
     await cruds_booking.edit_room(db=db, room_id=room_id, room=room)
 
 
-@router.delete(
+@module.router.delete(
     "/booking/rooms/{room_id}",
     status_code=204,
-    tags=[Tags.booking],
+    tags=[tag],
 )
 async def delete_room(
     room_id: str,
