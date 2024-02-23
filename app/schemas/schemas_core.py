@@ -71,6 +71,7 @@ class CoreUser(CoreUserSimple):
     phone: str | None = None
     created_on: datetime | None = None
     groups: list[CoreGroupSimple] = []
+    enabled: bool
 
 
 class CoreUserUpdate(BaseModel):

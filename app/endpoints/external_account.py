@@ -12,7 +12,6 @@ router = APIRouter()
 
 @router.get(
     "/external/",
-    response_model=bool,
     status_code=200,
     tags=[Tags.external_account],
 )

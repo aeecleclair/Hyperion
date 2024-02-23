@@ -141,6 +141,7 @@ async def create_user_with_groups(
         name=name or get_random_string(),
         firstname=firstname or get_random_string(),
         floor=floor,
+        enabled=True
     )
 
     async with TestingSessionLocal() as db:
