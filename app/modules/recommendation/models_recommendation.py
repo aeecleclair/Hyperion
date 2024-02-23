@@ -12,6 +12,6 @@ class Recommendation(Base):
     id: Mapped[str] = mapped_column(String, primary_key=True, nullable=False)
     creation: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     title: Mapped[str] = mapped_column(String, nullable=False)
-    code: Mapped[str] = mapped_column(String, nullable=False)
+    code: Mapped[str] = mapped_column(String, nullable=True)
     summary: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str] = mapped_column(String, nullable=False)

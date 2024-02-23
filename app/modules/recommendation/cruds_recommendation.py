@@ -26,7 +26,7 @@ async def create_recommendation(
     recommendation_db = models_recommendation.Recommendation(
         id=str(uuid.uuid4()),
         creation=datetime.now(ZoneInfo(settings.TIMEZONE)),
-        **recommendation.dict(),
+        **recommendation.model_dump(),
     )
     db.add(recommendation_db)
     await db.commit()
@@ -41,7 +41,7 @@ async def update_recommendation(
     result = await db.execute(
         update(models_recommendation.Recommendation)
         .where(models_recommendation.Recommendation.id == recommendation_id)
-        .values(**recommendation.dict(exclude_none=True))
+        .values(**recommendation.model_dump(exclude_none=True))
     )
     if result.rowcount == 1:
         await db.commit()
