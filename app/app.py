@@ -194,7 +194,6 @@ def initialize_module_visibility(engine: Engine) -> None:
                     root=module.root, allowed_group_id=default_group_id.value
                 )
                 try:
-                    print(module.root, default_group_id)
                     initialization.create_module_visibility_sync(module_visibility, db)
                 except IntegrityError as error:
                     hyperion_error_logger.fatal(
