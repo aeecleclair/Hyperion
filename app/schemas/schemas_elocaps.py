@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from app.schemas.schemas_core import CoreUserSimple
 from app.utils.types.elocaps_types import CapsMode
@@ -13,8 +13,7 @@ class PlayerBase(BaseModel):
     elo: int
     mode: CapsMode
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PlayerModeInfo(BaseModel):
@@ -30,8 +29,7 @@ class DetailedPlayer(BaseModel):
 class GameMode(BaseModel):
     mode: CapsMode
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class GameCreateRequest(GameMode):
@@ -51,8 +49,7 @@ class GamePlayerBase(BaseModel):
     team: int
     score: int
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class GamePlayer(GamePlayerBase):
@@ -62,5 +59,5 @@ class GamePlayer(GamePlayerBase):
 
 
 # Needed because these are created before GamePlayer is
-Game.update_forward_refs()
-GameCreateRequest.update_forward_refs()
+Game.model_rebuild()
+GameCreateRequest.model_rebuild()
