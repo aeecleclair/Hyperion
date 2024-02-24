@@ -269,7 +269,7 @@ async def authorize_validation(
         )
 
     # The auth_client allows to override the redirect_uri and bypass related verifications
-    # This behaviour is not part of OAuth or Openid connect specifications
+    # This behavior is not part of OAuth or Openid connect specifications
     if auth_client.override_redirect_uri is not None:
         hyperion_access_logger.info(
             f"Authorize-validation: Overriding redirect_uri with {auth_client.override_redirect_uri}, as configured in the auth client ({request_id})"
@@ -632,7 +632,7 @@ async def authorization_code_grant(  # noqa: C901 # The function is too complex 
         )
 
     # The auth_client allows to override the redirect_uri and bypass related verifications
-    # This behaviour is not part of OAuth or Openid connect specifications
+    # This behavior is not part of OAuth or Openid connect specifications
     if auth_client.override_redirect_uri is not None:
         tokenreq.redirect_uri = auth_client.override_redirect_uri
     # A redirect_uri may be hardcoded in the client
@@ -680,6 +680,12 @@ async def authorization_code_grant(  # noqa: C901 # The function is too complex 
         scope=db_authorization_code.scope,
         nonce=db_authorization_code.nonce,
     )
+
+    # We delete the expired refresh tokens from the database so that they doesn't pile up
+    await cruds_auth.delete_expired_refresh_tokens(
+        db=db, user_id=db_authorization_code.user_id, settings=settings
+    )
+
     await cruds_auth.create_refresh_token(db=db, db_refresh_token=new_db_refresh_token)
 
     response_body = await create_response_body(
@@ -724,9 +730,6 @@ async def refresh_token_grant(
     )
 
     if db_refresh_token is None:
-        hyperion_access_logger.warning(
-            f"Token refresh_token_grant: invalid refresh token ({request_id})"
-        )
         return JSONResponse(
             status_code=400,
             content={
@@ -760,9 +763,6 @@ async def refresh_token_grant(
     if db_refresh_token.expire_on.astimezone(
         timezone(settings.TIMEZONE)
     ) < datetime.now(timezone(settings.TIMEZONE)):
-        await cruds_auth.revoke_refresh_token_by_token(
-            db=db, token=db_refresh_token.token, settings=settings
-        )
         return JSONResponse(
             status_code=400,
             content={
@@ -789,7 +789,7 @@ async def refresh_token_grant(
 
     if auth_client is None:
         hyperion_access_logger.warning(
-            f"Token authorization_code_grant: Invalid client_id {tokenreq.client_id} ({request_id})"
+            f"Token refresh_token_grant: Invalid client_id {tokenreq.client_id} ({request_id})"
         )
         return JSONResponse(
             status_code=400,
@@ -799,12 +799,12 @@ async def refresh_token_grant(
             },
         )
 
-    # If the auth provider expects to use a client secret, we don't use PKCE
+    # If the auth provider expects to use a client secret, we verify it
     elif auth_client.secret is not None:
         # We need to check the correct client_secret was provided
         if auth_client.secret != tokenreq.client_secret:
             hyperion_access_logger.warning(
-                f"Token authorization_code_grant: Invalid secret for client {tokenreq.client_id} ({request_id})"
+                f"Token refresh_token_grant: Invalid secret for client {tokenreq.client_id} ({request_id})"
             )
             return JSONResponse(
                 status_code=400,
@@ -827,9 +827,14 @@ async def refresh_token_grant(
                 },
             )
 
-    # If everything is good we can finally create the new access/refresh tokens
+    # If everything is good we can finally create the new access/refresh tokens.
+    # We delete the expired refresh tokens from the database so that they doesn't pile up
     # We use new refresh tokens every time as we use some client that can't store secrets (see Refresh token rotation in https://www.pingidentity.com/en/resources/blog/post/refresh-token-rotation-spa.html)
     # We use automatic reuse detection to prevent from replay attacks (https://auth0.com/docs/secure/tokens/refresh-tokens/refresh-token-rotation)
+
+    await cruds_auth.delete_expired_refresh_tokens(
+        db=db, user_id=db_refresh_token.user_id, settings=settings
+    )
 
     refresh_token = generate_token()
     new_db_refresh_token = models_auth.RefreshToken(

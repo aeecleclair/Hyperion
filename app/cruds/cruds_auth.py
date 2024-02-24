@@ -108,3 +108,18 @@ async def revoke_refresh_token_by_client_and_user_id(
     )
     await db.commit()
     return None
+
+
+async def delete_expired_refresh_tokens(
+    db: AsyncSession, user_id: str, settings: Settings
+) -> None:
+    """Delete expired refresh tokens of a specific user"""
+
+    await db.execute(
+        delete(models_auth.RefreshToken).where(
+            models_auth.RefreshToken.expire_on
+            < datetime.now(timezone(settings.TIMEZONE))
+        )
+    )
+    await db.commit()
+    return None
