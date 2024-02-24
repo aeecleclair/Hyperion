@@ -17,6 +17,7 @@ from app.endpoints import (
     loan,
     notification,
     raffle,
+    tricount,
     users,
 )
 
@@ -36,4 +37,5 @@ api_router.include_router(groups.router)
 api_router.include_router(loan.router)
 api_router.include_router(notification.router)
 api_router.include_router(raffle.router)
+api_router.include_router(tricount.router)
 api_router.include_router(users.router)
