@@ -136,7 +136,7 @@ async def confirm_game(
             raise HTTPException(
                 400, "You are not part of that game, or it doesn't exist"
             )
-        if player.game.cancelled:
+        if player.game.is_cancelled:
             raise HTTPException(400, "This game has been cancelled")
         await cruds_elocaps.user_game_validation(db, player)
         if player.game.is_confirmed:

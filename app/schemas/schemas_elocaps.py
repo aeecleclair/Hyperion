@@ -41,7 +41,7 @@ class Game(GameMode):
     id: str
     game_players: list[GamePlayer]
     is_confirmed: bool
-    cancelled: bool
+    is_cancelled: bool
 
 
 class GamePlayerBase(BaseModel):

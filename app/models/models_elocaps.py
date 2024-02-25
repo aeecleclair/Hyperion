@@ -41,7 +41,7 @@ class Game(Base):
         DateTime, nullable=False, default=func.now()
     )
     mode: Mapped[CapsMode] = mapped_column(Enum(CapsMode), nullable=False)
-    cancelled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_cancelled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     game_players: Mapped[list[GamePlayer]] = relationship(
         "GamePlayer", back_populates="game"

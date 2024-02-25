@@ -138,7 +138,7 @@ async def get_waiting_games(
         .where(
             (models_elocaps.Player.user_id == user_id)
             & not_(models_elocaps.GamePlayer.has_confirmed)
-            & not_(models_elocaps.Game.cancelled)
+            & not_(models_elocaps.Game.is_cancelled)
         )
     )
     return result.scalars().all()
@@ -245,5 +245,5 @@ async def get_winrate(
 
 
 async def cancel_game(db: AsyncSession, game: models_elocaps.Game) -> None:
-    game.cancelled = True
+    game.is_cancelled = True
     await db.commit()
