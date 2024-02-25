@@ -19,6 +19,28 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 @router.post(
+    "/raid/participant",
+    response_model=schemas_raid.Participant,
+    status_code=201,
+    tags=[Tags.raid],
+)
+async def create_participant(
+    participant: schemas_raid.ParticipantBase,
+    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Create a participant
+    """
+    # If the user is already a participant, return an error
+    if await cruds_raid.is_user_a_participant(user.id, db):
+        raise HTTPException(status_code=403, detail="You are already a participant.")
+
+    db_participant = models_raid.Participant(**participant.__dict__, id=user.id)
+    return await cruds_raid.create_participant(db_participant, db)
+
+
+@router.post(
     "/raid/team",
     response_model=schemas_raid.TeamBase,
     status_code=201,
