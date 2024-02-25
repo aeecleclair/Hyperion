@@ -32,9 +32,9 @@ from app.utils.tools import (
 
 module = Module(
     root="advert",
+    tag="Advert",
     default_allowed_groups_ids=[GroupType.student, GroupType.staff],
 )
-tag = "Advert"
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
@@ -43,7 +43,6 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
     "/advert/advertisers",
     response_model=list[schemas_advert.AdvertiserComplete],
     status_code=200,
-    tags=[tag],
 )
 async def read_advertisers(
     db: AsyncSession = Depends(get_db),
@@ -60,7 +59,6 @@ async def read_advertisers(
     "/advert/advertisers",
     response_model=schemas_advert.AdvertiserComplete,
     status_code=201,
-    tags=[tag],
 )
 async def create_advertiser(
     advertiser: schemas_advert.AdvertiserBase,
@@ -97,7 +95,6 @@ async def create_advertiser(
 @module.router.delete(
     "/advert/advertisers/{advertiser_id}",
     status_code=204,
-    tags=[tag],
 )
 async def delete_advertiser(
     advertiser_id: str,
@@ -127,7 +124,6 @@ async def delete_advertiser(
 @module.router.patch(
     "/advert/advertisers/{advertiser_id}",
     status_code=204,
-    tags=[tag],
 )
 async def update_advertiser(
     advertiser_id: str,
@@ -158,7 +154,6 @@ async def update_advertiser(
     "/advert/me/advertisers",
     response_model=list[schemas_advert.AdvertiserComplete],
     status_code=200,
-    tags=[tag],
 )
 async def get_current_user_advertisers(
     db: AsyncSession = Depends(get_db),
@@ -182,7 +177,6 @@ async def get_current_user_advertisers(
     "/advert/adverts",
     response_model=list[schemas_advert.AdvertReturnComplete],
     status_code=200,
-    tags=[tag],
 )
 async def read_adverts(
     advertisers: list[str] = Query(default=[]),
@@ -207,7 +201,6 @@ async def read_adverts(
     "/advert/adverts/{advert_id}",
     response_model=schemas_advert.AdvertReturnComplete,
     status_code=200,
-    tags=[tag],
 )
 async def read_advert(
     advert_id: str,
@@ -227,7 +220,6 @@ async def read_advert(
     "/advert/adverts",
     response_model=schemas_advert.AdvertReturnComplete,
     status_code=201,
-    tags=[tag],
 )
 async def create_advert(
     advert: schemas_advert.AdvertBase,
@@ -289,7 +281,10 @@ async def create_advert(
     return result
 
 
-@module.router.patch("/advert/adverts/{advert_id}", status_code=204, tags=[tag])
+@module.router.patch(
+    "/advert/adverts/{advert_id}",
+    status_code=204,
+)
 async def update_advert(
     advert_id: str,
     advert_update: schemas_advert.AdvertUpdate,
@@ -321,7 +316,10 @@ async def update_advert(
     )
 
 
-@module.router.delete("/advert/adverts/{advert_id}", status_code=204, tags=[tag])
+@module.router.delete(
+    "/advert/adverts/{advert_id}",
+    status_code=204,
+)
 async def delete_advert(
     advert_id: str,
     db: AsyncSession = Depends(get_db),
@@ -354,7 +352,6 @@ async def delete_advert(
     "/advert/adverts/{advert_id}/picture",
     response_class=FileResponse,
     status_code=200,
-    tags=[tag],
 )
 async def read_advert_image(
     advert_id: str,
@@ -375,7 +372,6 @@ async def read_advert_image(
     "/advert/adverts/{advert_id}/picture",
     response_model=standard_responses.Result,
     status_code=201,
-    tags=[tag],
 )
 async def create_advert_image(
     advert_id: str,

@@ -7,6 +7,7 @@ class Module:
     def __init__(
         self,
         root: str,
+        tag: str,
         default_allowed_groups_ids: list[GroupType],
         router: APIRouter | None = None,
     ):
@@ -18,4 +19,4 @@ class Module:
         """
         self.root = root
         self.default_allowed_groups_ids = default_allowed_groups_ids
-        self.router = router or APIRouter()
+        self.router = router or APIRouter(tags=[tag])

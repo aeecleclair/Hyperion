@@ -31,9 +31,9 @@ from app.utils.tools import (
 
 module = Module(
     root="vote",
+    tag="Campaign",
     default_allowed_groups_ids=[GroupType.AE],
 )
-tag = "Campaign"
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
@@ -42,7 +42,6 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
     "/campaign/sections",
     response_model=list[schemas_campaign.SectionComplete],
     status_code=200,
-    tags=[tag],
 )
 async def get_sections(
     db: AsyncSession = Depends(get_db),
@@ -70,7 +69,6 @@ async def get_sections(
     "/campaign/sections",
     response_model=schemas_campaign.SectionComplete,
     status_code=201,
-    tags=[tag],
 )
 async def add_section(
     section: schemas_campaign.SectionBase,
@@ -106,7 +104,6 @@ async def add_section(
 @module.router.delete(
     "/campaign/sections/{section_id}",
     status_code=204,
-    tags=[tag],
 )
 async def delete_section(
     section_id: str,
@@ -138,7 +135,6 @@ async def delete_section(
     "/campaign/lists",
     response_model=list[schemas_campaign.ListReturn],
     status_code=200,
-    tags=[tag],
 )
 async def get_lists(
     db: AsyncSession = Depends(get_db),
@@ -166,7 +162,6 @@ async def get_lists(
     "/campaign/lists",
     response_model=schemas_campaign.ListReturn,
     status_code=201,
-    tags=[tag],
 )
 async def add_list(
     list: schemas_campaign.ListBase,
@@ -236,7 +231,6 @@ async def add_list(
 @module.router.delete(
     "/campaign/lists/{list_id}",
     status_code=204,
-    tags=[tag],
 )
 async def delete_list(
     list_id: str,
@@ -267,7 +261,6 @@ async def delete_list(
 @module.router.delete(
     "/campaign/lists/",
     status_code=204,
-    tags=[tag],
 )
 async def delete_lists_by_type(
     list_type: ListType | None = None,
@@ -302,7 +295,6 @@ async def delete_lists_by_type(
 @module.router.patch(
     "/campaign/lists/{list_id}",
     status_code=204,
-    tags=[tag],
 )
 async def update_list(
     list_id: str,
@@ -351,7 +343,6 @@ async def update_list(
     "/campaign/voters",
     response_model=list[schemas_campaign.VoterGroup],
     status_code=200,
-    tags=[tag],
 )
 async def get_voters(
     user: models_core.CoreUser = Depends(is_user_a_member),
@@ -368,7 +359,6 @@ async def get_voters(
     "/campaign/voters",
     response_model=schemas_campaign.VoterGroup,
     status_code=201,
-    tags=[tag],
 )
 async def add_voter(
     voter: schemas_campaign.VoterGroup,
@@ -398,7 +388,6 @@ async def add_voter(
 @module.router.delete(
     "/campaign/voters/{group_id}",
     status_code=204,
-    tags=[tag],
 )
 async def delete_voter_by_group_id(
     group_id: str,
@@ -423,7 +412,6 @@ async def delete_voter_by_group_id(
 @module.router.delete(
     "/campaign/voters",
     status_code=204,
-    tags=[tag],
 )
 async def delete_voters(
     db: AsyncSession = Depends(get_db),
@@ -447,7 +435,6 @@ async def delete_voters(
 @module.router.post(
     "/campaign/status/open",
     status_code=204,
-    tags=[tag],
 )
 async def open_vote(
     db: AsyncSession = Depends(get_db),
@@ -486,7 +473,6 @@ async def open_vote(
 @module.router.post(
     "/campaign/status/close",
     status_code=204,
-    tags=[tag],
 )
 async def close_vote(
     db: AsyncSession = Depends(get_db),
@@ -513,7 +499,6 @@ async def close_vote(
 @module.router.post(
     "/campaign/status/counting",
     status_code=204,
-    tags=[tag],
 )
 async def count_voting(
     db: AsyncSession = Depends(get_db),
@@ -540,7 +525,6 @@ async def count_voting(
 @module.router.post(
     "/campaign/status/published",
     status_code=204,
-    tags=[tag],
 )
 async def publish_vote(
     db: AsyncSession = Depends(get_db),
@@ -567,7 +551,6 @@ async def publish_vote(
 @module.router.post(
     "/campaign/status/reset",
     status_code=204,
-    tags=[tag],
 )
 async def reset_vote(
     db: AsyncSession = Depends(get_db),
@@ -611,7 +594,6 @@ async def reset_vote(
 @module.router.post(
     "/campaign/votes",
     status_code=204,
-    tags=[tag],
 )
 async def vote(
     vote: schemas_campaign.VoteBase,
@@ -677,7 +659,6 @@ async def vote(
     "/campaign/votes",
     response_model=list[str],
     status_code=200,
-    tags=[tag],
 )
 async def get_sections_already_voted(
     db: AsyncSession = Depends(get_db),
@@ -712,7 +693,6 @@ async def get_sections_already_voted(
     "/campaign/results",
     response_model=list[schemas_campaign.Result],
     status_code=200,
-    tags=[tag],
 )
 async def get_results(
     db: AsyncSession = Depends(get_db),
@@ -768,7 +748,6 @@ async def get_results(
     "/campaign/status",
     response_model=schemas_campaign.VoteStatus,
     status_code=200,
-    tags=[tag],
 )
 async def get_status_vote(
     db: AsyncSession = Depends(get_db),
@@ -796,7 +775,6 @@ async def get_status_vote(
     "/campaign/stats/{section_id}",
     response_model=schemas_campaign.VoteStats,
     status_code=200,
-    tags=[tag],
 )
 async def get_stats_for_section(
     section_id: str,
@@ -822,7 +800,6 @@ async def get_stats_for_section(
     "/campaign/lists/{list_id}/logo",
     response_model=standard_responses.Result,
     status_code=201,
-    tags=[tag],
 )
 async def create_campaigns_logo(
     list_id: str,
@@ -867,7 +844,6 @@ async def create_campaigns_logo(
     "/campaign/lists/{list_id}/logo",
     response_class=FileResponse,
     status_code=200,
-    tags=[tag],
 )
 async def read_campaigns_logo(
     list_id: str,

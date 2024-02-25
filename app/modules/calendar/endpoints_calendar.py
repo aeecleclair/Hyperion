@@ -15,9 +15,10 @@ from app.modules.calendar.types_calendar import Decision
 from app.utils.tools import is_user_member_of_an_allowed_group
 
 module = Module(
-    root="event", default_allowed_groups_ids=[GroupType.student, GroupType.staff]
+    root="event",
+    tag="Calendar",
+    default_allowed_groups_ids=[GroupType.student, GroupType.staff],
 )
-tag = "Calendar"
 
 ical_file_path = "data/ics/ae_calendar.ics"
 
@@ -26,7 +27,6 @@ ical_file_path = "data/ics/ae_calendar.ics"
     "/calendar/events/",
     response_model=list[schemas_calendar.EventReturn],
     status_code=200,
-    tags=[tag],
 )
 async def get_events(
     db: AsyncSession = Depends(get_db),
@@ -41,7 +41,6 @@ async def get_events(
     "/calendar/events/confirmed",
     response_model=list[schemas_calendar.EventComplete],
     status_code=200,
-    tags=[tag],
 )
 async def get_confirmed_events(
     db: AsyncSession = Depends(get_db),
@@ -60,7 +59,6 @@ async def get_confirmed_events(
     "/calendar/events/user/{applicant_id}",
     response_model=list[schemas_calendar.EventReturn],
     status_code=200,
-    tags=[tag],
 )
 async def get_applicant_bookings(
     applicant_id: str,
@@ -87,7 +85,6 @@ async def get_applicant_bookings(
     "/calendar/events/{event_id}",
     response_model=schemas_calendar.EventComplete,
     status_code=200,
-    tags=[tag],
 )
 async def get_event_by_id(
     event_id: str,
@@ -107,7 +104,6 @@ async def get_event_by_id(
     "calendar/events/{event_id}/applicant",
     response_model=schemas_calendar.EventApplicant,
     status_code=200,
-    tags=[tag],
 )
 async def get_event_applicant(
     event_id: str,
@@ -125,7 +121,6 @@ async def get_event_applicant(
     "/calendar/events/",
     response_model=schemas_calendar.EventReturn,
     status_code=201,
-    tags=[tag],
 )
 async def add_event(
     event: schemas_calendar.EventBase,
@@ -152,7 +147,6 @@ async def add_event(
 @module.router.patch(
     "/calendar/events/{event_id}",
     status_code=204,
-    tags=[tag],
 )
 async def edit_bookings_id(
     event_id: str,
@@ -185,7 +179,6 @@ async def edit_bookings_id(
 @module.router.patch(
     "/calendar/events/{event_id}/reply/{decision}",
     status_code=204,
-    tags=[tag],
 )
 async def confirm_booking(
     event_id: str,
@@ -204,7 +197,10 @@ async def confirm_booking(
     )
 
 
-@module.router.delete("/calendar/events/{event_id}", status_code=204, tags=[tag])
+@module.router.delete(
+    "/calendar/events/{event_id}",
+    status_code=204,
+)
 async def delete_bookings_id(
     event_id,
     db: AsyncSession = Depends(get_db),
@@ -234,7 +230,6 @@ async def delete_bookings_id(
 @module.router.post(
     "/calendar/ical/create",
     status_code=204,
-    tags=[tag],
 )
 async def recreate_ical_file(
     db: AsyncSession = Depends(get_db),
@@ -254,7 +249,6 @@ async def recreate_ical_file(
     "/calendar/ical",
     response_class=FileResponse,
     status_code=200,
-    tags=[tag],
 )
 async def get_icalendar_file(db: AsyncSession = Depends(get_db)):
     """Get the icalendar file corresponding to the event in the database."""

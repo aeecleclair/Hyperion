@@ -26,9 +26,9 @@ from app.utils.tools import is_group_id_valid, is_user_member_of_an_allowed_grou
 
 module = Module(
     root="booking",
+    tag="Booking",
     default_allowed_groups_ids=[GroupType.student, GroupType.staff],
 )
-tag = "AMAP"
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
@@ -37,7 +37,6 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
     "/booking/managers",
     response_model=list[schemas_booking.Manager],
     status_code=200,
-    tags=[tag],
 )
 async def get_managers(
     db: AsyncSession = Depends(get_db),
@@ -56,7 +55,6 @@ async def get_managers(
     "/booking/managers",
     response_model=schemas_booking.Manager,
     status_code=201,
-    tags=[tag],
 )
 async def create_manager(
     manager: schemas_booking.ManagerBase,
@@ -91,7 +89,6 @@ async def create_manager(
 @module.router.patch(
     "/booking/managers/{manager_id}",
     status_code=204,
-    tags=[tag],
 )
 async def update_manager(
     manager_id: str,
@@ -122,7 +119,6 @@ async def update_manager(
 @module.router.delete(
     "/booking/managers/{manager_id}",
     status_code=204,
-    tags=[tag],
 )
 async def delete_manager(
     manager_id: str,
@@ -148,7 +144,6 @@ async def delete_manager(
     "/booking/managers/users/me",
     response_model=list[schemas_booking.Manager],
     status_code=200,
-    tags=[tag],
 )
 async def get_current_user_managers(
     db: AsyncSession = Depends(get_db),
@@ -167,7 +162,6 @@ async def get_current_user_managers(
     "/booking/bookings/users/me/manage",
     response_model=list[schemas_booking.BookingReturnApplicant],
     status_code=200,
-    tags=[tag],
 )
 async def get_bookings_for_manager(
     db: AsyncSession = Depends(get_db),
@@ -190,7 +184,6 @@ async def get_bookings_for_manager(
     "/booking/bookings/confirmed/users/me/manage",
     response_model=list[schemas_booking.BookingReturnApplicant],
     status_code=200,
-    tags=[tag],
 )
 async def get_confirmed_bookings_for_manager(
     db: AsyncSession = Depends(get_db),
@@ -212,7 +205,6 @@ async def get_confirmed_bookings_for_manager(
     "/booking/bookings/confirmed",
     response_model=list[schemas_booking.BookingReturnSimpleApplicant],
     status_code=200,
-    tags=[tag],
 )
 async def get_confirmed_bookings(
     db: AsyncSession = Depends(get_db),
@@ -233,7 +225,6 @@ async def get_confirmed_bookings(
     "/booking/bookings/users/me",
     response_model=list[schemas_booking.BookingReturn],
     status_code=200,
-    tags=[tag],
 )
 async def get_applicant_bookings(
     db: AsyncSession = Depends(get_db),
@@ -252,7 +243,6 @@ async def get_applicant_bookings(
     "/booking/bookings",
     response_model=schemas_booking.BookingReturn,
     status_code=201,
-    tags=[tag],
 )
 async def create_booking(
     booking: schemas_booking.BookingBase,
@@ -302,7 +292,6 @@ async def create_booking(
 @module.router.patch(
     "/booking/bookings/{booking_id}",
     status_code=204,
-    tags=[tag],
 )
 async def edit_booking(
     booking_id: str,
@@ -339,7 +328,6 @@ async def edit_booking(
 @module.router.patch(
     "/booking/bookings/{booking_id}/reply/{decision}",
     status_code=204,
-    tags=[tag],
 )
 async def confirm_booking(
     booking_id: str,
@@ -371,7 +359,6 @@ async def confirm_booking(
 @module.router.delete(
     "/booking/bookings/{booking_id}",
     status_code=204,
-    tags=[tag],
 )
 async def delete_booking(
     booking_id: str,
@@ -402,7 +389,6 @@ async def delete_booking(
     "/booking/rooms",
     response_model=list[schemas_booking.RoomComplete],
     status_code=200,
-    tags=[tag],
 )
 async def get_rooms(
     db: AsyncSession = Depends(get_db),
@@ -421,7 +407,6 @@ async def get_rooms(
     "/booking/rooms",
     response_model=schemas_booking.RoomComplete,
     status_code=201,
-    tags=[tag],
 )
 async def create_room(
     room: schemas_booking.RoomBase,
@@ -447,7 +432,6 @@ async def create_room(
 @module.router.patch(
     "/booking/rooms/{room_id}",
     status_code=204,
-    tags=[tag],
 )
 async def edit_room(
     room_id: str,
@@ -467,7 +451,6 @@ async def edit_room(
 @module.router.delete(
     "/booking/rooms/{room_id}",
     status_code=204,
-    tags=[tag],
 )
 async def delete_room(
     room_id: str,

@@ -10,15 +10,13 @@ from app.core.groups.groups_type import GroupType
 from app.dependencies import get_db, get_settings, is_user_a_member, is_user_a_member_of
 from app.utils.tools import is_group_id_valid
 
-router = APIRouter()
-tag = "Core"
+router = APIRouter(tags=["Core"])
 
 
 @router.get(
     "/information",
     response_model=schemas_core.CoreInformation,
     status_code=200,
-    tags=[tag],
 )
 async def read_information(settings: Settings = Depends(get_settings)):
     """
@@ -37,7 +35,6 @@ async def read_information(settings: Settings = Depends(get_settings)):
     "/privacy",
     response_class=FileResponse,
     status_code=200,
-    tags=[tag],
 )
 async def read_privacy():
     """
@@ -51,7 +48,6 @@ async def read_privacy():
     "/terms-and-conditions",
     response_class=FileResponse,
     status_code=200,
-    tags=[tag],
 )
 async def read_terms_and_conditions():
     """
@@ -65,7 +61,6 @@ async def read_terms_and_conditions():
     "/support",
     response_class=FileResponse,
     status_code=200,
-    tags=[tag],
 )
 async def read_support():
     """
@@ -79,7 +74,6 @@ async def read_support():
     "/security.txt",
     response_class=FileResponse,
     status_code=200,
-    tags=[tag],
 )
 async def read_security_txt():
     """
@@ -93,7 +87,6 @@ async def read_security_txt():
     "/.well-known/security.txt",
     response_class=FileResponse,
     status_code=200,
-    tags=[tag],
 )
 async def read_wellknown_security_txt():
     """
@@ -107,7 +100,6 @@ async def read_wellknown_security_txt():
     "/robots.txt",
     response_class=FileResponse,
     status_code=200,
-    tags=[tag],
 )
 async def read_robots_txt():
     """
@@ -121,7 +113,6 @@ async def read_robots_txt():
     "/style/{file}.css",
     response_class=FileResponse,
     status_code=200,
-    tags=[tag],
 )
 async def get_style_file(
     file: str,
@@ -148,7 +139,6 @@ async def get_style_file(
     "/favicon.ico",
     response_class=FileResponse,
     status_code=200,
-    tags=[tag],
 )
 async def get_favicon():
     return FileResponse("assets/images/favicon.ico")
@@ -158,7 +148,6 @@ async def get_favicon():
     "/module-visibility/",
     response_model=list[schemas_core.ModuleVisibility],
     status_code=200,
-    tags=[tag],
 )
 async def get_module_visibility(
     db: AsyncSession = Depends(get_db),
@@ -192,7 +181,6 @@ async def get_module_visibility(
     "/module-visibility/me",
     response_model=list[str],
     status_code=200,
-    tags=[tag],
 )
 async def get_user_modules_visibility(
     db: AsyncSession = Depends(get_db),
@@ -211,7 +199,6 @@ async def get_user_modules_visibility(
     "/module-visibility/",
     response_model=schemas_core.ModuleVisibilityCreate,
     status_code=201,
-    tags=[tag],
 )
 async def add_module_visibility(
     module_visibility: schemas_core.ModuleVisibilityCreate,
@@ -243,7 +230,7 @@ async def add_module_visibility(
         raise HTTPException(status_code=400, detail=str(error))
 
 
-@router.delete("/module-visibility/{root}/{group_id}", status_code=204, tags=[tag])
+@router.delete("/module-visibility/{root}/{group_id}", status_code=204)
 async def delete_session(
     root: str,
     group_id: str,
