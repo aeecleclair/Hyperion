@@ -810,7 +810,6 @@ async def return_loan(
         )
 
     # We need to update the item loaned quantity thanks to the quantity in the loan content
-    # We need to update the item loaned quantity thanks to the quantity in the loan content
     for item in loan.items:
         loan_content = await cruds_loan.get_loan_content_by_loan_id_item_id(
             loan_id=loan.id,
@@ -825,7 +824,6 @@ async def return_loan(
 
     await cruds_loan.update_loan_returned_status(
         loan_id=loan_id,
-        returned=True,
         db=db,
     )
 
