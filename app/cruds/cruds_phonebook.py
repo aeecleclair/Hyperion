@@ -124,6 +124,19 @@ async def get_memberships_by_association_id(
     return result.scalars().all()
 
 
+async def get_memberships_by_association_id_and_mandate_year(
+    association_id: str, mandate_year: int, db: AsyncSession
+) -> Sequence[models_phonebook.Membership] | None:
+    """Return all memberships with id from database"""
+    result = await db.execute(
+        select(models_phonebook.Membership).where(
+            models_phonebook.Membership.association_id == association_id,
+            models_phonebook.Membership.mandate_year == mandate_year,
+        )
+    )
+    return result.scalars().all()
+
+
 async def get_membership_by_id(
     membership_id: str, db: AsyncSession
 ) -> models_phonebook.Membership | None:

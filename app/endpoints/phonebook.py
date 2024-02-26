@@ -188,15 +188,16 @@ async def delete_association(
 # ---------------------------------------------------------------------------- #
 #                                    Members                                   #
 # ---------------------------------------------------------------------------- #
+
+
 @router.get(
-    "/phonebook/associations/{association_id}/members/{mandate_year}",
+    "/phonebook/associations/{association_id}/members/",
     response_model=list[schemas_phonebook.MemberComplete] | None,
     status_code=200,
     tags=[Tags.phonebook],
 )
 async def get_association_members(
     association_id: str,
-    mandate_year: int,
     user: models_core.CoreUser = Depends(is_user_a_member),
     db: AsyncSession = Depends(get_db),
 ):
@@ -206,33 +207,59 @@ async def get_association_members(
     )
 
     if association_memberships is None:
-        return
+        return []
 
     members_complete = []
-    all_memberships = await cruds_phonebook.get_all_memberships(mandate_year, db)
-    if all_memberships is None:
-        return
 
-    for (
-        association_membership
-    ) in association_memberships:  # Process every Membership of an association
-        # Get the user id
-        user_id = association_membership.user_id
-        member = await cruds_phonebook.get_member_by_id(
-            association_membership.user_id, db
+    for membership in association_memberships:
+        member_id = membership.user_id
+        member = await cruds_phonebook.get_member_by_id(member_id=member_id, db=db)
+        member_memberships = await cruds_phonebook.get_membership_by_user_id(
+            user_id=member_id, db=db
         )
-        if member:
-            member_memberships = []
-            for membership in all_memberships:
-                if membership.user_id == user_id:
-                    member_memberships.append(membership)
-
-            member_schema = schemas_phonebook.MemberBase(**member.__dict__)
-            members_complete.append(
-                schemas_phonebook.MemberComplete(
-                    memberships=member_memberships, **member_schema.dict()
-                )
+        members_complete.append(
+            schemas_phonebook.MemberComplete(
+                memberships=member_memberships, **member.__dict__
             )
+        )
+    return members_complete
+
+
+@router.get(
+    "/phonebook/associations/{association_id}/members/{mandate_year}",
+    response_model=list[schemas_phonebook.MemberComplete] | None,
+    status_code=200,
+    tags=[Tags.phonebook],
+)
+async def get_association_members_by_mandate_year(
+    association_id: str,
+    mandate_year: int,
+    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get the list of memberships of an association."""
+    association_memberships = (
+        await cruds_phonebook.get_memberships_by_association_id_and_mandate_year(
+            association_id=association_id, mandate_year=mandate_year, db=db
+        )
+    )
+
+    if association_memberships is None:
+        return []
+
+    members_complete = []
+
+    for membership in association_memberships:
+        member_id = membership.user_id
+        member = await cruds_phonebook.get_member_by_id(member_id=member_id, db=db)
+        member_memberships = await cruds_phonebook.get_membership_by_user_id(
+            user_id=member_id, db=db
+        )
+        members_complete.append(
+            schemas_phonebook.MemberComplete(
+                memberships=member_memberships, **member.__dict__
+            )
+        )
     return members_complete
 
 
