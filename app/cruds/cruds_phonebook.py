@@ -170,6 +170,11 @@ async def update_association(
 
 async def delete_association(association_id: str, db: AsyncSession):
     """Delete an association from database"""
+    await db.execute(  # Memberships from the association must first be deleted
+        delete(models_phonebook.Membership).where(
+            models_phonebook.Membership.association_id == association_id
+        )
+    )
     await db.execute(
         delete(models_phonebook.Association).where(
             models_phonebook.Association.id == association_id
