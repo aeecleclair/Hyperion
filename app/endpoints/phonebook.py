@@ -345,6 +345,20 @@ async def create_membership(
             "Error : No association in the scheme. Can't create the membership. Please add an association id in your membership scheme",
         )
 
+    if (
+        await cruds_phonebook.get_memberships_by_association_id_user_id_and_mandate_year(
+            association_id=membership.association_id,
+            user_id=membership.user_id,
+            mandate_year=membership.mandate_year,
+            db=db,
+        )
+        is not None
+    ):
+        raise HTTPException(
+            400,
+            "Error : Membership already exists, try modifying the existing one",
+        )
+
     id = str(uuid.uuid4())
 
     membership_model = models_phonebook.Membership(id=id, **membership.dict())

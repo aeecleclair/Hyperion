@@ -59,7 +59,6 @@ class MembershipBase(BaseModel):
 
 class MembershipComplete(MembershipBase):
     id: str
-    mandate_year: int
 
     class Config:
         orm_mode = True
@@ -87,7 +86,7 @@ class MemberBase(schemas_core.CoreUserSimple):
 
 
 class MemberComplete(MemberBase):
-    memberships: list[MembershipBase]
+    memberships: list[MembershipComplete]
 
     class Config:
         orm_mode = True
