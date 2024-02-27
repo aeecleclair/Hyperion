@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from app.schemas import schemas_core
 
@@ -6,16 +6,14 @@ from app.schemas import schemas_core
 class RoleTagsReturn(BaseModel):
     tags: list[str]
 
-    class config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class RoleTagsBase(BaseModel):
     role_tag: str
     membership_id: str
 
-    class config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AssociationBase(BaseModel):
@@ -28,8 +26,7 @@ class AssociationComplete(AssociationBase):
     id: str
     mandate_year: int
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AssociationEdit(BaseModel):
@@ -42,8 +39,7 @@ class AssociationEdit(BaseModel):
 class AssociationEditComplete(AssociationEdit):
     id: str
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MembershipBase(BaseModel):
@@ -53,15 +49,13 @@ class MembershipBase(BaseModel):
     role_name: str
     role_tags: str | None  # "roletag1;roletag2;..."
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MembershipComplete(MembershipBase):
     id: str
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MembershipEdit(BaseModel):
@@ -73,20 +67,18 @@ class MemberBase(schemas_core.CoreUserSimple):
     id: str
     email: str
     phone: str | None = None
-    nickname: str | None = None
+    nickname: str
     firstname: str
     name: str
     promo: int | None = None
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MemberComplete(MemberBase):
     memberships: list[MembershipComplete]
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class KindsReturn(BaseModel):

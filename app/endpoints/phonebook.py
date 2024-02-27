@@ -110,7 +110,7 @@ async def create_association(
     date = datetime.date.today()
     mandate_year = int(date.strftime("%Y"))  # Store the current mandate year
     association_model = models_phonebook.Association(
-        id=id, mandate_year=mandate_year, **association.dict()
+        id=id, mandate_year=mandate_year, **association.model_dump()
     )
 
     try:
@@ -286,7 +286,7 @@ async def get_member_details(
         if membership.mandate_year == mandate_year:
             member_memberships.append(membership)
     return schemas_phonebook.MemberComplete(
-        memberships=member_memberships, **member_schema.dict()
+        memberships=member_memberships, **member_schema.model_dump()
     )
 
 
@@ -361,7 +361,7 @@ async def create_membership(
 
     id = str(uuid.uuid4())
 
-    membership_model = models_phonebook.Membership(id=id, **membership.dict())
+    membership_model = models_phonebook.Membership(id=id, **membership.model_dump())
     # Add the membership
     await cruds_phonebook.create_membership(membership_model, db)
     # Add the roletags to the attributed roletags table
@@ -402,7 +402,7 @@ async def update_membership(
     ):
         raise HTTPException(
             status_code=403,
-            detail=f"You are not allowed to update membership for association {membership.association_id}",
+            detail=f"You are not allowed to update membership for association {membership_db.association_id}",
         )
     role_tags = dict(membership).pop("role_tags")
     if role_tags is not None:
@@ -416,8 +416,8 @@ async def update_membership(
             if role not in role_tags:
                 hyperion_phonebook_logger.info("Delete role", role)
                 await cruds_phonebook.delete_role(role, membership_id, db)
-    hyperion_phonebook_logger.info("Update membership", membership.dict())
-    membership_complete = schemas_phonebook.MembershipEdit(**membership.dict())
+    hyperion_phonebook_logger.info("Update membership", membership.model_dump())
+    membership_complete = schemas_phonebook.MembershipEdit(**membership.model_dump())
     await cruds_phonebook.update_membership(membership_complete, membership_id, db)
 
 
