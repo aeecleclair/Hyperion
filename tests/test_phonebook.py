@@ -89,6 +89,7 @@ def test_create_association_admin():
         json={
             "name": "Bazar",
             "kind": "Gros Club",
+            "mandate_year": 2023,
             "description": "Bazar description",
         },
         headers={"Authorization": f"Bearer {token_BDE}"},
@@ -102,6 +103,7 @@ def test_create_association_simple():
         json={
             "name": "Bazar",
             "kind": "Gros Club",
+            "mandate_year": 2023,
             "description": "Bazar description",
         },
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -115,19 +117,20 @@ def test_update_association_admin():
         json={
             "name": "Bazar",
             "kind": "Gros Club",
+            "mandate_year": 2023,
             "description": "Bazar description",
         },
         headers={"Authorization": f"Bearer {token_BDE}"},
     )
+    assert response.status_code == 201
+
     id = response.json()["id"]
 
     response = client.patch(
         f"/phonebook/associations/{id}",
         json={
-            "id": id,
-            "name": "Bazar",
-            "kind": "Gros Club",
-            "description": "Bazar description",
+            "name": "Bazar 2",
+            "description": "Bazar modifié",
         },
         headers={"Authorization": f"Bearer {token_BDE}"},
     )
@@ -150,6 +153,7 @@ def test_delete_association_admin():
         json={
             "name": "Piston Hebdo",
             "kind": "Gros Club",
+            "mandate_year": 2023,
         },
         headers={"Authorization": f"Bearer {token_BDE}"},
     )
@@ -170,6 +174,7 @@ def test_delete_association_simple():
         json={
             "name": "Piston Hebdo",
             "kind": "Gros Club",
+            "mandate_year": 2023,
         },
         headers={"Authorization": f"Bearer {token_BDE}"},
     )
@@ -209,6 +214,7 @@ def test_add_membership_admin():
         json={
             "name": "Bazar",
             "kind": "Gros Club",
+            "mandate_year": 2023,
         },
         headers={"Authorization": f"Bearer {token_BDE}"},
     )
@@ -236,6 +242,7 @@ def test_add_membership_simple():
         json={
             "name": "Bazar",
             "kind": "Gros Club",
+            "mandate_year": 2023,
         },
         headers={"Authorization": f"Bearer {token_BDE}"},
     )
@@ -263,6 +270,7 @@ def test_update_membership_admin():
         json={
             "name": "Bazar",
             "kind": "Gros Club",
+            "mandate_year": 2023,
         },
         headers={"Authorization": f"Bearer {token_BDE}"},
     )
@@ -300,6 +308,7 @@ def test_delete_membership_admin():
         json={
             "name": "Bazar",
             "kind": "Gros Club",
+            "mandate_year": 2023,
         },
         headers={"Authorization": f"Bearer {token_BDE}"},
     )

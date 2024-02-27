@@ -1,4 +1,3 @@
-import datetime
 import logging
 import uuid
 
@@ -107,11 +106,7 @@ async def create_association(
         )
 
     id = str(uuid.uuid4())
-    date = datetime.date.today()
-    mandate_year = int(date.strftime("%Y"))  # Store the current mandate year
-    association_model = models_phonebook.Association(
-        id=id, mandate_year=mandate_year, **association.model_dump()
-    )
+    association_model = models_phonebook.Association(id=id, **association.model_dump())
 
     try:
         result = await cruds_phonebook.create_association(association_model, db)
@@ -127,7 +122,7 @@ async def create_association(
 )
 async def update_association(
     association_id: str,
-    association: schemas_phonebook.AssociationEditComplete,
+    association_edit: schemas_phonebook.AssociationEdit,
     user: models_core.CoreUser = Depends(is_user_a_member),
     db: AsyncSession = Depends(get_db),
 ):
@@ -136,7 +131,6 @@ async def update_association(
 
     **This endpoint is only usable by CAA, BDE and association's president**
     """
-
     if not is_user_member_of_an_allowed_group(
         user=user, allowed_groups=[GroupType.CAA, GroupType.BDE]
     ) and not await cruds_phonebook.is_user_president(
@@ -147,13 +141,10 @@ async def update_association(
             detail=f"You are not allowed to update association {association_id}",
         )
 
-    if association_id != association.id:
-        raise HTTPException(
-            status_code=404,
-            detail="association_id and association's ID do not match",
-        )
     try:
-        await cruds_phonebook.update_association(association=association, db=db)
+        await cruds_phonebook.update_association(
+            association_id=association_id, association_edit=association_edit, db=db
+        )
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error))
 
@@ -280,13 +271,12 @@ async def get_member_details(
         return
     member = await cruds_phonebook.get_member_by_id(user_id, db)
     member_memberships = []
-    member_schema = schemas_phonebook.MemberBase(**member.__dict__)
 
     for membership in all_memberships:
         if membership.mandate_year == mandate_year:
             member_memberships.append(membership)
     return schemas_phonebook.MemberComplete(
-        memberships=member_memberships, **member_schema.model_dump()
+        memberships=member_memberships, **member.__dict__
     )
 
 

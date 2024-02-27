@@ -19,27 +19,21 @@ class RoleTagsBase(BaseModel):
 class AssociationBase(BaseModel):
     name: str
     kind: str
+    mandate_year: int
     description: str | None = None
 
 
 class AssociationComplete(AssociationBase):
     id: str
-    mandate_year: int
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class AssociationEdit(BaseModel):
-    name: str | None
-    kind: str | None
-    description: str | None
-    mandate_year: int | None
-
-
-class AssociationEditComplete(AssociationEdit):
-    id: str
-
-    model_config = ConfigDict(from_attributes=True)
+    name: str | None = None
+    kind: str | None = None
+    description: str | None = None
+    mandate_year: int | None = None
 
 
 class MembershipBase(BaseModel):
@@ -47,7 +41,7 @@ class MembershipBase(BaseModel):
     association_id: str
     mandate_year: int
     role_name: str
-    role_tags: str | None  # "roletag1;roletag2;..."
+    role_tags: str | None = None  # "roletag1;roletag2;..."
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -59,17 +53,13 @@ class MembershipComplete(MembershipBase):
 
 
 class MembershipEdit(BaseModel):
-    role_name: str | None
-    role_tags: str | None
+    role_name: str | None = None
+    role_tags: str | None = None
 
 
 class MemberBase(schemas_core.CoreUserSimple):
-    id: str
     email: str
     phone: str | None = None
-    nickname: str
-    firstname: str
-    name: str
     promo: int | None = None
 
     model_config = ConfigDict(from_attributes=True)

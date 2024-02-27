@@ -179,14 +179,15 @@ async def create_association(
 
 
 async def update_association(
-    association: schemas_phonebook.AssociationEditComplete,
+    association_id: str,
+    association_edit: schemas_phonebook.AssociationEdit,
     db: AsyncSession,
 ):
     """Update an association in database"""
     await db.execute(
         update(models_phonebook.Association)
-        .where(models_phonebook.Association.id == association.id)
-        .values(**association.dict(exclude_none=True))
+        .where(models_phonebook.Association.id == association_id)
+        .values(**association_edit.model_dump(exclude_none=True))
     )
     try:
         await db.commit()
@@ -234,7 +235,7 @@ async def update_membership(
     await db.execute(
         update(models_phonebook.Membership)
         .where(models_phonebook.Membership.id == membership_id)
-        .values(**membership.dict(exclude_none=True))
+        .values(**membership.model_dump(exclude_none=True))
     )
     try:
         await db.commit()
