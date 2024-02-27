@@ -285,7 +285,9 @@ def test_update_membership_admin():
 
     response = client.patch(
         f"/phonebook/associations/memberships/{membership_id}",
-        json={"role_name": "Autre rôle"},
+        json={
+            "role_name": "Autre rôle",
+        },
         headers={"Authorization": f"Bearer {token_BDE}"},
     )
     assert response.status_code == 204
@@ -309,6 +311,7 @@ def test_delete_membership_admin():
         json={
             "user_id": phonebook_user_simple.id,
             "association_id": association_id,
+            "mandate_year": 2023,
             "role_name": "VP Emprunts",
             "role_tags": "VP Emprunts",
         },
@@ -340,6 +343,7 @@ def test_delete_membership_simple():
         json={
             "user_id": phonebook_user_simple.id,
             "association_id": association_id,
+            "mandate_year": 2023,
             "role_name": "VP Emprunts",
             "role_tags": "VP Emprunts",
         },
