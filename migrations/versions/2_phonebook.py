@@ -13,7 +13,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "ef563306831b"
-down_revision: Union[str, None] = "28aa5ef44bf3"
+down_revision: Union[str, None] = "f17e6182b0a9"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -65,7 +65,7 @@ def upgrade() -> None:
             ["user_id"],
             ["core_user.id"],
         ),
-        sa.PrimaryKeyConstraint("id", "user_id", "association_id"),
+        sa.PrimaryKeyConstraint("user_id", "association_id", "mandate_year"),
     )
     op.create_index(
         op.f("ix_phonebook_membership_id"), "phonebook_membership", ["id"], unique=False
