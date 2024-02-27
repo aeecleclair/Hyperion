@@ -5,7 +5,7 @@ class RoleTags(Enum):
     president = "Prez'"
     treso = "Trez'"
     sg = "SG"
-    resp_co = "Respo Comm'"
+    resp_co = "Respo Com'"
     resp_part = "Respo Partenariats"
 
     def __str__(self):
@@ -20,14 +20,7 @@ class Kinds(Enum):
     club_use = "Club USE"
     section_uca = "Section UCA"
     club_uca = "Club UCA"
-    association_independant = "Indés"
+    association_independant = "Asso indé"
 
     def __str__(self):
         return self.value
-
-
-if __name__ == "__main__":
-    print("--> ", list(Kinds.__members__.items())[0][0])
-    print("--> ", list(Kinds.__members__.items())[:][0])
-    ol = [el[0] for el in list(Kinds.__members__.items())]
-    print("--> ", ol)
