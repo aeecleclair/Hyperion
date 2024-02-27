@@ -10,7 +10,7 @@ class RoleTagsReturn(BaseModel):
         orm_mode = True
 
 
-class add_roletag(BaseModel):
+class RoleTagsBase(BaseModel):
     role_tag: str
     membership_id: str
 
@@ -22,6 +22,14 @@ class AssociationBase(BaseModel):
     name: str
     kind: str
     description: str | None = None
+
+
+class AssociationComplete(AssociationBase):
+    id: str
+    mandate_year: int
+
+    class Config:
+        orm_mode = True
 
 
 class AssociationEdit(BaseModel):
@@ -38,17 +46,10 @@ class AssociationEditComplete(AssociationEdit):
         orm_mode = True
 
 
-class AssociationComplete(AssociationBase):
-    id: str
-    mandate_year: int
-
-    class Config:
-        orm_mode = True
-
-
-class MembershipPost(BaseModel):
+class MembershipBase(BaseModel):
     user_id: str
     association_id: str
+    mandate_year: int
     role_name: str
     role_tags: str | None  # "roletag1;roletag2;..."
 
@@ -56,7 +57,7 @@ class MembershipPost(BaseModel):
         orm_mode = True
 
 
-class MembershipBase(MembershipPost):
+class MembershipComplete(MembershipBase):
     id: str
     mandate_year: int
 
@@ -65,7 +66,6 @@ class MembershipBase(MembershipPost):
 
 
 class MembershipEdit(BaseModel):
-    association_id: str | None
     role_name: str | None
     role_tags: str | None
 
@@ -88,22 +88,6 @@ class MemberComplete(MemberBase):
 
     class Config:
         orm_mode = True
-
-
-# class Members(schemas_core.CoreUserSimple):
-#     name: str
-#     nickname: str | None = None
-#     firstname: str
-#     email: str
-#     promo: int
-
-#     class config:
-#         orm_mode = True
-
-
-# class ReturnMembers(BaseModel):
-#     members: list[Members]
-#     memberships: list[MembershipBase]
 
 
 class KindsReturn(BaseModel):
