@@ -18,8 +18,6 @@ class Kinds(Enum):
     club_ae = "Club AE"
     section_use = "Section USE"
     club_use = "Club USE"
-    section_uca = "Section UCA"
-    club_uca = "Club UCA"
     association_independant = "Asso indé"
 
     def __str__(self):
