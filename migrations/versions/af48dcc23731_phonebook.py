@@ -1,8 +1,8 @@
 """phonebook
 
-Revision ID: ef563306831b
-Revises: 28aa5ef44bf3
-Create Date: 2024-02-19 12:06:44.282256
+Revision ID: af48dcc23731
+Revises: f17e6182b0a9
+Create Date: 2024-02-27 17:29:57.182304
 
 """
 
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "ef563306831b"
+revision: str = "af48dcc23731"
 down_revision: Union[str, None] = "f17e6182b0a9"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -41,14 +41,12 @@ def upgrade() -> None:
         ["name"],
         unique=False,
     )
-
     op.create_table(
         "phonebook_role_tags",
         sa.Column("tag", sa.String(), nullable=False),
         sa.Column("membership_id", sa.String(), nullable=False),
         sa.PrimaryKeyConstraint("tag", "membership_id"),
     )
-
     op.create_table(
         "phonebook_membership",
         sa.Column("id", sa.String(), nullable=False),
