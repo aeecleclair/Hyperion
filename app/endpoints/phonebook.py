@@ -255,26 +255,21 @@ async def get_association_members_by_mandate_year(
 
 
 @router.get(
-    "/phonebook/member/{user_id}/{mandate_year}",
+    "/phonebook/member/{user_id}/",
     response_model=schemas_phonebook.MemberComplete,
     status_code=200,
     tags=[Tags.phonebook],
 )
 async def get_member_details(
     user_id: str,
-    mandate_year: int,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    all_memberships = await cruds_phonebook.get_membership_by_user_id(user_id, db)
-    if not all_memberships:
+    member_memberships = await cruds_phonebook.get_membership_by_user_id(user_id, db)
+    if not member_memberships:
         return
     member = await cruds_phonebook.get_member_by_id(user_id, db)
-    member_memberships = []
-
-    for membership in all_memberships:
-        if membership.mandate_year == mandate_year:
-            member_memberships.append(membership)
+    print(member_memberships)
     return schemas_phonebook.MemberComplete(
         memberships=member_memberships, **member.__dict__
     )

@@ -403,7 +403,7 @@ def test_get_members_by_association_id_simple():
 
 def test_get_member_by_id_admin():
     response = client.get(
-        f"phonebook/member/{phonebook_user_simple.id}/{membership.mandate_year}",
+        f"phonebook/member/{phonebook_user_simple.id}/",
         headers={"Authorization": f"Bearer {token_BDE}"},
     )
     assert response.status_code == 200
@@ -414,7 +414,7 @@ def test_get_member_by_id_admin():
 
 def test_get_member_by_id_simple():
     response = client.get(
-        f"phonebook/member/{phonebook_user_simple.id}/{membership.mandate_year}",
+        f"phonebook/member/{phonebook_user_simple.id}/",
         headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response.status_code == 200
