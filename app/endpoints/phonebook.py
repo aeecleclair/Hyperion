@@ -344,11 +344,11 @@ async def create_membership(
             400,
             "Error : No association in the scheme. Can't create the membership. Please add an association id in your membership scheme",
         )
+
     id = str(uuid.uuid4())
-    mandate_year = association.mandate_year
 
     membership_model = models_phonebook.Membership(
-        id=id, mandate_year=mandate_year, **membership.dict()
+        id=id, mandate_year=membership.mandate_year, **membership.dict()
     )
     # Add the membership
     await cruds_phonebook.create_membership(membership_model, db)
