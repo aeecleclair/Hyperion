@@ -66,6 +66,9 @@ class MembershipComplete(MembershipBase):
 
 
 class MembershipEdit(BaseModel):
+    user_id: str
+    association_id: str
+    mandate_year: int
     role_name: str | None
     role_tags: str | None
 

@@ -292,7 +292,7 @@ async def get_member_details(
 
 # @router.get(
 #     "/phonebook/associations/memberships/{membership_id}",
-#     response_model=schemas_phonebook.MembershipBase,
+#     response_model=schemas_phonebook.MembershipComplete,
 #     status_code=200,
 #     tags=[Tags.phonebook]
 # )
@@ -308,12 +308,12 @@ async def get_member_details(
 # ---------------------------------------------------------------------------- #
 @router.post(
     "/phonebook/associations/memberships",
-    response_model=schemas_phonebook.MembershipBase,
+    response_model=schemas_phonebook.MembershipComplete,
     status_code=201,
     tags=[Tags.phonebook],
 )
 async def create_membership(
-    membership: schemas_phonebook.MembershipPost,
+    membership: schemas_phonebook.MembershipBase,
     user: models_core.CoreUser = Depends(is_user_a_member),
     db: AsyncSession = Depends(get_db),
 ):
@@ -355,7 +355,7 @@ async def create_membership(
     # Add the roletags to the attributed roletags table
     for role in role_tags:
         await cruds_phonebook.add_new_role(role, id, db)
-    return schemas_phonebook.MembershipBase(**membership_model.__dict__)
+    return schemas_phonebook.MembershipComplete(**membership_model.__dict__)
 
 
 @router.patch(
