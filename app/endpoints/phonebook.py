@@ -347,9 +347,7 @@ async def create_membership(
 
     id = str(uuid.uuid4())
 
-    membership_model = models_phonebook.Membership(
-        id=id, mandate_year=membership.mandate_year, **membership.dict()
-    )
+    membership_model = models_phonebook.Membership(id=id, **membership.dict())
     # Add the membership
     await cruds_phonebook.create_membership(membership_model, db)
     # Add the roletags to the attributed roletags table
