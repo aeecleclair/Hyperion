@@ -49,7 +49,7 @@ async def get_recommendation(
     **The user must be authenticated to use this endpoint**
     """
 
-    return await cruds_recommendation.get_recommendation(db=db)
+    return await cruds_recommendation.get_recommendations(db=db)
 
 
 @module.router.post(

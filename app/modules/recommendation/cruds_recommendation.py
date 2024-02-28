@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.recommendation import models_recommendation, schemas_recommendation
 
 
-async def get_recommendation(
+async def get_recommendations(
     db: AsyncSession,
 ) -> Sequence[models_recommendation.Recommendation]:
     result = await db.execute(select(models_recommendation.Recommendation))
