@@ -19,14 +19,18 @@ async def is_user_president(
     association_id: str, user: models_core.CoreUser, db: AsyncSession
 ) -> bool:
 
-    if association_id is not None:
-        memberships = await get_memberships_by_association_id(association_id, db)
+    association = await get_association_by_id(association_id=association_id, db=db)
+    if association is not None:
+        memberships = await get_memberships_by_association_id(
+            association_id=association_id, db=db
+        )
         if memberships is None:
             return False
 
         for membership in memberships:
             if (
                 membership.user_id == user.id
+                and membership.mandate_year == association.mandate_year
                 and phonebook_types.RoleTags.president
                 in membership.role_tags.split(";")
             ):
