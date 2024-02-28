@@ -210,6 +210,7 @@ class SynapseAuthClient(BaseAuthClient):
     # See app.types.scopes_type.ScopeType for possible values
     allowed_scopes: set[ScopeType | str] = {ScopeType.openid, ScopeType.profile}
 
+    # https://github.com/matrix-org/matrix-authentication-service/issues/2088
     return_userinfo_in_id_token: bool = True
 
     @classmethod
