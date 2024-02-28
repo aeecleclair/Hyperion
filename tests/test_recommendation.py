@@ -46,6 +46,9 @@ def test_create_picture():
             headers={"Authorization": f"Bearer {token_BDE}"},
         )
     assert response.status_code == 201
+
+
+def test_create_picture_for_non_existing_recommendation():
     with open("assets/images/default_recommendation.png", "rb") as image:
         response = client.post(
             "/recommendation/recommendations/false_id/picture",
@@ -83,6 +86,9 @@ def test_create_recommendation():
         headers={"Authorization": f"Bearer {token_BDE}"},
     )
     assert response.status_code == 201
+
+
+def test_create_recommendation_with_no_body():
     response = client.post(
         "/recommendation/recommendations",
         json={},
@@ -98,12 +104,18 @@ def test_edit_recommendation():
         headers={"Authorization": f"Bearer {token_BDE}"},
     )
     assert response.status_code == 204
+
+
+def test_edit_recommendation_with_no_body():
     response = client.patch(
         f"/recommendation/recommendations/{recommendation.id}",
         json={},
         headers={"Authorization": f"Bearer {token_BDE}"},
     )
     assert response.status_code == 204
+
+
+def test_edit_for_non_existing_recommendation():
     response = client.patch(
         "/recommendation/recommendations/false_id",
         json={"title": "Nouveau titre"},
@@ -118,6 +130,9 @@ def test_delete_recommendation():
         headers={"Authorization": f"Bearer {token_BDE}"},
     )
     assert response.status_code == 204
+
+
+def test_delete_for_non_existing_recommendation():
     response = client.delete(
         "/recommendation/recommendations/false_id",
         headers={"Authorization": f"Bearer {token_BDE}"},
