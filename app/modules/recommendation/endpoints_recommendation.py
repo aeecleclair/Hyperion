@@ -149,7 +149,7 @@ async def read_recommendation_image(
     return get_file_from_data(
         default_asset="assets/images/default_recommendation.png",
         directory="recommendations",
-        filename=str(recommendation_id),
+        filename=recommendation_id,
     )
 
 
