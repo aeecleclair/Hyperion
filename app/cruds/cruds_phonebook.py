@@ -31,8 +31,10 @@ async def is_user_president(
             if (
                 membership.user_id == user.id
                 and membership.mandate_year == association.mandate_year
-                and phonebook_types.RoleTags.president
-                in membership.role_tags.split(";")
+                and (
+                    phonebook_types.RoleTags.president.value
+                    in membership.role_tags.split(";")
+                )
             ):
                 return True
     return False
