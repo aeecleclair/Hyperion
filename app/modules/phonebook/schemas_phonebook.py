@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 
-from app.schemas import schemas_core
+from app.core import schemas_core
 
 
 class RoleTagsReturn(BaseModel):

@@ -1,35 +1,38 @@
 import logging
 import uuid
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.cruds import cruds_phonebook
+from app.core import models_core, standard_responses
+from app.core.groups.groups_type import GroupType
+from app.core.module import Module
 from app.dependencies import get_db, get_request_id, is_user_a_member
-from app.models import models_core, models_phonebook
-from app.schemas import schemas_phonebook
+from app.modules.phonebook import cruds_phonebook, models_phonebook, schemas_phonebook
 from app.utils.tools import (
     get_file_from_data,
     is_user_member_of_an_allowed_group,
     save_file_as_data,
 )
-from app.utils.types import standard_responses
-from app.utils.types.groups_type import GroupType
-from app.utils.types.tags import Tags
 
-router = APIRouter()
+module = Module(
+    root="phonebook",
+    tag="Phonebook",
+    default_allowed_groups_ids=[GroupType.student, GroupType.staff],
+)
+
+
 hyperion_phonebook_logger = logging.getLogger("hyperion.phonebook")
 
 
 # ---------------------------------------------------------------------------- #
 #                                    Get All                                   #
 # ---------------------------------------------------------------------------- #
-@router.get(
+@module.router.get(
     "/phonebook/associations/",
     response_model=list[schemas_phonebook.AssociationComplete] | None,
     status_code=200,
-    tags=[Tags.phonebook],
 )
 async def get_all_associations(
     db: AsyncSession = Depends(get_db),
@@ -41,11 +44,10 @@ async def get_all_associations(
     return await cruds_phonebook.get_all_associations(db)
 
 
-@router.get(
+@module.router.get(
     "/phonebook/roletags",
     response_model=schemas_phonebook.RoleTagsReturn | None,
     status_code=200,
-    tags=[Tags.phonebook],
 )
 async def get_all_role_tags(
     db: AsyncSession = Depends(get_db),
@@ -59,11 +61,10 @@ async def get_all_role_tags(
     return roles_schema
 
 
-@router.get(
+@module.router.get(
     "/phonebook/associations/kinds",
     response_model=schemas_phonebook.KindsReturn | None,
     status_code=200,
-    tags=[Tags.phonebook],
 )
 async def get_all_kinds(
     db: AsyncSession = Depends(get_db),
@@ -80,11 +81,10 @@ async def get_all_kinds(
 # ---------------------------------------------------------------------------- #
 #                                  Association                                 #
 # ---------------------------------------------------------------------------- #
-@router.post(
+@module.router.post(
     "/phonebook/associations/",
     response_model=schemas_phonebook.AssociationComplete,
     status_code=201,
-    tags=[Tags.phonebook],
 )
 async def create_association(
     association: schemas_phonebook.AssociationBase,
@@ -115,10 +115,9 @@ async def create_association(
     return result
 
 
-@router.patch(
+@module.router.patch(
     "/phonebook/associations/{association_id}",
     status_code=204,
-    tags=[Tags.phonebook],
 )
 async def update_association(
     association_id: str,
@@ -149,10 +148,9 @@ async def update_association(
         raise HTTPException(status_code=400, detail=str(error))
 
 
-@router.delete(
+@module.router.delete(
     "/phonebook/associations/{association_id}",
     status_code=204,
-    tags=[Tags.phonebook],
 )
 async def delete_association(
     association_id: str,
@@ -181,11 +179,10 @@ async def delete_association(
 # ---------------------------------------------------------------------------- #
 
 
-@router.get(
+@module.router.get(
     "/phonebook/associations/{association_id}/members/",
     response_model=list[schemas_phonebook.MemberComplete] | None,
     status_code=200,
-    tags=[Tags.phonebook],
 )
 async def get_association_members(
     association_id: str,
@@ -216,11 +213,10 @@ async def get_association_members(
     return members_complete
 
 
-@router.get(
+@module.router.get(
     "/phonebook/associations/{association_id}/members/{mandate_year}",
     response_model=list[schemas_phonebook.MemberComplete] | None,
     status_code=200,
-    tags=[Tags.phonebook],
 )
 async def get_association_members_by_mandate_year(
     association_id: str,
@@ -254,11 +250,10 @@ async def get_association_members_by_mandate_year(
     return members_complete
 
 
-@router.get(
+@module.router.get(
     "/phonebook/member/{user_id}/",
     response_model=schemas_phonebook.MemberComplete,
     status_code=200,
-    tags=[Tags.phonebook],
 )
 async def get_member_details(
     user_id: str,
@@ -275,7 +270,7 @@ async def get_member_details(
     )
 
 
-# @router.get(
+# @module.router.get(
 #     "/phonebook/associations/memberships/{membership_id}",
 #     response_model=schemas_phonebook.MembershipComplete,
 #     status_code=200,
@@ -291,11 +286,10 @@ async def get_member_details(
 # ---------------------------------------------------------------------------- #
 #                                  Membership                                  #
 # ---------------------------------------------------------------------------- #
-@router.post(
+@module.router.post(
     "/phonebook/associations/memberships",
     response_model=schemas_phonebook.MembershipComplete,
     status_code=201,
-    tags=[Tags.phonebook],
 )
 async def create_membership(
     membership: schemas_phonebook.MembershipBase,
@@ -355,10 +349,9 @@ async def create_membership(
     return schemas_phonebook.MembershipComplete(**membership_model.__dict__)
 
 
-@router.patch(
+@module.router.patch(
     "/phonebook/associations/memberships/{membership_id}",
     status_code=204,
-    tags=[Tags.phonebook],
 )
 async def update_membership(
     membership: schemas_phonebook.MembershipEdit,
@@ -406,10 +399,9 @@ async def update_membership(
     await cruds_phonebook.update_membership(membership_complete, membership_id, db)
 
 
-@router.delete(
+@module.router.delete(
     "/phonebook/associations/memberships/{membership_id}",
     status_code=204,
-    tags=[Tags.phonebook],
 )
 async def delete_membership(
     membership_id: str,
@@ -446,11 +438,10 @@ async def delete_membership(
 # ---------------------------------------------------------------------------- #
 #                                     Logos                                    #
 # ---------------------------------------------------------------------------- #
-@router.post(
+@module.router.post(
     "/phonebook/associations/{association_id}/picture",
     # response_model=standard_responses.Result,
     status_code=201,
-    tags=[Tags.phonebook],
 )
 async def create_association_logo(
     association_id: str,
@@ -493,11 +484,10 @@ async def create_association_logo(
     return standard_responses.Result(success=True)
 
 
-@router.get(
+@module.router.get(
     "/phonebook/associations/{association_id}/picture",
     response_class=FileResponse,
     status_code=200,
-    tags=[Tags.users],
 )
 async def read_association_logo(
     association_id: str,

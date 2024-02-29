@@ -2,9 +2,9 @@ import uuid
 
 import pytest_asyncio
 
-from app.models import models_core, models_phonebook
-from app.schemas import schemas_phonebook
-from app.utils.types.groups_type import GroupType
+from app.core import models_core
+from app.core.groups.groups_type import GroupType
+from app.modules.phonebook import models_phonebook, schemas_phonebook
 from tests.commons import event_loop  # noqa
 from tests.commons import (
     add_object_to_db,
