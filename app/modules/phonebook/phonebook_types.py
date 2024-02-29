@@ -8,9 +8,6 @@ class RoleTags(Enum):
     resp_co = "Respo Com'"
     resp_part = "Respo Partenariats"
 
-    def __str__(self):
-        return self.value
-
 
 class Kinds(Enum):
     comity = "Comité"
@@ -19,6 +16,3 @@ class Kinds(Enum):
     section_use = "Section USE"
     club_use = "Club USE"
     association_independant = "Asso indé"
-
-    def __str__(self):
-        return self.value

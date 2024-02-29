@@ -33,10 +33,3 @@ class Association(Base):
     description: Mapped[str] = mapped_column(String, nullable=True)
     kind: Mapped[str] = mapped_column(String, nullable=False)
     mandate_year: Mapped[int] = mapped_column(Integer, nullable=False)
-
-
-class AttributedRoleTags(Base):
-    __tablename__ = "phonebook_role_tags"
-
-    tag: Mapped[str] = mapped_column(String, primary_key=True)
-    membership_id: Mapped[str] = mapped_column(String, primary_key=True)
