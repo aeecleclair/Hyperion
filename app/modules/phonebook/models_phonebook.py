@@ -1,11 +1,7 @@
-"""Common model files for all core in order to avoid circular import due to bidirectional relationship"""
-
 from sqlalchemy import ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
-
-# from sqlalchemy.orm import relationship
 
 
 class Membership(Base):

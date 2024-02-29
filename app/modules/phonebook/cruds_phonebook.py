@@ -1,5 +1,3 @@
-# from sqlalchemy.orm import selectinload
-
 from typing import Sequence
 
 from sqlalchemy import delete, select, update
@@ -7,14 +5,12 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
-from app.modules.phonebook import models_phonebook  # , models_core
-from app.modules.phonebook import phonebook_types, schemas_phonebook
+from app.modules.phonebook import models_phonebook, phonebook_types, schemas_phonebook
+
 
 # ---------------------------------------------------------------------------- #
 #                               President test                                 #
 # ---------------------------------------------------------------------------- #
-
-
 async def is_user_president(
     association_id: str, user: models_core.CoreUser, db: AsyncSession
 ) -> bool:
