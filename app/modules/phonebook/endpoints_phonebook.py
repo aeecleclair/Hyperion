@@ -1,4 +1,3 @@
-import logging
 import uuid
 
 from fastapi import Depends, File, HTTPException, UploadFile
@@ -22,9 +21,6 @@ module = Module(
     tag="Phonebook",
     default_allowed_groups_ids=[GroupType.student, GroupType.staff],
 )
-
-
-hyperion_phonebook_logger = logging.getLogger("hyperion.phonebook")
 
 
 # ---------------------------------------------------------------------------- #
