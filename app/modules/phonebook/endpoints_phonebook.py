@@ -253,7 +253,7 @@ async def get_association_members_by_mandate_year(
 
 @module.router.get(
     "/phonebook/member/{user_id}/",
-    response_model=schemas_phonebook.MemberComplete,
+    response_model=schemas_phonebook.MemberComplete | None,
     status_code=200,
 )
 async def get_member_details(
@@ -269,6 +269,9 @@ async def get_member_details(
         member_memberships = []
 
     member = await cruds_users.get_user_by_id(user_id=user_id, db=db)
+
+    if member is None:
+        return
 
     return schemas_phonebook.MemberComplete(
         memberships=member_memberships, **member.__dict__
