@@ -7,9 +7,10 @@ from pytest import mark
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from app.models import models_core, models_elocaps
-from app.utils.types.elocaps_types import CapsMode
-from app.utils.types.groups_type import GroupType
+from app.core import models_core
+from app.core.groups.groups_type import GroupType
+from app.modules.elocaps import models_elocaps
+from app.modules.elocaps.types_elocaps import CapsMode
 from tests.commons import event_loop  # noqa
 from tests.commons import (
     TestingSessionLocal,

@@ -8,9 +8,9 @@ from uuid import uuid4
 from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core import models_core
 from app.database import Base
-from app.models import models_core
-from app.utils.types.elocaps_types import CapsMode
+from app.modules.elocaps.types_elocaps import CapsMode
 
 
 class Player(Base):

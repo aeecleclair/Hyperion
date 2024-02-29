@@ -1,24 +1,27 @@
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.cruds import cruds_elocaps
+from app.core import models_core
+from app.core.groups.groups_type import GroupType
+from app.core.module import Module
 from app.dependencies import get_db, is_user_a_member
-from app.models import models_core, models_elocaps
-from app.schemas import schemas_elocaps
+from app.modules.elocaps import cruds_elocaps, models_elocaps, schemas_elocaps
+from app.modules.elocaps.types_elocaps import CapsMode
 from app.utils.tools import compute_elo_gain
-from app.utils.types.elocaps_types import CapsMode
-from app.utils.types.tags import Tags
 
-router = APIRouter()
+module = Module(
+    root="elocaps",
+    tag="Elocaps",
+    default_allowed_groups_ids=[GroupType.student, GroupType.admin],
+)
 
 
-@router.post(
+@module.router.post(
     "/elocaps/games",
     status_code=201,
     response_model=schemas_elocaps.Game,
-    tags=[Tags.elocaps],
 )
 async def register_game(
     game_params: schemas_elocaps.GameCreateRequest,
@@ -60,11 +63,10 @@ async def register_game(
         raise HTTPException(status_code=400, detail=str(error))
 
 
-@router.get(
+@module.router.get(
     "/elocaps/games/latest",
     response_model=list[schemas_elocaps.Game],
     status_code=200,
-    tags=[Tags.elocaps],
 )
 async def get_latest_games(
     db: AsyncSession = Depends(get_db),
@@ -73,11 +75,10 @@ async def get_latest_games(
     return await cruds_elocaps.get_latest_games(db)
 
 
-@router.get(
+@module.router.get(
     "/elocaps/games/waiting",
     response_model=list[schemas_elocaps.GameMode],
     status_code=200,
-    tags=[Tags.elocaps],
 )
 async def get_waiting_games(
     db: AsyncSession = Depends(get_db),
@@ -86,11 +87,10 @@ async def get_waiting_games(
     return await cruds_elocaps.get_waiting_games(db, user.id)
 
 
-@router.get(
+@module.router.get(
     "/elocaps/games",
     response_model=list[schemas_elocaps.Game],
     status_code=200,
-    tags=[Tags.elocaps],
 )
 async def get_games_played_on(
     time: date,
@@ -100,11 +100,10 @@ async def get_games_played_on(
     return await cruds_elocaps.get_games_played_on(db, time)
 
 
-@router.get(
+@module.router.get(
     "/elocaps/games/{game_id}",
     response_model=schemas_elocaps.Game,
     status_code=200,
-    tags=[Tags.elocaps],
 )
 async def get_game_detail(
     game_id: str,
@@ -117,11 +116,10 @@ async def get_game_detail(
     return game
 
 
-@router.post(
+@module.router.post(
     "/elocaps/games/{game_id}/validate",
     status_code=201,
     response_model=schemas_elocaps.Game,
-    tags=[Tags.elocaps],
 )
 async def confirm_game(
     game_id: str,
@@ -146,11 +144,10 @@ async def confirm_game(
         raise HTTPException(400, str(error))
 
 
-@router.post(
+@module.router.post(
     "/elocaps/games/{game_id}/cancel",
     status_code=201,
     response_model=schemas_elocaps.Game,
-    tags=[Tags.elocaps],
 )
 async def cancel_game(
     game_id: str,
@@ -166,11 +163,10 @@ async def cancel_game(
     return await cruds_elocaps.get_game_details(db, game_id)
 
 
-@router.get(
+@module.router.get(
     "/elocaps/players/{user_id}/games",
     response_model=list[schemas_elocaps.Game],
     status_code=200,
-    tags=[Tags.elocaps],
 )
 async def get_player_games(
     user_id: str,
@@ -180,11 +176,10 @@ async def get_player_games(
     return await cruds_elocaps.get_player_games(db, user_id)
 
 
-@router.get(
+@module.router.get(
     "/elocaps/players/{user_id}",
     response_model=schemas_elocaps.DetailedPlayer,
     status_code=200,
-    tags=[Tags.elocaps],
 )
 async def get_player_info(
     user_id: str,
@@ -202,11 +197,10 @@ async def get_player_info(
     return schemas_elocaps.DetailedPlayer(user=db_player_modes[0].user, info=mode_info)
 
 
-@router.get(
+@module.router.get(
     "/elocaps/leaderboard",
     response_model=list[schemas_elocaps.PlayerBase],
     status_code=200,
-    tags=[Tags.elocaps],
 )
 async def get_leaderboard(
     mode: CapsMode,

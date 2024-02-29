@@ -4,8 +4,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
-from app.schemas.schemas_core import CoreUserSimple
-from app.utils.types.elocaps_types import CapsMode
+from app.core.schemas_core import CoreUserSimple
+from app.modules.elocaps.types_elocaps import CapsMode
 
 
 class PlayerBase(BaseModel):

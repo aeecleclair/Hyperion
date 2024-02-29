@@ -6,9 +6,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import models_elocaps
-from app.schemas import schemas_elocaps
-from app.utils.types.elocaps_types import CapsMode
+from app.modules.elocaps import models_elocaps, schemas_elocaps
+from app.modules.elocaps.types_elocaps import CapsMode
 
 
 async def get_latest_games(db: AsyncSession, count=10) -> Sequence[models_elocaps.Game]:
