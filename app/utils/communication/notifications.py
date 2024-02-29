@@ -6,10 +6,9 @@ from firebase_admin import credentials, messaging
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
-from app.cruds import cruds_notification
-from app.models import models_notification
-from app.schemas.schemas_notification import Message
-from app.utils.types.notification_types import CustomTopic
+from app.core.notification import cruds_notification, models_notification
+from app.core.notification.notification_types import CustomTopic
+from app.core.notification.schemas_notification import Message
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 

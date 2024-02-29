@@ -20,15 +20,15 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import api
+from app.api import module_list
+from app.core import models_core
 from app.core.config import Settings
+from app.core.groups.groups_type import GroupType
 from app.core.log import LogConfig
 from app.database import Base
 from app.dependencies import get_db_engine, get_redis_client, get_settings
-from app.models import models_core
 from app.utils import initialization
 from app.utils.redis import limiter
-from app.utils.types.groups_type import GroupType
-from app.utils.types.module_list import ModuleList
 
 # NOTE: We can not get loggers at the top of this file like we do in other files
 # as the loggers are not yet initialized
@@ -188,10 +188,10 @@ def initialize_module_visibility(engine: Engine) -> None:
         hyperion_error_logger.info(
             "Startup: Modules visibility settings are empty, initializing them"
         )
-        for module in ModuleList:
-            for default_group_id in module.value.default_allowed_groups_ids:
+        for module in module_list:
+            for default_group_id in module.default_allowed_groups_ids:
                 module_visibility = models_core.ModuleVisibility(
-                    root=module.value.root, allowed_group_id=default_group_id.value
+                    root=module.root, allowed_group_id=default_group_id.value
                 )
                 try:
                     initialization.create_module_visibility_sync(module_visibility, db)

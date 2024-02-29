@@ -2,9 +2,10 @@ import uuid
 
 import pytest_asyncio
 
-from app.models import models_core, models_raffle
-from app.utils.types.groups_type import GroupType
-from app.utils.types.raffle_types import RaffleStatusType
+from app.core import models_core
+from app.core.groups.groups_type import GroupType
+from app.modules.raffle import models_raffle
+from app.modules.raffle.types_raffle import RaffleStatusType
 
 # We need to import event_loop for pytest-asyncio routine defined bellow
 from tests.commons import event_loop  # noqa

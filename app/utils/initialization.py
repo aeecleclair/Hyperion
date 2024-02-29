@@ -3,8 +3,8 @@ from sqlalchemy.engine import Engine, create_engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
+from app.core import models_core
 from app.core.config import Settings
-from app.models import models_core
 
 # These utils are used at startup to run database initializations & migrations
 

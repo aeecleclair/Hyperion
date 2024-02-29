@@ -12,16 +12,16 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.app import get_application
-from app.core import security
+from app.core import models_core, security
+from app.core.auth import schemas_auth
 from app.core.config import Settings
-from app.cruds import cruds_groups, cruds_users
+from app.core.groups import cruds_groups
+from app.core.groups.groups_type import GroupType
+from app.core.users import cruds_users
 from app.dependencies import get_db, get_redis_client, get_settings
-from app.models import models_core
-from app.schemas import schemas_auth
 from app.utils.redis import connect, disconnect
 from app.utils.tools import get_random_string
 from app.utils.types.floors_type import FloorsType
-from app.utils.types.groups_type import GroupType
 
 
 @lru_cache()

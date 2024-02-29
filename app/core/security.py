@@ -7,10 +7,10 @@ from fastapi.security import OAuth2AuthorizationCodeBearer
 from jose import jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import models_core
+from app.core.auth import schemas_auth
 from app.core.config import Settings
-from app.cruds import cruds_users
-from app.models import models_core
-from app.schemas import schemas_auth
+from app.core.users import cruds_users
 
 """
 In order to salt and hash password, we the bcrypt hashing function (see https://en.wikipedia.org/wiki/Bcrypt).
