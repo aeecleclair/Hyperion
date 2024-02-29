@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import models_core
 from app.modules.phonebook import models_phonebook  # , models_core
 from app.modules.phonebook import schemas_phonebook
-from app.utils.types import phonebook_types
+from app.modules.phonebook import phonebook_types
 
 # ---------------------------------------------------------------------------- #
 #                               President test                                 #
