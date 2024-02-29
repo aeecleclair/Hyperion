@@ -336,12 +336,13 @@ def test_get_members_by_association_id_simple():
 
 def test_get_member_by_id_simple():
     response = client.get(
-        f"phonebook/member/{phonebook_user_simple.id}/",
+        f"phonebook/member/{phonebook_user_simple.id}",
         headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response.status_code == 200
     assert isinstance(
-        schemas_phonebook.MemberBase(**response.json()), schemas_phonebook.MemberBase
+        schemas_phonebook.MemberComplete(**response.json()),
+        schemas_phonebook.MemberComplete,
     )
 
 

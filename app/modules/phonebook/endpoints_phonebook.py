@@ -252,7 +252,7 @@ async def get_association_members_by_mandate_year(
 
 
 @module.router.get(
-    "/phonebook/member/{user_id}/",
+    "/phonebook/member/{user_id}",
     response_model=schemas_phonebook.MemberComplete | None,
     status_code=200,
 )
