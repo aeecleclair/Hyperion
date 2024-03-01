@@ -16,4 +16,4 @@ redis==5.0.1
 icalendar == 5.0.11
 psycopg2==2.9.9                     # PostgreSQL adapter for synchronous operations at startup (database initializations & migrations)
 asyncpg==0.28.0                     # PostgreSQL adapter for asynchronous operations
-firebase-admin==6.2.0               # Firebase is used for push notification
+firebase-admin==6.4.0               # Firebase is used for push notification
