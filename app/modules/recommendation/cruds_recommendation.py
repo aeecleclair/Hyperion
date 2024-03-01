@@ -1,13 +1,9 @@
-import uuid
-from datetime import datetime
 from typing import Sequence
-from zoneinfo import ZoneInfo
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import Settings
 from app.modules.recommendation import models_recommendation, schemas_recommendation
 
 
@@ -19,18 +15,12 @@ async def get_recommendation(
 
 
 async def create_recommendation(
-    recommendation: schemas_recommendation.RecommendationBase,
+    recommendation: models_recommendation.Recommendation,
     db: AsyncSession,
-    settings: Settings,
-) -> models_recommendation.Recommendation:
-    recommendation_db = models_recommendation.Recommendation(
-        id=str(uuid.uuid4()),
-        creation=datetime.now(ZoneInfo(settings.TIMEZONE)),
-        **recommendation.model_dump(),
-    )
-    db.add(recommendation_db)
+):
+    db.add(recommendation)
     await db.commit()
-    return recommendation_db
+    return recommendation
 
 
 async def update_recommendation(

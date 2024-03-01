@@ -1,3 +1,7 @@
+import uuid
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,7 +17,11 @@ from app.dependencies import (
     is_user_a_member,
     is_user_a_member_of,
 )
-from app.modules.recommendation import cruds_recommendation, schemas_recommendation
+from app.modules.recommendation import (
+    cruds_recommendation,
+    models_recommendation,
+    schemas_recommendation,
+)
 from app.utils.tools import get_file_from_data, save_file_as_data
 
 router = APIRouter()
@@ -61,10 +69,14 @@ async def create_recommendation(
     **This endpoint is only usable by members of the group BDE**
     """
 
+    recommendation_db = models_recommendation.Recommendation(
+        id=str(uuid.uuid4()),
+        creation=datetime.now(ZoneInfo(settings.TIMEZONE)),
+        **recommendation.model_dump(),
+    )
+
     return await cruds_recommendation.create_recommendation(
-        recommendation=recommendation,
-        db=db,
-        settings=settings,
+        recommendation=recommendation_db, db=db
     )
 
 
