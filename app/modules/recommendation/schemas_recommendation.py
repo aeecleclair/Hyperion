@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel
 
 
@@ -10,6 +12,7 @@ class RecommendationBase(BaseModel):
 
 class Recommendation(RecommendationBase):
     id: str
+    creation: datetime
 
     class Config:
         orm_mode = True

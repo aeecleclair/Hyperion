@@ -8,6 +8,7 @@ class Recommendation(Base):
     __tablename__ = "recommendation"
 
     id: Mapped[str] = mapped_column(String, primary_key=True, nullable=False)
+    creation: Mapped[str] = mapped_column(String, nullable=False)
     title: Mapped[str] = mapped_column(String, nullable=False)
     code: Mapped[str] = mapped_column(String, nullable=False)
     summary: Mapped[str] = mapped_column(String, nullable=False)
