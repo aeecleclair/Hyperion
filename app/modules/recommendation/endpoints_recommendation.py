@@ -167,12 +167,12 @@ async def create_recommendation_image(
 
     **This endpoint is only usable by members of the group BDE**
     """
-    try:
-        await cruds_recommendation.get_recommendation_by_id(
-            recommendation_id=recommendation_id,
-            db=db,
-        )
-    except ValueError:
+    recommendation = await cruds_recommendation.get_recommendation_by_id(
+        recommendation_id=recommendation_id,
+        db=db,
+    )
+
+    if not recommendation:
         raise HTTPException(status_code=404, detail="The recommendation does not exist")
 
     await save_file_as_data(

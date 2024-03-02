@@ -1,7 +1,6 @@
 from typing import Sequence
 
 from sqlalchemy import delete, select, update
-from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.recommendation import models_recommendation, schemas_recommendation
@@ -62,13 +61,10 @@ async def delete_recommendation(
 async def get_recommendation_by_id(
     recommendation_id: str,
     db: AsyncSession,
-) -> models_recommendation.Recommendation:
+) -> models_recommendation.Recommendation | None:
     result = await db.execute(
         select(models_recommendation.Recommendation).where(
             models_recommendation.Recommendation.id == recommendation_id
         )
     )
-    try:
-        return result.scalars().one()
-    except NoResultFound:
-        raise ValueError
+    return result.scalars().one_or_none()
