@@ -292,6 +292,14 @@ class NotificationManager:
                 f"Notification: Unable to send firebase notification to user {user_id} with device: {error}",
             )
 
+    async def send_notification_to_users(
+        self, user_ids: list[str], message: Message, db: AsyncSession
+    ) -> None:
+        for user_id in user_ids:
+            await self.send_notification_to_user(
+                user_id=user_id, message=message, db=db
+            )
+
     async def send_notification_to_topic(
         self,
         custom_topic: CustomTopic,
@@ -438,6 +446,14 @@ class NotificationTool:
         self.background_tasks.add_task(
             self.notification_manager.send_notification_to_user,
             user_id=user_id,
+            message=message,
+            db=self.db,
+        )
+
+    async def send_notification_to_users(self, user_ids: list[str], message: Message):
+        self.background_tasks.add_task(
+            self.notification_manager.send_notification_to_users,
+            user_ids=user_ids,
             message=message,
             db=self.db,
         )
