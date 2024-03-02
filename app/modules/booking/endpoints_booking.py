@@ -6,9 +6,10 @@ from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
+from app.core.config import Settings
+from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
-from app.core.notification.notification_types import CustomTopic, Topic
 from app.core.notification.schemas_notification import Message
 from app.dependencies import (
     get_db,
@@ -267,24 +268,26 @@ async def create_booking(
     result = await cruds_booking.get_booking_by_id(db=db, booking_id=db_booking.id)
 
     try:
-        if result:
-            now = datetime.now(UTC)
+        manager_group_id = result.room.manager.group_id
+        manager_group = await cruds_groups.get_group_by_id(
+            db=db, group_id=manager_group_id
+        )
+        if result and manager_group:
+            now = datetime.now(ZoneInfo(settings.TIMEZONE))
             message = Message(
-                # We use sunday date as context to avoid sending the recap twice
                 context=f"booking-create-{result.id}",
                 is_visible=True,
-                title="Réservations - Nouvelle réservation 📅",
+                title="Réservations - Nouvelle réservation 🗝️",
                 content=f"{result.applicant.nickname} - {result.room.name} {result.start.strftime('%m/%d/%Y, %H:%M')} - {result.reason}",
-                # The notification will expire the next sunday
                 expire_on=now.replace(day=now.day + 3),
             )
-            await notification_tool.send_notification_to_topic(
-                custom_topic=CustomTopic(topic=Topic.bookingadmin),
+            await notification_tool.send_notification_to_users(
+                user_ids=[user.id for user in manager_group.members],
                 message=message,
             )
     except Exception as error:
         hyperion_error_logger.error(
-            f"Error while sending cinema recap notification, {error}",
+            f"Error while sending booking admin notification, {error}"
         )
 
     return result
