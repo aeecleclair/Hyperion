@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
@@ -6,10 +7,19 @@ from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
+from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
-from app.dependencies import get_db, is_user_a_member, is_user_a_member_of
+from app.core.notification.schemas_notification import Message
+from app.dependencies import (
+    get_db,
+    get_notification_tool,
+    get_settings,
+    is_user_a_member,
+    is_user_a_member_of,
+)
 from app.modules.loan import cruds_loan, models_loan, schemas_loan
+from app.utils.communication.notifications import NotificationTool
 from app.utils.tools import (
     is_group_id_valid,
     is_user_id_valid,
@@ -25,6 +35,9 @@ module = Module(
     tag="Loans",
     default_allowed_groups_ids=[GroupType.student, GroupType.staff],
 )
+
+
+hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 @module.router.get(
@@ -487,6 +500,8 @@ async def create_loan(
     loan_creation: schemas_loan.LoanCreation,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
+    settings: Settings = Depends(get_settings),
+    notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
     Create a new loan in database and add the requested items
@@ -599,6 +614,25 @@ async def create_loan(
                 quantity=itemret.quantity,
             ),
         )
+
+    try:
+        now = datetime.now(ZoneInfo(settings.TIMEZONE))
+        message = Message(
+            context=f"loan-new-{loan.id}",
+            is_visible=True,
+            title="Nouveaux prêt 📦",
+            content=f"Un prêt a été enregistré pour l'association {loan.loaner.name}",
+            expire_on=now.replace(day=now.day + 3),
+        )
+        await notification_tool.send_notification_to_user(
+            user_id=loan.borrower_id,
+            message=message,
+        )
+    except Exception as error:
+        hyperion_error_logger.error(
+            f"Error while sending notification to borrower of a new loan, {error}"
+        )
+
     return schemas_loan.Loan(items_qty=items_qty_ret, **loan.__dict__)
 
 
