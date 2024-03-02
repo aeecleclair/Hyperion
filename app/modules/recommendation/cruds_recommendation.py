@@ -28,6 +28,9 @@ async def update_recommendation(
     recommendation: schemas_recommendation.RecommendationEdit,
     db: AsyncSession,
 ):
+    if not any(recommendation.model_dump().values()):
+        return
+
     result = await db.execute(
         update(models_recommendation.Recommendation)
         .where(models_recommendation.Recommendation.id == recommendation_id)

@@ -96,17 +96,14 @@ async def edit_recommendation(
     **This endpoint is only usable by members of the group BDE**
     """
 
-    if any(recommendation.model_dump().values()):
-        try:
-            await cruds_recommendation.update_recommendation(
-                recommendation_id=recommendation_id,
-                recommendation=recommendation,
-                db=db,
-            )
-        except ValueError:
-            raise HTTPException(
-                status_code=404, detail="The recommendation does not exist"
-            )
+    try:
+        await cruds_recommendation.update_recommendation(
+            recommendation_id=recommendation_id,
+            recommendation=recommendation,
+            db=db,
+        )
+    except ValueError:
+        raise HTTPException(status_code=404, detail="The recommendation does not exist")
 
 
 @module.router.delete(
