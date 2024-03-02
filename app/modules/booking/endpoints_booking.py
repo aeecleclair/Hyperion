@@ -324,7 +324,7 @@ async def edit_booking(
             booking_id=booking_id, booking=booking_edit, db=db
         )
     except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @module.router.patch(
