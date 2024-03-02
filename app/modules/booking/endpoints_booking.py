@@ -338,6 +338,8 @@ async def confirm_booking(
     decision: Decision,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
+    settings: Settings = Depends(get_settings),
+    notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
     Give a decision to a booking.
@@ -361,6 +363,26 @@ async def confirm_booking(
             status_code=403,
             detail="You are not allowed to give a decision to this booking",
         )
+
+    if decision in [Decision.approved, Decision.declined]:
+        try:
+            now = datetime.now(ZoneInfo(settings.TIMEZONE))
+            status = "acceptée" if decision == Decision.approved else "refusée"
+            message = Message(
+                context=f"booking-decision-{booking_id}",
+                is_visible=True,
+                title=f"Réservations {status} 🗝️",
+                content=f"Votre reservation pour {booking.room.name} le {booking.start.strftime('%m/%d/%Y, %H:%M')} a été {status}",
+                expire_on=now.replace(day=now.day + 3),
+            )
+            await notification_tool.send_notification_to_user(
+                user_id=booking.applicant_id,
+                message=message,
+            )
+        except Exception as error:
+            hyperion_error_logger.error(
+                f"Error while sending booking status notification to applicant, {error}"
+            )
 
 
 @module.router.delete(
