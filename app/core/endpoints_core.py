@@ -151,7 +151,7 @@ async def get_favicon():
 
 
 @router.get(
-    "/module-visibility/",
+    "/module-visibility",
     response_model=list[schemas_core.ModuleVisibility],
     status_code=200,
 )
@@ -160,16 +160,15 @@ async def get_module_visibility(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
-    Get all existing module_visibility.
+    Get group ids allowed to see a module for all existing modules in Hyperion.
 
     **This endpoint is only usable by administrators**
     """
 
     return_module_visibilities = []
     for module in module_list:
-        allowed_group_ids = await cruds_core.get_allowed_groups_by_root(
-            root=module.root,
-            db=db,
+        allowed_group_ids = await cruds_core.get_allowed_groups_ids_by_root(
+            root=module.root, db=db
         )
         return_module_visibilities.append(
             schemas_core.ModuleVisibility(
@@ -191,12 +190,12 @@ async def get_user_modules_visibility(
     user: models_core.CoreUser = Depends(is_user),
 ):
     """
-    Get group user accessible root
+    Get all roots the user can see.
 
     **This endpoint is only usable by everyone**
     """
 
-    return await cruds_core.get_modules_by_user(user=user, db=db)
+    return await cruds_core.get_visible_roots_by_user(user=user, db=db)
 
 
 @router.post(
@@ -225,6 +224,7 @@ async def add_module_visibility(
         module_visibility_db = models_core.ModuleVisibility(
             root=module_visibility.root,
             allowed_group_id=module_visibility.allowed_group_id,
+            visible=True,
         )
 
         return await cruds_core.create_module_visibility(
@@ -242,8 +242,6 @@ async def delete_session(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
-    await cruds_core.delete_module_visibility(
-        root=root,
-        allowed_group_id=group_id,
-        db=db,
+    await cruds_core.disable_module_visibility(
+        root=root, allowed_group_id=group_id, db=db
     )

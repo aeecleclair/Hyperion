@@ -185,24 +185,22 @@ def initialize_module_visibility(engine: Engine) -> None:
     hyperion_error_logger = logging.getLogger("hyperion.error")
 
     with Session(engine) as db:
-        # Is run to create default module visibilies or when the table is empty
-        haveBeenInitialized = (
-            len(initialization.get_all_module_visibility_membership_sync(db)) > 0
-        )
-        if haveBeenInitialized:
-            hyperion_error_logger.info(
-                "Startup: Modules visibility settings have already been initialized",
-            )
-            return
-
-        hyperion_error_logger.info(
-            "Startup: Modules visibility settings are empty, initializing them",
-        )
         for module in module_list:
+            existing_module_visibility = (
+                initialization.get_all_module_visibility_by_root_sync(
+                    root=module.root, db=db
+                )
+            )
+            if len(existing_module_visibility):
+                # There are already module visibilities for this module
+                # we don't want to override them with default group ids
+                continue
+            # We add the module visibility for the default groups
             for default_group_id in module.default_allowed_groups_ids:
                 module_visibility = models_core.ModuleVisibility(
                     root=module.root,
                     allowed_group_id=default_group_id.value,
+                    visible=True,
                 )
                 try:
                     initialization.create_module_visibility_sync(module_visibility, db)
