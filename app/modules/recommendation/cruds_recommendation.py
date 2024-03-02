@@ -17,7 +17,7 @@ async def get_recommendations(
 async def create_recommendation(
     recommendation: models_recommendation.Recommendation,
     db: AsyncSession,
-):
+) -> models_recommendation.Recommendation:
     db.add(recommendation)
     await db.commit()
     return recommendation
