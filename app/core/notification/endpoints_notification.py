@@ -254,12 +254,12 @@ async def get_topic(
 
 
 @router.get(
-    "/notification/topics/{topic_str}",
+    "/notification/topics/{topic}",
     status_code=200,
     response_model=list[str],
 )
 async def get_topic_identifier(
-    topic_str: str,
+    topic: Topic,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
