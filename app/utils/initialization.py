@@ -1,3 +1,5 @@
+from typing import Sequence
+
 from sqlalchemy import select
 from sqlalchemy.engine import Engine, create_engine
 from sqlalchemy.exc import IntegrityError
@@ -22,13 +24,18 @@ def get_sync_db_engine(settings: Settings) -> Engine:
     return engine
 
 
-def get_all_module_visibility_membership_sync(
+def get_all_module_visibility_by_root_sync(
+    root: str,
     db: Session,
-):
+) -> Sequence[models_core.ModuleVisibility]:
     """
     Return the every module with their visibility
     """
-    result = db.execute(select(models_core.ModuleVisibility))
+    result = db.execute(
+        select(models_core.ModuleVisibility).where(
+            models_core.ModuleVisibility.root == root
+        )
+    )
     return result.unique().scalars().all()
 
 
