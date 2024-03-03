@@ -10,7 +10,6 @@ from typing import Sequence, Union
 
 from alembic import op
 
-
 # revision identifiers, used by Alembic.
 revision: str = "99a2c70e4a24"
 down_revision: Union[str, None] = "f17e6182b0a9"
@@ -35,7 +34,19 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    pass
+    # Booking
+    op.execute(generate_downgrade_sql_request("booking", "start"))
+    op.execute(generate_downgrade_sql_request("booking", "end"))
+    op.execute(generate_downgrade_sql_request("booking", "creation"))
+    # Advert
+    op.execute(generate_downgrade_sql_request("advert_adverts", "date"))
+    # Amap
+    op.execute(generate_downgrade_sql_request("amap_order", "ordering_date"))
+    # Calendar
+    op.execute(generate_downgrade_sql_request("calendar_events", "start"))
+    op.execute(generate_downgrade_sql_request("calendar_events", "end"))
+    # Cinema
+    op.execute(generate_downgrade_sql_request("cinema_session", "start"))
 
 
 def generate_sql_request(table, column) -> str:
