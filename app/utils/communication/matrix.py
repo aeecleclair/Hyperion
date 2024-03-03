@@ -33,7 +33,7 @@ class Matrix:
         if "Authorization" not in headers:
             headers["Authorization"] = "Bearer " + self.access_token
 
-        response = requests.post(url, json=json, headers=headers)
+        response = requests.post(url, json=json, headers=headers, timeout=10)
         try:
             response.raise_for_status()
         except requests.exceptions.HTTPError:

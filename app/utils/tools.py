@@ -1,7 +1,7 @@
 import glob
 import logging
 import os
-import random
+import secrets
 from collections.abc import Sequence
 
 import aiofiles
@@ -196,4 +196,6 @@ def get_display_name(
 
 
 def get_random_string(length: int = 5) -> str:
-    return "".join(random.choices("abcdefghijklmnopqrstuvwxyz0123456789", k=length))
+    return "".join(
+        secrets.choice("abcdefghijklmnopqrstuvwxyz0123456789") for _ in range(length)
+    )

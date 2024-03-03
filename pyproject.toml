@@ -18,12 +18,17 @@ select = [
     "DTZ",
     "UP",
     "ASYNC",
+    "S",
 ] # "B", "N" to add later
-ignore = ["E203", "E266", "E501", "F403"]
+ignore = ["E203", "E266", "E501", "F403", "S104"]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
 fixable = ["ALL"]
 unfixable = []
+
+[tool.ruff.lint.per-file-ignores]
+# Allow `assert` and hardcoded passwords for tests
+"tests/*" = ["S101", "S105", "S106"]
 
 [tool.ruff.lint.mccabe]
 # Flag errors (`C901`) whenever the complexity level exceeds 18.
