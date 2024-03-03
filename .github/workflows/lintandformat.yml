@@ -35,7 +35,7 @@ jobs:
           key: ruff_cache-${{ github.head_ref }}
 
       - name: Lint with ruff
-        run: ruff --output-format=github .
+        run: ruff check --output-format=github .
 
       - name: Cache .mypy_cache folder
         id: mypy_cache
