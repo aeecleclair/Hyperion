@@ -24,6 +24,7 @@ select = [
     "C4",
     "ISC",
     "ICN",
+    "INP",
 ] # "B", "N" to add later
 ignore = ["E203", "E266", "E501", "F403", "S104", "B008", "C401"]
 
@@ -39,6 +40,8 @@ unfixable = []
 "**/cruds_*" = ["B904"]          # TODO: find a better way to handle cruds errors
 "app/utils/tools.py" = ["B904"]
 "app/dependencies.py" = ["B904"]
+# Migrations folder should not really be part of a Python package
+"migrations/env.py" = ["INP001"]
 
 [tool.ruff.lint.mccabe]
 # Flag errors (`C901`) whenever the complexity level exceeds 18.
