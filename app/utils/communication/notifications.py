@@ -69,7 +69,7 @@ class NotificationManager:
     async def _send_firebase_push_notification_by_tokens(
         self,
         db: AsyncSession,
-        tokens: list[str] = [],
+        tokens: list[str],
     ):
         """
         Send a firebase push notification to a list of tokens.
@@ -116,7 +116,7 @@ class NotificationManager:
         )
 
     async def _send_firebase_trigger_notification_by_tokens(
-        self, db: AsyncSession, tokens: list[str] = []
+        self, db: AsyncSession, tokens: list[str]
     ):
         """
         Send a firebase trigger notification to a list of tokens.

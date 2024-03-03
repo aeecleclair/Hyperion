@@ -111,7 +111,7 @@ def create_access_token(
 def create_access_token_RS256(
     settings: Settings,
     data: schemas_auth.TokenData,
-    additional_data: dict[str, Any] = {},
+    additional_data: dict[str, Any] | None = None,
     expires_delta: timedelta | None = None,
 ) -> str:
     """
@@ -123,7 +123,7 @@ def create_access_token_RS256(
         # We use the default value
         expires_delta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
-    to_encode: dict[str, Any] = additional_data
+    to_encode: dict[str, Any] = additional_data or {}
     to_encode.update(data.model_dump(exclude_none=True))
 
     iat = datetime.now(UTC)

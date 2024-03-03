@@ -91,7 +91,7 @@ async def get_advert_by_id(
 
 
 async def get_adverts_by_advertisers(
-    db: AsyncSession, advertisers: list[str] = []
+    db: AsyncSession, advertisers: list[str]
 ) -> Sequence[models_advert.Advert]:
     result = await db.execute(
         select(models_advert.Advert).where(

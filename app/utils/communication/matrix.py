@@ -22,13 +22,18 @@ class Matrix:
 
         self.access_token = token
 
-    def post(self, url, json, headers={}) -> dict[str, Any]:
+    def post(
+        self, url: str, json: dict[str, Any], headers: dict[str, Any] | None
+    ) -> dict[str, Any]:
         """
         The function adds an access token to the request authorization header and issue a post operation.
         The authorization header will only be added if one is not already provided
 
         https://spec.matrix.org/v1.3/client-server-api/#using-access-tokens
         """
+        if headers is None:
+            # If no headers are provided, create a new dict
+            headers = {}
 
         if "Authorization" not in headers:
             headers["Authorization"] = "Bearer " + self.access_token

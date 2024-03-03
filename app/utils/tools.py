@@ -96,11 +96,7 @@ async def save_file_as_data(
     filename: str,
     request_id: str,
     max_file_size: int = 1024 * 1024 * 2,  # 2 MB
-    accepted_content_types: list[str] = [
-        "image/jpeg",
-        "image/png",
-        "image/webp",
-    ],  # images only
+    accepted_content_types: list[str] | None = None,
 ):
     """
     Save an image file to the data folder.
@@ -121,6 +117,16 @@ async def save_file_as_data(
 
     WARNING: **NEVER** trust user input when calling this function. Always check that parameters are valid.
     """
+    if accepted_content_types is None:
+        # Accept only images by default
+        accepted_content_types = (
+            [
+                "image/jpeg",
+                "image/png",
+                "image/webp",
+            ],
+        )
+
     if image.content_type not in accepted_content_types:
         raise HTTPException(
             status_code=400,

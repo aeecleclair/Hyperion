@@ -21,14 +21,16 @@ async def count_users(db: AsyncSession) -> int:
 
 async def get_users(
     db: AsyncSession,
-    includedGroups: list[str] = [],
-    excludedGroups: list[str] = [],
+    included_groups: list[str] | None = None,
+    excluded_groups: list[str] | None = None,
 ) -> Sequence[models_core.CoreUser]:
     """
     Return all users from database.
 
-    Parameters `includedGroups` and `excludedGroups` can be used to filter results.
+    Parameters `included_groups` and `excluded_groups` can be used to filter results.
     """
+    included_groups = included_groups or []
+    excluded_groups = excluded_groups or []
 
     result = await db.execute(
         select(models_core.CoreUser).where(
@@ -40,7 +42,7 @@ async def get_users(
                     models_core.CoreUser.groups.any(
                         models_core.CoreGroup.id == group_id
                     )
-                    for group_id in includedGroups
+                    for group_id in included_groups
                 ],
                 # We want, for each group that should not be included
                 # check that the following condition is false :
@@ -51,7 +53,7 @@ async def get_users(
                             models_core.CoreGroup.id == group_id
                         )
                     )
-                    for group_id in excludedGroups
+                    for group_id in excluded_groups
                 ],
             )
         )
