@@ -4,12 +4,11 @@ import logging
 import os
 import uuid
 from contextlib import asynccontextmanager
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import alembic.command as alembic_command
 import alembic.config as alembic_config
 import alembic.migration as alembic_migration
-import redis
 from fastapi import FastAPI, Request, Response, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
@@ -29,6 +28,9 @@ from app.database import Base
 from app.dependencies import get_db_engine, get_redis_client, get_settings
 from app.utils import initialization
 from app.utils.redis import limiter
+
+if TYPE_CHECKING:
+    import redis
 
 # NOTE: We can not get loggers at the top of this file like we do in other files
 # as the loggers are not yet initialized

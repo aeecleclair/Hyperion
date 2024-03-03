@@ -1,6 +1,6 @@
 import uuid
-from collections.abc import Sequence
 from datetime import timedelta
+from typing import TYPE_CHECKING
 
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,6 +15,10 @@ from app.utils.tools import (
     is_user_id_valid,
     is_user_member_of_an_allowed_group,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
 
 module = Module(
     root="loan",

@@ -32,6 +32,7 @@ select = [
     "Q",
     "SLF",
     "SIM",
+    "TCH",
 ] # "B", "N" to add later
 ignore = [
     "E203",
