@@ -18,6 +18,7 @@ from app.core.config import Settings
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
 from app.core.users import cruds_users
+from app.database import Base
 from app.dependencies import get_db, get_redis_client, get_settings
 from app.utils.redis import connect, disconnect
 from app.utils.tools import get_random_string
@@ -176,13 +177,13 @@ def create_api_access_token(user: models_core.CoreUser):
     return token
 
 
-async def add_object_to_db(object):
+async def add_object_to_db(db_object: Base) -> None:
     """
     Add an object to the database
     """
     async with TestingSessionLocal() as db:
         try:
-            db.add(object)
+            db.add(db_object)
             await db.commit()
         except IntegrityError as e:
             await db.rollback()

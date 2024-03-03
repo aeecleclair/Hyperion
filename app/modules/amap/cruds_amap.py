@@ -145,8 +145,12 @@ async def create_delivery(
         await db.rollback()
         raise ValueError("An error as occured server side while creating the delivery")
 
-    for id in delivery.products_ids:
-        db.add(models_amap.AmapDeliveryContent(product_id=id, delivery_id=delivery.id))
+    for product_id in delivery.products_ids:
+        db.add(
+            models_amap.AmapDeliveryContent(
+                product_id=product_id, delivery_id=delivery.id
+            )
+        )
     try:
         await db.commit()
         return await get_delivery_by_id(db=db, delivery_id=delivery.id)
@@ -176,8 +180,12 @@ async def add_product_to_delivery(
     delivery_id: str,
 ):
     """Add a product to a delivery products list"""
-    for id in products_ids.products_ids:
-        db.add(models_amap.AmapDeliveryContent(product_id=id, delivery_id=delivery_id))
+    for product_id in products_ids.products_ids:
+        db.add(
+            models_amap.AmapDeliveryContent(
+                product_id=product_id, delivery_id=delivery_id
+            )
+        )
     try:
         await db.commit()
     except IntegrityError:

@@ -153,12 +153,12 @@ def initialize_groups(engine: Engine) -> None:
 
     hyperion_error_logger.info("Startup: Adding new groups to the database")
     with Session(engine) as db:
-        for id in GroupType:
-            exists = initialization.get_group_by_id_sync(group_id=id, db=db)
+        for group_type in GroupType:
+            exists = initialization.get_group_by_id_sync(group_id=group_type, db=db)
             # We don't want to recreate the groups if they already exist
             if not exists:
                 group = models_core.CoreGroup(
-                    id=id, name=id.name, description="Group type"
+                    id=group_type, name=group_type.name, description="Group type"
                 )
 
                 try:

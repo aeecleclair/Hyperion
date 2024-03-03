@@ -253,9 +253,9 @@ async def delete_list_by_type(list_type: ListType, db: AsyncSession) -> None:
     """Delete all campaign list by type."""
 
     lists = await get_lists(db)
-    for list in lists:
-        if list.type == list_type:
-            await remove_members_from_list(list_id=list.id, db=db)
+    for list_obj in lists:
+        if list_obj.type == list_type:
+            await remove_members_from_list(list_id=list_obj.id, db=db)
 
     await db.execute(
         delete(models_campaign.Lists).where(models_campaign.Lists.type == list_type)

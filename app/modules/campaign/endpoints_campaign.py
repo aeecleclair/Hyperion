@@ -164,7 +164,7 @@ async def get_lists(
     status_code=201,
 )
 async def add_list(
-    list: schemas_campaign.ListBase,
+    campaign_list: schemas_campaign.ListBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
@@ -183,11 +183,13 @@ async def add_list(
         )
 
     # Check if the section given exists in the DB.
-    section = await cruds_campaign.get_section_by_id(db=db, section_id=list.section_id)
+    section = await cruds_campaign.get_section_by_id(
+        db=db, section_id=campaign_list.section_id
+    )
     if section is None:
         raise HTTPException(status_code=404, detail="Given section doesn't exist.")
 
-    if list.type == ListType.blank:
+    if campaign_list.type == ListType.blank:
         raise HTTPException(
             status_code=400,
             detail="Blank list should not be added by an user. They will be created before the vote start.",
@@ -198,7 +200,7 @@ async def add_list(
     # We don't need to add membership for list members by hand
     # SQLAlchemy will do it for us if we provide a `members` list
     members = []
-    for member in list.members:
+    for member in campaign_list.members:
         if await cruds_users.get_user_by_id(db=db, user_id=member.user_id) is None:
             raise HTTPException(
                 status_code=404,
@@ -213,12 +215,12 @@ async def add_list(
 
     model_list = models_campaign.Lists(
         id=list_id,
-        name=list.name,
-        description=list.description,
-        section_id=list.section_id,
-        type=list.type,
+        name=campaign_list.name,
+        description=campaign_list.description,
+        section_id=campaign_list.section_id,
+        type=campaign_list.type,
         members=members,
-        program=list.program,
+        program=campaign_list.program,
     )
     try:
         await cruds_campaign.add_list(campaign_list=model_list, db=db)
@@ -284,8 +286,8 @@ async def delete_lists_by_type(
 
     try:
         if list_type is None:
-            for type in ListType:
-                await cruds_campaign.delete_list_by_type(list_type=type, db=db)
+            for type_obj in ListType:
+                await cruds_campaign.delete_list_by_type(list_type=type_obj, db=db)
         else:
             await cruds_campaign.delete_list_by_type(list_type=list_type, db=db)
     except ValueError as error:
@@ -316,8 +318,8 @@ async def update_list(
             detail=f"You can't edit a list if the vote has already begun. The module status is {status} but should be 'waiting'",
         )
 
-    list = await cruds_campaign.get_list_by_id(db=db, list_id=list_id)
-    if list is None:
+    list_db = await cruds_campaign.get_list_by_id(db=db, list_id=list_id)
+    if list_db is None:
         raise HTTPException(status_code=404, detail="List not found.")
 
     if campaign_list.members is not None:
@@ -823,8 +825,8 @@ async def create_campaigns_logo(
             detail=f"Lists can only be edited in waiting mode. The current status is {status}",
         )
 
-    list = await cruds_campaign.get_list_by_id(db=db, list_id=list_id)
-    if list is None:
+    campaign_list = await cruds_campaign.get_list_by_id(db=db, list_id=list_id)
+    if campaign_list is None:
         raise HTTPException(
             status_code=404,
             detail="The list does not exist.",
