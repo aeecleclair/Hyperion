@@ -1,5 +1,5 @@
 from datetime import UTC, datetime
-from typing import Sequence
+from collections.abc import Sequence
 
 from icalendar import Calendar, Event, vRecur
 from sqlalchemy import delete, select, update

@@ -131,7 +131,7 @@ async def delete_manager(
     manager = await cruds_booking.get_manager_by_id(db=db, manager_id=manager_id)
     if manager.rooms:
         raise HTTPException(
-            status_code=403, detail=str("There are still rooms linked to this manager")
+            status_code=403, detail="There are still rooms linked to this manager"
         )
     else:
         await cruds_booking.delete_manager(manager_id=manager_id, db=db)
@@ -460,14 +460,13 @@ async def delete_room(
     """
     room = await cruds_booking.get_room_by_id(db=db, room_id=room_id)
     if all(
-        map(
-            lambda b: b.end < datetime.now(UTC),
-            room.bookings,
-        )
+        booking.end.replace(tzinfo=ZoneInfo(settings.TIMEZONE))
+        < datetime.now(timezone.utc)
+        for booking in room.bookings
     ):
         await cruds_booking.delete_room(db=db, room_id=room_id)
     else:
         raise HTTPException(
             status_code=403,
-            detail=str("There are still future or ongoing bookings of this room"),
+            detail="There are still future or ongoing bookings of this room",
         )

@@ -1,6 +1,6 @@
 """File defining the functions called by the endpoints, making queries to the table using the models"""
 
-from typing import Sequence
+from collections.abc import Sequence
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError

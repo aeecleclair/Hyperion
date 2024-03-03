@@ -3,7 +3,7 @@ import logging
 import os
 import random
 import shutil
-from typing import Sequence
+from collections.abc import Sequence
 
 from fastapi import HTTPException, UploadFile
 from fastapi.responses import FileResponse

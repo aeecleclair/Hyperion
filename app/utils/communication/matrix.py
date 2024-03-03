@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any
 
 import requests
 
@@ -22,7 +22,7 @@ class Matrix:
 
         self.access_token = token
 
-    def post(self, url, json, headers={}) -> Dict[str, Any]:
+    def post(self, url, json, headers={}) -> dict[str, Any]:
         """
         The function adds an access token to the request authorization header and issue a post operation.
         The authorization header will only be added if one is not already provided

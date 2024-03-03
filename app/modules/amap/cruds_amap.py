@@ -1,8 +1,8 @@
 """File defining the functions called by the endpoints, making queries to the table using the models"""
 
 import logging
+from collections.abc import Sequence
 from datetime import date
-from typing import Sequence
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError

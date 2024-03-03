@@ -8,8 +8,9 @@ async def get_users(db: AsyncSession = Depends(get_db)):
 """
 
 import logging
+from collections.abc import AsyncGenerator, Callable, Coroutine
 from functools import lru_cache
-from typing import Any, AsyncGenerator, Callable, Coroutine
+from typing import Any
 
 import redis
 from fastapi import BackgroundTasks, Depends, HTTPException, Request, status
@@ -112,7 +113,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             await db.close()
 
 
-@lru_cache()
+@lru_cache
 def get_settings() -> Settings:
     """
     Return a settings object, based on `.env` dotenv

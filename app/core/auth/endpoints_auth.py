@@ -860,11 +860,11 @@ async def create_response_body(
     # We use a set representation as:
     #  - scopes should be unique
     #  - we will intersect requested scopes with allowed scopes, which is an easier operation with a set than a list
-    requested_scopes_set: Set[str] = set((db_row.scope or "").split(" "))
+    requested_scopes_set: set[str] = set((db_row.scope or "").split(" "))
 
     # We create a list of all the scopes we accept to grant to the user to include them in the access token.
 
-    granted_scopes_set: Set[ScopeType | str] = auth_client.filter_scopes(
+    granted_scopes_set: set[ScopeType | str] = auth_client.filter_scopes(
         requested_scopes=requested_scopes_set
     )
     refused_scopes = requested_scopes_set - granted_scopes_set

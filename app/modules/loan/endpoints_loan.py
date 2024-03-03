@@ -1,6 +1,6 @@
 import uuid
+from collections.abc import Sequence
 from datetime import timedelta
-from typing import Sequence
 
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -566,11 +566,11 @@ async def create_loan(
 
     loan = await cruds_loan.get_loan_by_id(loan_id=db_loan.id, db=db)
     if loan is None:
-        raise HTTPException(status_code=404, detail=str("Loan not found"))
+        raise HTTPException(status_code=404, detail="Loan not found")
 
     itemsret = await cruds_loan.get_loan_contents_by_loan_id(loan_id=db_loan.id, db=db)
     if itemsret is None:
-        raise HTTPException(status_code=404, detail=str("LoanContent not found"))
+        raise HTTPException(status_code=404, detail="LoanContent not found")
     items_qty_ret: list[schemas_loan.ItemQuantity] = []
     for itemret in itemsret:
         items_qty_ret.append(
