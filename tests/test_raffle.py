@@ -1,4 +1,5 @@
 import uuid
+from pathlib import Path
 
 import pytest_asyncio
 
@@ -181,7 +182,7 @@ def test_edit_raffle():
 def test_create_raffle_logo():
     token = create_api_access_token(BDE_user)
 
-    with open("assets/images/default_campaigns_logo.png", "rb") as image:
+    with Path("assets/images/default_campaigns_logo.png").open("rb") as image:
         response = client.post(
             f"/tombola/raffles/{raffle.id}/logo",
             files={"image": ("logo.png", image, "image/png")},
@@ -205,7 +206,7 @@ def test_read_raffle_logo():
 def test_create_prize_picture():
     token = create_api_access_token(BDE_user)
 
-    with open("assets/images/default_campaigns_logo.png", "rb") as image:
+    with Path("assets/images/default_campaigns_logo.png").open("rb") as image:
         response = client.post(
             f"/tombola/prizes/{prize.id}/picture",
             files={"image": ("logo.png", image, "image/png")},

@@ -1,9 +1,9 @@
 """File defining the Metadata. And the basic functions creating the database tables and calling the router"""
 
 import logging
-import os
 import uuid
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 import alembic.command as alembic_command
@@ -213,12 +213,9 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     hyperion_security_logger = logging.getLogger("hyperion.security")
     hyperion_error_logger = logging.getLogger("hyperion.error")
 
-    # Create folder for calendars
-    if not os.path.exists("data/ics/"):
-        os.makedirs("data/ics/")
-
-    if not os.path.exists("data/core/"):
-        os.makedirs("data/core/")
+    # Create folder for calendars if they don't already exists
+    Path("data/ics/").mkdir(parents=True, exist_ok=True)
+    Path("data/core/").mkdir(parents=True, exist_ok=True)
 
     # Creating a lifespan which will be called when the application starts then shuts down
     # https://fastapi.tiangolo.com/advanced/events/

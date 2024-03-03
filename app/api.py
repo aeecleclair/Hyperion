@@ -24,7 +24,7 @@ api_router.include_router(endpoints_groups.router)
 api_router.include_router(endpoints_notification.router)
 api_router.include_router(endpoints_users.router)
 
-for endpoints_file in Path(".").glob("app/modules/*/endpoints_*.py"):
+for endpoints_file in Path().glob("app/modules/*/endpoints_*.py"):
     endpoint_module = importlib.import_module(
         ".".join(endpoints_file.with_suffix("").parts)
     )

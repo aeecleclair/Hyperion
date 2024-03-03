@@ -1,5 +1,5 @@
-import os
 import uuid
+from pathlib import Path
 
 from fastapi import Depends, HTTPException
 from fastapi.responses import FileResponse
@@ -246,7 +246,7 @@ async def recreate_ical_file(
 async def get_icalendar_file(db: AsyncSession = Depends(get_db)):
     """Get the icalendar file corresponding to the event in the database."""
 
-    if os.path.exists(ical_file_path):
+    if Path(ical_file_path).exists():
         return FileResponse(ical_file_path)
 
     else:

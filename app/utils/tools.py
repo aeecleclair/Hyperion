@@ -1,8 +1,8 @@
-import glob
 import logging
 import os
 import secrets
 from collections.abc import Sequence
+from pathlib import Path
 
 import aiofiles
 from fastapi import HTTPException, UploadFile
@@ -153,11 +153,11 @@ async def save_file_as_data(
     extension = extensions_mapping.get(image.content_type, "")
     # Remove the existing file if any and create the new one
     try:
-        if not os.path.exists(f"data/{directory}/"):
-            os.makedirs(f"data/{directory}/")
+        # If the directory does not exist, we want to create it
+        Path(f"data/{directory}/").mkdir(parents=True, exist_ok=True)
 
-        for filePath in glob.glob(f"data/{directory}/{filename}.*"):
-            os.remove(filePath)
+        for filePath in Path().glob(f"data/{directory}/{filename}.*"):
+            filePath.unlink()
 
         async with aiofiles.open(
             f"data/{directory}/{filename}.{extension}", mode="wb"
@@ -185,7 +185,7 @@ def get_file_from_data(
 
     WARNING: **NEVER** trust user input when calling this function. Always check that parameters are valid.
     """
-    for filePath in glob.glob(f"data/{directory}/{filename}.*"):
+    for filePath in Path().glob(f"data/{directory}/{filename}.*"):
         return FileResponse(filePath)
 
     return FileResponse(default_asset)

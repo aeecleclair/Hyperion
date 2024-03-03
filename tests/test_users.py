@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest_asyncio
 
 from app.core import models_core
@@ -100,7 +102,7 @@ def test_update_user():
 def test_create_current_user_profile_picture():
     token = create_api_access_token(student_user)
 
-    with open("assets/images/default_profile_picture.png", "rb") as image:
+    with Path("assets/images/default_profile_picture.png").open("rb") as image:
         response = client.post(
             "/users/me/profile-picture",
             files={"image": ("profile picture.png", image, "image/png")},

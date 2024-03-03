@@ -1,4 +1,5 @@
 from os import path
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
@@ -129,7 +130,7 @@ async def get_style_file(
     ) != path.realpath(css_dir):
         raise HTTPException(status_code=404, detail="File not found")
 
-    if not path.isfile(css_path):
+    if not Path(css_path).is_file():
         raise HTTPException(status_code=404, detail="File not found")
 
     return FileResponse(css_path)

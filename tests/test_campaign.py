@@ -1,4 +1,5 @@
 import uuid
+from pathlib import Path
 
 import pytest_asyncio
 
@@ -204,7 +205,7 @@ def test_update_list():
 def test_create_campaigns_logo():
     token = create_api_access_token(CAA_user)
 
-    with open("assets/images/default_campaigns_logo.png", "rb") as image:
+    with Path("assets/images/default_campaigns_logo.png").open("rb") as image:
         response = client.post(
             f"/campaign/lists/{campaign_list.id}/logo",
             files={"image": ("logo.png", image, "image/png")},

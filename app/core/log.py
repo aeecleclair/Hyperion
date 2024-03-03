@@ -1,8 +1,8 @@
 import logging
 import logging.config
-import os
 import queue
 from logging.handlers import QueueHandler, QueueListener
+from pathlib import Path
 
 from app.core.config import Settings
 
@@ -238,8 +238,7 @@ class LogConfig:
         # We may be interested in https://github.com/python/cpython/pull/93269 when it will be released. See https://discuss.python.org/t/a-new-feature-is-being-added-in-logging-config-dictconfig-to-configure-queuehandler-and-queuelistener/16124
 
         # If logs/ folder does not exist, the logging module won't be able to create file handlers
-        if not os.path.exists("logs/"):
-            os.makedirs("logs/")
+        Path("logs/").mkdir(parents=True, exist_ok=True)
 
         config_dict = self.get_config_dict(settings=settings)
         logging.config.dictConfig(config_dict)
