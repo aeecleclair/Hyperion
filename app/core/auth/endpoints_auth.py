@@ -458,7 +458,7 @@ async def token(
         )
 
 
-async def authorization_code_grant(  # noqa: C901 # The function is too complex for flake8
+async def authorization_code_grant(
     db: AsyncSession,
     settings: Settings,
     tokenreq: schemas_auth.TokenReq,
