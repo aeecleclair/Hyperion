@@ -1,19 +1,33 @@
-[tool.black]
+[tool.ruff]
+# By default ruff also respect gitignore files
+# Same as Black.
 line-length = 88
-target-version = ['py310']
-# "Black will automatically ignore files and directories in .gitignore file"
-extend-exclude = '''
-/(
-    .git
-  | migrations
-)/
-'''
+indent-width = 4
+target-version = "py311"
 
-[tool.isort]
-profile = "black"
-py_version = 310
-skip_gitignore = true
-skip_glob = [".git", "migrations/*"]
+[tool.ruff.lint]
+# Enable Pyflakes (`F`), pycodestyle (`E`, `W`), isort (`I`), pep8-naming (`N`), flake8-bugbear (`B`)
+# T201: check for prints, C90: mccabe complexity
+select = ["F", "E", "W", "I", "T201", "C90"] # "B", "N" to add later
+ignore = ["E203", "E266", "E501", "F403"]
+
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.lint.mccabe]
+# Flag errors (`C901`) whenever the complexity level exceeds 18.
+max-complexity = 18
+
+[tool.ruff.format]
+# Like Black, use double quotes for strings.
+quote-style = "double"
+# Like Black, indent with spaces, rather than tabs.
+indent-style = "space"
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"
 
 [tool.mypy]
 python_version = "3.11"

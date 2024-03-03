@@ -144,7 +144,8 @@ async def get_messages(
 
     if firebase_device is None:
         raise HTTPException(
-            status_code=404, detail="Device not found for user"  # {user.id}"
+            status_code=404,
+            detail="Device not found for user",  # {user.id}"
         )
 
     messages = await cruds_notification.get_messages_by_firebase_token(

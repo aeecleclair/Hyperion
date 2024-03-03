@@ -34,9 +34,7 @@ class LogConfig:
         + "%(message)s"
         + console_color.END
     )
-    MATRIX_LOG_FORMAT: str = (
-        "%(asctime)s - %(name)s - <code>%(levelname)s</code> - <font color ='green'>%(message)s</font>"
-    )
+    MATRIX_LOG_FORMAT: str = "%(asctime)s - %(name)s - <code>%(levelname)s</code> - <font color ='green'>%(message)s</font>"
 
     # Logging config
     # See https://docs.python.org/3/library/logging.config.html#logging-config-dictschema

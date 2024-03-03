@@ -107,8 +107,7 @@ async def get_firebase_devices_by_user_id_and_firebase_token(
         select(models_notification.FirebaseDevice).where(
             # If we want to enable authentification for /messages/{firebase_token} endpoint, we may to uncomment the following line
             # models_notification.FirebaseDevice.user_id == user_id,
-            models_notification.FirebaseDevice.firebase_device_token
-            == firebase_token,
+            models_notification.FirebaseDevice.firebase_device_token == firebase_token,
         )
     )
     return result.scalars().first()

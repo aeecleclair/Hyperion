@@ -11,12 +11,9 @@
     // When using the debugger, VS Code pass the porly parsed file as environnement variables, letting to Pydantic validation erros
     "python.envFile": "${workspaceFolder}/",
     "[python]": {
-        "editor.defaultFormatter": "ms-python.black-formatter"
+        "editor.defaultFormatter": "charliermarsh.ruff"
     },
     "python.testing.pytestArgs": ["tests"],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
-    "black-formatter.path": [
-        "black"
-    ],
 }

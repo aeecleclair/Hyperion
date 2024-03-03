@@ -9,13 +9,13 @@ from app.modules.amap import models_amap
 from app.modules.amap.types_amap import AmapSlotType, DeliveryStatusType
 
 # We need to import event_loop for pytest-asyncio routine defined bellow
-from tests.commons import event_loop  # noqa
 from tests.commons import (
     add_object_to_db,
     change_redis_client_status,
     client,
     create_api_access_token,
     create_user_with_groups,
+    event_loop,  # noqa
 )
 
 amap_user: models_core.CoreUser | None = None
@@ -31,7 +31,17 @@ deletable_order_by_admin: models_amap.Order | None = None
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects():
-    global amap_user, student_user, product, deletable_product, delivery, deletable_delivery, locked_delivery, order, deletable_order_by_admin, cash
+    global \
+        amap_user, \
+        student_user, \
+        product, \
+        deletable_product, \
+        delivery, \
+        deletable_delivery, \
+        locked_delivery, \
+        order, \
+        deletable_order_by_admin, \
+        cash
 
     amap_user = await create_user_with_groups([GroupType.amap])
     student_user = await create_user_with_groups([GroupType.student])
