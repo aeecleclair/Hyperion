@@ -167,8 +167,6 @@ class CoreGroup(CoreGroupSimple):
 class CoreGroupCreate(CoreGroupBase):
     """Model for group creation schema"""
 
-    pass
-
 
 class CoreGroupInDB(CoreGroupBase):
     """Schema for user activation"""
