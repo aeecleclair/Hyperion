@@ -81,8 +81,8 @@ def change_redis_client_status(activated: bool):
         if settings.REDIS_HOST != "":
             try:
                 redis_client = connect(settings)
-            except redis.exceptions.ConnectionError:
-                raise Exception("Connection to Redis failed")
+            except redis.exceptions.ConnectionError as err:
+                raise Exception("Connection to Redis failed") from err
     else:
         if isinstance(redis_client, redis.Redis):
             redis_client.flushdb()

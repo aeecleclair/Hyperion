@@ -418,7 +418,7 @@ async def add_order_to_delievery(
 
     amount = 0.0
     for product_id, product_quantity in zip(
-        order.products_ids, order.products_quantity
+        order.products_ids, order.products_quantity, strict=True
     ):
         prod = await cruds_amap.get_product_by_id(product_id=product_id, db=db)
         if prod is None or prod not in delivery.products:
@@ -481,7 +481,6 @@ async def add_order_to_delievery(
         hyperion_amap_logger.info(
             f"Add_order_to_delivery: An order has been created for user {order.user_id} for an amount of {amount}€. ({request_id})"
         )
-        productsret
         return schemas_amap.OrderReturn(productsdetail=productsret, **orderret.__dict__)
 
     except ValueError as error:
@@ -550,7 +549,7 @@ async def edit_order_from_delivery(
 
         amount = 0.0
         for product_id, product_quantity in zip(
-            order.products_ids, order.products_quantity
+            order.products_ids, order.products_quantity, strict=True
         ):
             prod = await cruds_amap.get_product_by_id(product_id=product_id, db=db)
             if prod is None or prod not in delivery.products:

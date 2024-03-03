@@ -80,9 +80,7 @@ class Settings(BaseSettings):
     # PostgreSQL configuration #
     ############################
     # PostgreSQL configuration is needed to use the database
-    SQLITE_DB: str | None = (
-        None  # If set, the application use a SQLite database instead of PostgreSQL, for testing or development purposes (should not be used if possible)
-    )
+    SQLITE_DB: str | None = None  # If set, the application use a SQLite database instead of PostgreSQL, for testing or development purposes (should not be used if possible)
     POSTGRES_HOST: str = ""
     POSTGRES_USER: str = ""
     POSTGRES_PASSWORD: str = ""
@@ -193,11 +191,11 @@ class Settings(BaseSettings):
                 auth_client_class: type[providers.BaseAuthClient] = getattr(
                     providers, auth_client_name
                 )
-            except AttributeError:
+            except AttributeError as error:
                 # logger.error()
                 raise ValueError(
                     f".env AUTH_CLIENTS is invalid: {auth_client_name} is not an auth_client from app.utils.auth.providers"
-                )
+                ) from error
             # If the secret is empty, this mean the client is expected to use PKCE
             # We need to pass a None value to the auth_client_class
             if not secret:
@@ -250,8 +248,8 @@ class Settings(BaseSettings):
 
         try:
             jwk.construct(self.RSA_PRIVATE_PEM_STRING, algorithm="RS256")
-        except JWKError as e:
-            raise ValueError("RSA_PRIVATE_PEM_STRING is not a valid RSA key", e)
+        except JWKError as error:
+            raise ValueError("RSA_PRIVATE_PEM_STRING is not a valid RSA key") from error
 
         return self
 
@@ -262,9 +260,9 @@ class Settings(BaseSettings):
         By calling them in this validator, we force their initialization during the instantiation of the class.
         This allow them to raise error on Hyperion startup if they are not correctly configured instead of creating an error on runtime.
         """
-        self.KNOWN_AUTH_CLIENTS
-        self.RSA_PRIVATE_KEY
-        self.RSA_PUBLIC_KEY
-        self.RSA_PUBLIC_JWK
+        self.KNOWN_AUTH_CLIENTS  # noqa
+        self.RSA_PRIVATE_KEY  # noqa
+        self.RSA_PUBLIC_KEY  # noqa
+        self.RSA_PUBLIC_JWK  # noqa
 
         return self

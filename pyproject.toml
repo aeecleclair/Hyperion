@@ -19,8 +19,9 @@ select = [
     "UP",
     "ASYNC",
     "S",
+    "B",
 ] # "B", "N" to add later
-ignore = ["E203", "E266", "E501", "F403", "S104"]
+ignore = ["E203", "E266", "E501", "F403", "S104", "B008"]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
 fixable = ["ALL"]
@@ -29,6 +30,11 @@ unfixable = []
 [tool.ruff.lint.per-file-ignores]
 # Allow `assert` and hardcoded passwords for tests
 "tests/*" = ["S101", "S105", "S106"]
+# Allow endpoints, tools and dependencies to raise `HTTPException` after catching an excetion without reraising (`from err`)
+"**/endpoints_*" = ["B904"]
+"**/cruds_*" = ["B904"]          # TODO: find a better way to handle cruds errors
+"app/utils/tools.py" = ["B904"]
+"app/dependencies.py" = ["B904"]
 
 [tool.ruff.lint.mccabe]
 # Flag errors (`C901`) whenever the complexity level exceeds 18.

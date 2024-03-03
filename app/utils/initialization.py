@@ -45,7 +45,7 @@ def create_module_visibility_sync(
         return module_visibility
     except IntegrityError as error:
         db.rollback()
-        raise ValueError(error)
+        raise ValueError(error) from error
 
 
 def get_group_by_id_sync(group_id: str, db: Session) -> models_core.CoreGroup | None:

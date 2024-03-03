@@ -9,8 +9,6 @@ from sqlalchemy.orm import selectinload
 
 from app.core import models_core
 
-# from app.schemas.schemas_core import CoreUserUpdate
-
 
 async def count_users(db: AsyncSession) -> int:
     """Return the number of users in the database"""
