@@ -31,7 +31,17 @@ deletable_order_by_admin: models_amap.Order | None = None
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects():
-    global amap_user, student_user, product, deletable_product, delivery, deletable_delivery, locked_delivery, order, deletable_order_by_admin, cash
+    global \
+        amap_user, \
+        student_user, \
+        product, \
+        deletable_product, \
+        delivery, \
+        deletable_delivery, \
+        locked_delivery, \
+        order, \
+        deletable_order_by_admin, \
+        cash
 
     amap_user = await create_user_with_groups([GroupType.amap])
     student_user = await create_user_with_groups([GroupType.student])
