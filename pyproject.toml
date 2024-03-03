@@ -22,6 +22,7 @@ select = [
     "B",
     "A",
     "C4",
+    "ISC",
 ] # "B", "N" to add later
 ignore = ["E203", "E266", "E501", "F403", "S104", "B008", "C401"]
 
