@@ -21,7 +21,7 @@ async def get_modules_by_user(
 ) -> Sequence[str]:
     """Return the modules a user has access to"""
 
-    userGroupIds = list(map(lambda group: group.id, user.groups))
+    userGroupIds = [group.id for group in user.groups]
 
     result = await db.execute(
         select(models_core.ModuleVisibility.root)

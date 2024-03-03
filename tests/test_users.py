@@ -160,7 +160,7 @@ def test_search_users():
     )
     assert response.status_code == 200
     data = response.json()
-    assert all([user["id"] not in group_users for user in data])
+    assert all(user["id"] not in group_users for user in data)
 
 
 async def test_invalid_migrate_mail():

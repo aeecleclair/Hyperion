@@ -21,8 +21,9 @@ select = [
     "S",
     "B",
     "A",
+    "C4",
 ] # "B", "N" to add later
-ignore = ["E203", "E266", "E501", "F403", "S104", "B008"]
+ignore = ["E203", "E266", "E501", "F403", "S104", "B008", "C401"]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
 fixable = ["ALL"]
