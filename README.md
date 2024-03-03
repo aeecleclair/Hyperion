@@ -72,7 +72,7 @@ pip install -r requirements-dev.txt
 
 To lint and format, we currently use `Ruff`. We also use `Mypy` for the type checking.
 
-Before each PR or git push you will need to run `ruff check . --fix` in order to format/lint your code and `mypy .` in order to verify that there is no type mismatch.
+Before each PR or git push you will need to run `ruff check --fix && ruff format` in order to format/lint your code and `mypy .` in order to verify that there is no type mismatch.
 
 ## Complete the dotenv (`.env`)
 
