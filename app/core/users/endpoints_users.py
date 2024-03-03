@@ -101,7 +101,7 @@ async def search_users(
     """
 
     users = await cruds_users.get_users(
-        db, includedGroups=includedGroups, excludedGroups=excludedGroups
+        db, included_groups=includedGroups, excluded_groups=excludedGroups
     )
 
     return fuzzy_search_user(query, users)
