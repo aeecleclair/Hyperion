@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
 from collections.abc import Sequence
 
+import aiofiles
 from icalendar import Calendar, Event, vRecur
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
@@ -146,5 +147,5 @@ async def create_icalendar_file(db: AsyncSession) -> None:
 
             calendar.add_component(ical_event)
 
-    with open(calendar_file_path, "wb") as calendar_file:
-        calendar_file.write(calendar.to_ical())
+    async with aiofiles.open(calendar_file_path, mode="wb") as calendar_file:
+        await calendar_file.write(calendar.to_ical())

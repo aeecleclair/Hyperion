@@ -2,9 +2,9 @@ import glob
 import logging
 import os
 import random
-import shutil
 from collections.abc import Sequence
 
+import aiofiles
 from fastapi import HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from rapidfuzz import process
@@ -153,8 +153,12 @@ async def save_file_as_data(
         for filePath in glob.glob(f"data/{directory}/{filename}.*"):
             os.remove(filePath)
 
-        with open(f"data/{directory}/{filename}.{extension}", "wb") as buffer:
-            shutil.copyfileobj(image.file, buffer)
+        async with aiofiles.open(
+            f"data/{directory}/{filename}.{extension}", mode="wb"
+        ) as buffer:
+            # https://stackoverflow.com/questions/63580229/how-to-save-uploadfile-in-fastapi
+            while content := await image.read(1024):
+                await buffer.write(content)
 
     except Exception as error:
         hyperion_error_logger.error(

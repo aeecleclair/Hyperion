@@ -17,6 +17,7 @@ select = [
     "C90",
     "DTZ",
     "UP",
+    "ASYNC",
 ] # "B", "N" to add later
 ignore = ["E203", "E266", "E501", "F403"]
 

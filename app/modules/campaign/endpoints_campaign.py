@@ -3,6 +3,7 @@ import logging
 import uuid
 from datetime import UTC, datetime
 
+import aiofiles
 from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.exc import IntegrityError
@@ -466,7 +467,7 @@ async def open_vote(
         f"data/campaigns/lists-{datetime.now(tz=UTC).date().isoformat()}.json",
         "w",
     ) as file:
-        json.dump([liste.as_dict() for liste in lists], file)
+        await file.write(json.dumps([liste.as_dict() for liste in lists]))
 
 
 @module.router.post(
@@ -577,8 +578,10 @@ async def reset_vote(
             f"data/campaigns/results-{datetime.now(UTC).date().isoformat()}.json",
             "w",
         ) as file:
-            json.dump(
-                [{"list_id": res.list_id, "count": res.count} for res in results], file
+            await file.write(
+                json.dumps(
+                    [{"list_id": res.list_id, "count": res.count} for res in results]
+                )
             )
 
         await cruds_campaign.reset_campaign(db=db)

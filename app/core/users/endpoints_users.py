@@ -3,6 +3,7 @@ import re
 import uuid
 from datetime import UTC, datetime, timedelta
 
+import aiofiles
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -696,11 +697,11 @@ async def migrate_mail_confirm(
         db=db,
     )
 
-    with open(
+    async with aiofiles.open(
         "data/core/mail-migration-archives.txt",
-        "a",
+        mode="a",
     ) as file:
-        file.write(
+        await file.write(
             f"{migration_object.user_id},{migration_object.old_email},{migration_object.new_email}\n"
         )
 
