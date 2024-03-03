@@ -45,6 +45,7 @@ ignore = [
     "S104",
     "B008",
     "C401",
+    "ISC001",
     "SIM102",
     "SIM105",
     "RUF012", # We may want to enable "Mutable class attributes should be annotated with `typing.ClassVar`"
