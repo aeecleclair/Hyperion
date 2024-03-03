@@ -35,6 +35,7 @@ select = [
     "SIM",
     "TCH",
     "PTH",
+    "RUF",
 ] # "B", "N" to add later
 ignore = [
     "E203",
@@ -46,6 +47,7 @@ ignore = [
     "C401",
     "SIM102",
     "SIM105",
+    "RUF012", # We may want to enable "Mutable class attributes should be annotated with `typing.ClassVar`"
 ]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
