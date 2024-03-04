@@ -7,7 +7,7 @@ class CalendarEventType(str, Enum):
     independentAssociation = "Asso indé"
     happyHour = "HH"
     direction = "Strass"
-    nightParty = "Soirée"
+    nightParty = "Rewass"
     other = "Autre"
 
     def __str__(self):
