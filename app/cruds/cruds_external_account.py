@@ -15,7 +15,7 @@ async def disable_external_accounts(db: AsyncSession):
                     models_core.CoreGroup.id == GroupType.external.value
                 )
             )
-            .values(enabled=False)
+            .values(disabled=True)
         )
         await db.commit()
 

@@ -35,7 +35,7 @@ class CoreUser(Base):
     phone: Mapped[str | None] = mapped_column(String)
     floor: Mapped[FloorsType] = mapped_column(Enum(FloorsType), nullable=False)
     created_on: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    disabled: Mapped[bool] = mapped_column(Boolean, nullable=False)
 
     # We use list["CoreGroup"] with quotes as CoreGroup is only defined after this class
     # Defining CoreUser after CoreGroup would cause a similar issue

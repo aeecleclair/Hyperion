@@ -38,4 +38,4 @@ def test_disable_external_account():
     assert response.status_code == 200
     assert response1.status_code == 200
     data = response1.json()
-    assert not data["enabled"]
+    assert data["disabled"]

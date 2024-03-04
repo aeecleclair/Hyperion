@@ -21,7 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import security
 from app.core.config import Settings
-from app.cruds import cruds_groups, cruds_users
+from app.cruds import cruds_external_account, cruds_groups, cruds_users
 from app.dependencies import (
     get_db,
     get_request_id,
@@ -946,3 +946,15 @@ async def read_user_profile_picture(
         filename=str(user_id),
         default_asset="assets/images/default_profile_picture.png",
     )
+
+
+@router.get(
+    "/users/external/",
+    status_code=200,
+    tags=[Tags.external_account],
+)
+async def disable_external_users(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    return await cruds_external_account.disable_external_accounts(db=db)

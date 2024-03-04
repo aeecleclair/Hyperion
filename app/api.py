@@ -13,7 +13,6 @@ from app.endpoints import (
     campaign,
     cinema,
     core,
-    external_account,
     groups,
     loan,
     notification,
@@ -33,7 +32,6 @@ api_router.include_router(calendar.router)
 api_router.include_router(campaign.router)
 api_router.include_router(cinema.router)
 api_router.include_router(core.router)
-api_router.include_router(external_account.router)
 api_router.include_router(groups.router)
 api_router.include_router(loan.router)
 api_router.include_router(notification.router)

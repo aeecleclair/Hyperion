@@ -17,4 +17,3 @@ class Tags(str, Enum):
     raffle = "Raffle"
     advert = "Advert"
     notifications = "Notifications"
-    external_account = "External_account"
