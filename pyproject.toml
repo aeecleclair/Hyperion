@@ -8,7 +8,7 @@ target-version = "py311"
 [tool.ruff.lint]
 # Enable Pyflakes (`F`), pycodestyle (`E`, `W`), isort (`I`), pep8-naming (`N`), flake8-bugbear (`B`)
 # T201: check for prints, C90: mccabe complexity
-select = ["F", "E", "W", "I", "T201", "C90"] # "B", "N" to add later
+select = ["F", "E", "W", "I", "T201", "C90", "DTZ"] # "B", "N" to add later
 ignore = ["E203", "E266", "E501", "F403"]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
