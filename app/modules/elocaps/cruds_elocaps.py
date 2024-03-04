@@ -202,7 +202,21 @@ async def get_leaderboard(
 ) -> Sequence[models_elocaps.Player]:
     result = await db.execute(
         select(models_elocaps.Player)
-        .where(models_elocaps.Player.mode == game_mode)
+        .distinct()
+        .join(models_elocaps.GamePlayer)
+        .join(models_elocaps.Game)
+        .where(
+            not_(
+                select(models_elocaps.GamePlayer)
+                .correlate(models_elocaps.Game)
+                .where(
+                    (models_elocaps.GamePlayer.game_id == models_elocaps.Game.id)
+                    & not_(models_elocaps.GamePlayer.has_confirmed)
+                )
+                .exists()
+            )
+            & (models_elocaps.Player.mode == game_mode)
+        )
         .order_by(desc(models_elocaps.Player.elo))
         .limit(count)
         .options(selectinload(models_elocaps.Player.user))

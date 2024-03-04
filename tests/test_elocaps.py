@@ -11,13 +11,13 @@ from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from app.modules.elocaps import models_elocaps
 from app.modules.elocaps.types_elocaps import CapsMode
-from tests.commons import event_loop  # noqa
 from tests.commons import (
     TestingSessionLocal,
     add_object_to_db,
     client,
     create_api_access_token,
     create_user_with_groups,
+    event_loop,  # noqa
 )
 
 UserTest = TypedDict(
@@ -150,7 +150,7 @@ def test_validate_and_end_game():
         for u in users
         if u["user"].id == i.user_id
     ]
-    another_token = next(x for x in users if not x["token"] in tokens)["token"]
+    another_token = next(x for x in users if x["token"] not in tokens)["token"]
     assert (
         client.post(
             f"/elocaps/games/{game.id}/validate",

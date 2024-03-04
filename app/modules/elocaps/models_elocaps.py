@@ -26,7 +26,7 @@ class Player(Base):
     elo: Mapped[int] = mapped_column(Integer, nullable=False, default=1000)
 
     user: Mapped[models_core.CoreUser] = relationship("CoreUser")
-    game_players: Mapped[GamePlayer] = relationship(
+    game_players: Mapped[list[GamePlayer]] = relationship(
         "GamePlayer", back_populates="player"
     )
 
