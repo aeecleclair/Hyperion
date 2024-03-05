@@ -6,12 +6,12 @@ from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from app.modules.phonebook import models_phonebook, schemas_phonebook
 from app.modules.phonebook.phonebook_types import RoleTags
-from tests.commons import event_loop  # noqa
 from tests.commons import (
     add_object_to_db,
     client,
     create_api_access_token,
     create_user_with_groups,
+    event_loop,  # noqa
 )
 
 association: models_phonebook.Association | None = None
