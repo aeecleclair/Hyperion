@@ -69,4 +69,4 @@ class Matrix:
             "msgtype": "m.text",
         }
 
-        self.post(url, json=data)
+        self.post(url, json=data, headers=None)
