@@ -461,8 +461,7 @@ async def delete_room(
     """
     room = await cruds_booking.get_room_by_id(db=db, room_id=room_id)
     if all(
-        booking.end.replace(tzinfo=ZoneInfo(settings.TIMEZONE))
-        < datetime.now(UTC)
+        booking.end.replace(tzinfo=ZoneInfo(settings.TIMEZONE)) < datetime.now(UTC)
         for booking in room.bookings
     ):
         await cruds_booking.delete_room(db=db, room_id=room_id)
