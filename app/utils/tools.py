@@ -119,13 +119,11 @@ async def save_file_as_data(
     """
     if accepted_content_types is None:
         # Accept only images by default
-        accepted_content_types = (
-            [
-                "image/jpeg",
-                "image/png",
-                "image/webp",
-            ],
-        )
+        accepted_content_types = [
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+        ]
 
     if image.content_type not in accepted_content_types:
         raise HTTPException(
