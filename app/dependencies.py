@@ -37,13 +37,17 @@ from app.utils.types.scopes_type import ScopeType
 hyperion_access_logger = logging.getLogger("hyperion.access")
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
-redis_client: redis.Redis | bool | None = None  # Create a global variable for the redis client, so that it can be instancied in the startup event
+redis_client: redis.Redis | bool | None = (
+    None  # Create a global variable for the redis client, so that it can be instancied in the startup event
+)
 # Is None if the redis client is not instantiated, is False if the redis client is instancied but not connected, is a redis.Redis object if the redis client is connected
 
-engine: AsyncEngine | None = None  # Create a global variable for the database engine, so that it can be instancied in the startup event
-SessionLocal: Callable[
-    [], AsyncSession
-] | None = None  # Create a global variable for the database session, so that it can be instancied in the startup event
+engine: AsyncEngine | None = (
+    None  # Create a global variable for the database engine, so that it can be instancied in the startup event
+)
+SessionLocal: Callable[[], AsyncSession] | None = (
+    None  # Create a global variable for the database session, so that it can be instancied in the startup event
+)
 
 
 notification_manager: NotificationManager | None = None

@@ -80,7 +80,9 @@ class Settings(BaseSettings):
     # PostgreSQL configuration #
     ############################
     # PostgreSQL configuration is needed to use the database
-    SQLITE_DB: str | None = None  # If set, the application use a SQLite database instead of PostgreSQL, for testing or development purposes (should not be used if possible)
+    SQLITE_DB: str | None = (
+        None  # If set, the application use a SQLite database instead of PostgreSQL, for testing or development purposes (should not be used if possible)
+    )
     POSTGRES_HOST: str = ""
     POSTGRES_USER: str = ""
     POSTGRES_PASSWORD: str = ""
