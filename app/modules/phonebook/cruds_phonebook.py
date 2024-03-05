@@ -14,7 +14,6 @@ from app.modules.phonebook import models_phonebook, phonebook_types, schemas_pho
 async def is_user_president(
     association_id: str, user: models_core.CoreUser, db: AsyncSession
 ) -> bool:
-
     association = await get_association_by_id(association_id=association_id, db=db)
     if association is not None:
         memberships = await get_memberships_by_association_id(
