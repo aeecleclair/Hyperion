@@ -90,6 +90,7 @@ exclude = '''(?x)(
       .git
     | __pycache__
     | .pytest_cache
+    | .ruff_cache
     | .venv
 )'''
 warn_unreachable = true
