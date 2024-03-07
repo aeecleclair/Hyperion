@@ -15,11 +15,11 @@ from tests.commons import (
     event_loop,  # noqa
 )
 
-advert: models_advert.Advert | None = None
-advertiser: models_advert.Advertiser | None = None
-user_admin: models_core.CoreUser | None = None
-user_advertiser: models_core.CoreUser | None = None
-user_simple: models_core.CoreUser | None = None
+advert: models_advert.Advert
+advertiser: models_advert.Advertiser
+user_admin: models_core.CoreUser
+user_advertiser: models_core.CoreUser
+user_simple: models_core.CoreUser
 token_admin: str = ""
 token_advertiser: str = ""
 token_simple: str = ""
