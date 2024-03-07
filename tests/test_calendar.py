@@ -14,12 +14,12 @@ from tests.commons import (
     create_user_with_groups,
 )
 
-calendar_event: models_calendar.Event | None = None
-calendar_event_to_delete: models_calendar.Event | None = None
-calendar_user_bde: models_core.CoreUser | None = None
-calendar_user_simple: models_core.CoreUser | None = None
-token_bde: str = ""
-token_simple: str = ""
+calendar_event: models_calendar.Event
+calendar_event_to_delete: models_calendar.Event
+calendar_user_bde: models_core.CoreUser
+calendar_user_simple: models_core.CoreUser
+token_bde: str
+token_simple: str
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)

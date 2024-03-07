@@ -9,7 +9,7 @@ from tests.commons import (
     create_user_with_groups,
 )
 
-admin_user: models_core.CoreUser | None = None
+admin_user: models_core.CoreUser
 
 
 id_eclair = "8aab79e7-1e15-456d-b6e2-11e4e9f77e4f"

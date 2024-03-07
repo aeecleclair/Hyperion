@@ -9,10 +9,10 @@ from tests.commons import (
     create_user_with_groups,
 )
 
-simple_user: models_core.CoreUser | None = None
-admin_user: models_core.CoreUser | None = None
-token_simple: str = ""
-token_admin: str = ""
+simple_user: models_core.CoreUser
+admin_user: models_core.CoreUser
+token_simple: str
+token_admin: str
 root = "root"
 group_id = "random id"
 

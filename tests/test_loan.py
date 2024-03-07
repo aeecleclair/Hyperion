@@ -14,17 +14,17 @@ from tests.commons import (
     create_user_with_groups,
 )
 
-admin_user: models_core.CoreUser | None = None
-loan_user_loaner: models_core.CoreUser | None = None
-loan_user_simple: models_core.CoreUser | None = None
-loaner: models_loan.Loaner | None = None
-loaner_to_delete: models_loan.Loaner | None = None
-loan: models_loan.Loan | None = None
-item: models_loan.Item | None = None
-item_to_delete: models_loan.Item | None = None
-token_loaner: str = ""
-token_simple: str = ""
-token_admin: str = ""
+admin_user: models_core.CoreUser
+loan_user_loaner: models_core.CoreUser
+loan_user_simple: models_core.CoreUser
+loaner: models_loan.Loaner
+loaner_to_delete: models_loan.Loaner
+loan: models_loan.Loan
+item: models_loan.Item
+item_to_delete: models_loan.Item
+token_loaner: str
+token_simple: str
+token_admin: str
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)

@@ -13,18 +13,21 @@ from tests.commons import (
     create_user_with_groups,
 )
 
-booking: models_booking.Booking | None = None
-booking_to_delete: models_booking.Booking | None = None
-room: models_booking.Room | None = None
-room_to_delete: models_booking.Room | None = None
-manager: models_booking.Manager | None = None
-manager_to_delete: models_booking.Manager | None = None
-admin_user: models_core.CoreUser | None = None
-manager_user: models_booking.CoreUser | None = None
-simple_user: models_core.CoreUser | None = None
-token_admin: str = ""
-token_manager: str = ""
-token_simple: str = ""
+booking_id: str
+
+booking: models_booking.Booking
+booking_to_delete: models_booking.Booking
+room: models_booking.Room
+room_to_delete: models_booking.Room
+manager: models_booking.Manager
+manager_to_delete: models_booking.Manager
+admin_user: models_core.CoreUser
+manager_user: models_booking.CoreUser
+simple_user: models_core.CoreUser
+
+token_admin: str
+token_manager: str
+token_simple: str
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)

@@ -15,15 +15,15 @@ from tests.commons import (
     create_user_with_groups,
 )
 
-amap_user: models_core.CoreUser | None = None
-student_user: models_core.CoreUser | None = None
-product: models_amap.Product | None = None
-deletable_product: models_amap.Product | None = None
-delivery: models_amap.Delivery | None = None
-deletable_delivery: models_amap.Delivery | None = None
-locked_delivery: models_amap.Delivery | None = None
-order: models_amap.Order | None = None
-deletable_order_by_admin: models_amap.Order | None = None
+amap_user: models_core.CoreUser
+student_user: models_core.CoreUser
+product: models_amap.Product
+deletable_product: models_amap.Product
+delivery: models_amap.Delivery
+deletable_delivery: models_amap.Delivery
+locked_delivery: models_amap.Delivery
+order: models_amap.Order
+deletable_order_by_admin: models_amap.Order
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
@@ -37,8 +37,7 @@ async def init_objects():
         deletable_delivery, \
         locked_delivery, \
         order, \
-        deletable_order_by_admin, \
-        cash
+        deletable_order_by_admin
 
     amap_user = await create_user_with_groups([GroupType.amap])
     student_user = await create_user_with_groups([GroupType.student])

@@ -13,11 +13,11 @@ from tests.commons import (
     create_user_with_groups,
 )
 
-session: models_cinema.Session | None = None
-cinema_user_cinema: models_core.CoreUser | None = None
-cinema_user_simple: models_core.CoreUser | None = None
-token_cinema: str = ""
-token_simple: str = ""
+session: models_cinema.Session
+cinema_user_cinema: models_core.CoreUser
+cinema_user_simple: models_core.CoreUser
+token_cinema: str
+token_simple: str
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)

@@ -14,15 +14,15 @@ from tests.commons import (
     create_user_with_groups,
 )
 
-CAA_user: models_core.CoreUser | None = None
-AE_user: models_core.CoreUser | None = None
+CAA_user: models_core.CoreUser
+AE_user: models_core.CoreUser
 
-section: models_campaign.Sections | None = None
-campaign_list: models_campaign.Lists | None = None
-voters: models_campaign.VoterGroups | None = None
+section: models_campaign.Sections
+campaign_list: models_campaign.Lists
+voters: models_campaign.VoterGroups
 
-section2id: str = ""
-list2id: str = ""
+section2id: str
+list2id: str
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)

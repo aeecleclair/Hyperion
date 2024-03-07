@@ -15,20 +15,20 @@ from tests.commons import (
     create_user_with_groups,
 )
 
-BDE_user: models_core.CoreUser | None = None
-admin_user: models_core.CoreUser | None = None
-student_user: models_core.CoreUser | None = None
-raffle: models_raffle.Raffle | None = None
-raffle_to_draw: models_raffle.Raffle | None = None
-raffle_to_delete: models_raffle.Raffle | None = None
-packticket: models_raffle.PackTicket | None = None
-packticket_to_draw: models_raffle.PackTicket | None = None
-packticket_to_delete: models_raffle.PackTicket | None = None
-prize: models_raffle.Prize | None = None
-prize_to_draw: models_raffle.Prize | None = None
-ticket: models_raffle.Ticket | None = None
-ticket_to_draw: models_raffle.Ticket | None = None
-cash: models_raffle.Cash | None = None
+BDE_user: models_core.CoreUser
+admin_user: models_core.CoreUser
+student_user: models_core.CoreUser
+raffle: models_raffle.Raffle
+raffle_to_draw: models_raffle.Raffle
+raffle_to_delete: models_raffle.Raffle
+packticket: models_raffle.PackTicket
+packticket_to_draw: models_raffle.PackTicket
+packticket_to_delete: models_raffle.PackTicket
+prize: models_raffle.Prize
+prize_to_draw: models_raffle.Prize
+ticket: models_raffle.Ticket
+ticket_to_draw: models_raffle.Ticket
+cash: models_raffle.Cash
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
