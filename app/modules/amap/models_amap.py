@@ -83,9 +83,7 @@ class Order(Base):
     collection_slot: Mapped[AmapSlotType] = mapped_column(
         Enum(AmapSlotType), nullable=False
     )
-    ordering_date: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
+    ordering_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     delivery_date: Mapped[date] = mapped_column(Date, nullable=False)
 
 

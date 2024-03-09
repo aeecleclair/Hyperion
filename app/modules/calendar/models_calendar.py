@@ -20,8 +20,8 @@ class Event(Base):
         ForeignKey("core_user.id"), nullable=False
     )
     applicant: Mapped[CoreUser] = relationship("CoreUser")
-    start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    start: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    end: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     all_day: Mapped[bool] = mapped_column(Boolean, nullable=False)
     location: Mapped[str] = mapped_column(String, nullable=False)
     type: Mapped[CalendarEventType] = mapped_column(

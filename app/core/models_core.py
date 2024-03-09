@@ -34,7 +34,7 @@ class CoreUser(Base):
     promo: Mapped[int | None] = mapped_column(Integer)
     phone: Mapped[str | None] = mapped_column(String)
     floor: Mapped[FloorsType] = mapped_column(Enum(FloorsType), nullable=False)
-    created_on: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_on: Mapped[datetime | None] = mapped_column(DateTime)
 
     # We use list["CoreGroup"] with quotes as CoreGroup is only defined after this class
     # Defining CoreUser after CoreGroup would cause a similar issue
@@ -56,10 +56,8 @@ class CoreUserUnconfirmed(Base):
     email: Mapped[str] = mapped_column(String, nullable=False)
     account_type: Mapped[str] = mapped_column(String, nullable=False)
     activation_token: Mapped[str] = mapped_column(String, nullable=False)
-    created_on: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
-    expire_on: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_on: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    expire_on: Mapped[datetime] = mapped_column(DateTime, nullable=False)
 
 
 class CoreUserRecoverRequest(Base):
@@ -70,10 +68,8 @@ class CoreUserRecoverRequest(Base):
     email: Mapped[str] = mapped_column(String, nullable=False)
     user_id: Mapped[str] = mapped_column(String, nullable=False)
     reset_token: Mapped[str] = mapped_column(String, nullable=False, primary_key=True)
-    created_on: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
-    expire_on: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_on: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    expire_on: Mapped[datetime] = mapped_column(DateTime, nullable=False)
 
 
 class CoreUserEmailMigrationCode(Base):

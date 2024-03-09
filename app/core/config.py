@@ -87,14 +87,12 @@ class Settings(BaseSettings):
     POSTGRES_USER: str = ""
     POSTGRES_PASSWORD: str = ""
     POSTGRES_DB: str = ""
+    POSTGRES_TZ: str = ""
     DATABASE_DEBUG: bool = False  # If True, the database will log all queries
 
     #####################
     # Hyperion settings #
     #####################
-
-    # Timezone used to compare dates
-    TIMEZONE: str
 
     # By default, only production's records are logged
     LOG_DEBUG_MESSAGES: bool | None

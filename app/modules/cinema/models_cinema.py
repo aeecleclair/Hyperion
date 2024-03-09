@@ -11,7 +11,7 @@ class Session(Base):
 
     id: Mapped[str] = mapped_column(String, primary_key=True, nullable=False)
     name: Mapped[str] = mapped_column(String, nullable=False)
-    start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    start: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     duration: Mapped[int] = mapped_column(Integer, nullable=False)
     overview: Mapped[str] = mapped_column(String, nullable=True)
     genre: Mapped[str] = mapped_column(String, nullable=True)

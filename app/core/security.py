@@ -1,5 +1,5 @@
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import bcrypt
@@ -99,8 +99,8 @@ def create_access_token(
         # We use the default value
         expires_delta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode = data.model_dump(exclude_none=True)
-    iat = datetime.utcnow()
-    expire_on = datetime.utcnow() + expires_delta
+    iat = datetime.now(timezone.utc)
+    expire_on = datetime.now(timezone.utc) + expires_delta
     to_encode.update({"exp": expire_on, "iat": iat})
     encoded_jwt = jwt.encode(
         to_encode, settings.ACCESS_TOKEN_SECRET_KEY, algorithm=jwt_algorithme
@@ -126,8 +126,8 @@ def create_access_token_RS256(
     to_encode: dict[str, Any] = additional_data
     to_encode.update(data.model_dump(exclude_none=True))
 
-    iat = datetime.utcnow()
-    expire_on = datetime.utcnow() + expires_delta
+    iat = datetime.now(timezone.utc)
+    expire_on = datetime.now(timezone.utc) + expires_delta
     to_encode.update({"exp": expire_on, "iat": iat})
 
     encoded_jwt = jwt.encode(

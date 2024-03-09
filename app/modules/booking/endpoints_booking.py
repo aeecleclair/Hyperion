@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -263,7 +263,7 @@ async def create_booking(
 
     try:
         if result:
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             message = Message(
                 # We use sunday date as context to avoid sending the recap twice
                 context=f"booking-create-{result.id}",
@@ -461,7 +461,7 @@ async def delete_room(
     room = await cruds_booking.get_room_by_id(db=db, room_id=room_id)
     if all(
         map(
-            lambda b: b.end < datetime.now(timezone.utc),
+            lambda b: b.end < datetime.now(UTC),
             room.bookings,
         )
     ):

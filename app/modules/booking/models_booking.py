@@ -35,9 +35,9 @@ class Booking(Base):
 
     id: Mapped[str] = mapped_column(String, primary_key=True, index=True)
     reason: Mapped[str] = mapped_column(String, nullable=False)
-    start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    creation: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    start: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    end: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    creation: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     note: Mapped[str] = mapped_column(String, nullable=True)
     room_id: Mapped[str] = mapped_column(
         ForeignKey("booking_room.id"), nullable=False, index=True

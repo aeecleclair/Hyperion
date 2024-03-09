@@ -610,7 +610,9 @@ async def authorization_code_grant(  # noqa: C901 # The function is too complex 
         )
 
     # We can check the authorization code
-    if db_authorization_code.expire_on < datetime.now(timezone.utc):
+    if db_authorization_code.expire_on.replace(tzinfo=timezone.utc) < datetime.now(
+        timezone.utc
+    ):
         hyperion_access_logger.warning(
             f"Token authorization_code_grant: Expired authorization code ({request_id})"
         )

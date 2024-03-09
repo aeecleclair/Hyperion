@@ -30,5 +30,5 @@ class Advert(Base):
     )
     title: Mapped[str] = mapped_column(String, nullable=False)
     content: Mapped[str] = mapped_column(String, nullable=False)
-    date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     tags: Mapped[str] = mapped_column(String, nullable=True)
