@@ -41,7 +41,7 @@ async def init_objects():
     session = models_cinema.Session(
         id=str(uuid.uuid4()),
         name="Titanic",
-        start=datetime.datetime.fromisoformat("2022-10-22T20:00:00"),
+        start=datetime.datetime.fromisoformat("2022-10-22T20:00:00Z"),
         duration=194,
         overview="Southampton, 10 avril 1912. Le paquebot le plus grand et le plus moderne du monde, réputé pour son insubmersibilité, le « Titanic », appareille pour son premier voyage. Quatre jours plus tard, il heurte un iceberg. À son bord, un artiste pauvre et une grande bourgeoise tombent amoureux.",
         genre="Drame, Romance",
