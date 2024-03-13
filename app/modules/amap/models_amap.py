@@ -2,12 +2,13 @@
 
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, Enum, Float, ForeignKey, Integer, String
+from sqlalchemy import Date, Enum, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.models_core import CoreUser
 from app.database import Base
 from app.modules.amap.types_amap import AmapSlotType, DeliveryStatusType
+from app.utils.types.datetime import TZDateTime
 
 
 class AmapOrderContent(Base):
@@ -83,7 +84,7 @@ class Order(Base):
     collection_slot: Mapped[AmapSlotType] = mapped_column(
         Enum(AmapSlotType), nullable=False
     )
-    ordering_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    ordering_date: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
     delivery_date: Mapped[date] = mapped_column(Date, nullable=False)
 
 

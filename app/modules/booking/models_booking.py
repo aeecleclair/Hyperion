@@ -2,11 +2,12 @@
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String
+from sqlalchemy import Boolean, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.models_core import CoreUser
 from app.database import Base
+from app.utils.types.datetime import TZDateTime
 
 
 class Manager(Base):
@@ -35,9 +36,9 @@ class Booking(Base):
 
     id: Mapped[str] = mapped_column(String, primary_key=True, index=True)
     reason: Mapped[str] = mapped_column(String, nullable=False)
-    start: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    end: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    creation: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    start: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
+    end: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
+    creation: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
     note: Mapped[str] = mapped_column(String, nullable=True)
     room_id: Mapped[str] = mapped_column(
         ForeignKey("booking_room.id"), nullable=False, index=True

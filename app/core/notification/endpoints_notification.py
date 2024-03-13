@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Path
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -50,7 +50,7 @@ async def register_firebase_device(
             # Update the register date
             await cruds_notification.update_firebase_devices_register_date(
                 firebase_device_token=firebase_token,
-                new_register_date=date.today(),
+                new_register_date=datetime.now(tz=UTC).date(),
                 db=db,
             )
             return
@@ -76,7 +76,7 @@ async def register_firebase_device(
     firebase_device = models_notification.FirebaseDevice(
         user_id=user.id,
         firebase_device_token=firebase_token,
-        register_date=date.today(),
+        register_date=datetime.now(tz=UTC).date(),
     )
 
     await cruds_notification.create_firebase_devices(
