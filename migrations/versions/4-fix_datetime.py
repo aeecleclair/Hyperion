@@ -8,6 +8,7 @@ Create Date: 2024-03-02 20:23:13.078198
 
 from typing import Sequence, Union
 
+import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
@@ -19,41 +20,45 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     # Booking
-    op.execute(generate_sql_request("booking", "start"))
-    op.execute(generate_sql_request("booking", "end"))
-    op.execute(generate_sql_request("booking", "creation"))
+    upgrade_column("booking", "start")
+    upgrade_column("booking", "end")
+    upgrade_column("booking", "creation")
     # Advert
-    op.execute(generate_sql_request("advert_adverts", "date"))
+    upgrade_column("advert_adverts", "date")
     # Amap
-    op.execute(generate_sql_request("amap_order", "ordering_date"))
+    upgrade_column("amap_order", "ordering_date")
     # Calendar
-    op.execute(generate_sql_request("calendar_events", "start"))
-    op.execute(generate_sql_request("calendar_events", "end"))
+    upgrade_column("calendar_events", "start")
+    upgrade_column("calendar_events", "end")
     # Cinema
-    op.execute(generate_sql_request("cinema_session", "start"))
+    upgrade_column("cinema_session", "start")
 
 
 def downgrade() -> None:
     # Booking
-    op.execute(generate_downgrade_sql_request("booking", "start"))
-    op.execute(generate_downgrade_sql_request("booking", "end"))
-    op.execute(generate_downgrade_sql_request("booking", "creation"))
+    downgrade_column("booking", "start")
+    downgrade_column("booking", "end")
+    downgrade_column("booking", "creation")
     # Advert
-    op.execute(generate_downgrade_sql_request("advert_adverts", "date"))
+    downgrade_column("advert_adverts", "date")
     # Amap
-    op.execute(generate_downgrade_sql_request("amap_order", "ordering_date"))
+    downgrade_column("amap_order", "ordering_date")
     # Calendar
-    op.execute(generate_downgrade_sql_request("calendar_events", "start"))
-    op.execute(generate_downgrade_sql_request("calendar_events", "end"))
+    downgrade_column("calendar_events", "start")
+    downgrade_column("calendar_events", "end")
     # Cinema
-    op.execute(generate_downgrade_sql_request("cinema_session", "start"))
+    downgrade_column("cinema_session", "start")
 
 
-def generate_sql_request(table, column) -> str:
-    return f'UPDATE "{table}" SET "{column}" = "{column}"::timestamp AT TIME ZONE \'Europe/Paris\''
-
-
-def generate_downgrade_sql_request(table, column) -> str:
-    return (
-        f'UPDATE "{table}" SET "{column}" = "{column}"::timestamp AT TIME ZONE timezone'
+def upgrade_column(table, column):
+    op.execute(
+        f'UPDATE "{table}" SET "{column}" = "{column}"::timestamp AT TIME ZONE \'Europe/Paris\''
     )
+    op.alter_column(f'"{table}"', f'"{column}"', type_=sa.DateTime(timezone=False))
+
+
+def downgrade_column(table, column):
+    op.execute(
+        f'UPDATE "{table}" SET "{column}" = "{column}" AT TIME ZONE \'Europe/Paris\''
+    )
+    op.alter_column(f'"{table}"', f'"{column}"', type_=sa.DateTime(timezone=True))
