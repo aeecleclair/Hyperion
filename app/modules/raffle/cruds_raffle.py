@@ -381,7 +381,7 @@ async def create_cash_of_user(
         raise err
 
 
-async def edit_cash(db: AsyncSession, user_id: str, amount: float):
+async def edit_cash(db: AsyncSession, user_id: str, amount: int):
     await db.execute(
         update(models_raffle.Cash)
         .where(models_raffle.Cash.user_id == user_id)

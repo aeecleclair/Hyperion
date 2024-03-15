@@ -81,17 +81,17 @@ async def init_objects():
     await add_object_to_db(raffle_to_draw)
 
     packticket = models_raffle.PackTicket(
-        id=str(uuid.uuid4()), price=1.0, pack_size=1, raffle_id=raffle.id
+        id=str(uuid.uuid4()), price=100, pack_size=1, raffle_id=raffle.id
     )
     await add_object_to_db(packticket)
 
     packticket_to_draw = models_raffle.PackTicket(
-        id=str(uuid.uuid4()), price=1.0, pack_size=1, raffle_id=raffle_to_draw.id
+        id=str(uuid.uuid4()), price=100, pack_size=1, raffle_id=raffle_to_draw.id
     )
     await add_object_to_db(packticket_to_draw)
 
     packticket_to_delete = models_raffle.PackTicket(
-        id=str(uuid.uuid4()), price=1.0, pack_size=1, raffle_id=raffle_to_delete.id
+        id=str(uuid.uuid4()), price=100, pack_size=1, raffle_id=raffle_to_delete.id
     )
     await add_object_to_db(packticket_to_delete)
 
@@ -270,7 +270,7 @@ def test_get_raffle_stats():
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
-    assert response.json()["amount_raised"] == 1.0
+    assert response.json()["amount_raised"] == 100
 
 
 # # tickets
@@ -377,7 +377,7 @@ def test_create_packtickets():
         "/tombola/pack_tickets",
         json={
             "raffle_id": raffle.id,
-            "price": 1.23,
+            "price": 123,
             "pack_size": 5,
         },
         headers={"Authorization": f"Bearer {token}"},
@@ -392,7 +392,7 @@ def test_edit_packtickets():
         f"/tombola/pack_tickets/{packticket.id}",
         json={
             "raffle_id": raffle.id,
-            "price": 10.0,
+            "price": 1000,
             "pack_size": 5,
         },
         headers={"Authorization": f"Bearer {token}"},

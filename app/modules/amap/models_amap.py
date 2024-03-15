@@ -96,7 +96,7 @@ class Cash(Base):
         String, ForeignKey("core_user.id"), primary_key=True
     )
     user: Mapped[CoreUser] = relationship("CoreUser")
-    balance: Mapped[float] = mapped_column(Float, nullable=False)
+    balance: Mapped[int] = mapped_column(Integer, nullable=False)
 
 
 class AmapInformation(Base):
