@@ -1,6 +1,6 @@
 """File defining the functions called by the endpoints, making queries to the table using the models"""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
@@ -84,7 +84,7 @@ async def revoke_refresh_token_by_token(
             models_auth.RefreshToken.token == token,
             models_auth.RefreshToken.revoked_on.is_(None),
         )
-        .values(revoked_on=datetime.now(timezone.utc))
+        .values(revoked_on=datetime.now(UTC))
     )
     await db.commit()
     return None
@@ -102,7 +102,7 @@ async def revoke_refresh_token_by_client_and_user_id(
             models_auth.RefreshToken.user_id == user_id,
             models_auth.RefreshToken.revoked_on.is_(None),
         )
-        .values(revoked_on=datetime.now(timezone.utc))
+        .values(revoked_on=datetime.now(UTC))
     )
     await db.commit()
     return None

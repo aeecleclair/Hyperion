@@ -2,7 +2,7 @@ import base64
 import hashlib
 import logging
 import urllib.parse
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Set
 
 from fastapi import (
@@ -342,7 +342,7 @@ async def authorize_validation(
     # maximum authorization code lifetime of 10 minutes is
     # RECOMMENDED. The client MUST NOT use the authorization code more than once.
     authorization_code = generate_token()
-    expire_on = datetime.now(timezone.utc) + timedelta(
+    expire_on = datetime.now(UTC) + timedelta(
         minutes=settings.AUTHORIZATION_CODE_EXPIRE_MINUTES
     )
     # We save this authorization_code to the database
@@ -610,7 +610,7 @@ async def authorization_code_grant(  # noqa: C901 # The function is too complex 
         )
 
     # We can check the authorization code
-    if db_authorization_code.expire_on < datetime.now(timezone.utc):
+    if db_authorization_code.expire_on < datetime.now(UTC):
         hyperion_access_logger.warning(
             f"Token authorization_code_grant: Expired authorization code ({request_id})"
         )
@@ -664,9 +664,9 @@ async def authorization_code_grant(  # noqa: C901 # The function is too complex 
     new_db_refresh_token = models_auth.RefreshToken(
         token=refresh_token,
         client_id=tokenreq.client_id,
-        created_on=datetime.now(timezone.utc),
+        created_on=datetime.now(UTC),
         user_id=db_authorization_code.user_id,
-        expire_on=datetime.now(timezone.utc)
+        expire_on=datetime.now(UTC)
         + timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES),
         scope=db_authorization_code.scope,
         nonce=db_authorization_code.nonce,
@@ -745,7 +745,7 @@ async def refresh_token_grant(
 
     await cruds_auth.revoke_refresh_token_by_token(db=db, token=tokenreq.refresh_token)
 
-    if db_refresh_token.expire_on < datetime.now(timezone.utc):
+    if db_refresh_token.expire_on < datetime.now(UTC):
         await cruds_auth.revoke_refresh_token_by_token(
             db=db, token=db_refresh_token.token
         )
@@ -821,9 +821,9 @@ async def refresh_token_grant(
     new_db_refresh_token = models_auth.RefreshToken(
         token=refresh_token,
         client_id=db_refresh_token.client_id,
-        created_on=datetime.now(timezone.utc),
+        created_on=datetime.now(UTC),
         user_id=db_refresh_token.user_id,
-        expire_on=datetime.now(timezone.utc)
+        expire_on=datetime.now(UTC)
         + timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES),
         scope=db_refresh_token.scope,
     )

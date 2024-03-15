@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Sequence
 
 from icalendar import Calendar, Event, vRecur
@@ -137,7 +137,7 @@ async def create_icalendar_file(db: AsyncSession) -> None:
             ical_event.add("description", event.description)
             ical_event.add("dtstart", event.start)
             ical_event.add("dtend", event.end)
-            ical_event.add("dtstamp", datetime.now(timezone.utc))
+            ical_event.add("dtstamp", datetime.now(UTC))
             ical_event.add("class", "public")
             ical_event.add("organizer", event.organizer)
             ical_event.add("location", event.location)

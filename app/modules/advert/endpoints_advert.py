@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
@@ -248,7 +248,7 @@ async def create_advert(
 
     db_advert = models_advert.Advert(
         id=str(uuid.uuid4()),
-        date=datetime.now(timezone.utc),
+        date=datetime.now(UTC),
         advertiser=advertiser,
         **advert_params,
     )
@@ -259,7 +259,7 @@ async def create_advert(
         raise HTTPException(status_code=400, detail=str(error))
 
     try:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         message = Message(
             context=f"advert-{result.id}",
             is_visible=True,

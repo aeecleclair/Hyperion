@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import Depends, HTTPException, Response
 from redis import Redis
@@ -425,7 +425,7 @@ async def add_order_to_delievery(
             raise HTTPException(status_code=403, detail="Invalid product")
         amount += prod.price * product_quantity
 
-    ordering_date = datetime.now(timezone.utc)
+    ordering_date = datetime.now(UTC)
     order_id = str(uuid.uuid4())
     db_order = schemas_amap.OrderComplete(
         order_id=order_id,
@@ -875,7 +875,7 @@ async def create_cash_of_user(
 
     try:
         if result:
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             message = Message(
                 context=f"amap-cash-{user_id}",
                 is_visible=True,

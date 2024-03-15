@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -65,7 +65,7 @@ async def create_session(
 
     # Send a notification with the week recap
     try:
-        today = datetime.now(timezone.utc)
+        today = datetime.now(UTC)
         sunday = today.replace(
             day=today.day - today.weekday() + 6, hour=11, minute=0, second=0
         )
