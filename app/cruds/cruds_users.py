@@ -53,6 +53,7 @@ async def get_users(
                     )
                     for group_id in excludedGroups
                 ],
+                not_(models_core.CoreUser.disabled),
             )
         )
     )
@@ -64,7 +65,10 @@ async def get_user_by_id(db: AsyncSession, user_id: str) -> models_core.CoreUser
 
     result = await db.execute(
         select(models_core.CoreUser)
-        .where(models_core.CoreUser.id == user_id)
+        .where(
+            models_core.CoreUser.id == user_id,
+            not_(models_core.CoreUser.disabled),
+        )
         .options(
             # The group relationship need to be loaded
             selectinload(models_core.CoreUser.groups)
@@ -79,7 +83,10 @@ async def get_user_by_email(
     """Return user with id from database as a dictionary"""
 
     result = await db.execute(
-        select(models_core.CoreUser).where(models_core.CoreUser.email == email)
+        select(models_core.CoreUser).where(
+            models_core.CoreUser.email == email,
+            not_(models_core.CoreUser.disabled),
+        )
     )
     return result.scalars().first()
 

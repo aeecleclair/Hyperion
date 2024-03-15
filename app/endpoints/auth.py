@@ -68,7 +68,7 @@ async def login_for_access_token(
     settings: Settings = Depends(get_settings),
 ):
     """
-    Ask for a JWT acc   ess token using oauth password flow.
+    Ask for a JWT access token using oauth password flow.
 
     *username* and *password* must be provided
 

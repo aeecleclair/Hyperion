@@ -60,7 +60,8 @@ def fuzzy_search_user(
     choices = []
 
     for user in users:
-        choices.append(f"{user.firstname} {user.name} {user.nickname}")
+        if not user.disabled:
+            choices.append(f"{user.firstname} {user.name} {user.nickname}")
 
     results: list[tuple[str, int | float, int]] = process.extract(
         query, choices, limit=limit

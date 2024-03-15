@@ -289,6 +289,12 @@ def is_user_a_member_of(
         """
         A dependency that checks that user is a member of the group with the given id then returns the corresponding user.
         """
+        if user.disabled:
+            raise HTTPException(
+                status_code=403,
+                detail="Unauthorized, user is disabled",
+            )
+
         if is_user_member_of_an_allowed_group(user=user, allowed_groups=[group_id]):
             # We know the user is a member of the group, we don't need to return an error and can return the CoreUser object
             return user

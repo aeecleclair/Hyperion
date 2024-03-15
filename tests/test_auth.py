@@ -29,7 +29,7 @@ async def init_objects():
         birthday=date.fromisoformat("2000-01-01"),
         floor=FloorsType.Autre,
         created_on=date.fromisoformat("2000-01-01"),
-        disabled=True,
+        disabled=False,
     )
     await add_object_to_db(user)
 
