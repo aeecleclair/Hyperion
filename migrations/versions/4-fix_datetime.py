@@ -54,11 +54,11 @@ def upgrade_column(table, column):
     op.execute(
         f'UPDATE "{table}" SET "{column}" = "{column}"::timestamp AT TIME ZONE \'Europe/Paris\''
     )
-    op.alter_column(f'"{table}"', f'"{column}"', type_=sa.DateTime(timezone=False))
+    op.alter_column(table, column, type_=sa.DateTime(timezone=False))
 
 
 def downgrade_column(table, column):
     op.execute(
         f'UPDATE "{table}" SET "{column}" = "{column}" AT TIME ZONE \'Europe/Paris\''
     )
-    op.alter_column(f'"{table}"', f'"{column}"', type_=sa.DateTime(timezone=True))
+    op.alter_column(table, column, type_=sa.DateTime(timezone=True))
