@@ -189,9 +189,14 @@ async def get_raffle_stats(
     tickets = await cruds_raffle.get_tickets_by_raffleid(db=db, raffle_id=raffle_id)
 
     tickets_sold = len(tickets)
-    amount_raised = int(sum(
-        [ticket.pack_ticket.price / ticket.pack_ticket.pack_size for ticket in tickets]
-    ))
+    amount_raised = int(
+        sum(
+            [
+                ticket.pack_ticket.price / ticket.pack_ticket.pack_size
+                for ticket in tickets
+            ]
+        )
+    )
 
     return schemas_raffle.RaffleStats(
         tickets_sold=tickets_sold, amount_raised=amount_raised
