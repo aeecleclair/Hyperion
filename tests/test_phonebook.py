@@ -5,7 +5,7 @@ import pytest_asyncio
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from app.modules.phonebook import models_phonebook, schemas_phonebook
-from app.modules.phonebook.phonebook_types import RoleTags
+from app.modules.phonebook.phonebook_types import Kinds, RoleTags
 from tests.commons import (
     add_object_to_db,
     client,
@@ -54,19 +54,25 @@ async def init_objects():
 
     global association
     association = models_phonebook.Association(
-        id=str(uuid.uuid4()), kind="Section AE", name="ECLAIR", mandate_year=2023
+        id=str(uuid.uuid4()), kind=Kinds.section_ae, name="ECLAIR", mandate_year=2023
     )
     await add_object_to_db(association)
 
     global associations_to_delete_admin
     associations_to_delete_admin = models_phonebook.Association(
-        id=str(uuid.uuid4()), kind="Asso indé", name="Nom", mandate_year=2023
+        id=str(uuid.uuid4()),
+        kind=Kinds.association_independant,
+        name="Nom",
+        mandate_year=2023,
     )
     await add_object_to_db(associations_to_delete_admin)
 
     global associations_to_delete_simple
     associations_to_delete_simple = models_phonebook.Association(
-        id=str(uuid.uuid4()), kind="Asso indé", name="Nom", mandate_year=2023
+        id=str(uuid.uuid4()),
+        kind=Kinds.association_independant,
+        name="Nom",
+        mandate_year=2023,
     )
     await add_object_to_db(associations_to_delete_simple)
 
@@ -152,7 +158,7 @@ def test_create_association_admin():
         "/phonebook/associations/",
         json={
             "name": "Bazar",
-            "kind": "Gros Club",
+            "kind": "Section USE",
             "mandate_year": 2023,
             "description": "Bazar description",
         },
@@ -166,7 +172,7 @@ def test_create_association_simple():
         "/phonebook/associations/",
         json={
             "name": "Bazar",
-            "kind": "Gros Club",
+            "kind": "Section USE",
             "mandate_year": 2023,
             "description": "Bazar description",
         },

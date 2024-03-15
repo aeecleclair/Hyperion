@@ -1,6 +1,7 @@
 from pydantic import BaseModel, ConfigDict
 
 from app.core import schemas_core
+from app.modules.phonebook.phonebook_types import Kinds
 
 
 class RoleTagsReturn(BaseModel):
@@ -18,7 +19,7 @@ class RoleTagsBase(BaseModel):
 
 class AssociationBase(BaseModel):
     name: str
-    kind: str
+    kind: Kinds
     mandate_year: int
     description: str | None = None
 
@@ -31,7 +32,7 @@ class AssociationComplete(AssociationBase):
 
 class AssociationEdit(BaseModel):
     name: str | None = None
-    kind: str | None = None
+    kind: Kinds | None = None
     description: str | None = None
     mandate_year: int | None = None
 
@@ -72,4 +73,4 @@ class MemberComplete(MemberBase):
 
 
 class KindsReturn(BaseModel):
-    kinds: list[str]
+    kinds: list[Kinds]

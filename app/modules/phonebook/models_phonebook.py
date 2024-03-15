@@ -1,7 +1,8 @@
-from sqlalchemy import ForeignKey, Integer, String
+from sqlalchemy import Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
+from app.modules.phonebook.phonebook_types import Kinds
 
 
 class Membership(Base):
@@ -27,5 +28,5 @@ class Association(Base):
     )
     name: Mapped[str] = mapped_column(String, nullable=False, index=True)
     description: Mapped[str] = mapped_column(String, nullable=True)
-    kind: Mapped[str] = mapped_column(String, nullable=False)
+    kind: Mapped[Kinds] = mapped_column(Enum(Kinds), nullable=False)
     mandate_year: Mapped[int] = mapped_column(Integer, nullable=False)
