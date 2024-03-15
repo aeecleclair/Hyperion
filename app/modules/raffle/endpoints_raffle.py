@@ -189,8 +189,13 @@ async def get_raffle_stats(
     tickets = await cruds_raffle.get_tickets_by_raffleid(db=db, raffle_id=raffle_id)
 
     tickets_sold = len(tickets)
-    amount_raised = sum(
-        [ticket.pack_ticket.price / ticket.pack_ticket.pack_size for ticket in tickets]
+    amount_raised = int(
+        sum(
+            [
+                ticket.pack_ticket.price / ticket.pack_ticket.pack_size
+                for ticket in tickets
+            ]
+        )
     )
 
     return schemas_raffle.RaffleStats(
@@ -459,7 +464,7 @@ async def buy_ticket(
             user_id=user.id,
         )
         balance = models_raffle.Cash(
-            **new_cash_db.dict(),
+            **new_cash_db.model_dump(),
         )
         await cruds_raffle.create_cash_of_user(
             cash=balance,
@@ -499,7 +504,7 @@ async def buy_ticket(
             firstname=user.firstname, name=user.name, nickname=user.nickname
         )
         hyperion_raffle_logger.info(
-            f"Add_ticket_to_user: A pack of {pack_ticket.pack_size} tickets of type {pack_id} has been buyed by user {display_name}({user.id}) for an amount of {pack_ticket.price}€. ({request_id})"
+            f"Add_ticket_to_user: A pack of {pack_ticket.pack_size} tickets of type {pack_id} has been buyed by user {display_name}({user.id}) for an amount of {pack_ticket.price//100}€{pack_ticket.price%100}. ({request_id})"
         )
 
         return tickets

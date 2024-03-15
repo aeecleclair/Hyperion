@@ -47,11 +47,11 @@ async def init_objects():
     student_user = await create_user_with_groups([GroupType.student])
 
     product = models_amap.Product(
-        id=str(uuid.uuid4()), name="Tomato", price=1.5, category="Test"
+        id=str(uuid.uuid4()), name="Tomato", price=150, category="Test"
     )
     await add_object_to_db(product)
     deletable_product = models_amap.Product(
-        id=str(uuid.uuid4()), name="Deletable Tomato", price=1.5, category="Test"
+        id=str(uuid.uuid4()), name="Deletable Tomato", price=150, category="Test"
     )
     await add_object_to_db(deletable_product)
 
@@ -117,7 +117,7 @@ def test_create_product():
 
     response = client.post(
         "/amap/products",
-        json={"name": "test", "price": 0.1, "category": "test"},
+        json={"name": "test", "price": 10, "category": "test"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 201
@@ -139,7 +139,7 @@ def test_edit_product():
 
     response = client.patch(
         f"/amap/products/{product.id}",
-        json={"name": "testupdate", "price": 0.1, "category": "test"},
+        json={"name": "testupdate", "price": 10, "category": "test"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 204

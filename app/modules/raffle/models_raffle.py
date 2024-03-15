@@ -1,6 +1,6 @@
 """Models file for module_tombola"""
 
-from sqlalchemy import Enum, Float, ForeignKey, Integer, String
+from sqlalchemy import Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.models_core import CoreGroup, CoreUser
@@ -30,7 +30,7 @@ class PackTicket(Base):
     id: Mapped[str] = mapped_column(
         String, primary_key=True, index=True, nullable=False
     )
-    price: Mapped[float] = mapped_column(Float, nullable=False)
+    price: Mapped[int] = mapped_column(Integer, nullable=False)
     pack_size: Mapped[int] = mapped_column(Integer, nullable=False)
     raffle_id: Mapped[str] = mapped_column(
         ForeignKey("raffle.id"), index=True, nullable=False
@@ -80,6 +80,6 @@ class Cash(Base):
     user_id: Mapped[str] = mapped_column(
         String, ForeignKey("core_user.id"), primary_key=True
     )
-    balance: Mapped[float] = mapped_column(Float, nullable=False)
+    balance: Mapped[int] = mapped_column(Integer, nullable=False)
 
     user: Mapped[CoreUser] = relationship("CoreUser")

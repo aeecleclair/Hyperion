@@ -360,7 +360,7 @@ async def create_cash_of_user(
         raise ValueError(err)
 
 
-async def add_cash(db: AsyncSession, user_id: str, amount: float):
+async def add_cash(db: AsyncSession, user_id: str, amount: int):
     result = await db.execute(
         select(models_amap.Cash).where(models_amap.Cash.user_id == user_id)
     )
@@ -378,7 +378,7 @@ async def add_cash(db: AsyncSession, user_id: str, amount: float):
             raise ValueError("Error during cash edition")
 
 
-async def remove_cash(db: AsyncSession, user_id: str, amount: float):
+async def remove_cash(db: AsyncSession, user_id: str, amount: int):
     result = await db.execute(
         select(models_amap.Cash).where(models_amap.Cash.user_id == user_id)
     )

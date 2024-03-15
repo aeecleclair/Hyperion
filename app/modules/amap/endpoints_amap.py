@@ -420,7 +420,7 @@ async def add_order_to_delievery(
             status_code=403, detail="You are not allowed to add this order"
         )
 
-    amount = 0.0
+    amount = 0
     for product_id, product_quantity in zip(
         order.products_ids, order.products_quantity
     ):
@@ -483,7 +483,7 @@ async def add_order_to_delievery(
         productsret = await cruds_amap.get_products_of_order(db=db, order_id=order_id)
 
         hyperion_amap_logger.info(
-            f"Add_order_to_delivery: An order has been created for user {order.user_id} for an amount of {amount}€. ({request_id})"
+            f"Add_order_to_delivery: An order has been created for user {order.user_id} for an amount of {amount//100}€{amount%100}. ({request_id})"
         )
         productsret
         return schemas_amap.OrderReturn(productsdetail=productsret, **orderret.__dict__)
@@ -553,7 +553,7 @@ async def edit_order_from_delivery(
         ):
             raise HTTPException(status_code=400, detail="Invalid request")
 
-        amount = 0.0
+        amount = 0
         for product_id, product_quantity in zip(
             order.products_ids, order.products_quantity
         ):
@@ -601,7 +601,7 @@ async def edit_order_from_delivery(
                 amount=previous_amount,
             )
             hyperion_amap_logger.info(
-                f"Edit_order: Order {order_id} has been edited for user {db_order.user_id}. Amount was {previous_amount}€, is now {amount}€. ({request_id})"
+                f"Edit_order: Order {order_id} has been edited for user {db_order.user_id}. Amount was {previous_amount//100}€{previous_amount%100}, is now {amount//100}€{amount%100}. ({request_id})"
             )
 
         except ValueError as error:
@@ -674,7 +674,7 @@ async def remove_order(
             amount=amount,
         )
         hyperion_amap_logger.info(
-            f"Delete_order: Order {order_id} by {order.user_id} was deleted. {amount}€ were refunded. ({request_id})"
+            f"Delete_order: Order {order_id} by {order.user_id} was deleted. {amount//100}€{amount%100} were refunded. ({request_id})"
         )
         return Response(status_code=204)
 
@@ -869,7 +869,7 @@ async def create_cash_of_user(
     )
 
     hyperion_amap_logger.info(
-        f"Create_cash_of_user: A cash has been created for user {cash_db.user_id} for an amount of {cash_db.balance}€. ({request_id})"
+        f"Create_cash_of_user: A cash has been created for user {cash_db.user_id} for an amount of {cash_db.balance//100}€{cash_db.balance%100}. ({request_id})"
     )
 
     # We can not directly return the cash_db because it does not contain the user.
@@ -886,7 +886,7 @@ async def create_cash_of_user(
                 context=f"amap-cash-{user_id}",
                 is_visible=True,
                 title="AMAP - Solde mis à jour",
-                content=f"Votre nouveau solde est de {result.balance} €.",
+                content=f"Votre nouveau solde est de {result.balance//100}€{result.balance%100}.",
                 # The notification will expire in 3 days
                 expire_on=now.replace(day=now.day + 3),
             )
@@ -931,7 +931,7 @@ async def edit_cash_by_id(
     await cruds_amap.add_cash(user_id=user_id, amount=balance.balance, db=db)
 
     hyperion_amap_logger.info(
-        f"Edit_cash_by_id: Cash has been updated for user {cash.user_id} from an amount of {cash.balance}€ to an amount of {balance.balance}€. ({request_id})"
+        f"Edit_cash_by_id: Cash has been updated for user {cash.user_id} from an amount of {cash.balance//100}€{cash.balance%100} to an amount of {balance.balance//100}€{balance.balance%100}. ({request_id})"
     )
 
 
