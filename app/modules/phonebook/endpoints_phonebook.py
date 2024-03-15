@@ -28,7 +28,7 @@ module = Module(
 # ---------------------------------------------------------------------------- #
 @module.router.get(
     "/phonebook/associations/",
-    response_model=list[schemas_phonebook.AssociationComplete] | None,
+    response_model=list[schemas_phonebook.AssociationComplete],
     status_code=200,
 )
 async def get_all_associations(
@@ -43,7 +43,7 @@ async def get_all_associations(
 
 @module.router.get(
     "/phonebook/roletags",
-    response_model=schemas_phonebook.RoleTagsReturn | None,
+    response_model=schemas_phonebook.RoleTagsReturn,
     status_code=200,
 )
 async def get_all_role_tags(
@@ -53,23 +53,22 @@ async def get_all_role_tags(
     """
     Return all available role tags from RoleTags enum.
     """
-    roles = await cruds_phonebook.get_all_role_tags(db)
+    roles = await cruds_phonebook.get_all_role_tags()
     return schemas_phonebook.RoleTagsReturn(tags=roles)
 
 
 @module.router.get(
     "/phonebook/associations/kinds",
-    response_model=schemas_phonebook.KindsReturn | None,
+    response_model=schemas_phonebook.KindsReturn,
     status_code=200,
 )
 async def get_all_kinds(
-    db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Return all available kinds of from Kinds enum.
     """
-    kinds = await cruds_phonebook.get_all_kinds(db)
+    kinds = await cruds_phonebook.get_all_kinds()
     return schemas_phonebook.KindsReturn(kinds=kinds)
 
 
@@ -194,9 +193,6 @@ async def get_association_members(
         association_id, db
     )
 
-    if association_memberships is None:
-        return []
-
     members_complete = []
 
     for membership in association_memberships:
@@ -232,9 +228,6 @@ async def get_association_members_by_mandate_year(
         )
     )
 
-    if association_memberships is None:
-        return []
-
     members_complete = []
 
     for membership in association_memberships:
@@ -264,9 +257,6 @@ async def get_member_details(
     """Return MemberComplete for given user_id."""
 
     member_memberships = await cruds_phonebook.get_membership_by_user_id(user_id, db)
-
-    if not member_memberships:
-        member_memberships = []
 
     member = await cruds_users.get_user_by_id(user_id=user_id, db=db)
 
@@ -321,7 +311,7 @@ async def create_membership(
         )
 
     if (
-        await cruds_phonebook.get_memberships_by_association_id_user_id_and_mandate_year(
+        await cruds_phonebook.get_membership_by_association_id_user_id_and_mandate_year(
             association_id=membership.association_id,
             user_id=membership.user_id,
             mandate_year=membership.mandate_year,

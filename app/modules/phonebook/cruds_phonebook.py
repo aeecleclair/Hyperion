@@ -15,24 +15,19 @@ async def is_user_president(
     association_id: str, user: models_core.CoreUser, db: AsyncSession
 ) -> bool:
     association = await get_association_by_id(association_id=association_id, db=db)
-    if association is not None:
-        memberships = await get_memberships_by_association_id(
-            association_id=association_id, db=db
-        )
-        if memberships is None:
-            return False
+    if association is None:
+        return False
 
-        for membership in memberships:
-            if (
-                membership.user_id == user.id
-                and membership.mandate_year == association.mandate_year
-                and (
-                    phonebook_types.RoleTags.president.value
-                    in membership.role_tags.split(";")
-                )
-            ):
-                return True
-    return False
+    membership = await get_membership_by_association_id_user_id_and_mandate_year(
+        association_id=association_id,
+        user_id=user.id,
+        mandate_year=association.mandate_year,
+        db=db,
+    )
+    return (
+        membership is not None
+        and phonebook_types.RoleTags.president.value in membership.role_tags.split(";")
+    )
 
 
 # ---------------------------------------------------------------------------- #
@@ -40,30 +35,28 @@ async def is_user_president(
 # ---------------------------------------------------------------------------- #
 async def get_all_associations(
     db: AsyncSession,
-) -> Sequence[models_phonebook.Association] | None:
+) -> Sequence[models_phonebook.Association]:
     """Return all Associations from database"""
 
     result = await db.execute(select(models_phonebook.Association))
     return result.scalars().all()
 
 
-async def get_all_role_tags(db: AsyncSession) -> Sequence[str] | None:
+async def get_all_role_tags() -> Sequence[str]:
     """Return all RoleTags from Enum"""
 
-    role_tags = [tag.value for tag in phonebook_types.RoleTags]
-    return role_tags
+    return [tag.value for tag in phonebook_types.RoleTags]
 
 
-async def get_all_kinds(db: AsyncSession) -> Sequence[str] | None:
+async def get_all_kinds() -> Sequence[str]:
     """Return all Kinds from Enum"""
 
-    kinds = [kind.value for kind in phonebook_types.Kinds]
-    return kinds
+    return [kind.value for kind in phonebook_types.Kinds]
 
 
 async def get_all_memberships(
     mandate_year: int, db: AsyncSession
-) -> Sequence[models_phonebook.Membership] | None:
+) -> Sequence[models_phonebook.Membership]:
     """Return all Memberships from database"""
 
     result = await db.execute(
@@ -78,8 +71,9 @@ async def get_all_memberships(
 #                                  Association                                 #
 # ---------------------------------------------------------------------------- #
 async def create_association(
-    association: models_phonebook.Association, db: AsyncSession
-):
+    association: models_phonebook.Association,
+    db: AsyncSession,
+) -> models_phonebook.Association:
     """Create a new Association in database and return it"""
 
     db.add(association)
@@ -191,7 +185,7 @@ async def delete_membership(membership_id: str, db: AsyncSession):
 
 async def get_membership_by_user_id(
     user_id: str, db: AsyncSession
-) -> Sequence[models_phonebook.Membership] | None:
+) -> Sequence[models_phonebook.Membership]:
     """Return all Memberships with user_id from database"""
     result = await db.execute(
         select(models_phonebook.Membership).where(
@@ -202,8 +196,9 @@ async def get_membership_by_user_id(
 
 
 async def get_memberships_by_association_id(
-    association_id: str, db: AsyncSession
-) -> Sequence[models_phonebook.Membership] | None:
+    association_id: str,
+    db: AsyncSession,
+) -> Sequence[models_phonebook.Membership]:
     """Return all Memberships with association_id from database"""
 
     result = await db.execute(
@@ -215,8 +210,10 @@ async def get_memberships_by_association_id(
 
 
 async def get_memberships_by_association_id_and_mandate_year(
-    association_id: str, mandate_year: int, db: AsyncSession
-) -> Sequence[models_phonebook.Membership] | None:
+    association_id: str,
+    mandate_year: int,
+    db: AsyncSession,
+) -> Sequence[models_phonebook.Membership]:
     """Return all Memberships with association_id and mandate_year from database"""
     result = await db.execute(
         select(models_phonebook.Membership).where(
@@ -227,8 +224,11 @@ async def get_memberships_by_association_id_and_mandate_year(
     return result.scalars().all()
 
 
-async def get_memberships_by_association_id_user_id_and_mandate_year(
-    association_id: str, user_id: str, mandate_year: int, db: AsyncSession
+async def get_membership_by_association_id_user_id_and_mandate_year(
+    association_id: str,
+    user_id: str,
+    mandate_year: int,
+    db: AsyncSession,
 ) -> models_phonebook.Membership | None:
     """Return all Memberships with association_id user_id and_mandate_year from database"""
 
