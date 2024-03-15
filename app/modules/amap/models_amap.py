@@ -2,7 +2,7 @@
 
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, Enum, Float, ForeignKey, Integer, String
+from sqlalchemy import Date, DateTime, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.models_core import CoreUser
@@ -39,7 +39,7 @@ class Product(Base):
     name: Mapped[Mapped[str]] = mapped_column(
         String, index=True, nullable=False, unique=True
     )
-    price: Mapped[float] = mapped_column(Float, nullable=False)
+    price: Mapped[int] = mapped_column(Integer, nullable=False)
     category: Mapped[str] = mapped_column(String, index=True, nullable=False)
 
 
@@ -79,7 +79,7 @@ class Order(Base):
         secondary="amap_order_content",
         viewonly=True,
     )
-    amount: Mapped[float] = mapped_column(Float, nullable=False)
+    amount: Mapped[int] = mapped_column(Integer, nullable=False)
     collection_slot: Mapped[AmapSlotType] = mapped_column(
         Enum(AmapSlotType), nullable=False
     )
