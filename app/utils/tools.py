@@ -1,8 +1,12 @@
 import logging
 import os
+import random
+import re
 import secrets
+import shutil
 from collections.abc import Sequence
 from pathlib import Path
+from typing import Sequence
 
 import aiofiles
 from fastapi import HTTPException, UploadFile
@@ -178,14 +182,25 @@ def get_file_from_data(
     directory: str,
     filename: str,
     default_asset: str,
-):
+) -> FileResponse:
     """
     If there is a file with the provided filename in the data folder, return it. The file extension will be inferred from the provided content file.
     > "data/{directory}/{filename}.ext"
     Otherwise, return the default asset.
 
+    The filename should be a uuid.
+
     WARNING: **NEVER** trust user input when calling this function. Always check that parameters are valid.
     """
+
+    if not re.match(
+        r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", filename
+    ):
+        hyperion_error_logger.error(
+            f"get_file_from_data: security issue, the filename is not a valid UUID: {filename}. This mean that the user input was not properly checked."
+        )
+        raise ValueError("The filename is not a valid UUID")
+
     for filePath in Path().glob(f"data/{directory}/{filename}.*"):
         return FileResponse(filePath)
 
