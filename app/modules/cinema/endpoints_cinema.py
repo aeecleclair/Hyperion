@@ -21,6 +21,7 @@ from app.dependencies import (
 from app.modules.cinema import cruds_cinema, schemas_cinema
 from app.utils.communication.notifications import NotificationTool
 from app.utils.tools import get_file_from_data, save_file_as_data
+from app.utils.types.content_type import ContentType
 
 module = Module(
     root="cinema",
@@ -154,7 +155,11 @@ async def create_campaigns_logo(
         filename=str(session_id),
         request_id=request_id,
         max_file_size=4 * 1024 * 1024,
-        accepted_content_types=["image/jpeg", "image/png", "image/webp"],
+        accepted_content_types=[
+            ContentType.jpg,
+            ContentType.png,
+            ContentType.webp,
+        ],
     )
 
     return standard_responses.Result(success=True)

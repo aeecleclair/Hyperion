@@ -22,6 +22,7 @@ from app.modules.recommendation import (
     schemas_recommendation,
 )
 from app.utils.tools import get_file_from_data, save_file_as_data
+from app.utils.types.content_type import ContentType
 
 router = APIRouter()
 
@@ -191,7 +192,11 @@ async def create_recommendation_image(
         filename=str(recommendation_id),
         request_id=request_id,
         max_file_size=4 * 1024 * 1024,
-        accepted_content_types=["image/jpeg", "image/png", "image/webp"],
+        accepted_content_types=[
+            ContentType.jpg,
+            ContentType.png,
+            ContentType.webp,
+        ],
     )
 
     return standard_responses.Result(success=True)
