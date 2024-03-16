@@ -209,7 +209,8 @@ def initialize_module_visibility(engine: Engine) -> None:
                     )
             module_awareness = models_core.ModuleAwareness(root=module.root)
             initialization.create_module_awareness_sync(
-                module_awareness=module_awareness, db=db
+                module_awareness=module_awareness,
+                db=db,
             )
 
 
