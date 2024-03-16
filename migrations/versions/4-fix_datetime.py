@@ -33,6 +33,18 @@ def upgrade() -> None:
     # Cinema
     upgrade_column("cinema_session", "start")
 
+    # Core
+    upgrade_column_type("refresh_token", "revoked_on")
+    upgrade_column_type("refresh_token", "expire_on")
+    upgrade_column_type("refresh_token", "created_on")
+    upgrade_column_type("notification_message", "delivery_datetime")
+    upgrade_column_type("core_user_unconfirmed", "expire_on")
+    upgrade_column_type("core_user_unconfirmed", "created_on")
+    upgrade_column_type("core_user_recover_request", "expire_on")
+    upgrade_column_type("core_user_recover_request", "created_on")
+    upgrade_column_type("core_user", "created_on")
+    upgrade_column_type("authorization_code", "expire_on")
+
 
 def downgrade() -> None:
     pass
@@ -42,4 +54,8 @@ def upgrade_column(table, column):
     op.execute(
         f'UPDATE "{table}" SET "{column}" = "{column}"::timestamp AT TIME ZONE \'Europe/Paris\'',
     )
+    op.alter_column(table, column, type_=sa.DateTime(timezone=False))
+
+
+def upgrade_column_type(table, column):
     op.alter_column(table, column, type_=sa.DateTime(timezone=False))
