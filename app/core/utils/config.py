@@ -150,6 +150,7 @@ class Settings(BaseSettings):
     POSTGRES_DB: str = ""
     POSTGRES_TZ: str = ""
     DATABASE_DEBUG: bool = False  # If True, the database will log all queries
+    FACTORIES: bool = False  # If True, the database will be populated with fake data
 
     #####################
     # Hyperion settings #
