@@ -11,8 +11,27 @@ def password_validator(password: str) -> str:
     https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
     """
     # TODO
-    if len(password) < 6:
-        raise ValueError("The password must be at least 6 characters long")
+    nb_number, nb_special, nb_maj, nb_min = 0, 0, 0, 0
+    for i in password:
+        if i.isnumeric():
+            nb_number += 1
+        elif not i.isalpha():
+            nb_special += 1
+        elif i.isupper():
+            nb_maj += 1
+        elif i.islower():
+            nb_min += 1
+
+    if (
+        len(password) < 6
+        and nb_number > 1
+        and nb_special > 1
+        and nb_min > 1
+        and nb_maj > 1
+    ):
+        raise ValueError(
+            "The password must be at least 6 characters long and contain at least one number, one special character, one majuscule and one minuscule."
+        )
     return password.strip()
 
 
