@@ -11,4 +11,4 @@ class Journal(Base):
 
     id: Mapped[str] = mapped_column(String, primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
-    date: Mapped[date] = mapped_column(Date, nullable=False)
+    release_date: Mapped[date] = mapped_column(Date, nullable=False)
