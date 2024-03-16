@@ -14,16 +14,14 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "2fcadbe2f0ad"
-down_revision: Union[str, None] = "f17e6182b0a9"
+down_revision: Union[str, None] = "99a2c70e4a24"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
     # Schema migration
-    op.add_column(
-        "loan", sa.Column("returned_date", sa.DateTime(timezone=True), nullable=True)
-    )
+    op.add_column("loan", sa.Column("returned_date", sa.Date(), nullable=True))
 
     # Data migration
     t_loan = sa.Table(
