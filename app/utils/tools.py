@@ -187,56 +187,6 @@ async def save_file_as_data(
         raise HTTPException(status_code=400, detail="Could not save file")
 
 
-async def save_pdf_as_data(
-    pdf: UploadFile,
-    directory: str,
-    filename: str,
-    request_id: str,
-    max_file_size: int = 10,  # MB
-    accepted_content_types: list[str] = [
-        "application/pdf",
-    ],
-):
-    if pdf.content_type not in accepted_content_types:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid file format, supported {accepted_content_types}",
-        )
-
-    # We need to go to the end of the file to be able to get the size of the file
-    pdf.file.seek(0, os.SEEK_END)
-    # Use file.tell() to retrieve the cursor's current position
-    file_size = pdf.file.tell()  # Bytes
-    if file_size > max_file_size:
-        raise HTTPException(
-            status_code=413,
-            detail=f"File size is too big. Limit is {max_file_size} MB",
-        )
-    # We go back to the beginning of the file to save it on the disk
-    await pdf.seek(0)
-
-    extensions_mapping = {
-        "application/pdf": "pdf",
-    }
-    extension = extensions_mapping.get(pdf.content_type, "")
-    # Remove the existing file if any and create the new one
-    try:
-        if not os.path.exists(f"data/{directory}/"):
-            os.makedirs(f"data/{directory}/")
-
-        for filePath in glob.glob(f"data/{directory}/{filename}.*"):
-            os.remove(filePath)
-
-        with open(f"data/{directory}/{filename}.{extension}", "wb") as buffer:
-            shutil.copyfileobj(pdf.file, buffer)
-
-    except Exception as error:
-        hyperion_error_logger.error(
-            f"save_file_to_the_disk: could not save file to {filename}: {error} ({request_id})"
-        )
-        raise HTTPException(status_code=400, detail="Could not save file")
-
-
 def get_file_from_data(
     directory: str,
     filename: str,
