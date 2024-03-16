@@ -20,7 +20,7 @@ from app.core.users import cruds_users
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 uuid_regex = re.compile(
-    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
 )
 
 
@@ -135,7 +135,7 @@ async def save_file_as_data(
 
     if not uuid_regex.match(filename):
         hyperion_error_logger.error(
-            f"save_file_as_data: security issue, the filename is not a valid UUID: {filename}."
+            f"save_file_as_data: security issue, the filename is not a valid UUID: {filename}.",
         )
         raise ValueError("The filename is not a valid UUID")
 
@@ -202,7 +202,7 @@ def get_file_from_data(
     """
     if not uuid_regex.match(filename):
         hyperion_error_logger.error(
-            f"get_file_from_data: security issue, the filename is not a valid UUID: {filename}. This mean that the user input was not properly checked."
+            f"get_file_from_data: security issue, the filename is not a valid UUID: {filename}. This mean that the user input was not properly checked.",
         )
         raise ValueError("The filename is not a valid UUID")
 
