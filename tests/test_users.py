@@ -190,7 +190,7 @@ def test_can_not_make_admin_when_there_are_multiple_users():
         "/users/make-admin",
         headers={"Authorization": f"Bearer {token_admin_user}"},
     )
-    assert response.status_code == 400
+    assert response.status_code == 403
 
 
 def test_recover_and_reset_password(mocker):
