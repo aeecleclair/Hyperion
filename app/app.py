@@ -1,5 +1,6 @@
 """File defining the Metadata. And the basic functions creating the database tables and calling the router"""
 
+import importlib
 import logging
 import uuid
 from contextlib import asynccontextmanager
@@ -20,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from app import api
 from app.api import module_list
-from app.core import models_core
+from app.core import factory_core, models_core
 from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
 from app.core.log import LogConfig
@@ -206,6 +207,63 @@ def initialize_module_visibility(engine: Engine) -> None:
                     )
 
 
+async def run_factories(app: FastAPI) -> None:
+    """Run the factories to create default data in the database"""
+    hyperion_error_logger = logging.getLogger("hyperion.error")
+    settings = app.dependency_overrides.get(get_settings, get_settings)()
+    if not settings.FACTORIES:
+        hyperion_error_logger.info("Startup: Factories are disabled")
+        return
+
+    factories_list = [
+        factory_core.factory,
+    ]
+    for factories_file in Path().glob("app/modules/*/factory_*.py"):
+        factory_module = importlib.import_module(
+            ".".join(factories_file.with_suffix("").parts),
+        )
+        if hasattr(factory_module, "factory"):
+            factory = factory_module.factory
+            factories_list.append(factory)
+        else:
+            hyperion_error_logger.error(
+                f"Module {factories_file} does not declare a module. It won't be enabled.",
+            )
+
+    action = True
+    while factories_list and action:
+        action = False
+        for factory in factories_list:
+            if factory.depends_on == []:
+                action = True
+                if await factory.should_run(app):
+                    hyperion_error_logger.info(
+                        f"Startup: Running factory {factory.name}",
+                    )
+                    try:
+                        await factory.run(app)
+                    except Exception as error:
+                        hyperion_error_logger.fatal(
+                            f"Startup: Could not run factories: {error}"
+                        )
+                        raise
+                else:
+                    hyperion_error_logger.info(
+                        f"Startup: Factory {factory.name} is not necessary, skipping it",
+                    )
+                for other_factory in factories_list:
+                    if factory.name in other_factory.depends_on:
+                        other_factory.depends_on.remove(factory.name)
+                factories_list.remove(factory)
+                break
+        if not action:
+            hyperion_error_logger.error(
+                "Factories are not correctly configured, some factories are not running.",
+            )
+            break
+    hyperion_error_logger.info("Startup: Factories have been run")
+
+
 # We wrap the application in a function to be able to pass the settings and drop_db parameters
 # The drop_db parameter is used to drop the database tables before creating them again
 def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
@@ -224,6 +282,7 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     # https://fastapi.tiangolo.com/advanced/events/
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        await run_factories(app)
         yield
         hyperion_error_logger.info("Shutting down")
 
@@ -251,6 +310,8 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     # Initialize database tables
     initialize_groups(sync_engine)
     initialize_module_visibility(sync_engine)
+
+    # Run factories
 
     # Initialize Redis
     if not app.dependency_overrides.get(get_redis_client, get_redis_client)(

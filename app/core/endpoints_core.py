@@ -1,3 +1,4 @@
+import logging
 from os import path
 from pathlib import Path
 
@@ -10,6 +11,8 @@ from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
 from app.dependencies import get_db, get_settings, is_user_a_member, is_user_a_member_of
 from app.utils.tools import is_group_id_valid
+
+hyperion_error_logger = logging.getLogger("hyperion.error")
 
 router = APIRouter(tags=["Core"])
 
@@ -159,9 +162,9 @@ async def get_module_visibility(
 
     **This endpoint is only usable by administrators**
     """
-    from app.api import (  # We need to do it here, because the list is not initialized at startup
+    from app.api import (
         module_list,
-    )
+    )  # We need to do it here, because the list is not initialized at startup
 
     return_module_visibilities = []
     for module in module_list:
