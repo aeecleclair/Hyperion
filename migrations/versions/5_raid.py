@@ -125,6 +125,11 @@ def upgrade() -> None:
             sa.Enum("discovery", "sports", "expert", name="difficulty"),
             nullable=True,
         ),
+        sa.Column(
+            "meeting_place",
+            sa.Enum("centrale", "bellecour", "anyway", name="meeting_place"),
+            nullable=True,
+        ),
         sa.Column("captain_id", sa.String(), nullable=False),
         sa.Column("second_id", sa.String(), nullable=True),
         sa.ForeignKeyConstraint(
