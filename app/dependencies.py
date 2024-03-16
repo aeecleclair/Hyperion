@@ -15,6 +15,7 @@ from typing import Any
 import redis
 from fastapi import BackgroundTasks, Depends, HTTPException, Request, status
 from jose import jwt
+from jose.exceptions import JWTError
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -218,7 +219,7 @@ def get_user_from_token_with_scopes(
             hyperion_access_logger.info(
                 f"Get_current_user: Decoded a token for user {token_data.sub} ({request_id})",
             )
-        except (jwt.JWTError, ValidationError) as error:
+        except (JWTError, ValidationError) as error:
             hyperion_access_logger.warning(
                 f"Get_current_user: Failed to decode a token: {error} ({request_id})",
             )
@@ -326,7 +327,7 @@ async def get_token_data(
         hyperion_access_logger.info(
             f"Get_token_data: Decoded a token for user {token_data.sub} ({request_id})",
         )
-    except (jwt.JWTError, ValidationError) as error:
+    except (JWTError, ValidationError) as error:
         hyperion_access_logger.warning(
             f"Get_token_data: Failed to decode a token: {error} ({request_id})",
         )

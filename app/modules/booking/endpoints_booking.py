@@ -14,6 +14,7 @@ from app.core.notification.schemas_notification import Message
 from app.dependencies import (
     get_db,
     get_notification_tool,
+    get_settings,
     is_user_a_member,
     is_user_a_member_of,
 )
@@ -464,7 +465,7 @@ async def delete_room(
     room_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
-    settings=Depends(module.get_settings),
+    settings=Depends(get_settings),
 ):
     """
     Delete a room only if there are not future or ongoing bookings of this room
