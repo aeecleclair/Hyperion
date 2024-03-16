@@ -450,7 +450,7 @@ async def delete_membership(
 # ---------------------------------------------------------------------------- #
 @module.router.post(
     "/phonebook/associations/{association_id}/picture",
-    # response_model=standard_responses.Result,
+    response_model=standard_responses.Result,
     status_code=201,
 )
 async def create_association_logo(
