@@ -23,7 +23,7 @@ async def get_visible_roots_by_user(
             models_core.ModuleVisibility.allowed_group_id.in_(user_group_ids),
             models_core.ModuleVisibility.visible,
         )
-        .group_by(models_core.ModuleVisibility.root)
+        .group_by(models_core.ModuleVisibility.root),
     )
 
     return result.unique().scalars().all()
@@ -43,7 +43,7 @@ async def get_allowed_groups_ids_by_root(
         ).where(
             models_core.ModuleVisibility.root == root,
             models_core.ModuleVisibility.visible,
-        )
+        ),
     )
 
     return result.unique().scalars().all()
@@ -75,7 +75,7 @@ async def disable_module_visibility(
             models_core.ModuleVisibility.root == root,
             models_core.ModuleVisibility.allowed_group_id == allowed_group_id,
         )
-        .values(visible=False)
+        .values(visible=False),
     )
     await db.commit()
 

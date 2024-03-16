@@ -188,7 +188,8 @@ def initialize_module_visibility(engine: Engine) -> None:
         for module in module_list:
             existing_module_visibility = (
                 initialization.get_all_module_visibility_by_root_sync(
-                    root=module.root, db=db
+                    root=module.root,
+                    db=db,
                 )
             )
             if len(existing_module_visibility):

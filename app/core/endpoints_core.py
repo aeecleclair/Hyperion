@@ -168,7 +168,8 @@ async def get_module_visibility(
     return_module_visibilities = []
     for module in module_list:
         allowed_group_ids = await cruds_core.get_allowed_groups_ids_by_root(
-            root=module.root, db=db
+            root=module.root,
+            db=db,
         )
         return_module_visibilities.append(
             schemas_core.ModuleVisibility(
@@ -243,5 +244,7 @@ async def delete_session(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     await cruds_core.disable_module_visibility(
-        root=root, allowed_group_id=group_id, db=db
+        root=root,
+        allowed_group_id=group_id,
+        db=db,
     )

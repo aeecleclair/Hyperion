@@ -1,4 +1,4 @@
-from typing import Sequence
+from collections.abc import Sequence
 
 from sqlalchemy import select
 from sqlalchemy.engine import Engine, create_engine
@@ -33,8 +33,8 @@ def get_all_module_visibility_by_root_sync(
     """
     result = db.execute(
         select(models_core.ModuleVisibility).where(
-            models_core.ModuleVisibility.root == root
-        )
+            models_core.ModuleVisibility.root == root,
+        ),
     )
     return result.unique().scalars().all()
 
