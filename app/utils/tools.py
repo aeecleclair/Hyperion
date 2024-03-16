@@ -17,6 +17,7 @@ from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
 from app.core.models_core import CoreUser
 from app.core.users import cruds_users
+from app.utils.types.content_type import ContentType
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
@@ -104,7 +105,7 @@ async def save_file_as_data(
     filename: str,
     request_id: str,
     max_file_size: int = 1024 * 1024 * 2,  # 2 MB
-    accepted_content_types: list[str] | None = None,
+    accepted_content_types: list[ContentType] | None = None,
 ):
     """
     Save an image file to the data folder.
@@ -117,10 +118,7 @@ async def save_file_as_data(
 
     The file extension will be inferred from the provided content file.
     There should only be one file with the same filename, thus, saving a new file will remove the existing even if its extension was different.
-    Currently, compatible extensions are :
-     - png
-     - jpg
-     - webp
+    Currently, compatible extensions are defined in the enum `ContentType`
 
     An HTTP Exception will be raised if an error occurres.
 
@@ -131,9 +129,9 @@ async def save_file_as_data(
     if accepted_content_types is None:
         # Accept only images by default
         accepted_content_types = [
-            "image/jpeg",
-            "image/png",
-            "image/webp",
+            ContentType.jpg,
+            ContentType.png,
+            ContentType.webp,
         ]
 
     if not uuid_regex.match(filename):
@@ -160,12 +158,7 @@ async def save_file_as_data(
     # We go back to the beginning of the file to save it on the disk
     await upload_file.seek(0)
 
-    extensions_mapping = {
-        "image/jpeg": "jpg",
-        "image/png": "png",
-        "image/webp": "webp",
-    }
-    extension = extensions_mapping.get(upload_file.content_type, "")
+    extension = ContentType(image.content_type).name
     # Remove the existing file if any and create the new one
 
     # If the directory does not exist, we want to create it
