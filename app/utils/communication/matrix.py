@@ -23,7 +23,10 @@ class Matrix:
         self.access_token = token
 
     def post(
-        self, url: str, json: dict[str, Any], headers: dict[str, Any] | None
+        self,
+        url: str,
+        json: dict[str, Any],
+        headers: dict[str, Any] | None,
     ) -> dict[str, Any]:
         """
         The function adds an access token to the request authorization header and issue a post operation.
@@ -43,7 +46,7 @@ class Matrix:
             response.raise_for_status()
         except requests.exceptions.HTTPError as err:
             raise ValueError(
-                "Could not send message to Matrix server, check the room_id in settings."
+                "Could not send message to Matrix server, check the room_id in settings.",
             ) from err
 
         return response.json()

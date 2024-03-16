@@ -64,7 +64,9 @@ def fuzzy_search_user(
         choices.append(f"{user.firstname} {user.name} {user.nickname}")
 
     results: list[tuple[str, int | float, int]] = process.extract(
-        query, choices, limit=limit
+        query,
+        choices,
+        limit=limit,
     )
 
     # results has the format : (string used for the comparison, similarity score, index of the object in the choices collection)
@@ -158,7 +160,8 @@ async def save_file_as_data(
             filePath.unlink()
 
         async with aiofiles.open(
-            f"data/{directory}/{filename}.{extension}", mode="wb"
+            f"data/{directory}/{filename}.{extension}",
+            mode="wb",
         ) as buffer:
             # https://stackoverflow.com/questions/63580229/how-to-save-uploadfile-in-fastapi
             while content := await image.read(1024):
@@ -166,7 +169,7 @@ async def save_file_as_data(
 
     except Exception as error:
         hyperion_error_logger.error(
-            f"save_file_to_the_disk: could not save file to {filename}: {error} ({request_id})"
+            f"save_file_to_the_disk: could not save file to {filename}: {error} ({request_id})",
         )
         raise HTTPException(status_code=400, detail="Could not save file")
 

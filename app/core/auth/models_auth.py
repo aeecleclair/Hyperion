@@ -28,7 +28,11 @@ class RefreshToken(Base):
     expire_on: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
     revoked_on: Mapped[datetime | None] = mapped_column(TZDateTime)
     token: Mapped[str] = mapped_column(
-        String, index=True, primary_key=True, unique=True, nullable=False
+        String,
+        index=True,
+        primary_key=True,
+        unique=True,
+        nullable=False,
     )
     scope: Mapped[str | None] = mapped_column(String)
     user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), nullable=False)

@@ -56,7 +56,8 @@ async def create_session(
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     db_session = schemas_cinema.CineSessionComplete(
-        id=str(uuid.uuid4()), **session.model_dump()
+        id=str(uuid.uuid4()),
+        **session.model_dump(),
     )
     try:
         result = await cruds_cinema.create_session(session=db_session, db=db)
@@ -67,10 +68,15 @@ async def create_session(
     try:
         today = datetime.now(UTC)
         sunday = today.replace(
-            day=today.day - today.weekday() + 6, hour=11, minute=0, second=0
+            day=today.day - today.weekday() + 6,
+            hour=11,
+            minute=0,
+            second=0,
         )
         next_week_sessions = await cruds_cinema.get_sessions_in_time_frame(
-            start_after=sunday, start_before=sunday.replace(day=sunday.day + 7), db=db
+            start_after=sunday,
+            start_before=sunday.replace(day=sunday.day + 7),
+            db=db,
         )
         message_content = ""
         days = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
@@ -89,11 +95,12 @@ async def create_session(
             expire_on=sunday.replace(day=sunday.day + 7),
         )
         await notification_tool.send_notification_to_topic(
-            custom_topic=CustomTopic(topic=Topic.cinema), message=message
+            custom_topic=CustomTopic(topic=Topic.cinema),
+            message=message,
         )
     except Exception as error:
         hyperion_error_logger.error(
-            f"Error while sending cinema recap notification, {error}"
+            f"Error while sending cinema recap notification, {error}",
         )
 
     return result
@@ -107,7 +114,9 @@ async def update_session(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.cinema)),
 ):
     await cruds_cinema.update_session(
-        session_id=session_id, session_update=session_update, db=db
+        session_id=session_id,
+        session_update=session_update,
+        db=db,
     )
 
 

@@ -258,7 +258,9 @@ class LogConfig:
 
             # The listener will watch the queue and let the previous handler process logs records in their own thread
             listener = QueueListener(
-                log_queue, *logger.handlers, respect_handler_level=True
+                log_queue,
+                *logger.handlers,
+                respect_handler_level=True,
             )
             listener.start()
 

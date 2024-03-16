@@ -24,7 +24,9 @@ class CoreUser(Base):
     __tablename__ = "core_user"
 
     id: Mapped[str] = mapped_column(
-        String, primary_key=True, index=True
+        String,
+        primary_key=True,
+        index=True,
     )  # Use UUID later
     email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String, nullable=False)
@@ -84,7 +86,9 @@ class CoreUserEmailMigrationCode(Base):
     new_email: Mapped[str] = mapped_column(String, nullable=False)
     old_email: Mapped[str] = mapped_column(String, nullable=False)
     confirmation_token: Mapped[str] = mapped_column(
-        String, nullable=False, primary_key=True
+        String,
+        nullable=False,
+        primary_key=True,
     )
 
 

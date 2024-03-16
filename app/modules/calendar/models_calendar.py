@@ -18,7 +18,8 @@ class Event(Base):
     name: Mapped[str] = mapped_column(String, nullable=False)
     organizer: Mapped[str] = mapped_column(String, nullable=False)
     applicant_id: Mapped[str] = mapped_column(
-        ForeignKey("core_user.id"), nullable=False
+        ForeignKey("core_user.id"),
+        nullable=False,
     )
     applicant: Mapped[CoreUser] = relationship("CoreUser")
     start: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)

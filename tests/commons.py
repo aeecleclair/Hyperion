@@ -46,7 +46,9 @@ else:
 engine = create_async_engine(SQLALCHEMY_DATABASE_URL, echo=True)
 
 TestingSessionLocal = async_sessionmaker(
-    engine, class_=AsyncSession, expire_on_commit=False
+    engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
 )  # Create a session for testing purposes
 
 

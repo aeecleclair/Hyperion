@@ -184,7 +184,8 @@ async def add_list(
 
     # Check if the section given exists in the DB.
     section = await cruds_campaign.get_section_by_id(
-        db=db, section_id=campaign_list.section_id
+        db=db,
+        section_id=campaign_list.section_id,
     )
     if section is None:
         raise HTTPException(status_code=404, detail="Given section doesn't exist.")
@@ -210,7 +211,7 @@ async def add_list(
             models_campaign.ListMemberships(
                 user_id=member.user_id,
                 role=member.role,
-            )
+            ),
         )
 
     model_list = models_campaign.Lists(
@@ -582,8 +583,8 @@ async def reset_vote(
         ) as file:
             await file.write(
                 json.dumps(
-                    [{"list_id": res.list_id, "count": res.count} for res in results]
-                )
+                    [{"list_id": res.list_id, "count": res.count} for res in results],
+                ),
             )
 
         await cruds_campaign.reset_campaign(db=db)
@@ -634,11 +635,14 @@ async def vote(
 
     # Check if the user has already voted for this section.
     has_voted = await cruds_campaign.has_user_voted_for_section(
-        db=db, user_id=user.id, section_id=campaign_list.section_id
+        db=db,
+        user_id=user.id,
+        section_id=campaign_list.section_id,
     )
     if has_voted:
         raise HTTPException(
-            status_code=400, detail="You have already voted for this section."
+            status_code=400,
+            detail="You have already voted for this section.",
         )
 
     # Add the vote to the db
@@ -649,7 +653,9 @@ async def vote(
     try:
         # Mark user has voted for the given section.
         await cruds_campaign.mark_has_voted(
-            db=db, user_id=user.id, section_id=campaign_list.section_id
+            db=db,
+            user_id=user.id,
+            section_id=campaign_list.section_id,
         )
         await cruds_campaign.add_vote(
             db=db,
@@ -738,7 +744,7 @@ async def get_results(
                 schemas_campaign.Result(
                     list_id=list_id,
                     count=count,
-                )
+                ),
             )
         return results
     else:

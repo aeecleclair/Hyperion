@@ -15,10 +15,14 @@ class Loaner(Base):
     group_manager_id: Mapped[str] = mapped_column(String, nullable=False)
 
     items: Mapped[list["Item"]] = relationship(
-        "Item", lazy="joined", back_populates="loaner"
+        "Item",
+        lazy="joined",
+        back_populates="loaner",
     )
     loans: Mapped[list["Loan"]] = relationship(
-        "Loan", lazy="joined", back_populates="loaner"
+        "Loan",
+        lazy="joined",
+        back_populates="loaner",
     )
 
 
@@ -42,7 +46,8 @@ class Item(Base):
     suggested_caution: Mapped[int] = mapped_column(Integer)
     total_quantity: Mapped[int] = mapped_column(Integer, nullable=False)
     suggested_lending_duration: Mapped[int] = mapped_column(
-        Integer, nullable=False
+        Integer,
+        nullable=False,
     )  # duration in seconds
     loaner: Mapped[Loaner] = relationship(Loaner, lazy="joined", back_populates="items")
 

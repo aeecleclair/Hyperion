@@ -17,7 +17,8 @@ async def get_managers(
 
 
 async def create_manager(
-    db: AsyncSession, manager: models_booking.Manager
+    db: AsyncSession,
+    manager: models_booking.Manager,
 ) -> models_booking.Manager:
     db.add(manager)
     try:
@@ -36,7 +37,7 @@ async def update_manager(
     await db.execute(
         update(models_booking.Manager)
         .where(models_booking.Manager.id == manager_id)
-        .values(**manager_update.model_dump(exclude_none=True))
+        .values(**manager_update.model_dump(exclude_none=True)),
     )
     try:
         await db.commit()
@@ -50,7 +51,7 @@ async def delete_manager(
     db: AsyncSession,
 ):
     await db.execute(
-        delete(models_booking.Manager).where(models_booking.Manager.id == manager_id)
+        delete(models_booking.Manager).where(models_booking.Manager.id == manager_id),
     )
     try:
         await db.commit()
@@ -66,7 +67,7 @@ async def get_manager_by_id(
     result = await db.execute(
         select(models_booking.Manager)
         .where(models_booking.Manager.id == manager_id)
-        .options(selectinload(models_booking.Manager.rooms))
+        .options(selectinload(models_booking.Manager.rooms)),
     )
     return result.scalars().one()
 
@@ -78,8 +79,8 @@ async def get_user_managers(
     groups_id = [group.id for group in user.groups]
     result = await db.execute(
         select(models_booking.Manager).where(
-            models_booking.Manager.group_id.in_(groups_id)
-        )
+            models_booking.Manager.group_id.in_(groups_id),
+        ),
     )
     return result.scalars().all()
 
@@ -89,8 +90,8 @@ async def get_bookings(
 ) -> Sequence[models_booking.Booking]:
     result = await db.execute(
         select(models_booking.Booking).options(
-            selectinload(models_booking.Booking.applicant)
-        )
+            selectinload(models_booking.Booking.applicant),
+        ),
     )
     return result.scalars().all()
 
@@ -101,29 +102,31 @@ async def get_confirmed_bookings(
     result = await db.execute(
         select(models_booking.Booking)
         .where(models_booking.Booking.decision == Decision.approved)
-        .options(selectinload(models_booking.Booking.applicant))
+        .options(selectinload(models_booking.Booking.applicant)),
     )
     return result.scalars().all()
 
 
 async def get_applicant_bookings(
-    db: AsyncSession, applicant_id: str
+    db: AsyncSession,
+    applicant_id: str,
 ) -> Sequence[models_booking.Booking]:
     result = await db.execute(
         select(models_booking.Booking)
         .where(models_booking.Booking.applicant_id == applicant_id)
-        .options(selectinload(models_booking.Booking.applicant))
+        .options(selectinload(models_booking.Booking.applicant)),
     )
     return result.scalars().all()
 
 
 async def get_booking_by_id(
-    db: AsyncSession, booking_id: str
+    db: AsyncSession,
+    booking_id: str,
 ) -> models_booking.Booking:
     result = await db.execute(
         select(models_booking.Booking)
         .where(models_booking.Booking.id == booking_id)
-        .options(selectinload(models_booking.Booking.applicant))
+        .options(selectinload(models_booking.Booking.applicant)),
     )
     return result.scalars().one()
 
@@ -139,12 +142,14 @@ async def create_booking(db: AsyncSession, booking: schemas_booking.BookingCompl
 
 
 async def edit_booking(
-    db: AsyncSession, booking_id: str, booking: schemas_booking.BookingEdit
+    db: AsyncSession,
+    booking_id: str,
+    booking: schemas_booking.BookingEdit,
 ):
     await db.execute(
         update(models_booking.Booking)
         .where(models_booking.Booking.id == booking_id)
-        .values(**booking.model_dump(exclude_none=True))
+        .values(**booking.model_dump(exclude_none=True)),
     )
     try:
         await db.commit()
@@ -157,7 +162,7 @@ async def confirm_booking(db: AsyncSession, decision: Decision, booking_id: str)
     await db.execute(
         update(models_booking.Booking)
         .where(models_booking.Booking.id == booking_id)
-        .values(decision=decision)
+        .values(decision=decision),
     )
     try:
         await db.commit()
@@ -168,7 +173,7 @@ async def confirm_booking(db: AsyncSession, decision: Decision, booking_id: str)
 
 async def delete_booking(db: AsyncSession, booking_id: str):
     await db.execute(
-        delete(models_booking.Booking).where(models_booking.Booking.id == booking_id)
+        delete(models_booking.Booking).where(models_booking.Booking.id == booking_id),
     )
     try:
         await db.commit()
@@ -181,7 +186,7 @@ async def get_room_by_id(db: AsyncSession, room_id: str) -> models_booking.Room:
     result = await db.execute(
         select(models_booking.Room)
         .where(models_booking.Room.id == room_id)
-        .options(selectinload(models_booking.Room.bookings))
+        .options(selectinload(models_booking.Room.bookings)),
     )
     return result.scalars().one()
 
@@ -205,7 +210,7 @@ async def edit_room(db: AsyncSession, room_id: str, room: schemas_booking.RoomBa
     await db.execute(
         update(models_booking.Room)
         .where(models_booking.Room.id == room_id)
-        .values(name=room.name, manager_id=room.manager_id)
+        .values(name=room.name, manager_id=room.manager_id),
     )
     try:
         await db.commit()
@@ -219,7 +224,7 @@ async def delete_room(db: AsyncSession, room_id: str):
     for booking in room.bookings:
         await delete_booking(db=db, booking_id=booking.id)
     await db.execute(
-        delete(models_booking.Room).where(models_booking.Room.id == room_id)
+        delete(models_booking.Room).where(models_booking.Room.id == room_id),
     )
     try:
         await db.commit()

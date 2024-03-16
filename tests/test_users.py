@@ -167,7 +167,7 @@ def test_search_users():
 
 async def test_invalid_migrate_mail():
     student_user_with_old_email_token = create_api_access_token(
-        student_user_with_old_email
+        student_user_with_old_email,
     )
     other_student_user_token = create_api_access_token(student_user)
 

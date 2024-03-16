@@ -66,7 +66,10 @@ class BaseAuthClient:
     ########################################################
 
     def __init__(
-        self, client_id: str, secret: str | None, redirect_uri: list[str]
+        self,
+        client_id: str,
+        secret: str | None,
+        redirect_uri: list[str],
     ) -> None:
         # The following parameters are not class variables but instance variables.
         # There can indeed be more than one client using the class, the client will need to have its own client id and secret.
@@ -123,7 +126,9 @@ class NextcloudAuthClient(BaseAuthClient):
         return {
             "sub": user.id,
             "name": get_display_name(
-                firstname=user.firstname, name=user.name, nickname=user.nickname
+                firstname=user.firstname,
+                name=user.name,
+                nickname=user.nickname,
             ),
             # TODO: should we use group ids instead of names? It would be less human readable but would guarantee uniqueness. Question: are group names unique?
             "groups": [
@@ -167,7 +172,9 @@ class PiwigoAuthClient(BaseAuthClient):
         return {
             "sub": user.id,
             "name": get_display_name(
-                firstname=user.firstname, name=user.name, nickname=user.nickname
+                firstname=user.firstname,
+                name=user.name,
+                nickname=user.nickname,
             ),
             "groups": [group.name for group in user.groups],
             "email": user.email,
@@ -200,7 +207,9 @@ class WikijsAuthClient(BaseAuthClient):
         return {
             "sub": user.id,
             "name": get_display_name(
-                firstname=user.firstname, name=user.name, nickname=user.nickname
+                firstname=user.firstname,
+                name=user.name,
+                nickname=user.nickname,
             ),
             "email": user.email,
             "groups": [group.name for group in user.groups],
@@ -228,7 +237,9 @@ class SynapseAuthClient(BaseAuthClient):
             # Matrix does not support special characters in username
             "username": username,
             "displayname": get_display_name(
-                firstname=user.firstname, name=user.name, nickname=user.nickname
+                firstname=user.firstname,
+                name=user.name,
+                nickname=user.nickname,
             ),
             "email": user.email,
         }
@@ -274,7 +285,9 @@ class OpenProjectAuthClient(BaseAuthClient):
         return {
             "sub": user.id,
             "name": get_display_name(
-                firstname=user.firstname, name=user.name, nickname=user.nickname
+                firstname=user.firstname,
+                name=user.name,
+                nickname=user.nickname,
             ),
             "given_name": user.firstname,
             "family_name": user.name,
@@ -297,7 +310,9 @@ class RalllyAuthClient(BaseAuthClient):
         return {
             "sub": user.id,
             "name": get_display_name(
-                firstname=user.firstname, name=user.name, nickname=user.nickname
+                firstname=user.firstname,
+                name=user.name,
+                nickname=user.nickname,
             ),
             "email": user.email,
         }

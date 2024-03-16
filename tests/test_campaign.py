@@ -56,10 +56,14 @@ async def init_objects():
         type=ListType.serio,
         members=[
             models_campaign.ListMemberships(
-                user_id=CAA_user.id, list_id=list_id, role="Prez"
+                user_id=CAA_user.id,
+                list_id=list_id,
+                role="Prez",
             ),
             models_campaign.ListMemberships(
-                user_id=AE_user.id, list_id=list_id, role="SG"
+                user_id=AE_user.id,
+                list_id=list_id,
+                role="SG",
             ),
         ],
         program="Mon program",
@@ -301,7 +305,8 @@ def test_get_results_while_open():
 def test_close_vote():
     token = create_api_access_token(CAA_user)
     response = client.post(
-        "/campaign/status/close", headers={"Authorization": f"Bearer {token}"}
+        "/campaign/status/close",
+        headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 204
 
@@ -309,7 +314,8 @@ def test_close_vote():
 def test_count_vote():
     token = create_api_access_token(CAA_user)
     response = client.post(
-        "/campaign/status/counting", headers={"Authorization": f"Bearer {token}"}
+        "/campaign/status/counting",
+        headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 204
 
@@ -327,7 +333,8 @@ def test_get_results_while_counting():
 def test_publish_vote():
     token = create_api_access_token(CAA_user)
     response = client.post(
-        "/campaign/status/published", headers={"Authorization": f"Bearer {token}"}
+        "/campaign/status/published",
+        headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 204
 

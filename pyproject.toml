@@ -21,6 +21,7 @@ select = [
     "S",
     "B",
     "A",
+    "COM",
     "C4",
     "ISC",
     "ICN",

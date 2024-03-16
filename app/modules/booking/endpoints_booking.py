@@ -102,7 +102,8 @@ async def update_manager(
 
     # We need to check that manager.group_id is a valid group
     if manager_update.group_id is not None and not await is_group_id_valid(
-        manager_update.group_id, db=db
+        manager_update.group_id,
+        db=db,
     ):
         raise HTTPException(
             status_code=400,
@@ -110,7 +111,9 @@ async def update_manager(
         )
 
     await cruds_booking.update_manager(
-        manager_id=manager_id, manager_update=manager_update, db=db
+        manager_id=manager_id,
+        manager_update=manager_update,
+        db=db,
     )
 
 
@@ -132,7 +135,8 @@ async def delete_manager(
     manager = await cruds_booking.get_manager_by_id(db=db, manager_id=manager_id)
     if manager.rooms:
         raise HTTPException(
-            status_code=403, detail="There are still rooms linked to this manager"
+            status_code=403,
+            detail="There are still rooms linked to this manager",
         )
     else:
         await cruds_booking.delete_manager(manager_id=manager_id, db=db)
@@ -280,7 +284,7 @@ async def create_booking(
             )
     except Exception as error:
         hyperion_error_logger.error(
-            f"Error while sending cinema recap notification, {error}"
+            f"Error while sending cinema recap notification, {error}",
         )
 
     return result
@@ -302,7 +306,8 @@ async def edit_booking(
     **Only usable by a user in the manager group of the booking or applicant before decision**
     """
     booking: models_booking.Booking = await cruds_booking.get_booking_by_id(
-        db=db, booking_id=booking_id
+        db=db,
+        booking_id=booking_id,
     )
 
     if not (
@@ -316,7 +321,9 @@ async def edit_booking(
 
     try:
         await cruds_booking.edit_booking(
-            booking_id=booking_id, booking=booking_edit, db=db
+            booking_id=booking_id,
+            booking=booking_edit,
+            db=db,
         )
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
@@ -339,12 +346,15 @@ async def confirm_booking(
     """
 
     booking: models_booking.Booking = await cruds_booking.get_booking_by_id(
-        db=db, booking_id=booking_id
+        db=db,
+        booking_id=booking_id,
     )
 
     if is_user_member_of_an_allowed_group(user, [booking.room.manager.group_id]):
         await cruds_booking.confirm_booking(
-            booking_id=booking_id, decision=decision, db=db
+            booking_id=booking_id,
+            decision=decision,
+            db=db,
         )
     else:
         raise HTTPException(
@@ -369,7 +379,8 @@ async def delete_booking(
     """
 
     booking: models_booking.Booking = await cruds_booking.get_booking_by_id(
-        db=db, booking_id=booking_id
+        db=db,
+        booking_id=booking_id,
     )
 
     if user.id == booking.applicant_id and booking.decision == Decision.pending:

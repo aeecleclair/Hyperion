@@ -41,8 +41,8 @@ def upgrade() -> None:
     conn = op.get_bind()
     res = conn.execute(
         sa.select(t_booking.c.id, t_booking.c.start, t_booking.c.end).where(
-            t_booking.c.recurrence_rule != ""
-        )
+            t_booking.c.recurrence_rule != "",
+        ),
     ).fetchall()
     for id_, booking_start, booking_end in res:
         endBooking = booking_end.replace(
@@ -52,7 +52,7 @@ def upgrade() -> None:
         )
         endBooking = endBooking.astimezone().replace(tzinfo=None)
         conn.execute(
-            t_booking.update().where(t_booking.c.id == id_).values(end=endBooking)
+            t_booking.update().where(t_booking.c.id == id_).values(end=endBooking),
         )
 
 

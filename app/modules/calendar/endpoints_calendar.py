@@ -70,10 +70,12 @@ async def get_applicant_bookings(
     **Usable by the user or admins**
     """
     if user.id == applicant_id or is_user_member_of_an_allowed_group(
-        user, [GroupType.BDE]
+        user,
+        [GroupType.BDE],
     ):
         bookings = await cruds_calendar.get_applicant_events(
-            db=db, applicant_id=applicant_id
+            db=db,
+            applicant_id=applicant_id,
         )
         return bookings
     else:

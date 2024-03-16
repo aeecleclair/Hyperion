@@ -10,19 +10,21 @@ from app.core.auth import models_auth
 
 
 async def get_authorization_token_by_token(
-    db: AsyncSession, code: str
+    db: AsyncSession,
+    code: str,
 ) -> models_auth.AuthorizationCode | None:
     """Return authorization code from database"""
     result = await db.execute(
         select(models_auth.AuthorizationCode).where(
-            models_auth.AuthorizationCode.code == code
-        )
+            models_auth.AuthorizationCode.code == code,
+        ),
     )
     return result.scalars().first()
 
 
 async def create_authorization_token(
-    db_authorization_code: models_auth.AuthorizationCode, db: AsyncSession
+    db_authorization_code: models_auth.AuthorizationCode,
+    db: AsyncSession,
 ) -> models_auth.AuthorizationCode:
     """Create a new group in database and return it"""
 
@@ -36,31 +38,34 @@ async def create_authorization_token(
 
 
 async def delete_authorization_token_by_token(
-    db: AsyncSession, code: str
+    db: AsyncSession,
+    code: str,
 ) -> models_auth.AuthorizationCode | None:
     """Delete a token from database"""
 
     await db.execute(
         delete(models_auth.AuthorizationCode).where(
-            models_auth.AuthorizationCode.code == code
-        )
+            models_auth.AuthorizationCode.code == code,
+        ),
     )
     await db.commit()
     return None
 
 
 async def get_refresh_token_by_token(
-    db: AsyncSession, token: str
+    db: AsyncSession,
+    token: str,
 ) -> models_auth.RefreshToken | None:
     """Return refresh token from database"""
     result = await db.execute(
-        select(models_auth.RefreshToken).where(models_auth.RefreshToken.token == token)
+        select(models_auth.RefreshToken).where(models_auth.RefreshToken.token == token),
     )
     return result.scalars().first()
 
 
 async def create_refresh_token(
-    db_refresh_token: models_auth.RefreshToken, db: AsyncSession
+    db_refresh_token: models_auth.RefreshToken,
+    db: AsyncSession,
 ) -> models_auth.RefreshToken:
     """Create a new refresh token in database and return it"""
 

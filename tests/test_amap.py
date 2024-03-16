@@ -47,11 +47,17 @@ async def init_objects():
     student_user = await create_user_with_groups([GroupType.student])
 
     product = models_amap.Product(
-        id=str(uuid.uuid4()), name="Tomato", price=1.5, category="Test"
+        id=str(uuid.uuid4()),
+        name="Tomato",
+        price=1.5,
+        category="Test",
     )
     await add_object_to_db(product)
     deletable_product = models_amap.Product(
-        id=str(uuid.uuid4()), name="Deletable Tomato", price=1.5, category="Test"
+        id=str(uuid.uuid4()),
+        name="Deletable Tomato",
+        price=1.5,
+        category="Test",
     )
     await add_object_to_db(deletable_product)
 

@@ -15,7 +15,9 @@ class Advertiser(Base):
     group_manager_id: Mapped[str] = mapped_column(String, nullable=False)
 
     adverts: Mapped[list["Advert"]] = relationship(
-        "Advert", lazy="subquery", back_populates="advertiser"
+        "Advert",
+        lazy="subquery",
+        back_populates="advertiser",
     )
 
 
