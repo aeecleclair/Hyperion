@@ -2,7 +2,7 @@
 
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, Enum, ForeignKey, Integer, String
+from sqlalchemy import Date, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -106,12 +106,22 @@ class CoreGroup(Base):
     )
 
 
+class ModuleAwareness(Base):
+    """
+    A ModuleAwareness is a table that stores the modules that are known by Hyperion.
+    This allow to know which modules are new and should record their visibility in the database.
+    """
+
+    __tablename__ = "module_module"
+
+    root: Mapped[str] = mapped_column(String, primary_key=True)
+
+
 class ModuleVisibility(Base):
     __tablename__ = "module_visibility"
 
     root: Mapped[str] = mapped_column(String, primary_key=True)
     allowed_group_id: Mapped[str] = mapped_column(String, primary_key=True)
-    visible: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
 
 class AlembicVersion(Base):
