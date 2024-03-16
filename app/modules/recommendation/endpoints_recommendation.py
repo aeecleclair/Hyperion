@@ -138,6 +138,7 @@ async def delete_recommendation(
 async def read_recommendation_image(
     recommendation_id: str,
     db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Get the image of a recommendation.
