@@ -34,7 +34,7 @@ def upgrade() -> None:
 
     conn = op.get_bind()
     res = conn.execute(sa.select(t_loan.c.id).where(t_loan.c.returned)).fetchall()
-    for id_ in res:
+    for id_, _ in res:
         conn.execute(
             t_loan.update()
             .where(t_loan.c.id == id_)
