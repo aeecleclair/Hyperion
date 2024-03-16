@@ -137,12 +137,21 @@ async def delete_recommendation(
 )
 async def read_recommendation_image(
     recommendation_id: str,
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get the image of a recommendation.
 
     **The user must be authenticated to use this endpoint**
     """
+    recommendation = await cruds_recommendation.get_recommendation_by_id(
+        recommendation_id=recommendation_id,
+        db=db,
+    )
+
+    if not recommendation:
+        raise HTTPException(status_code=404, detail="The recommendation does not exist")
+
     return get_file_from_data(
         default_asset="assets/images/default_recommendation.png",
         directory="recommendations",
