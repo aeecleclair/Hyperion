@@ -262,7 +262,14 @@ async def upload_document(
     document_obj = await cruds_raid.get_document_by_id(document_id=document_id, db=db)
     if not document_obj:
         raise HTTPException(status_code=404, detail="Document not found.")
-    if not document_obj.user.id == user.id:
+    participant = await cruds_raid.get_user_by_document_id(
+        document_id=document_id, db=db
+    )
+    if not participant:
+        raise HTTPException(
+            status_code=404, detail="Participant owning hte document not found."
+        )
+    if not participant.id == user.id:
         raise HTTPException(
             status_code=403, detail="You are not the owner of this document."
         )
@@ -305,7 +312,13 @@ async def read_document(
     if not document:
         raise HTTPException(status_code=404, detail="Document not found.")
 
-    if document.user.id != user.id and not is_user_member_of_an_allowed_group(
+    participant = await cruds_raid.get_user_by_document_id(document_id, db)
+    if not participant:
+        raise HTTPException(
+            status_code=404, detail="Participant owning the document not found."
+        )
+
+    if participant.id != user.id and not is_user_member_of_an_allowed_group(
         user, [GroupType.raid_admin]
     ):
         raise HTTPException(
