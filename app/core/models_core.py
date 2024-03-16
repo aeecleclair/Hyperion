@@ -2,7 +2,7 @@
 
 from datetime import date, datetime
 
-from sqlalchemy import Date, Enum, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Date, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -111,7 +111,7 @@ class ModuleVisibility(Base):
 
     root: Mapped[str] = mapped_column(String, primary_key=True)
     allowed_group_id: Mapped[str] = mapped_column(String, primary_key=True)
-    visible: Mapped[bool] = mapped_column(Integer, nullable=False, default=True)
+    visible: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
 
 class AlembicVersion(Base):
