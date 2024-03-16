@@ -1,4 +1,4 @@
-from typing import Sequence
+from collections.abc import Sequence
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,7 +33,7 @@ async def update_recommendation(
     result = await db.execute(
         update(models_recommendation.Recommendation)
         .where(models_recommendation.Recommendation.id == recommendation_id)
-        .values(**recommendation.model_dump(exclude_none=True))
+        .values(**recommendation.model_dump(exclude_none=True)),
     )
     if result.rowcount == 1:
         await db.commit()
@@ -48,8 +48,8 @@ async def delete_recommendation(
 ):
     result = await db.execute(
         delete(models_recommendation.Recommendation).where(
-            models_recommendation.Recommendation.id == recommendation_id
-        )
+            models_recommendation.Recommendation.id == recommendation_id,
+        ),
     )
     if result.rowcount == 1:
         await db.commit()
@@ -64,7 +64,7 @@ async def get_recommendation_by_id(
 ) -> models_recommendation.Recommendation | None:
     result = await db.execute(
         select(models_recommendation.Recommendation).where(
-            models_recommendation.Recommendation.id == recommendation_id
-        )
+            models_recommendation.Recommendation.id == recommendation_id,
+        ),
     )
     return result.scalars().one_or_none()

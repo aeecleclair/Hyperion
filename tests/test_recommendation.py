@@ -1,16 +1,17 @@
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
+from pathlib import Path
 
 import pytest_asyncio
 
 from app.core.groups.groups_type import GroupType
 from app.modules.recommendation import models_recommendation
-from tests.commons import event_loop  # noqa
 from tests.commons import (
     add_object_to_db,
     client,
     create_api_access_token,
     create_user_with_groups,
+    event_loop,  # noqa
 )
 
 
@@ -29,7 +30,7 @@ async def init_objects():
     global recommendation
     recommendation = models_recommendation.Recommendation(
         id=str(uuid.uuid4()),
-        creation=datetime.now(),
+        creation=datetime.now(UTC),
         title="Un titre",
         code="Un code",
         summary="Un résumé",
@@ -39,7 +40,7 @@ async def init_objects():
 
 
 def test_create_picture():
-    with open("assets/images/default_recommendation.png", "rb") as image:
+    with Path.open("assets/images/default_recommendation.png", "rb") as image:
         response = client.post(
             f"/recommendation/recommendations/{recommendation.id}/picture",
             files={"image": ("recommendation.png", image, "image/png")},
@@ -49,7 +50,7 @@ def test_create_picture():
 
 
 def test_create_picture_for_non_existing_recommendation():
-    with open("assets/images/default_recommendation.png", "rb") as image:
+    with Path.open("assets/images/default_recommendation.png", "rb") as image:
         response = client.post(
             "/recommendation/recommendations/false_id/picture",
             files={"image": ("recommendation.png", image, "image/png")},

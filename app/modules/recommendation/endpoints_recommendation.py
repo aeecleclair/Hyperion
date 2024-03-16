@@ -76,7 +76,7 @@ async def create_recommendation(
     )
 
     return await cruds_recommendation.create_recommendation(
-        recommendation=recommendation_db, db=db
+        recommendation=recommendation_db, db=db,
     )
 
 
