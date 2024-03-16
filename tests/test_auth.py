@@ -1,7 +1,7 @@
 import base64
 import json
 import uuid
-from datetime import date
+from datetime import date, datetime
 from urllib.parse import parse_qs, urlparse
 
 import pytest_asyncio
@@ -31,7 +31,7 @@ async def init_objects():
         nickname="Nickname",
         birthday=date.fromisoformat("2000-01-01"),
         floor=FloorsType.Autre,
-        created_on=date.fromisoformat("2000-01-01"),
+        created_on=datetime.fromisoformat("2000-01-01T00:00:00Z"),
     )
     await add_object_to_db(user)
 

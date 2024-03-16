@@ -59,7 +59,7 @@ async def init_objects():
         advertiser_id=advertiser.id,
         title="Advert",
         content="Example of advert",
-        date=datetime.datetime.now(),
+        date=datetime.datetime.now(tz=datetime.UTC),
         tags="Tag1, Tag2, Tag3",
     )
 

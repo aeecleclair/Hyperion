@@ -1,13 +1,11 @@
 import logging
 import uuid
-from datetime import datetime, timezone
-from zoneinfo import ZoneInfo
+from datetime import UTC, datetime
 
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
-from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
 from app.core.notification.notification_types import CustomTopic, Topic
@@ -15,7 +13,6 @@ from app.core.notification.schemas_notification import Message
 from app.dependencies import (
     get_db,
     get_notification_tool,
-    get_settings,
     is_user_a_member,
     is_user_a_member_of,
 )
@@ -248,7 +245,6 @@ async def create_booking(
     booking: schemas_booking.BookingBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
-    settings: Settings = Depends(get_settings),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
@@ -267,7 +263,7 @@ async def create_booking(
 
     try:
         if result:
-            now = datetime.now(ZoneInfo(settings.TIMEZONE))
+            now = datetime.now(UTC)
             message = Message(
                 # We use sunday date as context to avoid sending the recap twice
                 context=f"booking-create-{result.id}",
@@ -455,7 +451,6 @@ async def edit_room(
 async def delete_room(
     room_id: str,
     db: AsyncSession = Depends(get_db),
-    settings: Settings = Depends(get_settings),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
@@ -466,8 +461,7 @@ async def delete_room(
     room = await cruds_booking.get_room_by_id(db=db, room_id=room_id)
     if all(
         map(
-            lambda b: b.end.replace(tzinfo=ZoneInfo(settings.TIMEZONE))
-            < datetime.now(timezone.utc),
+            lambda b: b.end < datetime.now(UTC),
             room.bookings,
         )
     ):

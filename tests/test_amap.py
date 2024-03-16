@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 import pytest_asyncio
 
@@ -58,20 +58,20 @@ async def init_objects():
     # We can not create two deliveries with the same date
     delivery = models_amap.Delivery(
         id=str(uuid.uuid4()),
-        delivery_date=datetime(2022, 8, 15),
+        delivery_date=datetime(2022, 8, 15, tzinfo=UTC),
         status=DeliveryStatusType.creation,
     )
     await add_object_to_db(delivery)
     deletable_delivery = models_amap.Delivery(
         id=str(uuid.uuid4()),
-        delivery_date=datetime(2022, 8, 16),
+        delivery_date=datetime(2022, 8, 16, tzinfo=UTC),
         status=DeliveryStatusType.creation,
     )
     await add_object_to_db(deletable_delivery)
 
     locked_delivery = models_amap.Delivery(
         id=str(uuid.uuid4()),
-        delivery_date=datetime(2022, 8, 17),
+        delivery_date=datetime(2022, 8, 17, tzinfo=UTC),
         status=DeliveryStatusType.locked,
     )
     await add_object_to_db(locked_delivery)
@@ -82,7 +82,7 @@ async def init_objects():
         delivery_id=delivery.id,
         amount=0.0,
         collection_slot=AmapSlotType.midi,
-        ordering_date=datetime(2022, 8, 10, 12, 16, 26),
+        ordering_date=datetime(2022, 8, 10, 12, 16, 26, tzinfo=UTC),
         delivery_date=delivery.delivery_date,
     )
     await add_object_to_db(order)
@@ -93,7 +93,7 @@ async def init_objects():
         delivery_id=locked_delivery.id,
         amount=0.0,
         collection_slot=AmapSlotType.midi,
-        ordering_date=datetime(2022, 8, 18, 12, 16, 26),
+        ordering_date=datetime(2022, 8, 18, 12, 16, 26, tzinfo=UTC),
         delivery_date=locked_delivery.delivery_date,
     )
     await add_object_to_db(deletable_order_by_admin)

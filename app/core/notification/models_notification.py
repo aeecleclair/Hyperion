@@ -1,10 +1,11 @@
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, Enum, ForeignKey, String
+from sqlalchemy import Boolean, Date, Enum, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.notification.notification_types import Topic
 from app.database import Base
+from app.utils.types.datetime import TZDateTime
 
 
 class Message(Base):
@@ -31,9 +32,7 @@ class Message(Base):
     action_table: Mapped[str | None] = mapped_column(String, nullable=True)
 
     # We can plan a notification to be sent later, the frontend should not display it before the planned date
-    delivery_datetime: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    delivery_datetime: Mapped[datetime] = mapped_column(TZDateTime, nullable=True)
     # Messages should be deleted after a certain time
     expire_on: Mapped[date] = mapped_column(Date, nullable=False)
 

@@ -1,14 +1,12 @@
 import logging
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from fastapi import Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
-from pytz import timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, standard_responses
-from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
 from app.core.notification.notification_types import CustomTopic, Topic
@@ -17,7 +15,6 @@ from app.dependencies import (
     get_db,
     get_notification_tool,
     get_request_id,
-    get_settings,
     is_user_a_member,
     is_user_a_member_of,
 )
@@ -225,7 +222,6 @@ async def create_advert(
     advert: schemas_advert.AdvertBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
-    settings: Settings = Depends(get_settings),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
@@ -252,7 +248,7 @@ async def create_advert(
 
     db_advert = models_advert.Advert(
         id=str(uuid.uuid4()),
-        date=datetime.now(timezone(settings.TIMEZONE)),
+        date=datetime.now(UTC),
         advertiser=advertiser,
         **advert_params,
     )
@@ -263,7 +259,7 @@ async def create_advert(
         raise HTTPException(status_code=400, detail=str(error))
 
     try:
-        now = datetime.now(timezone(settings.TIMEZONE))
+        now = datetime.now(UTC)
         message = Message(
             context=f"advert-{result.id}",
             is_visible=True,

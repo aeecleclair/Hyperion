@@ -1,14 +1,12 @@
 """File defining the functions called by the endpoints, making queries to the table using the models"""
 
-from datetime import datetime
+from datetime import UTC, datetime
 
-from pytz import timezone
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import models_auth
-from app.core.config import Settings
 
 
 async def get_authorization_token_by_token(
@@ -76,7 +74,7 @@ async def create_refresh_token(
 
 
 async def revoke_refresh_token_by_token(
-    db: AsyncSession, token: str, settings: Settings
+    db: AsyncSession, token: str
 ) -> models_auth.RefreshToken | None:
     """Revoke a refresh token from database"""
 
@@ -86,14 +84,14 @@ async def revoke_refresh_token_by_token(
             models_auth.RefreshToken.token == token,
             models_auth.RefreshToken.revoked_on.is_(None),
         )
-        .values(revoked_on=datetime.now(timezone(settings.TIMEZONE)))
+        .values(revoked_on=datetime.now(UTC))
     )
     await db.commit()
     return None
 
 
 async def revoke_refresh_token_by_client_and_user_id(
-    db: AsyncSession, client_id: str, user_id: str, settings: Settings
+    db: AsyncSession, client_id: str, user_id: str
 ) -> models_auth.RefreshToken | None:
     """Revoke a refresh token from database"""
 
@@ -104,7 +102,7 @@ async def revoke_refresh_token_by_client_and_user_id(
             models_auth.RefreshToken.user_id == user_id,
             models_auth.RefreshToken.revoked_on.is_(None),
         )
-        .values(revoked_on=datetime.now(timezone(settings.TIMEZONE)))
+        .values(revoked_on=datetime.now(UTC))
     )
     await db.commit()
     return None
