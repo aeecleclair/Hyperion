@@ -105,7 +105,7 @@ def test_get_latest_games():
 
 
 def test_get_games_played_on():
-    today = datetime.datetime.now(tz=UTC).date()
+    today = datetime.now(tz=UTC).date()
     yesterday = today - timedelta(days=1)
     response1 = client.get(
         f"/elocaps/games?time={today.isoformat()}",
@@ -134,7 +134,7 @@ def test_get_game():
     assert response.status_code == 200
     json = response.json()
     assert json["id"] == game.id
-    assert json["timestamp"] == game.timestamp.isoformat()
+    assert datetime.fromisoformat(json["timestamp"]) == game.timestamp
     assert (
         client.get(
             "/elocaps/games/1234",

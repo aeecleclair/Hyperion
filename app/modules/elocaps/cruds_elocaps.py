@@ -25,7 +25,8 @@ async def get_latest_games(db: AsyncSession, count=10) -> Sequence[models_elocap
 
 
 async def get_games_played_on(
-    db: AsyncSession, time: date,
+    db: AsyncSession,
+    time: date,
 ) -> Sequence[models_elocaps.Game]:
     result = await db.execute(
         select(models_elocaps.Game)
@@ -40,7 +41,8 @@ async def get_games_played_on(
 
 
 async def get_player_info(
-    db: AsyncSession, user_id: str,
+    db: AsyncSession,
+    user_id: str,
 ) -> Sequence[models_elocaps.Player]:
     result = await db.execute(
         select(models_elocaps.Player)
@@ -66,7 +68,8 @@ async def get_player_games(db: AsyncSession, user_id: str) -> list[models_elocap
 
 
 async def get_game_details(
-    db: AsyncSession, game_id: str,
+    db: AsyncSession,
+    game_id: str,
 ) -> models_elocaps.Game | None:
     result = await db.execute(
         select(models_elocaps.Game)
@@ -121,14 +124,17 @@ async def insert_player_into_game(
 
 
 async def set_player_elo_gain(
-    db: AsyncSession, game_player: models_elocaps.GamePlayer, gain: int,
+    db: AsyncSession,
+    game_player: models_elocaps.GamePlayer,
+    gain: int,
 ) -> None:
     game_player.elo_gain = gain
     await db.commit()
 
 
 async def get_waiting_games(
-    db: AsyncSession, user_id: str,
+    db: AsyncSession,
+    user_id: str,
 ) -> Sequence[models_elocaps.Game]:
     result = await db.execute(
         select(models_elocaps.Game)
@@ -144,7 +150,9 @@ async def get_waiting_games(
 
 
 async def get_game_player(
-    db: AsyncSession, game_id: str, user_id: str,
+    db: AsyncSession,
+    game_id: str,
+    user_id: str,
 ) -> models_elocaps.GamePlayer | None:
     return (
         (
@@ -168,7 +176,8 @@ async def get_game_player(
 
 
 async def user_game_validation(
-    db: AsyncSession, game_player: models_elocaps.GamePlayer,
+    db: AsyncSession,
+    game_player: models_elocaps.GamePlayer,
 ) -> None:
     game_player.has_confirmed = True
     await db.commit()
@@ -198,7 +207,9 @@ async def end_game(db: AsyncSession, game_id: str) -> None:
 
 
 async def get_leaderboard(
-    db: AsyncSession, game_mode: CapsMode, count=10,
+    db: AsyncSession,
+    game_mode: CapsMode,
+    count=10,
 ) -> Sequence[models_elocaps.Player]:
     result = await db.execute(
         select(models_elocaps.Player)
@@ -230,20 +241,18 @@ async def get_winrate(
     user_id: str,
 ) -> float | None:
     result = await db.execute(
-
-            select(models_elocaps.Game)
-            .join(models_elocaps.GamePlayer)
-            .join(models_elocaps.Player)
-            .where(
-                (models_elocaps.Game.mode == game_mode)
-                & (models_elocaps.Player.user_id == user_id),
-            )
-            .options(
-                selectinload(models_elocaps.Game.game_players).selectinload(
-                    models_elocaps.GamePlayer.player,
-                ),
+        select(models_elocaps.Game)
+        .join(models_elocaps.GamePlayer)
+        .join(models_elocaps.Player)
+        .where(
+            (models_elocaps.Game.mode == game_mode)
+            & (models_elocaps.Player.user_id == user_id),
+        )
+        .options(
+            selectinload(models_elocaps.Game.game_players).selectinload(
+                models_elocaps.GamePlayer.player,
             ),
-
+        ),
     )
     games: list[models_elocaps.Game] = [
         x for x in result.scalars().all() if x.is_confirmed

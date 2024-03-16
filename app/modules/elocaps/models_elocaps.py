@@ -1,20 +1,13 @@
-from __future__ import (  # Permit the use of class names not declared yet in the annotations
-    annotations,
-)
-
-from typing import TYPE_CHECKING
+from datetime import datetime
 from uuid import uuid4
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String, func
+from sqlalchemy import Boolean, Enum, ForeignKey, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core import models_core
 from app.database import Base
 from app.modules.elocaps.types_elocaps import CapsMode
-
-if TYPE_CHECKING:
-    from datetime import datetime
-
-    from app.core import models_core
+from app.utils.types.datetime import TZDateTime
 
 
 class Player(Base):
@@ -33,7 +26,7 @@ class Player(Base):
     elo: Mapped[int] = mapped_column(Integer, nullable=False, default=1000)
 
     user: Mapped[models_core.CoreUser] = relationship("CoreUser")
-    game_players: Mapped[list[GamePlayer]] = relationship(
+    game_players: Mapped[list["GamePlayer"]] = relationship(
         "GamePlayer",
         back_populates="player",
     )
@@ -49,14 +42,14 @@ class Game(Base):
         default=lambda: str(uuid4()),
     )
     timestamp: Mapped[datetime] = mapped_column(
-        DateTime,
+        TZDateTime,
         nullable=False,
         default=func.now(),
     )
     mode: Mapped[CapsMode] = mapped_column(Enum(CapsMode), nullable=False)
     is_cancelled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
-    game_players: Mapped[list[GamePlayer]] = relationship(
+    game_players: Mapped[list["GamePlayer"]] = relationship(
         "GamePlayer",
         back_populates="game",
     )
@@ -99,7 +92,7 @@ class GamePlayer(Base):
     has_confirmed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     elo_gain: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
-    game: Mapped[Game] = relationship("Game")
+    game: Mapped["Game"] = relationship("Game")
     player: Mapped[Player] = relationship(
         "Player",
         uselist=False,
