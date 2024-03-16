@@ -1,7 +1,6 @@
 import logging
 import uuid
 from datetime import UTC, datetime
-from zoneinfo import ZoneInfo
 
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -473,10 +472,7 @@ async def delete_room(
     **This endpoint is only usable by admins**
     """
     room = await cruds_booking.get_room_by_id(db=db, room_id=room_id)
-    if all(
-        booking.end.replace(tzinfo=ZoneInfo(settings.TIMEZONE)) < datetime.now(UTC)
-        for booking in room.bookings
-    ):
+    if all(booking.end < datetime.now(UTC) for booking in room.bookings):
         await cruds_booking.delete_room(db=db, room_id=room_id)
     else:
         raise HTTPException(
