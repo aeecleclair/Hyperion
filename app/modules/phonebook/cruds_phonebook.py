@@ -187,7 +187,7 @@ async def delete_membership(membership_id: str, db: AsyncSession):
         raise
 
 
-async def get_membership_by_user_id(
+async def get_memberships_by_user_id(
     user_id: str,
     db: AsyncSession,
 ) -> Sequence[models_phonebook.Membership]:

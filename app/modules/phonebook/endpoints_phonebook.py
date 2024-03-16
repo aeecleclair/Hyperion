@@ -210,7 +210,7 @@ async def get_association_members(
     for membership in association_memberships:
         member_id = membership.user_id
         member = await cruds_users.get_user_by_id(user_id=member_id, db=db)
-        member_memberships = await cruds_phonebook.get_membership_by_user_id(
+        member_memberships = await cruds_phonebook.get_memberships_by_user_id(
             user_id=member_id,
             db=db,
         )
@@ -249,7 +249,7 @@ async def get_association_members_by_mandate_year(
     for membership in association_memberships:
         member_id = membership.user_id
         member = await cruds_users.get_user_by_id(user_id=member_id, db=db)
-        member_memberships = await cruds_phonebook.get_membership_by_user_id(
+        member_memberships = await cruds_phonebook.get_memberships_by_user_id(
             user_id=member_id,
             db=db,
         )
@@ -264,7 +264,7 @@ async def get_association_members_by_mandate_year(
 
 @module.router.get(
     "/phonebook/member/{user_id}",
-    response_model=schemas_phonebook.MemberComplete | None,
+    response_model=schemas_phonebook.MemberComplete,
     status_code=200,
 )
 async def get_member_details(
@@ -274,12 +274,12 @@ async def get_member_details(
 ):
     """Return MemberComplete for given user_id."""
 
-    member_memberships = await cruds_phonebook.get_membership_by_user_id(user_id, db)
+    member_memberships = await cruds_phonebook.get_memberships_by_user_id(user_id, db)
 
     member = await cruds_users.get_user_by_id(user_id=user_id, db=db)
 
     if member is None:
-        return
+        raise HTTPException(404, "Member does not exist.")
 
     return schemas_phonebook.MemberComplete(
         memberships=member_memberships,
