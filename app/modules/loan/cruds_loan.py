@@ -192,6 +192,7 @@ async def update_loan(
 async def update_loan_returned_status(
     loan_id: str,
     db: AsyncSession,
+    returned: bool,
     returned_date: datetime,
 ):
     await db.execute(
@@ -199,7 +200,7 @@ async def update_loan_returned_status(
         .where(models_loan.Loan.id == loan_id)
         .values(
             {
-                "returned": True,
+                "returned": returned,
                 "returned_date": returned_date,
             },
         ),

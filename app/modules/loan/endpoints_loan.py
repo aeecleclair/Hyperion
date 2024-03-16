@@ -825,6 +825,7 @@ async def return_loan(
     await cruds_loan.update_loan_returned_status(
         loan_id=loan_id,
         db=db,
+        returned=True,
         returned_date=datetime.now(UTC),
     )
 
