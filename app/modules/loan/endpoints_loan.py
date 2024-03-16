@@ -1,11 +1,6 @@
 import uuid
-<<<<<<< HEAD
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
-=======
-from datetime import datetime, timedelta, timezone
-from typing import Sequence
->>>>>>> 23111a67 (use utc instead of settings timezone)
 
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -827,12 +822,11 @@ async def return_loan(
                 detail=f"Invalid loan content {loan.id}, {item.id}",
             )
 
-    values = {
-        "returned": True,
-        "returned_date": datetime.now(UTC),
-    }
-
-    await cruds_loan.update_loan_returned_status(loan_id=loan_id, db=db, values=values)
+    await cruds_loan.update_loan_returned_status(
+        loan_id=loan_id,
+        db=db,
+        returned_date=datetime.now(UTC),
+    )
 
 
 @module.router.post(
