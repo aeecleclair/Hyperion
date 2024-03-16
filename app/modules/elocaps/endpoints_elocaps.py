@@ -1,14 +1,24 @@
-from datetime import date
+import logging
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
 
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
+from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
-from app.dependencies import get_db, is_user_a_member
+from app.core.notification.schemas_notification import Message
+from app.dependencies import (
+    get_db,
+    get_notification_tool,
+    get_settings,
+    is_user_a_member,
+)
 from app.modules.elocaps import cruds_elocaps, models_elocaps, schemas_elocaps
 from app.modules.elocaps.types_elocaps import CapsMode
+from app.utils.communication.notifications import NotificationTool
 from app.utils.tools import compute_elo_gain
 
 module = Module(
@@ -16,6 +26,9 @@ module = Module(
     tag="Elocaps",
     default_allowed_groups_ids=[GroupType.student, GroupType.admin],
 )
+
+
+hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 @module.router.post(
@@ -27,6 +40,8 @@ async def register_game(
     game_params: schemas_elocaps.GameCreateRequest,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
+    settings: Settings = Depends(get_settings),
+    notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     if all(
         user.id != player.user_id for player in game_params.players
@@ -58,6 +73,28 @@ async def register_game(
         creator = await cruds_elocaps.get_game_player(db, game.id, user.id)
         assert creator is not None
         await cruds_elocaps.user_game_validation(db, creator)
+
+        try:
+            for player in game_params.players:
+                if player.user_id == user.user_id:
+                    continue
+                now = datetime.now(ZoneInfo(settings.TIMEZONE))
+                message = Message(
+                    context=f"elocaps-newgame-{game.id}-{player.user_id}",
+                    is_visible=True,
+                    title="ELOCaps",
+                    content="Nouvelle partie à valider !",
+                    expire_on=now.replace(day=now.day + 3),
+                )
+                await notification_tool.send_notification_to_user(
+                    user_id=player.user_id,
+                    message=message,
+                )
+        except Exception as error:
+            hyperion_error_logger.error(
+                f"Error while sending booking status notification to applicant, {error}"
+            )
+
         return complete_game
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error))
