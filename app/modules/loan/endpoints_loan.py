@@ -1,14 +1,15 @@
 import uuid
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
+from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
-from app.dependencies import get_db, is_user_a_member, is_user_a_member_of
+from app.dependencies import get_db, get_settings, is_user_a_member, is_user_a_member_of
 from app.modules.loan import cruds_loan, models_loan, schemas_loan
 from app.utils.tools import (
     is_group_id_valid,
@@ -784,6 +785,7 @@ async def return_loan(
     loan_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Mark a loan as returned. This will update items availability.
@@ -822,10 +824,12 @@ async def return_loan(
                 detail=f"Invalid loan content {loan.id}, {item.id}",
             )
 
-    await cruds_loan.update_loan_returned_status(
-        loan_id=loan_id,
-        db=db,
-    )
+    values = {
+        "returned": True,
+        "returned_date": datetime.now(UTC),
+    }
+
+    await cruds_loan.update_loan_returned_status(loan_id=loan_id, db=db, values=values)
 
 
 @module.router.post(

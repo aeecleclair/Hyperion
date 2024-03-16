@@ -1,14 +1,10 @@
 from collections.abc import Sequence
-from datetime import UTC, datetime
 
-from fastapi import Depends
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.config import Settings
-from app.dependencies import get_settings
 from app.modules.loan import models_loan, schemas_loan
 
 
@@ -195,17 +191,10 @@ async def update_loan(
 async def update_loan_returned_status(
     loan_id: str,
     db: AsyncSession,
-    settings: Settings = Depends(get_settings),
+    values: dict[str, object],
 ):
     await db.execute(
-        update(models_loan.Loan)
-        .where(models_loan.Loan.id == loan_id)
-        .values(
-            {
-                "returned": True,
-                "returned_date": datetime.now(UTC),
-            },
-        ),
+        update(models_loan.Loan).where(models_loan.Loan.id == loan_id).values(values),
     )
     await db.commit()
 
