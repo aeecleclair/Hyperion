@@ -14,7 +14,7 @@ from app.dependencies import (
     is_user_a_member_of,
 )
 from app.modules.PH import cruds_PH, models_PH, schemas_PH
-from app.utils.tools import get_file_from_data, save_pdf_as_data
+from app.utils.tools import get_file_from_data, save_file_as_data
 
 module = Module(
     root="PH",
@@ -33,7 +33,7 @@ async def get_journal_pdf(
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     return get_file_from_data(
-        default_asset="assets/pdf/default_journal.pdf",
+        default_asset="assets/pdf/default_PDF.pdf",
         directory="PH",
         filename=str(journal_id),
     )
@@ -97,8 +97,8 @@ async def create_journal_pdf(
             detail="The journal does not exist.",
         )
 
-    await save_pdf_as_data(
-        pdf=pdf,
+    await save_file_as_data(
+        image=pdf,
         directory="PH",
         filename=str(journal_id),
         request_id=request_id,
