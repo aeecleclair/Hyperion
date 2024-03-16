@@ -13,94 +13,94 @@ from app.dependencies import (
     is_user_a_member,
     is_user_a_member_of,
 )
-from app.modules.PH import cruds_PH, models_PH, schemas_PH
+from app.modules.ph import cruds_ph, models_ph, schemas_ph
 from app.utils.tools import get_file_from_data, save_file_as_data
 
 module = Module(
-    root="PH",
-    tag="PH",
+    root="ph",
+    tag="ph",
     default_allowed_groups_ids=[GroupType.student],
 )
 
 
 @module.router.get(
-    "/PH/{journal_id}/pdf",
+    "/ph/{paper_id}/pdf",
     response_class=FileResponse,
     status_code=200,
 )
-async def get_journal_pdf(
-    journal_id: str,
+async def get_paper_pdf(
+    paper_id: str,
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     return get_file_from_data(
         default_asset="assets/pdf/default_PDF.pdf",
-        directory="PH",
-        filename=str(journal_id),
+        directory="ph",
+        filename=str(paper_id),
     )
 
 
 @module.router.get(
-    "/PH/",
-    response_model=list[schemas_PH.Journal],
+    "/ph/",
+    response_model=list[schemas_ph.Paper],
     status_code=200,
 )
-async def get_journals(
+async def get_papers(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    result = await cruds_PH.get_journals(db=db)
+    result = await cruds_ph.get_papers(db=db)
     return result
 
 
 @module.router.post(
-    "/PH/",
-    response_model=schemas_PH.Journal,
+    "/ph/",
+    response_model=schemas_ph.Paper,
     status_code=201,
 )
-async def create_journal(
-    journal: schemas_PH.Journal,
+async def create_paper(
+    paper: schemas_ph.Paper,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.PH)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.ph)),
 ):
     """
-    Create a new journal.
+    Create a new paper.
     """
 
     try:
-        journal_db = models_PH.Journal(
+        paper_db = models_ph.Paper(
             id=str(uuid.uuid4()),
-            name=journal.name,
-            release_date=journal.release_date,
+            name=paper.name,
+            release_date=paper.release_date,
         )
 
-        return await cruds_PH.create_journal(journal=journal_db, db=db)
+        return await cruds_ph.create_paper(paper=paper_db, db=db)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
 
 @module.router.post(
-    "/PH/{journal_id}/pdf",
+    "/ph/{paper_id}/pdf",
     response_model=standard_responses.Result,
     status_code=201,
 )
-async def create_journal_pdf(
-    journal_id: str,
+async def create_paper_pdf(
+    paper_id: str,
     pdf: UploadFile = File(...),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.PH)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.ph)),
     request_id: str = Depends(get_request_id),
     db: AsyncSession = Depends(get_db),
 ):
-    journal = await cruds_PH.get_journal_by_id(db=db, journal_id=journal_id)
-    if journal is None:
+    paper = await cruds_ph.get_paper_by_id(db=db, paper_id=paper_id)
+    if paper is None:
         raise HTTPException(
             status_code=404,
-            detail="The journal does not exist.",
+            detail="The paper does not exist.",
         )
 
     await save_file_as_data(
         image=pdf,
-        directory="PH",
-        filename=str(journal_id),
+        directory="ph",
+        filename=str(paper_id),
         request_id=request_id,
         max_file_size=10 * 1024 * 1024,
         accepted_content_types=["application/pdf"],

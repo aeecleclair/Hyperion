@@ -3,8 +3,8 @@ from datetime import date
 from pydantic import BaseModel
 
 
-class Journal(BaseModel):
-    """Base schema for journal's model"""
+class Paper(BaseModel):
+    """Base schema for paper's model"""
 
     id: str
     name: str
