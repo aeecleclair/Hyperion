@@ -36,7 +36,7 @@ class Message(Base):
     # We can plan a notification to be sent later, the frontend should not display it before the planned date
     delivery_datetime: Mapped[datetime] = mapped_column(TZDateTime, nullable=True)
     # Messages should be deleted after a certain time
-    expire_on: Mapped[date] = mapped_column(Date, nullable=False)
+    expire_on: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
 
 
 class FirebaseDevice(Base):

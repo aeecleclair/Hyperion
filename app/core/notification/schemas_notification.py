@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -28,7 +28,7 @@ class Message(BaseModel):
         None,
         description="The date the notification should be shown",
     )
-    expire_on: date
+    expire_on: datetime
     model_config = ConfigDict(from_attributes=True)
 
 
