@@ -20,14 +20,11 @@ from tests.commons import (
     event_loop,  # noqa
 )
 
-UserTest = TypedDict(
-    "UserTest",
-    {
-        "user": models_core.CoreUser,
-        "token": str,
-        "players": dict[CapsMode, models_elocaps.Player],
-    },
-)
+
+class UserTest(TypedDict):
+    user: models_core.CoreUser
+    token: str
+    players: dict[CapsMode, models_elocaps.Player]
 users: list[UserTest] = []
 newUser: models_core.CoreUser | None = None
 game_players: list[models_elocaps.GamePlayer] = []
@@ -72,12 +69,12 @@ async def create_games(db, n):
         (
             await db.execute(
                 select(models_elocaps.GamePlayer).options(
-                    selectinload(models_elocaps.GamePlayer.player)
-                )
+                    selectinload(models_elocaps.GamePlayer.player),
+                ),
             )
         )
         .scalars()
-        .all()
+        .all(),
     )
 
 
@@ -115,10 +112,10 @@ def test_get_games_played_on():
         headers={"Authorization": f"Bearer {users[0]['token']}"},
     )
     assert response1.status_code == 200 and len(response1.json()) == len(
-        [i for i in games if i.timestamp.date() == today]
+        [i for i in games if i.timestamp.date() == today],
     )
     assert response2.status_code == 200 and len(response2.json()) == len(
-        [i for i in games if i.timestamp.date() == yesterday]
+        [i for i in games if i.timestamp.date() == yesterday],
     )
 
 
@@ -199,7 +196,7 @@ def test_player_games(player_nb: int):
         headers={"Authorization": f"Bearer {user['token']}"},
     )
     assert response.status_code == 200 and len(response.json()) == len(
-        [i for i in game_players if i.user_id == user["user"].id]
+        [i for i in game_players if i.user_id == user["user"].id],
     )
 
 

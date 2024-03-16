@@ -67,7 +67,7 @@ async def register_game(
                     20,
                     complete_game.get_team_elo(team),
                     complete_game.get_team_elo(-team + 3),
-                )
+                ),
             )
             await cruds_elocaps.set_player_elo_gain(db, game_player, elo_gain)
         creator = await cruds_elocaps.get_game_player(db, game.id, user.id)
@@ -92,7 +92,7 @@ async def register_game(
                 )
         except Exception as error:
             hyperion_error_logger.error(
-                f"Error while sending elocaps notification to player, {error}"
+                f"Error while sending elocaps notification to player, {error}",
             )
 
         return complete_game
@@ -165,11 +165,11 @@ async def confirm_game(
 ):
     try:
         player = await cruds_elocaps.get_game_player(
-            db, game_id=game_id, user_id=user.id
+            db, game_id=game_id, user_id=user.id,
         )
         if not player:
             raise HTTPException(
-                400, "You are not part of that game, or it doesn't exist"
+                400, "You are not part of that game, or it doesn't exist",
             )
         if player.game.is_cancelled:
             raise HTTPException(400, "This game has been cancelled")
@@ -227,7 +227,7 @@ async def get_player_info(
     # Build a DetailedPlayer object (a dict that looks like {mode: {elo, winrate}})
     mode_info = {
         x.mode: schemas_elocaps.PlayerModeInfo(
-            elo=x.elo, winrate=await cruds_elocaps.get_winrate(db, x.mode, user_id)
+            elo=x.elo, winrate=await cruds_elocaps.get_winrate(db, x.mode, user_id),
         )
         for x in db_player_modes
     }
