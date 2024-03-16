@@ -1,28 +1,31 @@
 import logging
 import uuid
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.cruds import cruds_raid
+from app.core import models_core, standard_responses
+from app.core.groups.groups_type import GroupType
+from app.core.module import Module
 from app.dependencies import get_db, get_request_id, is_user_a_member
-from app.models import models_core, models_raid
-from app.schemas import schemas_raid
+from app.modules.raid import cruds_raid, models_raid, schemas_raid
 from app.utils.tools import get_file_from_data, save_file_as_data
-from app.utils.types import standard_responses
-from app.utils.types.tags import Tags
-
-router = APIRouter()
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
-@router.get(
+module = Module(
+    root="raid",
+    tag="Raid",
+    default_allowed_groups_ids=[GroupType.student, GroupType.staff],
+)
+
+
+@module.router.get(
     "/raid/participant/{participant_id}",
     response_model=schemas_raid.Participant,
     status_code=200,
-    tags=[Tags.raid],
 )
 async def get_participant_by_id(
     participant_id: str,
@@ -37,11 +40,10 @@ async def get_participant_by_id(
     return participant
 
 
-@router.post(
+@module.router.post(
     "/raid/participant",
     response_model=schemas_raid.Participant,
     status_code=201,
-    tags=[Tags.raid],
 )
 async def create_participant(
     participant: schemas_raid.ParticipantBase,
@@ -59,10 +61,9 @@ async def create_participant(
     return await cruds_raid.create_participant(db_participant, db)
 
 
-@router.patch(
+@module.router.patch(
     "/raid/participant/{participant_id}",
     status_code=204,
-    tags=[Tags.raid],
 )
 async def update_participant(
     participant_id: str,
@@ -84,11 +85,10 @@ async def update_participant(
     await cruds_raid.update_participant(participant_id, participant, db)
 
 
-@router.post(
+@module.router.post(
     "/raid/team",
     response_model=schemas_raid.TeamBase,
     status_code=201,
-    tags=[Tags.raid],
 )
 async def create_team(
     team: schemas_raid.TeamBase,
@@ -117,11 +117,10 @@ async def create_team(
     return await cruds_raid.create_team(db_team, db)
 
 
-@router.get(
+@module.router.get(
     "/raid/participant/{participant_id}/team",
     response_model=schemas_raid.Team,
     status_code=200,
-    tags=[Tags.raid],
 )
 async def get_team_by_participant_id(
     participant_id: str,
@@ -141,11 +140,10 @@ async def get_team_by_participant_id(
     return participant_team
 
 
-@router.get(
+@module.router.get(
     "/raid/team/all",
     response_model=list[schemas_raid.TeamPreview],
     status_code=200,
-    tags=[Tags.raid],
 )
 async def get_all_teams(
     db: AsyncSession = Depends(get_db),
@@ -156,11 +154,10 @@ async def get_all_teams(
     return await cruds_raid.get_all_teams(db)
 
 
-@router.get(
+@module.router.get(
     "/raid/team/{team_id}",
     response_model=schemas_raid.Team,
     status_code=200,
-    tags=[Tags.raid],
 )
 async def get_team_by_id(
     team_id: str,
@@ -172,10 +169,9 @@ async def get_team_by_id(
     return await cruds_raid.get_team_by_id(team_id, db)
 
 
-@router.patch(
+@module.router.patch(
     "/raid/team/{team_id}",
     status_code=204,
-    tags=[Tags.raid],
 )
 async def update_team(
     team_id: str,
@@ -188,10 +184,9 @@ async def update_team(
     await cruds_raid.update_team(team_id, team, db)
 
 
-@router.delete(
+@module.router.delete(
     "/raid/team/{team_id}",
     status_code=204,
-    tags=[Tags.raid],
 )
 async def delete_team(
     team_id: str,
@@ -203,7 +198,7 @@ async def delete_team(
     await cruds_raid.delete_team(team_id, db)
 
 
-@router.delete(
+@module.router.delete(
     "/raid/team/all",
     status_code=204,
     tags=["raid"],
@@ -217,7 +212,7 @@ async def delete_all_teams(
     await cruds_raid.delete_all_teams(db)
 
 
-@router.post(
+@module.router.post(
     "/raid/participant/{participant_id}/document",
     status_code=204,
     tags=["raid"],
@@ -232,7 +227,7 @@ async def create_document(
     await cruds_raid.create_document(document, db)
 
 
-@router.post(
+@module.router.post(
     "/raid/document/{document_id}",
     response_model=standard_responses.Result,
     status_code=201,
@@ -262,7 +257,7 @@ async def upload_document(
     return standard_responses.Result(success=True)
 
 
-@router.get(
+@module.router.get(
     "/raid/document/{document_id}",
     response_class=FileResponse,
     status_code=200,
@@ -281,7 +276,7 @@ async def read_document(
     )
 
 
-@router.patch(
+@module.router.patch(
     "/raid/participant/{participant_id}/document/{document_id}",
     status_code=204,
     tags=["raid"],
@@ -297,7 +292,7 @@ async def update_document(
     await cruds_raid.update_document(document_id, document, db)
 
 
-@router.delete(
+@module.router.delete(
     "/raid/participant/{participant_id}/document/{document_id}",
     status_code=204,
     tags=["raid"],
@@ -312,10 +307,9 @@ async def delete_document(
     await cruds_raid.delete_document(document_id, db)
 
 
-@router.post(
+@module.router.post(
     "/raid/participant/{participant_id}/payment",
     status_code=204,
-    tags=[Tags.raid],
 )
 async def confirm_payment(
     participant_id: str,
@@ -327,10 +321,9 @@ async def confirm_payment(
     return await cruds_raid.confirm_payment(participant_id, db)
 
 
-@router.post(
+@module.router.post(
     "/raid/participant/{participant_id}/honour",
     status_code=204,
-    tags=[Tags.raid],
 )
 async def validate_attestation_on_honour(
     participant_id: str,

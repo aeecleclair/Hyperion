@@ -37,7 +37,7 @@ class SecurityFileBase(BaseModel):
     family: str | None = None
 
 
-class SecurityFileUpdate(SecurityFileBase):
+class SecurityFileUpdate(BaseModel):
     name: str | None = None
     firstname: str | None = None
     birthday: date | None = None
@@ -92,7 +92,7 @@ class Participant(ParticipantBase):
         orm_mode = True
 
 
-class ParticipantUpdate(ParticipantBase):
+class ParticipantUpdate(BaseModel):
     name: str | None = None
     firstname: str | None = None
     birthday: date | None = None
