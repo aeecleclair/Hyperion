@@ -11,7 +11,7 @@ async def get_journals(
     db: AsyncSession,
 ) -> Sequence[models_PH.Journal]:
     result = await db.execute(
-        select(models_PH.Journal).order_by(models_PH.Journal.date)
+        select(models_PH.Journal).order_by(models_PH.Journal.release_date)
     )
     return result.scalars().all()
 
