@@ -461,7 +461,7 @@ async def create_association_logo(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Upload a logo for an association.
+    Upload a logo for an Association.
     **The user must be a member of the group CAA or BDE to use this endpoint**
     """
 
@@ -482,13 +482,13 @@ async def create_association_logo(
     if association is None:
         raise HTTPException(
             status_code=404,
-            detail="The association does not exist.",
+            detail="The Association does not exist.",
         )
 
     await save_file_as_data(
         image=image,
         directory="associations",
-        filename=str(association_id),
+        filename=association_id,
         request_id=request_id,
         max_file_size=4 * 1024 * 1024,
         accepted_content_types=["image/jpeg", "image/png", "image/webp"],
@@ -503,14 +503,19 @@ async def create_association_logo(
 )
 async def read_association_logo(
     association_id: str,
+    db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ) -> FileResponse:
     """
-    Get the logo of an association.
+    Get the logo of an Association.
     """
+    association = await cruds_phonebook.get_association_by_id(association_id, db)
+
+    if association is None:
+        raise HTTPException(404, "The Association does not exist.")
 
     return get_file_from_data(
         directory="associations",
-        filename=str(association_id),
+        filename=association_id,
         default_asset="assets/images/default_association_picture.png",
     )
