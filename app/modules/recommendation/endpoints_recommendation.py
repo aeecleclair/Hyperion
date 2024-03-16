@@ -1,6 +1,5 @@
 import uuid
-from datetime import datetime
-from zoneinfo import ZoneInfo
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -71,12 +70,13 @@ async def create_recommendation(
 
     recommendation_db = models_recommendation.Recommendation(
         id=str(uuid.uuid4()),
-        creation=datetime.now(ZoneInfo(settings.TIMEZONE)),
+        creation=datetime.now(UTC),
         **recommendation.model_dump(),
     )
 
     return await cruds_recommendation.create_recommendation(
-        recommendation=recommendation_db, db=db,
+        recommendation=recommendation_db,
+        db=db,
     )
 
 
