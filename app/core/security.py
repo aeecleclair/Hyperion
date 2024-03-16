@@ -65,12 +65,15 @@ def verify_password(plain_password: str, hashed_password: str | None) -> bool:
     if hashed_password is None:
         return bcrypt.checkpw(plain_password.encode("utf-8"), fake_hash)
     return bcrypt.checkpw(
-        plain_password.encode("utf-8"), hashed_password.encode("utf-8")
+        plain_password.encode("utf-8"),
+        hashed_password.encode("utf-8"),
     )
 
 
 async def authenticate_user(
-    db: AsyncSession, email: str, password: str
+    db: AsyncSession,
+    email: str,
+    password: str,
 ) -> models_core.CoreUser | None:
     """
     Try to authenticate the user.
@@ -103,7 +106,9 @@ def create_access_token(
     expire_on = datetime.now(UTC) + expires_delta
     to_encode.update({"exp": expire_on, "iat": iat})
     encoded_jwt = jwt.encode(
-        to_encode, settings.ACCESS_TOKEN_SECRET_KEY, algorithm=jwt_algorithme
+        to_encode,
+        settings.ACCESS_TOKEN_SECRET_KEY,
+        algorithm=jwt_algorithme,
     )
     return encoded_jwt
 
@@ -111,7 +116,7 @@ def create_access_token(
 def create_access_token_RS256(
     settings: Settings,
     data: schemas_auth.TokenData,
-    additional_data: dict[str, Any] = {},
+    additional_data: dict[str, Any] | None = None,
     expires_delta: timedelta | None = None,
 ) -> str:
     """
@@ -123,7 +128,7 @@ def create_access_token_RS256(
         # We use the default value
         expires_delta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
-    to_encode: dict[str, Any] = additional_data
+    to_encode: dict[str, Any] = additional_data or {}
     to_encode.update(data.model_dump(exclude_none=True))
 
     iat = datetime.now(UTC)
@@ -135,7 +140,7 @@ def create_access_token_RS256(
         settings.RSA_PRIVATE_KEY,
         algorithm="RS256",
         headers={
-            "kid": "RSA-JWK-1"
+            "kid": "RSA-JWK-1",
         },  # The kid allows to identify the key to use to decode the JWT, and should be the same as the kid in the JWK Set.
     )
     return encoded_jwt

@@ -38,7 +38,7 @@ class MatrixHandler(StreamHandler):
         else:
             # We use warning level so that the message is not sent to matrix again
             hyperion_error_logger.warning(
-                "MatrixHandler isn't configured in the .env file, disabling the handler"
+                "MatrixHandler isn't configured in the .env file, disabling the handler",
             )
 
     def emit(self, record):
@@ -50,5 +50,5 @@ class MatrixHandler(StreamHandler):
             except ValueError as err:
                 # We use warning level so that the message is not sent to matrix again
                 hyperion_error_logger.warning(
-                    f"MatrixHandler: Unable to send message to Matrix server: {err}"
+                    f"MatrixHandler: Unable to send message to Matrix server: {err}",
                 )

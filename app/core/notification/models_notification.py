@@ -17,7 +17,9 @@ class Message(Base):
     # If there can be one notification per context, there can be multiple messages per notification: one by firebase_device_token
     # A firebase_device_token is related to a device from an user (its phone, its computer, etc.)
     firebase_device_token: Mapped[str] = mapped_column(
-        String, index=True, primary_key=True
+        String,
+        index=True,
+        primary_key=True,
     )
 
     # A message can be visible or not, if it is not visible, it should only trigger an action
@@ -42,7 +44,10 @@ class FirebaseDevice(Base):
 
     user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), nullable=False)
     firebase_device_token: Mapped[str] = mapped_column(
-        String, index=True, nullable=False, primary_key=True
+        String,
+        index=True,
+        nullable=False,
+        primary_key=True,
     )
     register_date: Mapped[date] = mapped_column(Date, nullable=False)
 
@@ -51,11 +56,18 @@ class TopicMembership(Base):
     __tablename__ = "notification_topic_membership"
 
     user_id: Mapped[str] = mapped_column(
-        ForeignKey("core_user.id"), nullable=False, primary_key=True
+        ForeignKey("core_user.id"),
+        nullable=False,
+        primary_key=True,
     )
     topic: Mapped[Topic] = mapped_column(
-        Enum(Topic), index=True, nullable=False, primary_key=True
+        Enum(Topic),
+        index=True,
+        nullable=False,
+        primary_key=True,
     )
     topic_identifier: Mapped[str] = mapped_column(
-        String, nullable=False, primary_key=True
+        String,
+        nullable=False,
+        primary_key=True,
     )

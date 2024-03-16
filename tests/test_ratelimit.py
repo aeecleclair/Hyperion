@@ -7,7 +7,7 @@ def test_limiter():
         for _ in range(settings.REDIS_LIMIT - 1):
             response = client.get("/information")
             assert response.status_code == 200
-        for i in range(2):
+        for _ in range(2):
             response = client.get("/information")
             assert response.status_code == 429
     finally:

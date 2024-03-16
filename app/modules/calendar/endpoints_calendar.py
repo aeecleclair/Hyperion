@@ -1,5 +1,5 @@
-import os
 import uuid
+from pathlib import Path
 
 from fastapi import Depends, HTTPException
 from fastapi.responses import FileResponse
@@ -70,10 +70,12 @@ async def get_applicant_bookings(
     **Usable by the user or admins**
     """
     if user.id == applicant_id or is_user_member_of_an_allowed_group(
-        user, [GroupType.BDE]
+        user,
+        [GroupType.BDE],
     ):
         bookings = await cruds_calendar.get_applicant_events(
-            db=db, applicant_id=applicant_id
+            db=db,
+            applicant_id=applicant_id,
         )
         return bookings
     else:
@@ -246,7 +248,7 @@ async def recreate_ical_file(
 async def get_icalendar_file(db: AsyncSession = Depends(get_db)):
     """Get the icalendar file corresponding to the event in the database."""
 
-    if os.path.exists(ical_file_path):
+    if Path(ical_file_path).exists():
         return FileResponse(ical_file_path)
 
     else:

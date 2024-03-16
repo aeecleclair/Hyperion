@@ -117,7 +117,9 @@ async def edit_raffle(
         )
 
     await cruds_raffle.edit_raffle(
-        raffle_id=raffle_id, raffle_update=raffle_update, db=db
+        raffle_id=raffle_id,
+        raffle_update=raffle_update,
+        db=db,
     )
 
 
@@ -190,11 +192,12 @@ async def get_raffle_stats(
 
     tickets_sold = len(tickets)
     amount_raised = sum(
-        [ticket.pack_ticket.price / ticket.pack_ticket.pack_size for ticket in tickets]
+        [ticket.pack_ticket.price / ticket.pack_ticket.pack_size for ticket in tickets],
     )
 
     return schemas_raffle.RaffleStats(
-        tickets_sold=tickets_sold, amount_raised=amount_raised
+        tickets_sold=tickets_sold,
+        amount_raised=amount_raised,
     )
 
 
@@ -305,7 +308,8 @@ async def create_packticket(
         )
 
     db_packticket = models_raffle.PackTicket(
-        id=str(uuid.uuid4()), **packticket.model_dump()
+        id=str(uuid.uuid4()),
+        **packticket.model_dump(),
     )
 
     try:
@@ -332,7 +336,8 @@ async def edit_packticket(
     """
 
     packticket = await cruds_raffle.get_packticket_by_id(
-        packticket_id=packticket_id, db=db
+        packticket_id=packticket_id,
+        db=db,
     )
 
     if not packticket:
@@ -355,7 +360,9 @@ async def edit_packticket(
         )
 
     await cruds_raffle.edit_packticket(
-        packticket_id=packticket_id, packticket_update=packticket_update, db=db
+        packticket_id=packticket_id,
+        packticket_update=packticket_update,
+        db=db,
     )
 
 
@@ -375,7 +382,8 @@ async def delete_packticket(
     """
 
     packticket = await cruds_raffle.get_packticket_by_id(
-        packticket_id=packticket_id, db=db
+        packticket_id=packticket_id,
+        db=db,
     )
     if not packticket:
         raise HTTPException(status_code=404, detail="Packticket not found")
@@ -477,7 +485,8 @@ async def buy_ticket(
     redis_key = "raffle_" + user.id
 
     if not isinstance(redis_client, Redis) or locker_get(
-        redis_client=redis_client, key=redis_key
+        redis_client=redis_client,
+        key=redis_key,
     ):
         raise HTTPException(status_code=429, detail="Too fast !")
 
@@ -496,10 +505,12 @@ async def buy_ticket(
         )
 
         display_name = get_display_name(
-            firstname=user.firstname, name=user.name, nickname=user.nickname
+            firstname=user.firstname,
+            name=user.name,
+            nickname=user.nickname,
         )
         hyperion_raffle_logger.info(
-            f"Add_ticket_to_user: A pack of {pack_ticket.pack_size} tickets of type {pack_id} has been buyed by user {display_name}({user.id}) for an amount of {pack_ticket.price}€. ({request_id})"
+            f"Add_ticket_to_user: A pack of {pack_ticket.pack_size} tickets of type {pack_id} has been buyed by user {display_name}({user.id}) for an amount of {pack_ticket.price}€. ({request_id})",
         )
 
         return tickets
@@ -835,7 +846,8 @@ async def get_cash_by_id(
         raise HTTPException(status_code=404, detail="User not found")
 
     if user_id == user.id or is_user_member_of_an_allowed_group(
-        user, [GroupType.admin]
+        user,
+        [GroupType.admin],
     ):
         cash = await cruds_raffle.get_cash_by_id(user_id=user_id, db=db)
         if cash is not None:
@@ -926,14 +938,17 @@ async def edit_cash_by_id(
     redis_key = redis_key = "raffle_" + user_id
 
     if not isinstance(redis_client, Redis) or locker_get(
-        redis_client=redis_client, key=redis_key
+        redis_client=redis_client,
+        key=redis_key,
     ):
         raise HTTPException(status_code=403, detail="Too fast !")
     locker_set(redis_client=redis_client, key=redis_key, lock=True)
 
     try:
         await cruds_raffle.edit_cash(
-            user_id=user_id, amount=cash.balance + balance.balance, db=db
+            user_id=user_id,
+            amount=cash.balance + balance.balance,
+            db=db,
         )
     except ValueError as e:
         hyperion_error_logger.error(f"Error in tombola edit_cash_by_id: {e}")
@@ -970,12 +985,14 @@ async def draw_winner(
 
     if prize.raffle.status != RaffleStatusType.lock:
         raise HTTPException(
-            status_code=400, detail="Raffle must be locked to draw a prize"
+            status_code=400,
+            detail="Raffle must be locked to draw a prize",
         )
 
     try:
         winning_tickets = await cruds_raffle.draw_winner_by_prize_raffle(
-            prize_id=prize_id, db=db
+            prize_id=prize_id,
+            db=db,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -1018,7 +1035,9 @@ async def open_raffle(
         )
 
     await cruds_raffle.change_raffle_status(
-        db=db, raffle_id=raffle_id, status=RaffleStatusType.open
+        db=db,
+        raffle_id=raffle_id,
+        status=RaffleStatusType.open,
     )
 
 
@@ -1054,5 +1073,7 @@ async def lock_raffle(
         )
 
     await cruds_raffle.change_raffle_status(
-        db=db, raffle_id=raffle_id, status=RaffleStatusType.lock
+        db=db,
+        raffle_id=raffle_id,
+        status=RaffleStatusType.lock,
     )

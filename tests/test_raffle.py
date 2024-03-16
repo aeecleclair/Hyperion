@@ -1,4 +1,5 @@
 import uuid
+from pathlib import Path
 
 import pytest_asyncio
 
@@ -81,17 +82,26 @@ async def init_objects():
     await add_object_to_db(raffle_to_draw)
 
     packticket = models_raffle.PackTicket(
-        id=str(uuid.uuid4()), price=1.0, pack_size=1, raffle_id=raffle.id
+        id=str(uuid.uuid4()),
+        price=1.0,
+        pack_size=1,
+        raffle_id=raffle.id,
     )
     await add_object_to_db(packticket)
 
     packticket_to_draw = models_raffle.PackTicket(
-        id=str(uuid.uuid4()), price=1.0, pack_size=1, raffle_id=raffle_to_draw.id
+        id=str(uuid.uuid4()),
+        price=1.0,
+        pack_size=1,
+        raffle_id=raffle_to_draw.id,
     )
     await add_object_to_db(packticket_to_draw)
 
     packticket_to_delete = models_raffle.PackTicket(
-        id=str(uuid.uuid4()), price=1.0, pack_size=1, raffle_id=raffle_to_delete.id
+        id=str(uuid.uuid4()),
+        price=1.0,
+        pack_size=1,
+        raffle_id=raffle_to_delete.id,
     )
     await add_object_to_db(packticket_to_delete)
 
@@ -181,7 +191,7 @@ def test_edit_raffle():
 def test_create_raffle_logo():
     token = create_api_access_token(BDE_user)
 
-    with open("assets/images/default_campaigns_logo.png", "rb") as image:
+    with Path("assets/images/default_campaigns_logo.png").open("rb") as image:
         response = client.post(
             f"/tombola/raffles/{raffle.id}/logo",
             files={"image": ("logo.png", image, "image/png")},
@@ -205,7 +215,7 @@ def test_read_raffle_logo():
 def test_create_prize_picture():
     token = create_api_access_token(BDE_user)
 
-    with open("assets/images/default_campaigns_logo.png", "rb") as image:
+    with Path("assets/images/default_campaigns_logo.png").open("rb") as image:
         response = client.post(
             f"/tombola/prizes/{prize.id}/picture",
             files={"image": ("logo.png", image, "image/png")},

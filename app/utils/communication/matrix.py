@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any
 
 import requests
 
@@ -22,24 +22,32 @@ class Matrix:
 
         self.access_token = token
 
-    def post(self, url, json, headers={}) -> Dict[str, Any]:
+    def post(
+        self,
+        url: str,
+        json: dict[str, Any],
+        headers: dict[str, Any] | None,
+    ) -> dict[str, Any]:
         """
         The function adds an access token to the request authorization header and issue a post operation.
         The authorization header will only be added if one is not already provided
 
         https://spec.matrix.org/v1.3/client-server-api/#using-access-tokens
         """
+        if headers is None:
+            # If no headers are provided, create a new dict
+            headers = {}
 
         if "Authorization" not in headers:
             headers["Authorization"] = "Bearer " + self.access_token
 
-        response = requests.post(url, json=json, headers=headers)
+        response = requests.post(url, json=json, headers=headers, timeout=10)
         try:
             response.raise_for_status()
-        except requests.exceptions.HTTPError:
+        except requests.exceptions.HTTPError as err:
             raise ValueError(
-                "Could not send message to Matrix server, check the room_id in settings."
-            )
+                "Could not send message to Matrix server, check the room_id in settings.",
+            ) from err
 
         return response.json()
 
@@ -64,4 +72,4 @@ class Matrix:
             "msgtype": "m.text",
         }
 
-        self.post(url, json=data)
+        self.post(url, json=data, headers=None)

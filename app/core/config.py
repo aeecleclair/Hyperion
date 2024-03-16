@@ -28,7 +28,10 @@ class Settings(BaseSettings):
     # Without this property, @cached_property decorator raise "TypeError: cannot pickle '_thread.RLock' object"
     # See https://github.com/samuelcolvin/pydantic/issues/1241
     model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="ignore"
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
     )
 
     # NOTE: Variables without a value should not be configured in this class, but added to the dotenv .env file
@@ -174,7 +177,7 @@ class Settings(BaseSettings):
             {
                 "use": "sig",
                 "kid": "RSA-JWK-1",  # The kid allows to identify the key in the JWKS, it should match the kid in the token header
-            }
+            },
         )
         return {"keys": [JWK]}
 
@@ -191,20 +194,23 @@ class Settings(BaseSettings):
         for client_id, secret, redirect_uri, auth_client_name in cls.AUTH_CLIENTS:
             try:
                 auth_client_class: type[providers.BaseAuthClient] = getattr(
-                    providers, auth_client_name
+                    providers,
+                    auth_client_name,
                 )
-            except AttributeError:
+            except AttributeError as error:
                 # logger.error()
                 raise ValueError(
-                    f".env AUTH_CLIENTS is invalid: {auth_client_name} is not an auth_client from app.utils.auth.providers"
-                )
+                    f".env AUTH_CLIENTS is invalid: {auth_client_name} is not an auth_client from app.utils.auth.providers",
+                ) from error
             # If the secret is empty, this mean the client is expected to use PKCE
             # We need to pass a None value to the auth_client_class
             if not secret:
                 secret = None
             # We can create a new instance of the auth_client_class with the client id and secret
             clients[client_id] = auth_client_class(
-                client_id=client_id, secret=secret, redirect_uri=redirect_uri
+                client_id=client_id,
+                secret=secret,
+                redirect_uri=redirect_uri,
             )
 
         return clients
@@ -231,7 +237,7 @@ class Settings(BaseSettings):
             )
         ):
             raise ValueError(
-                "Either SQLITE_DB or POSTGRES_HOST, POSTGRES_USER, POSTGRES_PASSWORD and POSTGRES_DB should be configured in the dotenv"
+                "Either SQLITE_DB or POSTGRES_HOST, POSTGRES_USER, POSTGRES_PASSWORD and POSTGRES_DB should be configured in the dotenv",
             )
 
         return self
@@ -240,18 +246,18 @@ class Settings(BaseSettings):
     def check_secrets(self) -> "Settings":
         if not self.ACCESS_TOKEN_SECRET_KEY:
             raise ValueError(
-                "ACCESS_TOKEN_SECRET_KEY should be configured in the dotenv"
+                "ACCESS_TOKEN_SECRET_KEY should be configured in the dotenv",
             )
 
         if not self.RSA_PRIVATE_PEM_STRING:
             raise ValueError(
-                "RSA_PRIVATE_PEM_STRING should be configured in the dotenv"
+                "RSA_PRIVATE_PEM_STRING should be configured in the dotenv",
             )
 
         try:
             jwk.construct(self.RSA_PRIVATE_PEM_STRING, algorithm="RS256")
-        except JWKError as e:
-            raise ValueError("RSA_PRIVATE_PEM_STRING is not a valid RSA key", e)
+        except JWKError as error:
+            raise ValueError("RSA_PRIVATE_PEM_STRING is not a valid RSA key") from error
 
         return self
 
@@ -262,9 +268,9 @@ class Settings(BaseSettings):
         By calling them in this validator, we force their initialization during the instantiation of the class.
         This allow them to raise error on Hyperion startup if they are not correctly configured instead of creating an error on runtime.
         """
-        self.KNOWN_AUTH_CLIENTS
-        self.RSA_PRIVATE_KEY
-        self.RSA_PUBLIC_KEY
-        self.RSA_PUBLIC_JWK
+        self.KNOWN_AUTH_CLIENTS  # noqa
+        self.RSA_PRIVATE_KEY  # noqa
+        self.RSA_PUBLIC_KEY  # noqa
+        self.RSA_PUBLIC_JWK  # noqa
 
         return self

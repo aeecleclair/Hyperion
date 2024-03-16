@@ -1,15 +1,14 @@
 """File defining the Metadata. And the basic functions creating the database tables and calling the router"""
 
 import logging
-import os
 import uuid
 from contextlib import asynccontextmanager
-from typing import Literal
+from pathlib import Path
+from typing import TYPE_CHECKING, Literal
 
 import alembic.command as alembic_command
 import alembic.config as alembic_config
 import alembic.migration as alembic_migration
-import redis
 from fastapi import FastAPI, Request, Response, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
@@ -29,6 +28,9 @@ from app.database import Base
 from app.dependencies import get_db_engine, get_redis_client, get_settings
 from app.utils import initialization
 from app.utils.redis import limiter
+
+if TYPE_CHECKING:
+    import redis
 
 # NOTE: We can not get loggers at the top of this file like we do in other files
 # as the loggers are not yet initialized
@@ -124,7 +126,7 @@ def update_db_tables(engine: Engine, drop_db: bool = False) -> None:
                 # in order not to have to run all migrations one by one
                 # See https://alembic.sqlalchemy.org/en/latest/cookbook.html#building-an-up-to-date-database-from-scratch
                 hyperion_error_logger.info(
-                    "Startup: Database tables not created yet, creating them"
+                    "Startup: Database tables not created yet, creating them",
                 )
 
                 # Create all tables
@@ -134,14 +136,14 @@ def update_db_tables(engine: Engine, drop_db: bool = False) -> None:
                 stamp_alembic_head(conn)
             else:
                 hyperion_error_logger.info(
-                    f"Startup: Database tables already created (current revision: {alembic_current_revision}), running migrations"
+                    f"Startup: Database tables already created (current revision: {alembic_current_revision}), running migrations",
                 )
                 run_alembic_upgrade(conn)
 
             hyperion_error_logger.info("Startup: Database tables updated")
     except Exception as error:
         hyperion_error_logger.fatal(
-            f"Startup: Could not create tables in the database: {error}"
+            f"Startup: Could not create tables in the database: {error}",
         )
         raise
 
@@ -153,19 +155,21 @@ def initialize_groups(engine: Engine) -> None:
 
     hyperion_error_logger.info("Startup: Adding new groups to the database")
     with Session(engine) as db:
-        for id in GroupType:
-            exists = initialization.get_group_by_id_sync(group_id=id, db=db)
+        for group_type in GroupType:
+            exists = initialization.get_group_by_id_sync(group_id=group_type, db=db)
             # We don't want to recreate the groups if they already exist
             if not exists:
                 group = models_core.CoreGroup(
-                    id=id, name=id.name, description="Group type"
+                    id=group_type,
+                    name=group_type.name,
+                    description="Group type",
                 )
 
                 try:
                     initialization.create_group_sync(group=group, db=db)
                 except IntegrityError as error:
                     hyperion_error_logger.fatal(
-                        f"Startup: Could not add group {group.name}<{group.id}> in the database: {error}"
+                        f"Startup: Could not add group {group.name}<{group.id}> in the database: {error}",
                     )
 
 
@@ -181,23 +185,24 @@ def initialize_module_visibility(engine: Engine) -> None:
         )
         if haveBeenInitialized:
             hyperion_error_logger.info(
-                "Startup: Modules visibility settings have already been initialized"
+                "Startup: Modules visibility settings have already been initialized",
             )
             return
 
         hyperion_error_logger.info(
-            "Startup: Modules visibility settings are empty, initializing them"
+            "Startup: Modules visibility settings are empty, initializing them",
         )
         for module in module_list:
             for default_group_id in module.default_allowed_groups_ids:
                 module_visibility = models_core.ModuleVisibility(
-                    root=module.root, allowed_group_id=default_group_id.value
+                    root=module.root,
+                    allowed_group_id=default_group_id.value,
                 )
                 try:
                     initialization.create_module_visibility_sync(module_visibility, db)
                 except IntegrityError as error:
                     hyperion_error_logger.fatal(
-                        f"Startup: Could not add module visibility {module.root}<{default_group_id}> in the database: {error}"
+                        f"Startup: Could not add module visibility {module.root}<{default_group_id}> in the database: {error}",
                     )
 
 
@@ -211,12 +216,9 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     hyperion_security_logger = logging.getLogger("hyperion.security")
     hyperion_error_logger = logging.getLogger("hyperion.error")
 
-    # Create folder for calendars
-    if not os.path.exists("data/ics/"):
-        os.makedirs("data/ics/")
-
-    if not os.path.exists("data/core/"):
-        os.makedirs("data/core/")
+    # Create folder for calendars if they don't already exists
+    Path("data/ics/").mkdir(parents=True, exist_ok=True)
+    Path("data/core/").mkdir(parents=True, exist_ok=True)
 
     # Creating a lifespan which will be called when the application starts then shuts down
     # https://fastapi.tiangolo.com/advanced/events/
@@ -239,7 +241,7 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
 
     # Initialize database connection
     app.dependency_overrides.get(get_db_engine, get_db_engine)(
-        settings=settings
+        settings=settings,
     )  # Initialize the async engine
     sync_engine = initialization.get_sync_db_engine(settings=settings)
 
@@ -252,7 +254,7 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
 
     # Initialize Redis
     if not app.dependency_overrides.get(get_redis_client, get_redis_client)(
-        settings=settings
+        settings=settings,
     ):
         hyperion_error_logger.info("Redis client not configured")
 
@@ -285,7 +287,8 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         settings: Settings = app.dependency_overrides.get(get_settings, get_settings)()
         redis_client: redis.Redis | Literal[False] | None = (
             app.dependency_overrides.get(
-                get_redis_client, get_redis_client
+                get_redis_client,
+                get_redis_client,
             )(settings=settings)
         )
 
@@ -293,17 +296,20 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         process = True
         if redis_client:  # If redis is configured
             process, log = limiter(
-                redis_client, ip_address, settings.REDIS_LIMIT, settings.REDIS_WINDOW
+                redis_client,
+                ip_address,
+                settings.REDIS_LIMIT,
+                settings.REDIS_WINDOW,
             )
             if log:
                 hyperion_security_logger.warning(
-                    f"Rate limit reached for {ip_address} (limit: {settings.REDIS_LIMIT}, window: {settings.REDIS_WINDOW})"
+                    f"Rate limit reached for {ip_address} (limit: {settings.REDIS_LIMIT}, window: {settings.REDIS_WINDOW})",
                 )
         if process:
             response = await call_next(request)
 
             hyperion_access_logger.info(
-                f'{client_address} - "{request.method} {request.url.path}" {response.status_code} ({request_id})'
+                f'{client_address} - "{request.method} {request.url.path}" {response.status_code} ({request_id})',
             )
         else:
             response = Response(status_code=429, content="Too Many Requests")
@@ -311,11 +317,12 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
 
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(
-        request: Request, exc: RequestValidationError
+        request: Request,
+        exc: RequestValidationError,
     ):
         # We use a Debug logger to log the error as personal data may be present in the request
         hyperion_error_logger.debug(
-            f"Validation error: {exc.errors()} ({request.state.request_id})"
+            f"Validation error: {exc.errors()} ({request.state.request_id})",
         )
 
         return JSONResponse(

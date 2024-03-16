@@ -120,7 +120,9 @@ async def edit_product(
         raise HTTPException(status_code=404, detail="Product not found")
 
     await cruds_amap.edit_product(
-        db=db, product_id=product_id, product_update=product_update
+        db=db,
+        product_id=product_id,
+        product_update=product_update,
     )
 
 
@@ -145,7 +147,8 @@ async def delete_product(
 
     if await cruds_amap.is_product_used(db=db, product_id=product_id):
         raise HTTPException(
-            status_code=400, detail="This product is used in a delivery"
+            status_code=400,
+            detail="This product is used in a delivery",
         )
 
     await cruds_amap.delete_product(db=db, product_id=product_id)
@@ -188,10 +191,12 @@ async def create_delivery(
         **delivery.model_dump(),
     )
     if await cruds_amap.is_there_a_delivery_on(
-        db=db, delivery_date=db_delivery.delivery_date
+        db=db,
+        delivery_date=db_delivery.delivery_date,
     ):
         raise HTTPException(
-            status_code=400, detail="There is already a delivery planned that day."
+            status_code=400,
+            detail="There is already a delivery planned that day.",
         )
 
     result = await cruds_amap.create_delivery(delivery=db_delivery, db=db)
@@ -316,7 +321,9 @@ async def remove_product_from_delivery(
         )
 
     await cruds_amap.remove_product_from_delivery(
-        db=db, delivery_id=delivery_id, products_ids=products_ids
+        db=db,
+        delivery_id=delivery_id,
+        products_ids=products_ids,
     )
 
 
@@ -343,7 +350,8 @@ async def get_orders_from_delivery(
     res = []
     for order in orders:
         order_content = await cruds_amap.get_products_of_order(
-            db=db, order_id=order.order_id
+            db=db,
+            order_id=order.order_id,
         )
         products = [
             schemas_amap.ProductQuantity(**product.__dict__)
@@ -413,12 +421,15 @@ async def add_order_to_delievery(
         or is_user_member_of_an_allowed_group(user, [GroupType.amap])
     ):
         raise HTTPException(
-            status_code=403, detail="You are not allowed to add this order"
+            status_code=403,
+            detail="You are not allowed to add this order",
         )
 
     amount = 0.0
     for product_id, product_quantity in zip(
-        order.products_ids, order.products_quantity
+        order.products_ids,
+        order.products_quantity,
+        strict=True,
     ):
         prod = await cruds_amap.get_product_by_id(product_id=product_id, db=db)
         if prod is None or prod not in delivery.products:
@@ -459,7 +470,8 @@ async def add_order_to_delievery(
     redis_key = "amap_" + order.user_id
 
     if not isinstance(redis_client, Redis) or locker_get(
-        redis_client=redis_client, key=redis_key
+        redis_client=redis_client,
+        key=redis_key,
     ):
         raise HTTPException(status_code=429, detail="Too fast !")
     locker_set(redis_client=redis_client, key=redis_key, lock=True)
@@ -479,9 +491,8 @@ async def add_order_to_delievery(
         productsret = await cruds_amap.get_products_of_order(db=db, order_id=order_id)
 
         hyperion_amap_logger.info(
-            f"Add_order_to_delivery: An order has been created for user {order.user_id} for an amount of {amount}€. ({request_id})"
+            f"Add_order_to_delivery: An order has been created for user {order.user_id} for an amount of {amount}€. ({request_id})",
         )
-        productsret
         return schemas_amap.OrderReturn(productsdetail=productsret, **orderret.__dict__)
 
     except ValueError as error:
@@ -514,7 +525,8 @@ async def edit_order_from_delivery(
         raise HTTPException(status_code=404, detail="Order not found")
 
     delivery = await cruds_amap.get_delivery_by_id(
-        db=db, delivery_id=previous_order.delivery_id
+        db=db,
+        delivery_id=previous_order.delivery_id,
     )
     if not delivery:
         raise HTTPException(status_code=404, detail="Delivery not found")
@@ -537,20 +549,24 @@ async def edit_order_from_delivery(
     if order.products_ids is None:
         try:
             await cruds_amap.edit_order_without_products(
-                order=order, db=db, order_id=order_id
+                order=order,
+                db=db,
+                order_id=order_id,
             )
         except ValueError as error:
             raise HTTPException(status_code=400, detail=str(error))
 
     else:
         if order.products_quantity is None or len(order.products_quantity) != len(
-            order.products_ids
+            order.products_ids,
         ):
             raise HTTPException(status_code=400, detail="Invalid request")
 
         amount = 0.0
         for product_id, product_quantity in zip(
-            order.products_ids, order.products_quantity
+            order.products_ids,
+            order.products_quantity,
+            strict=True,
         ):
             prod = await cruds_amap.get_product_by_id(product_id=product_id, db=db)
             if prod is None or prod not in delivery.products:
@@ -575,7 +591,8 @@ async def edit_order_from_delivery(
         redis_key = "amap_" + previous_order.user_id
 
         if not isinstance(redis_client, Redis) or locker_get(
-            redis_client=redis_client, key=redis_key
+            redis_client=redis_client,
+            key=redis_key,
         ):
             raise HTTPException(status_code=429, detail="Too fast !")
         locker_set(redis_client=redis_client, key=redis_key, lock=True)
@@ -596,7 +613,7 @@ async def edit_order_from_delivery(
                 amount=previous_amount,
             )
             hyperion_amap_logger.info(
-                f"Edit_order: Order {order_id} has been edited for user {db_order.user_id}. Amount was {previous_amount}€, is now {amount}€. ({request_id})"
+                f"Edit_order: Order {order_id} has been edited for user {db_order.user_id}. Amount was {previous_amount}€, is now {amount}€. ({request_id})",
             )
 
         except ValueError as error:
@@ -653,7 +670,8 @@ async def remove_order(
     redis_key = "amap_" + order.user_id
 
     if not isinstance(redis_client, Redis) or locker_get(
-        redis_client=redis_client, key=redis_key
+        redis_client=redis_client,
+        key=redis_key,
     ):
         raise HTTPException(status_code=429, detail="Too fast !")
     locker_set(redis_client=redis_client, key=redis_key, lock=True)
@@ -669,7 +687,7 @@ async def remove_order(
             amount=amount,
         )
         hyperion_amap_logger.info(
-            f"Delete_order: Order {order_id} by {order.user_id} was deleted. {amount}€ were refunded. ({request_id})"
+            f"Delete_order: Order {order_id} by {order.user_id} was deleted. {amount}€ were refunded. ({request_id})",
         )
         return Response(status_code=204)
 
@@ -863,7 +881,7 @@ async def create_cash_of_user(
     )
 
     hyperion_amap_logger.info(
-        f"Create_cash_of_user: A cash has been created for user {cash_db.user_id} for an amount of {cash_db.balance}€. ({request_id})"
+        f"Create_cash_of_user: A cash has been created for user {cash_db.user_id} for an amount of {cash_db.balance}€. ({request_id})",
     )
 
     # We can not directly return the cash_db because it does not contain the user.
@@ -925,7 +943,7 @@ async def edit_cash_by_id(
     await cruds_amap.add_cash(user_id=user_id, amount=balance.balance, db=db)
 
     hyperion_amap_logger.info(
-        f"Edit_cash_by_id: Cash has been updated for user {cash.user_id} from an amount of {cash.balance}€ to an amount of {balance.balance}€. ({request_id})"
+        f"Edit_cash_by_id: Cash has been updated for user {cash.user_id} from an amount of {cash.balance}€ to an amount of {balance.balance}€. ({request_id})",
     )
 
 
@@ -959,7 +977,8 @@ async def get_orders_of_user(
     res = []
     for order in orders:
         products = await cruds_amap.get_products_of_order(
-            db=db, order_id=order.order_id
+            db=db,
+            order_id=order.order_id,
         )
         res.append(schemas_amap.OrderReturn(productsdetail=products, **order.__dict__))
     return res
@@ -1022,7 +1041,8 @@ async def edit_information(
     else:
         try:
             await cruds_amap.edit_information(
-                information_update=edit_information, db=db
+                information_update=edit_information,
+                db=db,
             )
         except ValueError as error:
             raise HTTPException(status_code=400, detail=str(error))

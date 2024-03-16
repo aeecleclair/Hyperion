@@ -139,7 +139,7 @@ class TokenReq(BaseModel):
                 "refresh_token": "Yi6wBcMVoUe-dYJ-ttd6dT8ZuKcUsJVnc4MaUxoLeXU",
                 "grant_type": "refresh_token",
                 "client_id": "5507cc3a-fd29-11ec-b939-0242ac120002",
-            }
+            },
         }
 
 

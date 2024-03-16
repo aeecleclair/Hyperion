@@ -29,7 +29,7 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 # This allows alembic to find our models and take them into account when generating migrations (do not remove)
-for models_file in Path(".").glob("app/**/models_*.py"):
+for models_file in Path().glob("app/**/models_*.py"):
     __import__(".".join(models_file.with_suffix("").parts))
 
 # other values from the config, defined by the needs of env.py,

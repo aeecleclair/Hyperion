@@ -1,6 +1,6 @@
 import uuid
 from datetime import timedelta
-from typing import Sequence
+from typing import TYPE_CHECKING
 
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,6 +15,10 @@ from app.utils.tools import (
     is_user_id_valid,
     is_user_member_of_an_allowed_group,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
 
 module = Module(
     root="loan",
@@ -93,7 +97,8 @@ async def delete_loaner(
     **This endpoint is only usable by administrators**
     """
     loaner: models_loan.Loaner | None = await cruds_loan.get_loaner_by_id(
-        loaner_id=loaner_id, db=db
+        loaner_id=loaner_id,
+        db=db,
     )
     if loaner is None:
         raise HTTPException(
@@ -129,7 +134,9 @@ async def update_loaner(
     """
 
     await cruds_loan.update_loaner(
-        loaner_id=loaner_id, loaner_update=loaner_update, db=db
+        loaner_id=loaner_id,
+        loaner_update=loaner_update,
+        db=db,
     )
 
 
@@ -156,7 +163,8 @@ async def get_loans_by_loaner(
 
     # We need to make sure the user is allowed to manage the loaner
     loaner: models_loan.Loaner | None = await cruds_loan.get_loaner_by_id(
-        loaner_id=loaner_id, db=db
+        loaner_id=loaner_id,
+        db=db,
     )
     if loaner is None:
         raise HTTPException(
@@ -175,7 +183,8 @@ async def get_loans_by_loaner(
     for loan in loaner.loans:
         if returned is None or loan.returned == returned:
             itemsret = await cruds_loan.get_loan_contents_by_loan_id(
-                loan_id=loan.id, db=db
+                loan_id=loan.id,
+                db=db,
             )
             if itemsret is None:
                 raise HTTPException(
@@ -188,7 +197,7 @@ async def get_loans_by_loaner(
                     schemas_loan.ItemQuantity(
                         itemSimple=schemas_loan.ItemSimple(**itemret.item.__dict__),
                         quantity=itemret.quantity,
-                    )
+                    ),
                 )
             loans.append(schemas_loan.Loan(items_qty=items_qty_ret, **loan.__dict__))
 
@@ -213,7 +222,8 @@ async def get_items_by_loaner(
 
     # We need to make sure the user is allowed to manage the loaner
     loaner: models_loan.Loaner | None = await cruds_loan.get_loaner_by_id(
-        loaner_id=loaner_id, db=db
+        loaner_id=loaner_id,
+        db=db,
     )
     if loaner is None:
         raise HTTPException(
@@ -230,7 +240,7 @@ async def get_items_by_loaner(
     for itemDB in loaner.items:
         loaned_quantity = await cruds_loan.get_loaned_quantity(item_id=itemDB.id, db=db)
         itemret.append(
-            schemas_loan.Item(loaned_quantity=loaned_quantity, **itemDB.__dict__)
+            schemas_loan.Item(loaned_quantity=loaned_quantity, **itemDB.__dict__),
         )
 
     # We use the ORM relationship capabilities to load items in the loaner object
@@ -256,7 +266,8 @@ async def create_items_for_loaner(
 
     # We need to make sure the user is allowed to manage the loaner
     loaner: models_loan.Loaner | None = await cruds_loan.get_loaner_by_id(
-        loaner_id=loaner_id, db=db
+        loaner_id=loaner_id,
+        db=db,
     )
     if loaner is None:
         raise HTTPException(
@@ -273,7 +284,9 @@ async def create_items_for_loaner(
     # We need to check that the loaner does not have another item with the same name
     if (
         await cruds_loan.get_loaner_item_by_name_and_loaner_id(
-            loaner_item_name=item.name, loaner_id=loaner_id, db=db
+            loaner_item_name=item.name,
+            loaner_id=loaner_id,
+            db=db,
         )
         is not None
     ):
@@ -317,10 +330,12 @@ async def update_items_for_loaner(
 
     # We need to make sure the user is allowed to manage the loaner
     loaner: models_loan.Loaner | None = await cruds_loan.get_loaner_by_id(
-        loaner_id=loaner_id, db=db
+        loaner_id=loaner_id,
+        db=db,
     )
     item: models_loan.Item | None = await cruds_loan.get_loaner_item_by_id(
-        loaner_item_id=item_id, db=db
+        loaner_item_id=item_id,
+        db=db,
     )
     if item is None:
         raise HTTPException(
@@ -365,7 +380,8 @@ async def delete_loaner_item(
     """
     # We need to make sure the user is allowed to manage the loaner
     item: models_loan.Item | None = await cruds_loan.get_loaner_item_by_id(
-        loaner_item_id=item_id, db=db
+        loaner_item_id=item_id,
+        db=db,
     )
     if item is None:
         raise HTTPException(
@@ -426,7 +442,7 @@ async def get_current_user_loans(
                 schemas_loan.ItemQuantity(
                     itemSimple=schemas_loan.ItemSimple(**itemret.item.__dict__),
                     quantity=itemret.quantity,
-                )
+                ),
             )
         loansret.append(schemas_loan.Loan(items_qty=items_qty_ret, **loan.__dict__))
 
@@ -480,7 +496,8 @@ async def create_loan(
 
     # We need to make sure the user is allowed to manage the loaner
     loaner: models_loan.Loaner | None = await cruds_loan.get_loaner_by_id(
-        loaner_id=loan_creation.loaner_id, db=db
+        loaner_id=loan_creation.loaner_id,
+        db=db,
     )
     if loaner is None:
         raise HTTPException(
@@ -510,7 +527,8 @@ async def create_loan(
         quantity: int = item_borrowed.quantity
 
         item: models_loan.Item | None = await cruds_loan.get_loaner_item_by_id(
-            loaner_item_id=item_id, db=db
+            loaner_item_id=item_id,
+            db=db,
         )
         if item is None:
             raise HTTPException(
@@ -560,24 +578,26 @@ async def create_loan(
     for item, quantity in items:
         # We add each item to the loan
         loan_content = models_loan.LoanContent(
-            loan_id=db_loan.id, item_id=item.id, quantity=quantity
+            loan_id=db_loan.id,
+            item_id=item.id,
+            quantity=quantity,
         )
         await cruds_loan.create_loan_content(loan_content=loan_content, db=db)
 
     loan = await cruds_loan.get_loan_by_id(loan_id=db_loan.id, db=db)
     if loan is None:
-        raise HTTPException(status_code=404, detail=str("Loan not found"))
+        raise HTTPException(status_code=404, detail="Loan not found")
 
     itemsret = await cruds_loan.get_loan_contents_by_loan_id(loan_id=db_loan.id, db=db)
     if itemsret is None:
-        raise HTTPException(status_code=404, detail=str("LoanContent not found"))
+        raise HTTPException(status_code=404, detail="LoanContent not found")
     items_qty_ret: list[schemas_loan.ItemQuantity] = []
     for itemret in itemsret:
         items_qty_ret.append(
             schemas_loan.ItemQuantity(
                 itemSimple=schemas_loan.ItemSimple(**itemret.item.__dict__),
                 quantity=itemret.quantity,
-            )
+            ),
         )
     return schemas_loan.Loan(items_qty=items_qty_ret, **loan.__dict__)
 
@@ -586,7 +606,7 @@ async def create_loan(
     "/loans/{loan_id}",
     status_code=204,
 )
-async def update_loan(  # noqa: C901
+async def update_loan(
     loan_id: str,
     loan_update: schemas_loan.LoanUpdate,
     db: AsyncSession = Depends(get_db),
@@ -603,7 +623,8 @@ async def update_loan(  # noqa: C901
 
     # We need to make sure the user is allowed to manage the loaner
     loan: models_loan.Loan | None = await cruds_loan.get_loan_by_id(
-        loan_id=loan_id, db=db
+        loan_id=loan_id,
+        db=db,
     )
     if loan is None:
         raise HTTPException(
@@ -650,7 +671,8 @@ async def update_loan(  # noqa: C901
             item_id: str = item_borrowed.item_id
             quantity: int = item_borrowed.quantity
             item: models_loan.Item | None = await cruds_loan.get_loaner_item_by_id(
-                loaner_item_id=item_id, db=db
+                loaner_item_id=item_id,
+                db=db,
             )
             if item is None:
                 raise HTTPException(
@@ -665,7 +687,8 @@ async def update_loan(  # noqa: C901
                 )
             # We need to check if the quantity is available
             loaned_quantity = await cruds_loan.get_loaned_quantity(
-                item_id=item.id, db=db
+                item_id=item.id,
+                db=db,
             )
             if loaned_quantity is None:
                 raise HTTPException(
@@ -686,7 +709,9 @@ async def update_loan(  # noqa: C901
         # We need to remove the item_ids list from the schema before calling the update_loan crud function
         loan_in_db_update = schemas_loan.LoanInDBUpdate(**loan_update.model_dump())
         await cruds_loan.update_loan(
-            loan_id=loan_id, loan_update=loan_in_db_update, db=db
+            loan_id=loan_id,
+            loan_update=loan_in_db_update,
+            db=db,
         )
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
@@ -694,7 +719,9 @@ async def update_loan(  # noqa: C901
     for item, quantity in items:
         # We add each item to the loan
         loan_content = models_loan.LoanContent(
-            loan_id=loan_id, item_id=item.id, quantity=quantity
+            loan_id=loan_id,
+            item_id=item.id,
+            quantity=quantity,
         )
         await cruds_loan.create_loan_content(loan_content=loan_content, db=db)
 
@@ -716,7 +743,8 @@ async def delete_loan(
     """
     # We need to make sure the user is allowed to manage the loaner
     loan: models_loan.Loan | None = await cruds_loan.get_loan_by_id(
-        loan_id=loan_id, db=db
+        loan_id=loan_id,
+        db=db,
     )
     if loan is None:
         raise HTTPException(
@@ -765,7 +793,8 @@ async def return_loan(
 
     # We need to make sure the user is allowed to manage the loaner
     loan: models_loan.Loan | None = await cruds_loan.get_loan_by_id(
-        loan_id=loan_id, db=db
+        loan_id=loan_id,
+        db=db,
     )
     if loan is None:
         raise HTTPException(
@@ -819,7 +848,8 @@ async def extend_loan(
 
     # We need to make sure the user is allowed to manage the loaner
     loan: models_loan.Loan | None = await cruds_loan.get_loan_by_id(
-        loan_id=loan_id, db=db
+        loan_id=loan_id,
+        db=db,
     )
     if loan is None:
         raise HTTPException(

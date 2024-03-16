@@ -8,12 +8,66 @@ target-version = "py311"
 [tool.ruff.lint]
 # Enable Pyflakes (`F`), pycodestyle (`E`, `W`), isort (`I`), pep8-naming (`N`), flake8-bugbear (`B`)
 # T201: check for prints, C90: mccabe complexity
-select = ["F", "E", "W", "I", "T201", "C90", "DTZ"] # "B", "N" to add later
-ignore = ["E203", "E266", "E501", "F403"]
+select = [
+    "F",
+    "E",
+    "W",
+    "I",
+    "T201",
+    "C90",
+    "DTZ",
+    "UP",
+    "ASYNC",
+    "S",
+    "B",
+    "A",
+    "COM",
+    "C4",
+    "ISC",
+    "ICN",
+    "INP",
+    "PIE",
+    "T20",
+    "PYI",
+    "PT",
+    "Q",
+    "SLF",
+    "SLOT",
+    "SIM",
+    "TCH",
+    "PTH",
+    "RUF",
+] # "B", "N" to add later
+ignore = [
+    "E203",
+    "E266",
+    "E501",
+    "F403",
+    "S104",
+    "B008",
+    "C401",
+    "ISC001",
+    "SIM102",
+    "SIM105",
+    "RUF012", # We may want to enable "Mutable class attributes should be annotated with `typing.ClassVar`"
+]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
 fixable = ["ALL"]
 unfixable = []
+
+[tool.ruff.lint.per-file-ignores]
+# Allow `assert` and hardcoded passwords for tests.
+"tests/*" = ["S101", "S105", "S106"]
+# Allow endpoints, tools and dependencies to raise `HTTPException` after catching an excetion without reraising (`from err`)
+"**/endpoints_*" = ["B904"]
+"**/cruds_*" = ["B904"]          # TODO: find a better way to handle cruds errors
+"app/utils/tools.py" = ["B904"]
+"app/dependencies.py" = ["B904"]
+# Migrations folder should not really be part of a Python package
+"migrations/env.py" = ["INP001"]
+# Allow raw SQL for migrations
+"migrations/versions/*" = ["S608"]
 
 [tool.ruff.lint.mccabe]
 # Flag errors (`C901`) whenever the complexity level exceeds 18.

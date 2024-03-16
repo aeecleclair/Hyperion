@@ -133,7 +133,8 @@ def test_authorization_code_flow_PKCE():
         "client_id": "AppAuthClientWithPKCE",
     }
     response = client.post(
-        "/auth/token", data=data
+        "/auth/token",
+        data=data,
     )  # Verify that the token has been revoked due to the reuse attempt
 
     assert response.status_code == 400
@@ -213,7 +214,8 @@ def test_authorization_code_flow_secret():
         "client_secret": "secret",
     }
     response = client.post(
-        "/auth/token", data=data
+        "/auth/token",
+        data=data,
     )  # Verify that the token has been revoked due to the reuse attempt
 
     assert response.status_code == 400

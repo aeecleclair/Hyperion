@@ -14,10 +14,12 @@ from app.utils.types.datetime import TZDateTime
 class AmapOrderContent(Base):
     __tablename__ = "amap_order_content"
     product_id: Mapped[str] = mapped_column(
-        ForeignKey("amap_product.id"), primary_key=True
+        ForeignKey("amap_product.id"),
+        primary_key=True,
     )
     order_id: Mapped[str] = mapped_column(
-        ForeignKey("amap_order.order_id"), primary_key=True
+        ForeignKey("amap_order.order_id"),
+        primary_key=True,
     )
     quantity: Mapped[int] = mapped_column(Integer)
     product: Mapped["Product"] = relationship("Product")
@@ -26,10 +28,12 @@ class AmapOrderContent(Base):
 class AmapDeliveryContent(Base):
     __tablename__ = "amap_delivery_content"
     product_id: Mapped[str] = mapped_column(
-        ForeignKey("amap_product.id"), primary_key=True
+        ForeignKey("amap_product.id"),
+        primary_key=True,
     )
     delivery_id: Mapped[str] = mapped_column(
-        ForeignKey("amap_delivery.id"), primary_key=True
+        ForeignKey("amap_delivery.id"),
+        primary_key=True,
     )
 
 
@@ -38,7 +42,10 @@ class Product(Base):
 
     id: Mapped[Mapped[str]] = mapped_column(String, primary_key=True, index=True)
     name: Mapped[Mapped[str]] = mapped_column(
-        String, index=True, nullable=False, unique=True
+        String,
+        index=True,
+        nullable=False,
+        unique=True,
     )
     price: Mapped[float] = mapped_column(Float, nullable=False)
     category: Mapped[str] = mapped_column(String, index=True, nullable=False)
@@ -49,7 +56,10 @@ class Delivery(Base):
 
     id: Mapped[str] = mapped_column(String, primary_key=True, index=True)
     delivery_date: Mapped[date] = mapped_column(
-        Date, nullable=False, unique=False, index=True
+        Date,
+        nullable=False,
+        unique=False,
+        index=True,
     )
     products: Mapped[list[Product]] = relationship(
         "Product",
@@ -63,7 +73,9 @@ class Order(Base):
     __tablename__ = "amap_order"
 
     user_id: Mapped[str] = mapped_column(
-        String, ForeignKey("core_user.id"), nullable=False
+        String,
+        ForeignKey("core_user.id"),
+        nullable=False,
     )
     user: Mapped[CoreUser] = relationship(
         "CoreUser",
@@ -82,7 +94,8 @@ class Order(Base):
     )
     amount: Mapped[float] = mapped_column(Float, nullable=False)
     collection_slot: Mapped[AmapSlotType] = mapped_column(
-        Enum(AmapSlotType), nullable=False
+        Enum(AmapSlotType),
+        nullable=False,
     )
     ordering_date: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
     delivery_date: Mapped[date] = mapped_column(Date, nullable=False)
@@ -92,7 +105,9 @@ class Cash(Base):
     __tablename__ = "amap_cash"
 
     user_id: Mapped[str] = mapped_column(
-        String, ForeignKey("core_user.id"), primary_key=True
+        String,
+        ForeignKey("core_user.id"),
+        primary_key=True,
     )
     user: Mapped[CoreUser] = relationship("CoreUser")
     balance: Mapped[float] = mapped_column(Float, nullable=False)

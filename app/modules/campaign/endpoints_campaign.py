@@ -3,6 +3,7 @@ import logging
 import uuid
 from datetime import UTC, datetime
 
+import aiofiles
 from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.exc import IntegrityError
@@ -163,7 +164,7 @@ async def get_lists(
     status_code=201,
 )
 async def add_list(
-    list: schemas_campaign.ListBase,
+    campaign_list: schemas_campaign.ListBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
@@ -182,11 +183,14 @@ async def add_list(
         )
 
     # Check if the section given exists in the DB.
-    section = await cruds_campaign.get_section_by_id(db=db, section_id=list.section_id)
+    section = await cruds_campaign.get_section_by_id(
+        db=db,
+        section_id=campaign_list.section_id,
+    )
     if section is None:
         raise HTTPException(status_code=404, detail="Given section doesn't exist.")
 
-    if list.type == ListType.blank:
+    if campaign_list.type == ListType.blank:
         raise HTTPException(
             status_code=400,
             detail="Blank list should not be added by an user. They will be created before the vote start.",
@@ -197,7 +201,7 @@ async def add_list(
     # We don't need to add membership for list members by hand
     # SQLAlchemy will do it for us if we provide a `members` list
     members = []
-    for member in list.members:
+    for member in campaign_list.members:
         if await cruds_users.get_user_by_id(db=db, user_id=member.user_id) is None:
             raise HTTPException(
                 status_code=404,
@@ -207,17 +211,17 @@ async def add_list(
             models_campaign.ListMemberships(
                 user_id=member.user_id,
                 role=member.role,
-            )
+            ),
         )
 
     model_list = models_campaign.Lists(
         id=list_id,
-        name=list.name,
-        description=list.description,
-        section_id=list.section_id,
-        type=list.type,
+        name=campaign_list.name,
+        description=campaign_list.description,
+        section_id=campaign_list.section_id,
+        type=campaign_list.type,
         members=members,
-        program=list.program,
+        program=campaign_list.program,
     )
     try:
         await cruds_campaign.add_list(campaign_list=model_list, db=db)
@@ -283,8 +287,8 @@ async def delete_lists_by_type(
 
     try:
         if list_type is None:
-            for type in ListType:
-                await cruds_campaign.delete_list_by_type(list_type=type, db=db)
+            for type_obj in ListType:
+                await cruds_campaign.delete_list_by_type(list_type=type_obj, db=db)
         else:
             await cruds_campaign.delete_list_by_type(list_type=list_type, db=db)
     except ValueError as error:
@@ -315,8 +319,8 @@ async def update_list(
             detail=f"You can't edit a list if the vote has already begun. The module status is {status} but should be 'waiting'",
         )
 
-    list = await cruds_campaign.get_list_by_id(db=db, list_id=list_id)
-    if list is None:
+    list_db = await cruds_campaign.get_list_by_id(db=db, list_id=list_id)
+    if list_db is None:
         raise HTTPException(status_code=404, detail="List not found.")
 
     if campaign_list.members is not None:
@@ -462,11 +466,11 @@ async def open_vote(
 
     # Archive all changes to a json file
     lists = await cruds_campaign.get_lists(db=db)
-    with open(
+    async with aiofiles.open(
         f"data/campaigns/lists-{datetime.now(tz=UTC).date().isoformat()}.json",
-        "w",
+        mode="w",
     ) as file:
-        json.dump([liste.as_dict() for liste in lists], file)
+        await file.write(json.dumps([liste.as_dict() for liste in lists]))
 
 
 @module.router.post(
@@ -573,12 +577,14 @@ async def reset_vote(
     try:
         # Archive results to a json file
         results = await get_results(db=db, user=user)
-        with open(
+        async with aiofiles.open(
             f"data/campaigns/results-{datetime.now(UTC).date().isoformat()}.json",
-            "w",
+            mode="w",
         ) as file:
-            json.dump(
-                [{"list_id": res.list_id, "count": res.count} for res in results], file
+            await file.write(
+                json.dumps(
+                    [{"list_id": res.list_id, "count": res.count} for res in results],
+                ),
             )
 
         await cruds_campaign.reset_campaign(db=db)
@@ -629,11 +635,14 @@ async def vote(
 
     # Check if the user has already voted for this section.
     has_voted = await cruds_campaign.has_user_voted_for_section(
-        db=db, user_id=user.id, section_id=campaign_list.section_id
+        db=db,
+        user_id=user.id,
+        section_id=campaign_list.section_id,
     )
     if has_voted:
         raise HTTPException(
-            status_code=400, detail="You have already voted for this section."
+            status_code=400,
+            detail="You have already voted for this section.",
         )
 
     # Add the vote to the db
@@ -644,7 +653,9 @@ async def vote(
     try:
         # Mark user has voted for the given section.
         await cruds_campaign.mark_has_voted(
-            db=db, user_id=user.id, section_id=campaign_list.section_id
+            db=db,
+            user_id=user.id,
+            section_id=campaign_list.section_id,
         )
         await cruds_campaign.add_vote(
             db=db,
@@ -733,7 +744,7 @@ async def get_results(
                 schemas_campaign.Result(
                     list_id=list_id,
                     count=count,
-                )
+                ),
             )
         return results
     else:
@@ -820,8 +831,8 @@ async def create_campaigns_logo(
             detail=f"Lists can only be edited in waiting mode. The current status is {status}",
         )
 
-    list = await cruds_campaign.get_list_by_id(db=db, list_id=list_id)
-    if list is None:
+    campaign_list = await cruds_campaign.get_list_by_id(db=db, list_id=list_id)
+    if campaign_list is None:
         raise HTTPException(
             status_code=404,
             detail="The list does not exist.",

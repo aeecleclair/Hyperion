@@ -30,7 +30,8 @@ async def init_objects():
     global token_simple
     token_simple = create_api_access_token(user_simple)
     module_visibility = models_core.ModuleVisibility(
-        root=root, allowed_group_id=group_id
+        root=root,
+        allowed_group_id=group_id,
     )
     await add_object_to_db(module_visibility)
 

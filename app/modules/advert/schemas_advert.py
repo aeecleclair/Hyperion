@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class AdvertiserBase(BaseModel):
     name: str
     group_manager_id: str = Field(
-        description="The group manager id should be a group identifier"
+        description="The group manager id should be a group identifier",
     )
 
 

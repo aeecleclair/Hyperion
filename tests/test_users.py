@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest_asyncio
 
 from app.core import models_core
@@ -100,7 +102,7 @@ def test_update_user():
 def test_create_current_user_profile_picture():
     token = create_api_access_token(student_user)
 
-    with open("assets/images/default_profile_picture.png", "rb") as image:
+    with Path("assets/images/default_profile_picture.png").open("rb") as image:
         response = client.post(
             "/users/me/profile-picture",
             files={"image": ("profile picture.png", image, "image/png")},
@@ -160,12 +162,12 @@ def test_search_users():
     )
     assert response.status_code == 200
     data = response.json()
-    assert all([user["id"] not in group_users for user in data])
+    assert all(user["id"] not in group_users for user in data)
 
 
 async def test_invalid_migrate_mail():
     student_user_with_old_email_token = create_api_access_token(
-        student_user_with_old_email
+        student_user_with_old_email,
     )
     other_student_user_token = create_api_access_token(student_user)
 

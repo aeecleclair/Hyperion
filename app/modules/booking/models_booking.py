@@ -25,7 +25,8 @@ class Room(Base):
     id: Mapped[str] = mapped_column(String, primary_key=True, nullable=False)
     name: Mapped[str] = mapped_column(String, nullable=False)
     manager_id: Mapped[str] = mapped_column(
-        ForeignKey("booking_manager.id"), nullable=False
+        ForeignKey("booking_manager.id"),
+        nullable=False,
     )
     manager: Mapped["Manager"] = relationship(lazy="joined", back_populates="rooms")
     bookings: Mapped[list["Booking"]] = relationship(back_populates="room")
@@ -41,14 +42,17 @@ class Booking(Base):
     creation: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
     note: Mapped[str] = mapped_column(String, nullable=True)
     room_id: Mapped[str] = mapped_column(
-        ForeignKey("booking_room.id"), nullable=False, index=True
+        ForeignKey("booking_room.id"),
+        nullable=False,
+        index=True,
     )
     room: Mapped[Room] = relationship(Room, lazy="joined", back_populates="bookings")
     key: Mapped[bool] = mapped_column(Boolean, nullable=False)
     decision: Mapped[str] = mapped_column(String, nullable=False)
     recurrence_rule: Mapped[str | None] = mapped_column(String)
     applicant_id: Mapped[str] = mapped_column(
-        ForeignKey("core_user.id"), nullable=False
+        ForeignKey("core_user.id"),
+        nullable=False,
     )
     applicant: Mapped[CoreUser] = relationship("CoreUser")
     entity: Mapped[str] = mapped_column(String)

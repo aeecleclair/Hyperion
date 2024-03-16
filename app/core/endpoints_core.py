@@ -1,4 +1,5 @@
 from os import path
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
@@ -125,11 +126,11 @@ async def get_style_file(
 
     # Security check (even if FastAPI parsing of path parameters does not allow path traversal)
     if path.commonprefix(
-        (path.realpath(css_path), path.realpath(css_dir))
+        (path.realpath(css_path), path.realpath(css_dir)),
     ) != path.realpath(css_dir):
         raise HTTPException(status_code=404, detail="File not found")
 
-    if not path.isfile(css_path):
+    if not Path(css_path).is_file():
         raise HTTPException(status_code=404, detail="File not found")
 
     return FileResponse(css_path)
@@ -165,13 +166,14 @@ async def get_module_visibility(
     return_module_visibilities = []
     for module in module_list:
         allowed_group_ids = await cruds_core.get_allowed_groups_by_root(
-            root=module.root, db=db
+            root=module.root,
+            db=db,
         )
         return_module_visibilities.append(
             schemas_core.ModuleVisibility(
                 root=module.root,
                 allowed_group_ids=allowed_group_ids,
-            )
+            ),
         )
 
     return return_module_visibilities
@@ -224,7 +226,8 @@ async def add_module_visibility(
         )
 
         return await cruds_core.create_module_visibility(
-            module_visibility=module_visibility_db, db=db
+            module_visibility=module_visibility_db,
+            db=db,
         )
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error))
@@ -238,5 +241,7 @@ async def delete_session(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     await cruds_core.delete_module_visibility(
-        root=root, allowed_group_id=group_id, db=db
+        root=root,
+        allowed_group_id=group_id,
+        db=db,
     )

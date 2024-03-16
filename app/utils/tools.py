@@ -1,10 +1,10 @@
-import glob
 import logging
 import os
-import random
-import shutil
-from typing import Sequence
+import secrets
+from collections.abc import Sequence
+from pathlib import Path
 
+import aiofiles
 from fastapi import HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from rapidfuzz import process
@@ -64,7 +64,9 @@ def fuzzy_search_user(
         choices.append(f"{user.firstname} {user.name} {user.nickname}")
 
     results: list[tuple[str, int | float, int]] = process.extract(
-        query, choices, limit=limit
+        query,
+        choices,
+        limit=limit,
     )
 
     # results has the format : (string used for the comparison, similarity score, index of the object in the choices collection)
@@ -96,11 +98,7 @@ async def save_file_as_data(
     filename: str,
     request_id: str,
     max_file_size: int = 1024 * 1024 * 2,  # 2 MB
-    accepted_content_types: list[str] = [
-        "image/jpeg",
-        "image/png",
-        "image/webp",
-    ],  # images only
+    accepted_content_types: list[str] | None = None,
 ):
     """
     Save an image file to the data folder.
@@ -121,6 +119,14 @@ async def save_file_as_data(
 
     WARNING: **NEVER** trust user input when calling this function. Always check that parameters are valid.
     """
+    if accepted_content_types is None:
+        # Accept only images by default
+        accepted_content_types = [
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+        ]
+
     if image.content_type not in accepted_content_types:
         raise HTTPException(
             status_code=400,
@@ -147,18 +153,23 @@ async def save_file_as_data(
     extension = extensions_mapping.get(image.content_type, "")
     # Remove the existing file if any and create the new one
     try:
-        if not os.path.exists(f"data/{directory}/"):
-            os.makedirs(f"data/{directory}/")
+        # If the directory does not exist, we want to create it
+        Path(f"data/{directory}/").mkdir(parents=True, exist_ok=True)
 
-        for filePath in glob.glob(f"data/{directory}/{filename}.*"):
-            os.remove(filePath)
+        for filePath in Path().glob(f"data/{directory}/{filename}.*"):
+            filePath.unlink()
 
-        with open(f"data/{directory}/{filename}.{extension}", "wb") as buffer:
-            shutil.copyfileobj(image.file, buffer)
+        async with aiofiles.open(
+            f"data/{directory}/{filename}.{extension}",
+            mode="wb",
+        ) as buffer:
+            # https://stackoverflow.com/questions/63580229/how-to-save-uploadfile-in-fastapi
+            while content := await image.read(1024):
+                await buffer.write(content)
 
     except Exception as error:
         hyperion_error_logger.error(
-            f"save_file_to_the_disk: could not save file to {filename}: {error} ({request_id})"
+            f"save_file_to_the_disk: could not save file to {filename}: {error} ({request_id})",
         )
         raise HTTPException(status_code=400, detail="Could not save file")
 
@@ -175,7 +186,7 @@ def get_file_from_data(
 
     WARNING: **NEVER** trust user input when calling this function. Always check that parameters are valid.
     """
-    for filePath in glob.glob(f"data/{directory}/{filename}.*"):
+    for filePath in Path().glob(f"data/{directory}/{filename}.*"):
         return FileResponse(filePath)
 
     return FileResponse(default_asset)
@@ -192,4 +203,6 @@ def get_display_name(
 
 
 def get_random_string(length: int = 5) -> str:
-    return "".join(random.choices("abcdefghijklmnopqrstuvwxyz0123456789", k=length))
+    return "".join(
+        secrets.choice("abcdefghijklmnopqrstuvwxyz0123456789") for _ in range(length)
+    )

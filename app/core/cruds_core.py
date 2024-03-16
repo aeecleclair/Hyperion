@@ -1,4 +1,4 @@
-from typing import Sequence
+from collections.abc import Sequence
 
 from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
@@ -21,12 +21,12 @@ async def get_modules_by_user(
 ) -> Sequence[str]:
     """Return the modules a user has access to"""
 
-    userGroupIds = list(map(lambda group: group.id, user.groups))
+    userGroupIds = [group.id for group in user.groups]
 
     result = await db.execute(
         select(models_core.ModuleVisibility.root)
         .where(models_core.ModuleVisibility.allowed_group_id.in_(userGroupIds))
-        .group_by(models_core.ModuleVisibility.root)
+        .group_by(models_core.ModuleVisibility.root),
     )
 
     return result.unique().scalars().all()
@@ -41,7 +41,7 @@ async def get_allowed_groups_by_root(
     result = await db.execute(
         select(
             models_core.ModuleVisibility.allowed_group_id,
-        ).where(models_core.ModuleVisibility.root == root)
+        ).where(models_core.ModuleVisibility.root == root),
     )
 
     resultList = result.unique().scalars().all()
@@ -60,7 +60,7 @@ async def get_module_visibility(
         select(models_core.ModuleVisibility).where(
             models_core.ModuleVisibility.allowed_group_id == group_id,
             models_core.ModuleVisibility.root == root,
-        )
+        ),
     )
     return result.unique().scalars().first()
 
@@ -89,6 +89,6 @@ async def delete_module_visibility(
         delete(models_core.ModuleVisibility).where(
             models_core.ModuleVisibility.root == root,
             models_core.ModuleVisibility.allowed_group_id == allowed_group_id,
-        )
+        ),
     )
     await db.commit()

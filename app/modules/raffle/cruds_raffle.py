@@ -2,7 +2,7 @@
 
 import logging
 import random
-from typing import Sequence
+from collections.abc import Sequence
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
@@ -19,7 +19,7 @@ async def get_raffles(db: AsyncSession) -> Sequence[models_raffle.Raffle]:
     """Return all raffle from database"""
 
     result = await db.execute(
-        select(models_raffle.Raffle).options(selectinload(models_raffle.Raffle.group))
+        select(models_raffle.Raffle).options(selectinload(models_raffle.Raffle.group)),
     )
     return result.scalars().all()
 
@@ -44,7 +44,7 @@ async def get_raffles_by_groupid(
     db: AsyncSession,
 ) -> Sequence[models_raffle.Raffle]:
     result = await db.execute(
-        select(models_raffle.Raffle).where(models_raffle.Raffle.group_id == group_id)
+        select(models_raffle.Raffle).where(models_raffle.Raffle.group_id == group_id),
     )
     return result.scalars().all()
 
@@ -54,7 +54,7 @@ async def get_raffle_by_id(
     db: AsyncSession,
 ) -> models_raffle.Raffle | None:
     result = await db.execute(
-        select(models_raffle.Raffle).where(models_raffle.Raffle.id == raffle_id)
+        select(models_raffle.Raffle).where(models_raffle.Raffle.id == raffle_id),
     )
     return result.scalars().first()
 
@@ -67,7 +67,7 @@ async def edit_raffle(
     await db.execute(
         update(models_raffle.Raffle)
         .where(models_raffle.Raffle.id == raffle_id)
-        .values(**raffle_update.model_dump(exclude_none=True))
+        .values(**raffle_update.model_dump(exclude_none=True)),
     )
     await db.commit()
 
@@ -79,7 +79,7 @@ async def delete_raffle(
     """Delete a raffle from database by id"""
 
     await db.execute(
-        delete(models_raffle.Raffle).where(models_raffle.Raffle.id == raffle_id)
+        delete(models_raffle.Raffle).where(models_raffle.Raffle.id == raffle_id),
     )
     await db.commit()
 
@@ -88,7 +88,7 @@ async def get_prizes(db: AsyncSession) -> Sequence[models_raffle.Prize]:
     """Return all prizes from database"""
 
     result = await db.execute(
-        select(models_raffle.Prize).options(selectinload(models_raffle.Prize.raffle))
+        select(models_raffle.Prize).options(selectinload(models_raffle.Prize.raffle)),
     )
     return result.scalars().all()
 
@@ -113,7 +113,7 @@ async def get_prizes_by_raffleid(
     db: AsyncSession,
 ) -> Sequence[models_raffle.Prize]:
     result = await db.execute(
-        select(models_raffle.Prize).where(models_raffle.Prize.raffle_id == raffle_id)
+        select(models_raffle.Prize).where(models_raffle.Prize.raffle_id == raffle_id),
     )
     return result.scalars().all()
 
@@ -125,7 +125,7 @@ async def get_prize_by_id(
     result = await db.execute(
         select(models_raffle.Prize)
         .where(models_raffle.Prize.id == prize_id)
-        .options(selectinload(models_raffle.Prize.raffle))
+        .options(selectinload(models_raffle.Prize.raffle)),
     )
     return result.scalars().first()
 
@@ -138,7 +138,7 @@ async def edit_prize(
     await db.execute(
         update(models_raffle.Prize)
         .where(models_raffle.Prize.id == prize_id)
-        .values(**prize_update.model_dump(exclude_none=True))
+        .values(**prize_update.model_dump(exclude_none=True)),
     )
     await db.commit()
 
@@ -150,7 +150,7 @@ async def delete_prize(
     """Delete a prize from database by id"""
 
     await db.execute(
-        delete(models_raffle.Prize).where(models_raffle.Prize.id == prize_id)
+        delete(models_raffle.Prize).where(models_raffle.Prize.id == prize_id),
     )
     await db.commit()
 
@@ -160,8 +160,8 @@ async def delete_prizes_by_raffleid(db: AsyncSession, raffle_id: str):
     prizes_to_delete = await get_prizes_by_raffleid(raffle_id=raffle_id, db=db)
     await db.execute(
         delete(models_raffle.Prize).where(
-            models_raffle.Prize.id.in_([prize.id for prize in prizes_to_delete])
-        )
+            models_raffle.Prize.id.in_([prize.id for prize in prizes_to_delete]),
+        ),
     )
     await db.commit()
 
@@ -172,7 +172,7 @@ async def get_packtickets(db: AsyncSession) -> Sequence[models_raffle.PackTicket
     result = await db.execute(
         select(models_raffle.PackTicket).options(
             selectinload(models_raffle.PackTicket.raffle),
-        )
+        ),
     )
     return result.scalars().all()
 
@@ -198,8 +198,8 @@ async def get_packtickets_by_raffleid(
 ) -> Sequence[models_raffle.PackTicket]:
     result = await db.execute(
         select(models_raffle.PackTicket).where(
-            models_raffle.PackTicket.raffle_id == raffle_id
-        )
+            models_raffle.PackTicket.raffle_id == raffle_id,
+        ),
     )
     return result.scalars().all()
 
@@ -211,7 +211,7 @@ async def get_packticket_by_id(
     result = await db.execute(
         select(models_raffle.PackTicket)
         .where(models_raffle.PackTicket.id == packticket_id)
-        .options(selectinload(models_raffle.PackTicket.raffle))
+        .options(selectinload(models_raffle.PackTicket.raffle)),
     )
     return result.scalars().first()
 
@@ -224,7 +224,7 @@ async def edit_packticket(
     await db.execute(
         update(models_raffle.PackTicket)
         .where(models_raffle.PackTicket.id == packticket_id)
-        .values(**packticket_update.model_dump(exclude_none=True))
+        .values(**packticket_update.model_dump(exclude_none=True)),
     )
     await db.commit()
 
@@ -237,8 +237,8 @@ async def delete_packticket(
 
     await db.execute(
         delete(models_raffle.PackTicket).where(
-            models_raffle.PackTicket.id == packticket_id
-        )
+            models_raffle.PackTicket.id == packticket_id,
+        ),
     )
     await db.commit()
 
@@ -246,12 +246,13 @@ async def delete_packticket(
 async def delete_packtickets_by_raffleid(db: AsyncSession, raffle_id: str):
     """Delete packtickets from database by raffle_id"""
     packtickets_to_delete = await get_packtickets_by_raffleid(
-        raffle_id=raffle_id, db=db
+        raffle_id=raffle_id,
+        db=db,
     )
     await db.execute(
         delete(models_raffle.PackTicket).where(
-            models_raffle.PackTicket.id.in_([p.id for p in packtickets_to_delete])
-        )
+            models_raffle.PackTicket.id.in_([p.id for p in packtickets_to_delete]),
+        ),
     )
     await db.commit()
 
@@ -286,11 +287,11 @@ async def get_tickets_by_raffleid(
             await db.execute(
                 select(models_raffle.Ticket).options(
                     joinedload(models_raffle.Ticket.pack_ticket).joinedload(
-                        models_raffle.PackTicket.raffle
+                        models_raffle.PackTicket.raffle,
                     ),
                     joinedload(models_raffle.Ticket.user),
                     joinedload(models_raffle.Ticket.prize),
-                )
+                ),
             )
         )
         .scalars()
@@ -307,7 +308,7 @@ async def get_ticket_by_id(
     db: AsyncSession,
 ) -> models_raffle.Ticket | None:
     result = await db.execute(
-        select(models_raffle.Ticket).where(models_raffle.Ticket.id == ticket_id)
+        select(models_raffle.Ticket).where(models_raffle.Ticket.id == ticket_id),
     )
     return result.scalars().first()
 
@@ -321,11 +322,11 @@ async def get_tickets_by_userid(
         .where(models_raffle.Ticket.user_id == user_id)
         .options(
             joinedload(models_raffle.Ticket.pack_ticket).joinedload(
-                models_raffle.PackTicket.raffle
+                models_raffle.PackTicket.raffle,
             ),
             joinedload(models_raffle.Ticket.user),
             joinedload(models_raffle.Ticket.prize),
-        )
+        ),
     )
     return result.scalars().all()
 
@@ -337,7 +338,7 @@ async def delete_ticket(
     """Delete a ticket from database by id"""
 
     await db.execute(
-        delete(models_raffle.Ticket).where(models_raffle.Ticket.id == ticket_id)
+        delete(models_raffle.Ticket).where(models_raffle.Ticket.id == ticket_id),
     )
     await db.commit()
 
@@ -347,15 +348,15 @@ async def delete_tickets_by_raffleid(db: AsyncSession, raffle_id: str):
     tickets_to_delete = await get_tickets_by_raffleid(raffle_id=raffle_id, db=db)
     await db.execute(
         delete(models_raffle.Ticket).where(
-            models_raffle.Ticket.id.in_([t.id for t in tickets_to_delete])
-        )
+            models_raffle.Ticket.id.in_([t.id for t in tickets_to_delete]),
+        ),
     )
     await db.commit()
 
 
 async def get_users_cash(db: AsyncSession) -> Sequence[models_raffle.Cash]:
     result = await db.execute(
-        select(models_raffle.Cash).options(selectinload(models_raffle.Cash.user))
+        select(models_raffle.Cash).options(selectinload(models_raffle.Cash.user)),
     )
     return result.scalars().all()
 
@@ -364,13 +365,14 @@ async def get_cash_by_id(db: AsyncSession, user_id: str) -> models_raffle.Cash |
     result = await db.execute(
         select(models_raffle.Cash)
         .where(models_raffle.Cash.user_id == user_id)
-        .options(selectinload(models_raffle.Cash.user))
+        .options(selectinload(models_raffle.Cash.user)),
     )
     return result.scalars().first()
 
 
 async def create_cash_of_user(
-    db: AsyncSession, cash: models_raffle.Cash
+    db: AsyncSession,
+    cash: models_raffle.Cash,
 ) -> models_raffle.Cash:
     db.add(cash)
     try:
@@ -385,7 +387,7 @@ async def edit_cash(db: AsyncSession, user_id: str, amount: float):
     await db.execute(
         update(models_raffle.Cash)
         .where(models_raffle.Cash.user_id == user_id)
-        .values(user_id=user_id, balance=amount)
+        .values(user_id=user_id, balance=amount),
     )
     try:
         await db.commit()
@@ -395,7 +397,8 @@ async def edit_cash(db: AsyncSession, user_id: str, amount: float):
 
 
 async def draw_winner_by_prize_raffle(
-    prize_id: str, db: AsyncSession
+    prize_id: str,
+    db: AsyncSession,
 ) -> Sequence[models_raffle.Ticket]:
     prize = await get_prize_by_id(prize_id=prize_id, db=db)
     if prize is None:
@@ -417,7 +420,7 @@ async def draw_winner_by_prize_raffle(
     await db.execute(
         update(models_raffle.Ticket)
         .where(models_raffle.Ticket.id.in_([w.id for w in winners]))
-        .values(winning_prize=prize_id)
+        .values(winning_prize=prize_id),
     )
     try:
         await db.commit()
@@ -428,7 +431,7 @@ async def draw_winner_by_prize_raffle(
     await db.execute(
         update(models_raffle.Prize)
         .where(models_raffle.Prize.id == prize_id)
-        .values(quantity=prize.quantity - len(winners))
+        .values(quantity=prize.quantity - len(winners)),
     )
     try:
         await db.commit()
@@ -443,11 +446,13 @@ async def draw_winner_by_prize_raffle(
 
 
 async def change_raffle_status(
-    db: AsyncSession, raffle_id: str, status: RaffleStatusType
+    db: AsyncSession,
+    raffle_id: str,
+    status: RaffleStatusType,
 ):
     await db.execute(
         update(models_raffle.Raffle)
         .where(models_raffle.Raffle.id == raffle_id)
-        .values(status=status)
+        .values(status=status),
     )
     await db.commit()

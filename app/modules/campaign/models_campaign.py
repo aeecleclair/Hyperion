@@ -11,7 +11,8 @@ class ListMemberships(Base):
 
     user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), primary_key=True)
     list_id: Mapped[str] = mapped_column(
-        ForeignKey("campaign_lists.id"), primary_key=True
+        ForeignKey("campaign_lists.id"),
+        primary_key=True,
     )
     user: Mapped[models_core.CoreUser] = relationship("CoreUser")
     lists: Mapped["Lists"] = relationship("Lists", back_populates="members")
@@ -37,7 +38,8 @@ class Lists(Base):
     section: Mapped[Sections] = relationship("Sections", back_populates="lists")
     type: Mapped[str] = mapped_column(String, nullable=False)
     members: Mapped[list[ListMemberships]] = relationship(
-        "ListMemberships", back_populates="lists"
+        "ListMemberships",
+        back_populates="lists",
     )
     program: Mapped[str | None] = mapped_column(String)
 
@@ -60,7 +62,8 @@ class Votes(Base):
 
     id = mapped_column(String, primary_key=True)
     list_id: Mapped[str] = mapped_column(
-        ForeignKey("campaign_lists.id"), nullable=False
+        ForeignKey("campaign_lists.id"),
+        nullable=False,
     )
 
 
@@ -70,7 +73,8 @@ class HasVoted(Base):
     # There are two primary keys, has each user_id and section_id will be used multiple times but the combinaison of the two should always be unique
     user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), primary_key=True)
     section_id: Mapped[str] = mapped_column(
-        ForeignKey("campaign_sections.id"), primary_key=True
+        ForeignKey("campaign_sections.id"),
+        primary_key=True,
     )
 
 

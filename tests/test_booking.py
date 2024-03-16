@@ -182,7 +182,7 @@ def test_get_user_bookings_manage_confirmed():
         headers={"Authorization": f"Bearer {token_manager}"},
     )
     assert response.status_code == 200
-    assert booking_id in map(lambda booking: booking["id"], response.json())
+    assert booking_id in [booking["id"] for booking in response.json()]
 
 
 def test_get_bookings_confirmed():

@@ -1,6 +1,7 @@
+from collections.abc import Sequence
 from datetime import UTC, datetime
-from typing import Sequence
 
+import aiofiles
 from icalendar import Calendar, Event, vRecur
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
@@ -17,8 +18,8 @@ async def get_all_events(db: AsyncSession) -> Sequence[models_calendar.Event]:
     """Retriveve all the events in the database."""
     result = await db.execute(
         select(models_calendar.Event).options(
-            selectinload(models_calendar.Event.applicant)
-        )
+            selectinload(models_calendar.Event.applicant),
+        ),
     )
     return result.scalars().all()
 
@@ -28,8 +29,8 @@ async def get_confirmed_events(
 ) -> Sequence[models_calendar.Event]:
     result = await db.execute(
         select(models_calendar.Event).where(
-            models_calendar.Event.decision == Decision.approved
-        )
+            models_calendar.Event.decision == Decision.approved,
+        ),
     )
     return result.scalars().all()
 
@@ -39,24 +40,26 @@ async def get_event(db: AsyncSession, event_id: str) -> models_calendar.Event | 
     result = await db.execute(
         select(models_calendar.Event)
         .where(models_calendar.Event.id == event_id)
-        .options(selectinload(models_calendar.Event.applicant))
+        .options(selectinload(models_calendar.Event.applicant)),
     )
     return result.scalars().first()
 
 
 async def get_applicant_events(
-    db: AsyncSession, applicant_id: str
+    db: AsyncSession,
+    applicant_id: str,
 ) -> Sequence[models_calendar.Event]:
     result = await db.execute(
         select(models_calendar.Event)
         .where(models_calendar.Event.applicant_id == applicant_id)
-        .options(selectinload(models_calendar.Event.applicant))
+        .options(selectinload(models_calendar.Event.applicant)),
     )
     return result.scalars().all()
 
 
 async def add_event(
-    db: AsyncSession, event: models_calendar.Event
+    db: AsyncSession,
+    event: models_calendar.Event,
 ) -> models_calendar.Event:
     """Add an event to the database."""
 
@@ -71,12 +74,14 @@ async def add_event(
 
 
 async def edit_event(
-    db: AsyncSession, event_id: str, event: schemas_calendar.EventEdit
+    db: AsyncSession,
+    event_id: str,
+    event: schemas_calendar.EventEdit,
 ):
     await db.execute(
         update(models_calendar.Event)
         .where(models_calendar.Event.id == event_id)
-        .values(**event.model_dump(exclude_none=True))
+        .values(**event.model_dump(exclude_none=True)),
     )
     try:
         await db.commit()
@@ -88,7 +93,7 @@ async def edit_event(
 async def delete_event(db: AsyncSession, event_id: str) -> None:
     """Delete the event given in the database."""
     await db.execute(
-        delete(models_calendar.Event).where(models_calendar.Event.id == event_id)
+        delete(models_calendar.Event).where(models_calendar.Event.id == event_id),
     )
     try:
         await db.commit()
@@ -106,7 +111,7 @@ async def confirm_event(db: AsyncSession, decision: Decision, event_id: str):
     await db.execute(
         update(models_calendar.Event)
         .where(models_calendar.Event.id == event_id)
-        .values(decision=decision)
+        .values(decision=decision),
     )
     try:
         await db.commit()
@@ -146,5 +151,5 @@ async def create_icalendar_file(db: AsyncSession) -> None:
 
             calendar.add_component(ical_event)
 
-    with open(calendar_file_path, "wb") as calendar_file:
-        calendar_file.write(calendar.to_ical())
+    async with aiofiles.open(calendar_file_path, mode="wb") as calendar_file:
+        await calendar_file.write(calendar.to_ical())
