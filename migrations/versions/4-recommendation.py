@@ -1,8 +1,8 @@
-"""recommendation
+"""add migration file for recommendation module
 
-Revision ID: d233bd29c521
-Revises: f17e6182b0a9
-Create Date: 2024-02-23 19:12:25.372249
+Revision ID: 3f9843f165e9
+Revises: 99a2c70e4a24
+Create Date: 2024-03-16 06:02:34.664485
 
 """
 
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "d233bd29c521"
-down_revision: str | None = "f17e6182b0a9"
+revision: str = "3f9843f165e9"
+down_revision: str | None = "99a2c70e4a24"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -23,7 +23,7 @@ def upgrade() -> None:
     op.create_table(
         "recommendation",
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("creation", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("creation", sa.DateTime(timezone=False), nullable=False),
         sa.Column("title", sa.String(), nullable=False),
         sa.Column("code", sa.String(), nullable=True),
         sa.Column("summary", sa.String(), nullable=False),
