@@ -364,6 +364,7 @@ async def delete_advert(
 async def read_advert_image(
     advert_id: str,
     db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Get the image of an advert
