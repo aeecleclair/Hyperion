@@ -58,7 +58,7 @@ unfixable = []
 
 [tool.ruff.lint.per-file-ignores]
 # Allow `assert` and hardcoded passwords for tests.
-"tests/*" = ["S101", "S105", "S106"]
+"tests/*" = ["S101", "S105", "S106", "ASYNC101"]
 # Allow endpoints, tools and dependencies to raise `HTTPException` after catching an excetion without reraising (`from err`)
 "**/endpoints_*" = ["B904"]
 "**/cruds_*" = ["B904"]          # TODO: find a better way to handle cruds errors

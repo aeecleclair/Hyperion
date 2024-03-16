@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 import secrets
 from collections.abc import Sequence
 from pathlib import Path
@@ -17,6 +18,10 @@ from app.core.models_core import CoreUser
 from app.core.users import cruds_users
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
+
+uuid_regex = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+)
 
 
 def is_user_member_of_an_allowed_group(
@@ -107,6 +112,7 @@ async def save_file_as_data(
     - Maximum size is 2MB by default, it can be changed using `max_file_size` (in bytes) parameter.
     - `accepted_content_types` is a list of accepted content types. By default, only images are accepted.
         Use: `["image/jpeg", "image/png", "image/webp"]` to accept only images.
+    - Filename should be an uuid.
 
     The file extension will be inferred from the provided content file.
     There should only be one file with the same filename, thus, saving a new file will remove the existing even if its extension was different.
@@ -126,6 +132,12 @@ async def save_file_as_data(
             "image/png",
             "image/webp",
         ]
+
+    if not uuid_regex.match(filename):
+        hyperion_error_logger.error(
+            f"save_file_as_data: security issue, the filename is not a valid UUID: {filename}.",
+        )
+        raise ValueError("The filename is not a valid UUID")
 
     if image.content_type not in accepted_content_types:
         raise HTTPException(
@@ -178,14 +190,22 @@ def get_file_from_data(
     directory: str,
     filename: str,
     default_asset: str,
-):
+) -> FileResponse:
     """
     If there is a file with the provided filename in the data folder, return it. The file extension will be inferred from the provided content file.
     > "data/{directory}/{filename}.ext"
     Otherwise, return the default asset.
 
+    The filename should be a uuid.
+
     WARNING: **NEVER** trust user input when calling this function. Always check that parameters are valid.
     """
+    if not uuid_regex.match(filename):
+        hyperion_error_logger.error(
+            f"get_file_from_data: security issue, the filename is not a valid UUID: {filename}. This mean that the user input was not properly checked.",
+        )
+        raise ValueError("The filename is not a valid UUID")
+
     for filePath in Path().glob(f"data/{directory}/{filename}.*"):
         return FileResponse(filePath)
 
