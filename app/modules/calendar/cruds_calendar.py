@@ -1,5 +1,5 @@
-from datetime import UTC, datetime
 from collections.abc import Sequence
+from datetime import UTC, datetime
 
 import aiofiles
 from icalendar import Calendar, Event, vRecur
@@ -58,7 +58,8 @@ async def get_applicant_events(
 
 
 async def add_event(
-    db: AsyncSession, event: models_calendar.Event
+    db: AsyncSession,
+    event: models_calendar.Event,
 ) -> models_calendar.Event:
     """Add an event to the database."""
 

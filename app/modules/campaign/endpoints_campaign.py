@@ -466,9 +466,9 @@ async def open_vote(
 
     # Archive all changes to a json file
     lists = await cruds_campaign.get_lists(db=db)
-    with open(
+    async with aiofiles.open(
         f"data/campaigns/lists-{datetime.now(tz=UTC).date().isoformat()}.json",
-        "w",
+        mode="w",
     ) as file:
         await file.write(json.dumps([liste.as_dict() for liste in lists]))
 
@@ -577,9 +577,9 @@ async def reset_vote(
     try:
         # Archive results to a json file
         results = await get_results(db=db, user=user)
-        with open(
+        async with aiofiles.open(
             f"data/campaigns/results-{datetime.now(UTC).date().isoformat()}.json",
-            "w",
+            mode="w",
         ) as file:
             await file.write(
                 json.dumps(

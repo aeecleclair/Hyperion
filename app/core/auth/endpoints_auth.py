@@ -3,7 +3,6 @@ import hashlib
 import logging
 import urllib.parse
 from datetime import UTC, datetime, timedelta
-from typing import Set
 
 from fastapi import (
     APIRouter,
@@ -344,7 +343,7 @@ async def authorize_validation(
     # RECOMMENDED. The client MUST NOT use the authorization code more than once.
     authorization_code = generate_token()
     expire_on = datetime.now(UTC) + timedelta(
-        minutes=settings.AUTHORIZATION_CODE_EXPIRE_MINUTES
+        minutes=settings.AUTHORIZATION_CODE_EXPIRE_MINUTES,
     )
     # We save this authorization_code to the database
     # We can not use a JWT for this as:
@@ -751,7 +750,8 @@ async def refresh_token_grant(
 
     if db_refresh_token.expire_on < datetime.now(UTC):
         await cruds_auth.revoke_refresh_token_by_token(
-            db=db, token=db_refresh_token.token
+            db=db,
+            token=db_refresh_token.token,
         )
         return JSONResponse(
             status_code=400,

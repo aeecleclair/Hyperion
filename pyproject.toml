@@ -57,7 +57,7 @@ fixable = ["ALL"]
 unfixable = []
 
 [tool.ruff.lint.per-file-ignores]
-# Allow `assert` and hardcoded passwords for tests
+# Allow `assert` and hardcoded passwords for tests.
 "tests/*" = ["S101", "S105", "S106"]
 # Allow endpoints, tools and dependencies to raise `HTTPException` after catching an excetion without reraising (`from err`)
 "**/endpoints_*" = ["B904"]
@@ -66,6 +66,8 @@ unfixable = []
 "app/dependencies.py" = ["B904"]
 # Migrations folder should not really be part of a Python package
 "migrations/env.py" = ["INP001"]
+# Allow raw SQL for migrations
+"migrations/versions/*" = ["S608"]
 
 [tool.ruff.lint.mccabe]
 # Flag errors (`C901`) whenever the complexity level exceeds 18.
