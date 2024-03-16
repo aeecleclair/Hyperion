@@ -1,8 +1,8 @@
 import logging
-from datetime import date, datetime, timezone
+from datetime import date, datetime
 
 from fastapi import Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
+from pytz import timezone
 
 from app.core import models_core
 from app.core.config import Settings
@@ -91,7 +91,7 @@ async def register_game(
                 )
         except Exception as error:
             hyperion_error_logger.error(
-                f"Error while sending booking status notification to applicant, {error}"
+                f"Error while sending elocaps notification to player, {error}"
             )
 
         return complete_game
