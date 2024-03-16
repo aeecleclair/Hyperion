@@ -35,19 +35,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # Booking
-    downgrade_column("booking", "start")
-    downgrade_column("booking", "end")
-    downgrade_column("booking", "creation")
-    # Advert
-    downgrade_column("advert_adverts", "date")
-    # Amap
-    downgrade_column("amap_order", "ordering_date")
-    # Calendar
-    downgrade_column("calendar_events", "start")
-    downgrade_column("calendar_events", "end")
-    # Cinema
-    downgrade_column("cinema_session", "start")
+    pass
 
 
 def upgrade_column(table, column):
@@ -55,10 +43,3 @@ def upgrade_column(table, column):
         f'UPDATE "{table}" SET "{column}" = "{column}"::timestamp AT TIME ZONE \'Europe/Paris\''
     )
     op.alter_column(table, column, type_=sa.DateTime(timezone=False))
-
-
-def downgrade_column(table, column):
-    op.execute(
-        f'UPDATE "{table}" SET "{column}" = "{column}" AT TIME ZONE \'Europe/Paris\''
-    )
-    op.alter_column(table, column, type_=sa.DateTime(timezone=True))
