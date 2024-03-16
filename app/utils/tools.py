@@ -229,7 +229,10 @@ def get_random_string(length: int = 5) -> str:
 
 
 def compute_elo_gain(
-    score: float, k: float, rating: float, opponent_rating: float
+    score: float,
+    k: float,
+    rating: float,
+    opponent_rating: float,
 ) -> float:
     expected = 1 / (10 ** ((opponent_rating - rating) / 400) + 1)
     return k * (score - expected)

@@ -1,11 +1,14 @@
 from __future__ import annotations
 
-from datetime import datetime
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict
 
-from app.core.schemas_core import CoreUserSimple
-from app.modules.elocaps.types_elocaps import CapsMode
+if TYPE_CHECKING:
+    from datetime import datetime
+
+    from app.core.schemas_core import CoreUserSimple
+    from app.modules.elocaps.types_elocaps import CapsMode
 
 
 class PlayerBase(BaseModel):

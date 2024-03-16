@@ -1,9 +1,9 @@
-from datetime import date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from random import randint
 from typing import TypedDict
 
+import pytest
 import pytest_asyncio
-from pytest import mark
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
@@ -25,6 +25,8 @@ class UserTest(TypedDict):
     user: models_core.CoreUser
     token: str
     players: dict[CapsMode, models_elocaps.Player]
+
+
 users: list[UserTest] = []
 newUser: models_core.CoreUser | None = None
 game_players: list[models_elocaps.GamePlayer] = []
@@ -38,19 +40,20 @@ async def create_games(db, n):
             await add_object_to_db(player)
             user["players"][mode] = player
     await db.commit()
-    for i in range(n):
+    for _ in range(n):
         game = models_elocaps.Game(
             mode=CapsMode.CD,
-            timestamp=datetime.today() - timedelta(hours=2, minutes=randint(0, 4320)),
+            timestamp=datetime.now(tz=UTC)
+            - timedelta(hours=2, minutes=randint(0, 4320)),  # noqa: S311 "Standard pseudo-random generators are not suitable for cryptographic purposes"
         )
         games.append(game)
         db.add(game)
         await db.commit()
-        win = randint(-1, 1)
+        win = randint(-1, 1)  # noqa: S311 "Standard pseudo-random generators are not suitable for cryptographic purposes"
         one_game_players = [
             models_elocaps.GamePlayer(
                 game_id=game.id,
-                player_id=users[randint(0, 2)]["players"][CapsMode.CD].id,
+                player_id=users[randint(0, 2)]["players"][CapsMode.CD].id,  # noqa: S311 "Standard pseudo-random generators are not suitable for cryptographic purposes"
                 team=1,
                 score=win,
             ),
@@ -81,7 +84,7 @@ async def create_games(db, n):
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def initialize_the_things_that_are_needed_for_the_tests():
     async with TestingSessionLocal() as db:
-        for i in range(4):
+        for _ in range(4):
             user = await create_user_with_groups([GroupType.student])
             token = create_api_access_token(user)
             users.append({"user": user, "token": token, "players": {}})
@@ -97,11 +100,12 @@ def test_get_latest_games():
     )
     assert response.status_code == 200
     json = response.json()
-    assert len(json) == min(10, len(games)) and len(json[0]["game_players"]) == 2
+    assert len(json) == min(10, len(games))
+    assert len(json[0]["game_players"]) == 2
 
 
 def test_get_games_played_on():
-    today = date.today()
+    today = datetime.datetime.now(tz=UTC).date()
     yesterday = today - timedelta(days=1)
     response1 = client.get(
         f"/elocaps/games?time={today.isoformat()}",
@@ -111,10 +115,12 @@ def test_get_games_played_on():
         f"/elocaps/games?time={yesterday.isoformat()}",
         headers={"Authorization": f"Bearer {users[0]['token']}"},
     )
-    assert response1.status_code == 200 and len(response1.json()) == len(
+    assert response1.status_code == 200
+    assert len(response1.json()) == len(
         [i for i in games if i.timestamp.date() == today],
     )
-    assert response2.status_code == 200 and len(response2.json()) == len(
+    assert response2.status_code == 200
+    assert len(response2.json()) == len(
         [i for i in games if i.timestamp.date() == yesterday],
     )
 
@@ -173,11 +179,9 @@ def test_validate_and_end_game():
         f"/elocaps/games/{game.id}",
         headers={"Authorization": f"Bearer {users[0]['token']}"},
     )
-    assert (
-        response.status_code == 200
-        and response.json()["id"] == game.id
-        and response.json()["is_confirmed"]
-    )
+    assert response.status_code == 200
+    assert response.json()["id"] == game.id
+    assert response.json()["is_confirmed"]
 
 
 def test_get_waiting_games():
@@ -188,19 +192,20 @@ def test_get_waiting_games():
     assert response.status_code == 200
 
 
-@mark.parametrize("player_nb", range(4))
+@pytest.mark.parametrize("player_nb", range(4))
 def test_player_games(player_nb: int):
     user = users[player_nb]
     response = client.get(
         f"/elocaps/players/{user['user'].id}/games",
         headers={"Authorization": f"Bearer {user['token']}"},
     )
-    assert response.status_code == 200 and len(response.json()) == len(
+    assert response.status_code == 200
+    assert len(response.json()) == len(
         [i for i in game_players if i.user_id == user["user"].id],
     )
 
 
-@mark.parametrize("player_nb", range(4))
+@pytest.mark.parametrize("player_nb", range(4))
 def test_player_info(player_nb: int):
     response = client.get(
         f"/elocaps/players/{users[player_nb]['user'].id}",
@@ -290,16 +295,10 @@ def test_create_game():
         "/elocaps/games/latest",
         headers={"Authorization": f"Bearer {users[0]['token']}"},
     )
-    assert (
-        response.status_code == 200
-        and (
-            game_player := next(
-                i for i in response.json()[0]["game_players"] if i["team"] == 2
-            )
-        )["score"]
-        == -1
-        and game_player["elo_gain"] is not None
-    )
+    assert response.status_code == 200
+    game_player = next(i for i in response.json()[0]["game_players"] if i["team"] == 2)
+    assert game_player["score"] == -1
+    assert game_player["elo_gain"] is not None
     assert (
         client.post(
             "/elocaps/games",

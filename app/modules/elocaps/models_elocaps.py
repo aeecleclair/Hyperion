@@ -2,15 +2,19 @@ from __future__ import (  # Permit the use of class names not declared yet in th
     annotations,
 )
 
-from datetime import datetime
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core import models_core
 from app.database import Base
 from app.modules.elocaps.types_elocaps import CapsMode
+
+if TYPE_CHECKING:
+    from datetime import datetime
+
+    from app.core import models_core
 
 
 class Player(Base):
@@ -18,7 +22,10 @@ class Player(Base):
 
     # Needed because relationships are awful and don't even work if it's not there
     id: Mapped[str] = mapped_column(
-        String, primary_key=True, nullable=False, default=lambda: str(uuid4()),
+        String,
+        primary_key=True,
+        nullable=False,
+        default=lambda: str(uuid4()),
     )
     user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), nullable=False)
     mode: Mapped[CapsMode] = mapped_column(Enum(CapsMode), nullable=False)
@@ -27,7 +34,8 @@ class Player(Base):
 
     user: Mapped[models_core.CoreUser] = relationship("CoreUser")
     game_players: Mapped[list[GamePlayer]] = relationship(
-        "GamePlayer", back_populates="player",
+        "GamePlayer",
+        back_populates="player",
     )
 
 
@@ -35,21 +43,27 @@ class Game(Base):
     __tablename__ = "elocaps_game"
 
     id: Mapped[str] = mapped_column(
-        String, primary_key=True, nullable=False, default=lambda: str(uuid4()),
+        String,
+        primary_key=True,
+        nullable=False,
+        default=lambda: str(uuid4()),
     )
     timestamp: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=func.now(),
+        DateTime,
+        nullable=False,
+        default=func.now(),
     )
     mode: Mapped[CapsMode] = mapped_column(Enum(CapsMode), nullable=False)
     is_cancelled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     game_players: Mapped[list[GamePlayer]] = relationship(
-        "GamePlayer", back_populates="game",
+        "GamePlayer",
+        back_populates="game",
     )
 
     @property
     def is_confirmed(self) -> bool:
-        return all([i.has_confirmed for i in self.game_players])
+        return all(i.has_confirmed for i in self.game_players)
 
     def get_team_score(self, team: int) -> float:
         """Returns 0, 0.5, or 1."""
@@ -71,10 +85,14 @@ class GamePlayer(Base):
     __tablename__ = "elocaps_game_player"
 
     game_id: Mapped[str] = mapped_column(
-        ForeignKey("elocaps_game.id"), nullable=False, primary_key=True,
+        ForeignKey("elocaps_game.id"),
+        nullable=False,
+        primary_key=True,
     )
     player_id: Mapped[str] = mapped_column(
-        ForeignKey("elocaps_player.id"), nullable=False, primary_key=True,
+        ForeignKey("elocaps_player.id"),
+        nullable=False,
+        primary_key=True,
     )
     team: Mapped[int] = mapped_column(Integer, nullable=False)
     score: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -83,7 +101,9 @@ class GamePlayer(Base):
 
     game: Mapped[Game] = relationship("Game")
     player: Mapped[Player] = relationship(
-        "Player", uselist=False, back_populates="game_players",
+        "Player",
+        uselist=False,
+        back_populates="game_players",
     )
 
     @property

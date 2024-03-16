@@ -1,8 +1,7 @@
 import logging
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 
 from fastapi import Depends, HTTPException
-from pytz import timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
@@ -58,7 +57,8 @@ async def register_game(
             await cruds_elocaps.insert_player_into_game(db, game, player)
         complete_game = await cruds_elocaps.get_game_details(db, game.id)
         # Since it has just been inserted, it should still be there
-        assert complete_game is not None
+        if complete_game is None:
+            raise HTTPException(400, "Game does not exist")
         for game_player in complete_game.game_players:
             team = game_player.team
             elo_gain = round(
@@ -71,14 +71,15 @@ async def register_game(
             )
             await cruds_elocaps.set_player_elo_gain(db, game_player, elo_gain)
         creator = await cruds_elocaps.get_game_player(db, game.id, user.id)
-        assert creator is not None
+        if creator is None:
+            raise HTTPException(400, "GamePlayer does not exist")
         await cruds_elocaps.user_game_validation(db, creator)
 
         try:
             for player in game_params.players:
                 if player.user_id == user.id:
                     continue
-                now = datetime.now(timezone(settings.TIMEZONE))
+                now = datetime.now(tz=UTC)
                 message = Message(
                     context=f"elocaps-newgame-{game.id}-{player.user_id}",
                     is_visible=True,
@@ -165,11 +166,14 @@ async def confirm_game(
 ):
     try:
         player = await cruds_elocaps.get_game_player(
-            db, game_id=game_id, user_id=user.id,
+            db,
+            game_id=game_id,
+            user_id=user.id,
         )
         if not player:
             raise HTTPException(
-                400, "You are not part of that game, or it doesn't exist",
+                400,
+                "You are not part of that game, or it doesn't exist",
             )
         if player.game.is_cancelled:
             raise HTTPException(400, "This game has been cancelled")
@@ -227,7 +231,8 @@ async def get_player_info(
     # Build a DetailedPlayer object (a dict that looks like {mode: {elo, winrate}})
     mode_info = {
         x.mode: schemas_elocaps.PlayerModeInfo(
-            elo=x.elo, winrate=await cruds_elocaps.get_winrate(db, x.mode, user_id),
+            elo=x.elo,
+            winrate=await cruds_elocaps.get_winrate(db, x.mode, user_id),
         )
         for x in db_player_modes
     }
