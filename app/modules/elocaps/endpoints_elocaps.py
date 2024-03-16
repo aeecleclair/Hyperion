@@ -3,6 +3,7 @@ from datetime import date, datetime
 
 from fastapi import Depends, HTTPException
 from pytz import timezone
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
 from app.core.config import Settings
