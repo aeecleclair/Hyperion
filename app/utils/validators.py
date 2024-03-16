@@ -24,10 +24,10 @@ def password_validator(password: str) -> str:
 
     if (
         len(password) < 6
-        and nb_number > 1
-        and nb_special > 1
-        and nb_min > 1
-        and nb_maj > 1
+        and nb_number < 1
+        and nb_special < 1
+        and nb_min < 1
+        and nb_maj < 1
     ):
         raise ValueError(
             "The password must be at least 6 characters long and contain at least one number, one special character, one majuscule and one minuscule."
