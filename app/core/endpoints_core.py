@@ -225,7 +225,6 @@ async def add_module_visibility(
         module_visibility_db = models_core.ModuleVisibility(
             root=module_visibility.root,
             allowed_group_id=module_visibility.allowed_group_id,
-            visible=True,
         )
 
         return await cruds_core.create_module_visibility(
@@ -243,7 +242,7 @@ async def delete_session(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
-    await cruds_core.disable_module_visibility(
+    await cruds_core.delete_module_visibility(
         root=root,
         allowed_group_id=group_id,
         db=db,

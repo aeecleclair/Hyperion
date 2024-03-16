@@ -1,6 +1,6 @@
 from collections.abc import Sequence
 
-from sqlalchemy import select, update
+from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,7 +21,6 @@ async def get_visible_roots_by_user(
         select(models_core.ModuleVisibility.root)
         .where(
             models_core.ModuleVisibility.allowed_group_id.in_(user_group_ids),
-            models_core.ModuleVisibility.visible,
         )
         .group_by(models_core.ModuleVisibility.root),
     )
@@ -42,7 +41,6 @@ async def get_allowed_groups_ids_by_root(
             models_core.ModuleVisibility.allowed_group_id,
         ).where(
             models_core.ModuleVisibility.root == root,
-            models_core.ModuleVisibility.visible,
         ),
     )
 
@@ -64,18 +62,16 @@ async def create_module_visibility(
         raise ValueError(error)
 
 
-async def disable_module_visibility(
+async def delete_module_visibility(
     root: str,
     allowed_group_id: str,
     db: AsyncSession,
 ):
     await db.execute(
-        update(models_core.ModuleVisibility)
-        .where(
+        delete(models_core.ModuleVisibility).where(
             models_core.ModuleVisibility.root == root,
             models_core.ModuleVisibility.allowed_group_id == allowed_group_id,
-        )
-        .values(visible=False),
+        ),
     )
     await db.commit()
 

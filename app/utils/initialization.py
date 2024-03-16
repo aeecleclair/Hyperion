@@ -39,6 +39,18 @@ def get_all_module_visibility_by_root_sync(
     return result.unique().scalars().all()
 
 
+def get_module_awareness_by_root(
+    root: str,
+    db: Session,
+) -> models_core.ModuleAwareness | None:
+    result = db.execute(
+        select(models_core.ModuleAwareness).where(
+            models_core.ModuleAwareness.root == root,
+        ),
+    )
+    return result.scalars().first()
+
+
 def create_module_visibility_sync(
     module_visibility: models_core.ModuleVisibility,
     db: Session,
