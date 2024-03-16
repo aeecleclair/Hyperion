@@ -873,6 +873,13 @@ async def read_campaigns_logo(
             detail="Access forbidden : you are not a poll member",
         )
 
+    campaign_list = await cruds_campaign.get_list_by_id(db=db, list_id=list_id)
+    if campaign_list is None:
+        raise HTTPException(
+            status_code=404,
+            detail="The list does not exist.",
+        )
+
     return get_file_from_data(
         directory="campaigns",
         filename=str(list_id),

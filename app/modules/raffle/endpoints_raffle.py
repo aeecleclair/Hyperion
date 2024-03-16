@@ -254,10 +254,14 @@ async def create_current_raffle_logo(
 async def read_raffle_logo(
     raffle_id: str,
     user: models_core.CoreUser = Depends(is_user_a_member),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get the logo of a specific raffle.
     """
+    raffle = await cruds_raffle.get_raffle_by_id(raffle_id=raffle_id, db=db)
+    if not raffle:
+        raise HTTPException(status_code=404, detail="Raffle not found")
 
     return get_file_from_data(
         directory="raffle-pictures",
@@ -796,10 +800,14 @@ async def create_prize_picture(
 async def read_prize_logo(
     prize_id: str,
     user: models_core.CoreUser = Depends(is_user_a_member),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get the logo of a specific prize.
     """
+    prize = await cruds_raffle.get_prize_by_id(prize_id=prize_id, db=db)
+    if not prize:
+        raise HTTPException(status_code=404, detail="Prize not found")
 
     return get_file_from_data(
         directory="raffle-prize_picture",
