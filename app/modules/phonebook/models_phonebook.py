@@ -10,10 +10,14 @@ class Membership(Base):
 
     id: Mapped[str] = mapped_column(String, index=True, nullable=False)
     user_id: Mapped[str] = mapped_column(
-        String, ForeignKey("core_user.id"), primary_key=True
+        String,
+        ForeignKey("core_user.id"),
+        primary_key=True,
     )
     association_id: Mapped[str] = mapped_column(
-        String, ForeignKey("phonebook_association.id"), primary_key=True
+        String,
+        ForeignKey("phonebook_association.id"),
+        primary_key=True,
     )
     mandate_year: Mapped[int] = mapped_column(Integer, primary_key=True)
     role_name: Mapped[str] = mapped_column(String, nullable=False)
@@ -24,7 +28,10 @@ class Association(Base):
     __tablename__ = "phonebook_association"
 
     id: Mapped[str] = mapped_column(
-        String, primary_key=True, index=True, nullable=False
+        String,
+        primary_key=True,
+        index=True,
+        nullable=False,
     )
     name: Mapped[str] = mapped_column(String, nullable=False, index=True)
     description: Mapped[str] = mapped_column(String, nullable=True)

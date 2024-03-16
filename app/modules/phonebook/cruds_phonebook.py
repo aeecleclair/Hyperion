@@ -1,4 +1,4 @@
-from typing import Sequence
+from collections.abc import Sequence
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
@@ -12,7 +12,9 @@ from app.modules.phonebook import models_phonebook, phonebook_types, schemas_pho
 #                               President test                                 #
 # ---------------------------------------------------------------------------- #
 async def is_user_president(
-    association_id: str, user: models_core.CoreUser, db: AsyncSession
+    association_id: str,
+    user: models_core.CoreUser,
+    db: AsyncSession,
 ) -> bool:
     association = await get_association_by_id(association_id=association_id, db=db)
     if association is None:
@@ -55,14 +57,15 @@ async def get_all_kinds() -> Sequence[str]:
 
 
 async def get_all_memberships(
-    mandate_year: int, db: AsyncSession
+    mandate_year: int,
+    db: AsyncSession,
 ) -> Sequence[models_phonebook.Membership]:
     """Return all Memberships from database"""
 
     result = await db.execute(
         select(models_phonebook.Membership).where(
-            models_phonebook.Membership.mandate_year == mandate_year
-        )
+            models_phonebook.Membership.mandate_year == mandate_year,
+        ),
     )
     return result.scalars().all()
 
@@ -94,7 +97,7 @@ async def update_association(
     await db.execute(
         update(models_phonebook.Association)
         .where(models_phonebook.Association.id == association_id)
-        .values(**association_edit.model_dump(exclude_none=True))
+        .values(**association_edit.model_dump(exclude_none=True)),
     )
     try:
         await db.commit()
@@ -108,13 +111,13 @@ async def delete_association(association_id: str, db: AsyncSession):
 
     await db.execute(  # Memberships from the Association must be deleted first
         delete(models_phonebook.Membership).where(
-            models_phonebook.Membership.association_id == association_id
-        )
+            models_phonebook.Membership.association_id == association_id,
+        ),
     )
     await db.execute(
         delete(models_phonebook.Association).where(
-            models_phonebook.Association.id == association_id
-        )
+            models_phonebook.Association.id == association_id,
+        ),
     )
     try:
         await db.commit()
@@ -124,14 +127,15 @@ async def delete_association(association_id: str, db: AsyncSession):
 
 
 async def get_association_by_id(
-    association_id: str, db: AsyncSession
+    association_id: str,
+    db: AsyncSession,
 ) -> models_phonebook.Association | None:
     """Return Association with id from database"""
 
     result = await db.execute(
         select(models_phonebook.Association).where(
-            models_phonebook.Association.id == association_id
-        )
+            models_phonebook.Association.id == association_id,
+        ),
     )
     return result.scalars().first()
 
@@ -159,7 +163,7 @@ async def update_membership(
     await db.execute(
         update(models_phonebook.Membership)
         .where(models_phonebook.Membership.id == membership_id)
-        .values(**membership_edit.model_dump(exclude_none=True))
+        .values(**membership_edit.model_dump(exclude_none=True)),
     )
     try:
         await db.commit()
@@ -173,8 +177,8 @@ async def delete_membership(membership_id: str, db: AsyncSession):
 
     await db.execute(
         delete(models_phonebook.Membership).where(
-            models_phonebook.Membership.id == membership_id
-        )
+            models_phonebook.Membership.id == membership_id,
+        ),
     )
     try:
         await db.commit()
@@ -184,13 +188,14 @@ async def delete_membership(membership_id: str, db: AsyncSession):
 
 
 async def get_membership_by_user_id(
-    user_id: str, db: AsyncSession
+    user_id: str,
+    db: AsyncSession,
 ) -> Sequence[models_phonebook.Membership]:
     """Return all Memberships with user_id from database"""
     result = await db.execute(
         select(models_phonebook.Membership).where(
-            models_phonebook.Membership.user_id == user_id
-        )
+            models_phonebook.Membership.user_id == user_id,
+        ),
     )
     return result.scalars().all()
 
@@ -203,8 +208,8 @@ async def get_memberships_by_association_id(
 
     result = await db.execute(
         select(models_phonebook.Membership).where(
-            models_phonebook.Membership.association_id == association_id
-        )
+            models_phonebook.Membership.association_id == association_id,
+        ),
     )
     return result.scalars().all()
 
@@ -219,7 +224,7 @@ async def get_memberships_by_association_id_and_mandate_year(
         select(models_phonebook.Membership).where(
             models_phonebook.Membership.association_id == association_id,
             models_phonebook.Membership.mandate_year == mandate_year,
-        )
+        ),
     )
     return result.scalars().all()
 
@@ -237,19 +242,20 @@ async def get_membership_by_association_id_user_id_and_mandate_year(
             models_phonebook.Membership.association_id == association_id,
             models_phonebook.Membership.user_id == user_id,
             models_phonebook.Membership.mandate_year == mandate_year,
-        )
+        ),
     )
     return result.scalars().unique().first()
 
 
 async def get_membership_by_id(
-    membership_id: str, db: AsyncSession
+    membership_id: str,
+    db: AsyncSession,
 ) -> models_phonebook.Membership | None:
     """Return the Membership with id from database"""
 
     result = await db.execute(
         select(models_phonebook.Membership).where(
-            models_phonebook.Membership.id == membership_id
-        )
+            models_phonebook.Membership.id == membership_id,
+        ),
     )
     return result.scalars().first()

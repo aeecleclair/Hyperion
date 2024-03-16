@@ -6,16 +6,16 @@ Create Date: 2024-02-29 11:46:46.895113
 
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "6afc765adaa2"
-down_revision: Union[str, None] = "99a2c70e4a24"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = "99a2c70e4a24"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -60,7 +60,10 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("user_id", "association_id", "mandate_year"),
     )
     op.create_index(
-        op.f("ix_phonebook_membership_id"), "phonebook_membership", ["id"], unique=False
+        op.f("ix_phonebook_membership_id"),
+        "phonebook_membership",
+        ["id"],
+        unique=False,
     )
     # ### end Alembic commands ###
 
@@ -70,10 +73,12 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_phonebook_membership_id"), table_name="phonebook_membership")
     op.drop_table("phonebook_membership")
     op.drop_index(
-        op.f("ix_phonebook_association_name"), table_name="phonebook_association"
+        op.f("ix_phonebook_association_name"),
+        table_name="phonebook_association",
     )
     op.drop_index(
-        op.f("ix_phonebook_association_id"), table_name="phonebook_association"
+        op.f("ix_phonebook_association_id"),
+        table_name="phonebook_association",
     )
     op.drop_table("phonebook_association")
     # ### end Alembic commands ###

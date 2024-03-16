@@ -92,15 +92,19 @@ async def create_association(
     """
 
     if not is_user_member_of_an_allowed_group(
-        user=user, allowed_groups=[GroupType.CAA, GroupType.BDE]
+        user=user,
+        allowed_groups=[GroupType.CAA, GroupType.BDE],
     ):
         raise HTTPException(
             status_code=403,
             detail="You are not allowed to create association",
         )
 
-    id = str(uuid.uuid4())
-    association_model = models_phonebook.Association(id=id, **association.model_dump())
+    associationId = str(uuid.uuid4())
+    association_model = models_phonebook.Association(
+        id=associationId,
+        **association.model_dump(),
+    )
 
     try:
         result = await cruds_phonebook.create_association(association_model, db)
@@ -126,10 +130,13 @@ async def update_association(
     """
     if not (
         is_user_member_of_an_allowed_group(
-            user=user, allowed_groups=[GroupType.CAA, GroupType.BDE]
+            user=user,
+            allowed_groups=[GroupType.CAA, GroupType.BDE],
         )
         or await cruds_phonebook.is_user_president(
-            association_id=association_id, user=user, db=db
+            association_id=association_id,
+            user=user,
+            db=db,
         )
     ):
         raise HTTPException(
@@ -139,7 +146,9 @@ async def update_association(
 
     try:
         await cruds_phonebook.update_association(
-            association_id=association_id, association_edit=association_edit, db=db
+            association_id=association_id,
+            association_edit=association_edit,
+            db=db,
         )
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error))
@@ -163,14 +172,16 @@ async def delete_association(
     """
 
     if not is_user_member_of_an_allowed_group(
-        user=user, allowed_groups=[GroupType.CAA, GroupType.BDE]
+        user=user,
+        allowed_groups=[GroupType.CAA, GroupType.BDE],
     ):
         raise HTTPException(
             status_code=403,
             detail=f"You are not allowed to delete association {association_id}",
         )
     return await cruds_phonebook.delete_association(
-        association_id=association_id, db=db
+        association_id=association_id,
+        db=db,
     )
 
 
@@ -190,7 +201,8 @@ async def get_association_members(
     """Return the list of MemberComplete of an Association."""
 
     association_memberships = await cruds_phonebook.get_memberships_by_association_id(
-        association_id, db
+        association_id,
+        db,
     )
 
     members_complete = []
@@ -199,12 +211,14 @@ async def get_association_members(
         member_id = membership.user_id
         member = await cruds_users.get_user_by_id(user_id=member_id, db=db)
         member_memberships = await cruds_phonebook.get_membership_by_user_id(
-            user_id=member_id, db=db
+            user_id=member_id,
+            db=db,
         )
         members_complete.append(
             schemas_phonebook.MemberComplete(
-                memberships=member_memberships, **member.__dict__
-            )
+                memberships=member_memberships,
+                **member.__dict__,
+            ),
         )
     return members_complete
 
@@ -224,7 +238,9 @@ async def get_association_members_by_mandate_year(
 
     association_memberships = (
         await cruds_phonebook.get_memberships_by_association_id_and_mandate_year(
-            association_id=association_id, mandate_year=mandate_year, db=db
+            association_id=association_id,
+            mandate_year=mandate_year,
+            db=db,
         )
     )
 
@@ -234,12 +250,14 @@ async def get_association_members_by_mandate_year(
         member_id = membership.user_id
         member = await cruds_users.get_user_by_id(user_id=member_id, db=db)
         member_memberships = await cruds_phonebook.get_membership_by_user_id(
-            user_id=member_id, db=db
+            user_id=member_id,
+            db=db,
         )
         members_complete.append(
             schemas_phonebook.MemberComplete(
-                memberships=member_memberships, **member.__dict__
-            )
+                memberships=member_memberships,
+                **member.__dict__,
+            ),
         )
     return members_complete
 
@@ -264,7 +282,8 @@ async def get_member_details(
         return
 
     return schemas_phonebook.MemberComplete(
-        memberships=member_memberships, **member.__dict__
+        memberships=member_memberships,
+        **member.__dict__,
     )
 
 
@@ -290,10 +309,13 @@ async def create_membership(
 
     if not (
         is_user_member_of_an_allowed_group(
-            user=user, allowed_groups=[GroupType.CAA, GroupType.BDE]
+            user=user,
+            allowed_groups=[GroupType.CAA, GroupType.BDE],
         )
         or await cruds_phonebook.is_user_president(
-            association_id=membership.association_id, user=user, db=db
+            association_id=membership.association_id,
+            user=user,
+            db=db,
         )
     ):
         raise HTTPException(
@@ -302,7 +324,8 @@ async def create_membership(
         )
 
     association = await cruds_phonebook.get_association_by_id(
-        membership.association_id, db
+        membership.association_id,
+        db,
     )
     if association is None:
         raise HTTPException(
@@ -324,8 +347,11 @@ async def create_membership(
             "Error : Membership already exists, try modifying the existing one",
         )
 
-    id = str(uuid.uuid4())
-    membership_model = models_phonebook.Membership(id=id, **membership.model_dump())
+    membershipId = str(uuid.uuid4())
+    membership_model = models_phonebook.Membership(
+        id=membershipId,
+        **membership.model_dump(),
+    )
 
     await cruds_phonebook.create_membership(membership_model, db)
 
@@ -349,7 +375,8 @@ async def update_membership(
     """
 
     membership_db = await cruds_phonebook.get_membership_by_id(
-        membership_id=membership_id, db=db
+        membership_id=membership_id,
+        db=db,
     )
     if not membership_db:
         raise HTTPException(
@@ -359,10 +386,13 @@ async def update_membership(
 
     if not (
         is_user_member_of_an_allowed_group(
-            user=user, allowed_groups=[GroupType.CAA, GroupType.BDE]
+            user=user,
+            allowed_groups=[GroupType.CAA, GroupType.BDE],
         )
         or await cruds_phonebook.is_user_president(
-            association_id=membership_db.association_id, user=user, db=db
+            association_id=membership_db.association_id,
+            user=user,
+            db=db,
         )
     ):
         raise HTTPException(
@@ -398,10 +428,13 @@ async def delete_membership(
 
     if not (
         is_user_member_of_an_allowed_group(
-            user=user, allowed_groups=[GroupType.CAA, GroupType.BDE]
+            user=user,
+            allowed_groups=[GroupType.CAA, GroupType.BDE],
         )
         or await cruds_phonebook.is_user_president(
-            association_id=membership.association_id, user=user, db=db
+            association_id=membership.association_id,
+            user=user,
+            db=db,
         )
     ):
         raise HTTPException(
@@ -422,7 +455,7 @@ async def delete_membership(
 )
 async def create_association_logo(
     association_id: str,
-    image: UploadFile = File(...),
+    image: UploadFile = File(),
     request_id: str = Depends(get_request_id),
     user: models_core.CoreUser = Depends(is_user_a_member),
     db: AsyncSession = Depends(get_db),
@@ -433,9 +466,12 @@ async def create_association_logo(
     """
 
     if not is_user_member_of_an_allowed_group(
-        user=user, allowed_groups=[GroupType.CAA, GroupType.BDE]
+        user=user,
+        allowed_groups=[GroupType.CAA, GroupType.BDE],
     ) and not await cruds_phonebook.is_user_president(
-        association_id=association_id, user=user, db=db
+        association_id=association_id,
+        user=user,
+        db=db,
     ):
         raise HTTPException(
             status_code=403,

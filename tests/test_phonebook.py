@@ -1,4 +1,5 @@
 import uuid
+from pathlib import Path
 
 import pytest_asyncio
 
@@ -54,7 +55,10 @@ async def init_objects():
 
     global association
     association = models_phonebook.Association(
-        id=str(uuid.uuid4()), kind=Kinds.section_ae, name="ECLAIR", mandate_year=2023
+        id=str(uuid.uuid4()),
+        kind=Kinds.section_ae,
+        name="ECLAIR",
+        mandate_year=2023,
     )
     await add_object_to_db(association)
 
@@ -137,7 +141,8 @@ def test_get_all_association_kinds_simple():
 # ---------------------------------------------------------------------------- #
 def test_get_all_roletags_simple():
     response = client.get(
-        "/phonebook/roletags/", headers={"Authorization": f"Bearer {token_simple}"}
+        "/phonebook/roletags/",
+        headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response.status_code == 200
 
@@ -356,7 +361,7 @@ def test_get_member_by_id_simple():
 #                                  Logos tests                                 #
 # ---------------------------------------------------------------------------- #
 def test_create_association_picture_admin():
-    with open("assets/images/default_association_picture.png", "rb") as image:
+    with Path.open("assets/images/default_association_picture.png", "rb") as image:
         response = client.post(
             f"/phonebook/associations/{association.id}/picture",
             files={"image": ("logo.png", image, "image/png")},
@@ -366,7 +371,7 @@ def test_create_association_picture_admin():
 
 
 def test_create_association_picture_simple():
-    with open("assets/images/default_association_picture.png", "rb") as image:
+    with Path.open("assets/images/default_association_picture.png", "rb") as image:
         response = client.post(
             f"/phonebook/associations/{association.id}/picture",
             files={"image": ("logo.png", image, "image/png")},
