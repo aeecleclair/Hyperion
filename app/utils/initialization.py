@@ -51,6 +51,22 @@ def get_module_awareness_by_root(
     return result.scalars().first()
 
 
+def create_module_awareness_sync(
+    module_awareness: models_core.ModuleAwareness,
+    db: Session,
+) -> models_core.ModuleAwareness:
+    """
+    Create a new module awareness in database and return it
+    """
+    db.add(module_awareness)
+    try:
+        db.commit()
+        return module_awareness
+    except IntegrityError as error:
+        db.rollback()
+        raise ValueError(error) from error
+
+
 def create_module_visibility_sync(
     module_visibility: models_core.ModuleVisibility,
     db: Session,

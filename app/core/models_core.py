@@ -119,7 +119,7 @@ class ModuleAwareness(Base):
     This allow to know which modules are new and should record their visibility in the database.
     """
 
-    __tablename__ = "module_module"
+    __tablename__ = "module_awareness"
 
     root: Mapped[str] = mapped_column(String, primary_key=True)
 class CoreData(Base):

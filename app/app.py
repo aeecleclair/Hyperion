@@ -207,6 +207,10 @@ def initialize_module_visibility(engine: Engine) -> None:
                     hyperion_error_logger.fatal(
                         f"Startup: Could not add module visibility {module.root}<{default_group_id}> in the database: {error}",
                     )
+            module_awareness = models_core.ModuleAwareness(root=module.root)
+            initialization.create_module_awareness_sync(
+                module_awareness=module_awareness, db=db
+            )
 
 
 def use_route_path_as_operation_ids(app: FastAPI) -> None:
