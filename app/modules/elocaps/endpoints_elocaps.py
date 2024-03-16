@@ -1,6 +1,5 @@
 import logging
-from datetime import date, datetime
-from zoneinfo import ZoneInfo
+from datetime import date, datetime, timezone
 
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -78,7 +77,7 @@ async def register_game(
             for player in game_params.players:
                 if player.user_id == user.id:
                     continue
-                now = datetime.now(ZoneInfo(settings.TIMEZONE))
+                now = datetime.now(timezone(settings.TIMEZONE))
                 message = Message(
                     context=f"elocaps-newgame-{game.id}-{player.user_id}",
                     is_visible=True,
