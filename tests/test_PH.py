@@ -1,5 +1,6 @@
 import datetime
 import uuid
+from pathlib import Path
 
 import pytest_asyncio
 
@@ -67,7 +68,7 @@ def test_get_journals():
 
 
 def test_create_journal_pdf():
-    with open("assets/pdf/default_PDF.pdf", "rb") as pdf:
+    with Path("assets/pdf/default_PDF.pdf").open("rb") as pdf:
         response = client.post(
             f"/PH/{journal.id}/pdf",
             files={"pdf": ("test_journal.pdf", pdf, "application/pdf")},
