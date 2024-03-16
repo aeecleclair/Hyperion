@@ -13,7 +13,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "6afc765adaa2"
-down_revision: Union[str, None] = "f17e6182b0a9"
+down_revision: Union[str, None] = "99a2c70e4a24"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
