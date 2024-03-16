@@ -1,7 +1,7 @@
 """Schemas file for endpoint /amap"""
 
+from collections.abc import Sequence
 from datetime import date, datetime
-from typing import Sequence
 
 from pydantic import BaseModel, ConfigDict
 

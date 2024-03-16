@@ -1,15 +1,14 @@
-import os
 import uuid
+from pathlib import Path
 
 from fastapi import Depends, HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
-from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
-from app.dependencies import get_db, get_settings, is_user_a_member, is_user_a_member_of
+from app.dependencies import get_db, is_user_a_member, is_user_a_member_of
 from app.modules.calendar import cruds_calendar, models_calendar, schemas_calendar
 from app.modules.calendar.types_calendar import Decision
 from app.utils.tools import is_user_member_of_an_allowed_group
@@ -71,10 +70,12 @@ async def get_applicant_bookings(
     **Usable by the user or admins**
     """
     if user.id == applicant_id or is_user_member_of_an_allowed_group(
-        user, [GroupType.BDE]
+        user,
+        [GroupType.BDE],
     ):
         bookings = await cruds_calendar.get_applicant_events(
-            db=db, applicant_id=applicant_id
+            db=db,
+            applicant_id=applicant_id,
         )
         return bookings
     else:
@@ -126,7 +127,6 @@ async def add_event(
     event: schemas_calendar.EventBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
-    settings: Settings = Depends(get_settings),
 ):
     """Add an event to the calendar."""
 
@@ -139,7 +139,7 @@ async def add_event(
         **event.model_dump(),
     )
     try:
-        return await cruds_calendar.add_event(event=db_event, db=db, settings=settings)
+        return await cruds_calendar.add_event(event=db_event, db=db)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
 
@@ -185,16 +185,13 @@ async def confirm_booking(
     decision: Decision,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
-    settings: Settings = Depends(get_settings),
 ):
     """
     Give a decision to an event.
 
     **Only usable by admins**
     """
-    await cruds_calendar.confirm_event(
-        event_id=event_id, decision=decision, db=db, settings=settings
-    )
+    await cruds_calendar.confirm_event(event_id=event_id, decision=decision, db=db)
 
 
 @module.router.delete(
@@ -205,7 +202,6 @@ async def delete_bookings_id(
     event_id,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
-    settings: Settings = Depends(get_settings),
 ):
     """
     Remove an event.
@@ -218,7 +214,7 @@ async def delete_bookings_id(
         (user.id == event.applicant_id and event.decision == Decision.pending)
         or is_user_member_of_an_allowed_group(user, [GroupType.BDE])
     ):
-        await cruds_calendar.delete_event(event_id=event_id, db=db, settings=settings)
+        await cruds_calendar.delete_event(event_id=event_id, db=db)
 
     else:
         raise HTTPException(
@@ -234,7 +230,6 @@ async def delete_bookings_id(
 async def recreate_ical_file(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
-    settings: Settings = Depends(get_settings),
 ):
     """
     Create manually the icalendar file
@@ -242,7 +237,7 @@ async def recreate_ical_file(
     **Only usable by global admins**
     """
 
-    await cruds_calendar.create_icalendar_file(db=db, settings=settings)
+    await cruds_calendar.create_icalendar_file(db=db)
 
 
 @module.router.get(
@@ -253,7 +248,7 @@ async def recreate_ical_file(
 async def get_icalendar_file(db: AsyncSession = Depends(get_db)):
     """Get the icalendar file corresponding to the event in the database."""
 
-    if os.path.exists(ical_file_path):
+    if Path(ical_file_path).exists():
         return FileResponse(ical_file_path)
 
     else:

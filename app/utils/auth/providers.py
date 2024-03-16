@@ -1,5 +1,5 @@
 import re
-from typing import Any, Set
+from typing import Any
 
 import unidecode
 
@@ -26,7 +26,7 @@ class BaseAuthClient:
     # If the client always send a specific scope (ex: `name`), you may add it to the allowed scopes as a string (ex: `"name"`)
     # These "string" scopes won't have any effect for Hyperion but won't raise a warning when asked by the client
     # WARNING: to be able to use openid connect, `ScopeType.openid` should always be allowed
-    allowed_scopes: Set[ScopeType | str] = {ScopeType.openid}
+    allowed_scopes: set[ScopeType | str] = {ScopeType.openid}
     # Restrict the authentication to this client to specific Hyperion groups.
     # When set to `None`, users from any group can use the auth client
     allowed_groups: list[GroupType] | None = None
@@ -66,7 +66,10 @@ class BaseAuthClient:
     ########################################################
 
     def __init__(
-        self, client_id: str, secret: str | None, redirect_uri: list[str]
+        self,
+        client_id: str,
+        secret: str | None,
+        redirect_uri: list[str],
     ) -> None:
         # The following parameters are not class variables but instance variables.
         # There can indeed be more than one client using the class, the client will need to have its own client id and secret.
@@ -77,7 +80,7 @@ class BaseAuthClient:
         # redirect_uri should alway match the one provided by the client
         self.redirect_uri: list[str] = redirect_uri
 
-    def filter_scopes(self, requested_scopes: Set[str]) -> Set[ScopeType | str]:
+    def filter_scopes(self, requested_scopes: set[str]) -> set[ScopeType | str]:
         return self.allowed_scopes.intersection(requested_scopes)
 
 
@@ -89,7 +92,7 @@ class AppAuthClient(BaseAuthClient):
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.utils.types.scopes_type.ScopeType for possible values
     # WARNING: to be able to use openid connect, `ScopeType.openid` should always be allowed
-    allowed_scopes: Set[ScopeType | str] = {ScopeType.API}
+    allowed_scopes: set[ScopeType | str] = {ScopeType.API}
     # Restrict the authentication to this client to specific Hyperion groups.
     # When set to `None`, users from any group can use the auth client
     allowed_groups: list[GroupType] | None = None
@@ -103,13 +106,13 @@ class PostmanAuthClient(BaseAuthClient):
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.utils.types.scopes_type.ScopeType for possible values
     # WARNING: to be able to use openid connect, `ScopeType.openid` should always be allowed
-    allowed_scopes: Set[ScopeType | str] = {ScopeType.API}
+    allowed_scopes: set[ScopeType | str] = {ScopeType.API}
 
 
 class NextcloudAuthClient(BaseAuthClient):
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.utils.types.scopes_type.ScopeType for possible values
-    allowed_scopes: Set[ScopeType | str] = {ScopeType.openid}
+    allowed_scopes: set[ScopeType | str] = {ScopeType.openid}
 
     # For Nextcloud:
     # Required iss : the issuer value form .well-known (corresponding code : https://github.com/pulsejet/nextcloud-oidc-login/blob/0c072ecaa02579384bb5e10fbb9d219bbd96cfb8/3rdparty/jumbojett/openid-connect-php/src/OpenIDConnectClient.php#L1255)
@@ -123,7 +126,9 @@ class NextcloudAuthClient(BaseAuthClient):
         return {
             "sub": user.id,
             "name": get_display_name(
-                firstname=user.firstname, name=user.name, nickname=user.nickname
+                firstname=user.firstname,
+                name=user.name,
+                nickname=user.nickname,
             ),
             # TODO: should we use group ids instead of names? It would be less human readable but would guarantee uniqueness. Question: are group names unique?
             "groups": [
@@ -139,7 +144,7 @@ class PiwigoAuthClient(BaseAuthClient):
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.utils.types.scopes_type.ScopeType for possible values
     # WARNING: to be able to use openid connect, `ScopeType.openid` should always be allowed
-    allowed_scopes: Set[ScopeType | str] = {ScopeType.openid}
+    allowed_scopes: set[ScopeType | str] = {ScopeType.openid}
     # Restrict the authentication to this client to specific Hyperion groups.
     # When set to `None`, users from any group can use the auth client
     allowed_groups: list[GroupType] | None = None
@@ -167,7 +172,9 @@ class PiwigoAuthClient(BaseAuthClient):
         return {
             "sub": user.id,
             "name": get_display_name(
-                firstname=user.firstname, name=user.name, nickname=user.nickname
+                firstname=user.firstname,
+                name=user.name,
+                nickname=user.nickname,
             ),
             "groups": [group.name for group in user.groups],
             "email": user.email,
@@ -177,7 +184,7 @@ class PiwigoAuthClient(BaseAuthClient):
 class HedgeDocAuthClient(BaseAuthClient):
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.utils.types.scopes_type.ScopeType for possible values
-    allowed_scopes: Set[ScopeType | str] = {ScopeType.profile}
+    allowed_scopes: set[ScopeType | str] = {ScopeType.profile}
 
     @classmethod
     def get_userinfo(cls, user: models_core.CoreUser):
@@ -193,14 +200,16 @@ class WikijsAuthClient(BaseAuthClient):
 
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.utils.types.scopes_type.ScopeType for possible values
-    allowed_scopes: Set[ScopeType | str] = {ScopeType.openid, ScopeType.profile}
+    allowed_scopes: set[ScopeType | str] = {ScopeType.openid, ScopeType.profile}
 
     @classmethod
     def get_userinfo(cls, user: models_core.CoreUser):
         return {
             "sub": user.id,
             "name": get_display_name(
-                firstname=user.firstname, name=user.name, nickname=user.nickname
+                firstname=user.firstname,
+                name=user.name,
+                nickname=user.nickname,
             ),
             "email": user.email,
             "groups": [group.name for group in user.groups],
@@ -210,7 +219,7 @@ class WikijsAuthClient(BaseAuthClient):
 class SynapseAuthClient(BaseAuthClient):
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.utils.types.scopes_type.ScopeType for possible values
-    allowed_scopes: Set[ScopeType | str] = {ScopeType.openid, ScopeType.profile}
+    allowed_scopes: set[ScopeType | str] = {ScopeType.openid, ScopeType.profile}
 
     @classmethod
     def get_userinfo(cls, user: models_core.CoreUser):
@@ -228,7 +237,9 @@ class SynapseAuthClient(BaseAuthClient):
             # Matrix does not support special characters in username
             "username": username,
             "displayname": get_display_name(
-                firstname=user.firstname, name=user.name, nickname=user.nickname
+                firstname=user.firstname,
+                name=user.name,
+                nickname=user.nickname,
             ),
             "email": user.email,
         }
@@ -237,7 +248,7 @@ class SynapseAuthClient(BaseAuthClient):
 class MinecraftAuthClient(BaseAuthClient):
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.utils.types.scopes_type.ScopeType for possible values
-    allowed_scopes: Set[ScopeType | str] = {ScopeType.profile}
+    allowed_scopes: set[ScopeType | str] = {ScopeType.profile}
 
     @classmethod
     def get_userinfo(cls, user: models_core.CoreUser):
@@ -252,7 +263,7 @@ class MinecraftAuthClient(BaseAuthClient):
 class ChallengerAuthClient(BaseAuthClient):
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.utils.types.scopes_type.ScopeType for possible values
-    allowed_scopes: Set[ScopeType | str] = {ScopeType.openid, ScopeType.profile}
+    allowed_scopes: set[ScopeType | str] = {ScopeType.openid, ScopeType.profile}
 
     @classmethod
     def get_userinfo(cls, user: models_core.CoreUser):
@@ -267,14 +278,16 @@ class ChallengerAuthClient(BaseAuthClient):
 class OpenProjectAuthClient(BaseAuthClient):
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.utils.types.scopes_type.ScopeType for possible values
-    allowed_scopes: Set[ScopeType | str] = {ScopeType.openid, ScopeType.profile}
+    allowed_scopes: set[ScopeType | str] = {ScopeType.openid, ScopeType.profile}
 
     @classmethod
     def get_userinfo(cls, user: models_core.CoreUser):
         return {
             "sub": user.id,
             "name": get_display_name(
-                firstname=user.firstname, name=user.name, nickname=user.nickname
+                firstname=user.firstname,
+                name=user.name,
+                nickname=user.nickname,
             ),
             "given_name": user.firstname,
             "family_name": user.name,
@@ -285,7 +298,7 @@ class OpenProjectAuthClient(BaseAuthClient):
 
 
 class RalllyAuthClient(BaseAuthClient):
-    allowed_scopes: Set[ScopeType | str] = {
+    allowed_scopes: set[ScopeType | str] = {
         ScopeType.openid,
         ScopeType.profile,
         "email",
@@ -297,7 +310,9 @@ class RalllyAuthClient(BaseAuthClient):
         return {
             "sub": user.id,
             "name": get_display_name(
-                firstname=user.firstname, name=user.name, nickname=user.nickname
+                firstname=user.firstname,
+                name=user.name,
+                nickname=user.nickname,
             ),
             "email": user.email,
         }

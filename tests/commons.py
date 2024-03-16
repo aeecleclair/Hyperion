@@ -1,8 +1,8 @@
 import asyncio
 import logging
 import uuid
+from collections.abc import AsyncGenerator
 from functools import lru_cache
-from typing import AsyncGenerator
 
 import pytest
 import redis
@@ -18,13 +18,14 @@ from app.core.config import Settings
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
 from app.core.users import cruds_users
+from app.database import Base
 from app.dependencies import get_db, get_redis_client, get_settings
 from app.utils.redis import connect, disconnect
 from app.utils.tools import get_random_string
 from app.utils.types.floors_type import FloorsType
 
 
-@lru_cache()
+@lru_cache
 def override_get_settings() -> Settings:
     """Override the get_settings function to use the testing session"""
     return Settings(_env_file=".env.test", _env_file_encoding="utf-8")  # type: ignore[call-arg] # See https://github.com/pydantic/pydantic/issues/3072, TODO: remove when fixes
@@ -45,7 +46,9 @@ else:
 engine = create_async_engine(SQLALCHEMY_DATABASE_URL, echo=True)
 
 TestingSessionLocal = async_sessionmaker(
-    engine, class_=AsyncSession, expire_on_commit=False
+    engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
 )  # Create a session for testing purposes
 
 
@@ -81,8 +84,8 @@ def change_redis_client_status(activated: bool):
         if settings.REDIS_HOST != "":
             try:
                 redis_client = connect(settings)
-            except redis.exceptions.ConnectionError:
-                raise Exception("Connection to Redis failed")
+            except redis.exceptions.ConnectionError as err:
+                raise Exception("Connection to Redis failed") from err
     else:
         if isinstance(redis_client, redis.Redis):
             redis_client.flushdb()
@@ -176,13 +179,13 @@ def create_api_access_token(user: models_core.CoreUser):
     return token
 
 
-async def add_object_to_db(object):
+async def add_object_to_db(db_object: Base) -> None:
     """
     Add an object to the database
     """
     async with TestingSessionLocal() as db:
         try:
-            db.add(object)
+            db.add(db_object)
             await db.commit()
         except IntegrityError as e:
             await db.rollback()

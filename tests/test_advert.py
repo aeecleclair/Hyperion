@@ -1,5 +1,6 @@
 import datetime
 import uuid
+from pathlib import Path
 
 import pytest_asyncio
 
@@ -59,7 +60,7 @@ async def init_objects():
         advertiser_id=advertiser.id,
         title="Advert",
         content="Example of advert",
-        date=datetime.datetime.now(),
+        date=datetime.datetime.now(tz=datetime.UTC),
         tags="Tag1, Tag2, Tag3",
     )
 
@@ -105,7 +106,7 @@ def test_create_advert():
 
 
 def test_create_picture():
-    with open("assets/images/default_advert.png", "rb") as image:
+    with Path("assets/images/default_advert.png").open("rb") as image:
         response = client.post(
             f"/advert/adverts/{advert.id}/picture",
             files={"image": ("advert.png", image, "image/png")},

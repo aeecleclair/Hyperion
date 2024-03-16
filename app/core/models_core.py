@@ -2,10 +2,11 @@
 
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, Enum, ForeignKey, Integer, String
+from sqlalchemy import Date, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
+from app.utils.types.datetime import TZDateTime
 from app.utils.types.floors_type import FloorsType
 
 
@@ -23,7 +24,9 @@ class CoreUser(Base):
     __tablename__ = "core_user"
 
     id: Mapped[str] = mapped_column(
-        String, primary_key=True, index=True
+        String,
+        primary_key=True,
+        index=True,
     )  # Use UUID later
     email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String, nullable=False)
@@ -34,7 +37,7 @@ class CoreUser(Base):
     promo: Mapped[int | None] = mapped_column(Integer)
     phone: Mapped[str | None] = mapped_column(String)
     floor: Mapped[FloorsType] = mapped_column(Enum(FloorsType), nullable=False)
-    created_on: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_on: Mapped[datetime | None] = mapped_column(TZDateTime)
 
     # We use list["CoreGroup"] with quotes as CoreGroup is only defined after this class
     # Defining CoreUser after CoreGroup would cause a similar issue
@@ -56,10 +59,8 @@ class CoreUserUnconfirmed(Base):
     email: Mapped[str] = mapped_column(String, nullable=False)
     account_type: Mapped[str] = mapped_column(String, nullable=False)
     activation_token: Mapped[str] = mapped_column(String, nullable=False)
-    created_on: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
-    expire_on: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_on: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
+    expire_on: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
 
 
 class CoreUserRecoverRequest(Base):
@@ -70,10 +71,8 @@ class CoreUserRecoverRequest(Base):
     email: Mapped[str] = mapped_column(String, nullable=False)
     user_id: Mapped[str] = mapped_column(String, nullable=False)
     reset_token: Mapped[str] = mapped_column(String, nullable=False, primary_key=True)
-    created_on: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
-    expire_on: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_on: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
+    expire_on: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
 
 
 class CoreUserEmailMigrationCode(Base):
@@ -87,7 +86,9 @@ class CoreUserEmailMigrationCode(Base):
     new_email: Mapped[str] = mapped_column(String, nullable=False)
     old_email: Mapped[str] = mapped_column(String, nullable=False)
     confirmation_token: Mapped[str] = mapped_column(
-        String, nullable=False, primary_key=True
+        String,
+        nullable=False,
+        primary_key=True,
     )
 
 

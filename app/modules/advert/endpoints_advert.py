@@ -1,14 +1,12 @@
 import logging
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from fastapi import Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
-from pytz import timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, standard_responses
-from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
 from app.core.notification.notification_types import CustomTopic, Topic
@@ -17,7 +15,6 @@ from app.dependencies import (
     get_db,
     get_notification_tool,
     get_request_id,
-    get_settings,
     is_user_a_member,
     is_user_a_member_of,
 )
@@ -107,7 +104,8 @@ async def delete_advertiser(
     **This endpoint is only usable by administrators**
     """
     advertiser = await cruds_advert.get_advertiser_by_id(
-        advertiser_id=advertiser_id, db=db
+        advertiser_id=advertiser_id,
+        db=db,
     )
     if advertiser is None:
         raise HTTPException(
@@ -137,7 +135,8 @@ async def update_advertiser(
     **This endpoint is only usable by administrators**
     """
     advertiser = await cruds_advert.get_advertiser_by_id(
-        advertiser_id=advertiser_id, db=db
+        advertiser_id=advertiser_id,
+        db=db,
     )
     if not advertiser:
         raise HTTPException(
@@ -146,7 +145,9 @@ async def update_advertiser(
         )
 
     await cruds_advert.update_advertiser(
-        advertiser_id=advertiser_id, advertiser_update=advertiser_update, db=db
+        advertiser_id=advertiser_id,
+        advertiser_update=advertiser_update,
+        db=db,
     )
 
 
@@ -169,7 +170,8 @@ async def get_current_user_advertisers(
         user_groups_ids.append(group.id)
 
     return await cruds_advert.get_advertisers_by_groups(
-        db=db, user_groups_ids=user_groups_ids
+        db=db,
+        user_groups_ids=user_groups_ids,
     )
 
 
@@ -191,7 +193,8 @@ async def read_adverts(
 
     if advertisers:
         return await cruds_advert.get_adverts_by_advertisers(
-            advertisers=advertisers, db=db
+            advertisers=advertisers,
+            db=db,
         )
     else:
         return await cruds_advert.get_adverts(db=db)
@@ -225,7 +228,6 @@ async def create_advert(
     advert: schemas_advert.AdvertBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
-    settings: Settings = Depends(get_settings),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
@@ -234,7 +236,8 @@ async def create_advert(
     **The user must be a member of the advertiser group_manager to use this endpoint**
     """
     advertiser = await cruds_advert.get_advertiser_by_id(
-        advertiser_id=advert.advertiser_id, db=db
+        advertiser_id=advert.advertiser_id,
+        db=db,
     )
     if advertiser is None:
         raise HTTPException(
@@ -252,7 +255,7 @@ async def create_advert(
 
     db_advert = models_advert.Advert(
         id=str(uuid.uuid4()),
-        date=datetime.now(timezone(settings.TIMEZONE)),
+        date=datetime.now(UTC),
         advertiser=advertiser,
         **advert_params,
     )
@@ -263,7 +266,7 @@ async def create_advert(
         raise HTTPException(status_code=400, detail=str(error))
 
     try:
-        now = datetime.now(timezone(settings.TIMEZONE))
+        now = datetime.now(UTC)
         message = Message(
             context=f"advert-{result.id}",
             is_visible=True,
@@ -273,7 +276,8 @@ async def create_advert(
             expire_on=now.replace(day=now.day + 3),
         )
         await notification_tool.send_notification_to_topic(
-            custom_topic=CustomTopic(topic=Topic.advert), message=message
+            custom_topic=CustomTopic(topic=Topic.advert),
+            message=message,
         )
     except Exception as error:
         hyperion_error_logger.error(f"Error while sending advert notification, {error}")
@@ -304,7 +308,8 @@ async def update_advert(
         )
 
     if not is_user_member_of_an_allowed_group(
-        user, [advert.advertiser.group_manager_id]
+        user,
+        [advert.advertiser.group_manager_id],
     ):
         raise HTTPException(
             status_code=403,
@@ -312,7 +317,9 @@ async def update_advert(
         )
 
     await cruds_advert.update_advert(
-        advert_id=advert_id, advert_update=advert_update, db=db
+        advert_id=advert_id,
+        advert_update=advert_update,
+        db=db,
     )
 
 
@@ -338,7 +345,8 @@ async def delete_advert(
         )
 
     if not is_user_member_of_an_allowed_group(
-        user, [GroupType.admin, advert.advertiser.group_manager_id]
+        user,
+        [GroupType.admin, advert.advertiser.group_manager_id],
     ):
         raise HTTPException(
             status_code=403,

@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Path
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -42,7 +42,8 @@ async def register_firebase_device(
 
     # If there is already a device with this token, we need to update the register date
     firebase_device = await cruds_notification.get_firebase_devices_by_firebase_token(
-        firebase_token=firebase_token, db=db
+        firebase_token=firebase_token,
+        db=db,
     )
 
     if firebase_device is not None:
@@ -50,18 +51,20 @@ async def register_firebase_device(
             # Update the register date
             await cruds_notification.update_firebase_devices_register_date(
                 firebase_device_token=firebase_token,
-                new_register_date=date.today(),
+                new_register_date=datetime.now(tz=UTC).date(),
                 db=db,
             )
             return
         # If the user is not the same, we don't want the new user to receive the notifications of the old one
         await cruds_notification.delete_firebase_devices(
-            firebase_device_token=firebase_token, db=db
+            firebase_device_token=firebase_token,
+            db=db,
         )
 
     # We also need to subscribe the new token to the topics the user is subscribed to
     topic_memberships = await cruds_notification.get_topic_memberships_by_user_id(
-        user_id=user.id, db=db
+        user_id=user.id,
+        db=db,
     )
 
     for topic_membership in topic_memberships:
@@ -76,11 +79,12 @@ async def register_firebase_device(
     firebase_device = models_notification.FirebaseDevice(
         user_id=user.id,
         firebase_device_token=firebase_token,
-        register_date=date.today(),
+        register_date=datetime.now(tz=UTC).date(),
     )
 
     await cruds_notification.create_firebase_devices(
-        firebase_device=firebase_device, db=db
+        firebase_device=firebase_device,
+        db=db,
     )
 
 
@@ -103,7 +107,8 @@ async def unregister_firebase_device(
 
     # We also need to unsubscribe the token to the topics the user is subscribed to
     topic_memberships = await cruds_notification.get_topic_memberships_by_user_id(
-        user_id=user.id, db=db
+        user_id=user.id,
+        db=db,
     )
 
     for topic_membership in topic_memberships:
@@ -116,7 +121,8 @@ async def unregister_firebase_device(
         )
 
     await cruds_notification.delete_firebase_devices(
-        firebase_device_token=firebase_token, db=db
+        firebase_device_token=firebase_token,
+        db=db,
     )
 
 
@@ -149,11 +155,13 @@ async def get_messages(
         )
 
     messages = await cruds_notification.get_messages_by_firebase_token(
-        firebase_token=firebase_token, db=db
+        firebase_token=firebase_token,
+        db=db,
     )
 
     await cruds_notification.remove_message_by_firebase_device_token(
-        firebase_device_token=firebase_token, db=db
+        firebase_device_token=firebase_token,
+        db=db,
     )
 
     return messages
@@ -186,7 +194,9 @@ async def subscribe_to_topic(
         )
 
     await notification_manager.subscribe_user_to_topic(
-        user_id=user.id, custom_topic=custom_topic, db=db
+        user_id=user.id,
+        custom_topic=custom_topic,
+        db=db,
     )
 
 
@@ -209,7 +219,9 @@ async def unsubscribe_to_topic(
     custom_topic = CustomTopic.from_str(topic_str)
 
     await notification_manager.unsubscribe_user_to_topic(
-        user_id=user.id, custom_topic=custom_topic, db=db
+        user_id=user.id,
+        custom_topic=custom_topic,
+        db=db,
     )
 
 
@@ -230,7 +242,8 @@ async def get_topic(
     """
 
     memberships = await cruds_notification.get_topic_memberships_by_user_id(
-        user_id=user.id, db=db
+        user_id=user.id,
+        db=db,
     )
 
     return [
@@ -257,12 +270,15 @@ async def get_topic_identifier(
     """
 
     memberships = await cruds_notification.get_topic_memberships_with_identifiers_by_user_id_and_topic(
-        user_id=user.id, db=db, topic=Topic(topic_str)
+        user_id=user.id,
+        db=db,
+        topic=Topic(topic_str),
     )
 
     return [
         CustomTopic(
-            topic=membership.topic, topic_identifier=membership.topic_identifier
+            topic=membership.topic,
+            topic_identifier=membership.topic_identifier,
         ).to_str()
         for membership in memberships
     ]
@@ -304,5 +320,6 @@ async def get_devices(
     **Only admins can use this endpoint**
     """
     return await cruds_notification.get_firebase_devices_by_user_id(
-        user_id=user.id, db=db
+        user_id=user.id,
+        db=db,
     )

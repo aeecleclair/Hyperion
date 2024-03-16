@@ -27,7 +27,10 @@ def upgrade() -> None:
         sa.UniqueConstraint("name"),
     )
     op.create_index(
-        op.f("ix_advert_advertisers_id"), "advert_advertisers", ["id"], unique=False
+        op.f("ix_advert_advertisers_id"),
+        "advert_advertisers",
+        ["id"],
+        unique=False,
     )
     op.create_table(
         "amap_delivery",
@@ -66,7 +69,10 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
-        op.f("ix_amap_product_category"), "amap_product", ["category"], unique=False
+        op.f("ix_amap_product_category"),
+        "amap_product",
+        ["category"],
+        unique=False,
     )
     op.create_index(op.f("ix_amap_product_id"), "amap_product", ["id"], unique=False)
     op.create_index(op.f("ix_amap_product_name"), "amap_product", ["name"], unique=True)
@@ -83,7 +89,10 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("code"),
     )
     op.create_index(
-        op.f("ix_authorization_code_code"), "authorization_code", ["code"], unique=False
+        op.f("ix_authorization_code_code"),
+        "authorization_code",
+        ["code"],
+        unique=False,
     )
     op.create_table(
         "campaign_sections",
@@ -99,7 +108,12 @@ def upgrade() -> None:
         sa.Column(
             "status",
             sa.Enum(
-                "waiting", "open", "closed", "counting", "published", name="statustype"
+                "waiting",
+                "open",
+                "closed",
+                "counting",
+                "published",
+                name="statustype",
             ),
             nullable=False,
         ),
@@ -298,10 +312,16 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("order_id"),
     )
     op.create_index(
-        op.f("ix_amap_order_delivery_id"), "amap_order", ["delivery_id"], unique=False
+        op.f("ix_amap_order_delivery_id"),
+        "amap_order",
+        ["delivery_id"],
+        unique=False,
     )
     op.create_index(
-        op.f("ix_amap_order_order_id"), "amap_order", ["order_id"], unique=False
+        op.f("ix_amap_order_order_id"),
+        "amap_order",
+        ["order_id"],
+        unique=False,
     )
     op.create_table(
         "booking_manager",
@@ -349,7 +369,10 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
-        op.f("ix_calendar_events_id"), "calendar_events", ["id"], unique=False
+        op.f("ix_calendar_events_id"),
+        "calendar_events",
+        ["id"],
+        unique=False,
     )
     op.create_table(
         "campaign_has_voted",
@@ -511,7 +534,10 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
-        op.f("ix_raffle_description"), "raffle", ["description"], unique=False
+        op.f("ix_raffle_description"),
+        "raffle",
+        ["description"],
+        unique=False,
     )
     op.create_index(op.f("ix_raffle_group_id"), "raffle", ["group_id"], unique=False)
     op.create_index(op.f("ix_raffle_id"), "raffle", ["id"], unique=False)
@@ -542,10 +568,16 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("token"),
     )
     op.create_index(
-        op.f("ix_refresh_token_client_id"), "refresh_token", ["client_id"], unique=False
+        op.f("ix_refresh_token_client_id"),
+        "refresh_token",
+        ["client_id"],
+        unique=False,
     )
     op.create_index(
-        op.f("ix_refresh_token_token"), "refresh_token", ["token"], unique=True
+        op.f("ix_refresh_token_token"),
+        "refresh_token",
+        ["token"],
+        unique=True,
     )
     op.create_table(
         "amap_order_content",
@@ -626,7 +658,10 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
-        op.f("ix_raffle_pack_ticket_id"), "raffle_pack_ticket", ["id"], unique=False
+        op.f("ix_raffle_pack_ticket_id"),
+        "raffle_pack_ticket",
+        ["id"],
+        unique=False,
     )
     op.create_index(
         op.f("ix_raffle_pack_ticket_raffle_id"),
@@ -649,7 +684,10 @@ def upgrade() -> None:
     )
     op.create_index(op.f("ix_raffle_prize_id"), "raffle_prize", ["id"], unique=False)
     op.create_index(
-        op.f("ix_raffle_prize_raffle_id"), "raffle_prize", ["raffle_id"], unique=False
+        op.f("ix_raffle_prize_raffle_id"),
+        "raffle_prize",
+        ["raffle_id"],
+        unique=False,
     )
     op.create_table(
         "booking",
@@ -718,7 +756,8 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_raffle_prize_id"), table_name="raffle_prize")
     op.drop_table("raffle_prize")
     op.drop_index(
-        op.f("ix_raffle_pack_ticket_raffle_id"), table_name="raffle_pack_ticket"
+        op.f("ix_raffle_pack_ticket_raffle_id"),
+        table_name="raffle_pack_ticket",
     )
     op.drop_index(op.f("ix_raffle_pack_ticket_id"), table_name="raffle_pack_ticket")
     op.drop_table("raffle_pack_ticket")
@@ -769,7 +808,8 @@ def downgrade() -> None:
         table_name="notification_message",
     )
     op.drop_index(
-        op.f("ix_notification_message_context"), table_name="notification_message"
+        op.f("ix_notification_message_context"),
+        table_name="notification_message",
     )
     op.drop_table("notification_message")
     op.drop_table("module_visibility")

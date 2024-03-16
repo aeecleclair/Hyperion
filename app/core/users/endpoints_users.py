@@ -1,8 +1,9 @@
 import logging
 import re
 import uuid
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
+import aiofiles
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -16,7 +17,6 @@ from fastapi import (
 )
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
-from pytz import timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, schemas_core, security, standard_responses
@@ -101,7 +101,9 @@ async def search_users(
     """
 
     users = await cruds_users.get_users(
-        db, includedGroups=includedGroups, excludedGroups=excludedGroups
+        db,
+        included_groups=includedGroups,
+        excluded_groups=excludedGroups,
     )
 
     return fuzzy_search_user(query, users)
@@ -179,12 +181,12 @@ async def create_user_by_user(
     db_user = await cruds_users.get_user_by_email(db=db, email=user_create.email)
     if db_user is not None:
         hyperion_security_logger.warning(
-            f"Create_user: an user with email {user_create.email} already exists ({request_id})"
+            f"Create_user: an user with email {user_create.email} already exists ({request_id})",
         )
         # We will send to the email a message explaining they already have an account and can reset their password if they want.
         if settings.SMTP_ACTIVE:
             account_exists_content = templates.get_template(
-                "account_exists_mail.html"
+                "account_exists_mail.html",
             ).render()
             background_tasks.add_task(
                 send_email,
@@ -284,8 +286,8 @@ async def create_user(
         email=email,
         account_type=account_type,
         activation_token=activation_token,
-        created_on=datetime.now(timezone(settings.TIMEZONE)),
-        expire_on=datetime.now(timezone(settings.TIMEZONE))
+        created_on=datetime.now(UTC),
+        expire_on=datetime.now(UTC)
         + timedelta(hours=settings.USER_ACTIVATION_TOKEN_EXPIRE_HOURS),
     )
 
@@ -296,7 +298,7 @@ async def create_user(
 
     if settings.SMTP_ACTIVE:
         activation_content = templates.get_template("activation_mail.html").render(
-            {"activation_token": activation_token}
+            {"activation_token": activation_token},
         )
         background_tasks.add_task(
             send_email,
@@ -306,11 +308,11 @@ async def create_user(
             settings=settings,
         )
         hyperion_security_logger.info(
-            f"Create_user: Creating an unconfirmed account for {email} ({request_id})"
+            f"Create_user: Creating an unconfirmed account for {email} ({request_id})",
         )
     else:
         hyperion_security_logger.info(
-            f"Create_user: Creating an unconfirmed account for {email} with token {activation_token} ({request_id})"
+            f"Create_user: Creating an unconfirmed account for {email} with token {activation_token} ({request_id})",
         )
 
 
@@ -324,7 +326,6 @@ async def get_user_activation_page(
     request: Request,
     activation_token: str,
     db: AsyncSession = Depends(get_db),
-    settings: Settings = Depends(get_settings),
 ):
     """
     Return a HTML page to activate an account. The activation token is passed as a query string.
@@ -333,7 +334,8 @@ async def get_user_activation_page(
     """
 
     unconfirmed_user = await cruds_users.get_unconfirmed_user_by_activation_token(
-        db=db, activation_token=activation_token
+        db=db,
+        activation_token=activation_token,
     )
     if unconfirmed_user is None:
         return templates.TemplateResponse(
@@ -343,9 +345,7 @@ async def get_user_activation_page(
                 "message": "The activation token is invalid",
             },
         )
-    if unconfirmed_user.expire_on.astimezone(
-        timezone(settings.TIMEZONE)
-    ) < datetime.now(timezone(settings.TIMEZONE)):
+    if unconfirmed_user.expire_on < datetime.now(UTC):
         return templates.TemplateResponse(
             "error.html",
             {
@@ -372,7 +372,6 @@ async def get_user_activation_page(
 async def activate_user(
     user: schemas_core.CoreUserActivateRequest,
     db: AsyncSession = Depends(get_db),
-    settings: Settings = Depends(get_settings),
     request_id: str = Depends(get_request_id),
 ):
     """
@@ -384,15 +383,14 @@ async def activate_user(
     """
     # We need to find the corresponding user_unconfirmed
     unconfirmed_user = await cruds_users.get_unconfirmed_user_by_activation_token(
-        db=db, activation_token=user.activation_token
+        db=db,
+        activation_token=user.activation_token,
     )
     if unconfirmed_user is None:
         raise HTTPException(status_code=404, detail="Invalid activation token")
 
     # We need to make sure the unconfirmed user is still valid
-    if unconfirmed_user.expire_on.astimezone(
-        timezone(settings.TIMEZONE)
-    ) < datetime.now(timezone(settings.TIMEZONE)):
+    if unconfirmed_user.expire_on < datetime.now(UTC):
         raise HTTPException(status_code=400, detail="Expired activation token")
 
     # An account with the same email may exist if:
@@ -421,7 +419,7 @@ async def activate_user(
         promo=user.promo,
         phone=user.phone,
         floor=user.floor,
-        created_on=datetime.now(timezone(settings.TIMEZONE)),
+        created_on=datetime.now(UTC),
     )
     # We add the new user to the database
     try:
@@ -436,13 +434,14 @@ async def activate_user(
 
         # We remove all unconfirmed users with the same email address
         await cruds_users.delete_unconfirmed_user_by_email(
-            db=db, email=unconfirmed_user.email
+            db=db,
+            email=unconfirmed_user.email,
         )
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error))
 
     hyperion_security_logger.info(
-        f"Activate_user: Activated user {confirmed_user.id} (email: {confirmed_user.email}) ({request_id})"
+        f"Activate_user: Activated user {confirmed_user.id} (email: {confirmed_user.email}) ({request_id})",
     )
     return standard_responses.Result()
 
@@ -471,7 +470,8 @@ async def make_admin(
         await cruds_groups.create_membership(
             db=db,
             membership=models_core.CoreMembership(
-                user_id=users[0].id, group_id=GroupType.admin
+                user_id=users[0].id,
+                group_id=GroupType.admin,
             ),
         )
     except Exception as error:
@@ -511,18 +511,19 @@ async def recover_user(
             email=email,
             user_id=db_user.id,
             reset_token=reset_token,
-            created_on=datetime.now(timezone(settings.TIMEZONE)),
-            expire_on=datetime.now(timezone(settings.TIMEZONE))
+            created_on=datetime.now(UTC),
+            expire_on=datetime.now(UTC)
             + timedelta(hours=settings.PASSWORD_RESET_TOKEN_EXPIRE_HOURS),
         )
 
         await cruds_users.create_user_recover_request(
-            db=db, recover_request=recover_request
+            db=db,
+            recover_request=recover_request,
         )
 
         if settings.SMTP_ACTIVE:
             reset_content = templates.get_template("reset_mail.html").render(
-                {"reset_token": reset_token}
+                {"reset_token": reset_token},
             )
             send_email(
                 recipient=db_user.email,
@@ -532,7 +533,7 @@ async def recover_user(
             )
         else:
             hyperion_security_logger.info(
-                f"Reset password for {email} with token {reset_token} ({request_id})"
+                f"Reset password for {email} with token {reset_token} ({request_id})",
             )
 
     return standard_responses.Result()
@@ -546,31 +547,32 @@ async def recover_user(
 async def reset_password(
     reset_password_request: schemas_core.ResetPasswordRequest,
     db: AsyncSession = Depends(get_db),
-    settings: Settings = Depends(get_settings),
 ):
     """
     Reset the user password, using a **reset_token** provided by `/users/recover` endpoint.
     """
     recover_request = await cruds_users.get_recover_request_by_reset_token(
-        db=db, reset_token=reset_password_request.reset_token
+        db=db,
+        reset_token=reset_password_request.reset_token,
     )
     if recover_request is None:
         raise HTTPException(status_code=404, detail="Invalid reset token")
 
     # We need to make sure the unconfirmed user is still valid
-    if recover_request.expire_on.astimezone(timezone(settings.TIMEZONE)) < datetime.now(
-        timezone(settings.TIMEZONE)
-    ):
+    if recover_request.expire_on < datetime.now(UTC):
         raise HTTPException(status_code=400, detail="Expired reset token")
 
     new_password_hash = security.get_password_hash(reset_password_request.new_password)
     await cruds_users.update_user_password_by_id(
-        db=db, user_id=recover_request.user_id, new_password_hash=new_password_hash
+        db=db,
+        user_id=recover_request.user_id,
+        new_password_hash=new_password_hash,
     )
 
     # As the user has reset its password, all other recovery requests can be deleted from the table
     await cruds_users.delete_recover_request_by_email(
-        db=db, email=recover_request.email
+        db=db,
+        email=recover_request.email,
     )
 
     return standard_responses.Result()
@@ -607,15 +609,16 @@ async def migrate_mail(
         )
 
     existing_user = await cruds_users.get_user_by_email(
-        db=db, email=mail_migration.new_email
+        db=db,
+        email=mail_migration.new_email,
     )
     if existing_user is not None:
         hyperion_security_logger.info(
-            f"Email migration: There is already an account with the email {mail_migration.new_email}"
+            f"Email migration: There is already an account with the email {mail_migration.new_email}",
         )
         if settings.SMTP_ACTIVE:
             migration_content = templates.get_template(
-                "migration_mail_already_used.html"
+                "migration_mail_already_used.html",
             ).render({})
             send_email(
                 recipient=mail_migration.new_email,
@@ -635,14 +638,15 @@ async def migrate_mail(
     )
 
     await cruds_users.create_email_migration_code(
-        migration_object=migration_object, db=db
+        migration_object=migration_object,
+        db=db,
     )
 
     if settings.SMTP_ACTIVE:
         migration_content = templates.get_template("migration_mail.html").render(
             {
-                "migration_link": f"{settings.CLIENT_URL}users/migrate-mail-confirm?token={confirmation_token}"
-            }
+                "migration_link": f"{settings.CLIENT_URL}users/migrate-mail-confirm?token={confirmation_token}",
+            },
         )
         send_email(
             recipient=mail_migration.new_email,
@@ -652,7 +656,7 @@ async def migrate_mail(
         )
     else:
         hyperion_security_logger.info(
-            f"You can confirm your new email address by clicking the following link: {settings.CLIENT_URL}users/migrate-mail-confirm?token={confirmation_token}"
+            f"You can confirm your new email address by clicking the following link: {settings.CLIENT_URL}users/migrate-mail-confirm?token={confirmation_token}",
         )
 
 
@@ -681,11 +685,12 @@ async def migrate_mail_confirm(
         )
 
     existing_user = await cruds_users.get_user_by_email(
-        db=db, email=migration_object.new_email
+        db=db,
+        email=migration_object.new_email,
     )
     if existing_user is not None:
         hyperion_security_logger.info(
-            f"Email migration: There is already an account with the email {migration_object.new_email}"
+            f"Email migration: There is already an account with the email {migration_object.new_email}",
         )
         raise HTTPException(
             status_code=400,
@@ -706,12 +711,12 @@ async def migrate_mail_confirm(
         db=db,
     )
 
-    with open(
+    async with aiofiles.open(
         "data/core/mail-migration-archives.txt",
-        "a",
+        mode="a",
     ) as file:
-        file.write(
-            f"{migration_object.user_id},{migration_object.old_email},{migration_object.new_email}\n"
+        await file.write(
+            f"{migration_object.user_id},{migration_object.old_email},{migration_object.new_email}\n",
         )
 
     return "The email address has been successfully updated"
@@ -805,7 +810,7 @@ async def delete_user(
     This manual verification is needed to prevent data from being deleting for other users
     """
     hyperion_security_logger.info(
-        f"User {user.email} - {user.id} has requested to delete their account."
+        f"User {user.email} - {user.id} has requested to delete their account.",
     )
 
 

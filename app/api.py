@@ -24,9 +24,9 @@ api_router.include_router(endpoints_groups.router)
 api_router.include_router(endpoints_notification.router)
 api_router.include_router(endpoints_users.router)
 
-for endpoints_file in Path(".").glob("app/modules/*/endpoints_*.py"):
+for endpoints_file in Path().glob("app/modules/*/endpoints_*.py"):
     endpoint_module = importlib.import_module(
-        ".".join(endpoints_file.with_suffix("").parts)
+        ".".join(endpoints_file.with_suffix("").parts),
     )
     if hasattr(endpoint_module, "module"):
         module: Module = endpoint_module.module
@@ -34,5 +34,5 @@ for endpoints_file in Path(".").glob("app/modules/*/endpoints_*.py"):
         api_router.include_router(module.router)
     else:
         hyperion_error_logger.error(
-            f"Module {endpoints_file} does not declare a module. It won't be enabled."
+            f"Module {endpoints_file} does not declare a module. It won't be enabled.",
         )

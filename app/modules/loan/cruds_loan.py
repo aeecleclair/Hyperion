@@ -1,4 +1,4 @@
-from typing import Sequence
+from collections.abc import Sequence
 
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
@@ -43,7 +43,7 @@ async def update_loaner(
     await db.execute(
         update(models_loan.Loaner)
         .where(models_loan.Loaner.id == loaner_id)
-        .values(**loaner_update.model_dump(exclude_none=True))
+        .values(**loaner_update.model_dump(exclude_none=True)),
     )
     await db.commit()
 
@@ -57,7 +57,7 @@ async def get_loaner_by_id(
     result = await db.execute(
         select(models_loan.Loaner)
         .where(models_loan.Loaner.id == loaner_id)
-        .options(selectinload(models_loan.Loaner.loans))
+        .options(selectinload(models_loan.Loaner.loans)),
     )
     return result.scalars().first()
 
@@ -67,7 +67,7 @@ async def delete_loaner_by_id(
     db: AsyncSession,
 ):
     await db.execute(
-        delete(models_loan.Loaner).where(models_loan.Loaner.id == loaner_id)
+        delete(models_loan.Loaner).where(models_loan.Loaner.id == loaner_id),
     )
     await db.commit()
 
@@ -92,7 +92,7 @@ async def get_loaner_item_by_id(
     """Return the item with id"""
 
     result = await db.execute(
-        select(models_loan.Item).where(models_loan.Item.id == loaner_item_id)
+        select(models_loan.Item).where(models_loan.Item.id == loaner_item_id),
     )
     return result.scalars().first()
 
@@ -108,7 +108,7 @@ async def get_loaner_item_by_name_and_loaner_id(
         select(models_loan.Item).where(
             models_loan.Item.name == loaner_item_name,
             models_loan.Item.loaner_id == loaner_id,
-        )
+        ),
     )
     return result.scalars().first()
 
@@ -121,7 +121,7 @@ async def update_loaner_item(
     await db.execute(
         update(models_loan.Item)
         .where(models_loan.Item.id == item_id)
-        .values(**item_update.model_dump(exclude_none=True))
+        .values(**item_update.model_dump(exclude_none=True)),
     )
     await db.commit()
 
@@ -131,7 +131,7 @@ async def delete_loaner_items_by_loaner_id(
     db: AsyncSession,
 ):
     await db.execute(
-        delete(models_loan.Item).where(models_loan.Item.loaner_id == loaner_id)
+        delete(models_loan.Item).where(models_loan.Item.loaner_id == loaner_id),
     )
     await db.commit()
 
@@ -183,7 +183,7 @@ async def update_loan(
     await db.execute(
         update(models_loan.Loan)
         .where(models_loan.Loan.id == loan_id)
-        .values(**loan_update.model_dump(exclude_none=True))
+        .values(**loan_update.model_dump(exclude_none=True)),
     )
     await db.commit()
 
@@ -196,7 +196,7 @@ async def update_loan_returned_status(
     await db.execute(
         update(models_loan.Loan)
         .where(models_loan.Loan.id == loan_id)
-        .values({"returned": returned})
+        .values({"returned": returned}),
     )
     await db.commit()
 
@@ -208,7 +208,7 @@ async def get_loan_by_id(
     """Return loan with id from database as a dictionary"""
 
     result = await db.execute(
-        select(models_loan.Loan).where(models_loan.Loan.id == loan_id)
+        select(models_loan.Loan).where(models_loan.Loan.id == loan_id),
     )
     return result.scalars().first()
 
@@ -245,8 +245,8 @@ async def get_loan_content_by_loan_id_item_id(
     result = await db.execute(
         select(models_loan.LoanContent).where(
             models_loan.LoanContent.loan_id == loan_id
-            and models_loan.LoanContent.item_id == item_id
-        )
+            and models_loan.LoanContent.item_id == item_id,
+        ),
     )
     return result.scalars().first()
 
@@ -257,8 +257,8 @@ async def get_loan_contents_by_loan_id(
 ) -> Sequence[models_loan.LoanContent] | None:
     result = await db.execute(
         select(models_loan.LoanContent).where(
-            models_loan.LoanContent.loan_id == loan_id
-        )
+            models_loan.LoanContent.loan_id == loan_id,
+        ),
     )
     return result.scalars().all()
 
@@ -270,8 +270,8 @@ async def get_loaned_quantity(
     result = await db.execute(
         select(func.sum(models_loan.LoanContent.quantity)).where(
             models_loan.LoanContent.loan.has(returned=False)
-            & (models_loan.LoanContent.item_id == item_id)
-        )
+            & (models_loan.LoanContent.item_id == item_id),
+        ),
     )
     qty = result.scalars().first()
     if qty is None:
@@ -286,8 +286,8 @@ async def delete_loan_content_by_loan_id(
 ):
     await db.execute(
         delete(models_loan.LoanContent).where(
-            models_loan.LoanContent.loan_id == loan_id
-        )
+            models_loan.LoanContent.loan_id == loan_id,
+        ),
     )
     await db.commit()
 
@@ -298,7 +298,7 @@ async def delete_loan_content_by_item_id(
 ):
     await db.execute(
         delete(models_loan.LoanContent).where(
-            models_loan.LoanContent.item_id == item_id
-        )
+            models_loan.LoanContent.item_id == item_id,
+        ),
     )
     await db.commit()

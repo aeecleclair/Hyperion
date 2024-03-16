@@ -1,7 +1,7 @@
 import base64
 import json
 import uuid
-from datetime import date
+from datetime import date, datetime
 from urllib.parse import parse_qs, urlparse
 
 import pytest_asyncio
@@ -31,7 +31,7 @@ async def init_objects():
         nickname="Nickname",
         birthday=date.fromisoformat("2000-01-01"),
         floor=FloorsType.Autre,
-        created_on=date.fromisoformat("2000-01-01"),
+        created_on=datetime.fromisoformat("2000-01-01T00:00:00Z"),
     )
     await add_object_to_db(user)
 
@@ -133,7 +133,8 @@ def test_authorization_code_flow_PKCE():
         "client_id": "AppAuthClientWithPKCE",
     }
     response = client.post(
-        "/auth/token", data=data
+        "/auth/token",
+        data=data,
     )  # Verify that the token has been revoked due to the reuse attempt
 
     assert response.status_code == 400
@@ -213,7 +214,8 @@ def test_authorization_code_flow_secret():
         "client_secret": "secret",
     }
     response = client.post(
-        "/auth/token", data=data
+        "/auth/token",
+        data=data,
     )  # Verify that the token has been revoked due to the reuse attempt
 
     assert response.status_code == 400

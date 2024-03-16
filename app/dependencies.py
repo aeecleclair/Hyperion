@@ -8,12 +8,14 @@ async def get_users(db: AsyncSession = Depends(get_db)):
 """
 
 import logging
+from collections.abc import AsyncGenerator, Callable, Coroutine
 from functools import lru_cache
-from typing import Any, AsyncGenerator, Callable, Coroutine
+from typing import Any
 
 import redis
 from fastapi import BackgroundTasks, Depends, HTTPException, Request, status
 from jose import jwt
+from jose.exceptions import JWTError
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -72,10 +74,13 @@ def get_db_engine(settings: Settings) -> AsyncEngine:
 
     if engine is None:
         engine = create_async_engine(
-            SQLALCHEMY_DATABASE_URL, echo=settings.DATABASE_DEBUG
+            SQLALCHEMY_DATABASE_URL,
+            echo=settings.DATABASE_DEBUG,
         )
         SessionLocal = async_sessionmaker(
-            engine, class_=AsyncSession, expire_on_commit=False
+            engine,
+            class_=AsyncSession,
+            expire_on_commit=False,
         )
     return engine
 
@@ -112,7 +117,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             await db.close()
 
 
-@lru_cache()
+@lru_cache
 def get_settings() -> Settings:
     """
     Return a settings object, based on `.env` dotenv
@@ -141,7 +146,7 @@ def get_redis_client(
                 redis_client = connect(settings)
             except redis.exceptions.ConnectionError:
                 hyperion_error_logger.error(
-                    "Redis connection error: Check the Redis configuration or the Redis server"
+                    "Redis connection error: Check the Redis configuration or the Redis server",
                 )
         else:
             redis_client = False
@@ -182,7 +187,7 @@ def get_notification_tool(
 
 
 def get_user_from_token_with_scopes(
-    scopes: list[list[ScopeType]] = [],
+    scopes: list[list[ScopeType]],
 ) -> Callable[[AsyncSession, Settings, str], Coroutine[Any, Any, models_core.CoreUser]]:
     """
     Generate a dependency which will:
@@ -212,11 +217,11 @@ def get_user_from_token_with_scopes(
             )
             token_data = schemas_auth.TokenData(**payload)
             hyperion_access_logger.info(
-                f"Get_current_user: Decoded a token for user {token_data.sub} ({request_id})"
+                f"Get_current_user: Decoded a token for user {token_data.sub} ({request_id})",
             )
-        except (jwt.JWTError, ValidationError) as error:
+        except (JWTError, ValidationError) as error:
             hyperion_access_logger.warning(
-                f"Get_current_user: Failed to decode a token: {error} ({request_id})"
+                f"Get_current_user: Failed to decode a token: {error} ({request_id})",
             )
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -256,7 +261,7 @@ def get_user_from_token_with_scopes(
 
 def is_user_a_member(
     user: models_core.CoreUser = Depends(
-        get_user_from_token_with_scopes([[ScopeType.API]])
+        get_user_from_token_with_scopes([[ScopeType.API]]),
     ),
 ) -> models_core.CoreUser:
     """
@@ -281,7 +286,7 @@ def is_user_a_member_of(
 
     async def is_user_a_member_of(
         user: models_core.CoreUser = Depends(
-            get_user_from_token_with_scopes([[ScopeType.API]])
+            get_user_from_token_with_scopes([[ScopeType.API]]),
         ),
         request_id: str = Depends(get_request_id),
     ) -> models_core.CoreUser:
@@ -293,7 +298,7 @@ def is_user_a_member_of(
             return user
 
         hyperion_access_logger.warning(
-            f"Is_user_a_member_of: user is not a member of the group {group_id} ({request_id})"
+            f"Is_user_a_member_of: user is not a member of the group {group_id} ({request_id})",
         )
 
         raise HTTPException(
@@ -320,11 +325,11 @@ async def get_token_data(
         )
         token_data = schemas_auth.TokenData(**payload)
         hyperion_access_logger.info(
-            f"Get_token_data: Decoded a token for user {token_data.sub} ({request_id})"
+            f"Get_token_data: Decoded a token for user {token_data.sub} ({request_id})",
         )
-    except (jwt.JWTError, ValidationError) as error:
+    except (JWTError, ValidationError) as error:
         hyperion_access_logger.warning(
-            f"Get_token_data: Failed to decode a token: {error} ({request_id})"
+            f"Get_token_data: Failed to decode a token: {error} ({request_id})",
         )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

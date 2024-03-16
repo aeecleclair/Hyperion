@@ -8,7 +8,7 @@ from app.core import schemas_core
 class LoanerBase(BaseModel):
     name: str
     group_manager_id: str = Field(
-        description="The group manager id should by a group identifier"
+        description="The group manager id should by a group identifier",
     )
     model_config = ConfigDict(from_attributes=True)
 
@@ -37,7 +37,8 @@ class ItemUpdate(BaseModel):
     suggested_caution: int | None = None
     total_quantity: int | None = None
     suggested_lending_duration: int | None = Field(
-        description="duration in seconds", default=None
+        description="duration in seconds",
+        default=None,
     )
 
 
@@ -133,5 +134,6 @@ class LoanExtend(BaseModel):
     # The client can either provide a new end date or a timedelta to be added to the old end date.
     end: date | None = Field(None, description="A new return date for the Loan")
     duration: int | None = Field(
-        None, description="The duration by which the loan should be extended in seconds"
+        None,
+        description="The duration by which the loan should be extended in seconds",
     )

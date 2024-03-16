@@ -84,7 +84,8 @@ async def create_group(
     """
     if await cruds_groups.get_group_by_name(group_name=group.name, db=db) is not None:
         raise HTTPException(
-            status_code=400, detail="A group with the name {group.name} already exist"
+            status_code=400,
+            detail="A group with the name {group.name} already exist",
         )
 
     try:
@@ -159,7 +160,7 @@ async def create_membership(
         raise HTTPException(status_code=400, detail="Invalid user_id")
 
     hyperion_security_logger.warning(
-        f"Create_membership: Admin user {user.id} ({user.name}) added user {user_db.id} ({user_db.email}) to group {group_db.id} ({group_db.name}) ({request_id})"
+        f"Create_membership: Admin user {user.id} ({user.name}) added user {user_db.id} ({user_db.email}) to group {group_db.id} ({group_db.name}) ({request_id})",
     )
 
     try:
@@ -191,13 +192,14 @@ async def create_batch_membership(
     """
 
     group_db = await cruds_groups.get_group_by_id(
-        group_id=batch_membership.group_id, db=db
+        group_id=batch_membership.group_id,
+        db=db,
     )
     if group_db is None:
         raise HTTPException(status_code=400, detail="Invalid group_id")
 
     hyperion_security_logger.warning(
-        f"Create_batch_membership: Admin user {user.id} ({user.name}) added users to group {group_db.id} ({group_db.name}) in batch ({request_id})"
+        f"Create_batch_membership: Admin user {user.id} ({user.name}) added users to group {group_db.id} ({group_db.name}) in batch ({request_id})",
     )
 
     for email in batch_membership.user_emails:
@@ -235,11 +237,13 @@ async def delete_membership(
     """
 
     hyperion_security_logger.warning(
-        f"Create_membership: Admin user {user.id} ({user.name}) removed user {membership.user_id} from group {membership.group_id} ({request_id})"
+        f"Create_membership: Admin user {user.id} ({user.name}) removed user {membership.user_id} from group {membership.group_id} ({request_id})",
     )
 
     await cruds_groups.delete_membership_by_group_and_user_id(
-        group_id=membership.group_id, user_id=membership.user_id, db=db
+        group_id=membership.group_id,
+        user_id=membership.user_id,
+        db=db,
     )
 
 
@@ -260,17 +264,19 @@ async def delete_batch_membership(
     """
 
     group_db = await cruds_groups.get_group_by_id(
-        group_id=batch_membership.group_id, db=db
+        group_id=batch_membership.group_id,
+        db=db,
     )
     if group_db is None:
         raise HTTPException(status_code=400, detail="Invalid group_id")
 
     hyperion_security_logger.warning(
-        f"Create_batch_membership: Admin user {user.id} ({user.name}) removed all users from group {group_db.id} ({group_db.name}) in batch ({request_id})"
+        f"Create_batch_membership: Admin user {user.id} ({user.name}) removed all users from group {group_db.id} ({group_db.name}) in batch ({request_id})",
     )
 
     await cruds_groups.delete_membership_by_group_id(
-        group_id=batch_membership.group_id, db=db
+        group_id=batch_membership.group_id,
+        db=db,
     )
 
 
@@ -294,7 +300,8 @@ async def delete_group(
 
     if group_id in set(item.value for item in GroupType):
         raise HTTPException(
-            status_code=400, detail="GroupTypes groups can not be deleted"
+            status_code=400,
+            detail="GroupTypes groups can not be deleted",
         )
 
     await cruds_groups.delete_membership_by_group_id(group_id=group_id, db=db)

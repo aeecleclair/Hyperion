@@ -45,7 +45,7 @@ def create_module_visibility_sync(
         return module_visibility
     except IntegrityError as error:
         db.rollback()
-        raise ValueError(error)
+        raise ValueError(error) from error
 
 
 def get_group_by_id_sync(group_id: str, db: Session) -> models_core.CoreGroup | None:
@@ -56,14 +56,15 @@ def get_group_by_id_sync(group_id: str, db: Session) -> models_core.CoreGroup | 
         select(models_core.CoreGroup)
         .where(models_core.CoreGroup.id == group_id)
         .options(
-            selectinload(models_core.CoreGroup.members)
-        )  # needed to load the members from the relationship
+            selectinload(models_core.CoreGroup.members),
+        ),  # needed to load the members from the relationship
     )
     return result.scalars().first()
 
 
 def create_group_sync(
-    group: models_core.CoreGroup, db: Session
+    group: models_core.CoreGroup,
+    db: Session,
 ) -> models_core.CoreGroup:
     """
     Create a new group in database and return it

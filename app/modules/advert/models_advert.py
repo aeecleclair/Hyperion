@@ -1,9 +1,10 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
+from app.utils.types.datetime import TZDateTime
 
 
 class Advertiser(Base):
@@ -14,7 +15,9 @@ class Advertiser(Base):
     group_manager_id: Mapped[str] = mapped_column(String, nullable=False)
 
     adverts: Mapped[list["Advert"]] = relationship(
-        "Advert", lazy="subquery", back_populates="advertiser"
+        "Advert",
+        lazy="subquery",
+        back_populates="advertiser",
     )
 
 
@@ -30,5 +33,5 @@ class Advert(Base):
     )
     title: Mapped[str] = mapped_column(String, nullable=False)
     content: Mapped[str] = mapped_column(String, nullable=False)
-    date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    date: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
     tags: Mapped[str] = mapped_column(String, nullable=True)

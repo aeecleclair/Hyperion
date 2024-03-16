@@ -89,9 +89,9 @@ async def init_objects():
     booking = models_booking.Booking(
         id=booking_id,
         reason="HH",
-        start=datetime.datetime.fromisoformat("2023-09-22T20:00:00"),
-        end=datetime.datetime.fromisoformat("2023-09-22T23:00:00"),
-        creation=datetime.datetime.fromisoformat("2023-09-10T10:00:00"),
+        start=datetime.datetime.fromisoformat("2023-09-22T20:00:00Z"),
+        end=datetime.datetime.fromisoformat("2023-09-22T23:00:00Z"),
+        creation=datetime.datetime.fromisoformat("2023-09-10T10:00:00Z"),
         room_id=room.id,
         key=True,
         decision="approved",
@@ -104,9 +104,9 @@ async def init_objects():
     booking_to_delete = models_booking.Booking(
         id=str(uuid.uuid4()),
         reason="Test",
-        start=datetime.datetime.fromisoformat("2023-09-22T20:00:00"),
-        end=datetime.datetime.fromisoformat("2023-09-22T23:00:00"),
-        creation=datetime.datetime.fromisoformat("2023-09-10T10:00:00"),
+        start=datetime.datetime.fromisoformat("2023-09-22T20:00:00Z"),
+        end=datetime.datetime.fromisoformat("2023-09-22T23:00:00Z"),
+        creation=datetime.datetime.fromisoformat("2023-09-10T10:00:00Z"),
         room_id=room.id,
         key=True,
         decision="pending",
@@ -182,7 +182,7 @@ def test_get_user_bookings_manage_confirmed():
         headers={"Authorization": f"Bearer {token_manager}"},
     )
     assert response.status_code == 200
-    assert booking_id in map(lambda booking: booking["id"], response.json())
+    assert booking_id in [booking["id"] for booking in response.json()]
 
 
 def test_get_bookings_confirmed():

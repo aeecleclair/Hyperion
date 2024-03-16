@@ -31,10 +31,10 @@ class CoreUserBase(BaseModel):
 
     _normalize_name = field_validator("name")(validators.trailing_spaces_remover)
     _normalize_firstname = field_validator("firstname")(
-        validators.trailing_spaces_remover
+        validators.trailing_spaces_remover,
     )
     _normalize_nickname = field_validator("nickname")(
-        validators.trailing_spaces_remover
+        validators.trailing_spaces_remover,
     )
 
 
@@ -82,7 +82,7 @@ class CoreUserUpdate(BaseModel):
     floor: FloorsType | None = None
 
     _normalize_nickname = field_validator("nickname")(
-        validators.trailing_spaces_remover
+        validators.trailing_spaces_remover,
     )
     model_config = ConfigDict(json_schema_extra=examples_core.example_CoreUserUpdate)
 
@@ -98,10 +98,10 @@ class CoreUserUpdateAdmin(BaseModel):
 
     _normalize_name = field_validator("name")(validators.trailing_spaces_remover)
     _normalize_firstname = field_validator("firstname")(
-        validators.trailing_spaces_remover
+        validators.trailing_spaces_remover,
     )
     _normalize_nickname = field_validator("nickname")(
-        validators.trailing_spaces_remover
+        validators.trailing_spaces_remover,
     )
     model_config = ConfigDict(json_schema_extra=examples_core.example_CoreUserUpdate)
 
@@ -146,7 +146,8 @@ class CoreUserActivateRequest(CoreUserBase):
     phone: str | None = None
     floor: FloorsType
     promo: int | None = Field(
-        default=None, description="Promotion of the student, an integer like 21"
+        default=None,
+        description="Promotion of the student, an integer like 21",
     )
 
     # Password validator
@@ -166,8 +167,6 @@ class CoreGroup(CoreGroupSimple):
 
 class CoreGroupCreate(CoreGroupBase):
     """Model for group creation schema"""
-
-    pass
 
 
 class CoreGroupInDB(CoreGroupBase):
