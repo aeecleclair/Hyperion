@@ -6,8 +6,8 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
 
 
-class Journal(Base):
-    __tablename__ = "journals"
+class Paper(Base):
+    __tablename__ = "papers"
 
     id: Mapped[str] = mapped_column(String, primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String, nullable=False)

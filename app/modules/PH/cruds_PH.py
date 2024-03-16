@@ -4,38 +4,38 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.PH import models_PH
+from app.modules.ph import models_ph
 
 
-async def get_journals(
+async def get_papers(
     db: AsyncSession,
-) -> Sequence[models_PH.Journal]:
+) -> Sequence[models_ph.Paper]:
     result = await db.execute(
-        select(models_PH.Journal).order_by(models_PH.Journal.release_date),
+        select(models_ph.Paper).order_by(models_ph.Paper.release_date),
     )
     return result.scalars().all()
 
 
-async def get_journal_by_id(
+async def get_paper_by_id(
     db: AsyncSession,
-    journal_id: str,
-) -> Sequence[models_PH.Journal]:
+    paper_id: str,
+) -> Sequence[models_ph.Paper]:
     result = await db.execute(
-        select(models_PH.Journal).where(models_PH.Journal.id == journal_id),
+        select(models_ph.Paper).where(models_ph.Paper.id == paper_id),
     )
     return result.scalars().all()
 
 
-async def create_journal(
-    journal: models_PH.Journal,
+async def create_paper(
+    paper: models_ph.Paper,
     db: AsyncSession,
-) -> models_PH.Journal:
-    """Create a new journal in database and return it"""
+) -> models_ph.Paper:
+    """Create a new paper in database and return it"""
 
-    db.add(journal)
+    db.add(paper)
     try:
         await db.commit()
-        return journal
+        return paper
     except IntegrityError as error:
         await db.rollback()
         raise ValueError(error)
