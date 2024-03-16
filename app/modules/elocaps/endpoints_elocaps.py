@@ -76,7 +76,7 @@ async def register_game(
 
         try:
             for player in game_params.players:
-                if player.user_id == user.user_id:
+                if player.user_id == user.id:
                     continue
                 now = datetime.now(ZoneInfo(settings.TIMEZONE))
                 message = Message(
