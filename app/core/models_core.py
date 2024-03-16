@@ -134,7 +134,7 @@ class ModuleVisibility(Base):
 
     root: Mapped[str] = mapped_column(String, primary_key=True)
     allowed_group_id: Mapped[str] = mapped_column(String, primary_key=True)
-    visible: Mapped[bool] = mapped_column(Integer, nullable=False, default=True)
+    visible: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
 
 class AlembicVersion(Base):
