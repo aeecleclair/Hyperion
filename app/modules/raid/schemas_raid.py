@@ -132,7 +132,6 @@ class Team(TeamBase):
     captain: Participant
     second: Participant | None
     difficulty: Difficulty | None
-    validation_progress: float
     meeting_place: MeetingPlace | None
 
     class Config:
