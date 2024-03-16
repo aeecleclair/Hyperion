@@ -6,6 +6,7 @@ from app.utils.types.raid_type import Difficulty, DocumentType, Size
 
 
 class DocumentBase(BaseModel):
+    participant_id: str
     name: str
     type: DocumentType
 
