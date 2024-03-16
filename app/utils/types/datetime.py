@@ -5,6 +5,9 @@ from sqlalchemy.types import TypeDecorator
 
 
 class TZDateTime(TypeDecorator):
+    # see https://docs.sqlalchemy.org/en/20/core/custom_types.html#store-timezone-aware-timestamps-as-timezone-naive-utc
+    # We use this custom type because sqlite doesn't support datetime with timezone
+
     impl = DateTime
     cache_ok = True
 
