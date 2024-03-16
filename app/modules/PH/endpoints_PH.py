@@ -1,3 +1,4 @@
+import datetime
 import uuid
 
 from fastapi import Depends, File, HTTPException, UploadFile
@@ -24,7 +25,7 @@ module = Module(
 
 
 @module.router.get(
-    "/PH/get_journal_pdf",
+    "/PH/{journal_id}/pdf",
     response_class=FileResponse,
     status_code=200,
 )
@@ -40,7 +41,7 @@ async def get_journal_pdf(
 
 
 @module.router.get(
-    "/PH/journals",
+    "/PH/",
     response_model=list[schemas_PH.Journal],
     status_code=200,
 )
@@ -53,7 +54,7 @@ async def get_journals(
 
 
 @module.router.post(
-    "/PH/create_journal/",
+    "/PH/",
     response_model=schemas_PH.Journal,
     status_code=201,
 )
@@ -79,7 +80,7 @@ async def create_journal(
 
 
 @module.router.post(
-    "/PH/create_journal/{journal_id}/pdf",
+    "/PH/{journal_id}/pdf",
     response_model=standard_responses.Result,
     status_code=201,
 )
