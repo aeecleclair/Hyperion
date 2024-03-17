@@ -22,9 +22,7 @@ def upgrade() -> None:
     op.alter_column(
         "notification_message",
         "expire_on",
-        existing_type=sa.DATE(),
         type_=sa.DateTime(timezone=False),
-        existing_nullable=False,
     )
 
 
@@ -32,7 +30,5 @@ def downgrade() -> None:
     op.alter_column(
         "notification_message",
         "expire_on",
-        existing_type=sa.DateTime(timezone=False),
         type_=sa.DATE(),
-        existing_nullable=False,
     )
