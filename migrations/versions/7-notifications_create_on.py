@@ -1,7 +1,7 @@
 """Notifications 'create_on' migration
 
 Revision ID: e3d06397960d
-Revises: 2fcadbe2f0ad
+Revises: 6afc765adaa2
 Create Date: 2024-03-17 19:19:14.297195
 
 """
@@ -13,7 +13,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "e3d06397960d"
-down_revision: str | None = "2fcadbe2f0ad"
+down_revision: str | None = "6afc765adaa2"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
