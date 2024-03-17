@@ -21,7 +21,10 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     # Schema migration
-    op.add_column("loan", sa.Column("returned_date", sa.Date(), nullable=True))
+    op.add_column(
+        "loan",
+        sa.Column("returned_date", sa.Date(), nullable=True),
+    )
 
     # Data migration
     t_loan = sa.Table(
@@ -33,7 +36,9 @@ def upgrade() -> None:
     )
 
     conn = op.get_bind()
-    res = conn.execute(sa.select(t_loan.c.id).where(t_loan.c.returned)).fetchall()
+    res = conn.execute(
+        sa.select(t_loan.c.id, t_loan.c.returned).where(t_loan.c.returned),
+    ).fetchall()
     for id_, _ in res:
         conn.execute(
             t_loan.update()
