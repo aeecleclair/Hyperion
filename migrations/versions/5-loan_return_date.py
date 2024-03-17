@@ -7,7 +7,6 @@ Create Date: 2024-03-01 23:33:20.431056
 """
 
 from collections.abc import Sequence
-from datetime import UTC, datetime
 
 import sqlalchemy as sa
 from alembic import op
@@ -35,7 +34,7 @@ def upgrade() -> None:
 
     conn = op.get_bind()
     res = conn.execute(
-        sa.select(t_loan.c.id, t_loan.c.end).where(t_loan.c.returned)
+        sa.select(t_loan.c.id, t_loan.c.end).where(t_loan.c.returned),
     ).fetchall()
     for id_, end_ in res:
         conn.execute(
