@@ -50,6 +50,8 @@ async def register_game(
         for sub_player in game_params.players:
             if player != sub_player and player.user_id == sub_player.user_id:
                 raise HTTPException(400, "You can't have the same player twice")
+    if set(player.team for player in game_params.players) != {1, 2}:
+        raise HTTPException(400, "Teams 1 and 2 must both be present")
     game = models_elocaps.Game(mode=game_params.mode)
     try:
         await cruds_elocaps.create_game(db, game)

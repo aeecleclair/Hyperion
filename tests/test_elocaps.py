@@ -327,6 +327,20 @@ def test_create_game():
         ).status_code
         == 400
     )
+    assert (
+        client.post(
+            "/elocaps/games",
+            headers={"Authorization": f"Bearer {users[0]['token']}"},
+            json={
+                "mode": CapsMode.SINGLE,
+                "players": [
+                    {"user_id": users[0]["user"].id, "team": 1, "score": 1},
+                    {"user_id": users[1]["user"].id, "team": 1, "score": 1},
+                ],
+            },
+        ).status_code
+        == 400
+    )
     # The test below works only with postgresql
 
     # assert (
