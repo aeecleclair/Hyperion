@@ -5,14 +5,21 @@ See https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
 
 
 def password_validator(password: str) -> str:
-    """
-    Check the password strength, validity and remove trailing spaces.
-    This function is intended to be used as a Pydantic validator:
-    https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
-    """
-    # TODO
-    if len(password) < 6:
-        raise ValueError("The password must be at least 6 characters long")
+    nb_number, nb_special, nb_maj, nb_min = 0, 0, 0, 0
+    for i in password:
+        if i.isnumeric():
+            nb_number += 1
+        elif not i.isalpha():
+            nb_special += 1
+        elif i.isupper():
+            nb_maj += 1
+        elif i.islower():
+            nb_min += 1
+
+    if len(password) < 6 or nb_number < 1 or nb_special < 1 or nb_min < 1 or nb_maj < 1:
+        raise ValueError(
+            "The password must be at least 6 characters long and contain at least one number, one special character, one majuscule and one minuscule.",
+        )
     return password.strip()
 
 
