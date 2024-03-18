@@ -7,7 +7,6 @@ Create Date: 2024-03-01 23:33:20.431056
 """
 
 from collections.abc import Sequence
-from datetime import UTC, datetime
 
 import sqlalchemy as sa
 from alembic import op
@@ -28,17 +27,18 @@ def upgrade() -> None:
         "loan",
         sa.MetaData(),
         sa.Column("id", sa.String()),
+        sa.Column("end", sa.Date()),
         sa.Column("returned", sa.Boolean()),
-        sa.Column("returned_date", sa.DateTime(timezone=True)),
+        sa.Column("returned_date", sa.Date()),
     )
 
     conn = op.get_bind()
-    res = conn.execute(sa.select(t_loan.c.id).where(t_loan.c.returned)).fetchall()
-    for id_, _ in res:
+    res = conn.execute(
+        sa.select(t_loan.c.id, t_loan.c.end).where(t_loan.c.returned),
+    ).fetchall()
+    for id_, end_ in res:
         conn.execute(
-            t_loan.update()
-            .where(t_loan.c.id == id_)
-            .values(returned_date=datetime.now(UTC)),
+            t_loan.update().where(t_loan.c.id == id_).values(returned_date=end_),
         )
 
 
