@@ -25,7 +25,7 @@ FABRISTPP_EMAIL_1 = "fabristpp.eclair1@etu.ec-lyon.fr"
 FABRISTPP_EMAIL_2 = "fabristpp.eclair3@ecl21.ec-lyon.fr"
 
 student_user_email = "student@etu.ec-lyon.fr"
-student_user_password = "password"
+student_user_password = "Password1!"
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
@@ -157,7 +157,7 @@ def test_create_and_activate_user(mocker):
         "/users/activate",
         json={
             "activation_token": UNIQUE_TOKEN,
-            "password": "password",
+            "password": "Password1!",
             "firstname": "firstname",
             "name": "name",
             "nickname": "nickname",
@@ -207,7 +207,7 @@ def test_recover_and_reset_password(mocker):
 
     response = client.post(
         "/users/reset-password",
-        json={"reset_token": UNIQUE_TOKEN, "new_password": "new_password"},
+        json={"reset_token": UNIQUE_TOKEN, "new_password": "New_password1"},
     )
 
     assert response.status_code == 201
@@ -297,7 +297,7 @@ def test_change_password():
         json={
             "email": student_user_email,
             "old_password": student_user_password,
-            "new_password": "the_new_password",
+            "new_password": "The_new_password1",
         },
         headers={"Authorization": f"Bearer {token_student_user}"},
     )
