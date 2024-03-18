@@ -152,7 +152,7 @@ async def save_file_as_data(
     if file_size > max_file_size:
         raise HTTPException(
             status_code=413,
-            detail=f"File size is too big. Limit is {max_file_size} MB",
+            detail=f"File size is too big. Limit is {max_file_size/1024/1024} MB",
         )
     # We go back to the beginning of the file to save it on the disk
     await image.seek(0)
@@ -161,6 +161,7 @@ async def save_file_as_data(
         "image/jpeg": "jpg",
         "image/png": "png",
         "image/webp": "webp",
+        "application/pdf": "pdf",
     }
     extension = extensions_mapping.get(image.content_type, "")
     # Remove the existing file if any and create the new one
