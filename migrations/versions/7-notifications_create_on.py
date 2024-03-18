@@ -30,5 +30,5 @@ def downgrade() -> None:
     op.alter_column(
         "notification_message",
         "expire_on",
-        type_=sa.DATE(),
+        type_=sa.Date(),
     )
