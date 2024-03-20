@@ -1,7 +1,7 @@
 from pydantic import BaseModel, ConfigDict
 
 from app.core import schemas_core
-from app.modules.phonebook.phonebook_types import Kinds
+from app.modules.phonebook.types_phonebook import Kinds
 
 
 class RoleTagsReturn(BaseModel):

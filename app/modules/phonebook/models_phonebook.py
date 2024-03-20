@@ -2,7 +2,7 @@ from sqlalchemy import Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
-from app.modules.phonebook.phonebook_types import Kinds
+from app.modules.phonebook.types_phonebook import Kinds
 
 
 class Membership(Base):
