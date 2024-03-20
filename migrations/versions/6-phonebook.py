@@ -25,7 +25,19 @@ def upgrade() -> None:
         sa.Column("id", sa.String(), nullable=False),
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("description", sa.String(), nullable=True),
-        sa.Column("kind", sa.String(), nullable=False),
+        sa.Column(
+            "kind",
+            sa.Enum(
+                "Comité",
+                "Section AE",
+                "Club AE",
+                "Section USE",
+                "Club USE",
+                "Asso indé",
+                name="kinds",
+            ),
+            nullable=False,
+        ),
         sa.Column("mandate_year", sa.Integer(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )

@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class RoleTags(Enum):
+class RoleTags(str, Enum):
     president = "Prez'"
     treso = "Trez'"
     sg = "SG"
@@ -9,7 +9,7 @@ class RoleTags(Enum):
     resp_part = "Respo Partenariats"
 
 
-class Kinds(Enum):
+class Kinds(str, Enum):
     comity = "Comité"
     section_ae = "Section AE"
     club_ae = "Club AE"
