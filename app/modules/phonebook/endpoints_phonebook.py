@@ -15,6 +15,7 @@ from app.utils.tools import (
     is_user_member_of_an_allowed_group,
     save_file_as_data,
 )
+from app.utils.types.content_type import ContentType
 
 module = Module(
     root="phonebook",
@@ -491,7 +492,11 @@ async def create_association_logo(
         filename=association_id,
         request_id=request_id,
         max_file_size=4 * 1024 * 1024,
-        accepted_content_types=["image/jpeg", "image/png", "image/webp"],
+        accepted_content_types=[
+            ContentType.jpg,
+            ContentType.png,
+            ContentType.webp,
+        ],
     )
     return standard_responses.Result(success=True)
 
