@@ -26,6 +26,7 @@ class GroupType(str, Enum):
     cinema = "ce5f36e6-5377-489f-9696-de70e2477300"
 
     # Module related groups
+    raid_admin = "b378b102-4979-4186-8630-d28fe460ee08"
 
     # Auth related groups
 
