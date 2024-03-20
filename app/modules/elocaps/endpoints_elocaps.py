@@ -56,9 +56,16 @@ async def register_game(
     try:
         await cruds_elocaps.create_game(db, game)
         for player in game_params.players:
-            player_mode_info = await cruds_elocaps.get_player(db, player.user_id, game.mode)
+            player_mode_info = await cruds_elocaps.get_player(
+                db,
+                player.user_id,
+                game.mode,
+            )
             if not player_mode_info:
-                player_mode_info = models_elocaps.Player(user_id=player.user_id, mode=game.mode)
+                player_mode_info = models_elocaps.Player(
+                    user_id=player.user_id,
+                    mode=game.mode,
+                )
                 await cruds_elocaps.add_player(db, player_mode_info)
             game_player = models_elocaps.GamePlayer(
                 game_id=game.id,
@@ -192,7 +199,11 @@ async def confirm_game(
         await cruds_elocaps.user_game_validation(db, player)
         if player.game.is_confirmed:
             for game_player in player.game.game_players:
-                await cruds_elocaps.add_elo_to_player(db, game_player.player_id, game_player.elo_gain)
+                await cruds_elocaps.add_elo_to_player(
+                    db,
+                    game_player.player_id,
+                    game_player.elo_gain,
+                )
         return await cruds_elocaps.get_game_details(db, game_id)
     except ValueError as error:
         raise HTTPException(400, str(error))

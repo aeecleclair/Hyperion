@@ -53,7 +53,10 @@ async def get_player_info(
     return result.scalars().all()
 
 
-async def get_player_games(db: AsyncSession, user_id: str) -> Sequence[models_elocaps.Game]:
+async def get_player_games(
+    db: AsyncSession,
+    user_id: str,
+) -> Sequence[models_elocaps.Game]:
     result = await db.execute(
         select(models_elocaps.Game)
         .join(models_elocaps.GamePlayer)
@@ -139,8 +142,10 @@ async def set_player_elo_gain(
         update(models_elocaps.GamePlayer)
         .where(
             models_elocaps.GamePlayer.player_id == game_player.player_id,
-            models_elocaps.GamePlayer.game_id == game_player.game_id)
-        .values({"elo_gain": gain}))
+            models_elocaps.GamePlayer.game_id == game_player.game_id,
+        )
+        .values({"elo_gain": gain}),
+    )
     await db.commit()
 
 
