@@ -94,6 +94,7 @@ exclude = '''(?x)(
     | .venv
 )'''
 warn_unreachable = true
+warn_unused_ignores = true
 
 
 [[tool.mypy.overrides]]

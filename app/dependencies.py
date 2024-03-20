@@ -124,7 +124,7 @@ def get_settings() -> Settings:
     """
     # `lru_cache()` decorator is here to prevent the class to be instantiated multiple times.
     # See https://fastapi.tiangolo.com/advanced/settings/#lru_cache-technical-details
-    return Settings(_env_file=".env")  # type:ignore
+    return Settings(_env_file=".env")
 
 
 # (issue ouverte sur github: https://github.com/pydantic/pydantic/issues/3072)
