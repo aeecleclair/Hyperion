@@ -11,6 +11,7 @@ class Topic(str, Enum):
     bookingadmin = "bookingadmin"
     amap = "amap"
     booking = "booking"
+    elocaps = "elocaps"
     event = "event"
     loan = "loan"
     raffle = "raffle"
