@@ -12,10 +12,12 @@ from tests.commons import (
     client,
     create_api_access_token,
     create_user_with_groups,
-    event_loop,
+    event_loop,  # noqa
 )
 
-membership: models_phonebook.Membership | None = None
+association: models_phonebook.Association | None = None
+associations_to_delete_admin: models_phonebook.Association | None = None
+associations_to_delete_simple: models_phonebook.Association | None = None
 
 membership_to_delete_admin: models_phonebook.Membership | None = None
 membership_to_delete_president: models_phonebook.Membership | None = None
