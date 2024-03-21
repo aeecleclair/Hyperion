@@ -5,7 +5,7 @@ class AmapSlotType(str, Enum):
     midi = "midi"
     soir = "soir"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.name}<{self.value}"
 
 
@@ -16,5 +16,5 @@ class DeliveryStatusType(str, Enum):
     delivered = "delivered"  # Delivery can be archived
     archived = "archived"  # no longer returned
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.name}<{self.value}"

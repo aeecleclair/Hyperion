@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import uuid
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Iterator
 from functools import lru_cache
 
 import pytest
@@ -78,7 +78,7 @@ def override_get_redis_client(
     return redis_client
 
 
-def change_redis_client_status(activated: bool):
+def change_redis_client_status(activated: bool) -> None:
     global redis_client
     if activated:
         if settings.REDIS_HOST != "":
@@ -108,7 +108,7 @@ with client:  # That syntax trigger the lifespan defined in main.py
 # to be able to use session scoped fixture (the function that initialize the db objects in each test file)
 # See https://github.com/tortoise/tortoise-orm/issues/638#issuecomment-830124562
 @pytest.fixture(scope="module")
-def event_loop():
+def event_loop() -> Iterator:
     """Overrides pytest default function scoped event loop"""
     policy = asyncio.get_event_loop_policy()
     loop = policy.new_event_loop()
@@ -168,7 +168,7 @@ async def create_user_with_groups(
     return user
 
 
-def create_api_access_token(user: models_core.CoreUser):
+def create_api_access_token(user: models_core.CoreUser) -> str:
     """
     Create a JWT access token for the `user` with the scope `API`
     """

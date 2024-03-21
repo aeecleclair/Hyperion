@@ -29,7 +29,7 @@ list2id: str
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
-async def init_objects():
+async def init_objects() -> None:
     global CAA_user, AE_user
 
     CAA_user = await create_user_with_groups([GroupType.CAA, GroupType.AE])
@@ -80,7 +80,7 @@ async def init_objects():
     await add_object_to_db(voters_CAA)
 
 
-def test_get_sections():
+def test_get_sections() -> None:
     token = create_api_access_token(AE_user)
     response = client.get(
         "/campaign/sections",
@@ -91,7 +91,7 @@ def test_get_sections():
     assert response.status_code == 200
 
 
-def test_add_sections():
+def test_add_sections() -> None:
     token = create_api_access_token(CAA_user)
     response = client.post(
         "/campaign/sections",
@@ -106,7 +106,7 @@ def test_add_sections():
     section2id = response.json()["id"]
 
 
-def test_delete_section():
+def test_delete_section() -> None:
     token = create_api_access_token(CAA_user)
     response = client.delete(
         f"/campaign/sections/{section2id}",
@@ -115,7 +115,7 @@ def test_delete_section():
     assert response.status_code == 204
 
 
-def test_get_voters():
+def test_get_voters() -> None:
     token = create_api_access_token(AE_user)
     response = client.get(
         "/campaign/voters",
@@ -126,7 +126,7 @@ def test_get_voters():
     assert response.status_code == 200
 
 
-def test_delete_voter_by_group_id():
+def test_delete_voter_by_group_id() -> None:
     token = create_api_access_token(CAA_user)
     response = client.delete(
         f"/campaign/voters/{GroupType.CAA}",
@@ -135,7 +135,7 @@ def test_delete_voter_by_group_id():
     assert response.status_code == 204
 
 
-def test_delete_voters():
+def test_delete_voters() -> None:
     token = create_api_access_token(CAA_user)
     response = client.delete(
         "/campaign/voters",
@@ -144,7 +144,7 @@ def test_delete_voters():
     assert response.status_code == 204
 
 
-def test_add_voters():
+def test_add_voters() -> None:
     token = create_api_access_token(CAA_user)
     response = client.post(
         "/campaign/voters",
@@ -156,7 +156,7 @@ def test_add_voters():
     assert response.status_code == 201
 
 
-def test_get_lists():
+def test_get_lists() -> None:
     token = create_api_access_token(AE_user)
     response = client.get(
         "/campaign/lists",
@@ -165,7 +165,7 @@ def test_get_lists():
     assert response.status_code == 200
 
 
-def test_add_list():
+def test_add_list() -> None:
     token = create_api_access_token(CAA_user)
     response = client.post(
         "/campaign/lists",
@@ -184,7 +184,7 @@ def test_add_list():
     list2id = response.json()["id"]
 
 
-def test_delete_list():
+def test_delete_list() -> None:
     token = create_api_access_token(CAA_user)
     response = client.delete(
         f"/campaign/lists/{list2id}",
@@ -193,7 +193,7 @@ def test_delete_list():
     assert response.status_code == 204
 
 
-def test_update_list():
+def test_update_list() -> None:
     token = create_api_access_token(CAA_user)
     response = client.patch(
         f"/campaign/lists/{campaign_list.id}",
@@ -206,7 +206,7 @@ def test_update_list():
     assert response.status_code == 204
 
 
-def test_create_campaigns_logo():
+def test_create_campaigns_logo() -> None:
     token = create_api_access_token(CAA_user)
 
     with Path("assets/images/default_campaigns_logo.png").open("rb") as image:
@@ -219,7 +219,7 @@ def test_create_campaigns_logo():
     assert response.status_code == 201
 
 
-def test_vote_if_not_opened():
+def test_vote_if_not_opened() -> None:
     # An user should be able to vote if the status is not opened
     token = create_api_access_token(AE_user)
     response = client.post(
@@ -230,7 +230,7 @@ def test_vote_if_not_opened():
     assert response.status_code == 400
 
 
-def test_open_vote():
+def test_open_vote() -> None:
     token = create_api_access_token(CAA_user)
     response = client.post(
         "/campaign/status/open",
@@ -241,7 +241,7 @@ def test_open_vote():
     assert response.status_code == 204
 
 
-def test_read_campaigns_logo():
+def test_read_campaigns_logo() -> None:
     token = create_api_access_token(AE_user)
 
     response = client.get(
@@ -252,7 +252,7 @@ def test_read_campaigns_logo():
     assert response.status_code == 200
 
 
-def test_vote_if_opened():
+def test_vote_if_opened() -> None:
     # As the status is now opened, the user should be able to vote
     token = create_api_access_token(AE_user)
     response = client.post(
@@ -263,7 +263,7 @@ def test_vote_if_opened():
     assert response.status_code == 204
 
 
-def test_vote_a_second_time_for_the_same_section():
+def test_vote_a_second_time_for_the_same_section() -> None:
     # An user should not be able to vote twice for the same section
     token = create_api_access_token(AE_user)
     response = client.post(
@@ -274,7 +274,7 @@ def test_vote_a_second_time_for_the_same_section():
     assert response.status_code == 400
 
 
-def test_get_sections_already_voted():
+def test_get_sections_already_voted() -> None:
     token = create_api_access_token(AE_user)
     response = client.get(
         "/campaign/votes",
@@ -283,7 +283,7 @@ def test_get_sections_already_voted():
     assert response.status_code == 200
 
 
-def test_get_stats_for_section():
+def test_get_stats_for_section() -> None:
     token = create_api_access_token(CAA_user)
     response = client.get(
         f"/campaign/stats/{section.id}",
@@ -292,7 +292,7 @@ def test_get_stats_for_section():
     assert response.status_code == 200
 
 
-def test_get_results_while_open():
+def test_get_results_while_open() -> None:
     # As the status is open, nobody should be able to access results
     token = create_api_access_token(CAA_user)
     response = client.get(
@@ -302,7 +302,7 @@ def test_get_results_while_open():
     assert response.status_code == 400
 
 
-def test_close_vote():
+def test_close_vote() -> None:
     token = create_api_access_token(CAA_user)
     response = client.post(
         "/campaign/status/close",
@@ -311,7 +311,7 @@ def test_close_vote():
     assert response.status_code == 204
 
 
-def test_count_vote():
+def test_count_vote() -> None:
     token = create_api_access_token(CAA_user)
     response = client.post(
         "/campaign/status/counting",
@@ -320,7 +320,7 @@ def test_count_vote():
     assert response.status_code == 204
 
 
-def test_get_results_while_counting():
+def test_get_results_while_counting() -> None:
     # As the status is counting, only CAA user should be able to access results
     token = create_api_access_token(CAA_user)
     response = client.get(
@@ -330,7 +330,7 @@ def test_get_results_while_counting():
     assert response.status_code == 200
 
 
-def test_publish_vote():
+def test_publish_vote() -> None:
     token = create_api_access_token(CAA_user)
     response = client.post(
         "/campaign/status/published",
@@ -339,7 +339,7 @@ def test_publish_vote():
     assert response.status_code == 204
 
 
-def test_get_results_while_published():
+def test_get_results_while_published() -> None:
     token = create_api_access_token(AE_user)
     response = client.get(
         "/campaign/results",
@@ -348,7 +348,7 @@ def test_get_results_while_published():
     assert response.status_code == 200
 
 
-def test_reset_votes():
+def test_reset_votes() -> None:
     token = create_api_access_token(CAA_user)
     response = client.post(
         "/campaign/status/reset",

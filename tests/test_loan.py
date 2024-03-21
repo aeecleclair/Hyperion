@@ -29,7 +29,7 @@ token_admin: str
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
-async def init_objects():
+async def init_objects() -> None:
     global admin_user
     global loan_user_loaner
     global loaner
@@ -104,7 +104,7 @@ async def init_objects():
     token_simple = create_api_access_token(loan_user_simple)
 
 
-def test_get_loaners():
+def test_get_loaners() -> None:
     response = client.get(
         "/loans/loaners/",
         headers={"Authorization": f"Bearer {token_admin}"},
@@ -112,7 +112,7 @@ def test_get_loaners():
     assert response.status_code == 200
 
 
-def test_create_loaners():
+def test_create_loaners() -> None:
     response = client.post(
         "/loans/loaners/",
         json={
@@ -124,7 +124,7 @@ def test_create_loaners():
     assert response.status_code == 201
 
 
-def test_update_loaners():
+def test_update_loaners() -> None:
     response = client.patch(
         f"/loans/loaners/{loaner_to_delete.id}",
         json={
@@ -136,7 +136,7 @@ def test_update_loaners():
     assert response.status_code == 204
 
 
-def test_delete_loaners():
+def test_delete_loaners() -> None:
     response = client.delete(
         f"/loans/loaners/{loaner_to_delete.id}",
         headers={"Authorization": f"Bearer {token_admin}"},
@@ -144,7 +144,7 @@ def test_delete_loaners():
     assert response.status_code == 204
 
 
-def test_get_loans_by_loaner():
+def test_get_loans_by_loaner() -> None:
     response = client.get(
         f"/loans/loaners/{loaner.id}/loans",
         headers={"Authorization": f"Bearer {token_loaner}"},
@@ -152,7 +152,7 @@ def test_get_loans_by_loaner():
     assert response.status_code == 200
 
 
-def test_get_items_for_loaner():
+def test_get_items_for_loaner() -> None:
     response = client.get(
         f"/loans/loaners/{loaner.id}/items",
         headers={"Authorization": f"Bearer {token_loaner}"},
@@ -160,7 +160,7 @@ def test_get_items_for_loaner():
     assert response.status_code == 200
 
 
-def test_create_items_for_loaner():
+def test_create_items_for_loaner() -> None:
     response = client.post(
         f"/loans/loaners/{loaner.id}/items",
         json={
@@ -174,7 +174,7 @@ def test_create_items_for_loaner():
     assert response.status_code == 201
 
 
-def test_update_items_for_loaner():
+def test_update_items_for_loaner() -> None:
     response = client.patch(
         f"/loans/loaners/{loaner.id}/items/{item.id}",
         json={
@@ -188,7 +188,7 @@ def test_update_items_for_loaner():
     assert response.status_code == 204
 
 
-def test_delete_loaner_item():
+def test_delete_loaner_item() -> None:
     response = client.delete(
         f"/loans/loaners/{loaner.id}/items/{item_to_delete.id}",
         headers={"Authorization": f"Bearer {token_loaner}"},
@@ -196,7 +196,7 @@ def test_delete_loaner_item():
     assert response.status_code == 204
 
 
-def test_get_current_user_loans():
+def test_get_current_user_loans() -> None:
     response = client.get(
         "/loans/users/me",
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -204,7 +204,7 @@ def test_get_current_user_loans():
     assert response.status_code == 200
 
 
-def test_get_current_user_loaners():
+def test_get_current_user_loaners() -> None:
     response = client.get(
         "/loans/users/me/loaners",
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -212,7 +212,7 @@ def test_get_current_user_loaners():
     assert response.status_code == 200
 
 
-def test_create_loan():
+def test_create_loan() -> None:
     response = client.post(
         "/loans/",
         json={
@@ -234,7 +234,7 @@ def test_create_loan():
     assert response.status_code == 201
 
 
-def test_update_loan():
+def test_update_loan() -> None:
     response = client.patch(
         f"/loans/{loan.id}",
         json={
@@ -256,7 +256,7 @@ def test_update_loan():
     assert response.status_code == 204
 
 
-def test_return_loan():
+def test_return_loan() -> None:
     response = client.post(
         f"/loans/{loan.id}/return",
         headers={"Authorization": f"Bearer {token_loaner}"},
@@ -264,7 +264,7 @@ def test_return_loan():
     assert response.status_code == 204
 
 
-def test_extend_loan():
+def test_extend_loan() -> None:
     response = client.post(
         f"/loans/{loan.id}/extend",
         json={
@@ -275,7 +275,7 @@ def test_extend_loan():
     assert response.status_code == 204
 
 
-def test_delete_loan():
+def test_delete_loan() -> None:
     response = client.delete(
         f"/loans/{loan.id}",
         headers={"Authorization": f"Bearer {token_loaner}"},

@@ -26,7 +26,7 @@ token_simple: str
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
-async def init_objects():
+async def init_objects() -> None:
     global calendar_user_bde
     calendar_user_bde = await create_user_with_groups([GroupType.BDE])
 
@@ -72,7 +72,7 @@ async def init_objects():
     await add_object_to_db(calendar_event_to_delete)
 
 
-def test_get_all_events():
+def test_get_all_events() -> None:
     global token_bde
 
     response = client.get(
@@ -82,7 +82,7 @@ def test_get_all_events():
     assert response.status_code == 200
 
 
-def test_get_event():
+def test_get_event() -> None:
     global token_bde
 
     response = client.get(
@@ -92,7 +92,7 @@ def test_get_event():
     assert response.status_code == 200
 
 
-def test_get_nonexistent_event():
+def test_get_nonexistent_event() -> None:
     response = client.get(
         "/calendar/events/bad_id",
         headers={"Authorization": f"Bearer {token_bde}"},
@@ -100,7 +100,7 @@ def test_get_nonexistent_event():
     assert response.status_code == 404
 
 
-def test_add_event():
+def test_add_event() -> None:
     global token_bde
 
     response = client.post(
@@ -120,7 +120,7 @@ def test_add_event():
     assert response.status_code == 201
 
 
-def test_add_event_missing_parameter():
+def test_add_event_missing_parameter() -> None:
     """Test to add an event but a parameter is missing. `start` is missing"""
     global token_bde
 
@@ -139,7 +139,7 @@ def test_add_event_missing_parameter():
     assert response.status_code == 422
 
 
-def test_edit_event():
+def test_edit_event() -> None:
     response = client.patch(
         f"/calendar/events/{calendar_event.id}",
         json={"description": "Apprendre à programmer"},
@@ -148,7 +148,7 @@ def test_edit_event():
     assert response.status_code == 204
 
 
-def test_delete_event():
+def test_delete_event() -> None:
     """Test if an admin can delete an event."""
 
     global token_bde
@@ -160,7 +160,7 @@ def test_delete_event():
     assert response.status_code == 204
 
 
-def test_delete_event_unauthorized_user():
+def test_delete_event_unauthorized_user() -> None:
     """Test if a simple user can't delete an event."""
 
     global token_simple
@@ -172,7 +172,7 @@ def test_delete_event_unauthorized_user():
     assert response.status_code == 403
 
 
-def test_decline_event():
+def test_decline_event() -> None:
     response = client.patch(
         f"/calendar/events/{calendar_event.id}/reply/declined",
         headers={"Authorization": f"Bearer {token_bde}"},
@@ -180,7 +180,7 @@ def test_decline_event():
     assert response.status_code == 204
 
 
-def test_approve_event():
+def test_approve_event() -> None:
     global token_bde
     response = client.patch(
         f"/calendar/events/{calendar_event.id}/reply/approved",
