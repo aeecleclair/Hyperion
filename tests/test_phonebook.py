@@ -362,7 +362,7 @@ def test_get_member_by_id_simple():
 #                                  Logos tests                                 #
 # ---------------------------------------------------------------------------- #
 def test_create_association_picture_admin():
-    with Path.open("assets/images/default_association_picture.png", "rb") as image:
+    with Path("assets/images/default_association_picture.png").open("rb") as image:
         response = client.post(
             f"/phonebook/associations/{association.id}/picture",
             files={"image": ("logo.png", image, "image/png")},
@@ -372,7 +372,7 @@ def test_create_association_picture_admin():
 
 
 def test_create_association_picture_simple():
-    with Path.open("assets/images/default_association_picture.png", "rb") as image:
+    with Path("assets/images/default_association_picture.png").open("rb") as image:
         response = client.post(
             f"/phonebook/associations/{association.id}/picture",
             files={"image": ("logo.png", image, "image/png")},

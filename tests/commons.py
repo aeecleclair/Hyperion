@@ -1,6 +1,6 @@
 import logging
 import uuid
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Iterator
 from functools import lru_cache
 
 import redis
@@ -76,7 +76,7 @@ def override_get_redis_client(
     return redis_client
 
 
-def change_redis_client_status(activated: bool):
+def change_redis_client_status(activated: bool) -> None:
     global redis_client
     if activated:
         if settings.REDIS_HOST != "":
@@ -154,7 +154,7 @@ async def create_user_with_groups(
     return user
 
 
-def create_api_access_token(user: models_core.CoreUser):
+def create_api_access_token(user: models_core.CoreUser) -> str:
     """
     Create a JWT access token for the `user` with the scope `API`
     """

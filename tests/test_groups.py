@@ -16,7 +16,7 @@ id_eclair = "8aab79e7-1e15-456d-b6e2-11e4e9f77e4f"
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
-async def init_objects():
+async def init_objects() -> None:
     global admin_user
 
     eclair = models_core.CoreGroup(
@@ -29,7 +29,7 @@ async def init_objects():
     admin_user = await create_user_with_groups([GroupType.admin])
 
 
-def test_read_groups():
+def test_read_groups() -> None:
     token = create_api_access_token(admin_user)
 
     response = client.get(
@@ -39,7 +39,7 @@ def test_read_groups():
     assert response.status_code == 200
 
 
-def test_read_group():
+def test_read_group() -> None:
     token = create_api_access_token(admin_user)
 
     response = client.get(
@@ -51,7 +51,7 @@ def test_read_group():
     assert data["name"] == "eclair"
 
 
-def test_create_group():
+def test_create_group() -> None:
     token = create_api_access_token(admin_user)
 
     response = client.post(
@@ -65,7 +65,7 @@ def test_create_group():
     assert response.status_code == 201
 
 
-def test_update_group():
+def test_update_group() -> None:
     token = create_api_access_token(admin_user)
 
     response = client.patch(
@@ -78,7 +78,7 @@ def test_update_group():
     assert response.status_code == 204
 
 
-def test_create_membership():
+def test_create_membership() -> None:
     token = create_api_access_token(admin_user)
 
     response = client.post(
@@ -93,7 +93,7 @@ def test_create_membership():
     assert response.status_code == 201
 
 
-def test_delete_membership():
+def test_delete_membership() -> None:
     token = create_api_access_token(admin_user)
 
     response = client.request(

@@ -17,7 +17,7 @@ user: models_core.CoreUser
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
-async def init_objects():
+async def init_objects() -> None:
     global user
     user = models_core.CoreUser(
         id=str(uuid.uuid4()),
@@ -57,7 +57,7 @@ async def init_objects():
 #    assert response.status_code != 403  # forbidden
 
 
-def test_authorization_code_flow_PKCE():
+def test_authorization_code_flow_PKCE() -> None:
     code_verifier = "AntoineMonBelAntoine"
     code_challenge = "ws9GS3kBIFwDfNghvEk7GRlDvbUkSmZen8q2R4v3lBU="  # base64.urlsafe_b64encode(hashlib.sha256("AntoineMonBelAntoine".encode()).digest())
     data = {
@@ -138,7 +138,7 @@ def test_authorization_code_flow_PKCE():
     assert response.status_code == 400
 
 
-def test_authorization_code_flow_secret():
+def test_authorization_code_flow_secret() -> None:
     data = {
         "client_id": "AppAuthClientWithClientSecret",
         "client_secret": "secret",
@@ -219,7 +219,7 @@ def test_authorization_code_flow_secret():
     assert response.status_code == 400
 
 
-def test_get_user_info():
+def test_get_user_info() -> None:
     # We first need an access token to query user info endpoints #
     data = {
         "client_id": "BaseAuthClient",
@@ -269,7 +269,7 @@ def test_get_user_info():
     assert json["name"] == user.firstname
 
 
-def test_get_user_info_in_id_token():
+def test_get_user_info_in_id_token() -> None:
     # We first need an access token to query user info endpoints #
     data = {
         "client_id": "RalllyAuthClient",

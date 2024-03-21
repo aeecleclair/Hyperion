@@ -10,7 +10,7 @@ class CalendarEventType(str, Enum):
     nightParty = "Rewass"
     other = "Autre"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.name}<{self.value}"
 
 
@@ -19,5 +19,5 @@ class Decision(str, Enum):
     declined = "declined"
     pending = "pending"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.name}<{self.value}>"
