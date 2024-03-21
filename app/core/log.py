@@ -3,6 +3,7 @@ import logging.config
 import queue
 from logging.handlers import QueueHandler, QueueListener
 from pathlib import Path
+from typing import Any
 
 from app.core.config import Settings
 
@@ -251,7 +252,7 @@ class LogConfig:
                 continue
 
             # We create a queue where all log records will be added
-            log_queue: queue.Queue = queue.Queue(-1)
+            log_queue: queue.Queue[Any] = queue.Queue(-1)
 
             # queue_handler is the handler which adds all log records to the queue
             queue_handler = QueueHandler(log_queue)

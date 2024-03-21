@@ -27,7 +27,7 @@ class Matrix:
         url: str,
         json: dict[str, Any],
         headers: dict[str, Any] | None,
-    ) -> dict[str, Any]:
+    ) -> Any:
         """
         The function adds an access token to the request authorization header and issue a post operation.
         The authorization header will only be added if one is not already provided
