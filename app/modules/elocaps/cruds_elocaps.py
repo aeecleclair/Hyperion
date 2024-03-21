@@ -196,7 +196,14 @@ async def user_game_validation(
     db: AsyncSession,
     game_player: models_elocaps.GamePlayer,
 ) -> None:
-    game_player.has_confirmed = True
+    await db.execute(
+        update(models_elocaps.GamePlayer)
+        .where(
+            models_elocaps.GamePlayer.player_id == game_player.player_id,
+            models_elocaps.GamePlayer.game_id == game_player.game_id,
+        )
+        .values({"has_confirmed": True}),
+    )
     await db.commit()
 
 
@@ -206,6 +213,7 @@ async def add_elo_to_player(db: AsyncSession, player_id: str, elo_gain: int) -> 
         .where(models_elocaps.Player.id == player_id)
         .values({"elo": models_elocaps.Player.elo + elo_gain}),
     )
+    await db.commit()
 
 
 async def get_leaderboard(
