@@ -2,7 +2,7 @@ import uuid
 from pathlib import Path
 
 import pytest
-from fastapi import UploadFile
+from fastapi import Header, UploadFile
 
 from app.utils.tools import get_file_from_data, save_file_as_data
 
@@ -11,7 +11,7 @@ async def test_save_file():
     valid_uuid = str(uuid.uuid4())
     with Path("assets/images/default_profile_picture.png").open("rb") as file:
         await save_file_as_data(
-            image=UploadFile(file, headers={"content-type": "image/png"}),
+            image=UploadFile(file, headers=Header({"content-type": "image/png"})),
             directory="test",
             filename=valid_uuid,
             request_id="request_id",

@@ -15,18 +15,18 @@ from tests.commons import (
     event_loop,  # noqa
 )
 
-advert: models_advert.Advert | None = None
-advertiser: models_advert.Advertiser | None = None
-user_admin: models_core.CoreUser | None = None
-user_advertiser: models_core.CoreUser | None = None
-user_simple: models_core.CoreUser | None = None
+advert: models_advert.Advert
+advertiser: models_advert.Advertiser
+user_admin: models_core.CoreUser
+user_advertiser: models_core.CoreUser
+user_simple: models_core.CoreUser
 token_admin: str = ""
 token_advertiser: str = ""
 token_simple: str = ""
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
-async def init_objects():
+async def init_objects() -> None:
     global user_admin
     user_admin = await create_user_with_groups([GroupType.admin])
 
@@ -67,7 +67,7 @@ async def init_objects():
     await add_object_to_db(advert)
 
 
-def test_get_adverts():
+def test_get_adverts() -> None:
     response = client.get(
         "/advert/adverts",
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -75,7 +75,7 @@ def test_get_adverts():
     assert response.status_code == 200
 
 
-def test_get_advert_by_id():
+def test_get_advert_by_id() -> None:
     response = client.get(
         f"/advert/adverts/{advert.id}",
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -83,7 +83,7 @@ def test_get_advert_by_id():
     assert response.status_code == 200
 
 
-def test_get_advert_by_advertisers():
+def test_get_advert_by_advertisers() -> None:
     response = client.get(
         f"/advert/adverts?advertisers={advertiser.id}",
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -91,7 +91,7 @@ def test_get_advert_by_advertisers():
     assert response.status_code == 200
 
 
-def test_create_advert():
+def test_create_advert() -> None:
     response = client.post(
         "/advert/adverts",
         json={
@@ -105,7 +105,7 @@ def test_create_advert():
     assert response.status_code == 201
 
 
-def test_create_picture():
+def test_create_picture() -> None:
     with Path("assets/images/default_advert.png").open("rb") as image:
         response = client.post(
             f"/advert/adverts/{advert.id}/picture",
@@ -116,7 +116,7 @@ def test_create_picture():
     assert response.status_code == 201
 
 
-def test_get_picture():
+def test_get_picture() -> None:
     response = client.get(
         f"/advert/adverts/{advert.id}/picture",
         headers={"Authorization": f"Bearer {token_advertiser}"},
@@ -125,7 +125,7 @@ def test_get_picture():
     assert response.status_code == 200
 
 
-def test_edit_advert():
+def test_edit_advert() -> None:
     response = client.patch(
         f"/advert/adverts/{advert.id}",
         json={"content": "Advert Content Edited"},
@@ -134,7 +134,7 @@ def test_edit_advert():
     assert response.status_code == 204
 
 
-def test_delete_advert():
+def test_delete_advert() -> None:
     response = client.delete(
         f"/advert/adverts/{advert.id}",
         headers={"Authorization": f"Bearer {token_advertiser}"},
@@ -142,7 +142,7 @@ def test_delete_advert():
     assert response.status_code == 204
 
 
-def test_get_advertisers():
+def test_get_advertisers() -> None:
     response = client.get(
         "/advert/advertisers",
         headers={"Authorization": f"Bearer {token_admin}"},
@@ -150,7 +150,7 @@ def test_get_advertisers():
     assert response.status_code == 200
 
 
-def test_get_my_advertisers():
+def test_get_my_advertisers() -> None:
     response = client.get(
         "/advert/me/advertisers",
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -158,7 +158,7 @@ def test_get_my_advertisers():
     assert response.status_code == 200
 
 
-def test_create_advertiser():
+def test_create_advertiser() -> None:
     response = client.post(
         "/advert/advertisers",
         json={"name": "Advert2", "group_manager_id": advertiser.group_manager_id},
@@ -167,7 +167,7 @@ def test_create_advertiser():
     assert response.status_code == 201
 
 
-def test_edit_advertiser():
+def test_edit_advertiser() -> None:
     response = client.patch(
         f"/advert/advertisers/{advertiser.id}",
         json={"name": "AdvertiserEdited"},
@@ -176,7 +176,7 @@ def test_edit_advertiser():
     assert response.status_code == 204
 
 
-def test_delete_advertiser():
+def test_delete_advertiser() -> None:
     response = client.delete(
         f"/advert/advertisers/{advertiser.id}",
         headers={"Authorization": f"Bearer {token_admin}"},

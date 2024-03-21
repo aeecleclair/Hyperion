@@ -15,22 +15,22 @@ from tests.commons import (
     event_loop,  # noqa
 )
 
-association: models_phonebook.Association | None = None
-associations_to_delete_admin: models_phonebook.Association | None = None
-associations_to_delete_simple: models_phonebook.Association | None = None
+association: models_phonebook.Association
+associations_to_delete_admin: models_phonebook.Association
+associations_to_delete_simple: models_phonebook.Association
 
-membership: models_phonebook.Membership | None = None
-membership_to_delete_admin: models_phonebook.Membership | None = None
-membership_to_delete_president: models_phonebook.Membership | None = None
-membership_to_delete_simple: models_phonebook.Membership | None = None
+membership: models_phonebook.Membership
+membership_to_delete_admin: models_phonebook.Membership
+membership_to_delete_president: models_phonebook.Membership
+membership_to_delete_simple: models_phonebook.Membership
 
-phonebook_user_BDE: models_core.CoreUser | None = None
-phonebook_user_president: models_core.CoreUser | None = None
-phonebook_user_simple: models_core.CoreUser | None = None
+phonebook_user_BDE: models_core.CoreUser
+phonebook_user_president: models_core.CoreUser
+phonebook_user_simple: models_core.CoreUser
 
-token_BDE: str = ""
-token_president: str = ""
-token_simple: str = ""
+token_BDE: str
+token_president: str
+token_simple: str
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
@@ -361,7 +361,7 @@ def test_get_member_by_id_simple():
 #                                  Logos tests                                 #
 # ---------------------------------------------------------------------------- #
 def test_create_association_picture_admin():
-    with Path.open("assets/images/default_association_picture.png", "rb") as image:
+    with Path("assets/images/default_association_picture.png").open("rb") as image:
         response = client.post(
             f"/phonebook/associations/{association.id}/picture",
             files={"image": ("logo.png", image, "image/png")},
@@ -371,7 +371,7 @@ def test_create_association_picture_admin():
 
 
 def test_create_association_picture_simple():
-    with Path.open("assets/images/default_association_picture.png", "rb") as image:
+    with Path("assets/images/default_association_picture.png").open("rb") as image:
         response = client.post(
             f"/phonebook/associations/{association.id}/picture",
             files={"image": ("logo.png", image, "image/png")},

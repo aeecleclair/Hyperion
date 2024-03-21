@@ -1,7 +1,7 @@
 from tests.commons import change_redis_client_status, client, settings
 
 
-def test_limiter():
+def test_limiter() -> None:
     change_redis_client_status(activated=True)
     try:
         for _ in range(settings.REDIS_LIMIT - 1):

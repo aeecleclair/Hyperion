@@ -16,15 +16,15 @@ from tests.commons import (
     event_loop,  # noqa
 )
 
-session: models_cinema.Session | None = None
-cinema_user_cinema: models_core.CoreUser | None = None
-cinema_user_simple: models_core.CoreUser | None = None
-token_cinema: str = ""
-token_simple: str = ""
+session: models_cinema.Session
+cinema_user_cinema: models_core.CoreUser
+cinema_user_simple: models_core.CoreUser
+token_cinema: str
+token_simple: str
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
-async def init_objects():
+async def init_objects() -> None:
     global cinema_user_cinema
     cinema_user_cinema = await create_user_with_groups([GroupType.cinema])
 
@@ -50,7 +50,7 @@ async def init_objects():
     await add_object_to_db(session)
 
 
-def test_get_sessions():
+def test_get_sessions() -> None:
     response = client.get(
         "/cinema/sessions",
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -58,7 +58,7 @@ def test_get_sessions():
     assert response.status_code == 200
 
 
-def test_post_session():
+def test_post_session() -> None:
     response = client.post(
         "/cinema/sessions",
         json={
@@ -71,7 +71,7 @@ def test_post_session():
     assert response.status_code == 201
 
 
-def test_edit_session():
+def test_edit_session() -> None:
     response = client.patch(
         f"/cinema/sessions/{session.id}",
         json={"name": "Titanoc"},
@@ -80,7 +80,7 @@ def test_edit_session():
     assert response.status_code == 200
 
 
-def test_delete_session():
+def test_delete_session() -> None:
     response = client.delete(
         f"/cinema/sessions/{session.id}",
         headers={"Authorization": f"Bearer {token_cinema}"},

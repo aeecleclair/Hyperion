@@ -14,6 +14,10 @@ from tests.commons import (
     event_loop,  # noqa
 )
 
+token_simple: str
+token_BDE: str
+recommendation: models_recommendation.Recommendation
+
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects():
@@ -40,7 +44,7 @@ async def init_objects():
 
 
 def test_create_picture():
-    with Path.open("assets/images/default_recommendation.png", "rb") as image:
+    with Path("assets/images/default_recommendation.png").open("rb") as image:
         response = client.post(
             f"/recommendation/recommendations/{recommendation.id}/picture",
             files={"image": ("recommendation.png", image, "image/png")},
@@ -50,7 +54,7 @@ def test_create_picture():
 
 
 def test_create_picture_for_non_existing_recommendation():
-    with Path.open("assets/images/default_recommendation.png", "rb") as image:
+    with Path("assets/images/default_recommendation.png").open("rb") as image:
         response = client.post(
             "/recommendation/recommendations/false_id/picture",
             files={"image": ("recommendation.png", image, "image/png")},
