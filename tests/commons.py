@@ -108,7 +108,7 @@ with client:  # That syntax trigger the lifespan defined in main.py
 # to be able to use session scoped fixture (the function that initialize the db objects in each test file)
 # See https://github.com/tortoise/tortoise-orm/issues/638#issuecomment-830124562
 @pytest.fixture(scope="module")
-def event_loop() -> Iterator:
+def event_loop() -> Iterator[asyncio.AbstractEventLoop]:
     """Overrides pytest default function scoped event loop"""
     policy = asyncio.get_event_loop_policy()
     loop = policy.new_event_loop()

@@ -10,7 +10,7 @@ async def get_users(db: AsyncSession = Depends(get_db)):
 import logging
 from collections.abc import AsyncGenerator, Callable, Coroutine
 from functools import lru_cache
-from typing import Any
+from typing import Any, cast
 
 import redis
 from fastapi import BackgroundTasks, Depends, HTTPException, Request, status
@@ -58,7 +58,11 @@ async def get_request_id(request: Request) -> str:
     """
     The request identifier is a unique UUID which is used to associate logs saved during the same request
     """
-    return request.state.request_id
+    # `request_id` is a string injected in the state by our middleware
+    # We force Mypy to consider it as a str instead of Any
+    request_id = cast(str, request.state.request_id)
+
+    return request_id
 
 
 def get_db_engine(settings: Settings) -> AsyncEngine:
