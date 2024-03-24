@@ -7,62 +7,44 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import models_core
 
 
-async def get_all_module_visibility_membership(
-    db: AsyncSession,
-):
-    """Return the every module with their visibility"""
-    result = await db.execute(select(models_core.ModuleVisibility))
-    return result.unique().scalars().all()
-
-
-async def get_modules_by_user(
+async def get_visible_roots_by_user(
     user: models_core.CoreUser,
     db: AsyncSession,
 ) -> Sequence[str]:
-    """Return the modules a user has access to"""
+    """
+    Return every visible roots a user groups' allow him to access
+    """
 
-    userGroupIds = [group.id for group in user.groups]
+    user_group_ids = [group.id for group in user.groups]
 
     result = await db.execute(
         select(models_core.ModuleVisibility.root)
-        .where(models_core.ModuleVisibility.allowed_group_id.in_(userGroupIds))
+        .where(
+            models_core.ModuleVisibility.allowed_group_id.in_(user_group_ids),
+        )
         .group_by(models_core.ModuleVisibility.root),
     )
 
     return result.unique().scalars().all()
 
 
-async def get_allowed_groups_by_root(
+async def get_allowed_groups_ids_by_root(
     root: str,
     db: AsyncSession,
 ) -> Sequence[str]:
-    """Return the groups allowed to access to a specific root"""
+    """
+    Return group ids that can access a given root
+    """
 
     result = await db.execute(
         select(
             models_core.ModuleVisibility.allowed_group_id,
-        ).where(models_core.ModuleVisibility.root == root),
-    )
-
-    resultList = result.unique().scalars().all()
-
-    return resultList
-
-
-async def get_module_visibility(
-    root: str,
-    group_id: str,
-    db: AsyncSession,
-) -> models_core.ModuleVisibility | None:
-    """Return module visibility by root and group id"""
-
-    result = await db.execute(
-        select(models_core.ModuleVisibility).where(
-            models_core.ModuleVisibility.allowed_group_id == group_id,
+        ).where(
             models_core.ModuleVisibility.root == root,
         ),
     )
-    return result.unique().scalars().first()
+
+    return result.unique().scalars().all()
 
 
 async def create_module_visibility(
