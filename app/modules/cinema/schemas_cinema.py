@@ -33,3 +33,13 @@ class CineSessionUpdate(BaseModel):
     tagline: str | None = None
 
     _normalize_start = field_validator("start")(validators.time_zone_converter)
+
+"""
+class Movie(BaseModel):
+    genres: dict[str, any] | None = None
+    overview: str | None = None
+    poster_path: str | None = None
+    title: str | None = None
+    runtime: int | None = None
+    tagline: str | None = None
+"""
