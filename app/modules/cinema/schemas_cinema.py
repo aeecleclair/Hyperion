@@ -27,3 +27,13 @@ class CineSessionUpdate(BaseModel):
     overview: str | None = None
     genre: str | None = None
     tagline: str | None = None
+
+"""
+class Movie(BaseModel):
+    genres: dict[str, any] | None = None
+    overview: str | None = None
+    poster_path: str | None = None
+    title: str | None = None
+    runtime: int | None = None
+    tagline: str | None = None
+"""

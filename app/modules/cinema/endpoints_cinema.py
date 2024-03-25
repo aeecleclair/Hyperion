@@ -28,6 +28,24 @@ from app.utils.communication.date_manager import (
 from app.utils.communication.notifications import NotificationTool
 from app.utils.tools import get_file_from_data, save_file_as_data
 
+
+import os
+import json
+from dotenv import load_dotenv
+import requests
+
+load_dotenv()
+API_Key = os.getenv("THE_MOVIE_DB_API")
+host = "https://api.themoviedb.org/3/"
+
+def get_json(url):
+    r = requests.get(url)
+    assert r.status_code == 200, r.status_code
+    response = r.content
+    #response = json.loads(response)
+    #response = json.dumps(response)
+    return response
+
 module = Module(
     root="cinema",
     tag="Cinema",
@@ -35,6 +53,23 @@ module = Module(
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
+
+
+def search_movie(movie_id: str):
+    return get_json(
+        host + f"find/{movie_id}?api_key={API_Key}&language=fr-FR&external_source=imdb_id"
+    )
+
+@module.router.get("/cinema/movie/{movie_id}")
+def get_movie(movie_id):
+    url = host + f"movie/{movie_id}" + f"?api_key={API_Key}&language=fr-FR"
+    print(movie_id)
+    print(url)
+    r = get_json(url)
+    print(json.dumps(json.loads(r), indent=4))
+    return r
+
+#print(get_movie("tt0816692"))
 
 
 @module.router.get(
