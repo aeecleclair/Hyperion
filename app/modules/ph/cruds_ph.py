@@ -11,7 +11,7 @@ async def get_papers(
     db: AsyncSession,
 ) -> Sequence[models_ph.Paper]:
     result = await db.execute(
-        select(models_ph.Paper).order_by(models_ph.Paper.release_date),
+        select(models_ph.Paper).order_by(models_ph.Paper.release_date.desc()),
     )
     return result.scalars().all()
 
