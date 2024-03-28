@@ -29,8 +29,7 @@ class Result(Base):
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
     sport_id: Mapped[str] = mapped_column(String)
-    score: Mapped[tuple] = mapped_column(
-        Tuple
-    )  # This may don't work but i'll fix it later
+    score1: Mapped[int] = mapped_column(Integer)
+    score2: Mapped[int] = mapped_column(Integer)
     rank: Mapped[int] = mapped_column(Integer)
     match_date: Mapped[date] = mapped_column(Date)
