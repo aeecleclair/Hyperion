@@ -62,3 +62,12 @@ def get_ecl_groups() -> list[GroupType]:
         GroupType.association,
         GroupType.admin,
     ]
+
+
+class UserSource(str, Enum):
+    """
+    Various sources that can be used to create a user.
+    When a source is provided, the user is created using the corresponding group rules.
+    """
+
+    raid = GroupType.raid.value
