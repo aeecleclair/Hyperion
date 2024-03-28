@@ -274,6 +274,42 @@ def is_user_a_member(
     return user
 
 
+def is_user_an_ecl_member(
+    user: models_core.CoreUser = Depends(
+        get_user_from_token_with_scopes([[ScopeType.API]]),
+    ),
+    request_id: str = Depends(get_request_id),
+) -> models_core.CoreUser:
+    """
+    A dependency that will:
+        * check if the request header contains a valid API JWT token (a token that can be used to call endpoints from the API)
+        * make sure the user making the request exists and is a member of Student, Staff, Association or AE
+        * make sure the user making the request exists
+
+    To check if the user is the member of a group, use is_user_a_member_of generator
+    """
+    if is_user_member_of_an_allowed_group(
+        user=user,
+        allowed_groups=[
+            GroupType.AE,
+            GroupType.staff,
+            GroupType.student,
+            GroupType.association,
+        ],
+    ):
+        # We know the user is a member of the group, we don't need to return an error and can return the CoreUser object
+        return user
+
+    hyperion_access_logger.warning(
+        f"Is_user_a_member_of: Unauthorized, user is not a member of student, staff, association or AE group ({request_id})",
+    )
+
+    raise HTTPException(
+        status_code=403,
+        detail="Unauthorized, user is not a member of student, staff or AE group",
+    )
+
+
 def is_user_a_member_of(
     group_id: GroupType,
 ) -> Callable[[models_core.CoreUser], Coroutine[Any, Any, models_core.CoreUser]]:
