@@ -28,8 +28,9 @@ from app.dependencies import (
     get_db,
     get_request_id,
     get_settings,
-    is_user_a_member,
+    is_user,
     is_user_a_member_of,
+    is_user_an_ecl_member,
 )
 from app.types.content_type import ContentType
 from app.utils.mail.mailworker import send_email
@@ -91,7 +92,7 @@ async def search_users(
     includedGroups: list[str] = Query(default=[]),
     excludedGroups: list[str] = Query(default=[]),
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
     Search for a user using Fuzzy String Matching
@@ -116,7 +117,7 @@ async def search_users(
     status_code=200,
 )
 async def read_current_user(
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user),
 ):
     """
     Return `CoreUser` representation of current user
@@ -172,6 +173,8 @@ async def create_user_by_user(
     ):
         # Its a former student email address
         account_type = AccountType.formerstudent
+    elif user_create.external:
+        account_type = AccountType.external
     else:
         raise HTTPException(
             status_code=400,
@@ -586,7 +589,7 @@ async def reset_password(
 async def migrate_mail(
     mail_migration: schemas_core.MailMigrationRequest,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user),
     settings: Settings = Depends(get_settings),
 ):
     """
@@ -801,7 +804,7 @@ async def read_user(
 )
 async def delete_user(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user),
     settings: Settings = Depends(get_settings),
     background_tasks: BackgroundTasks = BackgroundTasks(),
     request_id: str = Depends(get_request_id),
@@ -822,7 +825,7 @@ async def delete_user(
 async def update_current_user(
     user_update: schemas_core.CoreUserUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user),
 ):
     """
     Update the current user, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value
@@ -862,7 +865,7 @@ async def update_user(
 )
 async def create_current_user_profile_picture(
     image: UploadFile = File(...),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user),
     request_id: str = Depends(get_request_id),
 ):
     """
@@ -893,7 +896,7 @@ async def create_current_user_profile_picture(
     status_code=200,
 )
 async def read_own_profile_picture(
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user),
 ):
     """
     Get the profile picture of the authenticated user.

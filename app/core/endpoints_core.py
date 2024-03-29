@@ -8,7 +8,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import cruds_core, models_core, schemas_core
 from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
-from app.dependencies import get_db, get_settings, is_user_a_member, is_user_a_member_of
+from app.dependencies import (
+    get_db,
+    get_settings,
+    is_user,
+    is_user_a_member_of,
+)
 from app.utils.tools import is_group_id_valid
 
 router = APIRouter(tags=["Core"])
@@ -186,7 +191,7 @@ async def get_module_visibility(
 )
 async def get_user_modules_visibility(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user),
 ):
     """
     Get group user accessible root
