@@ -41,7 +41,7 @@ async def get_paper_pdf(
 
 @module.router.get(
     "/ph/",
-    response_model=list[schemas_ph.Paper],
+    response_model=list[schemas_ph.PaperComplete],
     status_code=200,
 )
 async def get_papers(
@@ -54,11 +54,11 @@ async def get_papers(
 
 @module.router.post(
     "/ph/",
-    response_model=schemas_ph.Paper,
+    response_model=schemas_ph.PaperComplete,
     status_code=201,
 )
 async def create_paper(
-    paper: schemas_ph.Paper,
+    paper: schemas_ph.PaperBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.ph)),
 ):
@@ -66,13 +66,16 @@ async def create_paper(
     Create a new paper.
     """
 
+    paper_complete = schemas_ph.PaperComplete(
+        id=str(uuid.uuid4()),
+        **paper.model_dump(),
+    )
     try:
         paper_db = models_ph.Paper(
-            id=str(uuid.uuid4()),
-            name=paper.name,
-            release_date=paper.release_date,
+            id=paper_complete.id,
+            name=paper_complete.name,
+            release_date=paper_complete.release_date,
         )
-
         return await cruds_ph.create_paper(paper=paper_db, db=db)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
