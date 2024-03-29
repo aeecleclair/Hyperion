@@ -112,6 +112,10 @@ class CoreUserCreateRequest(BaseModel):
     """
 
     email: str
+    external: bool = Field(
+        False,
+        description="An external user may not have an ECL email address. He won't be able to access most features. This setting will be override if the user have an ecl email address.",
+    )
 
     # Email normalization, this will modify the email variable
     # https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
