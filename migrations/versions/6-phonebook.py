@@ -28,12 +28,12 @@ def upgrade() -> None:
         sa.Column(
             "kind",
             sa.Enum(
-                "Comité",
-                "Section AE",
-                "Club AE",
-                "Section USE",
-                "Club USE",
-                "Asso indé",
+                "comity",
+                "section_ae",
+                "club_ae",
+                "section_use",
+                "club_use",
+                "association_independant",
                 name="kinds",
             ),
             nullable=False,
