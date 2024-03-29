@@ -91,4 +91,5 @@ def downgrade() -> None:
         table_name="phonebook_association",
     )
     op.drop_table("phonebook_association")
+    sa.Enum(Kinds).drop(op.get_bind())
     # ### end Alembic commands ###
