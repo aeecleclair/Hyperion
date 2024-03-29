@@ -27,12 +27,13 @@ from sqlalchemy.ext.asyncio import (
 from app.core import models_core, security
 from app.core.auth import schemas_auth
 from app.core.config import Settings
-from app.core.groups.groups_type import GroupType
+from app.core.groups.groups_type import GroupType, get_ecl_groups
 from app.core.users import cruds_users
 from app.types.scopes_type import ScopeType
 from app.utils.communication.notifications import NotificationManager, NotificationTool
 from app.utils.redis import connect
-from app.utils.tools import is_user_member_of_an_allowed_group
+from app.utils.tools import is_user_external, is_user_member_of_an_allowed_group
+from app.utils.types.scopes_type import ScopeType
 
 # We could maybe use hyperion.security
 hyperion_access_logger = logging.getLogger("hyperion.access")
@@ -259,7 +260,7 @@ def get_user_from_token_with_scopes(
     return get_current_user
 
 
-def is_user_a_member(
+def is_user(
     user: models_core.CoreUser = Depends(
         get_user_from_token_with_scopes([[ScopeType.API]]),
     ),
@@ -274,6 +275,32 @@ def is_user_a_member(
     return user
 
 
+def is_user_a_member(
+    user: models_core.CoreUser = Depends(
+        get_user_from_token_with_scopes([[ScopeType.API]]),
+    ),
+) -> models_core.CoreUser:
+    """
+    A dependency that will:
+        * check if the request header contains a valid API JWT token (a token that can be used to call endpoints from the API)
+        * make sure the user making the request exists
+        * make sure the user is not a self registered external user
+
+    To check if the user is the member of a group, use is_user_a_member_of generator
+    """
+    if is_user_external(user):
+        hyperion_access_logger.warning(
+            "is_user_a_member: user is an external user",
+        )
+
+        raise HTTPException(
+            status_code=403,
+            detail="Unauthorized, user is an external user",
+        )
+
+    return user
+
+
 def is_user_an_ecl_member(
     user: models_core.CoreUser = Depends(
         get_user_from_token_with_scopes([[ScopeType.API]]),
@@ -284,18 +311,24 @@ def is_user_an_ecl_member(
     A dependency that will:
         * check if the request header contains a valid API JWT token (a token that can be used to call endpoints from the API)
         * make sure the user making the request exists and is a member of Student, Staff, Association or AE
+        * make sure the user is not a self registered external user
         * make sure the user making the request exists
 
     To check if the user is the member of a group, use is_user_a_member_of generator
     """
+    if is_user_external(user):
+        hyperion_access_logger.warning(
+            "is_user_an_ecl_member: user is an external user",
+        )
+
+        raise HTTPException(
+            status_code=403,
+            detail="Unauthorized, user is an external user",
+        )
+
     if is_user_member_of_an_allowed_group(
         user=user,
-        allowed_groups=[
-            GroupType.AE,
-            GroupType.staff,
-            GroupType.student,
-            GroupType.association,
-        ],
+        allowed_groups=get_ecl_groups(),
     ):
         # We know the user is a member of the group, we don't need to return an error and can return the CoreUser object
         return user
@@ -317,6 +350,7 @@ def is_user_a_member_of(
     Generate a dependency which will:
         * check if the request header contains a valid API JWT token (a token that can be used to call endpoints from the API)
         * make sure the user making the request exists and is a member of the group with the given id
+        * make sure the user is not an external user
         * return the corresponding user `models_core.CoreUser` object
     """
 
@@ -329,6 +363,16 @@ def is_user_a_member_of(
         """
         A dependency that checks that user is a member of the group with the given id then returns the corresponding user.
         """
+        if is_user_external(user):
+            hyperion_access_logger.warning(
+                "is_user_a_member_of: user is an external user",
+            )
+
+            raise HTTPException(
+                status_code=403,
+                detail="Unauthorized, user is an external user",
+            )
+
         if is_user_member_of_an_allowed_group(user=user, allowed_groups=[group_id]):
             # We know the user is a member of the group, we don't need to return an error and can return the CoreUser object
             return user
