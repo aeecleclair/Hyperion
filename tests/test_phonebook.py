@@ -19,6 +19,7 @@ association: models_phonebook.Association | None = None
 associations_to_delete_admin: models_phonebook.Association | None = None
 associations_to_delete_simple: models_phonebook.Association | None = None
 
+membership: models_phonebook.Membership | None = None
 membership_to_delete_admin: models_phonebook.Membership | None = None
 membership_to_delete_president: models_phonebook.Membership | None = None
 membership_to_delete_simple: models_phonebook.Membership | None = None
