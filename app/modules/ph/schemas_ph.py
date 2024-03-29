@@ -3,9 +3,12 @@ from datetime import date
 from pydantic import BaseModel
 
 
-class Paper(BaseModel):
+class PaperBase(BaseModel):
     """Base schema for paper's model"""
 
-    id: str
     name: str
     release_date: date
+
+
+class PaperComplete(PaperBase):
+    id: str
