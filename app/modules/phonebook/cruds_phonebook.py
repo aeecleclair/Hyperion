@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
-from app.modules.phonebook import models_phonebook, phonebook_types, schemas_phonebook
+from app.modules.phonebook import models_phonebook, schemas_phonebook, types_phonebook
 
 
 # ---------------------------------------------------------------------------- #
@@ -28,7 +28,7 @@ async def is_user_president(
     )
     return (
         membership is not None
-        and phonebook_types.RoleTags.president.value in membership.role_tags.split(";")
+        and types_phonebook.RoleTags.president.value in membership.role_tags.split(";")
     )
 
 
@@ -47,13 +47,13 @@ async def get_all_associations(
 async def get_all_role_tags() -> Sequence[str]:
     """Return all RoleTags from Enum"""
 
-    return [tag.value for tag in phonebook_types.RoleTags]
+    return [tag.value for tag in types_phonebook.RoleTags]
 
 
 async def get_all_kinds() -> Sequence[str]:
     """Return all Kinds from Enum"""
 
-    return [kind.value for kind in phonebook_types.Kinds]
+    return [kind.value for kind in types_phonebook.Kinds]
 
 
 async def get_all_memberships(

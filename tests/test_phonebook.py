@@ -6,7 +6,7 @@ import pytest_asyncio
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from app.modules.phonebook import models_phonebook, schemas_phonebook
-from app.modules.phonebook.phonebook_types import Kinds, RoleTags
+from app.modules.phonebook.types_phonebook import Kinds, RoleTags
 from tests.commons import (
     add_object_to_db,
     client,
@@ -23,7 +23,6 @@ membership: models_phonebook.Membership | None = None
 membership_to_delete_admin: models_phonebook.Membership | None = None
 membership_to_delete_president: models_phonebook.Membership | None = None
 membership_to_delete_simple: models_phonebook.Membership | None = None
-
 phonebook_user_BDE: models_core.CoreUser | None = None
 phonebook_user_president: models_core.CoreUser | None = None
 phonebook_user_simple: models_core.CoreUser | None = None
