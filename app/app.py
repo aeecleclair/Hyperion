@@ -14,6 +14,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.routing import APIRoute
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -209,6 +210,13 @@ def initialize_module_visibility(engine: Engine) -> None:
                     )
 
 
+def use_route_path_as_operation_ids(app: FastAPI) -> None:
+    """Simplify operation IDs so that generated API clients have simpler function names."""
+    for route in app.routes:
+        if isinstance(route, APIRoute):
+            route.operation_id = route.path
+
+
 # We wrap the application in a function to be able to pass the settings and drop_db parameters
 # The drop_db parameter is used to drop the database tables before creating them again
 def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
@@ -231,8 +239,13 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         hyperion_error_logger.info("Shutting down")
 
     # Initialize app
-    app = FastAPI(lifespan=lifespan)
+    app = FastAPI(
+        title="Hyperion",
+        version=settings.HYPERION_VERSION,
+        lifespan=lifespan,
+    )
     app.include_router(api.api_router)
+    use_route_path_as_operation_ids(app)
 
     app.add_middleware(
         CORSMiddleware,
