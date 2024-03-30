@@ -30,8 +30,16 @@ module = Module(
 )
 async def get_paper_pdf(
     paper_id: str,
+    db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    paper = await cruds_ph.get_paper_by_id(db=db, paper_id=paper_id)
+    if paper is None:
+        raise HTTPException(
+            status_code=404,
+            detail="The paper does not exist.",
+        )
+
     return get_file_from_data(
         default_asset="assets/pdf/default_PDF.pdf",
         directory="ph",
@@ -78,7 +86,7 @@ async def create_paper(
         )
         return await cruds_ph.create_paper(paper=paper_db, db=db)
     except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @module.router.post(
