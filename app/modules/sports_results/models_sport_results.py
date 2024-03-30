@@ -18,7 +18,7 @@ class Sport(Base):
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
     name: Mapped[str] = mapped_column(String, unique=True)
-    capitains: Mapped[list[Captain]] = relationship(
+    captains: Mapped[list[Captain]] = relationship(
         "Captain",
         back_populates="sport",
     )

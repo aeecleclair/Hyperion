@@ -3,6 +3,7 @@ from sqlite3 import IntegrityError
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.modules.sports_results import models_sport_results
 
@@ -24,6 +25,35 @@ async def get_captains_by_sport_id(
         ),
     )
     return result.scalars().all()
+
+
+async def is_user_a_captain(
+    db: AsyncSession,
+    user_id: str,
+    sport: models_sport_results.Sport | None = None,
+) -> bool:
+    if sport:
+        result = await db.execute(
+            select(
+                models_sport_results.Sport.captains.user_id,
+            )
+            .where(
+                models_sport_results.Sport.id == sport.id,
+            )
+            .options(
+                selectinload(models_sport_results.Captain.sport),
+            ),
+        )
+    else:
+        result = await db.execute(
+            select(
+                models_sport_results.Sport.captains.user_id,
+            ).options(
+                selectinload(models_sport_results.Captain.sport),
+            ),
+        )
+
+    return any(user_id == user_id_i for user_id_i in result)
 
 
 async def get_results(db: AsyncSession) -> Sequence[models_sport_results.Result]:
