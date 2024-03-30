@@ -99,12 +99,13 @@ class Settings(BaseSettings):
 
     # By default, only production's records are logged
     LOG_DEBUG_MESSAGES: bool | None
+
     # Hyperion follows Semantic Versioning
     # https://semver.org/
-    HYPERION_VERSION: str = "1.0.0"  # This value should never be modified by hand. See [Hyperion release] documentation
+    HYPERION_VERSION: str = "2.4.0"
     MINIMAL_TITAN_VERSION_CODE: int = 113
-    # Depreciated, minimal_titan_version_code should be used
-    MINIMAL_TITAN_VERSION: str = "0.0.1"
+
+    MINIMAL_TITAN_VERSION: str = "0.0.1"  # deprecated, use MINIMAL_TITAN_VERSION_CODE
 
     # Origins for the CORS middleware. `["http://localhost"]` can be used for development.
     # See https://fastapi.tiangolo.com/tutorial/cors/
