@@ -5,7 +5,7 @@ from app.database import Base
 
 class Captain(Base):
     user_id: str
-    sport: Sport
+    sport: "Sport"
 
 
 class Sport(Base):
