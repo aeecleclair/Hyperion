@@ -996,6 +996,7 @@ async def introspect(
 
 @router.get(
     "/auth/userinfo",
+    status_code=200,
 )
 async def auth_get_userinfo(
     user: models_core.CoreUser = Depends(
