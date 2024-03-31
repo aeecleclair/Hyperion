@@ -1069,7 +1069,7 @@ def introspect_access_token(
         payload = jwt.decode(
             access_token,
             settings.ACCESS_TOKEN_SECRET_KEY,
-            algorithms=[security.jwt_algorithme],
+            algorithms=[security.jwt_algorithm],
         )
         # We want to validate the structure of the payload
         _ = schemas_auth.TokenData(**payload)

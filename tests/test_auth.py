@@ -1,25 +1,34 @@
 import base64
 import json
+from datetime import UTC, datetime, timedelta
 from urllib.parse import parse_qs, urlparse
 
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
 from app.core import models_core
+from app.core.auth import models_auth
 from app.core.groups.groups_type import GroupType
 from tests.commons import (
+    add_object_to_db,
+    create_api_access_token,
     create_user_with_groups,
 )
 
 user: models_core.CoreUser
 external_user: models_core.CoreUser
 ecl_user: models_core.CoreUser
+access_token: str
+
+valid_refresh_token = "ValidRefreshToken"
+expired_refresh_token = "ExpiredRefreshToken"
+revoked_refresh_token = "RevokedRefreshToken"
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
     global user
-    user = await create_user_with_groups(
+    user = user = await create_user_with_groups(
         groups=[],
         email="email@myecl.fr",
         password="azerty",
@@ -39,6 +48,37 @@ async def init_objects() -> None:
         password="azerty",
         external=True,
     )
+
+    global access_token
+    access_token = create_api_access_token(user)
+
+    valid_refresh_token_db = models_auth.RefreshToken(
+        client_id="",
+        created_on=datetime.now(UTC),
+        expire_on=datetime.now(UTC) + timedelta(days=1),
+        token=valid_refresh_token,
+        user_id=user.id,
+    )
+    await add_object_to_db(valid_refresh_token_db)
+
+    expired_refresh_token_db = models_auth.RefreshToken(
+        client_id="",
+        created_on=datetime.now(UTC) - timedelta(days=1),
+        expire_on=datetime.now(UTC) - timedelta(days=1),
+        token=expired_refresh_token,
+        user_id=user.id,
+    )
+    await add_object_to_db(expired_refresh_token_db)
+
+    revoked_refresh_token_db = models_auth.RefreshToken(
+        client_id="",
+        created_on=datetime.now(UTC),
+        expire_on=datetime.now(UTC) + timedelta(days=1),
+        revoked_on=datetime.now(UTC),
+        token=revoked_refresh_token,
+        user_id=user.id,
+    )
+    await add_object_to_db(revoked_refresh_token_db)
 
 
 def test_simple_token(client: TestClient):
@@ -496,3 +536,179 @@ def test_authorization_code_flow_with_auth_client_restricting_external_users_and
     url = urlparse(response.headers["Location"])
     query = parse_qs(url.query)
     assert query["error"][0] == "consent_required"
+
+
+def test_token_introspection_unauthorized_for_auth_client_disallowing_introspection(
+    client: TestClient,
+):
+    data = {
+        "client_id": "BaseAuthClient",
+        "client_secret": "secret",
+        "token": access_token,
+    }
+    response = client.post(
+        "/auth/introspect",
+        data=data,
+    )
+    assert response.status_code == 401
+
+
+def test_token_introspection_without_client_id(
+    client: TestClient,
+):
+    data = {
+        "client_secret": "secret",
+        "token": access_token,
+    }
+    response = client.post(
+        "/auth/introspect",
+        data=data,
+    )
+    assert response.status_code == 401
+
+
+def test_token_introspection_with_invalid_client_secret(
+    client: TestClient,
+):
+    data = {
+        "client_id": "BaseAuthClient",
+        "client_secret": "invalid_secret",
+        "token": access_token,
+    }
+    response = client.post(
+        "/auth/introspect",
+        data=data,
+    )
+    assert response.status_code == 401
+
+
+def test_token_introspection_with_access_token(
+    client: TestClient,
+):
+    data = {
+        "client_id": "SynapseAuthClient",
+        "client_secret": "secret",
+        "token": access_token,
+    }
+    response = client.post(
+        "/auth/introspect",
+        data=data,
+    )
+    assert response.status_code == 200
+    json = response.json()
+
+    assert json["active"] is True
+
+
+def test_token_introspection_with_access_token_and_auth_in_header(
+    client: TestClient,
+):
+    data = {
+        "token": access_token,
+    }
+    client_id = "SynapseAuthClient"
+    client_secret = "secret"
+    basic_header = base64.b64encode(f"{client_id}:{client_secret}".encode()).decode()
+    response = client.post(
+        "/auth/introspect",
+        data=data,
+        headers={"Authorization": f"Basic {basic_header}"},
+    )
+    assert response.status_code == 200
+    json = response.json()
+
+    assert json["active"] is True
+
+
+def test_token_introspection_with_an_expired_access_token(
+    client: TestClient,
+):
+    expired_access_token = create_api_access_token(
+        user,
+        expires_delta=timedelta(seconds=-1),
+    )
+    data = {
+        "client_id": "SynapseAuthClient",
+        "client_secret": "secret",
+        "token": expired_access_token,
+    }
+    response = client.post(
+        "/auth/introspect",
+        data=data,
+    )
+    assert response.status_code == 200
+    json = response.json()
+
+    assert json["active"] is False
+
+
+def test_token_introspection_with_invalid_refresh_token(
+    client: TestClient,
+):
+    data = {
+        "client_id": "SynapseAuthClient",
+        "client_secret": "secret",
+        "token": "InvalidRefreshToken",
+    }
+    response = client.post(
+        "/auth/introspect",
+        data=data,
+    )
+    assert response.status_code == 200
+    json = response.json()
+
+    assert json["active"] is False
+
+
+def test_token_introspection_with_valid_refresh_token(
+    client: TestClient,
+):
+    data = {
+        "client_id": "SynapseAuthClient",
+        "client_secret": "secret",
+        "token": valid_refresh_token,
+    }
+    response = client.post(
+        "/auth/introspect",
+        data=data,
+    )
+    assert response.status_code == 200
+    json = response.json()
+
+    assert json["active"] is True
+
+
+def test_token_introspection_with_expired_refresh_token(
+    client: TestClient,
+):
+    data = {
+        "client_id": "SynapseAuthClient",
+        "client_secret": "secret",
+        "token": expired_refresh_token,
+    }
+    response = client.post(
+        "/auth/introspect",
+        data=data,
+    )
+    assert response.status_code == 200
+    json = response.json()
+
+    assert json["active"] is False
+
+
+def test_token_introspection_with_revoked_refresh_token(
+    client: TestClient,
+):
+    data = {
+        "client_id": "SynapseAuthClient",
+        "client_secret": "secret",
+        "token": revoked_refresh_token,
+    }
+    response = client.post(
+        "/auth/introspect",
+        data=data,
+    )
+    assert response.status_code == 200
+    json = response.json()
+
+    assert json["active"] is False

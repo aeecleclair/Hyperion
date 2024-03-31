@@ -1,6 +1,7 @@
 import logging
 import uuid
 from collections.abc import AsyncGenerator
+from datetime import timedelta
 from functools import lru_cache
 
 import redis
@@ -148,13 +149,20 @@ async def create_user_with_groups(
     return user
 
 
-def create_api_access_token(user: models_core.CoreUser) -> str:
+def create_api_access_token(
+    user: models_core.CoreUser,
+    expires_delta: timedelta | None = None,
+):
     """
     Create a JWT access token for the `user` with the scope `API`
     """
 
     access_token_data = schemas_auth.TokenData(sub=user.id, scopes="API")
-    token = security.create_access_token(data=access_token_data, settings=settings)
+    token = security.create_access_token(
+        data=access_token_data,
+        settings=settings,
+        expires_delta=expires_delta,
+    )
 
     return token
 

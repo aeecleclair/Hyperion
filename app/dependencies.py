@@ -187,36 +187,6 @@ def get_notification_tool(
     )
 
 
-async def get_token_data(
-    settings: Settings = Depends(get_settings),
-    token: str = Depends(security.oauth2_scheme),
-    request_id: str = Depends(get_request_id),
-) -> schemas_auth.TokenData:
-    """
-    Dependency that returns the token payload data
-    """
-    try:
-        payload = jwt.decode(
-            token,
-            settings.ACCESS_TOKEN_SECRET_KEY,
-            algorithms=[security.jwt_algorithme],
-        )
-        token_data = schemas_auth.TokenData(**payload)
-        hyperion_access_logger.info(
-            f"Get_token_data: Decoded a token for user {token_data.sub} ({request_id})",
-        )
-    except (JWTError, ValidationError) as error:
-        hyperion_access_logger.warning(
-            f"Get_token_data: Failed to decode a token: {error} ({request_id})",
-        )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Could not validate credentials",
-        )
-
-    return token_data
-
-
 def get_user_from_token_with_scopes(
     scopes: list[list[ScopeType]],
 ) -> Callable[
