@@ -17,9 +17,10 @@ from fastapi import (
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.templating import Jinja2Templates
+from jose import jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core
+from app.core import models_core, security
 from app.core.auth import cruds_auth, models_auth, schemas_auth
 from app.core.config import Settings
 from app.core.security import (
@@ -976,21 +977,126 @@ async def create_response_body(
 
 @router.post(
     "/auth/introspect",
-    tags=[Tags.auth],
     response_model=schemas_auth.IntrospectTokenResponse,
+    status_code=200,
 )
 async def introspect(
     response: Response,
     # OAuth and Openid connect parameters
     # The client id and secret must be passed either in the authorization header or with client_id and client_secret parameters
     tokenreq: schemas_auth.IntrospectTokenReq = Depends(
-        schemas_auth.IntrospectTokenReq.as_form
+        schemas_auth.IntrospectTokenReq.as_form,
     ),
+    authorization: str | None = Header(default=None),
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
     request_id: str = Depends(get_request_id),
 ):
-    print(tokenreq)
+    """
+    Some clients requires an endpoint to check if an access token or a refresh token is valid.
+    This endpoint should not be publicly accessible, and is thus restricted to some AuthClient.
+
+    * parameters:
+        * `token`: the token to introspect
+        * `token_type_hint`: may be `access_token` or `refresh_token`, we currently do not use this hint as we are able to differentiate access and refresh tokens
+
+    * Client credentials
+        The client must send either:
+            the client id and secret in the authorization header or with client_id and client_secret parameters
+
+    Reference:
+    https://www.oauth.com/oauth2-servers/token-introspection-endpoint/
+    https://datatracker.ietf.org/doc/html/rfc7662
+    """
+    # We need to check client id and secret
+    if authorization is not None:
+        # client_id and client_secret are base64 encoded in the Basic authorization header
+        tokenreq.client_id, tokenreq.client_secret = (
+            base64.b64decode(authorization.replace("Basic ", ""))
+            .decode("utf-8")
+            .split(":")
+        )
+
+    if tokenreq.client_id is None:
+        hyperion_access_logger.warning(
+            f"Token introspection: Unprovided client_id ({request_id})",
+        )
+        raise HTTPException(
+            status_code=401,
+            detail="Unprovided client_id",
+        )
+
+    auth_client: BaseAuthClient | None = settings.KNOWN_AUTH_CLIENTS.get(
+        tokenreq.client_id,
+    )
+
+    if (
+        auth_client is None
+        or auth_client.secret is None
+        or tokenreq.client_secret != auth_client.secret
+    ):
+        hyperion_access_logger.warning(
+            f"Token introspection: Invalid client_id {tokenreq.client_id} or secret. Token introspection is not supported without a client secret. Is `AUTH_CLIENTS` variable correctly configured in the dotenv? ({request_id})",
+        )
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid client_id or client_secret",
+        )
+
+    if not auth_client.allow_token_introspection:
+        hyperion_access_logger.warning(
+            f"Token introspection: Token introspection is not supported for client {tokenreq.client_id} ({request_id})",
+        )
+        raise HTTPException(
+            status_code=401,
+            detail="Token introspection is not supported for this client",
+        )
+
+    if len(tokenreq.token.split(".")) == 3:
+        # This should be an access JWT token
+        return introspect_access_token(access_token=tokenreq.token, settings=settings)
+
+    else:
+        # This should be a an urlsafe refresh token generated using `generate_token`
+        return await introspect_refresh_token(refresh_token=tokenreq.token, db=db)
+
+
+def introspect_access_token(
+    access_token: str,
+    settings: Settings,
+) -> schemas_auth.IntrospectTokenResponse:
+    try:
+        payload = jwt.decode(
+            access_token,
+            settings.ACCESS_TOKEN_SECRET_KEY,
+            algorithms=[security.jwt_algorithme],
+        )
+        # We want to validate the structure of the payload
+        _ = schemas_auth.TokenData(**payload)
+        return schemas_auth.IntrospectTokenResponse(active=True)
+    except Exception:
+        return schemas_auth.IntrospectTokenResponse(active=False)
+
+
+async def introspect_refresh_token(
+    refresh_token: str,
+    db: AsyncSession,
+) -> schemas_auth.IntrospectTokenResponse:
+    db_refresh_token = await cruds_auth.get_refresh_token_by_token(
+        db=db,
+        token=refresh_token,
+    )
+
+    if db_refresh_token is None:
+        # The refresh token is invalid
+        return schemas_auth.IntrospectTokenResponse(active=False)
+    elif db_refresh_token.revoked_on is not None:
+        # The refresh token was already revoked
+        return schemas_auth.IntrospectTokenResponse(active=False)
+    if db_refresh_token.expire_on < datetime.now(UTC):
+        # The refresh token is expired
+        return schemas_auth.IntrospectTokenResponse(active=False)
+
     return schemas_auth.IntrospectTokenResponse(active=True)
 
 
