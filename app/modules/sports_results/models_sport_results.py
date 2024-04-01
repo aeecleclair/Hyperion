@@ -7,7 +7,7 @@ from app.database import Base
 
 
 class Captain(Base):
-    __tablename__ = "sport-team-captain"
+    __tablename__ = "sport-team-captains"
 
     user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), primary_key=True)
     sport: Mapped["Sport"] = relationship("Sport", back_populates="captain")
