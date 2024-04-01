@@ -10,6 +10,7 @@ from app.modules.ph import models_ph
 async def get_papers(
     db: AsyncSession,
 ) -> Sequence[models_ph.Paper]:
+    """Return papers from the latest to the oldest"""
     result = await db.execute(
         select(models_ph.Paper).order_by(models_ph.Paper.release_date.desc()),
     )

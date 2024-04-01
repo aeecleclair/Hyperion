@@ -101,12 +101,12 @@ async def save_file_as_data(
     accepted_content_types: list[str] | None = None,
 ):
     """
-    Save an image file to the data folder.
+    Save an image or pdf file to the data folder.
 
     - The file will be saved in the `data` folder: "data/{directory}/{filename}.ext"
     - Maximum size is 2MB by default, it can be changed using `max_file_size` (in bytes) parameter.
     - `accepted_content_types` is a list of accepted content types. By default, only images are accepted.
-        Use: `["image/jpeg", "image/png", "image/webp"]` to accept only images.
+        Use: `["image/jpeg", "image/png", "image/webp", "application/pdf"]` to accept only images.
 
     The file extension will be inferred from the provided content file.
     There should only be one file with the same filename, thus, saving a new file will remove the existing even if its extension was different.
@@ -114,6 +114,7 @@ async def save_file_as_data(
      - png
      - jpg
      - webp
+     - pdf
 
     An HTTP Exception will be raised if an error occurres.
 
@@ -125,6 +126,7 @@ async def save_file_as_data(
             "image/jpeg",
             "image/png",
             "image/webp",
+            "application/pdf",
         ]
 
     if image.content_type not in accepted_content_types:
