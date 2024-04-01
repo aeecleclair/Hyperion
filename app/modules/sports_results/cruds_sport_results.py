@@ -28,14 +28,14 @@ async def get_captains_by_sport_id(
 
 async def is_user_a_captain_of_a_sport(
     user_id: str,
+    sport_id: str,
     db: AsyncSession,
-    sport: models_sport_results.Sport,
 ) -> bool:
     result = await db.execute(
         select(
             models_sport_results.CaptainMembership,
         ).where(
-            models_sport_results.CaptainMembership.sport_id == sport.id,
+            models_sport_results.CaptainMembership.sport_id == sport_id,
             models_sport_results.CaptainMembership.user_id == user_id,
         ),
     )
