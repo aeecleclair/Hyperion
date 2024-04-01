@@ -15,8 +15,8 @@ async def get_sports(
 
 
 async def get_captains_by_sport_id(
-    db: AsyncSession,
     sport_id: str,
+    db: AsyncSession,
 ) -> Sequence[models_sport_results.Captain]:
     result = await db.execute(
         select(models_sport_results.Captain).where(
@@ -27,8 +27,8 @@ async def get_captains_by_sport_id(
 
 
 async def is_user_a_captain_of_a_sport(
-    db: AsyncSession,
     user_id: str,
+    db: AsyncSession,
     sport: models_sport_results.Sport,
 ) -> bool:
     result = await db.execute(
@@ -44,8 +44,8 @@ async def is_user_a_captain_of_a_sport(
 
 
 async def is_user_a_captain(
-    db: AsyncSession,
     user_id: str,
+    db: AsyncSession,
 ) -> bool:
     result = await db.execute(
         select(
@@ -68,8 +68,8 @@ async def get_results(db: AsyncSession) -> Sequence[models_sport_results.Result]
 
 
 async def get_results_by_sport_id(
-    db: AsyncSession,
     sport_id,
+    db: AsyncSession,
 ) -> Sequence[models_sport_results.Result]:
     result = await db.execute(
         select(models_sport_results.Result)
@@ -84,8 +84,8 @@ async def get_results_by_sport_id(
 
 
 async def create_result(
-    db: AsyncSession,
     result: models_sport_results.Result,
+    db: AsyncSession,
 ) -> models_sport_results.Result:
     db.add(result)
     try:
@@ -109,8 +109,8 @@ async def delete_result(
 
 
 async def add_captain(
-    db: AsyncSession,
     captain: models_sport_results.Captain,
+    db: AsyncSession,
 ) -> models_sport_results.Captain:
     db.add(captain)
     captain_membership = models_sport_results.CaptainMembership(
@@ -144,8 +144,8 @@ async def delete_captain(
 
 
 async def add_sport(
-    db: AsyncSession,
     sport: models_sport_results.Sport,
+    db: AsyncSession,
 ) -> models_sport_results.Sport:
     db.add(sport)
     try:
