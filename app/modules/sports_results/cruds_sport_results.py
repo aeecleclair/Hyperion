@@ -1,9 +1,8 @@
 from collections.abc import Sequence
 from sqlite3 import IntegrityError
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.modules.sports_results import models_sport_results
 
@@ -34,18 +33,14 @@ async def is_user_a_captain_of_a_sport(
 ) -> bool:
     result = await db.execute(
         select(
-            models_sport_results.Sport.captains,
-        )
-        .where(
-            models_sport_results.Sport.id == sport.id,
-            models_sport_results.Sport.captains.user_id == user_id,
-        )
-        .options(
-            selectinload(models_sport_results.Captain.sport),
+            models_sport_results.CaptainMembership,
+        ).where(
+            models_sport_results.CaptainMembership.sport_id == sport.id,
+            models_sport_results.CaptainMembership.user_id == user_id,
         ),
     )
 
-    return result is not None
+    return result.unique().scalars().first() is not None
 
 
 async def is_user_a_captain(
@@ -54,17 +49,13 @@ async def is_user_a_captain(
 ) -> bool:
     result = await db.execute(
         select(
-            models_sport_results.Sport.captains,
-        )
-        .where(
-            models_sport_results.Sport.captains.user_id == user_id,
-        )
-        .options(
-            selectinload(models_sport_results.Captain.sport),
+            models_sport_results.CaptainMembership,
+        ).where(
+            models_sport_results.CaptainMembership.user_id == user_id,
         ),
     )
 
-    return result is not None
+    return result.unique().scalars().first() is not None
 
 
 async def get_results(db: AsyncSession) -> Sequence[models_sport_results.Result]:
@@ -105,17 +96,51 @@ async def create_result(
         raise ValueError(error)
 
 
+async def delete_result(
+    result_id: str,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_sport_results.Result).where(
+            models_sport_results.Result.id == result_id,
+        ),
+    )
+    await db.commit()
+
+
 async def add_captain(
     db: AsyncSession,
     captain: models_sport_results.Captain,
 ) -> models_sport_results.Captain:
     db.add(captain)
+    captain_membership = models_sport_results.CaptainMembership(
+        user_id=captain.user_id,
+        sport_id=captain.sport.id,
+    )
+    db.add(captain_membership)
     try:
         await db.commit()
         return captain
     except IntegrityError as error:
         await db.rollback()
         raise ValueError(error)
+
+
+async def delete_captain(
+    user_id: str,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_sport_results.Captain).where(
+            models_sport_results.Captain.user_id == user_id,
+        ),
+    )
+    await db.execute(
+        delete(models_sport_results.CaptainMembership).where(
+            models_sport_results.CaptainMembership.user_id == user_id,
+        ),
+    )
+    await db.commit()
 
 
 async def add_sport(
@@ -129,3 +154,30 @@ async def add_sport(
     except IntegrityError as error:
         await db.rollback()
         raise ValueError(error)
+
+
+async def delete_sport(
+    sport_id: str,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_sport_results.Sport).where(
+            models_sport_results.Sport.id == sport_id,
+        ),
+    )
+    await db.execute(
+        delete(models_sport_results.Result).where(
+            models_sport_results.Result.sport_id == sport_id,
+        ),
+    )
+    await db.execute(
+        delete(models_sport_results.CaptainMembership).where(
+            models_sport_results.CaptainMembership.sport_id == sport_id,
+        ),
+    )
+    await db.execute(
+        delete(models_sport_results.Captain).where(
+            models_sport_results.Captain.sport.id == sport_id,
+        ),
+    )
+    await db.commit()
