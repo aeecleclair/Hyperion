@@ -56,7 +56,9 @@ async def get_papers(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    result = await cruds_ph.get_papers(db=db)
+    result = await cruds_ph.get_papers(
+        db=db,
+    )  # Return papers from the latest to the oldest
     return result
 
 
@@ -70,9 +72,7 @@ async def create_paper(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.ph)),
 ):
-    """
-    Create a new paper.
-    """
+    """Create a new paper."""
 
     paper_complete = schemas_ph.PaperComplete(
         id=str(uuid.uuid4()),
