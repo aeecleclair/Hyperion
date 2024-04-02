@@ -130,8 +130,8 @@ async def update_paper(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.ph)),
     db: AsyncSession = Depends(get_db),
 ):
-    advert = await cruds_ph.get_paper_by_id(paper_id=paper_id, db=db)
-    if not advert:
+    paper = await cruds_ph.get_paper_by_id(paper_id=paper_id, db=db)
+    if not paper:
         raise HTTPException(
             status_code=404,
             detail="Invalid paper_id",
