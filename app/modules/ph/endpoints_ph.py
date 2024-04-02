@@ -120,8 +120,8 @@ async def create_paper_pdf(
     return standard_responses.Result(success=True)
 
 
-@module.router.post(
-    "/ph/update/{paper_id}",
+@module.router.patch(
+    "/ph/{paper_id}",
     response_model=standard_responses.Result,
     status_code=201,
 )
@@ -145,8 +145,8 @@ async def update_paper(
     )
 
 
-@module.router.post(
-    "/ph/delete/{paper_id}",
+@module.router.delete(
+    "/ph/{paper_id}",
     response_model=standard_responses.Result,
     status_code=201,
 )
