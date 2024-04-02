@@ -1,6 +1,4 @@
 import uuid
-from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING
 
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
-from app.dependencies import get_db, is_user_a_member, is_user_a_member_of
+from app.dependencies import get_db, is_user_a_member
 from app.modules.sports_results import (
     cruds_sport_results,
     models_sport_results,
