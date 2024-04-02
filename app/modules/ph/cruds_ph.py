@@ -1,10 +1,10 @@
 from collections.abc import Sequence
 
-from sqlalchemy import select
+from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.ph import models_ph
+from app.modules.ph import models_ph, schemas_ph
 
 
 async def get_papers(
@@ -40,3 +40,26 @@ async def create_paper(
     except IntegrityError as error:
         await db.rollback()
         raise ValueError(error)
+
+
+async def update_paper(
+    paper_id: str,
+    paper_update: schemas_ph.PaperUpdate,
+    db: AsyncSession,
+):
+    await db.execute(
+        update(models_ph.Paper)
+        .where(models_ph.Paper.id == paper_id)
+        .values(**paper_update.model_dump(exclude_none=True)),
+    )
+    await db.commit()
+
+
+async def delete_paper(
+    paper_id: str,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_ph.Paper).where(models_ph.Paper.id == paper_id),
+    )
+    await db.commit()

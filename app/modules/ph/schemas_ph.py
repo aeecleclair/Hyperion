@@ -12,3 +12,8 @@ class PaperBase(BaseModel):
 
 class PaperComplete(PaperBase):
     id: str
+
+
+class PaperUpdate(BaseModel):
+    name: str
+    release_date: date
