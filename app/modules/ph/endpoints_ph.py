@@ -122,7 +122,7 @@ async def create_paper_pdf(
 
 @module.router.patch(
     "/ph/{paper_id}",
-    status_code=201,
+    status_code=204,
 )
 async def update_paper(
     paper_id: str,
@@ -146,7 +146,7 @@ async def update_paper(
 
 @module.router.delete(
     "/ph/{paper_id}",
-    status_code=201,
+    status_code=204,
 )
 async def delete_paper(
     paper_id: str,
