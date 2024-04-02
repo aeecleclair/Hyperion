@@ -281,7 +281,6 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
             port = request.client.port
             client_address = f"{ip_address}:{port}"
         else:
-            ip_address = "0.0.0.0"  # In case of a test (see https://github.com/encode/starlette/pull/2377)
             client_address = "unknown"
 
         settings: Settings = app.dependency_overrides.get(get_settings, get_settings)()
