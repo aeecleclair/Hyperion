@@ -118,3 +118,44 @@ async def create_paper_pdf(
     )
 
     return standard_responses.Result(success=True)
+
+
+@module.router.post(
+    "/ph/update/{paper_id}",
+    response_model=standard_responses.Result,
+    status_code=201,
+)
+async def update_paper(
+    paper_id: str,
+    paper_update: schemas_ph.PaperUpdate,
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.ph)),
+    db: AsyncSession = Depends(get_db),
+):
+    advert = await cruds_ph.get_paper_by_id(paper_id=paper_id, db=db)
+    if not advert:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid paper_id",
+        )
+
+    await cruds_ph.update_paper(
+        paper_id=paper_id,
+        paper_update=paper_update,
+        db=db,
+    )
+
+
+@module.router.post(
+    "/ph/delete/{paper_id}",
+    response_model=standard_responses.Result,
+    status_code=201,
+)
+async def delete_paper(
+    paper_id: str,
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.ph)),
+    db: AsyncSession = Depends(get_db),
+):
+    await cruds_ph.delete_paper(
+        paper_id=paper_id,
+        db=db,
+    )
