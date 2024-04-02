@@ -14,7 +14,7 @@ from app.dependencies import (
     is_user_a_member_of,
 )
 from app.modules.ph import cruds_ph, models_ph, schemas_ph
-from app.utils.tools import get_file_from_data, save_file_as_data
+from app.utils.tools import delete_file_from_data, get_file_from_data, save_file_as_data
 
 module = Module(
     root="ph",
@@ -156,4 +156,8 @@ async def delete_paper(
     await cruds_ph.delete_paper(
         paper_id=paper_id,
         db=db,
+    )
+    await delete_file_from_data(
+        directory="ph",
+        filename=str(paper_id),
     )

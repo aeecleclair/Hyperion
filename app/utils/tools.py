@@ -213,6 +213,14 @@ def get_file_from_data(
     return FileResponse(default_asset)
 
 
+def delete_file_from_data(
+    directory: str,
+    filename: str,
+):
+    if Path.exists(Path(f"data/{directory}/{filename}.*")):
+        Path.unlink(Path(f"data/{directory}/{filename}.*"))
+
+
 def get_display_name(
     firstname: str,
     name: str,
