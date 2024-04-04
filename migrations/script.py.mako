@@ -9,6 +9,8 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+## We need to import app for migrations involving app.utils.types.datetime.TZDateTime()
+import app
 ${imports if imports else ""}
 
 # revision identifiers, used by Alembic.
