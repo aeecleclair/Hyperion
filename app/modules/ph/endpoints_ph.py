@@ -86,7 +86,10 @@ async def create_paper(
         )
         return await cruds_ph.create_paper(paper=paper_db, db=db)
     except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        )
 
 
 @module.router.post(
@@ -153,10 +156,35 @@ async def delete_paper(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.ph)),
     db: AsyncSession = Depends(get_db),
 ):
+    paper = await cruds_ph.get_paper_by_id(paper_id=paper_id, db=db)
+    if not paper:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid paper_id",
+        )
+
     await cruds_ph.delete_paper(
         paper_id=paper_id,
         db=db,
     )
+
+
+@module.router.delete(
+    "/ph/{paper_id}/pdf",
+    status_code=204,
+)
+async def delete_paper_pdf(
+    paper_id: str,
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.ph)),
+    db: AsyncSession = Depends(get_db),
+):
+    paper = await cruds_ph.get_paper_by_id(paper_id=paper_id, db=db)
+    if not paper:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid paper_id",
+        )
+
     await delete_file_from_data(
         directory="ph",
         filename=str(paper_id),

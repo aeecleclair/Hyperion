@@ -201,6 +201,8 @@ def delete_file_from_data(
 ):
     if Path.exists(Path(f"data/{directory}/{filename}.*")):
         Path.unlink(Path(f"data/{directory}/{filename}.*"))
+    else:
+        raise HTTPException(status_code=400, detail="Could not delete file")
 
 
 def get_display_name(
