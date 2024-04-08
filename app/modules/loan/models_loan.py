@@ -78,6 +78,7 @@ class Loan(Base):
     notes: Mapped[str | None] = mapped_column(TEXT)
     caution: Mapped[str | None] = mapped_column(String)
     returned: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    returned_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     items: Mapped[list["Item"]] = relationship(
         "Item",

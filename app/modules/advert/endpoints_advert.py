@@ -363,12 +363,21 @@ async def delete_advert(
 )
 async def read_advert_image(
     advert_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Get the image of an advert
 
     **The user must be authenticated to use this endpoint**
     """
+    advert = await cruds_advert.get_advert_by_id(db=db, advert_id=advert_id)
+    if advert is None:
+        raise HTTPException(
+            status_code=404,
+            detail="The advert does not exist",
+        )
+
     return get_file_from_data(
         default_asset="assets/images/default_advert.png",
         directory="adverts",

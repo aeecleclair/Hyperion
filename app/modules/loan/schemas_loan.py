@@ -125,6 +125,7 @@ class Loan(LoanBase):
 
     id: str
     returned: bool
+    returned_date: date | None
     items_qty: list[ItemQuantity]
     borrower: schemas_core.CoreUserSimple
     loaner: Loaner

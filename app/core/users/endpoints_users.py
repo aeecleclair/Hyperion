@@ -462,7 +462,7 @@ async def make_admin(
 
     if len(users) != 1:
         raise HTTPException(
-            status_code=404,
+            status_code=403,
             detail="This endpoint is only usable if there is exactly one user in the database",
         )
 

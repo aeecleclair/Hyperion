@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from datetime import datetime
 
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
@@ -190,13 +191,19 @@ async def update_loan(
 
 async def update_loan_returned_status(
     loan_id: str,
-    returned: bool,
     db: AsyncSession,
+    returned: bool,
+    returned_date: datetime,
 ):
     await db.execute(
         update(models_loan.Loan)
         .where(models_loan.Loan.id == loan_id)
-        .values({"returned": returned}),
+        .values(
+            {
+                "returned": returned,
+                "returned_date": returned_date,
+            },
+        ),
     )
     await db.commit()
 

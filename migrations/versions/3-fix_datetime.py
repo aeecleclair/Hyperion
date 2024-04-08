@@ -19,19 +19,25 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
+    def upgrade_column_with_wrong_datetime(table, column):
+        update_column_with_wrong_datetime(table, column, False)
+
+    def upgrade_column_type(table, column):
+        update_column_type(table, column, False)
+
     # Booking
-    upgrade_column("booking", "start")
-    upgrade_column("booking", "end")
-    upgrade_column("booking", "creation")
+    upgrade_column_with_wrong_datetime("booking", "start")
+    upgrade_column_with_wrong_datetime("booking", "end")
+    upgrade_column_with_wrong_datetime("booking", "creation")
     # Advert
-    upgrade_column("advert_adverts", "date")
+    upgrade_column_with_wrong_datetime("advert_adverts", "date")
     # Amap
-    upgrade_column("amap_order", "ordering_date")
+    upgrade_column_with_wrong_datetime("amap_order", "ordering_date")
     # Calendar
-    upgrade_column("calendar_events", "start")
-    upgrade_column("calendar_events", "end")
+    upgrade_column_with_wrong_datetime("calendar_events", "start")
+    upgrade_column_with_wrong_datetime("calendar_events", "end")
     # Cinema
-    upgrade_column("cinema_session", "start")
+    upgrade_column_with_wrong_datetime("cinema_session", "start")
 
     # Core
     upgrade_column_type("refresh_token", "revoked_on")
@@ -47,15 +53,55 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    pass
+    def downgrade_column_with_wrong_datetime(table, column):
+        update_column_with_wrong_datetime(table, column, True)
+
+    def downgrade_column_type(table, column):
+        update_column_type(table, column, True)
+
+    # Booking
+    downgrade_column_with_wrong_datetime("booking", "start")
+    downgrade_column_with_wrong_datetime("booking", "end")
+    downgrade_column_with_wrong_datetime("booking", "creation")
+    # Advert
+    downgrade_column_with_wrong_datetime("advert_adverts", "date")
+    # Amap
+    downgrade_column_with_wrong_datetime("amap_order", "ordering_date")
+    # Calendar
+    downgrade_column_with_wrong_datetime("calendar_events", "start")
+    downgrade_column_with_wrong_datetime("calendar_events", "end")
+    # Cinema
+    downgrade_column_with_wrong_datetime("cinema_session", "start")
+
+    # Core
+    downgrade_column_type("refresh_token", "revoked_on")
+    downgrade_column_type("refresh_token", "expire_on")
+    downgrade_column_type("refresh_token", "created_on")
+    downgrade_column_type("notification_message", "delivery_datetime")
+    downgrade_column_type("core_user_unconfirmed", "expire_on")
+    downgrade_column_type("core_user_unconfirmed", "created_on")
+    downgrade_column_type("core_user_recover_request", "expire_on")
+    downgrade_column_type("core_user_recover_request", "created_on")
+    downgrade_column_type("core_user", "created_on")
+    downgrade_column_type("authorization_code", "expire_on")
 
 
-def upgrade_column(table, column):
-    op.execute(
-        f'UPDATE "{table}" SET "{column}" = "{column}"::timestamp AT TIME ZONE \'Europe/Paris\'',
+# See https://www.postgresql.org/docs/11/functions-datetime.html#FUNCTIONS-DATETIME-ZONECONVERT understand how AT TIME ZONE works in PostgreSQL
+
+
+def update_column_with_wrong_datetime(table, column, is_downgrade):
+    op.alter_column(
+        table,
+        column,
+        type_=sa.DateTime(timezone=is_downgrade),
+        postgresql_using=f"\"{column}\" AT TIME ZONE 'Etc/UTC' AT TIME ZONE 'Europe/Paris' AT TIME ZONE 'Etc/UTC'",
     )
-    op.alter_column(table, column, type_=sa.DateTime(timezone=False))
 
 
-def upgrade_column_type(table, column):
-    op.alter_column(table, column, type_=sa.DateTime(timezone=False))
+def update_column_type(table, column, is_downgrade):
+    op.alter_column(
+        table,
+        column,
+        type_=sa.DateTime(timezone=is_downgrade),
+        postgresql_using=f"\"{column}\" AT TIME ZONE 'Etc/UTC'",
+    )
