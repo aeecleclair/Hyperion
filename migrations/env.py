@@ -3,7 +3,9 @@ from logging.config import fileConfig
 from pathlib import Path
 
 from alembic import context
+from sqlalchemy import Engine
 from sqlalchemy.engine import Connection
+from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
 from app.database import Base
 from app.dependencies import get_db_engine, get_settings
@@ -76,58 +78,71 @@ def do_run_migrations(connection: Connection) -> None:
         context.run_migrations()
 
 
-async def run_async_migrations() -> None:
-    """In this scenario we need to create an Engine
-    and associate a connection with the context.
-
-    If a connection is already present in the context config,
-    we will use it instead of creating a new one.
-    This connection should be set when invoking alembic programmatically.
-    See https://alembic.sqlalchemy.org/en/latest/cookbook.html#connection-sharing
-
-    When calling alembic from the CLI,we need to create a new connection
+async def create_async_engine_and_run_async_migrations() -> None:
+    """
+    In this scenario we need to create an AsyncEngine and then obtain a AsyncConnection from it.
+    We then call the `run_async_migrations` function to run the migrations.
     """
 
-    connection = config.attributes.get("connection", None)
+    # If we don't have a connection, we can safely assume that Hyperion is not running
+    # Migrations should have been called from the CLI. We thus want to point to the production database
+    # As we want to use the production database, we can call the `get_settings` function directly
+    # instead of using it as a dependency (`app.dependency_overrides.get(get_settings, get_settings)()`)
+    settings = get_settings()
+    connectable = get_db_engine(settings)
 
-    if connection is None:
-        # only create Engine if we don't have a Connection
-        # from the outside
+    async with connectable.connect() as connection:
+        await run_async_migrations(connection)
+    await connectable.dispose()
 
-        # If we don't have a connection, we can safely assume that Hyperion is not running
-        # Migrations should have been called from the CLI. We thus want to point to the production database
-        # As we want to use the production database, we can call the `get_settings` function directly
-        # instead of using it as a dependency (`app.dependency_overrides.get(get_settings, get_settings)()`)
-        settings = get_settings()
-        connectable = get_db_engine(settings)
 
-        async with connectable.connect() as connection:
-            await connection.run_sync(do_run_migrations)
-        await connectable.dispose()
-    else:
-        await connection.run_sync(do_run_migrations)
+async def run_async_migrations(connection: AsyncConnection) -> None:
+    """ """
+    # WARNING: SQLAlchemy does not support `Inspection on an AsyncConnection`. The call to Alembic must be wrapped in a `run_sync` call.
+    # See https://alembic.sqlalchemy.org/en/latest/cookbook.html#programmatic-api-use-connection-sharing-with-asyncio for more information.
+    await connection.run_sync(do_run_migrations)
 
 
 def run_migrations_online() -> None:
     """
     Run migrations in 'online' mode.
 
-    If a connection is already present in the context config, it means that we already are in an event loop.
-    We can not create a second event loop in the same thread so we can not call `asyncio.run(run_async_migrations())`.
-    Instead we need to call `run_async_migrations()` directly.
-    This `connection` attributes should be set when invoking alembic programmatically.
-    WARNING: SQLAlchemy does not support `Inspection on an AsyncConnection`. The call to Alembic must be wrapped in a `run_sync` call.
-    See https://alembic.sqlalchemy.org/en/latest/cookbook.html#programmatic-api-use-connection-sharing-with-asyncio for more information.
+    If a Connection or an AsyncConnection is not provided we may assume we are not in an existing event loop (ie. alembic was invoking from the cli).
+    We create a new event loop and run the migrations asynchronously in it.
+    WARNING: as we assume Alembic was invoked from the CLI, we want to point to the production settings (including the production database).
 
-    If not connection were provided, we may assume we are not in an existing event loop (ie. alembic was invoking from the cli). We create a new event loop and run the migrations in it.
+    If an async connection is already present in the context config, it means that alembic was invoked programmatically.
+    We create a new event loop and run the migrations asynchronously in it.
+    NOTE: since SQLAlchemy does not support `Inspection on an AsyncConnection`, we will wrap the call to Alembic in a `run_sync` call.
+
+    If a synchronous connection is present in the context config, we can call the migration directly in the existing event loop.
+
+    This `connection` attributes should be set when invoking alembic programmatically:
+    See https://alembic.sqlalchemy.org/en/latest/cookbook.html#connection-sharing
+
+    NOTE: many documentation are confuse and use the terms *connection* (`Connection` or `AsyncConnection`) and *connectable* (`Engine` or `AsyncEngine`) interchangeably.
+    We requires a *connection* (`Connection` or `AsyncConnection`) object. You may obtain one from an *connectable* calling the [`connect` method](https://docs.sqlalchemy.org/en/20/core/connections.html#sqlalchemy.engine.Engine.connect).
     """
 
-    connectable = config.attributes.get("connection", None)
+    connection: None | Connection | AsyncConnection = config.attributes.get(
+        "connection",
+        None,
+    )
 
-    if connectable is None:
-        asyncio.run(run_async_migrations())
+    if connection is None:
+        asyncio.run(create_async_engine_and_run_async_migrations())
+    elif isinstance(connection, AsyncConnection):
+        asyncio.run(run_async_migrations(connection))
+    elif isinstance(connection, Connection):
+        do_run_migrations(connection)
+    elif isinstance(connection, AsyncEngine | Engine):
+        raise TypeError(
+            f"You must acquire a connection object from the connectable {connection}",
+        )
     else:
-        do_run_migrations(connectable)
+        raise TypeError(
+            f"Unsupported connection object {connection}. A Connection or and AsyncConnection is required, got a {type(connection)}",
+        )
 
 
 if context.is_offline_mode():
