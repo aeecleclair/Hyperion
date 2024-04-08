@@ -43,6 +43,7 @@ class MembershipBase(BaseModel):
     mandate_year: int
     role_name: str
     role_tags: str | None = None  # "roletag1;roletag2;..."
+    order: int
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -56,6 +57,7 @@ class MembershipComplete(MembershipBase):
 class MembershipEdit(BaseModel):
     role_name: str | None = None
     role_tags: str | None = None
+    order: int | None = None
 
 
 class MemberBase(schemas_core.CoreUserSimple):

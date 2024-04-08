@@ -207,9 +207,11 @@ async def get_memberships_by_association_id(
     """Return all Memberships with association_id from database"""
 
     result = await db.execute(
-        select(models_phonebook.Membership).where(
+        select(models_phonebook.Membership)
+        .where(
             models_phonebook.Membership.association_id == association_id,
-        ),
+        )
+        .order_by(models_phonebook.Membership.order),
     )
     return result.scalars().all()
 
@@ -221,10 +223,12 @@ async def get_memberships_by_association_id_and_mandate_year(
 ) -> Sequence[models_phonebook.Membership]:
     """Return all Memberships with association_id and mandate_year from database"""
     result = await db.execute(
-        select(models_phonebook.Membership).where(
+        select(models_phonebook.Membership)
+        .where(
             models_phonebook.Membership.association_id == association_id,
             models_phonebook.Membership.mandate_year == mandate_year,
-        ),
+        )
+        .order_by(models_phonebook.Membership.order),
     )
     return result.scalars().all()
 

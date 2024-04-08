@@ -22,6 +22,7 @@ class Membership(Base):
     mandate_year: Mapped[int] = mapped_column(Integer, primary_key=True)
     role_name: Mapped[str] = mapped_column(String, nullable=False)
     role_tags: Mapped[str] = mapped_column(String, nullable=False)
+    order: Mapped[int] = mapped_column(Integer, nullable=False)
 
 
 class Association(Base):
