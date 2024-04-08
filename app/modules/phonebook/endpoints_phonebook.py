@@ -404,6 +404,35 @@ async def update_membership(
     membership_edit = schemas_phonebook.MembershipEdit(**membership.model_dump())
     await cruds_phonebook.update_membership(membership_edit, membership_id, db)
 
+    if membership.order != membership_db.order:
+        association_memberships = (
+            await cruds_phonebook.get_memberships_by_association_id_and_mandate_year(
+                association_id=membership_db.association_id,
+                mandate_year=membership_db.mandate_year,
+                db=db,
+            )
+        )
+
+        index_to_change = association_memberships.index(membership_db)
+
+        changed_membership = association_memberships.pop(index_to_change)
+        association_memberships.insert(membership.order, changed_membership)
+
+        for index, membership_to_change in enumerate(association_memberships):
+            new_order = list(range(len(association_memberships)))
+            if (
+                membership_to_change.order != new_order[index]
+                and membership_to_change.id != membership_id
+            ):
+                membership_edit = schemas_phonebook.MembershipEdit(
+                    order=new_order[index],
+                )
+                await cruds_phonebook.update_membership(
+                    membership_edit,
+                    membership_to_change.id,
+                    db,
+                )
+
 
 @module.router.delete(
     "/phonebook/associations/memberships/{membership_id}",
@@ -443,7 +472,26 @@ async def delete_membership(
             detail=f"You are not allowed to delete membership for association {membership.association_id}",
         )
 
+    association_memberships = (
+        await cruds_phonebook.get_memberships_by_association_id_and_mandate_year(
+            association_id=membership.association_id,
+            mandate_year=membership.mandate_year,
+            db=db,
+        )
+    )
+
     await cruds_phonebook.delete_membership(membership_id, db)
+
+    association_memberships.remove(membership)
+    for index, membership_to_change in enumerate(association_memberships):
+        new_order = list(range(len(association_memberships)))
+        if membership_to_change.order != new_order[index]:
+            membership_edit = schemas_phonebook.MembershipEdit(order=new_order[index])
+            await cruds_phonebook.update_membership(
+                membership_edit,
+                membership_to_change.id,
+                db,
+            )
 
 
 # ---------------------------------------------------------------------------- #
