@@ -3,6 +3,7 @@ from logging.config import fileConfig
 from pathlib import Path
 
 from alembic import context
+from sqlalchemy import Engine
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import AsyncConnection
 
