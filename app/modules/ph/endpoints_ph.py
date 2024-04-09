@@ -56,6 +56,9 @@ async def get_papers(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Return all editions, sorted from the latest to the oldest
+    """
     result = await cruds_ph.get_papers(
         db=db,
     )  # Return papers from the latest to the oldest

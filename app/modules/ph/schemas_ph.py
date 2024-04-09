@@ -15,5 +15,5 @@ class PaperComplete(PaperBase):
 
 
 class PaperUpdate(BaseModel):
-    name: str
-    release_date: date
+    name: str | None = None
+    release_date: date | None = None

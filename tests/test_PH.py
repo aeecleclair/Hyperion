@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest_asyncio
 
+from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from app.modules.ph import models_ph
 from tests.commons import (
@@ -13,6 +14,10 @@ from tests.commons import (
     create_user_with_groups,
     event_loop,  # noqa
 )
+
+ph_user_ph: models_core.CoreUser
+ph_user_simple: models_core.CoreUser
+token_simple: str
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
