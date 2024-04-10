@@ -1,4 +1,5 @@
 import uuid
+from datetime import UTC, datetime
 
 import fitz
 from fastapi import Depends, File, HTTPException, UploadFile
@@ -9,13 +10,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import models_core, standard_responses
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
+from app.core.notification.notification_types import CustomTopic, Topic
+from app.core.notification.schemas_notification import Message
 from app.dependencies import (
     get_db,
+    get_notification_tool,
     get_request_id,
     is_user_a_member,
     is_user_a_member_of,
 )
 from app.modules.ph import cruds_ph, models_ph, schemas_ph
+from app.utils.communication.notifications import NotificationTool
 from app.utils.tools import delete_file_from_data, get_file_from_data, save_file_as_data
 
 module = Module(
@@ -76,6 +81,7 @@ async def create_paper(
     paper: schemas_ph.PaperBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.ph)),
+    notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """Create a new paper."""
 
@@ -89,6 +95,21 @@ async def create_paper(
             name=paper_complete.name,
             release_date=paper_complete.release_date,
         )
+
+        now = datetime.now(UTC)
+        message = Message(
+            context=f"ph-{paper_db.id}",
+            is_visible=True,
+            title=f"📗 PH - {paper_db.name}",
+            content="A new paper has been released! 🎉",
+            # The notification will expire in 3 days
+            expire_on=now.replace(day=now.day + 3),
+        )
+        await notification_tool.send_notification_to_topic(
+            custom_topic=CustomTopic(topic=Topic.advert),
+            message=message,
+        )
+
         return await cruds_ph.create_paper(paper=paper_db, db=db)
     except ValueError as error:
         raise HTTPException(
@@ -125,6 +146,12 @@ async def create_paper_pdf(
         accepted_content_types=["application/pdf"],
     )
 
+    paper_pdf = fitz.open(f"data/ph/pdf/{paper_id}.pdf")
+    page = paper_pdf.load_page(0)
+    pix = page.get_pixmap(matrix=fitz.Matrix(300 / 72, 300 / 72))
+    cover = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+    cover.save(f"data/ph/cover/{paper_id}.jpg", "JPEG")
+    paper_pdf.close()
     return standard_responses.Result(success=True)
 
 
@@ -211,13 +238,6 @@ async def get_cover(
             status_code=404,
             detail="The paper does not exist.",
         )
-
-    paper_pdf = fitz.open(f"data/ph/pdf/{paper_id}.pdf")
-    page = paper_pdf.load_page(0)
-    pix = page.get_pixmap(matrix=fitz.Matrix(300 / 72, 300 / 72))
-    cover = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-    cover.save(f"data/ph/cover/{paper_id}.jpg", "JPG")
-    paper_pdf.close()
 
     return get_file_from_data(
         default_asset="assets/images/default_cover.jpg",

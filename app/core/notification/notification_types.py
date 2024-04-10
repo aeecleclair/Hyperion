@@ -15,6 +15,7 @@ class Topic(str, Enum):
     loan = "loan"
     raffle = "raffle"
     vote = "vote"
+    ph = "ph"
 
 
 class CustomTopic:
