@@ -89,6 +89,7 @@ async def init_objects() -> None:
         role_tags=RoleTags.president.value,
         role_name="Chef",
         mandate_year=2023,
+        order=0,
     )
     await add_object_to_db(membership)
 
@@ -100,6 +101,7 @@ async def init_objects() -> None:
         role_tags="Lambda",
         role_name="Membre",
         mandate_year=2000,
+        order=1,
     )
     await add_object_to_db(membership_to_delete_admin)
 
@@ -111,6 +113,7 @@ async def init_objects() -> None:
         role_tags="Lambda",
         role_name="Membre",
         mandate_year=2001,
+        order=2,
     )
     await add_object_to_db(membership_to_delete_president)
 
@@ -122,6 +125,7 @@ async def init_objects() -> None:
         role_tags="Lambda",
         role_name="Membre",
         mandate_year=2002,
+        order=3,
     )
     await add_object_to_db(membership_to_delete_simple)
 
@@ -251,6 +255,7 @@ def test_add_membership_admin(client: TestClient) -> None:
             "mandate_year": 2023,
             "role_name": "VP Emprunts",
             "role_tags": "VP Emprunts",
+            "order": 0,
         },
         headers={"Authorization": f"Bearer {token_BDE}"},
     )
@@ -266,6 +271,7 @@ def test_add_membership_simple(client: TestClient) -> None:
             "mandate_year": 2023,
             "role_name": "VP Emprunts",
             "role_tags": "VP Emprunts",
+            "order": 0,
         },
         headers={"Authorization": f"Bearer {token_simple}"},
     )
@@ -305,7 +311,18 @@ def test_update_membership_simple(client: TestClient) -> None:
     assert response.status_code == 403
 
 
-def test_delete_membership_admin(client: TestClient) -> None:
+def test_update_membership_order():
+    response = client.patch(
+        f"/phonebook/associations/memberships/{membership.id}",
+        json={
+            "order": 2,
+        },
+        headers={"Authorization": f"Bearer {token_BDE}"},
+    )
+    assert response.status_code == 204
+
+
+def test_delete_membership_admin():
     response = client.delete(
         f"/phonebook/associations/memberships/{membership_to_delete_admin.id}",
         headers={"Authorization": f"Bearer {token_BDE}"},
