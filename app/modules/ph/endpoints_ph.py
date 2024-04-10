@@ -1,7 +1,9 @@
 import uuid
 
+import fitz
 from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
+from PIL import Image
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, standard_responses
@@ -42,7 +44,7 @@ async def get_paper_pdf(
 
     return get_file_from_data(
         default_asset="assets/pdf/default_PDF.pdf",
-        directory="ph",
+        directory="ph/pdf",
         filename=str(paper_id),
     )
 
@@ -116,7 +118,7 @@ async def create_paper_pdf(
 
     await save_file_as_data(
         image=pdf,
-        directory="ph",
+        directory="ph/pdf",
         filename=str(paper_id),
         request_id=request_id,
         max_file_size=10 * 1024 * 1024,
@@ -189,6 +191,36 @@ async def delete_paper_pdf(
         )
 
     await delete_file_from_data(
-        directory="ph",
+        directory="ph/pdf",
+        filename=str(paper_id),
+    )
+
+
+@module.router.get(
+    "/ph/{paper_id}/cover",
+    status_code=204,
+)
+async def get_cover(
+    paper_id: str,
+    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: AsyncSession = Depends(get_db),
+):
+    paper = await cruds_ph.get_paper_by_id(db=db, paper_id=paper_id)
+    if paper is None:
+        raise HTTPException(
+            status_code=404,
+            detail="The paper does not exist.",
+        )
+
+    paper_pdf = fitz.open(f"data/ph/pdf/{paper_id}.pdf")
+    page = paper_pdf.load_page(0)
+    pix = page.get_pixmap(matrix=fitz.Matrix(300 / 72, 300 / 72))
+    cover = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+    cover.save(f"data/ph/cover/{paper_id}.jpg", "JPG")
+    paper_pdf.close()
+
+    return get_file_from_data(
+        default_asset="assets/images/default_cover.jpg",
+        directory="ph/cover",
         filename=str(paper_id),
     )
