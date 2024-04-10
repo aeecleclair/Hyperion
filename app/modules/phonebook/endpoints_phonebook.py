@@ -404,7 +404,7 @@ async def update_membership(
     membership_edit = schemas_phonebook.MembershipEdit(**membership.model_dump())
     await cruds_phonebook.update_membership(membership_edit, membership_id, db)
 
-    if membership.order != membership_db.order:
+    if membership.order is not None:
         association_memberships = (
             await cruds_phonebook.get_memberships_by_association_id_and_mandate_year(
                 association_id=membership_db.association_id,
