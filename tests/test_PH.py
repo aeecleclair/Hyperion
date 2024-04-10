@@ -61,7 +61,9 @@ def test_get_papers():
         "/ph/",
         headers={"Authorization": f"Bearer {token_simple}"},
     )
+    response_json = response.json()
     assert response.status_code == 200
+    assert paper.id in [response_paper["id"] for response_paper in response_json]
 
 
 def test_create_paper_pdf():
@@ -73,6 +75,7 @@ def test_create_paper_pdf():
         )
 
     assert response.status_code == 201
+    assert Path(f"data/ph/{paper.id}.pdf").is_file()
 
 
 def test_get_paper_pdf():
