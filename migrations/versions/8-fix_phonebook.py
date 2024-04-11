@@ -42,9 +42,10 @@ def define_order_of_memberships(memberships) -> list[list]:
     memberships2 = []
     for membership in memberships:
         if membership[2]:
-            tags = membership[2].split(";").sort(key=lambda x: order.index(x))
+            tags = membership[2].split(";")
+            tags.sort(key=lambda x: order.index(x))
         else:
-            tags = ["Default"]
+            tags = []
         memberships2.append(
             [
                 membership[0],
@@ -82,6 +83,7 @@ def upgrade() -> None:
         sa.Column("mandate_year", sa.Integer()),
         sa.Column("role_name", sa.String()),
         sa.Column("role_tags", sa.String()),
+        sa.Column("order", sa.Integer()),
     )
 
     conn = op.get_bind()
