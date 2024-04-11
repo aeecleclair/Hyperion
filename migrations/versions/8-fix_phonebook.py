@@ -38,13 +38,16 @@ class RoleTags(Enum):
 
 def define_order_of_memberships(memberships) -> list[list]:
     order = [tag.value for tag in RoleTags]
+    order.append("Default")
     memberships2 = []
     for membership in memberships:
         memberships2.append(
             [
                 membership[0],
                 membership[1],
-                membership[2].split(";").sort(key=lambda x: order.index(x)),
+                membership[2].split(";").sort(key=lambda x: order.index(x))
+                if membership[2]
+                else ["Default"],
                 membership[3],
             ],
         )
