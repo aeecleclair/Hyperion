@@ -1,10 +1,9 @@
 import importlib
 import logging
-from collections.abc import AsyncGenerator, Callable
+from collections.abc import Callable, Generator
 from pathlib import Path
 
 import pytest
-import pytest_asyncio
 from pytest_alembic import MigrationContext
 from pytest_alembic.config import Config
 from pytest_alembic.tests import (
@@ -14,21 +13,20 @@ from pytest_alembic.tests import (
     test_upgrade,  # noqa: F401
 )
 from pytest_alembic.tests.experimental import downgrade_leaves_no_trace  # noqa: F401
-from sqlalchemy import Engine
-from sqlalchemy.ext.asyncio import AsyncConnection
+from sqlalchemy import Engine, create_engine
+from sqlalchemy.engine import Connection
 
-from tests.commons import (
-    create_async_engine,
-    event_loop,  # noqa
-)
-
-SQLALCHEMY_DATABASE_URL = "sqlite+aiosqlite:///./test_migration.db"
+SQLALCHEMY_DATABASE_URL = "sqlite:///./test_migration.db"
 
 
 pre_test_upgrade_dict: dict[
-    str, Callable[[MigrationContext, AsyncConnection], None]
+    str,
+    Callable[[MigrationContext, Connection], None],
 ] = {}
-test_upgrade_dict: dict[str, Callable[[MigrationContext, AsyncConnection], None]] = {}
+test_upgrade_dict: dict[
+    str,
+    Callable[[MigrationContext, Connection], None],
+] = {}
 
 logger = logging.getLogger("hyperion_tests")
 
@@ -68,37 +66,40 @@ def run_test_upgrade(
 
 
 def have_revision_pretest_and_test(revision: str) -> bool:
-    return revision in test_upgrade_dict
+    return revision in test_upgrade_dict and revision in pre_test_upgrade_dict
 
 
 @pytest.fixture()
 def alembic_config() -> Config:
     """Override this fixture to configure the exact alembic context setup required."""
-    return Config(
-        # config_file_name="alembic.ini",
-    )
+    return Config()
 
 
-@pytest_asyncio.fixture()
-async def alembic_engine() -> AsyncGenerator[AsyncConnection, None]:
+@pytest.fixture()
+def alembic_engine() -> Generator[Connection, None]:
     """
     Override this fixture to provide pytest-alembic powered tests with a database handle.
 
-    We need to yield an AsyncConnection object
-    """
+    The fixture yields a SQLAlchemy connection object. This fixture should be run before each tests, to ensure that the database is empty.
 
+    Due to an issue with event loop, we can't run Alembic from asynchronous functions. The tests can't be async, so we need to use a synchronous connection.
+    """
+    # We need to delete the test database before each test
     Path("test_migration.db").unlink(missing_ok=True)
 
-    connectable = create_async_engine(SQLALCHEMY_DATABASE_URL, echo=True)
+    connectable = create_engine(SQLALCHEMY_DATABASE_URL, echo=True)
 
-    async with connectable.connect() as connection:
+    with connectable.begin() as connection:
         yield connection
 
-    await connectable.dispose()
+    connectable.dispose()
 
 
 @pytest.fixture(scope="module")
 def init_migration_scripts() -> None:  # noqa: PT004
+    """
+    We import all migration scripts in the migration/versions directory to extract the pre_test_upgrade and test_upgrade functions.
+    """
     global pre_test_upgrade_dict, test_upgrade_dict
 
     for migration_file_path in Path().glob("migrations/versions/*.py"):
@@ -121,6 +122,9 @@ def test_all_migrations_have_tests(
     alembic_runner: MigrationContext,
     init_migration_scripts: None,
 ) -> None:
+    """
+    Make sure that all migrations have a pretest and a test.
+    """
     for revision in alembic_runner.history.revisions:
         if revision in ["base", "heads"]:
             continue
@@ -130,9 +134,9 @@ def test_all_migrations_have_tests(
             )
 
 
-async def test_migrations(
+def test_migrations(
     alembic_runner: MigrationContext,
-    alembic_engine: AsyncConnection,
+    alembic_engine: Connection,
     init_migration_scripts: None,
 ) -> None:
     for revision in alembic_runner.history.revisions:
