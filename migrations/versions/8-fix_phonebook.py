@@ -44,7 +44,7 @@ def define_order_of_memberships(memberships) -> list[list]:
             [
                 membership[0],
                 membership[1],
-                membership[2].split(";").sort,
+                membership[2].split(";").sort(key=lambda x: order.index(x)),
                 membership[3],
             ],
         )
