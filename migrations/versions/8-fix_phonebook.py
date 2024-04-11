@@ -41,13 +41,15 @@ def define_order_of_memberships(memberships) -> list[list]:
     order.append("Default")
     memberships2 = []
     for membership in memberships:
+        if membership[2]:
+            tags = membership[2].split(";").sort(key=lambda x: order.index(x))
+        else:
+            tags = ["Default"]
         memberships2.append(
             [
                 membership[0],
                 membership[1],
-                membership[2].split(";").sort(key=lambda x: order.index(x))
-                if membership[2]
-                else ["Default"],
+                tags,
                 membership[3],
             ],
         )
