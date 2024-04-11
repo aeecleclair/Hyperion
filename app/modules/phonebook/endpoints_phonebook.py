@@ -364,7 +364,7 @@ async def create_membership(
     status_code=204,
 )
 async def update_membership(
-    membership: schemas_phonebook.MembershipEdit,
+    updated_membership: schemas_phonebook.MembershipEdit,
     membership_id: str,
     user: models_core.CoreUser = Depends(is_user_an_ecl_member),
     db: AsyncSession = Depends(get_db),
@@ -375,11 +375,11 @@ async def update_membership(
     **This endpoint is only usable by CAA, BDE and association's president**
     """
 
-    membership_db = await cruds_phonebook.get_membership_by_id(
+    old_membership = await cruds_phonebook.get_membership_by_id(
         membership_id=membership_id,
         db=db,
     )
-    if not membership_db:
+    if not old_membership:
         raise HTTPException(
             status_code=400,
             detail=f"No membership to update for membership_id {membership_id}",
@@ -391,47 +391,31 @@ async def update_membership(
             allowed_groups=[GroupType.CAA, GroupType.BDE],
         )
         or await cruds_phonebook.is_user_president(
-            association_id=membership_db.association_id,
+            association_id=old_membership.association_id,
             user=user,
             db=db,
         )
     ):
         raise HTTPException(
             status_code=403,
-            detail=f"You are not allowed to update membership for association {membership_db.association_id}",
+            detail=f"You are not allowed to update membership for association {old_membership.association_id}",
         )
 
-    membership_edit = schemas_phonebook.MembershipEdit(**membership.model_dump())
+    membership_edit = schemas_phonebook.MembershipEdit(
+        **updated_membership.model_dump(),
+    )
+
+    if updated_membership.order is not None:
+        await cruds_phonebook.update_order_of_memberships(
+            old_membership.association_id,
+            old_membership.mandate_year,
+            old_membership.order,
+            updated_membership.order,
+            db,
+        )
+
+    # We update the membership after updating the order to avoid conflicts
     await cruds_phonebook.update_membership(membership_edit, membership_id, db)
-
-    if membership.order is not None:
-        association_memberships = (
-            await cruds_phonebook.get_memberships_by_association_id_and_mandate_year(
-                association_id=membership_db.association_id,
-                mandate_year=membership_db.mandate_year,
-                db=db,
-            )
-        )
-
-        index_to_change = association_memberships.index(membership_db)
-
-        changed_membership = association_memberships.pop(index_to_change)
-        association_memberships.insert(membership.order, changed_membership)
-
-        for index, membership_to_change in enumerate(association_memberships):
-            new_order = list(range(len(association_memberships)))
-            if (
-                membership_to_change.order != new_order[index]
-                and membership_to_change.id != membership_id
-            ):
-                membership_edit = schemas_phonebook.MembershipEdit(
-                    order=new_order[index],
-                )
-                await cruds_phonebook.update_membership(
-                    membership_edit,
-                    membership_to_change.id,
-                    db,
-                )
 
 
 @module.router.delete(
@@ -480,18 +464,15 @@ async def delete_membership(
         )
     )
 
-    await cruds_phonebook.delete_membership(membership_id, db)
+    await cruds_phonebook.update_order_of_memberships(
+        membership.association_id,
+        membership.mandate_year,
+        membership.order,
+        len(association_memberships) - 1,
+        db,
+    )
 
-    association_memberships.remove(membership)
-    for index, membership_to_change in enumerate(association_memberships):
-        new_order = list(range(len(association_memberships)))
-        if membership_to_change.order != new_order[index]:
-            membership_edit = schemas_phonebook.MembershipEdit(order=new_order[index])
-            await cruds_phonebook.update_membership(
-                membership_edit,
-                membership_to_change.id,
-                db,
-            )
+    await cruds_phonebook.delete_membership(membership_id, db)
 
 
 # ---------------------------------------------------------------------------- #

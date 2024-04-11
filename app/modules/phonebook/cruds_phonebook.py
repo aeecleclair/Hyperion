@@ -172,6 +172,43 @@ async def update_membership(
         raise
 
 
+async def update_order_of_memberships(
+    association_id: str,
+    mandate_year: int,
+    old_order: int,
+    new_order: int,
+    db: AsyncSession,
+):
+    """Update the order of Memberships in database if a Membership is moved up or down"""
+    if old_order > new_order:
+        await db.execute(
+            update(models_phonebook.Membership)
+            .where(
+                models_phonebook.Membership.association_id == association_id,
+                models_phonebook.Membership.mandate_year == mandate_year,
+                models_phonebook.Membership.order >= new_order,
+                models_phonebook.Membership.order < old_order,
+            )
+            .values(order=models_phonebook.Membership.order + 1),
+        )
+    else:
+        await db.execute(
+            update(models_phonebook.Membership)
+            .where(
+                models_phonebook.Membership.association_id == association_id,
+                models_phonebook.Membership.mandate_year == mandate_year,
+                models_phonebook.Membership.order > old_order,
+                models_phonebook.Membership.order <= new_order,
+            )
+            .values(order=models_phonebook.Membership.order - 1),
+        )
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise
+
+
 async def delete_membership(membership_id: str, db: AsyncSession):
     """Delete a Membership in database"""
 
