@@ -6,8 +6,8 @@ Create Date: 2024-04-11 00:44:52.049956
 
 """
 
+from collections.abc import Sequence
 from enum import Enum
-from typing import Sequence
 
 import sqlalchemy as sa
 from alembic import op
@@ -36,7 +36,7 @@ class RoleTags(Enum):
     resp_part = "Respo Partenariats"
 
 
-def define_order_of_memberships(memberships) -> None:
+def define_order_of_memberships(memberships) -> list[list]:
     order = [tag.value for tag in RoleTags]
     memberships2 = []
     for membership in memberships:
@@ -44,7 +44,7 @@ def define_order_of_memberships(memberships) -> None:
             [
                 membership[0],
                 membership[1],
-                membership[2].split(";"),
+                membership[2].split(";").sort,
                 membership[3],
             ],
         )
@@ -97,8 +97,8 @@ def upgrade() -> None:
         years = {m[3] for m in memberships}
         for year in years:
             memberships_year = [m for m in memberships if m[3] == year]
-            memberships_year = define_order_of_memberships(memberships_year)
-            for i, m in enumerate(memberships_year):
+            sorted_memberships_year = define_order_of_memberships(memberships_year)
+            for i, m in enumerate(sorted_memberships_year):
                 conn.execute(
                     t_membership.update()
                     .where(t_membership.c.id == m[0])
