@@ -1,5 +1,6 @@
 import uuid
 from datetime import UTC, datetime
+from pathlib import Path
 
 import fitz
 from fastapi import Depends, File, HTTPException, UploadFile
@@ -145,7 +146,7 @@ async def create_paper_pdf(
         max_file_size=10 * 1024 * 1024,
         accepted_content_types=["application/pdf"],
     )
-
+    Path("data/ph/cover/").mkdir(parents=True, exist_ok=True)
     paper_pdf = fitz.open(f"data/ph/pdf/{paper_id}.pdf")
     page = paper_pdf.load_page(0)
     pix = page.get_pixmap(matrix=fitz.Matrix(300 / 72, 300 / 72))
