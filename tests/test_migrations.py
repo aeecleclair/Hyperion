@@ -13,7 +13,7 @@ from pytest_alembic.tests import (
     test_upgrade,  # noqa: F401
 )
 from pytest_alembic.tests.experimental import downgrade_leaves_no_trace  # noqa: F401
-from sqlalchemy import Engine, create_engine
+from sqlalchemy import create_engine
 from sqlalchemy.engine import Connection
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test_migration.db"
@@ -50,7 +50,7 @@ class MissingMigrationTestOrPretest(Exception):
 def run_pre_test_upgrade(
     revision: str,
     alembic_runner: "MigrationContext",
-    alembic_engine: Engine,
+    alembic_engine: Connection,
 ) -> None:
     if revision in pre_test_upgrade_dict:
         pre_test_upgrade_dict[revision](alembic_runner, alembic_engine)
@@ -59,7 +59,7 @@ def run_pre_test_upgrade(
 def run_test_upgrade(
     revision: str,
     alembic_runner: "MigrationContext",
-    alembic_engine: Engine,
+    alembic_engine: Connection,
 ) -> None:
     if revision in test_upgrade_dict:
         test_upgrade_dict[revision](alembic_runner, alembic_engine)
@@ -76,7 +76,7 @@ def alembic_config() -> Config:
 
 
 @pytest.fixture()
-def alembic_engine() -> Generator[Connection, None]:
+def alembic_engine() -> Generator[Connection, None, None]:
     """
     Override this fixture to provide pytest-alembic powered tests with a database handle.
 
