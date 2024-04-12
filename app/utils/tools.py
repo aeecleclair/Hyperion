@@ -198,9 +198,15 @@ def get_file_from_data(
 def delete_file_from_data(
     directory: str,
     filename: str,
+    extension: str,
 ):
-    if Path.exists(Path(f"data/{directory}/{filename}.*")):
-        Path.unlink(Path(f"data/{directory}/{filename}.*"))
+    """
+    If there is a file with the provided filename in the data folder, delete it. The file extension must be precised.
+    > "data/{directory}/{filename}.{extension}"
+    """
+    path = Path(f"data/{directory}/{filename}.{extension}")
+    if Path.exists(path):
+        Path.unlink(path)
     else:
         raise HTTPException(status_code=400, detail="Could not delete file")
 
