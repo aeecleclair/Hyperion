@@ -7,8 +7,7 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-## We need to import app for migrations involving app.utils.types.datetime.TZDateTime()
-import app
+from app.utils.types.datetime import TZDateTime
 
 ${imports if imports else ""}
 
