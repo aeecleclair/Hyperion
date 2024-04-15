@@ -59,7 +59,7 @@ pyenv activate hyperion
 ### Development requirements
 
 ```bash
-pip install -r requirements-dev.txt
+pip install -r requirements/dev.txt
 ```
 
 > If you need to remove all modules from your virtual environnement, you may use the following command with caution

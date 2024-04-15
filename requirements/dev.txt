@@ -1,4 +1,4 @@
--r requirements.txt
+-r common.txt
 aiosqlite==0.19.0
 pytest==8.0.2
 pytest-asyncio==0.21.1
@@ -10,3 +10,4 @@ types-requests==2.31.0.20240406
 types-redis==4.6.0.20240218
 mypy==1.8.0
 pytest-cov==4.1.0
+psycopg[binary]==3.1.18 # PostgreSQL adapter for synchronous operations at startup (database initializations & migrations), binary installation is the easiest way to install it
