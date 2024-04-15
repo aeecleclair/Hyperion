@@ -105,6 +105,22 @@ class CoreGroup(Base):
     )
 
 
+class CoreData(Base):
+    """
+    A table to store arbitrary data.
+
+     - schema: the name of the schema allowing to deserialize the data.
+     - data: the json data.
+
+    Use `get_core_data` and `set_core_data` utils to interact with this table.
+    """
+
+    __tablename__ = "core_data"
+
+    schema: Mapped[str] = mapped_column(String, primary_key=True)
+    data: Mapped[str] = mapped_column(String, nullable=False)
+
+
 class ModuleVisibility(Base):
     __tablename__ = "module_visibility"
 

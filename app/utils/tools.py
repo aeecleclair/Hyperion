@@ -4,20 +4,24 @@ import re
 import secrets
 from collections.abc import Sequence
 from pathlib import Path
+from typing import TypeVar
 
 import aiofiles
 import fitz
 from fastapi import HTTPException, UploadFile
 from fastapi.responses import FileResponse
+from pydantic import ValidationError
 from rapidfuzz import process
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core
+from app.core import cruds_core, models_core
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
 from app.core.models_core import CoreUser
 from app.core.users import cruds_users
 from app.types.content_type import ContentType
+from app.utils.types import core_data
+from app.utils.types.exceptions import CoreDataNotFoundException
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
@@ -352,3 +356,75 @@ def get_random_string(length: int = 5) -> str:
     return "".join(
         secrets.choice("abcdefghijklmnopqrstuvwxyz0123456789") for _ in range(length)
     )
+
+
+CoreDataClass = TypeVar("CoreDataClass", bound=core_data.BaseCoreData)
+
+
+async def get_core_data(
+    core_data_class: type[CoreDataClass],
+    db: AsyncSession,
+) -> CoreDataClass:
+    """
+    Access the core data stored in the database, using the name of the class `core_data_class`.
+    If the core data does not exist, it returns a new instance of `core_data_class`, including its default values, or raise a CoreDataNotFoundException.
+    `core_data_class` should be a class extending `BaseCoreData`.
+
+    This method should be called using the class object, and not an instance of the class:
+    ```python
+    await get_core_data(ExempleCoreData, db)
+    ```
+
+    See `BaseCoreData` for more information.
+    """
+    # `core_data_class` contains the class object, and not an instance of the class.
+    # We can call `core_data_class.__name__` to get the name of the class
+    schema_name = core_data_class.__name__
+    core_data_model = await cruds_core.get_core_data_crud(
+        schema=schema_name,
+        db=db,
+    )
+
+    if core_data_model is None:
+        # Return default values
+        try:
+            return core_data_class()
+        except ValidationError as error:
+            # If creating a new instance of the class raises a ValidationError, it means that the class does not have default values
+            # We should then raise an exception
+            raise CoreDataNotFoundException() from error
+
+    return core_data_class.model_validate_json(
+        core_data_model.data,
+        strict=True,
+    )
+
+
+async def set_core_data(
+    core_data: core_data.BaseCoreData,
+    db: AsyncSession,
+) -> None:
+    """
+    Set the core data in the database using the name of the class `core_data` is an instance of.
+
+    This method should be called using an instance of a class extending `BaseCoreData`:
+    ```python
+    example_core_data = ExempleCoreData()
+    await get_core_data(example_core_data, db)
+    ```
+
+    See `BaseCoreData` for more information.
+    """
+    # `core_data` contains an instance of the class.
+    # We call `core_data_class.__class__.__name__` to get the name of the class
+    schema_name = core_data.__class__.__name__
+
+    core_data_model = models_core.CoreData(
+        schema=schema_name,
+        data=core_data.model_dump_json(),
+    )
+
+    # We want to remove the old data
+    await cruds_core.delete_core_data_crud(schema=schema_name, db=db)
+    # And then add the new one
+    await cruds_core.add_core_data_crud(core_data=core_data_model, db=db)

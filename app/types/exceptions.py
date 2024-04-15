@@ -1,0 +1,2 @@
+class CoreDataNotFoundException(Exception):
+    pass
