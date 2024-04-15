@@ -6,8 +6,8 @@ from sqlalchemy import Date, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
-from app.utils.types.datetime import TZDateTime
-from app.utils.types.floors_type import FloorsType
+from app.types.floors_type import FloorsType
+from app.types.sqlalchemy import TZDateTime
 
 
 class CoreMembership(Base):

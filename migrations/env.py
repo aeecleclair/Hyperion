@@ -66,7 +66,7 @@ def do_run_migrations(connection: Connection) -> None:
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
-        # We don't want our custom type to be prefixed by the whole module path `app.utils.types.datetime.`
+        # We don't want our custom type to be prefixed by the whole module path `app.types.datetime.`
         # because we don't want to have to import it in the migration file.
         # See https://alembic.sqlalchemy.org/en/latest/autogenerate.html#controlling-the-module-prefix
         user_module_prefix="",

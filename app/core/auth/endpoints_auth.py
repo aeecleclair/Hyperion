@@ -36,9 +36,9 @@ from app.dependencies import (
     get_token_data,
     get_user_from_token_with_scopes,
 )
+from app.types.scopes_type import ScopeType
 from app.utils.auth.providers import BaseAuthClient
 from app.utils.tools import is_user_member_of_an_allowed_group
-from app.utils.types.scopes_type import ScopeType
 
 router = APIRouter(tags=["Auth"])
 

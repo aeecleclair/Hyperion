@@ -7,7 +7,7 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-from app.utils.types.datetime import TZDateTime
+from app.types.sqlalchemy import TZDateTime
 
 ${imports if imports else ""}
 

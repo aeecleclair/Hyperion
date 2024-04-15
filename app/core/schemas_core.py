@@ -6,9 +6,9 @@ from pydantic import BaseModel, ConfigDict, Field
 from pydantic.functional_validators import field_validator
 
 from app.core.groups.groups_type import AccountType
+from app.types.floors_type import FloorsType
 from app.utils import validators
 from app.utils.examples import examples_core
-from app.utils.types.floors_type import FloorsType
 
 
 class CoreInformation(BaseModel):

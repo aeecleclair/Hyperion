@@ -29,10 +29,10 @@ from app.core.auth import schemas_auth
 from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
 from app.core.users import cruds_users
+from app.types.scopes_type import ScopeType
 from app.utils.communication.notifications import NotificationManager, NotificationTool
 from app.utils.redis import connect
 from app.utils.tools import is_user_member_of_an_allowed_group
-from app.utils.types.scopes_type import ScopeType
 
 # We could maybe use hyperion.security
 hyperion_access_logger = logging.getLogger("hyperion.access")
