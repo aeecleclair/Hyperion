@@ -1,14 +1,12 @@
 import uuid
 from datetime import UTC, datetime
-from pathlib import Path
 
 import fitz
 from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
-from PIL import Image
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core, standard_responses
+from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
 from app.core.notification.notification_types import CustomTopic, Topic
@@ -121,7 +119,6 @@ async def create_paper(
 
 @module.router.post(
     "/ph/{paper_id}/pdf",
-    response_model=standard_responses.Result,
     status_code=201,
 )
 async def create_paper_pdf(
@@ -143,17 +140,22 @@ async def create_paper_pdf(
         directory="ph/pdf",
         filename=str(paper_id),
         request_id=request_id,
-        max_file_size=10 * 1024 * 1024,
+        max_file_size=10 * 1024 * 1024,  # 10 MB
         accepted_content_types=["application/pdf"],
     )
-    Path("data/ph/cover/").mkdir(parents=True, exist_ok=True)
-    paper_pdf = fitz.open(f"data/ph/pdf/{paper_id}.pdf")
-    page = paper_pdf.load_page(0)
-    pix = page.get_pixmap(matrix=fitz.Matrix(300 / 72, 300 / 72))
-    cover = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-    cover.save(f"data/ph/cover/{paper_id}.jpg", "JPEG")
-    paper_pdf.close()
-    return standard_responses.Result(success=True)
+
+    with fitz.open(f"data/ph/pdf/{paper_id}.pdf") as paper_pdf:
+        page = paper_pdf.load_page(0)
+        cover = page.get_pixmap()
+        cover.save(f"data/ph/cover/{paper_id}.jpg", "JPEG")
+        await save_file_as_data(
+            image=cover,
+            directory="ph/cover",
+            filename=str(paper_id),
+            request_id=request_id,
+            max_file_size=10 * 1024 * 1024,  # 10 MB
+            accepted_content_types=["image/jpeg"],
+        )
 
 
 @module.router.patch(

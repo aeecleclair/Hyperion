@@ -224,6 +224,8 @@ def delete_file_from_data(
     > "data/{directory}/{filename}.{extension}"
 
     The filename should be a uuid.
+
+    WARNING: **NEVER** trust user input when calling this function. Always check that parameters are valid.
     """
     if not uuid_regex.match(filename):
         hyperion_error_logger.error(
