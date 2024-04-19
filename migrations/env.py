@@ -3,9 +3,8 @@ from logging.config import fileConfig
 from pathlib import Path
 
 from alembic import context
-from sqlalchemy import Engine
 from sqlalchemy.engine import Connection
-from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
+from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app.database import Base
 from app.dependencies import get_db_engine, get_settings
@@ -135,10 +134,6 @@ def run_migrations_online() -> None:
         asyncio.run(run_async_migrations(connection))
     elif isinstance(connection, Connection):
         do_run_migrations(connection)
-    elif isinstance(connection, AsyncEngine | Engine):
-        raise TypeError(
-            f"You must acquire a connection object from the connectable {connection}",
-        )
     else:
         raise TypeError(
             f"Unsupported connection object {connection}. A Connection or and AsyncConnection is required, got a {type(connection)}",
