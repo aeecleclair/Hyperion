@@ -1,5 +1,6 @@
 import uuid
 from datetime import UTC, datetime
+from pathlib import Path
 
 import fitz
 from fastapi import Depends, File, HTTPException, UploadFile
@@ -197,11 +198,12 @@ async def delete_paper(
             detail="Invalid paper_id",
         )
 
-    delete_file_from_data(
-        directory="ph/pdf",
-        filename=str(paper_id),
-        extension="pdf",
-    )
+    if Path.exists(Path(f"data/pdf/{paper_id}.pdf")):
+        delete_file_from_data(
+            directory="ph/pdf",
+            filename=str(paper_id),
+            extension="pdf",
+        )
 
     await cruds_ph.delete_paper(
         paper_id=paper_id,
