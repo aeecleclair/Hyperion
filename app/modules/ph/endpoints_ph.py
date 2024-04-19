@@ -147,7 +147,6 @@ async def create_paper_pdf(
     with fitz.open(f"data/ph/pdf/{paper_id}.pdf") as paper_pdf:
         page = paper_pdf.load_page(0)
         cover = page.get_pixmap()
-        cover.save(f"data/ph/cover/{paper_id}.jpg", "JPEG")
         await save_file_as_data(
             image=cover,
             directory="ph/cover",
