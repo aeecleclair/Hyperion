@@ -8,7 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.models_core import CoreUser
 from app.database import Base
 from app.modules.amap.types_amap import AmapSlotType, DeliveryStatusType
-from app.utils.types.datetime import TZDateTime
+from app.types.sqlalchemy import TZDateTime
 
 
 class AmapOrderContent(Base):

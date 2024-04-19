@@ -4,7 +4,7 @@ from sqlalchemy import Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
-from app.utils.types.datetime import TZDateTime
+from app.types.sqlalchemy import TZDateTime
 
 
 class Session(Base):
