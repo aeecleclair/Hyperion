@@ -17,7 +17,7 @@ from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
 from app.core.models_core import CoreUser
 from app.core.users import cruds_users
-from app.utils.types.content_type import ContentType
+from app.types.content_type import ContentType
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 

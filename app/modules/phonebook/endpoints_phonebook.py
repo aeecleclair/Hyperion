@@ -10,12 +10,12 @@ from app.core.module import Module
 from app.core.users import cruds_users
 from app.dependencies import get_db, get_request_id, is_user_a_member
 from app.modules.phonebook import cruds_phonebook, models_phonebook, schemas_phonebook
+from app.types.content_type import ContentType
 from app.utils.tools import (
     get_file_from_data,
     is_user_member_of_an_allowed_group,
     save_file_as_data,
 )
-from app.utils.types.content_type import ContentType
 
 module = Module(
     root="phonebook",

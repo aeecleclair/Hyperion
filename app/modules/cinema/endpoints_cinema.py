@@ -19,9 +19,9 @@ from app.dependencies import (
     is_user_a_member_of,
 )
 from app.modules.cinema import cruds_cinema, schemas_cinema
+from app.types.content_type import ContentType
 from app.utils.communication.notifications import NotificationTool
 from app.utils.tools import get_file_from_data, save_file_as_data
-from app.utils.types.content_type import ContentType
 
 module = Module(
     root="cinema",

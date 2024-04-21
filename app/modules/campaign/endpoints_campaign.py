@@ -23,12 +23,12 @@ from app.dependencies import (
 )
 from app.modules.campaign import cruds_campaign, models_campaign, schemas_campaign
 from app.modules.campaign.types_campaign import ListType, StatusType
+from app.types.content_type import ContentType
 from app.utils.tools import (
     get_file_from_data,
     is_user_member_of_an_allowed_group,
     save_file_as_data,
 )
-from app.utils.types.content_type import ContentType
 
 module = Module(
     root="vote",

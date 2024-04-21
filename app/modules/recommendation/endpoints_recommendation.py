@@ -21,8 +21,8 @@ from app.modules.recommendation import (
     models_recommendation,
     schemas_recommendation,
 )
+from app.types.content_type import ContentType
 from app.utils.tools import get_file_from_data, save_file_as_data
-from app.utils.types.content_type import ContentType
 
 router = APIRouter()
 

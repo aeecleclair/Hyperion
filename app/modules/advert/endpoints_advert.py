@@ -19,6 +19,7 @@ from app.dependencies import (
     is_user_a_member_of,
 )
 from app.modules.advert import cruds_advert, models_advert, schemas_advert
+from app.types.content_type import ContentType
 from app.utils.communication.notifications import NotificationTool
 from app.utils.tools import (
     get_file_from_data,
@@ -26,7 +27,6 @@ from app.utils.tools import (
     is_user_member_of_an_allowed_group,
     save_file_as_data,
 )
-from app.utils.types.content_type import ContentType
 
 module = Module(
     root="advert",

@@ -22,6 +22,7 @@ from app.dependencies import (
 )
 from app.modules.raffle import cruds_raffle, models_raffle, schemas_raffle
 from app.modules.raffle.types_raffle import RaffleStatusType
+from app.types.content_type import ContentType
 from app.utils.redis import locker_get, locker_set
 from app.utils.tools import (
     get_display_name,
@@ -29,7 +30,6 @@ from app.utils.tools import (
     is_user_member_of_an_allowed_group,
     save_file_as_data,
 )
-from app.utils.types.content_type import ContentType
 
 module = Module(
     root="tombola",
