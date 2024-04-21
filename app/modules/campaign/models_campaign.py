@@ -2,8 +2,8 @@ from sqlalchemy import Enum, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core import models_core
-from app.database import Base
 from app.modules.campaign.types_campaign import StatusType
+from app.types.sqlalchemy import Base
 
 
 class ListMemberships(Base):

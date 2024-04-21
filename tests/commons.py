@@ -18,9 +18,9 @@ from app.core.config import Settings
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
 from app.core.users import cruds_users
-from app.database import Base
 from app.dependencies import get_db, get_redis_client, get_settings
 from app.types.floors_type import FloorsType
+from app.types.sqlalchemy import Base
 from app.utils.redis import connect, disconnect
 from app.utils.tools import get_random_string
 

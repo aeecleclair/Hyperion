@@ -2,7 +2,7 @@ from datetime import datetime
 
 from sqlalchemy.orm import Mapped
 
-from app.database import Base, primary_key
+from app.types.sqlalchemy import Base, primary_key
 
 
 class Recommendation(Base):
