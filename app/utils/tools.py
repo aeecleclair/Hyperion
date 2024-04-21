@@ -189,6 +189,78 @@ async def save_file_as_data(
         raise HTTPException(status_code=400, detail="Could not save file")
 
 
+async def save_bytes_as_data(
+    file_bytes: bytes,
+    directory: str,
+    filename: str,
+    extension: str,
+    request_id: str,
+):
+    """
+    Save bytes in file in the data folder.
+
+    - The file will be saved in the `data` folder: "data/{directory}/{filename}.{extension}"
+
+    The filename should be a uuid.
+    No verifications will be made about the content of the file, it is up to the caller to ensure the content is valid and safe.
+
+    An HTTP Exception will be raised if an error occurres.
+
+    WARNING: **NEVER** trust user input when calling this function. Always check that parameters are valid.
+    """
+
+    if not uuid_regex.match(filename):
+        hyperion_error_logger.error(
+            f"save_file_as_data: security issue, the filename is not a valid UUID: {filename}.",
+        )
+        raise ValueError("The filename is not a valid UUID")
+
+    # If the directory does not exist, we want to create it
+    Path(f"data/{directory}/").mkdir(parents=True, exist_ok=True)
+
+    try:
+        for filePath in Path().glob(f"data/{directory}/{filename}.*"):
+            filePath.unlink()
+
+        async with aiofiles.open(
+            f"data/{directory}/{filename}.{extension}",
+            mode="wb",
+        ) as buffer:
+            await buffer.write(file_bytes)
+
+    except Exception as error:
+        hyperion_error_logger.error(
+            f"save_file_to_the_disk: could not save file to {filename}: {error} ({request_id})",
+        )
+        raise HTTPException(status_code=400, detail="Could not save file")
+
+
+def get_file_path_from_data(
+    directory: str,
+    filename: str,
+    default_asset: str,
+) -> Path:
+    """
+    If there is a file with the provided filename in the data folder, return it. The file extension will be inferred from the provided content file.
+    > "data/{directory}/{filename}.ext"
+    Otherwise, return the default asset.
+
+    The filename should be a uuid.
+
+    WARNING: **NEVER** trust user input when calling this function. Always check that parameters are valid.
+    """
+    if not uuid_regex.match(filename):
+        hyperion_error_logger.error(
+            f"get_file_from_data: security issue, the filename is not a valid UUID: {filename}. This mean that the user input was not properly checked.",
+        )
+        raise ValueError("The filename is not a valid UUID")
+
+    for filePath in Path().glob(f"data/{directory}/{filename}.*"):
+        return filePath
+
+    return Path(default_asset)
+
+
 def get_file_from_data(
     directory: str,
     filename: str,
@@ -201,6 +273,11 @@ def get_file_from_data(
 
     The filename should be a uuid.
 
+    WARNING: **NEVER** trust user input when calling this function. Always check that parameters are valid.
+    """
+    path = get_file_path_from_data(directory, filename, default_asset)
+
+    return FileResponse(path)
     WARNING: **NEVER** trust user input when calling this function. Always check that parameters are valid.
     """
     if not uuid_regex.match(filename):
