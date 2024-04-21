@@ -149,7 +149,7 @@ async def create_campaigns_logo(
         )
 
     await save_file_as_data(
-        image=image,
+        upload_file=image,
         directory="cinemasessions",
         filename=str(session_id),
         request_id=request_id,

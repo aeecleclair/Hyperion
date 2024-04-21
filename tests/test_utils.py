@@ -11,7 +11,7 @@ async def test_save_file():
     valid_uuid = str(uuid.uuid4())
     with Path("assets/images/default_profile_picture.png").open("rb") as file:
         await save_file_as_data(
-            image=UploadFile(file, headers={"content-type": "image/png"}),
+            upload_file=UploadFile(file, headers={"content-type": "image/png"}),
             directory="test",
             filename=valid_uuid,
             request_id="request_id",
@@ -25,7 +25,7 @@ async def test_save_file_raise_a_value_error_if_filename_isnt_an_uuid():
         Path("assets/images/default_profile_picture.png").open("rb") as file,
     ):
         await save_file_as_data(
-            image=UploadFile(file),
+            upload_file=UploadFile(file),
             directory="test",
             filename=not_a_uuid,
             request_id="request_id",

@@ -871,7 +871,7 @@ async def create_current_user_profile_picture(
     """
 
     await save_file_as_data(
-        image=image,
+        upload_file=image,
         directory="profile-pictures",
         filename=str(user.id),
         request_id=request_id,

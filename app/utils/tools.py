@@ -98,7 +98,7 @@ async def is_user_id_valid(user_id: str, db: AsyncSession) -> bool:
 
 
 async def save_file_as_data(
-    image: UploadFile,
+    upload_file: UploadFile,
     directory: str,
     filename: str,
     request_id: str,
@@ -123,6 +123,8 @@ async def save_file_as_data(
 
     An HTTP Exception will be raised if an error occurres.
 
+    The filename should be a uuid.
+
     WARNING: **NEVER** trust user input when calling this function. Always check that parameters are valid.
     """
     if accepted_content_types is None:
@@ -139,35 +141,36 @@ async def save_file_as_data(
         )
         raise ValueError("The filename is not a valid UUID")
 
-    if image.content_type not in accepted_content_types:
+    if upload_file.content_type not in accepted_content_types:
         raise HTTPException(
             status_code=400,
             detail=f"Invalid file format, supported {accepted_content_types}",
         )
 
     # We need to go to the end of the file to be able to get the size of the file
-    image.file.seek(0, os.SEEK_END)
+    upload_file.file.seek(0, os.SEEK_END)
     # Use file.tell() to retrieve the cursor's current position
-    file_size = image.file.tell()  # Bytes
+    file_size = upload_file.file.tell()  # Bytes
     if file_size > max_file_size:
         raise HTTPException(
             status_code=413,
             detail=f"File size is too big. Limit is {max_file_size} MB",
         )
     # We go back to the beginning of the file to save it on the disk
-    await image.seek(0)
+    await upload_file.seek(0)
 
     extensions_mapping = {
         "image/jpeg": "jpg",
         "image/png": "png",
         "image/webp": "webp",
     }
-    extension = extensions_mapping.get(image.content_type, "")
+    extension = extensions_mapping.get(upload_file.content_type, "")
     # Remove the existing file if any and create the new one
-    try:
-        # If the directory does not exist, we want to create it
-        Path(f"data/{directory}/").mkdir(parents=True, exist_ok=True)
 
+    # If the directory does not exist, we want to create it
+    Path(f"data/{directory}/").mkdir(parents=True, exist_ok=True)
+
+    try:
         for filePath in Path().glob(f"data/{directory}/{filename}.*"):
             filePath.unlink()
 
@@ -176,7 +179,7 @@ async def save_file_as_data(
             mode="wb",
         ) as buffer:
             # https://stackoverflow.com/questions/63580229/how-to-save-uploadfile-in-fastapi
-            while content := await image.read(1024):
+            while content := await upload_file.read(1024):
                 await buffer.write(content)
 
     except Exception as error:
