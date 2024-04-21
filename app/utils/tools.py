@@ -6,6 +6,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 import aiofiles
+import fitz
 from fastapi import HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from rapidfuzz import process
@@ -301,6 +302,46 @@ def delete_file_from_data(
     for filePath in Path().glob(f"data/{directory}/{filename}.*"):
         filePath.unlink()
 
+
+async def save_pdf_first_page_as_image(
+    input_pdf_directory: str,
+    output_image_directory: str,
+    filename: str,
+    default_pdf_path: str,
+    request_id: str,
+    jpg_quality=95,
+):
+    """
+    Open the pdf file "data/{input_pdf_directory}/{filename}.ext" and export its first page as a jpg image.
+    The image will be saved in the `data` folder: "data/{output_image_directory}/{filename}.jpg"
+
+    WARNING: **NEVER** trust user input when calling this function. Always check that parameters are valid.
+    """
+
+    pdf_file_path = get_file_path_from_data(
+        input_pdf_directory,
+        filename,
+        default_pdf_path,
+    )
+
+    paper_pdf: fitz.Document
+    with fitz.open(pdf_file_path) as paper_pdf:
+        page: fitz.Page = paper_pdf.load_page(0)
+
+        cover: fitz.Pixmap = page.get_pixmap()
+
+        cover_bytes: bytes = cover.tobytes(
+            output="jpeg",
+            jpg_quality=jpg_quality,
+        )
+
+        await save_bytes_as_data(
+            file_bytes=cover_bytes,
+            directory=output_image_directory,
+            filename=filename,
+            extension="jpg",
+            request_id=request_id,
+        )
 
 
 def get_display_name(
