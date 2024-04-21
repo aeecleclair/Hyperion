@@ -10,7 +10,7 @@ from sqlalchemy.orm import DeclarativeBase, mapped_column
 from app.types.sqlalchemy import TZDateTime
 
 # Pre-configured field type for UUID primary key (see https://docs.sqlalchemy.org/en/20/orm/declarative_tables.html#mapping-whole-column-declarations-to-python-types)
-pk = Annotated[uuid.UUID, mapped_column(primary_key=True)]
+primary_key = Annotated[uuid.UUID, mapped_column(primary_key=True)]
 
 
 class Base(DeclarativeBase):
