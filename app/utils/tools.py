@@ -278,6 +278,18 @@ def get_file_from_data(
     path = get_file_path_from_data(directory, filename, default_asset)
 
     return FileResponse(path)
+
+
+def delete_file_from_data(
+    directory: str,
+    filename: str,
+):
+    """
+    Delete all files with the provided filename in the data folder.
+    > "data/{directory}/{filename}.ext"
+
+    The filename should be a uuid.
+
     WARNING: **NEVER** trust user input when calling this function. Always check that parameters are valid.
     """
     if not uuid_regex.match(filename):
@@ -287,9 +299,8 @@ def get_file_from_data(
         raise ValueError("The filename is not a valid UUID")
 
     for filePath in Path().glob(f"data/{directory}/{filename}.*"):
-        return FileResponse(filePath)
+        filePath.unlink()
 
-    return FileResponse(default_asset)
 
 
 def get_display_name(
