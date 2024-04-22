@@ -38,9 +38,17 @@ async def init_objects():
     paper = models_ph.Paper(
         id=str(uuid.uuid4()),
         name="OnlyPhans",
-        release_date=datetime.datetime.fromisoformat("2024-10-22T00:00:00"),
+        release_date=datetime.datetime.fromisoformat("2023-10-22T00:00:00"),
     )
     await add_object_to_db(paper)
+
+    global paper2
+    paper2 = models_ph.Paper(
+        id=str(uuid.uuid4()),
+        name="OnlyPhans du futur",
+        release_date=datetime.datetime.fromisoformat("2099-10-22T00:00:00"),
+    )
+    await add_object_to_db(paper2)
 
 
 def test_create_paper():
@@ -64,10 +72,22 @@ def test_get_papers():
     response_json = response.json()
     assert response.status_code == 200
     assert paper.id in [response_paper["id"] for response_paper in response_json]
+    assert paper2.id not in [response_paper["id"] for response_paper in response_json]
+
+
+def test_get_papers_admin():
+    response = client.get(
+        "/ph/",
+        headers={"Authorization": f"Bearer {token_simple}"},
+    )
+    response_json = response.json()
+    assert response.status_code == 200
+    assert paper.id in [response_paper["id"] for response_paper in response_json]
+    assert paper2.id in [response_paper["id"] for response_paper in response_json]
 
 
 def test_create_paper_pdf():
-    with Path("assets/pdf/default_PDF.pdf").open("rb") as pdf:
+    with Path("assets/pdf/default_ph.pdf").open("rb") as pdf:
         response = client.post(
             f"/ph/{paper.id}/pdf",
             files={"pdf": ("test_paper.pdf", pdf, "application/pdf")},

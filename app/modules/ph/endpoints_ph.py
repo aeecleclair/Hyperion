@@ -1,5 +1,5 @@
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 import fitz
@@ -48,7 +48,7 @@ async def get_paper_pdf(
         )
 
     return get_file_from_data(
-        default_asset="assets/pdf/default_PDF.pdf",
+        default_asset="assets/pdf/default_ph.pdf",
         directory="ph/pdf",
         filename=str(paper_id),
     )
@@ -68,7 +68,27 @@ async def get_papers(
     """
     result = await cruds_ph.get_papers(
         db=db,
-    )  # Return papers from the latest to the oldest
+        end_date=datetime.now(tz=UTC).date(),
+    )  # Return papers from the latest to the oldest until now
+    return result
+
+
+@module.router.get(
+    "/ph/admin",
+    response_model=list[schemas_ph.PaperComplete],
+    status_code=200,
+)
+async def get_papers_admin(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Return all editions, sorted from the latest to the oldest
+    """
+    result = await cruds_ph.get_papers(
+        db=db,
+        end_date=date(2099, 12, 31),
+    )  # Return all papers from the latest to the oldest
     return result
 
 

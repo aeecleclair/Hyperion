@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from datetime import date
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
@@ -9,10 +10,13 @@ from app.modules.ph import models_ph, schemas_ph
 
 async def get_papers(
     db: AsyncSession,
+    end_date: date,
 ) -> Sequence[models_ph.Paper]:
     """Return papers from the latest to the oldest"""
     result = await db.execute(
-        select(models_ph.Paper).order_by(models_ph.Paper.release_date.desc()),
+        select(models_ph.Paper)
+        .where(models_ph.Paper.release_date <= end_date)
+        .order_by(models_ph.Paper.release_date.desc()),
     )
     return result.scalars().all()
 
