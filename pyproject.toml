@@ -50,6 +50,7 @@ ignore = [
     "SIM102",
     "SIM105",
     "RUF012", # We may want to enable "Mutable class attributes should be annotated with `typing.ClassVar`"
+    "COM812", # Not recommended because we also use ruff as a formatter (see https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules)
 ]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
