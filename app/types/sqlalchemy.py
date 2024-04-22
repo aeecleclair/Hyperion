@@ -33,7 +33,7 @@ class TZDateTime(TypeDecorator):
 
 
 # Pre-configured field type for UUID primary key (see https://docs.sqlalchemy.org/en/20/orm/declarative_tables.html#mapping-whole-column-declarations-to-python-types)
-primary_key = Annotated[uuid.UUID, mapped_column(primary_key=True)]
+PrimaryKey = Annotated[uuid.UUID, mapped_column(primary_key=True)]
 
 
 class Base(DeclarativeBase):
