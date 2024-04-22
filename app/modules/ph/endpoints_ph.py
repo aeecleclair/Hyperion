@@ -1,5 +1,5 @@
 import uuid
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 import fitz
@@ -80,14 +80,13 @@ async def get_papers(
 )
 async def get_papers_admin(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.ph)),
 ):
     """
     Return all editions, sorted from the latest to the oldest
     """
     result = await cruds_ph.get_papers(
         db=db,
-        end_date=date(2099, 12, 31),
     )  # Return all papers from the latest to the oldest
     return result
 
@@ -117,18 +116,23 @@ async def create_paper(
         )
 
         now = datetime.now(UTC)
-        message = Message(
-            context=f"ph-{paper_db.id}",
-            is_visible=True,
-            title=f"📗 PH - {paper_db.name}",
-            content="A new paper has been released! 🎉",
-            # The notification will expire in 3 days
-            expire_on=now.replace(day=now.day + 3),
-        )
-        await notification_tool.send_notification_to_topic(
-            custom_topic=CustomTopic(topic=Topic.advert),
-            message=message,
-        )
+
+        if paper_db.release_date >= now.date() + timedelta(days=30):
+            message = Message(
+                context=f"ph-{paper_db.id}",
+                is_visible=True,
+                title=f"📗 PH - {paper_db.name}",
+                content="A new paper has been released! 🎉",
+                delivery_datetime=datetime.fromisoformat(
+                    paper_db.release_date.isoformat(),
+                ),
+                # The notification will expire in 10 days
+                expire_on=now + timedelta(days=10),
+            )
+            await notification_tool.send_notification_to_topic(
+                custom_topic=CustomTopic(topic=Topic.advert),
+                message=message,
+            )
         return await cruds_ph.create_paper(paper=paper_db, db=db)
 
     except ValueError as error:

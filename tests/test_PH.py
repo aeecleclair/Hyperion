@@ -78,7 +78,7 @@ def test_get_papers():
 def test_get_papers_admin():
     response = client.get(
         "/ph/",
-        headers={"Authorization": f"Bearer {token_simple}"},
+        headers={"Authorization": f"Bearer {token_ph}"},
     )
     response_json = response.json()
     assert response.status_code == 200
