@@ -186,7 +186,7 @@ async def create_recommendation_image(
         raise HTTPException(status_code=404, detail="The recommendation does not exist")
 
     await save_file_as_data(
-        image=image,
+        upload_file=image,
         directory="recommendations",
         filename=str(recommendation_id),
         request_id=request_id,

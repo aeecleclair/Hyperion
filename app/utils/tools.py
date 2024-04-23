@@ -6,6 +6,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 import aiofiles
+import fitz
 from fastapi import HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from rapidfuzz import process
@@ -98,7 +99,7 @@ async def is_user_id_valid(user_id: str, db: AsyncSession) -> bool:
 
 
 async def save_file_as_data(
-    image: UploadFile,
+    upload_file: UploadFile,
     directory: str,
     filename: str,
     request_id: str,
@@ -123,6 +124,8 @@ async def save_file_as_data(
 
     An HTTP Exception will be raised if an error occurres.
 
+    The filename should be a uuid.
+
     WARNING: **NEVER** trust user input when calling this function. Always check that parameters are valid.
     """
     if accepted_content_types is None:
@@ -139,35 +142,36 @@ async def save_file_as_data(
         )
         raise ValueError("The filename is not a valid UUID")
 
-    if image.content_type not in accepted_content_types:
+    if upload_file.content_type not in accepted_content_types:
         raise HTTPException(
             status_code=400,
             detail=f"Invalid file format, supported {accepted_content_types}",
         )
 
     # We need to go to the end of the file to be able to get the size of the file
-    image.file.seek(0, os.SEEK_END)
+    upload_file.file.seek(0, os.SEEK_END)
     # Use file.tell() to retrieve the cursor's current position
-    file_size = image.file.tell()  # Bytes
+    file_size = upload_file.file.tell()  # Bytes
     if file_size > max_file_size:
         raise HTTPException(
             status_code=413,
             detail=f"File size is too big. Limit is {max_file_size} MB",
         )
     # We go back to the beginning of the file to save it on the disk
-    await image.seek(0)
+    await upload_file.seek(0)
 
     extensions_mapping = {
         "image/jpeg": "jpg",
         "image/png": "png",
         "image/webp": "webp",
     }
-    extension = extensions_mapping.get(image.content_type, "")
+    extension = extensions_mapping.get(upload_file.content_type, "")
     # Remove the existing file if any and create the new one
-    try:
-        # If the directory does not exist, we want to create it
-        Path(f"data/{directory}/").mkdir(parents=True, exist_ok=True)
 
+    # If the directory does not exist, we want to create it
+    Path(f"data/{directory}/").mkdir(parents=True, exist_ok=True)
+
+    try:
         for filePath in Path().glob(f"data/{directory}/{filename}.*"):
             filePath.unlink()
 
@@ -176,7 +180,7 @@ async def save_file_as_data(
             mode="wb",
         ) as buffer:
             # https://stackoverflow.com/questions/63580229/how-to-save-uploadfile-in-fastapi
-            while content := await image.read(1024):
+            while content := await upload_file.read(1024):
                 await buffer.write(content)
 
     except Exception as error:
@@ -186,11 +190,57 @@ async def save_file_as_data(
         raise HTTPException(status_code=400, detail="Could not save file")
 
 
-def get_file_from_data(
+async def save_bytes_as_data(
+    file_bytes: bytes,
+    directory: str,
+    filename: str,
+    extension: str,
+    request_id: str,
+):
+    """
+    Save bytes in file in the data folder.
+
+    - The file will be saved in the `data` folder: "data/{directory}/{filename}.{extension}"
+
+    The filename should be a uuid.
+    No verifications will be made about the content of the file, it is up to the caller to ensure the content is valid and safe.
+
+    An HTTP Exception will be raised if an error occurres.
+
+    WARNING: **NEVER** trust user input when calling this function. Always check that parameters are valid.
+    """
+
+    if not uuid_regex.match(filename):
+        hyperion_error_logger.error(
+            f"save_file_as_data: security issue, the filename is not a valid UUID: {filename}.",
+        )
+        raise ValueError("The filename is not a valid UUID")
+
+    # If the directory does not exist, we want to create it
+    Path(f"data/{directory}/").mkdir(parents=True, exist_ok=True)
+
+    try:
+        for filePath in Path().glob(f"data/{directory}/{filename}.*"):
+            filePath.unlink()
+
+        async with aiofiles.open(
+            f"data/{directory}/{filename}.{extension}",
+            mode="wb",
+        ) as buffer:
+            await buffer.write(file_bytes)
+
+    except Exception as error:
+        hyperion_error_logger.error(
+            f"save_file_to_the_disk: could not save file to {filename}: {error} ({request_id})",
+        )
+        raise HTTPException(status_code=400, detail="Could not save file")
+
+
+def get_file_path_from_data(
     directory: str,
     filename: str,
     default_asset: str,
-) -> FileResponse:
+) -> Path:
     """
     If there is a file with the provided filename in the data folder, return it. The file extension will be inferred from the provided content file.
     > "data/{directory}/{filename}.ext"
@@ -207,9 +257,91 @@ def get_file_from_data(
         raise ValueError("The filename is not a valid UUID")
 
     for filePath in Path().glob(f"data/{directory}/{filename}.*"):
-        return FileResponse(filePath)
+        return filePath
 
-    return FileResponse(default_asset)
+    return Path(default_asset)
+
+
+def get_file_from_data(
+    directory: str,
+    filename: str,
+    default_asset: str,
+) -> FileResponse:
+    """
+    If there is a file with the provided filename in the data folder, return it. The file extension will be inferred from the provided content file.
+    > "data/{directory}/{filename}.ext"
+    Otherwise, return the default asset.
+
+    The filename should be a uuid.
+
+    WARNING: **NEVER** trust user input when calling this function. Always check that parameters are valid.
+    """
+    path = get_file_path_from_data(directory, filename, default_asset)
+
+    return FileResponse(path)
+
+
+def delete_file_from_data(
+    directory: str,
+    filename: str,
+):
+    """
+    Delete all files with the provided filename in the data folder.
+    > "data/{directory}/{filename}.ext"
+
+    The filename should be a uuid.
+
+    WARNING: **NEVER** trust user input when calling this function. Always check that parameters are valid.
+    """
+    if not uuid_regex.match(filename):
+        hyperion_error_logger.error(
+            f"get_file_from_data: security issue, the filename is not a valid UUID: {filename}. This mean that the user input was not properly checked.",
+        )
+        raise ValueError("The filename is not a valid UUID")
+
+    for filePath in Path().glob(f"data/{directory}/{filename}.*"):
+        filePath.unlink()
+
+
+async def save_pdf_first_page_as_image(
+    input_pdf_directory: str,
+    output_image_directory: str,
+    filename: str,
+    default_pdf_path: str,
+    request_id: str,
+    jpg_quality=95,
+):
+    """
+    Open the pdf file "data/{input_pdf_directory}/{filename}.ext" and export its first page as a jpg image.
+    The image will be saved in the `data` folder: "data/{output_image_directory}/{filename}.jpg"
+
+    WARNING: **NEVER** trust user input when calling this function. Always check that parameters are valid.
+    """
+
+    pdf_file_path = get_file_path_from_data(
+        input_pdf_directory,
+        filename,
+        default_pdf_path,
+    )
+
+    paper_pdf: fitz.Document
+    with fitz.open(pdf_file_path) as paper_pdf:
+        page: fitz.Page = paper_pdf.load_page(0)
+
+        cover: fitz.Pixmap = page.get_pixmap()
+
+        cover_bytes: bytes = cover.tobytes(
+            output="jpeg",
+            jpg_quality=jpg_quality,
+        )
+
+        await save_bytes_as_data(
+            file_bytes=cover_bytes,
+            directory=output_image_directory,
+            filename=filename,
+            extension="jpg",
+            request_id=request_id,
+        )
 
 
 def get_display_name(

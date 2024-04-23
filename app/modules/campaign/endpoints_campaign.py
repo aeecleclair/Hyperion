@@ -839,7 +839,7 @@ async def create_campaigns_logo(
         )
 
     await save_file_as_data(
-        image=image,
+        upload_file=image,
         directory="campaigns",
         filename=str(list_id),
         request_id=request_id,
