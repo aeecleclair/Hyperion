@@ -16,12 +16,12 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    op.alter_column(
-        "recommendation",
-        "id",
-        type_=sa.types.Uuid(),
-        postgresql_using="id::uuid",
-    )
+    with op.batch_alter_table("recommendation") as batch_op:
+        batch_op.alter_column(
+            "id",
+            type_=sa.types.Uuid(),
+            postgresql_using="id::uuid",
+        )
 
 
 def downgrade() -> None:
