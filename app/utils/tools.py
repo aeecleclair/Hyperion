@@ -112,7 +112,8 @@ async def save_file_as_data(
     - The file will be saved in the `data` folder: "data/{directory}/{filename}.ext"
     - Maximum size is 2MB by default, it can be changed using `max_file_size` (in bytes) parameter.
     - `accepted_content_types` is a list of accepted content types. By default, only images are accepted.
-        Use: `["image/jpeg", "image/png", "image/webp", "application/pdf"]` to accept only images.
+        Use: `["image/jpeg", "image/png", "image/webp"]` to accept only images.
+    - Filename should be an uuid.
 
     The file extension will be inferred from the provided content file.
     There should only be one file with the same filename, thus, saving a new file will remove the existing even if its extension was different.
@@ -344,32 +345,6 @@ async def save_pdf_first_page_as_image(
             extension="jpg",
             request_id=request_id,
         )
-
-
-def delete_file_from_data(
-    directory: str,
-    filename: str,
-    extension: str,
-):
-    """
-    If there is a file with the provided filename in the data folder, delete it. The file extension must be precised.
-    > "data/{directory}/{filename}.{extension}"
-
-    The filename should be a uuid.
-
-    WARNING: **NEVER** trust user input when calling this function. Always check that parameters are valid.
-    """
-    if not uuid_regex.match(filename):
-        hyperion_error_logger.error(
-            f"delete_file_as_data: security issue, the filename is not a valid UUID: {filename}.",
-        )
-        raise ValueError("The filename is not a valid UUID")
-
-    path = Path(f"data/{directory}/{filename}.{extension}")
-    if Path.exists(path):
-        Path.unlink(path)
-    else:
-        raise HTTPException(status_code=400, detail="Could not delete file")
 
 
 def get_display_name(
