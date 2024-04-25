@@ -7,7 +7,6 @@ Create Date: 2024-03-17 19:19:14.297195
 """
 
 from collections.abc import Sequence
-from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 import sqlalchemy as sa

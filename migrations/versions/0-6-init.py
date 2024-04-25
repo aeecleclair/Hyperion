@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 import sqlalchemy as sa
 from alembic import op
 
-import app
+from app.types.sqlalchemy import TZDateTime
 
 if TYPE_CHECKING:
     from pytest_alembic import MigrationContext
@@ -35,7 +35,10 @@ def upgrade() -> None:
         sa.UniqueConstraint("name"),
     )
     op.create_index(
-        op.f("ix_advert_advertisers_id"), "advert_advertisers", ["id"], unique=False
+        op.f("ix_advert_advertisers_id"),
+        "advert_advertisers",
+        ["id"],
+        unique=False,
     )
     op.create_table(
         "amap_delivery",
@@ -74,14 +77,17 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
-        op.f("ix_amap_product_category"), "amap_product", ["category"], unique=False
+        op.f("ix_amap_product_category"),
+        "amap_product",
+        ["category"],
+        unique=False,
     )
     op.create_index(op.f("ix_amap_product_id"), "amap_product", ["id"], unique=False)
     op.create_index(op.f("ix_amap_product_name"), "amap_product", ["name"], unique=True)
     op.create_table(
         "authorization_code",
         sa.Column("code", sa.String(), nullable=False),
-        sa.Column("expire_on", app.utils.types.datetime.TZDateTime(), nullable=False),
+        sa.Column("expire_on", TZDateTime(), nullable=False),
         sa.Column("scope", sa.String(), nullable=True),
         sa.Column("redirect_uri", sa.String(), nullable=True),
         sa.Column("user_id", sa.String(), nullable=False),
@@ -91,7 +97,10 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("code"),
     )
     op.create_index(
-        op.f("ix_authorization_code_code"), "authorization_code", ["code"], unique=False
+        op.f("ix_authorization_code_code"),
+        "authorization_code",
+        ["code"],
+        unique=False,
     )
     op.create_table(
         "campaign_sections",
@@ -107,7 +116,12 @@ def upgrade() -> None:
         sa.Column(
             "status",
             sa.Enum(
-                "waiting", "open", "closed", "counting", "published", name="statustype"
+                "waiting",
+                "open",
+                "closed",
+                "counting",
+                "published",
+                name="statustype",
             ),
             nullable=False,
         ),
@@ -122,7 +136,7 @@ def upgrade() -> None:
         "cinema_session",
         sa.Column("id", sa.String(), nullable=False),
         sa.Column("name", sa.String(), nullable=False),
-        sa.Column("start", app.utils.types.datetime.TZDateTime(), nullable=False),
+        sa.Column("start", TZDateTime(), nullable=False),
         sa.Column("duration", sa.Integer(), nullable=False),
         sa.Column("overview", sa.String(), nullable=True),
         sa.Column("genre", sa.String(), nullable=True),
@@ -180,7 +194,7 @@ def upgrade() -> None:
             ),
             nullable=False,
         ),
-        sa.Column("created_on", app.utils.types.datetime.TZDateTime(), nullable=True),
+        sa.Column("created_on", TZDateTime(), nullable=True),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(op.f("ix_core_user_email"), "core_user", ["email"], unique=True)
@@ -190,8 +204,8 @@ def upgrade() -> None:
         sa.Column("email", sa.String(), nullable=False),
         sa.Column("user_id", sa.String(), nullable=False),
         sa.Column("reset_token", sa.String(), nullable=False),
-        sa.Column("created_on", app.utils.types.datetime.TZDateTime(), nullable=False),
-        sa.Column("expire_on", app.utils.types.datetime.TZDateTime(), nullable=False),
+        sa.Column("created_on", TZDateTime(), nullable=False),
+        sa.Column("expire_on", TZDateTime(), nullable=False),
         sa.PrimaryKeyConstraint("reset_token"),
     )
     op.create_table(
@@ -200,8 +214,8 @@ def upgrade() -> None:
         sa.Column("email", sa.String(), nullable=False),
         sa.Column("account_type", sa.String(), nullable=False),
         sa.Column("activation_token", sa.String(), nullable=False),
-        sa.Column("created_on", app.utils.types.datetime.TZDateTime(), nullable=False),
-        sa.Column("expire_on", app.utils.types.datetime.TZDateTime(), nullable=False),
+        sa.Column("created_on", TZDateTime(), nullable=False),
+        sa.Column("expire_on", TZDateTime(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
@@ -228,10 +242,8 @@ def upgrade() -> None:
         sa.Column("content", sa.String(), nullable=True),
         sa.Column("action_module", sa.String(), nullable=True),
         sa.Column("action_table", sa.String(), nullable=True),
-        sa.Column(
-            "delivery_datetime", app.utils.types.datetime.TZDateTime(), nullable=True
-        ),
-        sa.Column("expire_on", app.utils.types.datetime.TZDateTime(), nullable=False),
+        sa.Column("delivery_datetime", TZDateTime(), nullable=True),
+        sa.Column("expire_on", TZDateTime(), nullable=False),
         sa.PrimaryKeyConstraint("context", "firebase_device_token"),
     )
     op.create_index(
@@ -282,7 +294,7 @@ def upgrade() -> None:
     op.create_table(
         "recommendation",
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("creation", app.utils.types.datetime.TZDateTime(), nullable=False),
+        sa.Column("creation", TZDateTime(), nullable=False),
         sa.Column("title", sa.String(), nullable=False),
         sa.Column("code", sa.String(), nullable=True),
         sa.Column("summary", sa.String(), nullable=False),
@@ -295,7 +307,7 @@ def upgrade() -> None:
         sa.Column("advertiser_id", sa.String(), nullable=False),
         sa.Column("title", sa.String(), nullable=False),
         sa.Column("content", sa.String(), nullable=False),
-        sa.Column("date", app.utils.types.datetime.TZDateTime(), nullable=False),
+        sa.Column("date", TZDateTime(), nullable=False),
         sa.Column("tags", sa.String(), nullable=True),
         sa.ForeignKeyConstraint(
             ["advertiser_id"],
@@ -338,9 +350,7 @@ def upgrade() -> None:
             sa.Enum("midi", "soir", name="amapslottype"),
             nullable=False,
         ),
-        sa.Column(
-            "ordering_date", app.utils.types.datetime.TZDateTime(), nullable=False
-        ),
+        sa.Column("ordering_date", TZDateTime(), nullable=False),
         sa.Column("delivery_date", sa.Date(), nullable=False),
         sa.ForeignKeyConstraint(
             ["delivery_id"],
@@ -353,10 +363,16 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("order_id"),
     )
     op.create_index(
-        op.f("ix_amap_order_delivery_id"), "amap_order", ["delivery_id"], unique=False
+        op.f("ix_amap_order_delivery_id"),
+        "amap_order",
+        ["delivery_id"],
+        unique=False,
     )
     op.create_index(
-        op.f("ix_amap_order_order_id"), "amap_order", ["order_id"], unique=False
+        op.f("ix_amap_order_order_id"),
+        "amap_order",
+        ["order_id"],
+        unique=False,
     )
     op.create_table(
         "booking_manager",
@@ -376,8 +392,8 @@ def upgrade() -> None:
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("organizer", sa.String(), nullable=False),
         sa.Column("applicant_id", sa.String(), nullable=False),
-        sa.Column("start", app.utils.types.datetime.TZDateTime(), nullable=False),
-        sa.Column("end", app.utils.types.datetime.TZDateTime(), nullable=False),
+        sa.Column("start", TZDateTime(), nullable=False),
+        sa.Column("end", TZDateTime(), nullable=False),
         sa.Column("all_day", sa.Boolean(), nullable=False),
         sa.Column("location", sa.String(), nullable=False),
         sa.Column(
@@ -404,7 +420,10 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
-        op.f("ix_calendar_events_id"), "calendar_events", ["id"], unique=False
+        op.f("ix_calendar_events_id"),
+        "calendar_events",
+        ["id"],
+        unique=False,
     )
     op.create_table(
         "campaign_has_voted",
@@ -568,7 +587,10 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("user_id", "association_id", "mandate_year"),
     )
     op.create_index(
-        op.f("ix_phonebook_membership_id"), "phonebook_membership", ["id"], unique=False
+        op.f("ix_phonebook_membership_id"),
+        "phonebook_membership",
+        ["id"],
+        unique=False,
     )
     op.create_table(
         "raffle",
@@ -588,7 +610,10 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
-        op.f("ix_raffle_description"), "raffle", ["description"], unique=False
+        op.f("ix_raffle_description"),
+        "raffle",
+        ["description"],
+        unique=False,
     )
     op.create_index(op.f("ix_raffle_group_id"), "raffle", ["group_id"], unique=False)
     op.create_index(op.f("ix_raffle_id"), "raffle", ["id"], unique=False)
@@ -605,9 +630,9 @@ def upgrade() -> None:
     op.create_table(
         "refresh_token",
         sa.Column("client_id", sa.String(), nullable=False),
-        sa.Column("created_on", app.utils.types.datetime.TZDateTime(), nullable=False),
-        sa.Column("expire_on", app.utils.types.datetime.TZDateTime(), nullable=False),
-        sa.Column("revoked_on", app.utils.types.datetime.TZDateTime(), nullable=True),
+        sa.Column("created_on", TZDateTime(), nullable=False),
+        sa.Column("expire_on", TZDateTime(), nullable=False),
+        sa.Column("revoked_on", TZDateTime(), nullable=True),
         sa.Column("token", sa.String(), nullable=False),
         sa.Column("scope", sa.String(), nullable=True),
         sa.Column("user_id", sa.String(), nullable=False),
@@ -619,10 +644,16 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("token"),
     )
     op.create_index(
-        op.f("ix_refresh_token_client_id"), "refresh_token", ["client_id"], unique=False
+        op.f("ix_refresh_token_client_id"),
+        "refresh_token",
+        ["client_id"],
+        unique=False,
     )
     op.create_index(
-        op.f("ix_refresh_token_token"), "refresh_token", ["token"], unique=True
+        op.f("ix_refresh_token_token"),
+        "refresh_token",
+        ["token"],
+        unique=True,
     )
     op.create_table(
         "amap_order_content",
@@ -703,7 +734,10 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
-        op.f("ix_raffle_pack_ticket_id"), "raffle_pack_ticket", ["id"], unique=False
+        op.f("ix_raffle_pack_ticket_id"),
+        "raffle_pack_ticket",
+        ["id"],
+        unique=False,
     )
     op.create_index(
         op.f("ix_raffle_pack_ticket_raffle_id"),
@@ -726,15 +760,18 @@ def upgrade() -> None:
     )
     op.create_index(op.f("ix_raffle_prize_id"), "raffle_prize", ["id"], unique=False)
     op.create_index(
-        op.f("ix_raffle_prize_raffle_id"), "raffle_prize", ["raffle_id"], unique=False
+        op.f("ix_raffle_prize_raffle_id"),
+        "raffle_prize",
+        ["raffle_id"],
+        unique=False,
     )
     op.create_table(
         "booking",
         sa.Column("id", sa.String(), nullable=False),
         sa.Column("reason", sa.String(), nullable=False),
-        sa.Column("start", app.utils.types.datetime.TZDateTime(), nullable=False),
-        sa.Column("end", app.utils.types.datetime.TZDateTime(), nullable=False),
-        sa.Column("creation", app.utils.types.datetime.TZDateTime(), nullable=False),
+        sa.Column("start", TZDateTime(), nullable=False),
+        sa.Column("end", TZDateTime(), nullable=False),
+        sa.Column("creation", TZDateTime(), nullable=False),
         sa.Column("note", sa.String(), nullable=True),
         sa.Column("room_id", sa.String(), nullable=False),
         sa.Column("key", sa.Boolean(), nullable=False),
@@ -796,7 +833,8 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_raffle_prize_id"), table_name="raffle_prize")
     op.drop_table("raffle_prize")
     op.drop_index(
-        op.f("ix_raffle_pack_ticket_raffle_id"), table_name="raffle_pack_ticket"
+        op.f("ix_raffle_pack_ticket_raffle_id"),
+        table_name="raffle_pack_ticket",
     )
     op.drop_index(op.f("ix_raffle_pack_ticket_id"), table_name="raffle_pack_ticket")
     op.drop_table("raffle_pack_ticket")
@@ -846,10 +884,12 @@ def downgrade() -> None:
     op.drop_table("advert_adverts")
     op.drop_table("recommendation")
     op.drop_index(
-        op.f("ix_phonebook_association_name"), table_name="phonebook_association"
+        op.f("ix_phonebook_association_name"),
+        table_name="phonebook_association",
     )
     op.drop_index(
-        op.f("ix_phonebook_association_id"), table_name="phonebook_association"
+        op.f("ix_phonebook_association_id"),
+        table_name="phonebook_association",
     )
     op.drop_table("phonebook_association")
     op.drop_index(
@@ -857,7 +897,8 @@ def downgrade() -> None:
         table_name="notification_message",
     )
     op.drop_index(
-        op.f("ix_notification_message_context"), table_name="notification_message"
+        op.f("ix_notification_message_context"),
+        table_name="notification_message",
     )
     op.drop_table("notification_message")
     op.drop_table("module_visibility")
