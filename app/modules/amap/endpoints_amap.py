@@ -3,6 +3,7 @@ import uuid
 from datetime import UTC, datetime
 
 from fastapi import Depends, HTTPException, Response
+from firebase_admin import messaging
 from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -719,6 +720,18 @@ async def open_ordering_of_delivery(
 
     await cruds_amap.open_ordering_of_delivery(delivery_id=delivery_id, db=db)
 
+    try:
+        message = messaging.Message(
+            notification=messaging.Notification(
+                title="AMAP - Nouvelle livraison disponible",
+                body="Viens commander !",
+            ),
+            topic="amap",
+        )
+        messaging.send(message)
+    except Exception as error:
+        hyperion_error_logger.error(f"Error while sending AMAP notification, {error}")
+
 
 @module.router.post(
     "/amap/deliveries/{delivery_id}/lock",
@@ -893,19 +906,13 @@ async def create_cash_of_user(
 
     try:
         if result:
-            now = datetime.now(UTC)
             message = Message(
-                context=f"amap-cash-{user_id}",
-                is_visible=True,
-                title="AMAP - Solde mis à jour",
-                content=f"Votre nouveau solde est de {result.balance} €.",
-                # The notification will expire in 3 days
-                expire_on=now.replace(day=now.day + 3),
+                notification=messaging.Notification(
+                    title="AMAP - Solde mis à jour",
+                    body=f"Votre nouveau solde est de {result.balance} €.",
+                ),
             )
-            await notification_tool.send_notification_to_user(
-                user_id=user_id,
-                message=message,
-            )
+            messaging.send(message, token=user_db.firebase_token)
     except Exception as error:
         hyperion_error_logger.error(f"Error while sending AMAP notification, {error}")
 
