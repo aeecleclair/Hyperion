@@ -117,7 +117,7 @@ async def create_paper(
 
         now = datetime.now(UTC)
 
-        if paper_db.release_date >= now.date() + timedelta(days=30):
+        if paper_db.release_date >= now.date() - timedelta(days=30):
             message = Message(
                 context=f"ph-{paper_db.id}",
                 is_visible=True,
