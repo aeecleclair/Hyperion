@@ -92,7 +92,6 @@ exclude = '''(?x)(
     | __pycache__
     | .pytest_cache
     | .venv
-    | migration
 )'''
 warn_unreachable = true
 

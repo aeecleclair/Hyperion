@@ -486,7 +486,7 @@ async def create_association_logo(
         )
 
     await save_file_as_data(
-        image=image,
+        upload_file=image,
         directory="associations",
         filename=association_id,
         request_id=request_id,

@@ -2,10 +2,8 @@ name: Build and Publish Hyperion Docker Images
 on:
   workflow_dispatch:
   push:
-    branches:
-      - "main"
     tags:
-      - "v*"
+      - 'v*.*.*'
 
 jobs:
   docker:
@@ -22,7 +20,6 @@ jobs:
         with:
           images: ${{ secrets.DOCKER_REGISTRY_IDENTIFER }}/hyperion
           tags: |
-            type=ref,event=branch
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
 

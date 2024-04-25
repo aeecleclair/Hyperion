@@ -5,8 +5,8 @@ import unidecode
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
+from app.types.scopes_type import ScopeType
 from app.utils.tools import get_display_name, is_user_member_of_an_allowed_group
-from app.utils.types.scopes_type import ScopeType
 
 
 class BaseAuthClient:
@@ -22,7 +22,7 @@ class BaseAuthClient:
     ########################################################
 
     # Set of scopes the auth client is authorized to grant when issuing an access token.
-    # See app.utils.types.scopes_type.ScopeType for possible values
+    # See app.types.scopes_type.ScopeType for possible values
     # If the client always send a specific scope (ex: `name`), you may add it to the allowed scopes as a string (ex: `"name"`)
     # These "string" scopes won't have any effect for Hyperion but won't raise a warning when asked by the client
     # WARNING: to be able to use openid connect, `ScopeType.openid` should always be allowed
@@ -90,7 +90,7 @@ class AppAuthClient(BaseAuthClient):
     """
 
     # Set of scopes the auth client is authorized to grant when issuing an access token.
-    # See app.utils.types.scopes_type.ScopeType for possible values
+    # See app.types.scopes_type.ScopeType for possible values
     # WARNING: to be able to use openid connect, `ScopeType.openid` should always be allowed
     allowed_scopes: set[ScopeType | str] = {ScopeType.API}
     # Restrict the authentication to this client to specific Hyperion groups.
@@ -104,14 +104,14 @@ class PostmanAuthClient(BaseAuthClient):
     """
 
     # Set of scopes the auth client is authorized to grant when issuing an access token.
-    # See app.utils.types.scopes_type.ScopeType for possible values
+    # See app.types.scopes_type.ScopeType for possible values
     # WARNING: to be able to use openid connect, `ScopeType.openid` should always be allowed
     allowed_scopes: set[ScopeType | str] = {ScopeType.API}
 
 
 class NextcloudAuthClient(BaseAuthClient):
     # Set of scopes the auth client is authorized to grant when issuing an access token.
-    # See app.utils.types.scopes_type.ScopeType for possible values
+    # See app.types.scopes_type.ScopeType for possible values
     allowed_scopes: set[ScopeType | str] = {ScopeType.openid}
 
     # For Nextcloud:
@@ -142,7 +142,7 @@ class NextcloudAuthClient(BaseAuthClient):
 
 class PiwigoAuthClient(BaseAuthClient):
     # Set of scopes the auth client is authorized to grant when issuing an access token.
-    # See app.utils.types.scopes_type.ScopeType for possible values
+    # See app.types.scopes_type.ScopeType for possible values
     # WARNING: to be able to use openid connect, `ScopeType.openid` should always be allowed
     allowed_scopes: set[ScopeType | str] = {ScopeType.openid}
     # Restrict the authentication to this client to specific Hyperion groups.
@@ -183,7 +183,7 @@ class PiwigoAuthClient(BaseAuthClient):
 
 class HedgeDocAuthClient(BaseAuthClient):
     # Set of scopes the auth client is authorized to grant when issuing an access token.
-    # See app.utils.types.scopes_type.ScopeType for possible values
+    # See app.types.scopes_type.ScopeType for possible values
     allowed_scopes: set[ScopeType | str] = {ScopeType.profile}
 
     @classmethod
@@ -199,7 +199,7 @@ class WikijsAuthClient(BaseAuthClient):
     # https://github.com/requarks/wiki/blob/main/server/modules/authentication/oidc/definition.yml
 
     # Set of scopes the auth client is authorized to grant when issuing an access token.
-    # See app.utils.types.scopes_type.ScopeType for possible values
+    # See app.types.scopes_type.ScopeType for possible values
     allowed_scopes: set[ScopeType | str] = {ScopeType.openid, ScopeType.profile}
 
     @classmethod
@@ -218,7 +218,7 @@ class WikijsAuthClient(BaseAuthClient):
 
 class SynapseAuthClient(BaseAuthClient):
     # Set of scopes the auth client is authorized to grant when issuing an access token.
-    # See app.utils.types.scopes_type.ScopeType for possible values
+    # See app.types.scopes_type.ScopeType for possible values
     allowed_scopes: set[ScopeType | str] = {ScopeType.openid, ScopeType.profile}
 
     @classmethod
@@ -247,7 +247,7 @@ class SynapseAuthClient(BaseAuthClient):
 
 class MinecraftAuthClient(BaseAuthClient):
     # Set of scopes the auth client is authorized to grant when issuing an access token.
-    # See app.utils.types.scopes_type.ScopeType for possible values
+    # See app.types.scopes_type.ScopeType for possible values
     allowed_scopes: set[ScopeType | str] = {ScopeType.profile}
 
     @classmethod
@@ -262,7 +262,7 @@ class MinecraftAuthClient(BaseAuthClient):
 
 class ChallengerAuthClient(BaseAuthClient):
     # Set of scopes the auth client is authorized to grant when issuing an access token.
-    # See app.utils.types.scopes_type.ScopeType for possible values
+    # See app.types.scopes_type.ScopeType for possible values
     allowed_scopes: set[ScopeType | str] = {ScopeType.openid, ScopeType.profile}
 
     @classmethod
@@ -277,7 +277,7 @@ class ChallengerAuthClient(BaseAuthClient):
 
 class OpenProjectAuthClient(BaseAuthClient):
     # Set of scopes the auth client is authorized to grant when issuing an access token.
-    # See app.utils.types.scopes_type.ScopeType for possible values
+    # See app.types.scopes_type.ScopeType for possible values
     allowed_scopes: set[ScopeType | str] = {ScopeType.openid, ScopeType.profile}
 
     @classmethod

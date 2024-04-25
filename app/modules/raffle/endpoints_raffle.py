@@ -235,7 +235,7 @@ async def create_current_raffle_logo(
         )
 
     await save_file_as_data(
-        image=image,
+        upload_file=image,
         directory="raffle-pictures",
         filename=str(raffle_id),
         request_id=request_id,
@@ -781,7 +781,7 @@ async def create_prize_picture(
         )
 
     await save_file_as_data(
-        image=image,
+        upload_file=image,
         directory="raffle-prize_pictures",
         filename=str(prize_id),
         request_id=request_id,

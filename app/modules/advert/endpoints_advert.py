@@ -410,7 +410,7 @@ async def create_advert_image(
         )
 
     await save_file_as_data(
-        image=image,
+        upload_file=image,
         directory="adverts",
         filename=str(advert_id),
         request_id=request_id,
