@@ -25,8 +25,8 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.alter_column(
-        "recommendation",
-        "id",
-        type_=sa.types.String(),
-    )
+    with op.batch_alter_table("recommendation") as batch_op:
+        batch_op.alter_column(
+            "id",
+            type_=sa.types.String(),
+        )
