@@ -36,3 +36,9 @@ class CustomTopic:
             topic_identifier = ""
         topic = Topic(topic)
         return cls(topic=topic, topic_identifier=topic_identifier)
+
+
+class TopicMessage:
+    def __init__(self, title: str, content: str):
+        self.title = title
+        self.content = content
