@@ -182,7 +182,6 @@ def get_notification_tool(
     return NotificationTool(
         background_tasks=background_tasks,
         notification_manager=notification_manager,
-        db=db,
     )
 
 

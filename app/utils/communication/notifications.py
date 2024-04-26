@@ -180,9 +180,7 @@ class NotificationManager:
     async def send_notification_to_user_manager(
         self,
         user_id: str,
-        title: str,
-        body: str,
-        db: AsyncSession,
+        message: Message,
     ):
         """
         Send a notification to a user.
@@ -192,7 +190,7 @@ class NotificationManager:
 
         firebase_devices = await cruds_notification.get_firebase_devices_by_user_id(
             user_id=user_id,
-            db=db,
+            db=self.db,
         )
 
         firebase_device_tokens = [
@@ -201,8 +199,8 @@ class NotificationManager:
 
         message = messaging.Message(
             notification=messaging.Notification(
-                title=title,
-                body=body,
+                title=message.title,
+                body=message.content,
             ),
             token=firebase_device_tokens,
         )
@@ -222,7 +220,6 @@ class NotificationTool:
         self,
         background_tasks: BackgroundTasks,
         notification_manager: NotificationManager,
-        db: AsyncSession,
     ):
         self.background_tasks = background_tasks
         self.notification_manager = notification_manager
@@ -232,9 +229,7 @@ class NotificationTool:
             messaging.send,
             self.notification_manager.send_notification_to_user_manager(
                 user_id,
-                message.title,
-                message.content,
-                self.db,
+                message,
             ),
         )
 
