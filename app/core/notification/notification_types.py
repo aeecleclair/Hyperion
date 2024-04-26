@@ -1,3 +1,4 @@
+from datetime import datetime
 from enum import Enum
 
 
@@ -37,3 +38,13 @@ class CustomTopic:
             topic_identifier = ""
         topic = Topic(topic)
         return cls(topic=topic, topic_identifier=topic_identifier)
+
+
+class Message:
+    def __init__(
+        self,
+        title: str | None = None,
+        content: str | None = None,
+    ):
+        self.title = title
+        self.content = content

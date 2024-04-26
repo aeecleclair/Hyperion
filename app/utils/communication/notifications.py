@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
 from app.core.notification import cruds_notification, models_notification
-from app.core.notification.notification_types import CustomTopic
+from app.core.notification.notification_types import CustomTopic, Message
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
@@ -177,6 +177,37 @@ class NotificationManager:
             db=db,
         )
 
+    async def send_notification_to_user_manager(
+        self,
+        user_id: str,
+        title: str,
+        body: str,
+        db: AsyncSession,
+    ):
+        """
+        Send a notification to a user.
+        """
+        if not self.use_firebase:
+            return
+
+        firebase_devices = await cruds_notification.get_firebase_devices_by_user_id(
+            user_id=user_id,
+            db=db,
+        )
+
+        firebase_device_tokens = [
+            device.firebase_device_token for device in firebase_devices
+        ]
+
+        message = messaging.Message(
+            notification=messaging.Notification(
+                title=title,
+                body=body,
+            ),
+            token=firebase_device_tokens,
+        )
+        return message
+
 
 class NotificationTool:
     """
@@ -191,35 +222,34 @@ class NotificationTool:
         self,
         background_tasks: BackgroundTasks,
         notification_manager: NotificationManager,
+        db: AsyncSession,
     ):
         self.background_tasks = background_tasks
         self.notification_manager = notification_manager
 
-    async def send_notification_to_user(self, user_id: str, title: str, body: str):
+    async def send_notification_to_user(self, user_id: str, message: Message):
         self.background_tasks.add_task(
             messaging.send,
-            messaging.Message(
-                notification=messaging.Notification(
-                    title=title,
-                    body=body,
-                ),
-                token=user_id,
+            self.notification_manager.send_notification_to_user_manager(
+                user_id,
+                message.title,
+                message.content,
+                self.db,
             ),
         )
 
-    def send_notification_to_topic(
+    async def send_notification_to_topic(
         self,
-        title: str,
-        body: str,
-        topic: str,
+        topic: CustomTopic,
+        message: Message,
     ):
         self.background_tasks.add_task(
             messaging.send,
             messaging.Message(
                 notification=messaging.Notification(
-                    title=title,
-                    body=body,
+                    title=message.title,
+                    body=message.content,
                 ),
-                topic=topic,
+                topic=topic.to_str(),
             ),
         )

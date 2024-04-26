@@ -10,8 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
-from app.core.notification.notification_types import CustomTopic
-from app.core.notification.schemas_notification import Message
+from app.core.notification.notification_types import CustomTopic, Message, Topic
 from app.core.users import cruds_users
 from app.core.users.endpoints_users import read_user
 from app.dependencies import (
@@ -723,10 +722,13 @@ async def open_ordering_of_delivery(
     await cruds_amap.open_ordering_of_delivery(delivery_id=delivery_id, db=db)
 
     try:
+        message = Message(
+            title="AMAP - Nouvelle livraison disponible",
+            content="Viens commander !",
+        )
         notification_tool.send_notification_to_topic(
-            "AMAP - Nouvelle livraison disponible",
-            "Viens commander !",
-            "amap",
+            CustomTopic(topic=Topic.amap),
+            message,
         )
     except Exception as error:
         hyperion_error_logger.error(f"Error while sending AMAP notification, {error}")
@@ -898,24 +900,23 @@ async def create_cash_of_user(
 
     # We can not directly return the cash_db because it does not contain the user.
     # Calling get_cash_by_id will return the cash with the user loaded as it's a relationship.
-    result = await cruds_amap.get_cash_by_id(
+    await cruds_amap.get_cash_by_id(
         user_id=user_id,
         db=db,
     )
-
     try:
-        if result:
-            message = Message(
-                notification=messaging.Notification(
-                    title="AMAP - Solde mis à jour",
-                    body=f"Votre nouveau solde est de {result.balance} €.",
-                ),
-            )
-            messaging.send(message, token=user_db.firebase_token)
+        message = (
+            Message(
+                title="AMAP - Solde mis à jour",
+                content=f"Votre nouveau solde est de {cash} €.",
+            ),
+        )
+        notification_tool.send_notification_to_user(
+            user_id,
+            message,
+        )
     except Exception as error:
         hyperion_error_logger.error(f"Error while sending AMAP notification, {error}")
-
-    return result
 
 
 @module.router.patch(
@@ -928,6 +929,7 @@ async def edit_cash_by_id(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
     request_id: str = Depends(get_request_id),
+    notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
     Edit cash for an user. This will add the balance to the current balance.
@@ -947,6 +949,23 @@ async def edit_cash_by_id(
         )
 
     await cruds_amap.add_cash(user_id=user_id, amount=balance.balance, db=db)
+
+    try:
+        hyperion_amap_logger.info(
+            "salut",
+        )
+        message = (
+            Message(
+                title="AMAP - Solde mis à jour",
+                content=f"Votre nouveau solde est de {cash} €.",
+            ),
+        )
+        notification_tool.send_notification_to_user(
+            user_id,
+            message,
+        )
+    except Exception as error:
+        hyperion_error_logger.error(f"Error while sending AMAP notification, {error}")
 
     hyperion_amap_logger.info(
         f"Edit_cash_by_id: Cash has been updated for user {cash.user_id} from an amount of {cash.balance}€ to an amount of {balance.balance}€. ({request_id})",
