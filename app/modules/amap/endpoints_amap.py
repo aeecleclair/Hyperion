@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
+from app.core.notification.notification_types import CustomTopic
 from app.core.notification.schemas_notification import Message
 from app.core.users import cruds_users
 from app.core.users.endpoints_users import read_user
@@ -707,6 +708,7 @@ async def open_ordering_of_delivery(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
+    notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
     if delivery is None:
@@ -721,14 +723,11 @@ async def open_ordering_of_delivery(
     await cruds_amap.open_ordering_of_delivery(delivery_id=delivery_id, db=db)
 
     try:
-        message = messaging.Message(
-            notification=messaging.Notification(
-                title="AMAP - Nouvelle livraison disponible",
-                body="Viens commander !",
-            ),
-            topic="amap",
+        notification_tool.send_notification_to_topic(
+            "AMAP - Nouvelle livraison disponible",
+            "Viens commander !",
+            "amap",
         )
-        messaging.send(message)
     except Exception as error:
         hyperion_error_logger.error(f"Error while sending AMAP notification, {error}")
 
