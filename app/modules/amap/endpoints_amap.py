@@ -951,9 +951,6 @@ async def edit_cash_by_id(
     await cruds_amap.add_cash(user_id=user_id, amount=balance.balance, db=db)
 
     try:
-        hyperion_amap_logger.info(
-            "salut",
-        )
         message = (
             Message(
                 title="AMAP - Solde mis à jour",
