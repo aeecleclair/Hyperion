@@ -11,6 +11,7 @@ from app.core.notification import (
     schemas_notification,
 )
 from app.core.notification.notification_types import CustomTopic, Topic
+from app.core.notification.schemas_notification import Message
 from app.dependencies import (
     get_db,
     get_notification_manager,
@@ -289,7 +290,6 @@ async def get_topic_identifier(
     status_code=201,
 )
 async def send_notification(
-    message: schemas_notification.Message,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
@@ -298,6 +298,15 @@ async def send_notification(
 
     **Only admins can use this endpoint**
     """
+    now = datetime.now(UTC)
+    message = Message(
+        context="Test",
+        is_visible=True,
+        title="Test notification",
+        content="Ceci est un test de notification",
+        # The notification will expire in 3 days
+        expire_on=now.replace(day=now.day + 3),
+    )
     await notification_tool.send_notification_to_user(
         user_id=user.id,
         message=message,
