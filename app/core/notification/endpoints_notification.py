@@ -299,7 +299,7 @@ async def send_notification(
     **Only admins can use this endpoint**
     """
     now = datetime.now(UTC)
-    message = Message(
+    message = schemas_notification.Message(
         context="Test",
         is_visible=True,
         title="Test notification",
