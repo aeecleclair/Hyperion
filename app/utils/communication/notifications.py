@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
 from app.core.notification import cruds_notification, models_notification
-from app.core.notification.notification_types import CustomTopic
+from app.core.notification.notification_types import CustomTopic, TopicMessage
 from app.core.notification.schemas_notification import Message
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
@@ -142,56 +142,6 @@ class NotificationManager:
         # See https://stackoverflow.com/questions/59298850/firebase-messaging-background-message-handler-method-not-called-when-the-app
         await self._send_firebase_push_notification_by_tokens(tokens=tokens, db=db)
 
-    def _send_firebase_push_notification_by_topic(
-        self,
-        custom_topic: CustomTopic,
-    ):
-        """
-        Send a firebase push notification for a given topic.
-
-        Prefer using `self._send_firebase_trigger_notification_by_topic` to send a trigger notification.
-        """
-
-        if not self.use_firebase:
-            return
-
-        # Set high priority for android, and background notification for iOS
-        # This allow to ensure that the notification will be processed in the background
-        # See https://firebase.google.com/docs/cloud-messaging/concept-options#setting-the-priority-of-a-message
-        # And https://developer.apple.com/documentation/usernotifications/setting_up_a_remote_notification_server/pushing_background_updates_to_your_app
-        androidconfig = messaging.AndroidConfig(priority="high")
-        apnsconfig = messaging.APNSConfig(
-            headers={"apns-priority": "5", "apns-push-type": "background"},
-            payload=messaging.APNSPayload(aps=messaging.Aps(content_available=True)),
-        )
-        message = messaging.Message(
-            topic=custom_topic.to_str(),
-            android=androidconfig,
-            apns=apnsconfig,
-        )
-        try:
-            messaging.send(message)
-        except messaging.FirebaseError as error:
-            hyperion_error_logger.error(
-                f"Notification: Unable to send firebase notification for topic {custom_topic}: {error}",
-            )
-            raise
-
-    def _send_firebase_trigger_notification_by_topic(self, custom_topic: CustomTopic):
-        """
-        Send a firebase trigger notification for a given topic.
-
-        Send a firebase trigger notification to a list of tokens.
-        This approach let the application know that a new notification is available,
-        without sending the content of the notification.
-        This is better for privacy and RGPD compliance.
-        """
-
-        # Push without any data or notification may not be processed by the app in the background.
-        # We thus need to send a data object with a dummy key to make sure the notification is processed.
-        # See https://stackoverflow.com/questions/59298850/firebase-messaging-background-message-handler-method-not-called-when-the-app
-        self._send_firebase_push_notification_by_topic(custom_topic=custom_topic)
-
     async def subscribe_tokens_to_topic(
         self,
         custom_topic: CustomTopic,
@@ -290,51 +240,6 @@ class NotificationManager:
         except Exception as error:
             hyperion_error_logger.warning(
                 f"Notification: Unable to send firebase notification to user {user_id} with device: {error}",
-            )
-
-    async def send_notification_to_topic(
-        self,
-        custom_topic: CustomTopic,
-        message: Message,
-        db: AsyncSession,
-    ) -> None:
-        """
-        Send a notification for a given topic.
-        This utils will find all users devices subscribed to the topic and send a firebase "trigger" notification for the topic.
-        This notification will prompte Titan to query the API to get the notification content.
-
-        The "trigger" notification will only be send if firebase is correctly configured.
-        """
-        if not self.use_firebase:
-            return
-
-        # Get all firebase_device_token related to the user
-        topic_memberships = await cruds_notification.get_topic_memberships_by_topic(
-            custom_topic=custom_topic,
-            db=db,
-        )
-
-        firebase_tokens = []
-        for membership in topic_memberships:
-            firebase_devices = await cruds_notification.get_firebase_devices_by_user_id(
-                user_id=membership.user_id,
-                db=db,
-            )
-
-            for device in firebase_devices:
-                firebase_tokens.append(device.firebase_device_token)
-
-        await self._add_message_for_user_in_database(
-            message=message,
-            tokens=firebase_tokens,
-            db=db,
-        )
-
-        try:
-            self._send_firebase_trigger_notification_by_topic(custom_topic=custom_topic)
-        except Exception as error:
-            hyperion_error_logger.warning(
-                f"Notification: Unable to send firebase notification for topic {custom_topic}: {error}",
             )
 
     async def subscribe_user_to_topic(
@@ -442,14 +347,17 @@ class NotificationTool:
             db=self.db,
         )
 
-    async def send_notification_to_topic(
+    def send_notification_to_topic(
         self,
         custom_topic: CustomTopic,
-        message: Message,
+        message: TopicMessage,
     ):
-        self.background_tasks.add_task(
-            self.notification_manager.send_notification_to_topic,
-            custom_topic=custom_topic,
-            message=message,
-            db=self.db,
+        messaging.send(
+            messaging.Message(
+                notification=messaging.Notification(
+                    title=message.title,
+                    body=message.content,
+                ),
+                topic=custom_topic.to_str(),
+            ),
         )
