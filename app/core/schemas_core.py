@@ -95,6 +95,7 @@ class CoreUserUpdateAdmin(BaseModel):
     birthday: date | None = None
     phone: str | None = None
     floor: FloorsType | None = None
+    external: bool | None = None
 
     _normalize_name = field_validator("name")(validators.trailing_spaces_remover)
     _normalize_firstname = field_validator("firstname")(
@@ -133,6 +134,7 @@ class CoreBatchUserCreateRequest(BaseModel):
 
     email: str
     account_type: AccountType
+    external: bool = False
 
     # Email normalization, this will modify the email variable
     # https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
