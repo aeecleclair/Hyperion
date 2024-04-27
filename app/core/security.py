@@ -23,6 +23,7 @@ oauth2_scheme = OAuth2AuthorizationCodeBearer(
     authorizationUrl="/auth/authorize",
     tokenUrl="/auth/token",
     scheme_name="AuthorizationCodeAuthentication",
+    scopes={"API": "Access Hyperion endpoints"},
 )
 """
 To generate JWT access tokens, we use a *FastAPI* OAuth2PasswordBearer object.
