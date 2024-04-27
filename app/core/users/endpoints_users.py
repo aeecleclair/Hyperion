@@ -149,6 +149,9 @@ async def create_user_by_user(
     When creating **student** or **staff** account a valid ECL email is required.
     Only admin users can create other **account types**, contact ÉCLAIR for more information.
     """
+    # By default we mark the user as external
+    # but if it has an ECL email address, we will mark it as member
+    external = True
     # Check the account type
 
     # For staff and student
@@ -161,18 +164,21 @@ async def create_user_by_user(
     if re.match(r"^[\w\-.]*@(enise\.)?ec-lyon\.fr$", user_create.email):
         # Its a staff email address
         account_type = AccountType.staff
+        external = False
     elif re.match(
         r"^[\w\-.]*@etu(-enise)?\.ec-lyon\.fr$",
         user_create.email,
     ):
         # Its a student email address
         account_type = AccountType.student
+        external = False
     elif re.match(
         r"^[\w\-.]*@centraliens-lyon\.net$",
         user_create.email,
     ):
         # Its a former student email address
         account_type = AccountType.formerstudent
+        external = False
     elif user_create.external:
         account_type = AccountType.external
     else:
@@ -213,6 +219,7 @@ async def create_user_by_user(
             db=db,
             settings=settings,
             request_id=request_id,
+            external=external,
         )
     except Exception as error:
         raise HTTPException(status_code=400, detail=str(error))
@@ -255,6 +262,7 @@ async def batch_create_users(
                 db=db,
                 settings=settings,
                 request_id=request_id,
+                external=user_create.external,
             )
         except Exception as error:
             failed[user_create.email] = str(error)
@@ -269,6 +277,7 @@ async def create_user(
     db: AsyncSession,
     settings: Settings,
     request_id: str,
+    external: bool,
 ) -> None:
     """
     User creation process. This function is used by both `/users/create` and `/users/admin/create` endpoints
@@ -293,6 +302,7 @@ async def create_user(
         created_on=datetime.now(UTC),
         expire_on=datetime.now(UTC)
         + timedelta(hours=settings.USER_ACTIVATION_TOKEN_EXPIRE_HOURS),
+        external=external,
     )
 
     await cruds_users.create_unconfirmed_user(user_unconfirmed=user_unconfirmed, db=db)
@@ -424,6 +434,7 @@ async def activate_user(
         phone=user.phone,
         floor=user.floor,
         created_on=datetime.now(UTC),
+        external=unconfirmed_user.external,
     )
     # We add the new user to the database
     try:

@@ -55,9 +55,9 @@ def is_user_external(
     user: CoreUser,
 ):
     """
-    External users are allowed to register them self without an ECL email address.
+    Users that are not members won't be able to use all features
     """
-    return is_user_member_of_an_allowed_group(user, [GroupType.external])
+    return user.external is True
 
 
 def fuzzy_search_user(
