@@ -113,9 +113,9 @@ class CoreUserCreateRequest(BaseModel):
     """
 
     email: str
-    external: bool = Field(
+    accept_external: bool = Field(
         False,
-        description="An external user may not have an ECL email address. He won't be able to access most features. This setting will be override if the user have an ecl email address.",
+        description="An external user may not have an ECL email address. He won't be able to access most features. The external status of the user will be determined by the user information.",
     )
 
     # Email normalization, this will modify the email variable

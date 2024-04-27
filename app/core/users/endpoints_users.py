@@ -187,6 +187,13 @@ async def create_user_by_user(
             detail="Invalid ECL email address.",
         )
 
+    if not user_create.accept_external:
+        if external:
+            raise HTTPException(
+                status_code=400,
+                detail="The user could not be marked as external. Try to add accept_external=True in the request or use an internal email address.",
+            )
+
     # Make sure a confirmed account does not already exist
     db_user = await cruds_users.get_user_by_email(db=db, email=user_create.email)
     if db_user is not None:
