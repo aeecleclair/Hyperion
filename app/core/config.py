@@ -203,6 +203,12 @@ class Settings(BaseSettings):
                 raise ValueError(
                     f".env AUTH_CLIENTS is invalid: {auth_client_name} is not an auth_client from app.utils.auth.providers",
                 ) from error
+            if auth_client_class.deprecated:
+                # The client is deprecated, we wont enable it
+                cls.DEPRECATED_SETTINGS.append(
+                    f"The auth client {client_id} {auth_client_name} is deprecated, it won't be enabled and may be removed in the future.",
+                )
+                continue
             # If the secret is empty, this mean the client is expected to use PKCE
             # We need to pass a None value to the auth_client_class
             if not secret:
@@ -215,6 +221,8 @@ class Settings(BaseSettings):
             )
 
         return clients
+
+    DEPRECATED_SETTINGS: list[str] = []
 
     #######################################
     #          Fields validation          #
