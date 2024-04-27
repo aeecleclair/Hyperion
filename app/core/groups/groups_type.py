@@ -16,8 +16,7 @@ class GroupType(str, Enum):
     formerstudent = "ab4c7503-41b3-11ee-8177-089798f1a4a5"
     staff = "703056c4-be9d-475c-aa51-b7fc62a96aaa"
     association = "29751438-103c-42f2-b09b-33fbb20758a7"
-    external = "b1cd979e-ecc1-4bd0-bc2b-4dad2ba8cded"  # NOTE: external users are allowed to register with any email adresse, they should not be able to access any internal data
-    choosenexternal = "abb4090c-7d65-42a5-b069-c65bc268daab"  # NOTE: choosenexternal users can only be registered by an admin
+    external = "b1cd979e-ecc1-4bd0-bc2b-4dad2ba8cded"
     demo = "ae4d1866-e7d9-4d7f-bee7-e0dda24d8dd8"
 
     # Core groups
