@@ -284,10 +284,6 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     ):
         hyperion_error_logger.info("Redis client not configured")
 
-    if len(settings.DEPRECATED_SETTINGS) > 0:
-        for depreciation in settings.DEPRECATED_SETTINGS:
-            hyperion_error_logger.warning("DEPRECIATION NOTICE : " + depreciation)
-
     @app.middleware("http")
     async def logging_middleware(
         request: Request,

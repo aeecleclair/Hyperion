@@ -43,10 +43,6 @@ class BaseAuthClient:
     # By setting this parameter to True, the userinfo will be added to the id_token.
     return_userinfo_in_id_token: bool = False
 
-    # Marking a client as deprecated will prevent it from being used.
-    # A warning will be displayed in the logs on Hyperion startup.
-    deprecated: bool = False
-
     def get_userinfo(self, user: models_core.CoreUser) -> dict[str, Any]:
         """
         Return information about the user in a format understandable by the client.
@@ -102,22 +98,20 @@ class AppAuthClient(BaseAuthClient):
     allowed_groups: list[GroupType] | None = None
 
 
-class PostmanAuthClient(BaseAuthClient):
-    """
-    An auth client for Postman
-
-    Deprecated: use APIToolAuthClient
-    """
-
-    deprecated: bool = True
-
-
 class APIToolAuthClient(BaseAuthClient):
     """
     An auth client for API development tools
     """
 
     allowed_scopes: set[ScopeType | str] = {ScopeType.API}
+
+
+class PostmanAuthClient(APIToolAuthClient):
+    """
+    An auth client for Postman
+
+    Deprecated: use APIToolAuthClient
+    """
 
 
 class NextcloudAuthClient(BaseAuthClient):
