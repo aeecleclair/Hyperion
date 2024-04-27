@@ -106,14 +106,6 @@ class APIToolAuthClient(BaseAuthClient):
     allowed_scopes: set[ScopeType | str] = {ScopeType.API}
 
 
-class PostmanAuthClient(APIToolAuthClient):
-    """
-    An auth client for Postman
-
-    Deprecated: use APIToolAuthClient
-    """
-
-
 class NextcloudAuthClient(BaseAuthClient):
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.types.scopes_type.ScopeType for possible values
