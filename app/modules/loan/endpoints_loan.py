@@ -616,7 +616,7 @@ async def create_loan(
         )
 
     try:
-        now = datetime.now(ZoneInfo(settings.TIMEZONE))
+        now = datetime.now(UTC)
         message = Message(
             context=f"loan-new-{loan.id}",
             is_visible=True,
@@ -630,7 +630,7 @@ async def create_loan(
         )
     except Exception as error:
         hyperion_error_logger.error(
-            f"Error while sending notification to borrower of a new loan, {error}"
+            f"Error while sending notification to borrower of a new loan, {error}",
         )
 
     return schemas_loan.Loan(items_qty=items_qty_ret, **loan.__dict__)

@@ -270,10 +270,11 @@ async def create_booking(
     try:
         manager_group_id = result.room.manager.group_id
         manager_group = await cruds_groups.get_group_by_id(
-            db=db, group_id=manager_group_id
+            db=db,
+            group_id=manager_group_id,
         )
         if result and manager_group:
-            now = datetime.now(ZoneInfo(settings.TIMEZONE))
+            now = datetime.now(UTC)
             message = Message(
                 context=f"booking-create-{result.id}",
                 is_visible=True,
@@ -287,7 +288,7 @@ async def create_booking(
             )
     except Exception as error:
         hyperion_error_logger.error(
-            f"Error while sending booking admin notification, {error}"
+            f"Error while sending booking admin notification, {error}",
         )
 
     return result
@@ -369,7 +370,7 @@ async def confirm_booking(
 
     if decision in [Decision.approved, Decision.declined]:
         try:
-            now = datetime.now(ZoneInfo(settings.TIMEZONE))
+            now = datetime.now(UTC)
             status = "acceptée" if decision == Decision.approved else "refusée"
             message = Message(
                 context=f"booking-decision-{booking_id}",
@@ -384,7 +385,7 @@ async def confirm_booking(
             )
         except Exception as error:
             hyperion_error_logger.error(
-                f"Error while sending booking status notification to applicant, {error}"
+                f"Error while sending booking status notification to applicant, {error}",
             )
 
 

@@ -4,8 +4,12 @@ from app.core import models_core
 from app.core.groups.groups_type import GroupType
 
 # We need to import event_loop for pytest-asyncio routine defined bellow
-from tests.commons import event_loop  # noqa
-from tests.commons import client, create_api_access_token, create_user_with_groups
+from tests.commons import (
+    client,
+    create_api_access_token,
+    create_user_with_groups,
+    event_loop,  # noqa
+)
 
 admin_user: models_core.CoreUser | None = None
 admin_user_token: str = ""
@@ -21,7 +25,6 @@ TOPIC_4 = "cinema_notsubscribed"
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects():
-
     global admin_user, admin_user_token
     admin_user = await create_user_with_groups([GroupType.admin])
     admin_user_token = create_api_access_token(admin_user)
