@@ -222,8 +222,7 @@ def use_route_path_as_operation_ids(app: FastAPI) -> None:
     for route in app.routes:
         if isinstance(route, APIRoute):
             # The operation_id should be unique.
-
-            # We currently never have more than one method per route
+            # It is possible to set multiple methods for the same endpoint method but it's not considered a good practice.
             method = "_".join(route.methods)
             route.operation_id = method.lower() + route.path.replace("/", "_")
 
