@@ -211,10 +211,21 @@ def initialize_module_visibility(engine: Engine) -> None:
 
 
 def use_route_path_as_operation_ids(app: FastAPI) -> None:
-    """Simplify operation IDs so that generated API clients have simpler function names."""
+    """
+    Simplify operation IDs so that generated API clients have simpler function names.
+
+    Theses names may be used by API clients to generate function names.
+    The operation_id will have the format "method_path", like "get_users_me".
+
+    See https://fastapi.tiangolo.com/advanced/path-operation-advanced-configuration/
+    """
     for route in app.routes:
         if isinstance(route, APIRoute):
-            route.operation_id = route.path
+            # The operation_id should be unique.
+
+            # We currently never have more than one method per route
+            method = "_".join(route.methods)
+            route.operation_id = method.lower() + route.path.replace("/", "_")
 
 
 # We wrap the application in a function to be able to pass the settings and drop_db parameters
