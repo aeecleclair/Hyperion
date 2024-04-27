@@ -58,7 +58,7 @@ def test_upgrade(
     alembic_connection: sa.Connection,
 ) -> None:
     rows = alembic_connection.execute(
-        sa.text("SELECT id from recommendation")
+        sa.text("SELECT id from recommendation"),
     ).fetchall()
 
     assert ("66c363bc-c71f-4eae-8376-c37712a312f6",) in rows
