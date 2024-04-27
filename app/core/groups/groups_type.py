@@ -58,4 +58,5 @@ def get_ecl_groups() -> list[GroupType]:
         GroupType.staff,
         GroupType.student,
         GroupType.association,
+        GroupType.admin,
     ]
