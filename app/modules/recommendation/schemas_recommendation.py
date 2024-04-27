@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
@@ -11,7 +12,7 @@ class RecommendationBase(BaseModel):
 
 
 class Recommendation(RecommendationBase):
-    id: str
+    id: uuid.UUID
     creation: datetime
 
     model_config = ConfigDict(from_attributes=True)

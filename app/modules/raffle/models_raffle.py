@@ -4,8 +4,8 @@ from sqlalchemy import Enum, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.models_core import CoreGroup, CoreUser
-from app.database import Base
 from app.modules.raffle.types_raffle import RaffleStatusType
+from app.types.sqlalchemy import Base
 
 
 class Raffle(Base):

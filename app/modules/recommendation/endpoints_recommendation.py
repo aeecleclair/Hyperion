@@ -69,7 +69,7 @@ async def create_recommendation(
     """
 
     recommendation_db = models_recommendation.Recommendation(
-        id=str(uuid.uuid4()),
+        id=uuid.uuid4(),
         creation=datetime.now(UTC),
         **recommendation.model_dump(),
     )
@@ -85,7 +85,7 @@ async def create_recommendation(
     status_code=204,
 )
 async def edit_recommendation(
-    recommendation_id: str,
+    recommendation_id: uuid.UUID,
     recommendation: schemas_recommendation.RecommendationEdit,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
@@ -111,7 +111,7 @@ async def edit_recommendation(
     status_code=204,
 )
 async def delete_recommendation(
-    recommendation_id: str,
+    recommendation_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
 ):
@@ -136,7 +136,7 @@ async def delete_recommendation(
     status_code=200,
 )
 async def read_recommendation_image(
-    recommendation_id: str,
+    recommendation_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
@@ -156,7 +156,7 @@ async def read_recommendation_image(
     return get_file_from_data(
         default_asset="assets/images/default_recommendation.png",
         directory="recommendations",
-        filename=recommendation_id,
+        filename=str(recommendation_id),
     )
 
 
@@ -166,7 +166,7 @@ async def read_recommendation_image(
     status_code=201,
 )
 async def create_recommendation_image(
-    recommendation_id: str,
+    recommendation_id: uuid.UUID,
     image: UploadFile = File(),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
     request_id: str = Depends(get_request_id),

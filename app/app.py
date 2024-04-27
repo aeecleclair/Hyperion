@@ -24,8 +24,8 @@ from app.core import models_core
 from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
 from app.core.log import LogConfig
-from app.database import Base
 from app.dependencies import get_db_engine, get_redis_client, get_settings
+from app.types.sqlalchemy import Base
 from app.utils import initialization
 from app.utils.redis import limiter
 

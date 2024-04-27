@@ -3,8 +3,7 @@ from datetime import datetime
 from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.database import Base
-from app.types.sqlalchemy import TZDateTime
+from app.types.sqlalchemy import Base, TZDateTime
 
 
 class AuthorizationCode(Base):

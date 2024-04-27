@@ -29,7 +29,7 @@ async def init_objects():
 
     global recommendation
     recommendation = models_recommendation.Recommendation(
-        id=str(uuid.uuid4()),
+        id=uuid.uuid4(),
         creation=datetime.now(UTC),
         title="Un titre",
         code="Un code",
@@ -51,8 +51,9 @@ def test_create_picture():
 
 def test_create_picture_for_non_existing_recommendation():
     with Path.open("assets/images/default_recommendation.png", "rb") as image:
+        false_id = "be3017e8-ae8b-4488-a21a-41547c9cc846"
         response = client.post(
-            "/recommendation/recommendations/false_id/picture",
+            f"/recommendation/recommendations/{false_id}/picture",
             files={"image": ("recommendation.png", image, "image/png")},
             headers={"Authorization": f"Bearer {token_BDE}"},
         )
@@ -117,8 +118,9 @@ def test_edit_recommendation_with_no_body():
 
 
 def test_edit_for_non_existing_recommendation():
+    false_id = "098cdfb7-609a-493f-8d5a-47bbdba213da"
     response = client.patch(
-        "/recommendation/recommendations/false_id",
+        f"/recommendation/recommendations/{false_id}",
         json={"title": "Nouveau titre"},
         headers={"Authorization": f"Bearer {token_BDE}"},
     )
@@ -134,8 +136,9 @@ def test_delete_recommendation():
 
 
 def test_delete_for_non_existing_recommendation():
+    false_id = "cfba17a6-58b8-4595-afb9-3c9e4e169a14"
     response = client.delete(
-        "/recommendation/recommendations/false_id",
+        f"/recommendation/recommendations/{false_id}",
         headers={"Authorization": f"Bearer {token_BDE}"},
     )
     assert response.status_code == 404

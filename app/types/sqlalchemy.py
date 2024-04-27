@@ -1,6 +1,9 @@
 import datetime
+import uuid
+from typing import Annotated
 
-from sqlalchemy import DateTime
+from sqlalchemy import DateTime, types
+from sqlalchemy.orm import DeclarativeBase, mapped_column
 from sqlalchemy.types import TypeDecorator
 
 
@@ -27,3 +30,21 @@ class TZDateTime(TypeDecorator):
         if value is not None:
             value = value.replace(tzinfo=datetime.UTC)
         return value
+
+
+# Pre-configured field type for UUID primary key (see https://docs.sqlalchemy.org/en/20/orm/declarative_tables.html#mapping-whole-column-declarations-to-python-types)
+PrimaryKey = Annotated[uuid.UUID, mapped_column(primary_key=True)]
+
+
+class Base(DeclarativeBase):
+    """Base class for all models.
+
+    The type map is overriden to use our custom datetime type (see https://docs.sqlalchemy.org/en/20/orm/declarative_tables.html#customizing-the-type-map)"""
+
+    type_annotation_map = {
+        bool: types.Boolean(),
+        datetime.date: types.Date(),
+        datetime.datetime: TZDateTime(),
+        str: types.String(),
+        uuid.UUID: types.Uuid(),
+    }

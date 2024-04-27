@@ -4,8 +4,7 @@ from sqlalchemy import Boolean, Date, Enum, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.notification.notification_types import Topic
-from app.database import Base
-from app.types.sqlalchemy import TZDateTime
+from app.types.sqlalchemy import Base, TZDateTime
 
 
 class Message(Base):
