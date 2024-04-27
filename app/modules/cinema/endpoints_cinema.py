@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import models_core, standard_responses
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
-from app.core.notification.notification_types import CustomTopic, Topic
+from app.core.notification.notification_types import CustomTopic, Topic, TopicMessage
 from app.core.notification.schemas_notification import Message
 from app.dependencies import (
     get_db,
@@ -65,60 +65,46 @@ async def create_session(
         result = await cruds_cinema.create_session(session=db_session, db=db)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
-    if notification_tool.notification_manager.use_firebase:
-        try:
-            days = [
-                "Lundi",
-                "Mardi",
-                "Mercredi",
-                "Jeudi",
-                "Vendredi",
-                "Samedi",
-                "Dimanche",
-            ]
-            months = [
-                "Janvier",
-                "Février",
-                "Mars",
-                "Avril",
-                "Mai",
-                "Juin",
-                "Juillet",
-                "Août",
-                "Septembre",
-                "Octobre",
-                "Novembre",
-                "Décembre",
-            ]
-            french_hour = db_session.start.astimezone(ZoneInfo("Europe/Paris"))
-            message_content = (
-                db_session.name
-                + " - "
-                + days[db_session.start.weekday()]
-                + " "
-                + db_session.start.strftime("%d")
-                + " "
-                + months[db_session.start.month - 1]
-                + " à "
-                + french_hour.strftime("%H:%M")
-            )
-            message = Message(
-                context=f"new-booking-{id}",
-                is_visible=True,
-                title="🎬 Cinéma - Nouvelle séance",
-                content=message_content,
-                # The notification will expire in 3 days
-                expire_on=datetime.now(UTC) + timedelta(days=3),
-            )
-            await notification_tool.send_notification_to_topic(
-                custom_topic=CustomTopic(Topic.cinema),
-                message=message,
-            )
 
-        except Exception as error:
-            hyperion_error_logger.error(
-                f"Error while sending CINEMA notification, {error}"
-            )
+    try:
+        days = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]
+        months = [
+            "Janvier",
+            "Février",
+            "Mars",
+            "Avril",
+            "Mai",
+            "Juin",
+            "Juillet",
+            "Août",
+            "Septembre",
+            "Octobre",
+            "Novembre",
+            "Décembre",
+        ]
+        message_content = (
+            db_session.name
+            + " - "
+            + days[db_session.start.weekday()]
+            + " "
+            + db_session.start.strftime("%d")
+            + " "
+            + months[db_session.start.month - 1]
+            + " à "
+            + db_session.start.strftime("%H:%M")
+        )
+        message = TopicMessage(
+            title="🎬 Cinéma - Nouvelle séance",
+            content=message_content,
+        )
+
+        notification_tool.send_notification_to_topic(
+            custom_topic=CustomTopic(Topic.cinema),
+            message=message,
+        )
+
+    except Exception as error:
+        hyperion_error_logger.error(f"Error while sending CINEMA notification, {error}")
 
     return result
 
