@@ -115,7 +115,7 @@ class CoreUserCreateRequest(BaseModel):
     email: str
     accept_external: bool = Field(
         False,
-        description="An external user may not have an ECL email address. He won't be able to access most features. The external status of the user will be determined by the user information.",
+        description="Allow Hyperion to create an external user. Without this, Hyperion will only allow non external students to be created. The email address will be used to determine if the user should be external or not. An external user may not have an ECL email address, he won't be able to access most features.",
     )
 
     # Email normalization, this will modify the email variable

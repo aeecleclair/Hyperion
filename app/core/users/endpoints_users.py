@@ -179,7 +179,7 @@ async def create_user_by_user(
         # Its a former student email address
         account_type = AccountType.formerstudent
         external = False
-    elif user_create.external:
+    elif user_create.accept_external:
         account_type = AccountType.external
     else:
         raise HTTPException(
