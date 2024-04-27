@@ -43,7 +43,7 @@ class CoreUser(Base):
     # - accounts meant to be used by external services based on Hyperion SSO or Hyperion backend
     # - new users that need to do additional steps before being able to all features,
     #   like using a specific email address, going through an inscription process or being manually validated
-    external: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    external: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     # We use list["CoreGroup"] with quotes as CoreGroup is only defined after this class
     # Defining CoreUser after CoreGroup would cause a similar issue
@@ -67,7 +67,7 @@ class CoreUserUnconfirmed(Base):
     activation_token: Mapped[str] = mapped_column(String, nullable=False)
     created_on: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
     expire_on: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
-    external: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    external: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
 
 class CoreUserRecoverRequest(Base):
