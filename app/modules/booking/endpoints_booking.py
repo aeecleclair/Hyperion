@@ -3,7 +3,6 @@ import uuid
 from datetime import UTC, datetime
 
 from fastapi import Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
@@ -11,7 +10,7 @@ from app.core.module import Module
 from app.core.notification.notification_types import CustomTopic, Topic
 from app.core.notification.schemas_notification import Message
 from app.dependencies import (
-    get_db,
+    Database,
     get_notification_tool,
     get_settings,
     is_user_a_member,
@@ -37,7 +36,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
     status_code=200,
 )
 async def get_managers(
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
@@ -56,7 +55,7 @@ async def get_managers(
 )
 async def create_manager(
     manager: schemas_booking.ManagerBase,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
@@ -91,7 +90,7 @@ async def create_manager(
 async def update_manager(
     manager_id: str,
     manager_update: schemas_booking.ManagerUpdate,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
@@ -123,7 +122,7 @@ async def update_manager(
 )
 async def delete_manager(
     manager_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
@@ -148,8 +147,8 @@ async def delete_manager(
     status_code=200,
 )
 async def get_current_user_managers(
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     Return all managers the current user is a member.
@@ -166,8 +165,8 @@ async def get_current_user_managers(
     status_code=200,
 )
 async def get_bookings_for_manager(
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     Return all bookings a user can manage.
@@ -188,8 +187,8 @@ async def get_bookings_for_manager(
     status_code=200,
 )
 async def get_confirmed_bookings_for_manager(
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     Return all confirmed bookings a user can manage.
@@ -209,8 +208,8 @@ async def get_confirmed_bookings_for_manager(
     status_code=200,
 )
 async def get_confirmed_bookings(
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     Return all confirmed bookings.
@@ -229,8 +228,8 @@ async def get_confirmed_bookings(
     status_code=200,
 )
 async def get_applicant_bookings(
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     Get the user bookings.
@@ -248,8 +247,8 @@ async def get_applicant_bookings(
 )
 async def create_booking(
     booking: schemas_booking.BookingBase,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
@@ -297,8 +296,8 @@ async def create_booking(
 async def edit_booking(
     booking_id: str,
     booking_edit: schemas_booking.BookingEdit,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     Edit a booking.
@@ -336,8 +335,8 @@ async def edit_booking(
 async def confirm_booking(
     booking_id: str,
     decision: Decision,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     Give a decision to a booking.
@@ -369,8 +368,8 @@ async def confirm_booking(
 )
 async def delete_booking(
     booking_id: str,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     Remove a booking.
@@ -399,8 +398,8 @@ async def delete_booking(
     status_code=200,
 )
 async def get_rooms(
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     Get all rooms.
@@ -418,7 +417,7 @@ async def get_rooms(
 )
 async def create_room(
     room: schemas_booking.RoomBase,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
@@ -444,7 +443,7 @@ async def create_room(
 async def edit_room(
     room_id: str,
     room: schemas_booking.RoomBase,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
@@ -462,7 +461,7 @@ async def edit_room(
 )
 async def delete_room(
     room_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
     settings=Depends(get_settings),
 ):

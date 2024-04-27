@@ -3,14 +3,14 @@ Various FastAPI [dependencies](https://fastapi.tiangolo.com/tutorial/dependencie
 
 They are used in endpoints function signatures. For example:
 ```python
-async def get_users(db: AsyncSession = Depends(get_db)):
+async def get_users(db: Database):
 ```
 """
 
 import logging
 from collections.abc import AsyncGenerator, Callable, Coroutine
 from functools import lru_cache
-from typing import Any
+from typing import Annotated, Any
 
 import redis
 from fastapi import BackgroundTasks, Depends, HTTPException, Request, status
@@ -59,6 +59,9 @@ async def get_request_id(request: Request) -> str:
     The request identifier is a unique UUID which is used to associate logs saved during the same request
     """
     return request.state.request_id
+
+
+RequestId = Annotated[str, Depends(get_request_id)]
 
 
 def get_db_engine(settings: Settings) -> AsyncEngine:
@@ -117,6 +120,9 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             await db.close()
 
 
+Database = Annotated[AsyncSession, Depends(get_db)]
+
+
 @lru_cache
 def get_settings() -> Settings:
     """
@@ -129,9 +135,11 @@ def get_settings() -> Settings:
 
 # (issue ouverte sur github: https://github.com/pydantic/pydantic/issues/3072)
 
+Settings_ = Annotated[Settings, Depends(get_settings)]
+
 
 def get_redis_client(
-    settings: Settings = Depends(get_settings),
+    settings: Settings_,
 ) -> redis.Redis | None | bool:
     """
     Dependency that returns the redis client
@@ -154,7 +162,7 @@ def get_redis_client(
 
 
 def get_notification_manager(
-    settings: Settings = Depends(get_settings),
+    settings: Settings_,
 ) -> NotificationManager:
     """
     Dependency that returns the notification manager.
@@ -172,7 +180,7 @@ def get_notification_manager(
 
 def get_notification_tool(
     background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     notification_manager: NotificationManager = Depends(get_notification_manager),
 ) -> NotificationTool:
     """
@@ -200,10 +208,10 @@ def get_user_from_token_with_scopes(
     """
 
     async def get_current_user(
-        db: AsyncSession = Depends(get_db),
-        settings: Settings = Depends(get_settings),
+        db: Database,
+        settings: Settings_,
         token: str = Depends(security.oauth2_scheme),
-        request_id: str = Depends(get_request_id),
+        request_id: RequestId,
     ) -> models_core.CoreUser:
         """
         Dependency that makes sure the token is valid, contains the expected scopes and returns the corresponding user.
@@ -273,6 +281,8 @@ def is_user_a_member(
     """
     return user
 
+MemberUser = Annotated[models_core.CoreUser, is_user_a_member]
+
 
 def is_user_a_member_of(
     group_id: GroupType,
@@ -288,7 +298,7 @@ def is_user_a_member_of(
         user: models_core.CoreUser = Depends(
             get_user_from_token_with_scopes([[ScopeType.API]]),
         ),
-        request_id: str = Depends(get_request_id),
+        request_id: RequestId,
     ) -> models_core.CoreUser:
         """
         A dependency that checks that user is a member of the group with the given id then returns the corresponding user.
@@ -310,9 +320,9 @@ def is_user_a_member_of(
 
 
 async def get_token_data(
-    settings: Settings = Depends(get_settings),
+    settings: Settings_,
     token: str = Depends(security.oauth2_scheme),
-    request_id: str = Depends(get_request_id),
+    request_id: RequestId,
 ) -> schemas_auth.TokenData:
     """
     Dependency that returns the token payload data

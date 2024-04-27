@@ -8,14 +8,14 @@ import logging
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, schemas_core
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
 from app.core.users import cruds_users
 from app.dependencies import (
-    get_db,
+    Database,
+    MemberUser,
     get_request_id,
     is_user_a_member,
     is_user_a_member_of,
@@ -32,8 +32,8 @@ hyperion_security_logger = logging.getLogger("hyperion.security")
     status_code=200,
 )
 async def read_groups(
-    db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     Return all groups from database as a list of dictionaries
@@ -52,7 +52,7 @@ async def read_groups(
 )
 async def read_group(
     group_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user=Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
@@ -74,7 +74,7 @@ async def read_group(
 )
 async def create_group(
     group: schemas_core.CoreGroupCreate,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user=Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
@@ -106,7 +106,7 @@ async def create_group(
 async def update_group(
     group_id: str,
     group_update: schemas_core.CoreGroupUpdate,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user=Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
@@ -140,9 +140,9 @@ async def update_group(
 )
 async def create_membership(
     membership: schemas_core.CoreMembership,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user=Depends(is_user_a_member_of(GroupType.admin)),
-    request_id: str = Depends(get_request_id),
+    request_id: RequestId,
 ):
     """
     Create a new membership in database and return the group. This allows to "add a user to a group".
@@ -180,9 +180,9 @@ async def create_membership(
 )
 async def create_batch_membership(
     batch_membership: schemas_core.CoreBatchMembership,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user=Depends(is_user_a_member_of(GroupType.admin)),
-    request_id: str = Depends(get_request_id),
+    request_id: RequestId,
 ):
     """
     Add a list of user to a group, using a list of email.
@@ -226,9 +226,9 @@ async def create_batch_membership(
 )
 async def delete_membership(
     membership: schemas_core.CoreMembershipDelete,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user=Depends(is_user_a_member_of(GroupType.admin)),
-    request_id: str = Depends(get_request_id),
+    request_id: RequestId,
 ):
     """
     Delete a membership using the user and group ids.
@@ -253,9 +253,9 @@ async def delete_membership(
 )
 async def delete_batch_membership(
     batch_membership: schemas_core.CoreBatchDeleteMembership,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user=Depends(is_user_a_member_of(GroupType.admin)),
-    request_id: str = Depends(get_request_id),
+    request_id: RequestId,
 ):
     """
     This endpoint removes all users from a given group.
@@ -286,7 +286,7 @@ async def delete_batch_membership(
 )
 async def delete_group(
     group_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user=Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """

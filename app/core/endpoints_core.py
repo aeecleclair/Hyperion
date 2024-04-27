@@ -3,12 +3,16 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import cruds_core, models_core, schemas_core
 from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
-from app.dependencies import get_db, get_settings, is_user_a_member, is_user_a_member_of
+from app.dependencies import (
+    Database,
+    get_settings,
+    is_user_a_member,
+    is_user_a_member_of,
+)
 from app.utils.tools import is_group_id_valid
 
 router = APIRouter(tags=["Core"])
@@ -19,7 +23,7 @@ router = APIRouter(tags=["Core"])
     response_model=schemas_core.CoreInformation,
     status_code=200,
 )
-async def read_information(settings: Settings = Depends(get_settings)):
+async def read_information(settings: Settings_):
     """
     Return information about Hyperion. This endpoint can be used to check if the API is up.
     """
@@ -151,7 +155,7 @@ async def get_favicon():
     status_code=200,
 )
 async def get_module_visibility(
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
@@ -185,8 +189,8 @@ async def get_module_visibility(
     status_code=200,
 )
 async def get_user_modules_visibility(
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     Get group user accessible root
@@ -204,7 +208,7 @@ async def get_user_modules_visibility(
 )
 async def add_module_visibility(
     module_visibility: schemas_core.ModuleVisibilityCreate,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
@@ -237,7 +241,7 @@ async def add_module_visibility(
 async def delete_session(
     root: str,
     group_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     await cruds_core.delete_module_visibility(

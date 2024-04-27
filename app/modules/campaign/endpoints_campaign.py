@@ -15,6 +15,7 @@ from app.core.groups.groups_type import GroupType
 from app.core.module import Module
 from app.core.users import cruds_users
 from app.dependencies import (
+    Database,
     get_db,
     get_request_id,
     get_settings,
@@ -44,8 +45,8 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
     status_code=200,
 )
 async def get_sections(
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     Return sections in the database as a list of `schemas_campaign.SectionBase`
@@ -72,7 +73,7 @@ async def get_sections(
 )
 async def add_section(
     section: schemas_campaign.SectionBase,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """
@@ -107,7 +108,7 @@ async def add_section(
 )
 async def delete_section(
     section_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """
@@ -137,8 +138,8 @@ async def delete_section(
     status_code=200,
 )
 async def get_lists(
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     Return campaign lists registered for the vote.
@@ -165,7 +166,7 @@ async def get_lists(
 )
 async def add_list(
     campaign_list: schemas_campaign.ListBase,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """
@@ -237,7 +238,7 @@ async def add_list(
 )
 async def delete_list(
     list_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """
@@ -267,7 +268,7 @@ async def delete_list(
 )
 async def delete_lists_by_type(
     list_type: ListType | None = None,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """
@@ -302,7 +303,7 @@ async def delete_lists_by_type(
 async def update_list(
     list_id: str,
     campaign_list: schemas_campaign.ListEdit,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """
@@ -348,8 +349,8 @@ async def update_list(
     status_code=200,
 )
 async def get_voters(
-    user: models_core.CoreUser = Depends(is_user_a_member),
-    db: AsyncSession = Depends(get_db),
+    user: MemberUser,
+    db: Database,
 ):
     """
     Return the voters (groups allowed to vorte) for the current campaign.
@@ -366,7 +367,7 @@ async def get_voters(
 async def add_voter(
     voter: schemas_campaign.VoterGroup,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
-    db: AsyncSession = Depends(get_db),
+    db: Database,
 ):
     """
     Add voters (groups allowed to vote) for this campaign
@@ -394,7 +395,7 @@ async def add_voter(
 )
 async def delete_voter_by_group_id(
     group_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """
@@ -417,7 +418,7 @@ async def delete_voter_by_group_id(
     status_code=204,
 )
 async def delete_voters(
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """
@@ -440,9 +441,9 @@ async def delete_voters(
     status_code=204,
 )
 async def open_vote(
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
-    settings: Settings = Depends(get_settings),
+    settings: Settings_,
 ):
     """
     If the status is 'waiting', change it to 'voting' and create the blank lists.
@@ -478,7 +479,7 @@ async def open_vote(
     status_code=204,
 )
 async def close_vote(
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """
@@ -504,7 +505,7 @@ async def close_vote(
     status_code=204,
 )
 async def count_voting(
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """
@@ -530,7 +531,7 @@ async def count_voting(
     status_code=204,
 )
 async def publish_vote(
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """
@@ -556,9 +557,9 @@ async def publish_vote(
     status_code=204,
 )
 async def reset_vote(
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
-    settings: Settings = Depends(get_settings),
+    settings: Settings_,
 ):
     """
     Reset the vote. Can only be used if the current status is counting ou published.
@@ -602,8 +603,8 @@ async def reset_vote(
 )
 async def vote(
     vote: schemas_campaign.VoteBase,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     Add a vote for a given campaign list.
@@ -671,8 +672,8 @@ async def vote(
     status_code=200,
 )
 async def get_sections_already_voted(
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     Return the list of id of sections an user has already voted for.
@@ -705,8 +706,8 @@ async def get_sections_already_voted(
     status_code=200,
 )
 async def get_results(
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     Return the results of the vote.
@@ -760,8 +761,8 @@ async def get_results(
     status_code=200,
 )
 async def get_status_vote(
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     Get the current status of the vote.
@@ -788,7 +789,7 @@ async def get_status_vote(
 )
 async def get_stats_for_section(
     section_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
 ):
     """
@@ -815,8 +816,8 @@ async def create_campaigns_logo(
     list_id: str,
     image: UploadFile = File(...),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
-    request_id: str = Depends(get_request_id),
-    db: AsyncSession = Depends(get_db),
+    request_id: RequestId,
+    db: Database,
 ):
     """
     Upload a logo for a campaign list.
@@ -857,8 +858,8 @@ async def create_campaigns_logo(
 )
 async def read_campaigns_logo(
     list_id: str,
-    user: models_core.CoreUser = Depends(is_user_a_member),
-    db: AsyncSession = Depends(get_db),
+    user: MemberUser,
+    db: Database,
 ):
     """
     Get the logo of a campaign list.

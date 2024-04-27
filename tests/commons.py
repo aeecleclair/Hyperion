@@ -69,7 +69,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 def override_get_redis_client(
-    settings: Settings = Depends(get_settings),
+    settings: Settings_,
 ) -> (
     redis.Redis | None | bool
 ):  # As we don't want the limiter to be activated, except during the designed test, we add an "activate"/"deactivate" option

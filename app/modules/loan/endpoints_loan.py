@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
-from app.dependencies import get_db, is_user_a_member, is_user_a_member_of
+from app.dependencies import Database, get_db, is_user_a_member, is_user_a_member_of
 from app.modules.loan import cruds_loan, models_loan, schemas_loan
 from app.utils.tools import (
     is_group_id_valid,
@@ -33,7 +33,7 @@ module = Module(
     status_code=200,
 )
 async def read_loaners(
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
@@ -52,7 +52,7 @@ async def read_loaners(
 )
 async def create_loaner(
     loaner: schemas_loan.LoanerBase,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
@@ -88,7 +88,7 @@ async def create_loaner(
 )
 async def delete_loaner(
     loaner_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
@@ -124,7 +124,7 @@ async def delete_loaner(
 async def update_loaner(
     loaner_id: str,
     loaner_update: schemas_loan.LoanerUpdate,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
@@ -148,8 +148,8 @@ async def update_loaner(
 async def get_loans_by_loaner(
     loaner_id: str,
     returned: bool | None = None,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     Return all loans from a given group.
@@ -211,8 +211,8 @@ async def get_loans_by_loaner(
 )
 async def get_items_by_loaner(
     loaner_id: str,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     Return all items of a loaner.
@@ -255,8 +255,8 @@ async def get_items_by_loaner(
 async def create_items_for_loaner(
     loaner_id: str,
     item: schemas_loan.ItemBase,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     Create a new item for a loaner. A given loaner can not have more than one item with the same `name`.
@@ -319,8 +319,8 @@ async def update_items_for_loaner(
     loaner_id: str,
     item_id: str,
     item_update: schemas_loan.ItemUpdate,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     Update a loaner's item.
@@ -369,8 +369,8 @@ async def update_items_for_loaner(
 async def delete_loaner_item(
     loaner_id: str,
     item_id: str,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     Delete a loaner's item.
@@ -411,8 +411,8 @@ async def delete_loaner_item(
 )
 async def get_current_user_loans(
     returned: bool | None = None,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     Return all loans from the current user.
@@ -455,8 +455,8 @@ async def get_current_user_loans(
     status_code=200,
 )
 async def get_current_user_loaners(
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     Return all loaners the current user can manage.
@@ -485,8 +485,8 @@ async def get_current_user_loaners(
 )
 async def create_loan(
     loan_creation: schemas_loan.LoanCreation,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     Create a new loan in database and add the requested items
@@ -609,8 +609,8 @@ async def create_loan(
 async def update_loan(
     loan_id: str,
     loan_update: schemas_loan.LoanUpdate,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     Update a loan and its items.
@@ -732,8 +732,8 @@ async def update_loan(
 )
 async def delete_loan(
     loan_id: str,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     Delete a loan
@@ -782,8 +782,8 @@ async def delete_loan(
 )
 async def return_loan(
     loan_id: str,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     Mark a loan as returned. This will update items availability.
@@ -837,8 +837,8 @@ async def return_loan(
 async def extend_loan(
     loan_id: str,
     loan_extend: schemas_loan.LoanExtend,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     A new `end` date or an extended `duration` can be provided. If the two are provided, only `end` will be used.

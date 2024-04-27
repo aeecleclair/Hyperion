@@ -30,6 +30,7 @@ from app.core.security import (
 )
 from app.core.users import cruds_users
 from app.dependencies import (
+    Database,
     get_db,
     get_request_id,
     get_settings,
@@ -60,8 +61,8 @@ hyperion_security_logger = logging.getLogger("hyperion.security")
 )
 async def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(),
-    db: AsyncSession = Depends(get_db),
-    settings: Settings = Depends(get_settings),
+    db: Database,
+    settings: Settings_,
 ):
     """
     Ask for a JWT acc   ess token using oauth password flow.
@@ -199,9 +200,9 @@ async def authorize_validation(
         schemas_auth.AuthorizeValidation.as_form,
     ),
     # Database
-    db: AsyncSession = Depends(get_db),
-    settings: Settings = Depends(get_settings),
-    request_id: str = Depends(get_request_id),
+    db: Database,
+    settings: Settings_,
+    request_id: RequestId,
 ):
     """
     Part 1 of the authorization code grant.
@@ -389,9 +390,9 @@ async def token(
     tokenreq: schemas_auth.TokenReq = Depends(schemas_auth.TokenReq.as_form),
     authorization: str | None = Header(default=None),
     # Database
-    db: AsyncSession = Depends(get_db),
-    settings: Settings = Depends(get_settings),
-    request_id: str = Depends(get_request_id),
+    db: Database,
+    settings: Settings_,
+    request_id: RequestId,
 ):
     """
     Part 2 of the authorization code grant.
@@ -971,8 +972,8 @@ async def auth_get_userinfo(
         get_user_from_token_with_scopes([[ScopeType.openid], [ScopeType.profile]]),
     ),
     token_data: schemas_auth.TokenData = Depends(get_token_data),
-    settings: Settings = Depends(get_settings),
-    request_id: str = Depends(get_request_id),
+    settings: Settings_,
+    request_id: RequestId,
 ):
     """
     Openid connect specify an endpoint the client can use to get information about the user.
@@ -1019,7 +1020,7 @@ async def auth_get_userinfo(
     "/oidc/authorization-flow/jwks_uri",
 )
 def jwks_uri(
-    settings: Settings = Depends(get_settings),
+    settings: Settings_,
 ):
     return settings.RSA_PUBLIC_JWK
 
@@ -1028,7 +1029,7 @@ def jwks_uri(
     "/.well-known/openid-configuration",
 )
 async def oidc_configuration(
-    settings: Settings = Depends(get_settings),
+    settings: Settings_,
 ):
     # See https://ldapwiki.com/wiki/Openid-configuration
     return {
