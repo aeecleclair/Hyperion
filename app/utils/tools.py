@@ -112,7 +112,7 @@ async def save_file_as_data(
 
     - The file will be saved in the `data` folder: "data/{directory}/{filename}.ext"
     - Maximum size is 2MB by default, it can be changed using `max_file_size` (in bytes) parameter.
-    - `accepted_content_types` is a list of accepted content types. By default, only images are accepted.
+    - `accepted_content_types` is a list of accepted content types. By default, all format are accepted.
         Use: `["image/jpeg", "image/png", "image/webp"]` to accept only images.
     - Filename should be an uuid.
 
@@ -132,6 +132,7 @@ async def save_file_as_data(
             ContentType.jpg,
             ContentType.png,
             ContentType.webp,
+            ContentType.pdf,
         ]
 
     if not uuid_regex.match(filename):
@@ -158,7 +159,7 @@ async def save_file_as_data(
     # We go back to the beginning of the file to save it on the disk
     await upload_file.seek(0)
 
-    extension = ContentType(image.content_type).name
+    extension = ContentType(upload_file.content_type).name
     # Remove the existing file if any and create the new one
 
     # If the directory does not exist, we want to create it

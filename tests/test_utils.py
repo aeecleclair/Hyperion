@@ -33,7 +33,7 @@ async def test_save_file_with_invalid_content_type():
         Path("assets/images/default_profile_picture.png").open("rb") as file,
     ):
         await save_file_as_data(
-            image=UploadFile(file, headers={"content-type": "test/test"}),
+            upload_file=UploadFile(file, headers={"content-type": "test/test"}),
             directory="test",
             filename=valid_uuid,
             request_id="request_id",
