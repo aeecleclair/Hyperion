@@ -76,10 +76,22 @@ def alembic_config() -> Config:
 
 
 @pytest.fixture()
-def alembic_engine() -> Generator[Connection, None, None]:
+def alembic_engine(alembic_connection) -> Connection:
     """
     Override this fixture to provide pytest-alembic powered tests with a database handle.
 
+    The fixture yields a SQLAlchemy connection object. This fixture should be run before each tests, to ensure that the database is empty.
+
+    Due to an issue with event loop, we can't run Alembic from asynchronous functions. The tests can't be async, so we need to use a synchronous connection.
+
+    NOTE: the fixture is named `alembic_engine` but it should return a connection object.
+    """
+    return alembic_connection
+
+
+@pytest.fixture()
+def alembic_connection() -> Generator[Connection, None, None]:
+    """
     The fixture yields a SQLAlchemy connection object. This fixture should be run before each tests, to ensure that the database is empty.
 
     Due to an issue with event loop, we can't run Alembic from asynchronous functions. The tests can't be async, so we need to use a synchronous connection.
@@ -136,13 +148,13 @@ def test_all_migrations_have_tests(
 
 def test_migrations(
     alembic_runner: MigrationContext,
-    alembic_engine: Connection,
+    alembic_connection: Connection,
     init_migration_scripts: None,
 ) -> None:
     for revision in alembic_runner.history.revisions:
         logger.info(f"Running tests for revision {logger}")
         try:
-            run_pre_test_upgrade(revision, alembic_runner, alembic_engine)
+            run_pre_test_upgrade(revision, alembic_runner, alembic_connection)
         except Exception as error:
             raise FailedToRunPreTestUpgrade(f"Revision {revision}") from error
         try:
@@ -150,6 +162,6 @@ def test_migrations(
         except Exception as error:
             raise FailedToRunUpgrade(f"Revision {revision}") from error
         try:
-            run_test_upgrade(revision, alembic_runner, alembic_engine)
+            run_test_upgrade(revision, alembic_runner, alembic_connection)
         except Exception as error:
             raise FailedToRunTestUpgrade(f"Revision {revision}") from error

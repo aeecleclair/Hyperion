@@ -40,13 +40,13 @@ def downgrade() -> None:
 
 def pre_test_upgrade(
     alembic_runner: "MigrationContext",
-    alembic_engine: sa.Engine,
+    alembic_connection: sa.Connection,
 ) -> None:
     pass
 
 
 def test_upgrade(
     alembic_runner: "MigrationContext",
-    alembic_engine: sa.Engine,
+    alembic_connection: sa.Connection,
 ) -> None:
     pass
