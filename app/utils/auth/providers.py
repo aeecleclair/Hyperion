@@ -31,9 +31,6 @@ class BaseAuthClient:
     # Restrict the authentication to this client to specific Hyperion groups.
     # When set to `None`, users from any group can use the auth client
     allowed_groups: list[GroupType] | None = None
-    # Disallow the authentication to this client to specific Hyperion groups.
-    # This is useful to prevent external users from accessing some services.
-    disallowed_groups: list[GroupType] | None = None
     # redirect_uri should alway match the one provided by the client
     redirect_uri: list[str]
     # Sometimes, when the client is wrongly configured, it may return an incorrect return_uri. This may also be useful for debugging clients.
@@ -178,8 +175,6 @@ class HedgeDocAuthClient(BaseAuthClient):
     # See app.types.scopes_type.ScopeType for possible values
     allowed_scopes: set[ScopeType | str] = {ScopeType.profile}
 
-    disallowed_groups: list[GroupType] | None = [GroupType.external]
-
     @classmethod
     def get_userinfo(cls, user: models_core.CoreUser):
         return {
@@ -195,8 +190,6 @@ class WikijsAuthClient(BaseAuthClient):
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.types.scopes_type.ScopeType for possible values
     allowed_scopes: set[ScopeType | str] = {ScopeType.openid, ScopeType.profile}
-
-    disallowed_groups: list[GroupType] | None = [GroupType.external]
 
     @classmethod
     def get_userinfo(cls, user: models_core.CoreUser):
@@ -216,8 +209,6 @@ class SynapseAuthClient(BaseAuthClient):
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.types.scopes_type.ScopeType for possible values
     allowed_scopes: set[ScopeType | str] = {ScopeType.openid, ScopeType.profile}
-
-    disallowed_groups: list[GroupType] | None = [GroupType.external]
 
     @classmethod
     def get_userinfo(cls, user: models_core.CoreUser):
@@ -248,8 +239,6 @@ class MinecraftAuthClient(BaseAuthClient):
     # See app.types.scopes_type.ScopeType for possible values
     allowed_scopes: set[ScopeType | str] = {ScopeType.profile}
 
-    disallowed_groups: list[GroupType] | None = [GroupType.external]
-
     @classmethod
     def get_userinfo(cls, user: models_core.CoreUser):
         return {
@@ -265,8 +254,6 @@ class ChallengerAuthClient(BaseAuthClient):
     # See app.types.scopes_type.ScopeType for possible values
     allowed_scopes: set[ScopeType | str] = {ScopeType.openid, ScopeType.profile}
 
-    disallowed_groups: list[GroupType] | None = [GroupType.external]
-
     @classmethod
     def get_userinfo(cls, user: models_core.CoreUser):
         return {
@@ -281,8 +268,6 @@ class OpenProjectAuthClient(BaseAuthClient):
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.types.scopes_type.ScopeType for possible values
     allowed_scopes: set[ScopeType | str] = {ScopeType.openid, ScopeType.profile}
-
-    disallowed_groups: list[GroupType] | None = [GroupType.external]
 
     @classmethod
     def get_userinfo(cls, user: models_core.CoreUser):
@@ -307,7 +292,6 @@ class RalllyAuthClient(BaseAuthClient):
         ScopeType.profile,
         "email",
     }
-    disallowed_groups: list[GroupType] | None = [GroupType.external]
 
 
     return_userinfo_in_id_token: bool = True
