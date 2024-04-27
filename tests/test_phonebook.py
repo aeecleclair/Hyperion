@@ -36,7 +36,7 @@ token_simple: str = ""
 async def init_objects():
     global phonebook_user_BDE
     phonebook_user_BDE = await create_user_with_groups(
-        [GroupType.student, GroupType.BDE]
+        [GroupType.student, GroupType.BDE],
     )
 
     global token_BDE

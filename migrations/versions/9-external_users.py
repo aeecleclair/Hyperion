@@ -8,8 +8,6 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-from app.types.sqlalchemy import TZDateTime
-
 # revision identifiers, used by Alembic.
 revision: str = "c3acc9b8dd98"
 down_revision: str | None = "d99516f0bbcb"
