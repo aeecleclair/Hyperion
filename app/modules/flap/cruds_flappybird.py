@@ -1,4 +1,5 @@
 from sqlalchemy import func, select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,6 +14,7 @@ async def get_flappybird_score_leaderboard(
     """Return the flappybird leaderboard scores from postion skip to skip+limit"""
     result = await db.execute(
         select(models_flappybird.FlappyBirdScore)
+        .options(selectinload(models_flappybird.FlappyBirdScore.user))
         .order_by(models_flappybird.FlappyBirdScore.value.desc())
         .offset(skip)
         .limit(limit),
@@ -57,7 +59,7 @@ async def get_flappybird_score_position(
     """Return the flappybird position in the leaderboard by user_id"""
 
     result = await db.execute(
-        select([func.count()])
+        select(func.count())
         .select_from(models_flappybird.FlappyBirdScore)
         .order_by(models_flappybird.FlappyBirdScore.value.desc())
         .distinct(models_flappybird.FlappyBirdScore.user_id)

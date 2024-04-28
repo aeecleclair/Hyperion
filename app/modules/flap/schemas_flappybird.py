@@ -6,7 +6,6 @@ from app.core.schemas_core import CoreUserSimple
 
 
 class FlappyBirdScoreBase(BaseModel):
-    user_id: str
     value: int
 
     # Required latter to initiate schema using models
@@ -16,6 +15,7 @@ class FlappyBirdScoreBase(BaseModel):
 
 class FlappyBirdScoreInDB(FlappyBirdScoreBase):
     id: str
+    user_id: str
     user: CoreUserSimple
     creation_time: datetime
 

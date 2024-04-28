@@ -23,10 +23,14 @@ module = Module(
     status_code=200,
 )
 async def get_flappybird_score(
-    skip: int = 0, limit: int = 10, db: AsyncSession = Depends(get_db),
+    skip: int = 0,
+    limit: int = 10,
+    db: AsyncSession = Depends(get_db),
 ):
     leaderboard = await cruds_flappybird.get_flappybird_score_leaderboard(
-        db=db, skip=skip, limit=limit,
+        db=db,
+        skip=skip,
+        limit=limit,
     )
     return leaderboard
 
@@ -37,10 +41,12 @@ async def get_flappybird_score(
     status_code=200,
 )
 async def get_flappybird_score_by_user(
-    user_id: str, db: AsyncSession = Depends(get_db),
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
 ):
     user_scores = await cruds_flappybird.get_flappybird_score_by_user_id(
-        db=db, user_id=user_id,
+        db=db,
+        user_id=user_id,
     )
     return user_scores
 
@@ -55,12 +61,14 @@ async def get_current_user_flappybird_pb(
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     user_pb_table = await cruds_flappybird.get_flappybird_pb_by_user_id(
-        db=db, user_id=user.id,
+        db=db,
+        user_id=user.id,
     )
 
     if user_pb_table is not None:
         position = await cruds_flappybird.get_flappybird_score_position(
-            db=db, score=user_pb_table,
+            db=db,
+            score=user_pb_table,
         )
         if position is not None:
             user_pb = schemas_flappybird.FlappyBirdScoreCompleteFeedBack(
@@ -71,10 +79,7 @@ async def get_current_user_flappybird_pb(
             )
 
             return user_pb
-        else:
-            return None
-    else:
-        return None
+    return None
 
 
 @module.router.post(
@@ -84,6 +89,7 @@ async def get_current_user_flappybird_pb(
 )
 async def create_flappybird_score(
     flappybird_score: schemas_flappybird.FlappyBirdScoreBase,
+    user: models_core.CoreUser = Depends(is_user_a_member),
     db: AsyncSession = Depends(get_db),
 ):
     # Currently, flappybird_score is a schema instance
@@ -96,14 +102,15 @@ async def create_flappybird_score(
 
     db_flappybird_score = models_flappybird.FlappyBirdScore(
         id=score_id,
-        user_id=flappybird_score.user_id,
+        user_id=user.id,
         value=flappybird_score.value,
         creation_time=creation_time,
         # We add all informations contained in the schema
     )
     try:
         return await cruds_flappybird.create_flappybird_score(
-            flappybird_score=db_flappybird_score, db=db,
+            flappybird_score=db_flappybird_score,
+            db=db,
         )
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
