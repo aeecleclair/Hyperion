@@ -31,7 +31,7 @@ async def get_flappybird_score_by_user_id(
     return result.scalars().all()
 
 
-async def get_flappybird_PB_by_user_id(
+async def get_flappybird_pb_by_user_id(
     db: AsyncSession, user_id: str
 ) -> models_flappybird.FlappyBirdScore | None:
     """Return the flappybird PB in the leaderboard by user_id"""

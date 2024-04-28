@@ -3,8 +3,8 @@ from datetime import datetime
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
-from app.database import Base
-from app.models.models_core import CoreUser
+from app.core.models_core import CoreUser
+from app.types.sqlalchemy import Base
 
 
 class FlappyBirdScore(Base):

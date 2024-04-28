@@ -1,23 +1,26 @@
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.flap import cruds_flappybird
-from app.dependencies import get_db
-from app.modules.flap import models_flappybird
-from app.modules.flap import schemas_flappybird
-from app.utils.types.tags import Tags
+from app.core import models_core
+from app.core.groups.groups_type import GroupType
+from app.core.module import Module
+from app.dependencies import get_db, is_user_a_member
+from app.modules.flap import cruds_flappybird, models_flappybird, schemas_flappybird
 
-router = APIRouter()
+module = Module(
+    root="flappybird",
+    tag="Flappy Bird",
+    default_allowed_groups_ids=[GroupType.student],
+)
 
 
-@router.get(
+@module.router.get(
     "/flappybird/scores",
     response_model=list[schemas_flappybird.FlappyBirdScoreInDB],
     status_code=200,
-    tags=[Tags.flappybird],
 )
 async def get_flappybird_score(
     skip: int = 0, limit: int = 10, db: AsyncSession = Depends(get_db)
@@ -28,11 +31,10 @@ async def get_flappybird_score(
     return leaderboard
 
 
-@router.get(
+@module.router.get(
     "/flappybird/scores/{user_id}",
     response_model=list[schemas_flappybird.FlappyBirdScoreInDB],
     status_code=200,
-    tags=[Tags.flappybird],
 )
 async def get_flappybird_score_by_user(
     user_id: str, db: AsyncSession = Depends(get_db)
@@ -43,17 +45,16 @@ async def get_flappybird_score_by_user(
     return user_scores
 
 
-@router.get(
+@module.router.get(
     "/flappybird/leaderboard/me",
     status_code=200,
     response_model=schemas_flappybird.FlappyBirdScoreCompleteFeedBack | None,
-    tags=[Tags.flappybird],
 )
 async def get_current_user_flappybird_pb(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    user_pb_table = await cruds_flappybird.get_flappybird_PB_by_user_id(
+    user_pb_table = await cruds_flappybird.get_flappybird_pb_by_user_id(
         db=db, user_id=user.id
     )
 
@@ -76,11 +77,10 @@ async def get_current_user_flappybird_pb(
         return None
 
 
-@router.post(
+@module.router.post(
     "/flappybird/scores",
     response_model=schemas_flappybird.FlappyBirdScoreBase,
     status_code=201,
-    tags=[Tags.flappybird],
 )
 async def create_flappybird_score(
     flappybird_score: schemas_flappybird.FlappyBirdScoreBase,
