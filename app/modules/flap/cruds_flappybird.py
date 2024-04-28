@@ -1,7 +1,7 @@
 from sqlalchemy import func, select
-from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.modules.flap import models_flappybird
 

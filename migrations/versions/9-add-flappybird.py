@@ -8,8 +8,6 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-from app.types.sqlalchemy import TZDateTime
-
 # revision identifiers, used by Alembic.
 revision: str = "875542976059"
 down_revision: str | None = "d99516f0bbcb"
@@ -29,7 +27,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
-        op.f("ix_flappy-bird_score_id"), "flappy-bird_score", ["id"], unique=False
+        op.f("ix_flappy-bird_score_id"), "flappy-bird_score", ["id"], unique=False,
     )
     # ### end Alembic commands ###
 
