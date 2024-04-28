@@ -1,7 +1,7 @@
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
-from sqlalchemy.orm import relationship
+from sqlalchemy import DateTime, ForeignKey, Integer, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.models_core import CoreUser
 from app.types.sqlalchemy import Base
@@ -10,9 +10,11 @@ from app.types.sqlalchemy import Base
 class FlappyBirdScore(Base):
     __tablename__ = "flappy-bird_score"
 
-    id: str = Column(String, primary_key=True, index=True)
+    id: Mapped[str] = mapped_column(String, primary_key=True, index=True)
 
-    user_id: str = Column(String, ForeignKey("core_user.id"), nullable=False)
-    user: CoreUser = relationship("CoreUser")
-    value: int = Column(Integer, nullable=False)
-    creation_time: datetime = Column(DateTime, nullable=False)
+    user_id: Mapped[str] = mapped_column(
+        String, ForeignKey("core_user.id"), nullable=False
+    )
+    user: Mapped[CoreUser] = relationship("CoreUser")
+    value: Mapped[int] = mapped_column(Integer, nullable=False)
+    creation_time: Mapped[datetime] = mapped_column(DateTime, nullable=False)
