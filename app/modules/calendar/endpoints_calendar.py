@@ -102,7 +102,7 @@ async def get_event_by_id(
 
 
 @module.router.get(
-    "calendar/events/{event_id}/applicant",
+    "/calendar/events/{event_id}/applicant",
     response_model=schemas_calendar.EventApplicant,
     status_code=200,
 )

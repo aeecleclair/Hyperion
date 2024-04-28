@@ -98,14 +98,11 @@ class AppAuthClient(BaseAuthClient):
     allowed_groups: list[GroupType] | None = None
 
 
-class PostmanAuthClient(BaseAuthClient):
+class APIToolAuthClient(BaseAuthClient):
     """
-    An auth client for Postman
+    An auth client for API development tools
     """
 
-    # Set of scopes the auth client is authorized to grant when issuing an access token.
-    # See app.types.scopes_type.ScopeType for possible values
-    # WARNING: to be able to use openid connect, `ScopeType.openid` should always be allowed
     allowed_scopes: set[ScopeType | str] = {ScopeType.API}
 
 
