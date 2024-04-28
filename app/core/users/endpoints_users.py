@@ -28,7 +28,7 @@ from app.dependencies import (
     Database,
     MemberUser,
     RequestId,
-    Settings_,
+    get_settings,
     is_user_a_member_of,
 )
 from app.utils.mail.mailworker import send_email
@@ -136,7 +136,7 @@ async def create_user_by_user(
     user_create: schemas_core.CoreUserCreateRequest,
     background_tasks: BackgroundTasks,
     db: Database,
-    settings: Settings_,
+    settings: Annotated[Settings, Depends(get_settings)],
     request_id: RequestId,
 ):
     """
@@ -226,7 +226,7 @@ async def batch_create_users(
     user_creates: list[schemas_core.CoreBatchUserCreateRequest],
     background_tasks: BackgroundTasks,
     db: Database,
-    settings: Settings_,
+    settings: Annotated[Settings, Depends(get_settings)],
     request_id: RequestId,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
@@ -493,7 +493,7 @@ async def recover_user(
     # We use embed for email parameter: https://fastapi.tiangolo.com/tutorial/body-multiple-params/#embed-a-single-body-parameter
     email: Annotated[str, Body(..., embed=True)],
     db: Database,
-    settings: Settings_,
+    settings: Annotated[Settings, Depends(get_settings)],
     request_id: RequestId,
 ):
     """
@@ -587,7 +587,7 @@ async def migrate_mail(
     mail_migration: schemas_core.MailMigrationRequest,
     db: Database,
     user: MemberUser,
-    settings: Settings_,
+    settings: Annotated[Settings, Depends(get_settings)],
 ):
     """
     Due to a change in the email format, all student users need to migrate their email address.
@@ -802,7 +802,7 @@ async def read_user(
 async def delete_user(
     db: Database,
     user: MemberUser,
-    settings: Settings_,
+    settings: Annotated[Settings, Depends(get_settings)],
     background_tasks: Annotated[BackgroundTasks, BackgroundTasks()],
     request_id: RequestId,
 ):

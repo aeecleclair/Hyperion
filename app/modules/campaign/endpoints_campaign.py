@@ -16,7 +16,6 @@ from app.dependencies import (
     Database,
     MemberUser,
     RequestId,
-    Settings_,
     UserMemberCAA,
     is_user_a_member_of,
 )
@@ -442,7 +441,6 @@ async def delete_voters(
 async def open_vote(
     db: Database,
     user: UserMemberCAA,
-    settings: Settings_,
 ):
     """
     If the status is 'waiting', change it to 'voting' and create the blank lists.
@@ -558,7 +556,6 @@ async def publish_vote(
 async def reset_vote(
     db: Database,
     user: UserMemberCAA,
-    settings: Settings_,
 ):
     """
     Reset the vote. Can only be used if the current status is counting ou published.

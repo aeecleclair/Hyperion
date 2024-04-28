@@ -3,9 +3,11 @@ import logging
 import uuid
 from collections.abc import AsyncGenerator
 from functools import lru_cache
+from typing import Annotated
 
 import pytest
 import redis
+from fastapi import Depends
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -17,7 +19,7 @@ from app.core.config import Settings
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
 from app.core.users import cruds_users
-from app.dependencies import Settings_, get_db, get_redis_client, get_settings
+from app.dependencies import get_db, get_redis_client, get_settings
 from app.types.floors_type import FloorsType
 from app.types.sqlalchemy import Base
 from app.utils.redis import connect, disconnect
@@ -27,7 +29,7 @@ from app.utils.tools import get_random_string
 @lru_cache
 def override_get_settings() -> Settings:
     """Override the get_settings function to use the testing session"""
-    return Settings(_env_file=".env.test", _env_file_encoding="utf-8")  # type: ignore[call-arg] # See https://github.com/pydantic/pydantic/issues/3072, TODO: remove when fixes
+    return Settings(_env_file=".env.test", _env_file_encoding="utf-8")
 
 
 settings = override_get_settings()
@@ -68,10 +70,8 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 def override_get_redis_client(
-    settings: Settings_,
-) -> (
-    redis.Redis | None | bool
-):  # As we don't want the limiter to be activated, except during the designed test, we add an "activate"/"deactivate" option
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> redis.Redis | None | bool:
     """Override the get_redis_client function to use the testing session"""
     global redis_client
     return redis_client

@@ -88,20 +88,6 @@ def get_db_engine(settings: Settings) -> AsyncEngine:
     return engine
 
 
-def get_session_maker() -> Callable[[], AsyncSession]:
-    """
-    Return the session maker
-    """
-    global SessionLocal
-    if SessionLocal is None:
-        hyperion_error_logger.error("Database engine is not initialized")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Database engine is not initialized",
-        )
-    return SessionLocal
-
-
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
     Return a database session
@@ -135,11 +121,9 @@ def get_settings() -> Settings:
 
 # (issue ouverte sur github: https://github.com/pydantic/pydantic/issues/3072)
 
-Settings_ = Annotated[Settings, Depends(get_settings)]
-
 
 def get_redis_client(
-    settings: Settings_,
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> redis.Redis | None | bool:
     """
     Dependency that returns the redis client
@@ -162,7 +146,7 @@ def get_redis_client(
 
 
 def get_notification_manager(
-    settings: Settings_,
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> NotificationManager:
     """
     Dependency that returns the notification manager.
@@ -212,7 +196,7 @@ def get_user_from_token_with_scopes(
 
     async def get_current_user(
         db: Database,
-        settings: Settings_,
+        settings: Annotated[Settings, Depends(get_settings)],
         token: Annotated[str, Depends(security.oauth2_scheme)],
         request_id: RequestId,
     ) -> models_core.CoreUser:
@@ -349,7 +333,7 @@ UserMemberCinema = Annotated[
 
 
 async def get_token_data(
-    settings: Settings_,
+    settings: Annotated[Settings, Depends(get_settings)],
     token: Annotated[str, Depends(security.oauth2_scheme)],
     request_id: RequestId,
 ) -> schemas_auth.TokenData:

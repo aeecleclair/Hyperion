@@ -1,15 +1,17 @@
 from os import path
 from pathlib import Path
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 
 from app.core import cruds_core, models_core, schemas_core
+from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
 from app.dependencies import (
     Database,
     MemberUser,
-    Settings_,
+    get_settings,
     is_user_a_member_of,
 )
 from app.utils.tools import is_group_id_valid
@@ -22,7 +24,7 @@ router = APIRouter(tags=["Core"])
     response_model=schemas_core.CoreInformation,
     status_code=200,
 )
-async def read_information(settings: Settings_):
+async def read_information(settings: Annotated[Settings, Depends(get_settings)]):
     """
     Return information about Hyperion. This endpoint can be used to check if the API is up.
     """

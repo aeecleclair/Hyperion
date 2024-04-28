@@ -33,7 +33,7 @@ from app.core.users import cruds_users
 from app.dependencies import (
     Database,
     RequestId,
-    Settings_,
+    get_settings,
     get_token_data,
     get_user_from_token_with_scopes,
 )
@@ -62,7 +62,7 @@ hyperion_security_logger = logging.getLogger("hyperion.security")
 async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: Database,
-    settings: Settings_,
+    settings: Annotated[Settings, Depends(get_settings)],
 ):
     """
     Ask for a JWT acc   ess token using oauth password flow.
@@ -204,7 +204,7 @@ async def authorize_validation(
     ],
     # Database
     db: Database,
-    settings: Settings_,
+    settings: Annotated[Settings, Depends(get_settings)],
     request_id: RequestId,
 ):
     """
@@ -395,7 +395,7 @@ async def token(
     authorization: Annotated[str | None, Header] = None,
     # Database
     db: Database,
-    settings: Settings_,
+    settings: Annotated[Settings, Depends(get_settings)],
     request_id: RequestId,
 ):
     """
@@ -979,7 +979,7 @@ async def auth_get_userinfo(
         ),
     ],
     token_data: Annotated[schemas_auth.TokenData, Depends(get_token_data)],
-    settings: Settings_,
+    settings: Annotated[Settings, Depends(get_settings)],
     request_id: RequestId,
 ):
     """
@@ -1027,7 +1027,7 @@ async def auth_get_userinfo(
     "/oidc/authorization-flow/jwks_uri",
 )
 def jwks_uri(
-    settings: Settings_,
+    settings: Annotated[Settings, Depends(get_settings)],
 ):
     return settings.RSA_PUBLIC_JWK
 
@@ -1036,7 +1036,7 @@ def jwks_uri(
     "/.well-known/openid-configuration",
 )
 async def oidc_configuration(
-    settings: Settings_,
+    settings: Annotated[Settings, Depends(get_settings)],
 ):
     # See https://ldapwiki.com/wiki/Openid-configuration
     return {
