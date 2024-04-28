@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
+from typing import Annotated
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Path
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
@@ -13,10 +13,10 @@ from app.core.notification import (
 from app.core.notification.notification_types import CustomTopic, Topic
 from app.dependencies import (
     Database,
-    get_db,
+    MemberUser,
+    UserMemberAdmin,
     get_notification_manager,
     get_notification_tool,
-    is_user_a_member,
     is_user_a_member_of,
 )
 from app.utils.communication.notifications import NotificationManager, NotificationTool
@@ -29,7 +29,7 @@ router = APIRouter(tags=["Notifications"])
     status_code=204,
 )
 async def register_firebase_device(
-    firebase_token: str = Body(embed=True),
+    firebase_token: Annotated[str, Body(embed=True)],
     db: Database,
     user: MemberUser,
     notification_manager: NotificationManager = Depends(get_notification_manager),
@@ -173,9 +173,12 @@ async def get_messages(
     status_code=204,
 )
 async def subscribe_to_topic(
-    topic_str: str = Path(
-        description="The topic to subscribe to. The Topic may be followed by an additional identifier (ex: cinema_4c029b5f-2bf7-4b70-85d4-340a4bd28653)",
-    ),
+    topic_str: Annotated[
+        str,
+        Path(
+            description="The topic to subscribe to. The Topic may be followed by an additional identifier (ex: cinema_4c029b5f-2bf7-4b70-85d4-340a4bd28653)",
+        ),
+    ],
     db: Database,
     user: MemberUser,
     notification_manager: NotificationManager = Depends(get_notification_manager),
@@ -311,7 +314,7 @@ async def send_notification(
     response_model=list[schemas_notification.FirebaseDevice],
 )
 async def get_devices(
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: UserMemberAdmin,
     db: Database,
 ):
     """

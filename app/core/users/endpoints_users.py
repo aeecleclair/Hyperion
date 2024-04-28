@@ -2,6 +2,7 @@ import logging
 import re
 import uuid
 from datetime import UTC, datetime, timedelta
+from typing import Annotated
 
 import aiofiles
 from fastapi import (
@@ -9,7 +10,6 @@ from fastapi import (
     BackgroundTasks,
     Body,
     Depends,
-    File,
     HTTPException,
     Query,
     Request,
@@ -26,10 +26,9 @@ from app.core.groups.groups_type import AccountType, GroupType
 from app.core.users import cruds_users
 from app.dependencies import (
     Database,
-    get_db,
-    get_request_id,
-    get_settings,
-    is_user_a_member,
+    MemberUser,
+    RequestId,
+    Settings_,
     is_user_a_member_of,
 )
 from app.utils.mail.mailworker import send_email
@@ -87,9 +86,10 @@ async def count_users(
     status_code=200,
 )
 async def search_users(
+    *,
     query: str,
-    includedGroups: list[str] = Query(default=[]),
-    excludedGroups: list[str] = Query(default=[]),
+    includedGroups: Annotated[list[str], Query()] = [],  # noqa: B006
+    excludedGroups: Annotated[list[str], Query()] = [],  # noqa: B006
     db: Database,
     user: MemberUser,
 ):
@@ -491,7 +491,7 @@ async def make_admin(
 )
 async def recover_user(
     # We use embed for email parameter: https://fastapi.tiangolo.com/tutorial/body-multiple-params/#embed-a-single-body-parameter
-    email: str = Body(..., embed=True),
+    email: Annotated[str, Body(..., embed=True)],
     db: Database,
     settings: Settings_,
     request_id: RequestId,
@@ -803,7 +803,7 @@ async def delete_user(
     db: Database,
     user: MemberUser,
     settings: Settings_,
-    background_tasks: BackgroundTasks = BackgroundTasks(),
+    background_tasks: Annotated[BackgroundTasks, BackgroundTasks()],
     request_id: RequestId,
 ):
     """
@@ -861,7 +861,7 @@ async def update_user(
     status_code=201,
 )
 async def create_current_user_profile_picture(
-    image: UploadFile = File(...),
+    image: UploadFile,
     user: MemberUser,
     request_id: RequestId,
 ):

@@ -2,9 +2,8 @@ import logging
 import uuid
 from datetime import UTC, datetime
 
-from fastapi import Depends, File, HTTPException, UploadFile
+from fastapi import Depends, HTTPException, UploadFile
 from fastapi.responses import FileResponse
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, standard_responses
 from app.core.groups.groups_type import GroupType
@@ -13,10 +12,10 @@ from app.core.notification.notification_types import CustomTopic, Topic
 from app.core.notification.schemas_notification import Message
 from app.dependencies import (
     Database,
-    get_db,
+    MemberUser,
+    RequestId,
+    UserMemberCinema,
     get_notification_tool,
-    get_request_id,
-    is_user_a_member,
     is_user_a_member_of,
 )
 from app.modules.cinema import cruds_cinema, schemas_cinema
@@ -125,7 +124,7 @@ async def update_session(
 async def delete_session(
     session_id: str,
     db: Database,
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.cinema)),
+    user: UserMemberCinema,
 ):
     await cruds_cinema.delete_session(session_id=session_id, db=db)
 
@@ -137,8 +136,8 @@ async def delete_session(
 )
 async def create_campaigns_logo(
     session_id: str,
-    image: UploadFile = File(...),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.cinema)),
+    image: UploadFile,
+    user: UserMemberCinema,
     request_id: RequestId,
     db: Database,
 ):

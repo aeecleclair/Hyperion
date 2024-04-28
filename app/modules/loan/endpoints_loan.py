@@ -3,12 +3,16 @@ from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
 from fastapi import Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
-from app.dependencies import Database, get_db, is_user_a_member, is_user_a_member_of
+from app.dependencies import (
+    Database,
+    MemberUser,
+    UserMemberAdmin,
+    is_user_a_member_of,
+)
 from app.modules.loan import cruds_loan, models_loan, schemas_loan
 from app.utils.tools import (
     is_group_id_valid,
@@ -125,7 +129,7 @@ async def update_loaner(
     loaner_id: str,
     loaner_update: schemas_loan.LoanerUpdate,
     db: Database,
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: UserMemberAdmin,
 ):
     """
     Update a loaner, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value.
@@ -146,6 +150,7 @@ async def update_loaner(
     status_code=200,
 )
 async def get_loans_by_loaner(
+    *,
     loaner_id: str,
     returned: bool | None = None,
     db: Database,
@@ -410,6 +415,7 @@ async def delete_loaner_item(
     status_code=200,
 )
 async def get_current_user_loans(
+    *,
     returned: bool | None = None,
     db: Database,
     user: MemberUser,

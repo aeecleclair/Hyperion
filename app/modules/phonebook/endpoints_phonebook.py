@@ -1,14 +1,17 @@
 import uuid
 
-from fastapi import Depends, File, HTTPException, UploadFile
+from fastapi import HTTPException, UploadFile
 from fastapi.responses import FileResponse
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core, standard_responses
+from app.core import standard_responses
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
 from app.core.users import cruds_users
-from app.dependencies import Database, get_db, get_request_id, is_user_a_member
+from app.dependencies import (
+    Database,
+    MemberUser,
+    RequestId,
+)
 from app.modules.phonebook import cruds_phonebook, models_phonebook, schemas_phonebook
 from app.utils.tools import (
     get_file_from_data,
@@ -455,7 +458,7 @@ async def delete_membership(
 )
 async def create_association_logo(
     association_id: str,
-    image: UploadFile = File(),
+    image: UploadFile,
     request_id: RequestId,
     user: MemberUser,
     db: Database,

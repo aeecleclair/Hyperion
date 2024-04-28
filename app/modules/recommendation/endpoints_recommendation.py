@@ -1,7 +1,7 @@
 import uuid
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
 from app.core import models_core, standard_responses
@@ -11,6 +11,7 @@ from app.dependencies import (
     Database,
     MemberUser,
     RequestId,
+    UserMemberBDE,
     is_user_a_member_of,
 )
 from app.modules.recommendation import (
@@ -164,7 +165,7 @@ async def read_recommendation_image(
 async def create_recommendation_image(
     recommendation_id: uuid.UUID,
     image: UploadFile,
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
+    user: UserMemberBDE,
     request_id: RequestId,
     db: Database,
 ):

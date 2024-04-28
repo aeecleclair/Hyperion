@@ -6,7 +6,6 @@ from functools import lru_cache
 
 import pytest
 import redis
-from fastapi import Depends
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -18,7 +17,7 @@ from app.core.config import Settings
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
 from app.core.users import cruds_users
-from app.dependencies import get_db, get_redis_client, get_settings
+from app.dependencies import Settings_, get_db, get_redis_client, get_settings
 from app.types.floors_type import FloorsType
 from app.types.sqlalchemy import Base
 from app.utils.redis import connect, disconnect

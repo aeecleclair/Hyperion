@@ -4,22 +4,20 @@ import uuid
 from datetime import UTC, datetime
 
 import aiofiles
-from fastapi import Depends, File, HTTPException, UploadFile
+from fastapi import Depends, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, standard_responses
-from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
 from app.core.users import cruds_users
 from app.dependencies import (
     Database,
-    get_db,
-    get_request_id,
-    get_settings,
-    is_user_a_member,
+    MemberUser,
+    RequestId,
+    Settings_,
+    UserMemberCAA,
     is_user_a_member_of,
 )
 from app.modules.campaign import cruds_campaign, models_campaign, schemas_campaign
@@ -267,6 +265,7 @@ async def delete_list(
     status_code=204,
 )
 async def delete_lists_by_type(
+    *,
     list_type: ListType | None = None,
     db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
@@ -366,7 +365,7 @@ async def get_voters(
 )
 async def add_voter(
     voter: schemas_campaign.VoterGroup,
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
+    user: UserMemberCAA,
     db: Database,
 ):
     """
@@ -442,7 +441,7 @@ async def delete_voters(
 )
 async def open_vote(
     db: Database,
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
+    user: UserMemberCAA,
     settings: Settings_,
 ):
     """
@@ -558,7 +557,7 @@ async def publish_vote(
 )
 async def reset_vote(
     db: Database,
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
+    user: UserMemberCAA,
     settings: Settings_,
 ):
     """
@@ -814,8 +813,8 @@ async def get_stats_for_section(
 )
 async def create_campaigns_logo(
     list_id: str,
-    image: UploadFile = File(...),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
+    image: UploadFile,
+    user: UserMemberCAA,
     request_id: RequestId,
     db: Database,
 ):

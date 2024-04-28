@@ -1,10 +1,10 @@
 import logging
 import uuid
 from datetime import UTC, datetime
+from typing import Annotated
 
-from fastapi import Depends, File, HTTPException, Query, UploadFile
+from fastapi import Depends, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, standard_responses
 from app.core.groups.groups_type import GroupType
@@ -14,10 +14,8 @@ from app.core.notification.schemas_notification import Message
 from app.dependencies import (
     Database,
     MemberUser,
-    get_db,
+    RequestId,
     get_notification_tool,
-    get_request_id,
-    is_user_a_member,
     is_user_a_member_of,
 )
 from app.modules.advert import cruds_advert, models_advert, schemas_advert
@@ -183,7 +181,8 @@ async def get_current_user_advertisers(
     status_code=200,
 )
 async def read_adverts(
-    advertisers: list[str] = Query(default=[]),
+    *,
+    advertisers: Annotated[list[str], Query()] = [],  # noqa: B006
     db: Database,
     user: MemberUser,
 ):
@@ -394,7 +393,7 @@ async def read_advert_image(
 )
 async def create_advert_image(
     advert_id: str,
-    image: UploadFile = File(...),
+    image: UploadFile,
     user: MemberUser,
     request_id: RequestId,
     db: Database,

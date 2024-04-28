@@ -1,11 +1,11 @@
 import logging
 import uuid
+from typing import Annotated
 
-from fastapi import Depends, File, HTTPException, UploadFile
+from fastapi import Depends, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from redis import Redis
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, standard_responses
 from app.core.groups import cruds_groups
@@ -15,10 +15,9 @@ from app.core.users import cruds_users
 from app.core.users.endpoints_users import read_user
 from app.dependencies import (
     Database,
-    get_db,
+    MemberUser,
+    RequestId,
     get_redis_client,
-    get_request_id,
-    is_user_a_member,
     is_user_a_member_of,
 )
 from app.modules.raffle import cruds_raffle, models_raffle, schemas_raffle
@@ -209,7 +208,7 @@ async def get_raffle_stats(
 )
 async def create_current_raffle_logo(
     raffle_id: str,
-    image: UploadFile = File(...),
+    image: UploadFile,
     user: MemberUser,
     request_id: RequestId,
     db: Database,
@@ -449,7 +448,7 @@ async def get_tickets(
 async def buy_ticket(
     pack_id: str,
     db: Database,
-    redis_client: Redis | None = Depends(get_redis_client),
+    redis_client: Annotated[Redis | None, Depends(get_redis_client)],
     user: MemberUser,
     request_id: RequestId,
 ):
@@ -750,7 +749,7 @@ async def get_prizes_by_raffleid(
 )
 async def create_prize_picture(
     prize_id: str,
-    image: UploadFile = File(...),
+    image: UploadFile,
     user: MemberUser,
     request_id: RequestId,
     db: Database,

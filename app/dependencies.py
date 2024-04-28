@@ -196,7 +196,10 @@ def get_notification_tool(
 
 def get_user_from_token_with_scopes(
     scopes: list[list[ScopeType]],
-) -> Callable[[AsyncSession, Settings, str], Coroutine[Any, Any, models_core.CoreUser]]:
+) -> Callable[
+    [AsyncSession, Settings, str, str],
+    Coroutine[Any, Any, models_core.CoreUser],
+]:
     """
     Generate a dependency which will:
      * check the request header contain a valid JWT token
@@ -210,7 +213,7 @@ def get_user_from_token_with_scopes(
     async def get_current_user(
         db: Database,
         settings: Settings_,
-        token: str = Depends(security.oauth2_scheme),
+        token: Annotated[str, Depends(security.oauth2_scheme)],
         request_id: RequestId,
     ) -> models_core.CoreUser:
         """
@@ -281,12 +284,13 @@ def is_user_a_member(
     """
     return user
 
-MemberUser = Annotated[models_core.CoreUser, is_user_a_member]
+
+MemberUser = Annotated[models_core.CoreUser, Depends(is_user_a_member)]
 
 
 def is_user_a_member_of(
     group_id: GroupType,
-) -> Callable[[models_core.CoreUser], Coroutine[Any, Any, models_core.CoreUser]]:
+) -> Callable[[models_core.CoreUser, str], Coroutine[Any, Any, models_core.CoreUser]]:
     """
     Generate a dependency which will:
         * check if the request header contains a valid API JWT token (a token that can be used to call endpoints from the API)
@@ -295,9 +299,12 @@ def is_user_a_member_of(
     """
 
     async def is_user_a_member_of(
-        user: models_core.CoreUser = Depends(
-            get_user_from_token_with_scopes([[ScopeType.API]]),
-        ),
+        user: Annotated[
+            models_core.CoreUser,
+            Depends(
+                get_user_from_token_with_scopes([[ScopeType.API]]),
+            ),
+        ],
         request_id: RequestId,
     ) -> models_core.CoreUser:
         """
@@ -319,9 +326,31 @@ def is_user_a_member_of(
     return is_user_a_member_of
 
 
+UserMemberAdmin = Annotated[
+    models_core.CoreUser,
+    Depends(is_user_a_member_of(GroupType.admin)),
+]
+UserMemberAmap = Annotated[
+    models_core.CoreUser,
+    Depends(is_user_a_member_of(GroupType.amap)),
+]
+UserMemberBDE = Annotated[
+    models_core.CoreUser,
+    Depends(is_user_a_member_of(GroupType.BDE)),
+]
+UserMemberCAA = Annotated[
+    models_core.CoreUser,
+    Depends(is_user_a_member_of(GroupType.CAA)),
+]
+UserMemberCinema = Annotated[
+    models_core.CoreUser,
+    Depends(is_user_a_member_of(GroupType.cinema)),
+]
+
+
 async def get_token_data(
     settings: Settings_,
-    token: str = Depends(security.oauth2_scheme),
+    token: Annotated[str, Depends(security.oauth2_scheme)],
     request_id: RequestId,
 ) -> schemas_auth.TokenData:
     """

@@ -5,12 +5,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 
 from app.core import cruds_core, models_core, schemas_core
-from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
 from app.dependencies import (
     Database,
-    get_settings,
-    is_user_a_member,
+    MemberUser,
+    Settings_,
     is_user_a_member_of,
 )
 from app.utils.tools import is_group_id_valid

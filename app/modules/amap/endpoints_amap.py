@@ -1,6 +1,7 @@
 import logging
 import uuid
 from datetime import UTC, datetime
+from typing import Annotated
 
 from fastapi import Depends, HTTPException, Response
 from redis import Redis
@@ -13,10 +14,11 @@ from app.core.users import cruds_users
 from app.core.users.endpoints_users import read_user
 from app.dependencies import (
     Database,
+    MemberUser,
+    RequestId,
+    UserMemberAmap,
     get_notification_tool,
     get_redis_client,
-    get_request_id,
-    is_user_a_member,
     is_user_a_member_of,
 )
 from app.modules.amap import cruds_amap, models_amap, schemas_amap
@@ -392,7 +394,7 @@ async def get_order_by_id(
 async def add_order_to_delievery(
     order: schemas_amap.OrderBase,
     db: Database,
-    redis_client: Redis | None = Depends(get_redis_client),
+    redis_client: Annotated[Redis | None, Depends(get_redis_client)],
     user: MemberUser,
     request_id: RequestId,
 ):
@@ -509,7 +511,7 @@ async def edit_order_from_delivery(
     order_id: str,
     order: schemas_amap.OrderEdit,
     db: Database,
-    redis_client: Redis | None = Depends(get_redis_client),
+    redis_client: Annotated[Redis | None, Depends(get_redis_client)],
     user: MemberUser,
     request_id: RequestId,
 ):
@@ -629,7 +631,7 @@ async def edit_order_from_delivery(
 async def remove_order(
     order_id: str,
     db: Database,
-    redis_client: Redis | None = Depends(get_redis_client),
+    redis_client: Annotated[Redis | None, Depends(get_redis_client)],
     user: MemberUser,
     request_id: RequestId,
 ):
@@ -851,7 +853,7 @@ async def create_cash_of_user(
     user_id: str,
     cash: schemas_amap.CashEdit,
     db: Database,
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
+    user: UserMemberAmap,
     request_id: RequestId,
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
@@ -919,7 +921,7 @@ async def edit_cash_by_id(
     user_id: str,
     balance: schemas_amap.CashEdit,
     db: Database,
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
+    user: UserMemberAmap,
     request_id: RequestId,
 ):
     """

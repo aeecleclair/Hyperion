@@ -16,8 +16,8 @@ from app.core.users import cruds_users
 from app.dependencies import (
     Database,
     MemberUser,
-    get_request_id,
-    is_user_a_member,
+    RequestId,
+    UserMemberAdmin,
     is_user_a_member_of,
 )
 
@@ -141,7 +141,7 @@ async def update_group(
 async def create_membership(
     membership: schemas_core.CoreMembership,
     db: Database,
-    user=Depends(is_user_a_member_of(GroupType.admin)),
+    user: UserMemberAdmin,
     request_id: RequestId,
 ):
     """
@@ -181,7 +181,7 @@ async def create_membership(
 async def create_batch_membership(
     batch_membership: schemas_core.CoreBatchMembership,
     db: Database,
-    user=Depends(is_user_a_member_of(GroupType.admin)),
+    user: UserMemberAdmin,
     request_id: RequestId,
 ):
     """
@@ -227,7 +227,7 @@ async def create_batch_membership(
 async def delete_membership(
     membership: schemas_core.CoreMembershipDelete,
     db: Database,
-    user=Depends(is_user_a_member_of(GroupType.admin)),
+    user: UserMemberAdmin,
     request_id: RequestId,
 ):
     """
@@ -254,7 +254,7 @@ async def delete_membership(
 async def delete_batch_membership(
     batch_membership: schemas_core.CoreBatchDeleteMembership,
     db: Database,
-    user=Depends(is_user_a_member_of(GroupType.admin)),
+    user: UserMemberAdmin,
     request_id: RequestId,
 ):
     """

@@ -11,9 +11,9 @@ from app.core.notification.notification_types import CustomTopic, Topic
 from app.core.notification.schemas_notification import Message
 from app.dependencies import (
     Database,
+    MemberUser,
     get_notification_tool,
     get_settings,
-    is_user_a_member,
     is_user_a_member_of,
 )
 from app.modules.booking import cruds_booking, models_booking, schemas_booking
