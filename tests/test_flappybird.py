@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 from app.core.groups.groups_type import GroupType
 from app.main import app
@@ -26,7 +26,7 @@ async def startuptest():
             user_id=user.id,
             user=user,
             value=25,
-            creation_time=datetime.now(),
+            creation_time=datetime.now(UTC),
         )
         db.add(flappybird_score)
 
