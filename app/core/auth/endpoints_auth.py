@@ -392,7 +392,7 @@ async def token(
     # OAuth and Openid connect parameters
     # The client id and secret must be passed either in the authorization header or with client_id and client_secret parameters
     tokenreq: Annotated[schemas_auth.TokenReq, Depends(schemas_auth.TokenReq.as_form)],
-    authorization: Annotated[str | None, Header] = None,
+    authorization: Annotated[str | None, Header()] = None,
     # Database
     db: Database,
     settings: Annotated[Settings, Depends(get_settings)],
