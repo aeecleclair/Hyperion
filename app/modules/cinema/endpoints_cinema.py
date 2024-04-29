@@ -82,6 +82,7 @@ async def create_session(
             "Novembre",
             "Décembre",
         ]
+        french_hour = db_session.start.astimezone(ZoneInfo("Europe/Paris"))
         message_content = (
             db_session.name
             + " - "
@@ -91,7 +92,7 @@ async def create_session(
             + " "
             + months[db_session.start.month - 1]
             + " à "
-            + db_session.start.strftime("%H:%M")
+            + french_hour.strftime("%H:%M")
         )
         message = TopicMessage(
             title="🎬 Cinéma - Nouvelle séance",
