@@ -177,6 +177,7 @@ class Team(Base):
     meeting_place: Mapped[MeetingPlace | None] = mapped_column(
         Enum(MeetingPlace), nullable=True
     )
+    file_id: Mapped[str | None] = mapped_column(String, nullable=True)
 
     @property
     def validation_progress(self) -> float:

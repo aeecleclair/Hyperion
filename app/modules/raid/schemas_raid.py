@@ -135,6 +135,7 @@ class Team(TeamBase):
     difficulty: Difficulty | None
     meeting_place: MeetingPlace | None
     validation_progress: float
+    file_id: str | None
 
     class Config:
         orm_mode = True

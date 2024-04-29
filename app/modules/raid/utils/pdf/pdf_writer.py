@@ -39,7 +39,7 @@ class PDFWriter(FPDF):
                 0, 10, f"Dossier d'inscription de l'équipe {self.team.name}", 0, 1, "C"
             )
 
-    def add_pdf(self, file_name: str):
+    def add_pdf(self):
         reader = PdfReader(io.BytesIO(self.output()))
         for i in range(len(self.pdf_paths)):
             pages = PdfReader(self.pdf_paths[i]).pages
