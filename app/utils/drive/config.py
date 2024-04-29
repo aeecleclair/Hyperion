@@ -1,4 +1,3 @@
-
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -9,7 +8,7 @@ class DriveSettings(BaseSettings):
         case_sensitive=False,
         extra="ignore",
     )
-    #####################################
+
     REFRESH_TOKEN: str
     API_KEY: str
     CLIENT_ID: str
