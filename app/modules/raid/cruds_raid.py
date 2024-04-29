@@ -131,7 +131,7 @@ async def delete_all_teams(
 
 
 async def add_security_file(
-    security_file: schemas_raid.SecurityFile,
+    security_file: models_raid.SecurityFile,
     db: AsyncSession,
 ) -> models_raid.SecurityFile:
     db.add(security_file)
