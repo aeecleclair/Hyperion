@@ -94,6 +94,34 @@ class Participant(Base):
     )
     payment: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
+    @property
+    def validation_progress(self) -> float:
+        number_validated = 0
+        number_total = 9
+        if self.address:
+            number_validated += 1
+        if self.bike_size:
+            number_validated += 1
+        if self.t_shirt_size:
+            number_validated += 1
+        if self.situation:
+            number_validated += 1
+        if self.situation.split(" : ")[0] in ["centrale", "otherschool"]:
+            number_total += 1
+            if self.student_card_id and self.student_card.validated:
+                number_validated += 1
+        if self.id_card_id and self.id_card.validated:
+            number_validated += 1
+        if self.medical_certificate_id and self.medical_certificate.validated:
+            number_validated += 1
+        if self.security_file_id:
+            number_validated += 1
+        if self.raid_rules_id and self.raid_rules.validated:
+            number_validated += 1
+        if self.payment:
+            number_validated += 1
+        return (number_validated / number_total) * 100
+
 
 class Team(Base):
     __tablename__ = "raid_team"
@@ -116,6 +144,21 @@ class Team(Base):
     meeting_place: Mapped[MeetingPlace | None] = mapped_column(
         Enum(MeetingPlace), nullable=True
     )
+
+    @property
+    def validation_progress(self) -> float:
+        number_validated = 0
+        number_total = 3
+        if self.name:
+            number_validated += 1
+        if self.difficulty:
+            number_validated += 1
+        if self.meeting_place:
+            number_validated += 1
+        return (number_validated / number_total) * 10 + (
+            self.captain.validation_progress
+            + (self.second.validation_progress if self.second else 0)
+        ) * 0.45
 
 
 class InviteToken(Base):

@@ -68,13 +68,11 @@ class ParticipantBase(BaseModel):
     bike_size: Size | None
     t_shirt_size: Size | None
     situation: str | None
+    validation_progress: float
 
 
 class ParticipantCreation(ParticipantBase):
     address: str | None
-    bike_size: Size | None
-    t_shirt_size: Size | None
-    situation: str | None
     other_school: str | None = None
     company: str | None = None
     diet: str | None = None
@@ -121,6 +119,7 @@ class TeamPreview(TeamBase):
     second: ParticipantBase | None
     difficulty: Difficulty | None
     meeting_place: MeetingPlace | None
+    validation_progress: float
 
     class Config:
         orm_mode = True
@@ -133,6 +132,7 @@ class Team(TeamBase):
     second: Participant | None
     difficulty: Difficulty | None
     meeting_place: MeetingPlace | None
+    validation_progress: float
 
     class Config:
         orm_mode = True
