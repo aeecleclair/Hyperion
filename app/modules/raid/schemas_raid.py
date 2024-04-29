@@ -73,6 +73,8 @@ class ParticipantPreview(ParticipantBase):
     situation: str | None
     validation_progress: float
     payment: bool
+    number_of_document: int
+    number_of_validated_document: int
 
 
 class Participant(ParticipantPreview):
