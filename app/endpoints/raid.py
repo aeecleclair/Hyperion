@@ -1,12 +1,13 @@
 import logging
 
 from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cruds import cruds_raid
 from app.dependencies import get_db, get_request_id
 from app.schemas import schemas_raid
-from app.utils.tools import save_file_as_data
+from app.utils.tools import get_file_from_data, save_file_as_data
 from app.utils.types import standard_responses
 
 router = APIRouter()
@@ -146,7 +147,6 @@ async def upload_document(
     document_id: str,
     image: UploadFile = File(...),
     request_id: str = Depends(get_request_id),
-    db: AsyncSession = Depends(get_db),
 ):
     """
     Upload a document
@@ -165,6 +165,27 @@ async def upload_document(
     )
 
     return standard_responses.Result(success=True)
+
+
+@router.get(
+    "/raid/document/{document_id}",
+    response_model=FileResponse,
+    status_code=200,
+    tags=["raid"],
+)
+async def read_document(
+    advert_id: str,
+):
+    """
+    Get the image of an advert
+
+    **The user must be authenticated to use this endpoint**
+    """
+    return get_file_from_data(
+        default_asset="assets/images/default_advert.png",
+        directory="adverts",
+        filename=str(advert_id),
+    )
 
 
 @router.patch(
