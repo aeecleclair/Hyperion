@@ -16,6 +16,8 @@ from app.dependencies import (
     is_user_a_member_of,
 )
 from app.modules.raid import cruds_raid, models_raid, schemas_raid
+from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
+from app.modules.raid.utils.pdf.pdf_writer import PDFWriter
 from app.utils.tools import (
     get_file_from_data,
     get_random_string,
@@ -31,6 +33,15 @@ module = Module(
     tag="Raid",
     default_allowed_groups_ids=[GroupType.student, GroupType.staff],
 )
+
+pdf_writer = PDFWriter()
+drive_file_manager = DriveFileManager()
+
+
+def save_team_info(team: schemas_raid.Team):
+    file_name = pdf_writer.write_team(team)
+    team.file_id = drive_file_manager.replace_file(file_name, team.file_id)
+    cruds_raid.update_team_file_id(team.id, team.file_id)
 
 
 @module.router.get(
@@ -103,6 +114,8 @@ async def update_participant(
         raise HTTPException(status_code=403, detail="You are not the participant.")
 
     await cruds_raid.update_participant(participant_id, participant, db)
+    team = await cruds_raid.get_team_by_participant_id(participant_id, db)
+    save_team_info(team)
 
 
 @module.router.post(
@@ -133,7 +146,9 @@ async def create_team(
         captain_id=user.id,
         second_id=None,
     )
-    return await cruds_raid.create_team(db_team, db)
+    created_team = await cruds_raid.create_team(db_team, db)
+    save_team_info(created_team)
+    return created_team
 
 
 @module.router.get(
@@ -213,6 +228,7 @@ async def update_team(
     if existing_team.id != team_id:
         raise HTTPException(status_code=403, detail="You are not in the team.")
     await cruds_raid.update_team(team_id, team, db)
+    save_team_info(team)
 
 
 @module.router.delete(
@@ -227,7 +243,9 @@ async def delete_team(
     """
     Delete a team
     """
+    team = await cruds_raid.get_team_by_id(team_id, db)
     await cruds_raid.delete_team(team_id, db)
+    drive_file_manager.delete_file(team.file_id)
 
 
 @module.router.delete(
@@ -291,6 +309,9 @@ async def create_document(
         document_key=document_type_id,
         db=db,
     )
+
+    team = await cruds_raid.get_team_by_participant_id(participant_id, db)
+    save_team_info(team)
 
     return document
 
@@ -421,6 +442,9 @@ async def set_security_file(
         model_security_file = models_raid.SecurityFile(**security_file.model_dump())
         await cruds_raid.add_security_file(model_security_file, db)
 
+    team = await cruds_raid.get_team_by_participant_id(user.id, db)
+    save_team_info(team)
+
     return security_file
 
 
@@ -455,6 +479,8 @@ async def confirm_payment(
     """
     Confirm payment
     """
+    team = await cruds_raid.get_team_by_participant_id(participant_id, db)
+    save_team_info(team)
     return await cruds_raid.confirm_payment(participant_id, db)
 
 
@@ -472,6 +498,8 @@ async def validate_attestation_on_honour(
     """
     if participant_id != user.id:
         raise HTTPException(status_code=403, detail="You are not the participant")
+    team = await cruds_raid.get_team_by_participant_id(participant_id, db)
+    save_team_info(team)
     return await cruds_raid.validate_attestation_on_honour(participant_id, db)
 
 
@@ -533,6 +561,7 @@ async def join_team(
         if user_team.second_id:
             raise HTTPException(status_code=403, detail="You are already in a team.")
 
+        drive_file_manager.delete_file(user_team.file_id)
         await cruds_raid.delete_team(user_team.id, db)
 
     team = await cruds_raid.get_team_by_id(invite_token.team_id, db)
@@ -549,5 +578,6 @@ async def join_team(
         )
 
     await cruds_raid.update_team_second_id(team.id, user.id, db)
+    save_team_info(team)
 
     await cruds_raid.delete_invite_token(invite_token.id, db)

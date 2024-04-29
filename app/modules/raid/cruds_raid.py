@@ -395,3 +395,16 @@ async def are_user_in_the_same_team(
     team_1 = await get_team_by_participant_id(participant_id_1, db)
     team_2 = await get_team_by_participant_id(participant_id_2, db)
     return team_1.id == team_2.id
+
+
+async def update_team_file_id(
+    team_id: str,
+    file_id: str,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        update(models_raid.Team)
+        .where(models_raid.Team.id == team_id)
+        .values(file_id=file_id)
+    )
+    await db.commit()
