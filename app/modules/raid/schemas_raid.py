@@ -154,3 +154,12 @@ class InviteToken(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class EmergencyPerson(BaseModel):
+    firstname: str | None = None
+    name: str | None = None
+    phone: str | None = None
+
+    class Config:
+        orm_mode = True
