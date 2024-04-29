@@ -35,7 +35,7 @@ class CoreUser(Base):
     birthday: Mapped[date | None] = mapped_column(Date)
     promo: Mapped[int | None] = mapped_column(Integer)
     phone: Mapped[str | None] = mapped_column(String)
-    floor: Mapped[FloorsType] = mapped_column(Enum(FloorsType), nullable=False)
+    floor: Mapped[FloorsType | None] = mapped_column(Enum(FloorsType))
     created_on: Mapped[datetime | None] = mapped_column(TZDateTime)
 
     # Users that are externals (not members) won't be able to use all features

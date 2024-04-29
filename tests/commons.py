@@ -125,7 +125,7 @@ async def create_user_with_groups(
     password: str | None = None,
     name: str | None = None,
     firstname: str | None = None,
-    floor: FloorsType = FloorsType.Autre,
+    floor: FloorsType | None = None,
     external: bool = False,
 ) -> models_core.CoreUser:
     """

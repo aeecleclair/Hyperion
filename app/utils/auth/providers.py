@@ -5,6 +5,7 @@ import unidecode
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType, get_ecl_groups
+from app.types.floors_type import FloorsType
 from app.types.scopes_type import ScopeType
 from app.utils.tools import get_display_name, is_user_member_of_an_allowed_group
 
@@ -244,7 +245,7 @@ class MinecraftAuthClient(BaseAuthClient):
             "id": user.id,
             "nickname": user.nickname,
             "promo": user.promo,
-            "floor": user.floor,
+            "floor": user.floor or FloorsType.Autre,
         }
 
 

@@ -67,7 +67,7 @@ class CoreUser(CoreUserSimple):
     email: str
     birthday: date | None = None
     promo: int | None = None
-    floor: FloorsType
+    floor: FloorsType | None = None
     phone: str | None = None
     created_on: datetime | None = None
     groups: list[CoreGroupSimple] = []
@@ -150,7 +150,7 @@ class CoreUserActivateRequest(CoreUserBase):
     password: str
     birthday: date | None = None
     phone: str | None = None
-    floor: FloorsType
+    floor: FloorsType | None = None
     promo: int | None = Field(
         default=None,
         description="Promotion of the student, an integer like 21",
