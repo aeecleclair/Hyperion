@@ -86,7 +86,7 @@ def test_get_papers_admin():
     assert paper2.id in [response_paper["id"] for response_paper in response_json]
 
 
-def test_create_paper_pdf():
+def test_create_paper_pdf_and_cover():
     with Path("assets/pdf/default_ph.pdf").open("rb") as pdf:
         response = client.post(
             f"/ph/{paper.id}/pdf",
@@ -96,6 +96,7 @@ def test_create_paper_pdf():
 
     assert response.status_code == 201
     assert Path(f"data/ph/pdf/{paper.id}.pdf").is_file()
+    assert Path(f"data/ph/cover/{paper.id}.jpg").is_file()
 
 
 def test_get_paper_pdf():
@@ -106,7 +107,14 @@ def test_get_paper_pdf():
     assert response.status_code == 200
 
 
-def test_get_paper_cover():
+def test_get_cover():
+    with Path("assets/pdf/default_PDF.pdf").open("rb") as pdf:
+        client.post(
+            f"/ph/{paper.id}/pdf",
+            files={"pdf": ("test_paper.pdf", pdf, "application/pdf")},
+            headers={"Authorization": f"Bearer {token_ph}"},
+        )
+
     response = client.get(
         f"/ph/{paper.id}/cover",
         headers={"Authorization": f"Bearer {token_simple}"},

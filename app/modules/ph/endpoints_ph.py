@@ -146,7 +146,7 @@ async def create_paper(
     "/ph/{paper_id}/pdf",
     status_code=201,
 )
-async def create_paper_pdf(
+async def create_paper_pdf_and_cover(
     paper_id: str,
     pdf: UploadFile = File(...),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.ph)),
