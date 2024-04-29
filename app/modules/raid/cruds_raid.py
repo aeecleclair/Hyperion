@@ -199,30 +199,6 @@ async def update_document(
     await db.commit()
 
 
-async def delete_document(
-    document_id: str,
-    db: AsyncSession,
-) -> None:
-    await db.execute(
-        delete(models_raid.Document).where(models_raid.Document.id == document_id)
-    )
-    participant = await db.execute(
-        select(models_raid.Participant).where(
-            models_raid.Participant.document_id == document_id
-        )
-    )
-    participant = await get_participant_by_id(participant.id, db)
-    if participant:
-        await db.execute(
-            update(models_raid.Participant)
-            .where(models_raid.Participant.id == participant.id)
-            .values(
-                validation_progress=(models_raid.Participant.validation_progress - 1)
-            )
-        )
-    await db.commit()
-
-
 async def confirm_payment(
     participant_id: str,
     db: AsyncSession,
