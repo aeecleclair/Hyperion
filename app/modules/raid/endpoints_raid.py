@@ -99,7 +99,7 @@ async def update_participant(
         raise HTTPException(status_code=403, detail="You are not a participant.")
 
     # If the user is not the participant, return an error
-    if participant_id != user.id:
+    if not await cruds_raid.are_user_in_the_same_team(user.id, participant_id, db):
         raise HTTPException(status_code=403, detail="You are not the participant.")
 
     await cruds_raid.update_participant(participant_id, participant, db)
@@ -258,7 +258,7 @@ async def create_document(
     """
     Create a document
     """
-    if participant_id != user.id:
+    if not await cruds_raid.are_user_in_the_same_team(participant_id, db):
         raise HTTPException(status_code=403, detail="You are not the participant.")
 
     # existing_document = await cruds_raid.get_document_by_id(document.id, db)
@@ -369,18 +369,19 @@ async def read_document(
             status_code=404, detail="Participant owning the document not found."
         )
 
-    # if participant.id != user.id and not is_user_member_of_an_allowed_group( # TODO: adapt for team mate
-    #     user, [GroupType.raid_admin]
-    # ):
-    #     raise HTTPException(
-    #         status_code=403, detail="You are not the owner of this document."
-    #     )
+    if not cruds_raid.are_user_in_the_same_team(
+        user.id, participant.id, db
+    ) and not is_user_member_of_an_allowed_group(user, [GroupType.raid_admin]):
+        raise HTTPException(
+            status_code=403, detail="You are not the owner of this document."
+        )
 
     return get_file_from_data(
         default_asset="assets/images/default_advert.png",  # TODO: get a default document
         directory="raid",
         filename=str(document_id),
     )
+
 
 @module.router.post(
     "/raid/document/{document_id}/validate",
@@ -436,6 +437,9 @@ async def assign_security_file(
     """
     Assign security file
     """
+    if not await cruds_raid.are_user_in_the_same_team(user.id, participant_id, db):
+        raise HTTPException(status_code=403, detail="You are not the participant.")
+
     return await cruds_raid.assign_security_file(participant_id, security_file_id, db)
 
 
