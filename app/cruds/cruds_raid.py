@@ -38,7 +38,7 @@ async def get_team_by_id(
 
 
 async def create_team(
-    team: schemas_raid.Team,
+    team: models_raid.Team,
     db: AsyncSession,
 ) -> models_raid.Team:
     db.add(team)
@@ -203,3 +203,10 @@ async def get_participant_by_id(
         )
     )
     return participant.scalars().first()
+
+
+async def get_number_of_teams(
+    db: AsyncSession,
+) -> int:
+    result = await db.execute(select(models_raid.Team))
+    return len(result.scalars().all())
