@@ -431,7 +431,7 @@ async def validate_document(
     response_model=schemas_raid.SecurityFile,
     status_code=201,
 )
-async def set_security_file(  # TODO: allow team members
+async def set_security_file(
     security_file: schemas_raid.SecurityFile,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
@@ -442,7 +442,6 @@ async def set_security_file(  # TODO: allow team members
     existing_security_file = await cruds_raid.get_security_file_by_security_id(
         security_file.id, db
     )
-    print(security_file.model_dump())
     if existing_security_file:
         await cruds_raid.update_security_file(security_file, db)
     else:

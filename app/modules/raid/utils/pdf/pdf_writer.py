@@ -224,6 +224,41 @@ class PDFWriter(FPDF):
             if data_row:
                 self.write_key_label(data_row[0], data_row[1])
 
+        self.ln(6)
+        self.set_font("times", "B", 12)
+        self.cell(
+            0,
+            4,
+            "Personne à contacter en cas d'urgence",
+            0,
+            1,
+            "C",
+        )
+        self.set_font("times", "", 12)
+        data = [
+            [
+                "Prénom",
+                security_file.emergency_person_firstname
+                if security_file.emergency_person_firstname
+                else "Non renseigné",
+            ],
+            [
+                "Nom",
+                security_file.emergency_person_name
+                if security_file.emergency_person_name
+                else "Non renseigné",
+            ],
+            [
+                "Téléphone",
+                security_file.emergency_person_phone
+                if security_file.emergency_person_phone
+                else "Non renseigné",
+            ],
+        ]
+        for data_row in data:
+            if data_row:
+                self.write_key_label(data_row[0], data_row[1])
+
     def write_document(self, document: Document, participant: Participant):
         self.write_document_header(document, participant)
         self.ln(6)
