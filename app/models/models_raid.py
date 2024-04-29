@@ -26,16 +26,16 @@ class SecurityFile(Base):
     id: Mapped[str] = mapped_column(
         String, primary_key=True, index=True, nullable=False
     )
-    allergy: Mapped[str] = mapped_column(String, nullable=True)
+    allergy: Mapped[str | None] = mapped_column(String, nullable=True)
     asthma: Mapped[bool] = mapped_column(Boolean, nullable=False)
-    intensive_care_unit: Mapped[bool] = mapped_column(Boolean, nullable=True)
-    intensive_care_unit_when: Mapped[str] = mapped_column(String, nullable=True)
-    ongoing_treatment: Mapped[str] = mapped_column(String, nullable=True)
-    sicknesses: Mapped[str] = mapped_column(String, nullable=True)
-    hospitalization: Mapped[str] = mapped_column(String, nullable=True)
-    surgical_operation: Mapped[str] = mapped_column(String, nullable=True)
-    trauma: Mapped[str] = mapped_column(String, nullable=True)
-    family: Mapped[str] = mapped_column(String, nullable=True)
+    intensive_care_unit: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    intensive_care_unit_when: Mapped[str | None] = mapped_column(String, nullable=True)
+    ongoing_treatment: Mapped[str | None] = mapped_column(String, nullable=True)
+    sicknesses: Mapped[str | None] = mapped_column(String, nullable=True)
+    hospitalization: Mapped[str | None] = mapped_column(String, nullable=True)
+    surgical_operation: Mapped[str | None] = mapped_column(String, nullable=True)
+    trauma: Mapped[str | None] = mapped_column(String, nullable=True)
+    family: Mapped[str | None] = mapped_column(String, nullable=True)
     participant: Mapped["Participant"] = relationship(back_populates="security_file")
 
 
