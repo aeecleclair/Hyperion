@@ -9,8 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import models_core, standard_responses
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
-from app.core.notification.notification_types import CustomTopic, Topic
-from app.core.notification.schemas_notification import Message
+from app.core.notification.notification_types import CustomTopic, Topic, TopicMessage
 from app.dependencies import (
     get_db,
     get_notification_tool,
@@ -267,19 +266,16 @@ async def create_advert(
         raise HTTPException(status_code=400, detail=str(error))
 
     try:
-        now = datetime.now(UTC)
-        message = Message(
-            context=f"advert-{result.id}",
-            is_visible=True,
+        message = TopicMessage(
             title=f"📣 Annonce - {result.title}",
             content=result.content,
-            # The notification will expire in 3 days
-            expire_on=now.replace(day=now.day + 3),
         )
-        await notification_tool.send_notification_to_topic(
-            custom_topic=CustomTopic(topic=Topic.advert),
+
+        notification_tool.send_notification_to_topic(
+            custom_topic=CustomTopic(Topic.advert),
             message=message,
         )
+
     except Exception as error:
         hyperion_error_logger.error(f"Error while sending advert notification, {error}")
 
