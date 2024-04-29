@@ -59,11 +59,11 @@ class Participant(Base):
     id_card_id: Mapped[str] = mapped_column(
         ForeignKey("raid_document.id"), nullable=False
     )
-    id_card: Mapped[Document] = relationship("Document")
+    id_card: Mapped[Document] = relationship("Document", foreign_keys=[id_card_id])
     medical_certificate_id: Mapped[str] = mapped_column(
         ForeignKey("raid_document.id"), nullable=False
     )
-    medical_certificate: Mapped[Document] = relationship("Document")
+    medical_certificate: Mapped[Document] = relationship("Document", foreign_keys=[medical_certificate_id])
     security_file_id: Mapped[str | None] = mapped_column(
         ForeignKey("raid_security_file.id"), nullable=True
     )
@@ -71,11 +71,11 @@ class Participant(Base):
     student_card_id: Mapped[str | None] = mapped_column(
         ForeignKey("raid_document.id"), nullable=True
     )
-    student_card: Mapped[Document] = relationship("Document")
+    student_card: Mapped[Document] = relationship("Document", foreign_keys=[student_card_id])
     raid_rules_id: Mapped[str] = mapped_column(
         ForeignKey("raid_document.id"), nullable=False
     )
-    raid_rules: Mapped[Document] = relationship("Document")
+    raid_rules: Mapped[Document] = relationship("Document", foreign_keys=[raid_rules_id])
     attestation_on_honour: Mapped[bool] = mapped_column(Boolean, nullable=False)
     validation_progress: Mapped[float] = mapped_column(Float, nullable=False)
 
@@ -91,9 +91,9 @@ class Team(Base):
     captain_id: Mapped[str] = mapped_column(
         ForeignKey("raid_participant.id"), nullable=False
     )
-    captain: Mapped[Participant] = relationship("Participant")
+    captain: Mapped[Participant] = relationship("Participant", foreign_keys=[captain_id])
     second_id: Mapped[str] = mapped_column(
         ForeignKey("raid_participant.id"), nullable=False
     )
-    second: Mapped[Participant] = relationship("Participant")
+    second: Mapped[Participant] = relationship("Participant", foreign_keys=[second_id])
     validationProgress: Mapped[float] = mapped_column(Float, nullable=False)
