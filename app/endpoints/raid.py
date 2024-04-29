@@ -40,6 +40,31 @@ async def create_participant(
     return await cruds_raid.create_participant(db_participant, db)
 
 
+@router.patch(
+    "/raid/participant/{participant_id}",
+    status_code=204,
+    tags=[Tags.raid],
+)
+async def update_participant(
+    participant_id: str,
+    participant: schemas_raid.ParticipantUpdate,
+    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Update a participant
+    """
+    # If the user is not a participant, return an error
+    if not await cruds_raid.is_user_a_participant(participant_id, db):
+        raise HTTPException(status_code=403, detail="You are not a participant.")
+
+    # If the user is not the participant, return an error
+    if participant_id != user.id:
+        raise HTTPException(status_code=403, detail="You are not the participant.")
+
+    await cruds_raid.update_participant(participant_id, participant, db)
+
+
 @router.post(
     "/raid/team",
     response_model=schemas_raid.TeamBase,
