@@ -330,3 +330,5 @@ class RAIDRegistering(BaseAuthClient):
     # Restrict the authentication to this client to specific Hyperion groups.
     # When set to `None`, users from any group can use the auth client
     allowed_groups: list[GroupType] | None = None
+    # Some clients may allow external users to authenticate
+    allow_external_users: True
