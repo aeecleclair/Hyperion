@@ -93,7 +93,7 @@ class Team(Base):
     )
     name: Mapped[str] = mapped_column(String, nullable=False)
     number: Mapped[int] = mapped_column(Integer, nullable=False)
-    difficulty: Mapped[Difficulty] = mapped_column(Enum(Difficulty), nullable=False)
+    difficulty: Mapped[Difficulty] = mapped_column(Enum(Difficulty), nullable=True)
     captain_id: Mapped[str] = mapped_column(
         ForeignKey("raid_participant.id"), nullable=False
     )
@@ -104,4 +104,4 @@ class Team(Base):
         ForeignKey("raid_participant.id"), nullable=False
     )
     second: Mapped[Participant] = relationship("Participant", foreign_keys=[second_id])
-    validationProgress: Mapped[float] = mapped_column(Float, nullable=False)
+    validation_progress: Mapped[float] = mapped_column(Float, nullable=False)
