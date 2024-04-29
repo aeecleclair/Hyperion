@@ -301,6 +301,7 @@ def is_user_a_member(
     user: models_core.CoreUser = Depends(
         get_user_from_token_with_scopes([[ScopeType.API]]),
     ),
+    request_id: str = Depends(get_request_id),
 ) -> models_core.CoreUser:
     """
     A dependency that will:
@@ -312,7 +313,7 @@ def is_user_a_member(
     """
     if is_user_external(user):
         hyperion_access_logger.warning(
-            "is_user_a_member: user is an external user",
+            f"Is_user_a_member: user is an external user ({request_id})",
         )
 
         raise HTTPException(
