@@ -1,12 +1,5 @@
 import io
-from typing import IO, Any
-from fpdf import FPDF
-from PIL import Image
-from fpdf.fonts import FontFace
-from fpdf.enums import TableCellFillMode, VAlign
-from app.modules.raid.schemas_raid import Document, Participant, SecurityFile, Team
-from pypdf import PdfReader, PdfWriter
-
+import os
 
 from conversion_utils import (
     date_to_string,
@@ -17,6 +10,13 @@ from conversion_utils import (
     get_size_label,
     nullable_number_to_string,
 )
+from fpdf import FPDF
+from fpdf.enums import TableCellFillMode, VAlign
+from fpdf.fonts import FontFace
+from PIL import Image
+from pypdf import PdfReader, PdfWriter
+
+from app.modules.raid.schemas_raid import Document, Participant, SecurityFile, Team
 
 
 def maximize_image(image_path: str, max_width: int, max_height: int) -> Image:
@@ -29,12 +29,7 @@ def maximize_image(image_path: str, max_width: int, max_height: int) -> Image:
 
 
 class PDFWriter(FPDF):
-
-    def __init__(self, team: Team, *args, **kwargs) -> None:
-        self.team = team
-        self.pdf_indexes = []
-        self.pdf_pages = []
-        self.pdf_paths = []
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
     def header(self):
@@ -44,7 +39,7 @@ class PDFWriter(FPDF):
                 0, 10, f"Dossier d'inscription de l'équipe {self.team.name}", 0, 1, "C"
             )
 
-    def add_pdf(self) -> IO[Any]:
+    def add_pdf(self, file_name: str):
         reader = PdfReader(io.BytesIO(self.output()))
         for i in range(len(self.pdf_paths)):
             pages = PdfReader(self.pdf_paths[i]).pages
@@ -53,8 +48,7 @@ class PDFWriter(FPDF):
 
         writer = PdfWriter()
         writer.append_pages_from_reader(reader)
-        _, file = writer.write()
-        return file
+        writer.write(self.file_name)
 
     def footer(self):
         if self.page_no() - 1 not in self.pdf_pages:
@@ -62,20 +56,30 @@ class PDFWriter(FPDF):
             self.set_font("times", "I", 8)
             self.cell(0, 10, f"Page {self.page_no()} - Raid Centrale Lyon", 0, 0, "C")
 
-    def write_team(self):
+    def write_team(self, team: Team) -> str:
+        self.pdf_indexes = []
+        self.pdf_pages = []
+        self.pdf_paths = []
+        self.team = team
+        self.file_name = (
+            str(team.number) + "_" if team.number else ""
+        ) + f"{team.name}_{team.captain.name}_{team.captain.firstname}.pdf"
         self.add_page()
         self.write_team_summary()
-        self.write_participant_summary(self.team.captain)
-        if self.team.second:
-            self.write_participant_summary(self.team.second, is_second=True)
+        self.write_participant_summary(team.captain)
+        if team.second:
+            self.write_participant_summary(team.second, is_second=True)
         else:
             self.write_empty_participant()
-        self.write_security_file(self.team.captain.security_file, self.team.captain)
-        self.write_participant_document(self.team.captain)
-        if self.team.second:
-            self.write_security_file(self.team.second.security_file, self.team.second)
-            self.write_participant_document(self.team.second)
+        self.write_security_file(team.captain.security_file, team.captain)
+        self.write_participant_document(team.captain)
+        if team.second:
+            self.write_security_file(team.second.security_file, team.second)
+            self.write_participant_document(team.second)
         self.add_pdf()
+
+    def clear_pdf(self):
+        os.Path.unlink(self.file_name)
 
     def write_empty_participant(self):
         self.set_font("times", "B", 12)
@@ -222,15 +226,15 @@ class PDFWriter(FPDF):
         x = ((self.epw * 2.85 - image_width) / 2) / 2.85 + 10
         self.image(image, x=x)
 
-    def write_team_summary(self):
+    def write_team_summary(self, team: Team):
         self.set_font("times", "", 12)
         data = [
             ["Parcours", "Lieu de rendez-vous", "Numéro", "Inscription"],
             [
-                get_difficulty_label(self.team.difficulty),
-                get_meeting_place_label(self.team.meeting_place),
-                nullable_number_to_string(self.team.number),
-                str(int(self.team.validation_progress * 100)) + " %",
+                get_difficulty_label(team.difficulty),
+                get_meeting_place_label(team.meeting_place),
+                nullable_number_to_string(team.number),
+                str(int(team.validation_progress * 100)) + " %",
             ],
         ]
         self.ln(6)
