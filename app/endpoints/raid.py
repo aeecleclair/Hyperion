@@ -1,4 +1,5 @@
 import logging
+import uuid
 
 from fastapi import APIRouter, Depends, File, UploadFile
 from fastapi.responses import FileResponse
@@ -6,13 +7,39 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cruds import cruds_raid
 from app.dependencies import get_db, get_request_id
+from app.models import models_raid
 from app.schemas import schemas_raid
 from app.utils.tools import get_file_from_data, save_file_as_data
 from app.utils.types import standard_responses
+from app.utils.types.tags import Tags
 
 router = APIRouter()
 
-hyperion_error_logger = logging.getLogger("hyhperion.error")
+hyperion_error_logger = logging.getLogger("hyperion.error")
+
+
+@router.post(
+    "/raid/team",
+    response_model=schemas_raid.TeamBase,
+    status_code=201,
+    tags=[Tags.raid],
+)
+async def create_team(
+    team: schemas_raid.TeamBase,
+    user_id: str = Depends(get_request_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Create a team
+    """
+    db_team = models_raid.Team(
+        id=str(uuid.uuid4()),
+        name=team.name,
+        number=0,
+        captain_id=user_id,
+        validationProgress=0.0,
+    )
+    return await cruds_raid.create_team(db_team, db)
 
 
 @router.get(
@@ -44,22 +71,6 @@ async def get_all_teams(
     Get all teams
     """
     return await cruds_raid.get_all_teams(db)
-
-
-@router.post(
-    "/raid/team",
-    response_model=schemas_raid.TeamPreview,
-    status_code=201,
-    tags=["raid"],
-)
-async def create_team(
-    team: schemas_raid.TeamBase,
-    db: AsyncSession = Depends(get_db),
-):
-    """
-    Create a team
-    """
-    return await cruds_raid.create_team(team, db)
 
 
 @router.get(
