@@ -102,7 +102,7 @@ async def create_team(
     "/raid/participant/{participant_id}/team",
     response_model=schemas_raid.Team,
     status_code=200,
-    tags=["raid"],
+    tags=[Tags.raid],
 )
 async def get_team_by_participant_id(
     participant_id: str,
@@ -126,7 +126,7 @@ async def get_team_by_participant_id(
     "/raid/team/all",
     response_model=list[schemas_raid.TeamPreview],
     status_code=200,
-    tags=["raid"],
+    tags=[Tags.raid],
 )
 async def get_all_teams(
     db: AsyncSession = Depends(get_db),
@@ -141,7 +141,7 @@ async def get_all_teams(
     "/raid/team/{team_id}",
     response_model=schemas_raid.Team,
     status_code=200,
-    tags=["raid"],
+    tags=[Tags.raid],
 )
 async def get_team_by_id(
     team_id: str,
@@ -156,7 +156,7 @@ async def get_team_by_id(
 @router.patch(
     "/raid/team/{team_id}",
     status_code=204,
-    tags=["raid"],
+    tags=[Tags.raid],
 )
 async def update_team(
     team_id: str,
