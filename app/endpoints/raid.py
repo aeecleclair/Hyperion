@@ -172,7 +172,7 @@ async def update_team(
 @router.delete(
     "/raid/team/{team_id}",
     status_code=204,
-    tags=["raid"],
+    tags=[Tags.raid],
 )
 async def delete_team(
     team_id: str,
