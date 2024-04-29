@@ -97,7 +97,9 @@ class Participant(Base):
     @property
     def validation_progress(self) -> float:
         number_validated = 0
-        number_total = 8
+        number_total = 10
+        if self.address:
+            number_validated += 1
         if self.bike_size:
             number_validated += 1
         if self.t_shirt_size:
@@ -115,6 +117,8 @@ class Participant(Base):
         if self.security_file_id:
             number_validated += 1
         if self.raid_rules_id and self.raid_rules.validated:
+            number_validated += 1
+        if self.attestation_on_honour:
             number_validated += 1
         if self.payment:
             number_validated += 1
