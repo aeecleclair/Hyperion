@@ -65,6 +65,8 @@ class ParticipantBase(BaseModel):
     birthday: date
     phone: str
     email: str
+    bike_size: Size | None
+    t_shirt_size: Size | None
 
 
 class ParticipantCreation(ParticipantBase):
@@ -117,6 +119,7 @@ class TeamPreview(TeamBase):
     captain: ParticipantBase
     second: ParticipantBase | None
     difficulty: Difficulty | None
+    meeting_place: MeetingPlace | None
 
     class Config:
         orm_mode = True
