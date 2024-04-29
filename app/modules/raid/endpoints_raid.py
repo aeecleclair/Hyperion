@@ -1,6 +1,6 @@
-from datetime import datetime
 import logging
 import uuid
+from datetime import datetime
 
 from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -18,6 +18,7 @@ from app.dependencies import (
 from app.modules.raid import cruds_raid, models_raid, schemas_raid
 from app.utils.tools import (
     get_file_from_data,
+    get_random_string,
     is_user_member_of_an_allowed_group,
     save_file_as_data,
 )
@@ -453,3 +454,38 @@ async def validate_attestation_on_honour(
     if participant_id != user.id:
         raise HTTPException(status_code=403, detail="You are not the participant")
     return await cruds_raid.validate_attestation_on_honour(participant_id, db)
+
+
+@module.router.post(
+    "/raid/teams/{team_id}/invite",
+    response_model=schemas_raid.InviteToken,
+    status_code=201,
+)
+async def create_invite_token(
+    team_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Create an invite token
+    """
+    team = await cruds_raid.get_team_by_participant_id(user.id, db)
+
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found.")
+
+    if team.id != team_id:
+        raise HTTPException(status_code=403, detail="You are not in the team.")
+
+    existing_invite_token = await cruds_raid.get_invite_token_by_team_id(team_id, db)
+
+    if existing_invite_token:
+        return existing_invite_token
+
+    invite_token = models_raid.InviteToken(
+        id=str(uuid.uuid4()),
+        team_id=team_id,
+        token=get_random_string(length=10),
+    )
+
+    return await cruds_raid.create_invite_token(invite_token, db)
