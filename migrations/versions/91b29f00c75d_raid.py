@@ -58,6 +58,7 @@ def upgrade() -> None:
     sa.Column('other_school', sa.String(), nullable=True, default=None),
     sa.Column('company', sa.String(), nullable=True, default=None), 
     sa.Column('diet', sa.String(), nullable=True, default=None),
+    sa.Column('payment', sa.Boolean(), nullable=False, default=False),
     sa.Column('id_card_id', sa.String(), nullable=True, default=None),
     sa.Column('medical_certificate_id', sa.String(), nullable=True, default=None),
     sa.Column('security_file_id', sa.String(), nullable=True, default=None),
