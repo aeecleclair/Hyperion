@@ -139,3 +139,11 @@ class TeamUpdate(BaseModel):
     number: int | None = None
     difficulty: Difficulty | None = None
     meeting_place: MeetingPlace | None = None
+
+
+class InviteToken(BaseModel):
+    team_id: str
+    token: str
+
+    class Config:
+        orm_mode = True

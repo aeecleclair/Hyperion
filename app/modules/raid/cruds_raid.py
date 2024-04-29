@@ -324,7 +324,31 @@ async def get_security_file_by_security_id(
     db: AsyncSession,
 ) -> models_raid.SecurityFile | None:
     security_file = await db.execute(
-        select(models_raid.SecurityFile)
-        .where(models_raid.SecurityFile.id == security_id)
+        select(models_raid.SecurityFile).where(
+            models_raid.SecurityFile.id == security_id
+        )
     )
     return security_file.scalars().first()
+
+
+async def create_invite_token(
+    invite: models_raid.InviteToken,
+    db: AsyncSession,
+) -> models_raid.InviteToken:
+    db.add(invite)
+    try:
+        await db.commit()
+        return invite
+    except IntegrityError:
+        await db.rollback()
+        raise ValueError("An error occurred while creating the invite token.")
+
+
+async def get_invite_token_by_team_id(
+    team_id: str,
+    db: AsyncSession,
+) -> models_raid.InviteToken | None:
+    invite = await db.execute(
+        select(models_raid.InviteToken).where(models_raid.InviteToken.team_id == team_id)
+    )
+    return invite.scalars().first()
