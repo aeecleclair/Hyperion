@@ -71,6 +71,13 @@ async def delete_team(
     await db.commit()
 
 
+async def delete_all_teams(
+    db: AsyncSession,
+) -> None:
+    await db.execute(delete(models_raid.Team))
+    await db.commit()
+
+
 async def get_document_by_id(
     document_id: str,
     db: AsyncSession,
