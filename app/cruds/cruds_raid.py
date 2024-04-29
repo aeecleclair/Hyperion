@@ -1,7 +1,8 @@
 from sqlite3 import IntegrityError
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models import models_raid
 from app.schemas import schemas_raid
@@ -48,9 +49,16 @@ async def get_team_by_participant_id(
     db: AsyncSession,
 ) -> models_raid.Team | None:
     team = await db.execute(
-        select(models_raid.Team).where(
-            models_raid.Team.captain_id == participant_id
-            or models_raid.Team.second_id == participant_id
+        select(models_raid.Team)
+        .where(
+            or_(
+                models_raid.Team.captain_id == participant_id,
+                models_raid.Team.second_id == participant_id,
+            )
+        )
+        .options(
+            selectinload(models_raid.Team.captain),
+            selectinload(models_raid.Team.second),
         )
     )
     return team.scalars().first()
@@ -59,7 +67,12 @@ async def get_team_by_participant_id(
 async def get_all_teams(
     db: AsyncSession,
 ) -> list[models_raid.Team]:
-    teams = await db.execute(select(models_raid.Team))
+    teams = await db.execute(
+        select(models_raid.Team).options(
+            selectinload(models_raid.Team.captain),
+            selectinload(models_raid.Team.second),
+        )
+    )
     return teams.scalars().all()
 
 
