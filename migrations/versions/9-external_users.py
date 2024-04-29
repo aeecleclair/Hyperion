@@ -20,11 +20,21 @@ def upgrade() -> None:
     # thus we can assume that all existing users are not external and set the default value to false
     op.add_column(
         "core_user",
-        sa.Column("external", sa.Boolean(), nullable=False, server_default="false"),
+        sa.Column(
+            "external",
+            sa.Boolean(),
+            nullable=False,
+            server_default=sa.sql.false(),
+        ),
     )
     op.add_column(
         "core_user_unconfirmed",
-        sa.Column("external", sa.Boolean(), nullable=False, server_default="false"),
+        sa.Column(
+            "external",
+            sa.Boolean(),
+            nullable=False,
+            server_default=sa.sql.false(),
+        ),
     )
 
 
