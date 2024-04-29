@@ -81,7 +81,9 @@ async def get_team_by_id(
     db: AsyncSession,
 ) -> models_raid.Team | None:
     team = await db.execute(
-        select(models_raid.Team).where(models_raid.Team.id == team_id).options(
+        select(models_raid.Team)
+        .where(models_raid.Team.id == team_id)
+        .options(
             selectinload(models_raid.Team.captain),
             selectinload(models_raid.Team.second),
         )
@@ -108,8 +110,8 @@ async def update_team(
     db: AsyncSession,
 ) -> None:
     await db.execute(
-        update(schemas_raid.Team)
-        .where(schemas_raid.Team.id == team_id)
+        update(models_raid.Team)
+        .where(models_raid.Team.id == team_id)
         .values(**team.model_dump(exclude_none=True))
     )
     await db.commit()
