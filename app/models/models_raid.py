@@ -34,6 +34,7 @@ class SecurityFile(Base):
     surgical_operation: Mapped[str] = mapped_column(String, nullable=True)
     trauma: Mapped[str] = mapped_column(String, nullable=True)
     family: Mapped[str] = mapped_column(String, nullable=True)
+    participant: Mapped["Participant"] = relationship(back_populates="security_file")
 
 
 class Participant(Base):
@@ -58,7 +59,7 @@ class Participant(Base):
     medical_certificate_id: mapped_column(ForeignKey("raid_document.id"), nullable=False)
     medical_certificate: Mapped[Document] = relationship("Document")
     security_file_id: mapped_column(ForeignKey("raid_security_file.id"), nullable=False)
-    security_file: Mapped[SecurityFile] = relationship("SecurityFile")
+    security_file: Mapped[SecurityFile] = relationship(back_populates="participant")
     student_card_id: mapped_column(ForeignKey("raid_document.id"), nullable=True)
     student_card: Mapped[Document] = relationship("Document")
     raid_rules_id: mapped_column(ForeignKey("raid_document.id"), nullable=False)
