@@ -5,8 +5,8 @@ from datetime import date
 from sqlalchemy import Boolean, Date, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.database import Base
 from app.modules.raid.raid_type import Difficulty, DocumentType, MeetingPlace, Size
+from app.types.sqlalchemy import Base
 
 
 class Document(Base):

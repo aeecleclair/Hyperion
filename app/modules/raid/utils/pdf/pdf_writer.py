@@ -17,6 +17,7 @@ from app.modules.raid.utils.pdf.conversion_utils import (
     get_size_label,
     nullable_number_to_string,
 )
+from app.utils.tools import get_file_path_from_data
 
 
 def maximize_image(image_path: str, max_width: int, max_height: int) -> Image:
@@ -39,7 +40,7 @@ class PDFWriter(FPDF):
                 0, 10, f"Dossier d'inscription de l'équipe {self.team.name}", 0, 1, "C"
             )
 
-    def add_pdf(self):
+    def add_pdf(self) -> str:
         reader = PdfReader(io.BytesIO(self.output()))
         for i in range(len(self.pdf_paths)):
             pages = PdfReader(self.pdf_paths[i]).pages
@@ -48,7 +49,8 @@ class PDFWriter(FPDF):
 
         writer = PdfWriter()
         writer.append_pages_from_reader(reader)
-        writer.write(self.file_name)
+        writer.write("data/raid/" + self.file_name)
+        return "data/raid/" + self.file_name
 
     def footer(self):
         if self.page_no() - 1 not in self.pdf_pages:
@@ -78,10 +80,11 @@ class PDFWriter(FPDF):
             if team.second.security_file:
                 self.write_security_file(team.second.security_file, team.second)
             self.write_participant_document(team.second)
-        self.add_pdf()
+        return self.add_pdf()
 
     def clear_pdf(self):
-        os.Path.unlink(self.file_name)
+        os.remove("data/raid/" + self.file_name)
+        self = PDFWriter()
 
     def write_empty_participant(self):
         self.set_font("times", "B", 12)
@@ -98,13 +101,14 @@ class PDFWriter(FPDF):
             participant.raid_rules,
         ]:
             if document:
-                extension = document.id.split(".")[-1]
+                pdf = get_file_path_from_data("raid", document.id, "documents")
+                extension = pdf.absolute().suffix[1:]
                 if extension in ["jpg", "jpeg", "png"]:
                     self.write_document(document, participant)
                 else:
                     self.write_document_header(document, participant)
                     self.pdf_indexes.append(self.page_no())
-                    number_page = len(PdfReader(document.id).pages)
+                    number_page = len(PdfReader(pdf).pages)
                     self.pdf_pages.extend(
                         list(range(self.page_no(), self.page_no() + number_page))
                     )
@@ -223,7 +227,8 @@ class PDFWriter(FPDF):
     def write_document(self, document: Document, participant: Participant):
         self.write_document_header(document, participant)
         self.ln(6)
-        image = maximize_image(document.id, self.epw * 2.85, (self.eph - 45) * 2.85)
+        file = get_file_path_from_data("raid", document.id, "documents")
+        image = maximize_image(file, self.epw * 2.85, (self.eph - 45) * 2.85)
         image_width, _ = image.size
         x = ((self.epw * 2.85 - image_width) / 2) / 2.85 + 10
         self.image(image, x=x)
@@ -236,7 +241,7 @@ class PDFWriter(FPDF):
                 get_difficulty_label(team.difficulty),
                 get_meeting_place_label(team.meeting_place),
                 nullable_number_to_string(team.number),
-                str(int(team.validation_progress * 100)) + " %",
+                str(int(team.validation_progress)) + " %",
             ],
         ]
         self.ln(6)
