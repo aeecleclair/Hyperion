@@ -349,6 +349,43 @@ async def get_invite_token_by_team_id(
     db: AsyncSession,
 ) -> models_raid.InviteToken | None:
     invite = await db.execute(
-        select(models_raid.InviteToken).where(models_raid.InviteToken.team_id == team_id)
+        select(models_raid.InviteToken).where(
+            models_raid.InviteToken.team_id == team_id
+        )
     )
     return invite.scalars().first()
+
+
+async def get_invite_token_by_token(
+    token: str,
+    db: AsyncSession,
+) -> models_raid.InviteToken | None:
+    invite = await db.execute(
+        select(models_raid.InviteToken).where(models_raid.InviteToken.token == token)
+    )
+    return invite.scalars().first()
+
+
+async def update_team_second_id(
+    team_id: str,
+    second_id: str,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        update(models_raid.Team)
+        .where(models_raid.Team.id == team_id)
+        .values(second_id=second_id)
+    )
+    await db.commit()
+
+
+async def delete_invite_token(
+    token_id: str,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        delete(models_raid.InviteToken).where(
+            models_raid.InviteToken.id == token_id
+        )
+    )
+    await db.commit()
