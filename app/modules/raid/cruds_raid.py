@@ -138,14 +138,13 @@ async def add_security_file(
     try:
         await db.commit()
         return security_file
-    except IntegrityError as e:
-        print(e)
+    except IntegrityError:
         await db.rollback()
         raise ValueError("An error occurred while creating the participant.")
 
 
 async def update_security_file(
-    security_file: models_raid.SecurityFile,
+    security_file: schemas_raid.SecurityFile,
     db: AsyncSession,
 ) -> None:
     await db.execute(
