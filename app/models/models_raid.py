@@ -50,40 +50,40 @@ class Participant(Base):
     address: Mapped[str] = mapped_column(String, nullable=False)
     phone: Mapped[str] = mapped_column(String, nullable=False)
     email: Mapped[str] = mapped_column(String, nullable=False)
-    bike_size: Mapped[Size] = mapped_column(Enum(Size), nullable=False)
-    t_shirt_size: Mapped[Size] = mapped_column(Enum(Size), nullable=False)
-    situation: Mapped[str] = mapped_column(String, nullable=False)
-    other_school: Mapped[str] = mapped_column(String, nullable=True)
-    company: Mapped[str] = mapped_column(String, nullable=True)
-    diet: Mapped[str] = mapped_column(String, nullable=True)
-    id_card_id: Mapped[str] = mapped_column(
-        ForeignKey("raid_document.id"), nullable=False
+    bike_size: Mapped[Size] = mapped_column(Enum(Size), nullable=True, default=None)
+    t_shirt_size: Mapped[Size] = mapped_column(Enum(Size), nullable=True, default=None)
+    situation: Mapped[str] = mapped_column(String, nullable=True, default=None)
+    other_school: Mapped[str] = mapped_column(String, nullable=True, default=None)
+    company: Mapped[str] = mapped_column(String, nullable=True, default=None)
+    diet: Mapped[str] = mapped_column(String, nullable=True, default=None)
+    id_card_id: Mapped[str | None] = mapped_column(
+        ForeignKey("raid_document.id"), nullable=True, default=None
     )
     id_card: Mapped[Document] = relationship("Document", foreign_keys=[id_card_id])
-    medical_certificate_id: Mapped[str] = mapped_column(
-        ForeignKey("raid_document.id"), nullable=False
+    medical_certificate_id: Mapped[str | None] = mapped_column(
+        ForeignKey("raid_document.id"), nullable=True, default=None
     )
     medical_certificate: Mapped[Document] = relationship(
         "Document", foreign_keys=[medical_certificate_id]
     )
     security_file_id: Mapped[str | None] = mapped_column(
-        ForeignKey("raid_security_file.id"), nullable=True
+        ForeignKey("raid_security_file.id"), nullable=True, default=None
     )
     security_file: Mapped[SecurityFile] = relationship(back_populates="participant")
     student_card_id: Mapped[str | None] = mapped_column(
-        ForeignKey("raid_document.id"), nullable=True
+        ForeignKey("raid_document.id"), nullable=True, default=None
     )
     student_card: Mapped[Document] = relationship(
         "Document", foreign_keys=[student_card_id]
     )
-    raid_rules_id: Mapped[str] = mapped_column(
-        ForeignKey("raid_document.id"), nullable=False
+    raid_rules_id: Mapped[str | None] = mapped_column(
+        ForeignKey("raid_document.id"), nullable=True, default=None
     )
     raid_rules: Mapped[Document] = relationship(
         "Document", foreign_keys=[raid_rules_id]
     )
-    attestation_on_honour: Mapped[bool] = mapped_column(Boolean, nullable=False)
-    validation_progress: Mapped[float] = mapped_column(Float, nullable=False)
+    attestation_on_honour: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    validation_progress: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
 
 
 class Team(Base):
