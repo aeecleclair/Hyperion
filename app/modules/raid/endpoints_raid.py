@@ -358,16 +358,16 @@ async def read_document(
     Read a document
     """
 
-    # document = await cruds_raid.get_document_by_id(document_id, db)
+    document = await cruds_raid.get_document_by_id(document_id, db)
 
-    # if not document:
-    #     raise HTTPException(status_code=404, detail="Document not found.")
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found.")
 
-    # participant = await cruds_raid.get_user_by_document_id(document_id, db)
-    # if not participant:
-    #     raise HTTPException(
-    #         status_code=404, detail="Participant owning the document not found."
-    #     )
+    participant = await cruds_raid.get_user_by_document_id(document_id, db)
+    if not participant:
+        raise HTTPException(
+            status_code=404, detail="Participant owning the document not found."
+        )
 
     # if participant.id != user.id and not is_user_member_of_an_allowed_group(
     #     user, [GroupType.raid_admin]
