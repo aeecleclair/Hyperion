@@ -67,12 +67,12 @@ class ParticipantBase(BaseModel):
     name: str
     firstname: str
     birthday: date
-    address: str
     phone: str
     email: str
 
 
 class ParticipantCreation(ParticipantBase):
+    address: str | None
     bike_size: Size | None
     t_shirt_size: Size | None
     situation: str | None
