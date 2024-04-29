@@ -2,11 +2,11 @@
 
 from datetime import date
 
-from sqlalchemy import Boolean, Date, Enum, Float, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Date, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
-from app.utils.types.raid_type import Difficulty, DocumentType, Size
+from app.utils.types.raid_type import Difficulty, DocumentType, MeetingPlace, Size
 
 
 class Document(Base):
@@ -92,9 +92,6 @@ class Participant(Base):
     attestation_on_honour: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False
     )
-    validation_progress: Mapped[float] = mapped_column(
-        Float, nullable=False, default=0.0
-    )
     payment: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
 
@@ -116,4 +113,6 @@ class Team(Base):
         ForeignKey("raid_participant.id"), nullable=True
     )
     second: Mapped[Participant] = relationship("Participant", foreign_keys=[second_id])
-    validation_progress: Mapped[float] = mapped_column(Float, nullable=False)
+    meeting_place: Mapped[MeetingPlace | None] = mapped_column(
+        Enum(MeetingPlace), nullable=True
+    )
