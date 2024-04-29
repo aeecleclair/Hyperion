@@ -6,7 +6,6 @@ from sqlalchemy import Boolean, Date, Enum, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
-
 from app.utils.types.raid_type import Difficulty, DocumentType, Size
 
 
@@ -19,6 +18,8 @@ class Document(Base):
     uploaded_at: Mapped[date] = mapped_column(Date, nullable=False)
     validated: Mapped[bool] = mapped_column(Boolean, nullable=False)
     type: Mapped[DocumentType] = mapped_column(Enum(DocumentType), nullable=False)
+
+    user: Mapped["Participant"] = relationship("Participant")
 
 
 class SecurityFile(Base):
@@ -50,10 +51,16 @@ class Participant(Base):
     address: Mapped[str] = mapped_column(String, nullable=False)
     phone: Mapped[str] = mapped_column(String, nullable=False)
     email: Mapped[str] = mapped_column(String, nullable=False)
-    bike_size: Mapped[Size | None] = mapped_column(Enum(Size), nullable=True, default=None)
-    t_shirt_size: Mapped[Size | None] = mapped_column(Enum(Size), nullable=True, default=None)
+    bike_size: Mapped[Size | None] = mapped_column(
+        Enum(Size), nullable=True, default=None
+    )
+    t_shirt_size: Mapped[Size | None] = mapped_column(
+        Enum(Size), nullable=True, default=None
+    )
     situation: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
-    other_school: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
+    other_school: Mapped[str | None] = mapped_column(
+        String, nullable=True, default=None
+    )
     company: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
     diet: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
     id_card_id: Mapped[str | None] = mapped_column(
@@ -82,8 +89,12 @@ class Participant(Base):
     raid_rules: Mapped[Document] = relationship(
         "Document", foreign_keys=[raid_rules_id]
     )
-    attestation_on_honour: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    validation_progress: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    attestation_on_honour: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False
+    )
+    validation_progress: Mapped[float] = mapped_column(
+        Float, nullable=False, default=0.0
+    )
     payment: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
 
@@ -93,7 +104,7 @@ class Team(Base):
         String, primary_key=True, index=True, nullable=False
     )
     name: Mapped[str] = mapped_column(String, nullable=False)
-    number: Mapped[int] = mapped_column(Integer, nullable=False)
+    number: Mapped[int | None] = mapped_column(Integer, nullable=True)
     difficulty: Mapped[Difficulty] = mapped_column(Enum(Difficulty), nullable=True)
     captain_id: Mapped[str] = mapped_column(
         ForeignKey("raid_participant.id"), nullable=False

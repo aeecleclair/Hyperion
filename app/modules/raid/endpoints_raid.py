@@ -23,7 +23,7 @@ module = Module(
 
 
 @module.router.get(
-    "/raid/participant/{participant_id}",
+    "/raid/participants/{participant_id}",
     response_model=schemas_raid.Participant,
     status_code=200,
 )
@@ -41,7 +41,7 @@ async def get_participant_by_id(
 
 
 @module.router.post(
-    "/raid/participant",
+    "/raid/participants",
     response_model=schemas_raid.Participant,
     status_code=201,
 )
@@ -62,7 +62,7 @@ async def create_participant(
 
 
 @module.router.patch(
-    "/raid/participant/{participant_id}",
+    "/raid/participants/{participant_id}",
     status_code=204,
 )
 async def update_participant(
@@ -86,7 +86,7 @@ async def update_participant(
 
 
 @module.router.post(
-    "/raid/team",
+    "/raid/teams",
     response_model=schemas_raid.TeamBase,
     status_code=201,
 )
@@ -109,7 +109,7 @@ async def create_team(
     db_team = models_raid.Team(
         id=str(uuid.uuid4()),
         name=team.name,
-        number=0,
+        number=None,
         captain_id=user.id,
         second_id=None,
         validation_progress=0.0,
@@ -118,7 +118,7 @@ async def create_team(
 
 
 @module.router.get(
-    "/raid/participant/{participant_id}/team",
+    "/raid/participants/{participant_id}/team",
     response_model=schemas_raid.Team,
     status_code=200,
 )
@@ -141,7 +141,7 @@ async def get_team_by_participant_id(
 
 
 @module.router.get(
-    "/raid/team/all",
+    "/raid/teams",
     response_model=list[schemas_raid.TeamPreview],
     status_code=200,
 )
@@ -155,7 +155,7 @@ async def get_all_teams(
 
 
 @module.router.get(
-    "/raid/team/{team_id}",
+    "/raid/teams/{team_id}",
     response_model=schemas_raid.Team,
     status_code=200,
 )
@@ -170,7 +170,7 @@ async def get_team_by_id(
 
 
 @module.router.patch(
-    "/raid/team/{team_id}",
+    "/raid/teams/{team_id}",
     status_code=204,
 )
 async def update_team(
@@ -185,7 +185,7 @@ async def update_team(
 
 
 @module.router.delete(
-    "/raid/team/{team_id}",
+    "/raid/teams/{team_id}",
     status_code=204,
 )
 async def delete_team(
@@ -199,7 +199,7 @@ async def delete_team(
 
 
 @module.router.delete(
-    "/raid/team/all",
+    "/raid/teams",
     status_code=204,
     tags=["raid"],
 )
@@ -210,21 +210,6 @@ async def delete_all_teams(
     Delete all teams
     """
     await cruds_raid.delete_all_teams(db)
-
-
-@module.router.post(
-    "/raid/participant/{participant_id}/document",
-    status_code=204,
-    tags=["raid"],
-)
-async def create_document(
-    document: schemas_raid.Document,
-    db: AsyncSession = Depends(get_db),
-):
-    """
-    Create a document
-    """
-    await cruds_raid.create_document(document, db)
 
 
 @module.router.post(
@@ -265,46 +250,29 @@ async def upload_document(
 )
 async def read_document(
     document_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Read a document
     """
+
+    document = await cruds_raid.get_document_by_id(document_id, db)
+
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found.")
+
+    if document.user.id != user.id:
+        # TODO: allow admin to get the document eitherway
+        raise HTTPException(
+            status_code=403, detail="You are not the owner of this document."
+        )
+
     return get_file_from_data(
-        default_asset="assets/images/default_advert.png",
+        default_asset="assets/images/default_advert.png",  # TODO: get a default document
         directory="raid",
         filename=str(document_id),
     )
-
-
-@module.router.patch(
-    "/raid/participant/{participant_id}/document/{document_id}",
-    status_code=204,
-    tags=["raid"],
-)
-async def update_document(
-    document_id: str,
-    document: schemas_raid.DocumentBase,
-    db: AsyncSession = Depends(get_db),
-):
-    """
-    Update a document
-    """
-    await cruds_raid.update_document(document_id, document, db)
-
-
-@module.router.delete(
-    "/raid/participant/{participant_id}/document/{document_id}",
-    status_code=204,
-    tags=["raid"],
-)
-async def delete_document(
-    document_id: str,
-    db: AsyncSession = Depends(get_db),
-):
-    """
-    Delete a document
-    """
-    await cruds_raid.delete_document(document_id, db)
 
 
 @module.router.post(
@@ -318,6 +286,7 @@ async def confirm_payment(
     """
     Confirm payment
     """
+    # TODO: admin only
     return await cruds_raid.confirm_payment(participant_id, db)
 
 
