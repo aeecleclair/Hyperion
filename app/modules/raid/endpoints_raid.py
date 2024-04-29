@@ -422,6 +422,8 @@ async def validate_document(
     Validate a document
     """
     await cruds_raid.validate_document(document_id, db)
+    team = await cruds_raid.get_team_by_participant_id(user.id, db)
+    await save_team_info(team, db)
 
 
 @module.router.post(
@@ -429,7 +431,7 @@ async def validate_document(
     response_model=schemas_raid.SecurityFile,
     status_code=201,
 )
-async def set_security_file(
+async def set_security_file(  # TODO: allow team members
     security_file: schemas_raid.SecurityFile,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
@@ -440,18 +442,14 @@ async def set_security_file(
     existing_security_file = await cruds_raid.get_security_file_by_security_id(
         security_file.id, db
     )
-    model_emergency_person = models_raid.EmergencyPerson(
-        id=str(uuid.uuid4()), **security_file.emergency_person.model_dump()
-    )
-    model_security_file = models_raid.SecurityFile(**security_file.model_dump())
-    model_security_file.emergency_person = model_emergency_person
+    print(security_file.model_dump())
     if existing_security_file:
-        await cruds_raid.update_security_file(model_security_file, db)
+        await cruds_raid.update_security_file(security_file, db)
     else:
+        model_security_file = models_raid.SecurityFile(
+            **security_file.model_dump(),
+        )
         await cruds_raid.add_security_file(model_security_file, db)
-
-    team = await cruds_raid.get_team_by_participant_id(user.id, db)
-    await save_team_info(team, db)
     return security_file
 
 
@@ -470,8 +468,10 @@ async def assign_security_file(
     """
     if not await cruds_raid.are_user_in_the_same_team(user.id, participant_id, db):
         raise HTTPException(status_code=403, detail="You are not the participant.")
-
-    return await cruds_raid.assign_security_file(participant_id, security_file_id, db)
+    result = await cruds_raid.assign_security_file(participant_id, security_file_id, db)
+    team = await cruds_raid.get_team_by_participant_id(user.id, db)
+    await save_team_info(team, db)
+    return result
 
 
 @module.router.post(
