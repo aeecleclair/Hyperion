@@ -328,10 +328,9 @@ async def confirm_payment(
     return await cruds_raid.confirm_payment(participant_id, db)
 
 
-@router.get(
+@router.post(
     "/raid/participant/{participant_id}/honour",
-    response_model=schemas_raid.Participant,
-    status_code=200,
+    status_code=204,
     tags=["raid"],
 )
 async def validate_attestation_on_honour(
