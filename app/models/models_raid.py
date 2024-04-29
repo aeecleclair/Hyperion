@@ -1,4 +1,5 @@
 """Models file for module_raid"""
+
 from datetime import date
 
 from sqlalchemy import Boolean, Date, Enum, Float, ForeignKey, Integer, String
@@ -7,6 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
 from app.utils.types.raid_type import Difficulty, DocumentType, Size
+
 
 class Document(Base):
     __tablename__ = "raid_document"
@@ -54,15 +56,25 @@ class Participant(Base):
     other_school: Mapped[str] = mapped_column(String, nullable=True)
     company: Mapped[str] = mapped_column(String, nullable=True)
     diet: Mapped[str] = mapped_column(String, nullable=True)
-    id_card_id: Mapped[str] = mapped_column(ForeignKey("raid_document.id"), nullable=False)
+    id_card_id: Mapped[str] = mapped_column(
+        ForeignKey("raid_document.id"), nullable=False
+    )
     id_card: Mapped[Document] = relationship("Document")
-    medical_certificate_id:Mapped[str] = mapped_column(ForeignKey("raid_document.id"), nullable=False)
+    medical_certificate_id: Mapped[str] = mapped_column(
+        ForeignKey("raid_document.id"), nullable=False
+    )
     medical_certificate: Mapped[Document] = relationship("Document")
-    security_file_id: Mapped[str | None] =mapped_column(ForeignKey("raid_security_file.id"), nullable=True)
+    security_file_id: Mapped[str | None] = mapped_column(
+        ForeignKey("raid_security_file.id"), nullable=True
+    )
     security_file: Mapped[SecurityFile] = relationship(back_populates="participant")
-    student_card_id: Mapped[str | None] = mapped_column(ForeignKey("raid_document.id"), nullable=True)
+    student_card_id: Mapped[str | None] = mapped_column(
+        ForeignKey("raid_document.id"), nullable=True
+    )
     student_card: Mapped[Document] = relationship("Document")
-    raid_rules_id: Mapped[str] = mapped_column(ForeignKey("raid_document.id"), nullable=False)
+    raid_rules_id: Mapped[str] = mapped_column(
+        ForeignKey("raid_document.id"), nullable=False
+    )
     raid_rules: Mapped[Document] = relationship("Document")
     attestation_on_honour: Mapped[bool] = mapped_column(Boolean, nullable=False)
     validation_progress: Mapped[float] = mapped_column(Float, nullable=False)
@@ -76,8 +88,12 @@ class Team(Base):
     name: Mapped[str] = mapped_column(String, nullable=False)
     number: Mapped[int] = mapped_column(Integer, nullable=False)
     difficulty: Mapped[Difficulty] = mapped_column(Enum(Difficulty), nullable=False)
-    captain_id: Mapped[str] = mapped_column(ForeignKey("raid_participant.id"), nullable=False)
+    captain_id: Mapped[str] = mapped_column(
+        ForeignKey("raid_participant.id"), nullable=False
+    )
     captain: Mapped[Participant] = relationship("Participant")
-    second_id: Mapped[str] = mapped_column(ForeignKey("raid_participant.id"), nullable=False)
+    second_id: Mapped[str] = mapped_column(
+        ForeignKey("raid_participant.id"), nullable=False
+    )
     second: Mapped[Participant] = relationship("Participant")
     validationProgress: Mapped[float] = mapped_column(Float, nullable=False)
