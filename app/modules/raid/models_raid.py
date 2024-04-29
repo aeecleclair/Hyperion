@@ -19,7 +19,7 @@ class Document(Base):
     validated: Mapped[bool] = mapped_column(Boolean, nullable=False)
     type: Mapped[DocumentType] = mapped_column(Enum(DocumentType), nullable=False)
 
-    user: Mapped["Participant"] = relationship("Participant")
+    # user: Mapped["Participant"] = relationship("Participant")
 
 
 class SecurityFile(Base):
