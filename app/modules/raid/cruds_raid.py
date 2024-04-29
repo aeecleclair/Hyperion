@@ -143,6 +143,22 @@ async def get_document_by_id(
     return document.scalars().first()
 
 
+async def get_user_by_document_id(
+    document_id: str, db: AsyncSession
+) -> models_raid.Participant | None:
+    document = await db.execute(
+        select(models_raid.Participant).where(
+            or_(
+                models_raid.Participant.id_card_id == document_id,
+                models_raid.Participant.medical_certificate_id == document_id,
+                models_raid.Participant.student_card_id == document_id,
+                models_raid.Participant.raid_rules_id == document_id,
+            ),
+        )
+    )
+    return document.scalars().first()
+
+
 async def upload_document(
     document: models_raid.Document,
     db: AsyncSession,
