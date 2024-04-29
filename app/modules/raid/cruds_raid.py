@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from sqlite3 import IntegrityError
 from typing import Sequence
 
@@ -165,15 +166,7 @@ async def validate_document(
         .where(models_raid.Document.id == document_id)
         .values(validated=True)
     )
-    participant = await get_participant_by_id(participant_id, db)
-    if participant:
-        await db.execute(
-            update(models_raid.Participant)
-            .where(models_raid.Participant.id == participant_id)
-            .values(
-                validation_progress=(models_raid.Participant.validation_progress + 1)
-            )
-        )
+
     await db.commit()
 
 
@@ -187,15 +180,19 @@ async def update_document(
         .where(models_raid.Document.id == document_id)
         .values(**document.dict(exclude_none=True))
     )
-    participant = await get_participant_by_id(document.participant_id, db)
-    if participant:
-        await db.execute(
-            update(models_raid.Participant)
-            .where(models_raid.Participant.id == document.participant_id)
-            .values(
-                validation_progress=(models_raid.Participant.validation_progress - 1)
-            )
-        )
+    await db.commit()
+
+
+async def mark_document_as_newly_updated(
+    document_id: str,
+    db: AsyncSession,
+):
+    await db.execute(
+        update(models_raid.Document)
+        .where(models_raid.Document.id == document_id)
+        .values(uploaded_at=datetime.now(tz=UTC).date(), validated=False)
+    )
+
     await db.commit()
 
 
