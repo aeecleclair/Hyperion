@@ -65,13 +65,16 @@ class ParticipantBase(BaseModel):
     birthday: date
     phone: str
     email: str
+
+class ParticipantPreview(ParticipantBase):
     bike_size: Size | None
     t_shirt_size: Size | None
     situation: str | None
     validation_progress: float
 
 
-class ParticipantCreation(ParticipantBase):
+class Participant(ParticipantPreview):
+    id: str
     address: str | None
     other_school: str | None = None
     company: str | None = None
@@ -86,10 +89,6 @@ class ParticipantCreation(ParticipantBase):
 
     class Config:
         orm_mode = True
-
-
-class Participant(ParticipantCreation):
-    id: str
 
 
 class ParticipantUpdate(BaseModel):
@@ -115,8 +114,8 @@ class TeamBase(BaseModel):
 class TeamPreview(TeamBase):
     id: str
     number: int | None
-    captain: ParticipantBase
-    second: ParticipantBase | None
+    captain: ParticipantPreview
+    second: ParticipantPreview | None
     difficulty: Difficulty | None
     meeting_place: MeetingPlace | None
     validation_progress: float
