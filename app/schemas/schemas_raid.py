@@ -121,7 +121,7 @@ class TeamPreview(TeamBase):
     id: str
     number: int
     captain: ParticipantBase
-    second: ParticipantBase
+    second: ParticipantBase | None
     difficulty: Difficulty | None
     validation_progress: float
 
@@ -133,7 +133,7 @@ class Team(TeamBase):
     id: str
     number: int
     captain: Participant
-    second: Participant
+    second: Participant | None
     difficulty: Difficulty | None
     validation_progress: float
 
