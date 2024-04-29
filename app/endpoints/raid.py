@@ -18,6 +18,25 @@ router = APIRouter()
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
+@router.get(
+    "/raid/participant/{participant_id}",
+    response_model=schemas_raid.Participant,
+    status_code=200,
+    tags=[Tags.raid],
+)
+async def get_participant_by_id(
+    participant_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Get a participant by id
+    """
+    participant = await cruds_raid.get_participant_by_id(participant_id, db)
+    if not participant:
+        raise HTTPException(status_code=404, detail="Participant not found.")
+    return participant
+
+
 @router.post(
     "/raid/participant",
     response_model=schemas_raid.Participant,
@@ -185,7 +204,7 @@ async def delete_team(
 
 
 @router.delete(
-    "/raid/teams",
+    "/raid/team/all",
     status_code=204,
     tags=["raid"],
 )
