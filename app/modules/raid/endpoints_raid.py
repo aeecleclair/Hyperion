@@ -369,7 +369,7 @@ async def read_document(
             status_code=404, detail="Participant owning the document not found."
         )
 
-    # if participant.id != user.id and not is_user_member_of_an_allowed_group(
+    # if participant.id != user.id and not is_user_member_of_an_allowed_group( # TODO: adapt for team mate
     #     user, [GroupType.raid_admin]
     # ):
     #     raise HTTPException(
@@ -381,6 +381,20 @@ async def read_document(
         directory="raid",
         filename=str(document_id),
     )
+
+@module.router.post(
+    "/raid/document/{document_id}/validate",
+    status_code=204,
+)
+async def validate_document(
+    document_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.raid_admin)),
+):
+    """
+    Validate a document
+    """
+    await cruds_raid.validate_document(document_id, db)
 
 
 @module.router.post(

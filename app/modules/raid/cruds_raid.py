@@ -195,6 +195,18 @@ async def assign_document(
     await db.commit()
 
 
+async def validate_document(
+    document_id: str,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        update(models_raid.Document)
+        .where(models_raid.Document.id == document_id)
+        .values(validated=True)
+    )
+    await db.commit()
+
+
 async def get_document_by_id(
     document_id: str,
     db: AsyncSession,
@@ -232,20 +244,6 @@ async def upload_document(
     except IntegrityError:
         await db.rollback()
         raise ValueError("An error occurred while uploading the document.")
-
-
-async def validate_document(
-    document_id: str,
-    participant_id: str,
-    db: AsyncSession,
-) -> None:
-    await db.execute(
-        update(models_raid.Document)
-        .where(models_raid.Document.id == document_id)
-        .values(validated=True)
-    )
-
-    await db.commit()
 
 
 async def update_document(
