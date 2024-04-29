@@ -335,3 +335,5 @@ class SiarnaqAuthClient(BaseAuthClient):
     allowed_scopes: set[ScopeType | str] = {ScopeType.API}
 
     allow_external_users: bool = True
+    # Some clients may allow external users to authenticate
+    allow_external_users: True
