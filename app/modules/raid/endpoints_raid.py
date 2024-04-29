@@ -1,3 +1,4 @@
+from datetime import datetime
 import logging
 import uuid
 
@@ -200,7 +201,7 @@ async def update_team(
     team_id: str,
     team: schemas_raid.TeamUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.raid_admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Update a team
@@ -243,10 +244,60 @@ async def delete_all_teams(
 
 
 @module.router.post(
+    "/raid/participant/{participant_id}/document",
+    response_model=schemas_raid.Document,
+    status_code=201,
+)
+async def create_document(
+    participant_id: str,
+    document: schemas_raid.DocumentCreation,
+    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Create a document
+    """
+    if participant_id != user.id:
+        raise HTTPException(status_code=403, detail="You are not the participant.")
+
+    # existing_document = await cruds_raid.get_document_by_id(document.id, db)
+
+    # if existing_document:
+    #     pass  # TODO: Delete the existing document
+
+    document = models_raid.Document(
+        uploaded_at=datetime.now().date(),
+        validated=False,
+        id=document.id,
+        name=document.name,
+        type=document.type,
+    )
+
+    await cruds_raid.create_document(document, db)
+
+    document_type_id = "id_card_id"
+
+    if document.type == "medicalCertificate":
+        document_type_id = "medical_certificate_id"
+    elif document.type == "raidRules":
+        document_type_id = "raid_rules_id"
+    elif document.type == "studentCard":
+        document_type_id = "student_card_id"
+
+    await cruds_raid.assign_document(
+        participant_id=participant_id,
+        document_id=document.id,
+        document_key=document_type_id,
+        db=db,
+    )
+
+    return document
+
+
+@module.router.post(
     "/raid/document/{document_id}",
     response_model=standard_responses.Result,
     status_code=201,
-    tags=["raid"],
 )
 async def upload_document(
     document_id: str,
@@ -258,31 +309,32 @@ async def upload_document(
     """
     Upload a document
     """
-    document_obj = await cruds_raid.get_document_by_id(document_id=document_id, db=db)
-    if not document_obj:
-        raise HTTPException(status_code=404, detail="Document not found.")
-    participant = await cruds_raid.get_user_by_document_id(
-        document_id=document_id, db=db
-    )
-    if not participant:
-        raise HTTPException(
-            status_code=404, detail="Participant owning hte document not found."
-        )
-    if not participant.id == user.id:
-        raise HTTPException(
-            status_code=403, detail="You are not the owner of this document."
-        )
+    # document_obj = await cruds_raid.get_document_by_id(document_id=document_id, db=db)
+    # if not document_obj:
+    #     raise HTTPException(status_code=404, detail="Document not found.")
+    # participant = await cruds_raid.get_user_by_document_id(
+    #     document_id=document_id, db=db
+    # )
+    # if not participant:
+    #     raise HTTPException(
+    #         status_code=404, detail="Participant owning hte document not found."
+    #     )
+    # if not participant.id == user.id:
+    #     raise HTTPException(
+    #         status_code=403, detail="You are not the owner of this document."
+    #     )
 
     await save_file_as_data(
         image=image,
         directory="raid",
         filename=str(document_id),
         request_id=request_id,
-        max_file_size=4 * 1024 * 1024,  # TODO : Change this value
+        max_file_size=50 * 1024 * 1024,  # TODO : Change this value
         accepted_content_types=[
             "image/jpeg",
             "image/png",
             "image/webp",
+            "application/pdf",
         ],  # TODO : Change this value
     )
 
@@ -295,7 +347,6 @@ async def upload_document(
     "/raid/document/{document_id}",
     response_class=FileResponse,
     status_code=200,
-    tags=["raid"],
 )
 async def read_document(
     document_id: str,
@@ -306,29 +357,70 @@ async def read_document(
     Read a document
     """
 
-    document = await cruds_raid.get_document_by_id(document_id, db)
+    # document = await cruds_raid.get_document_by_id(document_id, db)
 
-    if not document:
-        raise HTTPException(status_code=404, detail="Document not found.")
+    # if not document:
+    #     raise HTTPException(status_code=404, detail="Document not found.")
 
-    participant = await cruds_raid.get_user_by_document_id(document_id, db)
-    if not participant:
-        raise HTTPException(
-            status_code=404, detail="Participant owning the document not found."
-        )
+    # participant = await cruds_raid.get_user_by_document_id(document_id, db)
+    # if not participant:
+    #     raise HTTPException(
+    #         status_code=404, detail="Participant owning the document not found."
+    #     )
 
-    if participant.id != user.id and not is_user_member_of_an_allowed_group(
-        user, [GroupType.raid_admin]
-    ):
-        raise HTTPException(
-            status_code=403, detail="You are not the owner of this document."
-        )
+    # if participant.id != user.id and not is_user_member_of_an_allowed_group(
+    #     user, [GroupType.raid_admin]
+    # ):
+    #     raise HTTPException(
+    #         status_code=403, detail="You are not the owner of this document."
+    #     )
 
     return get_file_from_data(
         default_asset="assets/images/default_advert.png",  # TODO: get a default document
         directory="raid",
         filename=str(document_id),
     )
+
+
+@module.router.post(
+    "/raid/security_file/",
+    response_model=schemas_raid.SecurityFile,
+    status_code=201,
+)
+async def set_security_file(
+    security_file: schemas_raid.SecurityFile,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Confirm security file
+    """
+    existing_security_file = await cruds_raid.get_security_file_by_security_id(
+        security_file.id, db
+    )
+
+    if existing_security_file:
+        await cruds_raid.update_security_file(security_file, db)
+    else:
+        await cruds_raid.add_security_file(security_file, db)
+
+    return security_file
+
+
+@module.router.post(
+    "/raid/participant/{participant_id}/security_file",
+    status_code=204,
+)
+async def assign_security_file(
+    participant_id: str,
+    security_file_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Assign security file
+    """
+    return await cruds_raid.assign_security_file(participant_id, security_file_id, db)
 
 
 @module.router.post(
