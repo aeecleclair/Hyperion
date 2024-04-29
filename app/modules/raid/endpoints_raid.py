@@ -489,3 +489,44 @@ async def create_invite_token(
     )
 
     return await cruds_raid.create_invite_token(invite_token, db)
+
+
+@module.router.post(
+    "/raid/teams/join/{token}",
+    status_code=204,
+)
+async def join_team(
+    token: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Join a team
+    """
+    invite_token = await cruds_raid.get_invite_token_by_token(token, db)
+
+    if not invite_token:
+        raise HTTPException(status_code=404, detail="Invite token not found.")
+
+    user_team = await cruds_raid.get_team_by_participant_id(user.id, db)
+
+    if user_team:
+        if user_team.second_id:
+            raise HTTPException(status_code=403, detail="You are already in a team.")
+
+        await cruds_raid.delete_team(user_team.id, db)
+
+    team = await cruds_raid.get_team_by_id(invite_token.team_id, db)
+
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found.")
+
+    if team.second_id:
+        raise HTTPException(status_code=403, detail="Team is already full.")
+
+    if team.captain_id == user.id:
+        raise HTTPException(status_code=403, detail="You are already the captain of this team.")
+
+    await cruds_raid.update_team_second_id(team.id, user.id, db)
+
+    await cruds_raid.delete_invite_token(invite_token.id, db)
