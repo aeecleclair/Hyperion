@@ -2,7 +2,7 @@ import google.oauth2.credentials
 import googleapiclient.http
 from googleapiclient.discovery import build
 
-from app.utils.drive.config import DriveSettings
+from app.modules.raid.utils.drive.config import DriveSettings
 
 
 class DriveFileManager:

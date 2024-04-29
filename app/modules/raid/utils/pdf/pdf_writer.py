@@ -1,7 +1,14 @@
 import io
 import os
 
-from conversion_utils import (
+from fpdf import FPDF
+from fpdf.enums import TableCellFillMode, VAlign
+from fpdf.fonts import FontFace
+from PIL import Image
+from pypdf import PdfReader, PdfWriter
+
+from app.modules.raid.schemas_raid import Document, Participant, SecurityFile, Team
+from app.modules.raid.utils.pdf.conversion_utils import (
     date_to_string,
     get_difficulty_label,
     get_document_label,
@@ -10,13 +17,6 @@ from conversion_utils import (
     get_size_label,
     nullable_number_to_string,
 )
-from fpdf import FPDF
-from fpdf.enums import TableCellFillMode, VAlign
-from fpdf.fonts import FontFace
-from PIL import Image
-from pypdf import PdfReader, PdfWriter
-
-from app.modules.raid.schemas_raid import Document, Participant, SecurityFile, Team
 
 
 def maximize_image(image_path: str, max_width: int, max_height: int) -> Image:
@@ -65,16 +65,18 @@ class PDFWriter(FPDF):
             str(team.number) + "_" if team.number else ""
         ) + f"{team.name}_{team.captain.name}_{team.captain.firstname}.pdf"
         self.add_page()
-        self.write_team_summary()
+        self.write_team_summary(team)
         self.write_participant_summary(team.captain)
         if team.second:
             self.write_participant_summary(team.second, is_second=True)
         else:
             self.write_empty_participant()
-        self.write_security_file(team.captain.security_file, team.captain)
+        if team.captain.security_file:
+            self.write_security_file(team.captain.security_file, team.captain)
         self.write_participant_document(team.captain)
         if team.second:
-            self.write_security_file(team.second.security_file, team.second)
+            if team.second.security_file:
+                self.write_security_file(team.second.security_file, team.second)
             self.write_participant_document(team.second)
         self.add_pdf()
 
