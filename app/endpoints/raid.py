@@ -140,7 +140,8 @@ async def create_document(
 
 @router.post(
     "/raid/document/{document_id}",
-    status_code=204,
+    response_model=standard_responses.Result,
+    status_code=201,
     tags=["raid"],
 )
 async def upload_document(
@@ -169,7 +170,7 @@ async def upload_document(
 
 @router.get(
     "/raid/document/{document_id}",
-    response_model=FileResponse,
+    response_class=FileResponse,
     status_code=200,
     tags=["raid"],
 )
