@@ -141,7 +141,7 @@ class Team(TeamBase):
         orm_mode = True
 
 
-class TeamUpdate(TeamBase):
+class TeamUpdate(BaseModel):
     name: str | None = None
     number: int | None = None
     difficulty: Difficulty | None = None
