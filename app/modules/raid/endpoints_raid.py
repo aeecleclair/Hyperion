@@ -8,9 +8,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import models_core, standard_responses
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
-from app.dependencies import get_db, get_request_id, is_user_a_member
+from app.dependencies import (
+    get_db,
+    get_request_id,
+    is_user_a_member,
+    is_user_a_member_of,
+)
 from app.modules.raid import cruds_raid, models_raid, schemas_raid
-from app.utils.tools import get_file_from_data, save_file_as_data
+from app.utils.tools import (
+    get_file_from_data,
+    is_user_member_of_an_allowed_group,
+    save_file_as_data,
+)
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
@@ -30,13 +39,22 @@ module = Module(
 async def get_participant_by_id(
     participant_id: str,
     db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Get a participant by id
     """
+    if participant_id != user.id and is_user_member_of_an_allowed_group(
+        user, [GroupType.raid_admin]
+    ):
+        raise HTTPException(
+            status_code=403, detail="You can not get data of another user"
+        )
+
     participant = await cruds_raid.get_participant_by_id(participant_id, db)
     if not participant:
         raise HTTPException(status_code=404, detail="Participant not found.")
+
     return participant
 
 
@@ -125,10 +143,14 @@ async def create_team(
 async def get_team_by_participant_id(
     participant_id: str,
     db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Get a team by participant id
     """
+    if user.id != participant_id:
+        raise HTTPException(status_code=403, detail="You are not the participant.")
+
     # If the user is not a participant, return an error
     if not await cruds_raid.is_user_a_participant(participant_id, db):
         raise HTTPException(status_code=403, detail="You are not a participant.")
@@ -147,6 +169,7 @@ async def get_team_by_participant_id(
 )
 async def get_all_teams(
     db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.raid_admin)),
 ):
     """
     Get all teams
@@ -162,6 +185,7 @@ async def get_all_teams(
 async def get_team_by_id(
     team_id: str,
     db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.raid_admin)),
 ):
     """
     Get a team by id
@@ -177,10 +201,16 @@ async def update_team(
     team_id: str,
     team: schemas_raid.TeamUpdate,
     db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.raid_admin)),
 ):
     """
     Update a team
     """
+    existing_team = await cruds_raid.get_team_by_participant_id(user.id, db)
+    if existing_team is None:
+        raise HTTPException(status_code=404, detail="Team not found.")
+    if existing_team.id != team_id:
+        raise HTTPException(status_code=403, detail="You are not in the team.")
     await cruds_raid.update_team(team_id, team, db)
 
 
@@ -191,6 +221,7 @@ async def update_team(
 async def delete_team(
     team_id: str,
     db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.raid_admin)),
 ):
     """
     Delete a team
@@ -201,10 +232,10 @@ async def delete_team(
 @module.router.delete(
     "/raid/teams",
     status_code=204,
-    tags=["raid"],
 )
 async def delete_all_teams(
     db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.raid_admin)),
 ):
     """
     Delete all teams
@@ -222,10 +253,20 @@ async def upload_document(
     document_id: str,
     image: UploadFile = File(...),
     request_id: str = Depends(get_request_id),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Upload a document
     """
+    document_obj = await cruds_raid.get_document_by_id(document_id=document_id, db=db)
+    if not document_obj:
+        raise HTTPException(status_code=404, detail="Document not found.")
+    if not document_obj.user.id == user.id:
+        raise HTTPException(
+            status_code=403, detail="You are not the owner of this document."
+        )
+
     await save_file_as_data(
         image=image,
         directory="raid",
@@ -238,6 +279,8 @@ async def upload_document(
             "image/webp",
         ],  # TODO : Change this value
     )
+
+    await cruds_raid.mark_document_as_newly_updated(document_id=document_id, db=db)
 
     return standard_responses.Result(success=True)
 
@@ -262,8 +305,9 @@ async def read_document(
     if not document:
         raise HTTPException(status_code=404, detail="Document not found.")
 
-    if document.user.id != user.id:
-        # TODO: allow admin to get the document eitherway
+    if document.user.id != user.id and not is_user_member_of_an_allowed_group(
+        user, [GroupType.raid_admin]
+    ):
         raise HTTPException(
             status_code=403, detail="You are not the owner of this document."
         )
@@ -282,11 +326,11 @@ async def read_document(
 async def confirm_payment(
     participant_id: str,
     db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.raid_admin)),
 ):
     """
     Confirm payment
     """
-    # TODO: admin only
     return await cruds_raid.confirm_payment(participant_id, db)
 
 
@@ -297,8 +341,11 @@ async def confirm_payment(
 async def validate_attestation_on_honour(
     participant_id: str,
     db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Validate attestation on honour
     """
+    if participant_id != user.id:
+        raise HTTPException(status_code=403, detail="You are not the participant")
     return await cruds_raid.validate_attestation_on_honour(participant_id, db)

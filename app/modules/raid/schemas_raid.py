@@ -2,7 +2,7 @@ from datetime import date
 
 from pydantic import BaseModel
 
-from app.utils.types.raid_type import Difficulty, DocumentType, Size
+from app.utils.types.raid_type import Difficulty, DocumentType, MeetingPlace, Size
 
 
 class DocumentBase(BaseModel):
@@ -72,8 +72,7 @@ class ParticipantBase(BaseModel):
     email: str
 
 
-class Participant(ParticipantBase):
-    id: str
+class ParticipantCreation(ParticipantBase):
     bike_size: Size | None
     t_shirt_size: Size | None
     situation: str | None
@@ -87,10 +86,13 @@ class Participant(ParticipantBase):
     raid_rules: Document | None = None
     attestation_on_honour: bool
     payment: bool
-    validation_progress: float
 
     class Config:
         orm_mode = True
+
+
+class Participant(ParticipantCreation):
+    id: str
 
 
 class ParticipantUpdate(BaseModel):
@@ -106,11 +108,6 @@ class ParticipantUpdate(BaseModel):
     other_school: str | None = None
     company: str | None = None
     diet: str | None = None
-    id_card: Document | None = None
-    medical_certificate: Document | None = None
-    security_file: SecurityFile | None = None
-    student_card: Document | None = None
-    raid_rules: Document | None = None
     attestation_on_honour: bool | None = None
 
 
@@ -124,7 +121,6 @@ class TeamPreview(TeamBase):
     captain: ParticipantBase
     second: ParticipantBase | None
     difficulty: Difficulty | None
-    validation_progress: float
 
     class Config:
         orm_mode = True
@@ -137,6 +133,7 @@ class Team(TeamBase):
     second: Participant | None
     difficulty: Difficulty | None
     validation_progress: float
+    meeting_place: MeetingPlace | None
 
     class Config:
         orm_mode = True
@@ -146,3 +143,4 @@ class TeamUpdate(BaseModel):
     name: str | None = None
     number: int | None = None
     difficulty: Difficulty | None = None
+    meeting_place: MeetingPlace | None = None
