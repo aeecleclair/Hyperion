@@ -46,7 +46,7 @@ async def get_participant_by_id(
     """
     Get a participant by id
     """
-    if participant_id != user.id and is_user_member_of_an_allowed_group(
+    if participant_id != user.id and not is_user_member_of_an_allowed_group(
         user, [GroupType.raid_admin]
     ):
         raise HTTPException(
