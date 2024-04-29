@@ -119,7 +119,7 @@ def upgrade() -> None:
         "raid_team",
         sa.Column("id", sa.String(), nullable=False),
         sa.Column("name", sa.String(), nullable=False),
-        sa.Column("number", sa.Integer(), nullable=False),
+        sa.Column("number", sa.Integer(), nullable=True),
         sa.Column(
             "difficulty",
             sa.Enum("discovery", "sports", "expert", name="difficulty"),
