@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 from sqlalchemy.exc import IntegrityError
-from typing import Sequence
+from collections.abc import Sequence
 
 from sqlalchemy import delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
