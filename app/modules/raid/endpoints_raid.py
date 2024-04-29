@@ -440,11 +440,14 @@ async def set_security_file(
     existing_security_file = await cruds_raid.get_security_file_by_security_id(
         security_file.id, db
     )
-
+    model_emergency_person = models_raid.EmergencyPerson(
+        id=str(uuid.uuid4()), **security_file.emergency_person.model_dump()
+    )
+    model_security_file = models_raid.SecurityFile(**security_file.model_dump())
+    model_security_file.emergency_person = model_emergency_person
     if existing_security_file:
-        await cruds_raid.update_security_file(security_file, db)
+        await cruds_raid.update_security_file(model_security_file, db)
     else:
-        model_security_file = models_raid.SecurityFile(**security_file.model_dump())
         await cruds_raid.add_security_file(model_security_file, db)
 
     team = await cruds_raid.get_team_by_participant_id(user.id, db)
