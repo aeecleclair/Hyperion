@@ -38,7 +38,7 @@ async def init_objects():
     paper = models_ph.Paper(
         id=str(uuid.uuid4()),
         name="OnlyPhans",
-        release_date=datetime.datetime.fromisoformat("2023-10-22T00:00:00"),
+        release_date=datetime.date(2023, 10, 21),
     )
     await add_object_to_db(paper)
 
@@ -46,7 +46,7 @@ async def init_objects():
     paper2 = models_ph.Paper(
         id=str(uuid.uuid4()),
         name="OnlyPhans du futur",
-        release_date=datetime.datetime.fromisoformat("2099-10-22T00:00:00"),
+        release_date=datetime.date(2090, 10, 21),
     )
     await add_object_to_db(paper2)
 
@@ -77,7 +77,7 @@ def test_get_papers():
 
 def test_get_papers_admin():
     response = client.get(
-        "/ph/",
+        "/ph/admin",
         headers={"Authorization": f"Bearer {token_ph}"},
     )
     response_json = response.json()
@@ -108,13 +108,6 @@ def test_get_paper_pdf():
 
 
 def test_get_cover():
-    with Path("assets/pdf/default_PDF.pdf").open("rb") as pdf:
-        client.post(
-            f"/ph/{paper.id}/pdf",
-            files={"pdf": ("test_paper.pdf", pdf, "application/pdf")},
-            headers={"Authorization": f"Bearer {token_ph}"},
-        )
-
     response = client.get(
         f"/ph/{paper.id}/cover",
         headers={"Authorization": f"Bearer {token_simple}"},

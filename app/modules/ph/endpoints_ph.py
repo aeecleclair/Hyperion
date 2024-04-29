@@ -21,7 +21,12 @@ from app.dependencies import (
 )
 from app.modules.ph import cruds_ph, models_ph, schemas_ph
 from app.utils.communication.notifications import NotificationTool
-from app.utils.tools import delete_file_from_data, get_file_from_data, save_file_as_data, save_pdf_first_page_as_image
+from app.utils.tools import (
+    delete_file_from_data,
+    get_file_from_data,
+    save_file_as_data,
+    save_pdf_first_page_as_image,
+)
 
 module = Module(
     root="ph",
@@ -64,7 +69,7 @@ async def get_papers(
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
-    Return all editions, sorted from the latest to the oldest
+    Return all editions until now, sorted from the latest to the oldest
     """
     result = await cruds_ph.get_papers(
         db=db,
@@ -178,6 +183,7 @@ async def create_paper_pdf_and_cover(
         jpg_quality=95,
     )
 
+
 @module.router.get(
     "/ph/{paper_id}/cover",
     status_code=200,
@@ -199,6 +205,7 @@ async def get_cover(
         directory="ph/cover",
         filename=str(paper_id),
     )
+
 
 @module.router.patch(
     "/ph/{paper_id}",
@@ -250,4 +257,3 @@ async def delete_paper(
         paper_id=paper_id,
         db=db,
     )
-
