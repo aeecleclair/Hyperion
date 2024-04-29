@@ -115,17 +115,15 @@ class ParticipantUpdate(ParticipantBase):
 
 class TeamBase(BaseModel):
     name: str
-    number: int
-    difficulty: Difficulty
-    captain_id: str
-    second_id: str | None = None
-    validation_progress: float
 
 
 class TeamPreview(TeamBase):
     id: str
+    number: int
     captain: ParticipantBase
     second: ParticipantBase
+    difficulty: Difficulty | None
+    validation_progress: float
 
     class Config:
         orm_mode = True
@@ -133,8 +131,11 @@ class TeamPreview(TeamBase):
 
 class Team(TeamBase):
     id: str
+    number: int
     captain: Participant
     second: Participant
+    difficulty: Difficulty | None
+    validation_progress: float
 
     class Config:
         orm_mode = True
