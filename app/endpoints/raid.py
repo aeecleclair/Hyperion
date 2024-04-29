@@ -174,15 +174,15 @@ async def upload_document(
     tags=["raid"],
 )
 async def read_document(
-    advert_id: str,
+    document_id: str,
 ):
     """
     Read a document
     """
     return get_file_from_data(
         default_asset="assets/images/default_advert.png",
-        directory="adverts",
-        filename=str(advert_id),
+        directory="raid",
+        filename=str(document_id),
     )
 
 
