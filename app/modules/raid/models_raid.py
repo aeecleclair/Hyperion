@@ -40,6 +40,16 @@ class SecurityFile(Base):
     participant: Mapped["Participant"] = relationship(back_populates="security_file")
 
 
+class EmergencyPerson(Base):
+    __tablename__ = "raid_emergency_person"
+    id: Mapped[str] = mapped_column(
+        String, primary_key=True, index=True, nullable=False
+    )
+    firstname: Mapped[str | None] = mapped_column(String, nullable=True)
+    name: Mapped[str | None] = mapped_column(String, nullable=True)
+    phone: Mapped[str | None] = mapped_column(String, nullable=True)
+
+
 class Participant(Base):
     __tablename__ = "raid_participant"
     id: Mapped[str] = mapped_column(
@@ -93,6 +103,12 @@ class Participant(Base):
         Boolean, nullable=False, default=False
     )
     payment: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    emergency_person_id: Mapped[str | None] = mapped_column(
+        ForeignKey("raid_emergency_person.id"), nullable=True, default=None
+    )
+    emergency_person: Mapped[EmergencyPerson] = relationship(
+        "EmergencyPerson", foreign_keys=[emergency_person_id]
+    )
 
     @property
     def number_of_document(self) -> int:
