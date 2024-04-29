@@ -1,10 +1,9 @@
-
 from datetime import date
 
 from app.modules.raid.raid_type import Difficulty, DocumentType
 
 
-def nullable_number_to_string(number: float | int | None) -> str:
+def nullable_number_to_string(number: float | None) -> str:
     if number is None:
         return "Non défini"
     return str(number)
@@ -25,38 +24,31 @@ def get_difficulty_label(difficulty: Difficulty | None) -> str:
 
 
 def get_meeting_place_label(meeting_place: str | None) -> str:
-    if meeting_place == "centrale":
-        return "Centrale Lyon"
-    elif meeting_place == "bellecour":
-        return "Bellecour"
-    elif meeting_place == "anyway":
-        return "Peu importe"
+    labels = {
+        "centrale": "Centrale Lyon",
+        "bellecour": "Bellecour",
+        "anyway": "Peu importe",
+    }
+    if meeting_place in labels:
+        return labels[meeting_place]
     return "Non défini"
 
 
 def get_size_label(size: str | None) -> str:
-    if size == "XS":
-        return "XS"
-    elif size == "S":
-        return "S"
-    elif size == "M":
-        return "M"
-    elif size == "L":
-        return "L"
-    elif size == "XL":
-        return "XL"
-    return "Non défini"
+    if size is None:
+        return "Non défini"
+    return size
 
 
 def get_situation_label(situation: str | None) -> str:
-    if situation == "centrale":
-        return "Centrale Lyon"
-    elif situation == "otherSchool":
-        return "Autre école"
-    elif situation == "corporatePartner":
-        return "Partenaire entreprise"
-    elif situation == "other":
-        return "Autre"
+    labels = {
+        "centrale": "Centrale Lyon",
+        "otherSchool": "Autre école",
+        "corporatePartner": "Partenaire entreprise",
+        "other": "Autre",
+    }
+    if situation in labels:
+        return labels[situation]
     return "Non défini"
 
 

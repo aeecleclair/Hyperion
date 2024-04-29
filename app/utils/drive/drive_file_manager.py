@@ -1,12 +1,11 @@
 import google.oauth2.credentials
-from googleapiclient.discovery import build
 import googleapiclient.http
+from googleapiclient.discovery import build
 
 from app.utils.drive.config import DriveSettings
 
 
 class DriveFileManager:
-
     def __init__(self):
         config = DriveSettings(_env_file=".google.env")
 
