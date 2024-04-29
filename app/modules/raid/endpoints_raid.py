@@ -130,7 +130,6 @@ async def create_team(
         number=None,
         captain_id=user.id,
         second_id=None,
-        validation_progress=0.0,
     )
     return await cruds_raid.create_team(db_team, db)
 
