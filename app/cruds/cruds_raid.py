@@ -52,7 +52,7 @@ async def create_team(
 
 async def update_team(
     team_id: str,
-    team: models_raid.TeamUpdate,
+    team: schemas_raid.TeamUpdate,
     db: AsyncSession,
 ) -> None:
     await db.execute(
@@ -125,7 +125,7 @@ async def validate_document(
 
 async def update_document(
     document_id: str,
-    document: schemas_raid.DocumentUpdate,
+    document: schemas_raid.DocumentBase,
     db: AsyncSession,
 ) -> None:
     await db.execute(
