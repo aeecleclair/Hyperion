@@ -23,12 +23,12 @@ class SecurityFile(BaseModel):
     phone: str
     allergy: str | None = None
     asthma: bool
-    intensiveCareUnit: bool | None = None
-    intensiveCareUnitWhen: str | None = None
-    ongoingTreatment: str | None = None
+    intensive_care_unit: bool | None = None
+    intensive_care_unit_when: str | None = None
+    ongoing_treatment: str | None = None
     sicknesses: str | None = None
     hospitalization: str | None = None
-    surgicalOperation: str | None = None
+    surgical_operation: str | None = None
     trauma: str | None = None
     family: str | None = None
 
@@ -43,19 +43,19 @@ class Participant(BaseModel):
     address: str
     phone: str
     email: str
-    bikeSize: Size
-    tShirtSize: Size
+    bike_size: Size
+    t_shirt_size: Size
     situation: str
-    otherSchool: str | None = None
+    other_school: str | None = None
     company: str | None = None
     diet: str | None = None
-    idCard: Document
-    medicalCertificate: Document
-    securityFile: SecurityFile
-    studentCard: Document | None = None
-    raidRules: Document
-    certificateOfHonour: bool
-    validationProgress: float
+    id_card: Document
+    medical_certificate: Document
+    security_file: SecurityFile
+    student_card: Document | None = None
+    raid_rules: Document
+    attestation_on_honour: bool
+    validation_progress: float
 
     class Config:
         orm_mode = True
@@ -67,7 +67,7 @@ class Team(BaseModel):
     difficulty: Difficulty
     captain: Participant
     second: Participant
-    validationProgress: float
+    validation_progress: float
 
     class Config:
         orm_mode = True
