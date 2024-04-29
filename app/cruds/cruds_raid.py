@@ -7,6 +7,19 @@ from app.models import models_raid
 from app.schemas import schemas_raid
 
 
+async def create_participant(
+    participant: models_raid.Participant,
+    db: AsyncSession,
+) -> models_raid.Participant:
+    db.add(participant)
+    try:
+        await db.commit()
+        return participant
+    except IntegrityError:
+        await db.rollback()
+        raise ValueError("An error occurred while creating the participant.")
+
+
 async def is_user_a_participant(
     user_id: str,
     db: AsyncSession,
