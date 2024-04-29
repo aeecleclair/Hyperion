@@ -20,6 +20,19 @@ async def create_participant(
         raise ValueError("An error occurred while creating the participant.")
 
 
+async def update_participant(
+    participant_id: str,
+    participant: schemas_raid.ParticipantUpdate,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        update(models_raid.Participant)
+        .where(models_raid.Participant.id == participant_id)
+        .values(**participant.model_dump(exclude_none=True))
+    )
+    await db.commit()
+
+
 async def is_user_a_participant(
     user_id: str,
     db: AsyncSession,
