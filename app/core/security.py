@@ -20,9 +20,10 @@ It is important to use enough rounds while accounting for the hash computation t
 """
 
 oauth2_scheme = OAuth2AuthorizationCodeBearer(
-    authorizationUrl="auth/authorize",
-    tokenUrl="auth/token",
-    scheme_name="Authorization Code authentication",
+    authorizationUrl="/auth/authorize",
+    tokenUrl="/auth/token",
+    scheme_name="AuthorizationCodeAuthentication",
+    scopes={"API": "Access Hyperion endpoints"},
 )
 """
 To generate JWT access tokens, we use a *FastAPI* OAuth2PasswordBearer object.

@@ -1,3 +1,4 @@
+import uuid
 from collections.abc import Sequence
 
 from sqlalchemy import delete, select, update
@@ -23,7 +24,7 @@ async def create_recommendation(
 
 
 async def update_recommendation(
-    recommendation_id: str,
+    recommendation_id: uuid.UUID,
     recommendation: schemas_recommendation.RecommendationEdit,
     db: AsyncSession,
 ):
@@ -43,7 +44,7 @@ async def update_recommendation(
 
 
 async def delete_recommendation(
-    recommendation_id: str,
+    recommendation_id: uuid.UUID,
     db: AsyncSession,
 ):
     result = await db.execute(
@@ -59,7 +60,7 @@ async def delete_recommendation(
 
 
 async def get_recommendation_by_id(
-    recommendation_id: str,
+    recommendation_id: uuid.UUID,
     db: AsyncSession,
 ) -> models_recommendation.Recommendation | None:
     result = await db.execute(

@@ -14,6 +14,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.routing import APIRoute
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -24,8 +25,8 @@ from app.core import models_core
 from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
 from app.core.log import LogConfig
-from app.database import Base
 from app.dependencies import get_db_engine, get_redis_client, get_settings
+from app.types.sqlalchemy import Base
 from app.utils import initialization
 from app.utils.redis import limiter
 
@@ -209,6 +210,23 @@ def initialize_module_visibility(engine: Engine) -> None:
                     )
 
 
+def use_route_path_as_operation_ids(app: FastAPI) -> None:
+    """
+    Simplify operation IDs so that generated API clients have simpler function names.
+
+    Theses names may be used by API clients to generate function names.
+    The operation_id will have the format "method_path", like "get_users_me".
+
+    See https://fastapi.tiangolo.com/advanced/path-operation-advanced-configuration/
+    """
+    for route in app.routes:
+        if isinstance(route, APIRoute):
+            # The operation_id should be unique.
+            # It is possible to set multiple methods for the same endpoint method but it's not considered a good practice.
+            method = "_".join(route.methods)
+            route.operation_id = method.lower() + route.path.replace("/", "_")
+
+
 # We wrap the application in a function to be able to pass the settings and drop_db parameters
 # The drop_db parameter is used to drop the database tables before creating them again
 def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
@@ -231,8 +249,13 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         hyperion_error_logger.info("Shutting down")
 
     # Initialize app
-    app = FastAPI(lifespan=lifespan)
+    app = FastAPI(
+        title="Hyperion",
+        version=settings.HYPERION_VERSION,
+        lifespan=lifespan,
+    )
     app.include_router(api.api_router)
+    use_route_path_as_operation_ids(app)
 
     app.add_middleware(
         CORSMiddleware,
