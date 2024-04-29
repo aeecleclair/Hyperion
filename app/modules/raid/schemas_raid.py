@@ -66,11 +66,13 @@ class ParticipantBase(BaseModel):
     phone: str
     email: str
 
+
 class ParticipantPreview(ParticipantBase):
     bike_size: Size | None
     t_shirt_size: Size | None
     situation: str | None
     validation_progress: float
+    payment: bool
 
 
 class Participant(ParticipantPreview):
@@ -85,7 +87,6 @@ class Participant(ParticipantPreview):
     student_card: Document | None = None
     raid_rules: Document | None = None
     attestation_on_honour: bool
-    payment: bool
 
     class Config:
         orm_mode = True
