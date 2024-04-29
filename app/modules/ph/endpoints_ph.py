@@ -21,7 +21,7 @@ from app.dependencies import (
 )
 from app.modules.ph import cruds_ph, models_ph, schemas_ph
 from app.utils.communication.notifications import NotificationTool
-from app.utils.tools import delete_file_from_data, get_file_from_data, save_file_as_data
+from app.utils.tools import delete_file_from_data, get_file_from_data, save_file_as_data, save_pdf_first_page_as_image
 
 module = Module(
     root="ph",
@@ -169,18 +169,36 @@ async def create_paper_pdf(
         accepted_content_types=["application/pdf"],
     )
 
-    with fitz.open(f"data/ph/pdf/{paper_id}.pdf") as paper_pdf:
-        page = paper_pdf.load_page(0)
-        cover = page.get_pixmap()
-        await save_file_as_data(
-            image=cover,
-            directory="ph/cover",
-            filename=str(paper_id),
-            request_id=request_id,
-            max_file_size=10 * 1024 * 1024,  # 10 MB
-            accepted_content_types=["image/jpeg"],
+    save_pdf_first_page_as_image(
+        input_pdf_directory="ph/pdf",
+        output_image_directory="ph/cover",
+        filename=str(paper_id),
+        default_pdf_path="assets/pdf/default_ph.pdf",
+        request_id=request_id,
+        jpg_quality=95,
+    )
+
+@module.router.get(
+    "/ph/{paper_id}/cover",
+    status_code=200,
+)
+async def get_cover(
+    paper_id: str,
+    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: AsyncSession = Depends(get_db),
+):
+    paper = await cruds_ph.get_paper_by_id(db=db, paper_id=paper_id)
+    if paper is None:
+        raise HTTPException(
+            status_code=404,
+            detail="The paper does not exist.",
         )
 
+    return get_file_from_data(
+        default_asset="assets/images/default_cover.jpg",
+        directory="ph/cover",
+        filename=str(paper_id),
+    )
 
 @module.router.patch(
     "/ph/{paper_id}",
@@ -226,7 +244,6 @@ async def delete_paper(
         delete_file_from_data(
             directory="ph/pdf",
             filename=str(paper_id),
-            extension="pdf",
         )
 
     await cruds_ph.delete_paper(
@@ -234,25 +251,3 @@ async def delete_paper(
         db=db,
     )
 
-
-@module.router.get(
-    "/ph/{paper_id}/cover",
-    status_code=200,
-)
-async def get_cover(
-    paper_id: str,
-    user: models_core.CoreUser = Depends(is_user_a_member),
-    db: AsyncSession = Depends(get_db),
-):
-    paper = await cruds_ph.get_paper_by_id(db=db, paper_id=paper_id)
-    if paper is None:
-        raise HTTPException(
-            status_code=404,
-            detail="The paper does not exist.",
-        )
-
-    return get_file_from_data(
-        default_asset="assets/images/default_cover.jpg",
-        directory="ph/cover",
-        filename=str(paper_id),
-    )
