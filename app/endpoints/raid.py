@@ -1,13 +1,13 @@
 import logging
 import uuid
 
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cruds import cruds_raid
-from app.dependencies import get_db, get_request_id
-from app.models import models_raid
+from app.dependencies import get_db, get_request_id, is_user_a_member
+from app.models import models_core, models_raid
 from app.schemas import schemas_raid
 from app.utils.tools import get_file_from_data, save_file_as_data
 from app.utils.types import standard_responses
@@ -26,17 +26,25 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 )
 async def create_team(
     team: schemas_raid.TeamBase,
-    user_id: str = Depends(get_request_id),
+    user: models_core.CoreUser = Depends(is_user_a_member),
     db: AsyncSession = Depends(get_db),
 ):
     """
     Create a team
     """
+    # If the user is not a participant, return an error
+    if not await cruds_raid.is_user_a_participant(user.id, db):
+        raise HTTPException(status_code=403, detail="You are not a participant.")
+
+    # If the user already has a team, return an error
+    if await cruds_raid.get_team_by_participant_id(user.id, db):
+        raise HTTPException(status_code=403, detail="You already have a team.")
+
     db_team = models_raid.Team(
         id=str(uuid.uuid4()),
         name=team.name,
         number=0,
-        captain_id=user_id,
+        captain_id=user.id,
         second_id=None,
         validation_progress=0.0,
     )
@@ -60,7 +68,7 @@ async def get_team_by_participant_id(
 
 
 @router.get(
-    "/raid/teams",
+    "/raid/team/all",
     response_model=list[schemas_raid.TeamPreview],
     status_code=200,
     tags=["raid"],
