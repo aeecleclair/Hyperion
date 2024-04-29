@@ -95,6 +95,34 @@ class Participant(Base):
     payment: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     @property
+    def number_of_document(self) -> int:
+        number_total = 3
+        if self.situation and self.situation.split(" : ")[0] in [
+            "centrale",
+            "otherschool",
+        ]:
+            number_total += 1
+        return number_total
+
+    @property
+    def number_of_validated_document(self) -> int:
+        number_validated = 0
+        if (
+            self.situation
+            and self.situation.split(" : ")[0] in ["centrale", "otherschool"]
+            and self.student_card_id
+            and self.student_card.validated
+        ):
+            number_validated += 1
+        if self.id_card_id and self.id_card.validated:
+            number_validated += 1
+        if self.medical_certificate_id and self.medical_certificate.validated:
+            number_validated += 1
+        if self.raid_rules_id and self.raid_rules.validated:
+            number_validated += 1
+        return number_validated
+
+    @property
     def validation_progress(self) -> float:
         number_validated = 0
         number_total = 10
@@ -106,7 +134,10 @@ class Participant(Base):
             number_validated += 1
         if self.situation:
             number_validated += 1
-        if self.situation and self.situation.split(" : ")[0] in ["centrale", "otherschool"]:
+        if self.situation and self.situation.split(" : ")[0] in [
+            "centrale",
+            "otherschool",
+        ]:
             number_total += 1
             if self.student_card_id and self.student_card.validated:
                 number_validated += 1
