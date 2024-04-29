@@ -65,28 +65,28 @@ class SecurityFile(SecurityFileBase):
 class ParticipantBase(BaseModel):
     name: str
     firstname: str
-    validation_progress: float
-
-
-class Participant(ParticipantBase):
-    id: str
     birthday: date
     address: str
     phone: str
     email: str
-    bike_size: Size
-    t_shirt_size: Size
-    situation: str
+
+
+class Participant(ParticipantBase):
+    id: str
+    bike_size: Size | None
+    t_shirt_size: Size | None
+    situation: str | None
     other_school: str | None = None
     company: str | None = None
     diet: str | None = None
-    id_card: Document
-    medical_certificate: Document
-    security_file: SecurityFile
+    id_card: Document | None
+    medical_certificate: Document | None
+    security_file: SecurityFile | None
     student_card: Document | None = None
-    raid_rules: Document
+    raid_rules: Document | None = None
     attestation_on_honour: bool
     payment: bool
+    validation_progress: float
 
     class Config:
         orm_mode = True
