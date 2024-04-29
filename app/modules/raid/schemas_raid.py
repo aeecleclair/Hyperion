@@ -117,7 +117,7 @@ class TeamBase(BaseModel):
 
 class TeamPreview(TeamBase):
     id: str
-    number: int
+    number: int | None
     captain: ParticipantBase
     second: ParticipantBase | None
     difficulty: Difficulty | None
@@ -128,7 +128,7 @@ class TeamPreview(TeamBase):
 
 class Team(TeamBase):
     id: str
-    number: int
+    number: int | None
     captain: Participant
     second: Participant | None
     difficulty: Difficulty | None
