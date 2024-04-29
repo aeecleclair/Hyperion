@@ -1,5 +1,5 @@
 from datetime import UTC, datetime
-from sqlite3 import IntegrityError
+from sqlalchemy.exc import IntegrityError
 from typing import Sequence
 
 from sqlalchemy import delete, or_, select, update
