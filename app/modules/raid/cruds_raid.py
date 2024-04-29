@@ -1,11 +1,11 @@
 from sqlite3 import IntegrityError
+from typing import Sequence
 
 from sqlalchemy import delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import models_raid
-from app.schemas import schemas_raid
+from app.modules.raid import models_raid, schemas_raid
 
 
 async def create_participant(
@@ -66,7 +66,7 @@ async def get_team_by_participant_id(
 
 async def get_all_teams(
     db: AsyncSession,
-) -> list[models_raid.Team]:
+) -> Sequence[models_raid.Team]:
     teams = await db.execute(
         select(models_raid.Team).options(
             selectinload(models_raid.Team.captain),
@@ -143,7 +143,7 @@ async def get_document_by_id(
 
 
 async def upload_document(
-    document: schemas_raid.Document,
+    document: models_raid.Document,
     db: AsyncSession,
 ) -> models_raid.Document:
     db.add(document)
