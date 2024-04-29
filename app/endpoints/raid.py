@@ -177,9 +177,7 @@ async def read_document(
     advert_id: str,
 ):
     """
-    Get the image of an advert
-
-    **The user must be authenticated to use this endpoint**
+    Read a document
     """
     return get_file_from_data(
         default_asset="assets/images/default_advert.png",
