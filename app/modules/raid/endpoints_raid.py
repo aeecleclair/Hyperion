@@ -12,7 +12,7 @@ from app.core.module import Module
 from app.dependencies import (
     get_db,
     get_request_id,
-    is_user_a_member,
+    is_user,
     is_user_a_member_of,
 )
 from app.modules.raid import cruds_raid, models_raid, schemas_raid
@@ -58,7 +58,7 @@ async def save_team_info(team: schemas_raid.Team, db: AsyncSession) -> str:
 async def get_participant_by_id(
     participant_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user),
 ):
     """
     Get a participant by id
@@ -84,7 +84,7 @@ async def get_participant_by_id(
 )
 async def create_participant(
     participant: schemas_raid.ParticipantBase,
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -105,7 +105,7 @@ async def create_participant(
 async def update_participant(
     participant_id: str,
     participant: schemas_raid.ParticipantUpdate,
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -131,7 +131,7 @@ async def update_participant(
 )
 async def create_team(
     team: schemas_raid.TeamBase,
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -153,7 +153,7 @@ async def create_team(
         second_id=None,
     )
     created_team = await cruds_raid.create_team(db_team, db)
-    await save_team_info(team, db)
+    await save_team_info(created_team, db)
     return created_team
 
 
@@ -165,7 +165,7 @@ async def create_team(
 async def get_team_by_participant_id(
     participant_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user),
 ):
     """
     Get a team by participant id
@@ -223,7 +223,7 @@ async def update_team(
     team_id: str,
     team: schemas_raid.TeamUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user),
 ):
     """
     Update a team
@@ -276,7 +276,7 @@ async def delete_all_teams(
 async def create_document(
     participant_id: str,
     document: schemas_raid.DocumentCreation,
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -330,7 +330,7 @@ async def upload_document(
     document_id: str,
     image: UploadFile = File(...),
     request_id: str = Depends(get_request_id),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -378,7 +378,7 @@ async def upload_document(
 async def read_document(
     document_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user),
 ):
     """
     Read a document
@@ -434,7 +434,7 @@ async def validate_document(
 async def set_security_file(
     security_file: schemas_raid.SecurityFile,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user),
 ):
     """
     Confirm security file
@@ -460,7 +460,7 @@ async def assign_security_file(
     participant_id: str,
     security_file_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user),
 ):
     """
     Assign security file
@@ -497,7 +497,7 @@ async def confirm_payment(
 async def validate_attestation_on_honour(
     participant_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user),
 ):
     """
     Validate attestation on honour
@@ -517,7 +517,7 @@ async def validate_attestation_on_honour(
 async def create_invite_token(
     team_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user),
 ):
     """
     Create an invite token
@@ -551,7 +551,7 @@ async def create_invite_token(
 async def join_team(
     token: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user),
 ):
     """
     Join a team
