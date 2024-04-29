@@ -97,16 +97,14 @@ class Participant(Base):
     @property
     def validation_progress(self) -> float:
         number_validated = 0
-        number_total = 9
-        if self.address:
-            number_validated += 1
+        number_total = 8
         if self.bike_size:
             number_validated += 1
         if self.t_shirt_size:
             number_validated += 1
         if self.situation:
             number_validated += 1
-        if self.situation.split(" : ")[0] in ["centrale", "otherschool"]:
+        if self.situation and self.situation.split(" : ")[0] in ["centrale", "otherschool"]:
             number_total += 1
             if self.student_card_id and self.student_card.validated:
                 number_validated += 1
@@ -148,9 +146,7 @@ class Team(Base):
     @property
     def validation_progress(self) -> float:
         number_validated = 0
-        number_total = 3
-        if self.name:
-            number_validated += 1
+        number_total = 2
         if self.difficulty:
             number_validated += 1
         if self.meeting_place:
