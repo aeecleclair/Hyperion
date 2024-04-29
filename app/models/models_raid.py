@@ -50,12 +50,12 @@ class Participant(Base):
     address: Mapped[str] = mapped_column(String, nullable=False)
     phone: Mapped[str] = mapped_column(String, nullable=False)
     email: Mapped[str] = mapped_column(String, nullable=False)
-    bike_size: Mapped[Size] = mapped_column(Enum(Size), nullable=True, default=None)
-    t_shirt_size: Mapped[Size] = mapped_column(Enum(Size), nullable=True, default=None)
-    situation: Mapped[str] = mapped_column(String, nullable=True, default=None)
-    other_school: Mapped[str] = mapped_column(String, nullable=True, default=None)
-    company: Mapped[str] = mapped_column(String, nullable=True, default=None)
-    diet: Mapped[str] = mapped_column(String, nullable=True, default=None)
+    bike_size: Mapped[Size | None] = mapped_column(Enum(Size), nullable=True, default=None)
+    t_shirt_size: Mapped[Size | None] = mapped_column(Enum(Size), nullable=True, default=None)
+    situation: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
+    other_school: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
+    company: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
+    diet: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
     id_card_id: Mapped[str | None] = mapped_column(
         ForeignKey("raid_document.id"), nullable=True, default=None
     )
@@ -84,6 +84,7 @@ class Participant(Base):
     )
     attestation_on_honour: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     validation_progress: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    payment: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
 
 class Team(Base):
@@ -100,7 +101,7 @@ class Team(Base):
     captain: Mapped[Participant] = relationship(
         "Participant", foreign_keys=[captain_id]
     )
-    second_id: Mapped[str] = mapped_column(
+    second_id: Mapped[str | None] = mapped_column(
         ForeignKey("raid_participant.id"), nullable=True
     )
     second: Mapped[Participant] = relationship("Participant", foreign_keys=[second_id])
