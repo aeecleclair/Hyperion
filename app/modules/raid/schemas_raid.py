@@ -26,6 +26,15 @@ class Document(DocumentBase):
         orm_mode = True
 
 
+class EmergencyPerson(BaseModel):
+    firstname: str | None = None
+    name: str | None = None
+    phone: str | None = None
+
+    class Config:
+        orm_mode = True
+
+
 class SecurityFileBase(BaseModel):
     allergy: str | None = None
     asthma: bool
@@ -37,6 +46,7 @@ class SecurityFileBase(BaseModel):
     surgical_operation: str | None = None
     trauma: str | None = None
     family: str | None = None
+    emergency_person: EmergencyPerson | None = None
 
 
 class SecurityFileUpdate(BaseModel):
@@ -50,6 +60,7 @@ class SecurityFileUpdate(BaseModel):
     surgical_operation: str | None = None
     trauma: str | None = None
     family: str | None = None
+    emergency_person: EmergencyPerson | None = None
 
 
 class SecurityFile(SecurityFileBase):
@@ -151,15 +162,6 @@ class TeamUpdate(BaseModel):
 class InviteToken(BaseModel):
     team_id: str
     token: str
-
-    class Config:
-        orm_mode = True
-
-
-class EmergencyPerson(BaseModel):
-    firstname: str | None = None
-    name: str | None = None
-    phone: str | None = None
 
     class Config:
         orm_mode = True
