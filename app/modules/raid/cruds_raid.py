@@ -58,8 +58,7 @@ async def get_team_by_participant_id(
             )
         )
         .options(
-            selectinload(models_raid.Team.captain),
-            selectinload(models_raid.Team.second),
+            selectinload("*"),
         )
     )
     return team.scalars().first()
@@ -70,8 +69,7 @@ async def get_all_teams(
 ) -> Sequence[models_raid.Team]:
     teams = await db.execute(
         select(models_raid.Team).options(
-            selectinload(models_raid.Team.captain),
-            selectinload(models_raid.Team.second),
+            selectinload("*"),
         )
     )
     return teams.scalars().all()
@@ -85,8 +83,7 @@ async def get_team_by_id(
         select(models_raid.Team)
         .where(models_raid.Team.id == team_id)
         .options(
-            selectinload(models_raid.Team.captain),
-            selectinload(models_raid.Team.second),
+            selectinload("*"),
         )
     )
     return team.scalars().first()
@@ -130,6 +127,71 @@ async def delete_all_teams(
     db: AsyncSession,
 ) -> None:
     await db.execute(delete(models_raid.Team))
+    await db.commit()
+
+
+async def add_security_file(
+    security_file: schemas_raid.SecurityFile,
+    db: AsyncSession,
+) -> models_raid.SecurityFile:
+    db.add(security_file)
+    try:
+        await db.commit()
+        return security_file
+    except IntegrityError:
+        await db.rollback()
+        raise ValueError("An error occurred while creating the participant.")
+
+
+async def update_security_file(
+    security_file: schemas_raid.SecurityFile,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        update(models_raid.SecurityFile)
+        .where(models_raid.SecurityFile.id == security_file.id)
+        .values(**security_file.model_dump(exclude_none=True))
+    )
+    await db.commit()
+
+
+async def assign_security_file(
+    participant_id: str,
+    security_file_id: str,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        update(models_raid.Participant)
+        .where(models_raid.Participant.id == participant_id)
+        .values(security_file_id=security_file_id)
+    )
+    await db.commit()
+
+
+async def create_document(
+    document: models_raid.Document,
+    db: AsyncSession,
+) -> models_raid.Document:
+    db.add(document)
+    try:
+        await db.commit()
+        return document
+    except IntegrityError:
+        await db.rollback()
+        raise ValueError("An error occurred while creating the document.")
+
+
+async def assign_document(
+    participant_id: str,
+    document_id: str,
+    document_key: str,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        update(models_raid.Participant)
+        .where(models_raid.Participant.id == participant_id)
+        .values({document_key: document_id})
+    )
     await db.commit()
 
 
@@ -194,7 +256,7 @@ async def update_document(
     await db.execute(
         update(models_raid.Document)
         .where(models_raid.Document.id == document_id)
-        .values(**document.dict(exclude_none=True))
+        .values(**document.model_dump(exclude_none=True))
     )
     await db.commit()
 
@@ -241,9 +303,11 @@ async def get_participant_by_id(
     db: AsyncSession,
 ) -> models_raid.Participant | None:
     participant = await db.execute(
-        select(models_raid.Participant).where(
-            models_raid.Participant.id == participant_id
-        )
+        select(models_raid.Participant)
+        .where(models_raid.Participant.id == participant_id)
+        .options(
+            selectinload("*"),
+        ),
     )
     return participant.scalars().first()
 
@@ -253,3 +317,14 @@ async def get_number_of_teams(
 ) -> int:
     result = await db.execute(select(models_raid.Team))
     return len(result.scalars().all())
+
+
+async def get_security_file_by_security_id(
+    security_id: str,
+    db: AsyncSession,
+) -> models_raid.SecurityFile | None:
+    security_file = await db.execute(
+        select(models_raid.SecurityFile)
+        .where(models_raid.SecurityFile.id == security_id)
+    )
+    return security_file.scalars().first()

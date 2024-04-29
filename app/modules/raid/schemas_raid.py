@@ -6,9 +6,15 @@ from app.utils.types.raid_type import Difficulty, DocumentType, MeetingPlace, Si
 
 
 class DocumentBase(BaseModel):
-    participant_id: str
-    name: str
     type: DocumentType
+    name: str
+
+
+class DocumentCreation(DocumentBase):
+    id: str
+
+    class Config:
+        orm_mode = True
 
 
 class Document(DocumentBase):
@@ -21,11 +27,6 @@ class Document(DocumentBase):
 
 
 class SecurityFileBase(BaseModel):
-    name: str
-    firstname: str
-    birthday: date
-    address: str
-    phone: str
     allergy: str | None = None
     asthma: bool
     intensive_care_unit: bool | None = None
@@ -39,11 +40,6 @@ class SecurityFileBase(BaseModel):
 
 
 class SecurityFileUpdate(BaseModel):
-    name: str | None = None
-    firstname: str | None = None
-    birthday: date | None = None
-    address: str | None = None
-    phone: str | None = None
     allergy: str | None = None
     asthma: bool | None = None
     intensive_care_unit: bool | None = None
