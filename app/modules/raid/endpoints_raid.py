@@ -34,14 +34,20 @@ module = Module(
     default_allowed_groups_ids=[GroupType.student, GroupType.staff],
 )
 
-pdf_writer = PDFWriter()
+
 drive_file_manager = DriveFileManager()
 
 
-def save_team_info(team: schemas_raid.Team):
-    file_name = pdf_writer.write_team(team)
-    team.file_id = drive_file_manager.replace_file(file_name, team.file_id)
-    cruds_raid.update_team_file_id(team.id, team.file_id)
+async def save_team_info(team: schemas_raid.Team, db: AsyncSession) -> str:
+    pdf_writer = PDFWriter()
+    file_path = pdf_writer.write_team(team)
+    file_name = file_path.split("/")[-1]
+    if team.file_id:
+        file_id = drive_file_manager.replace_file(file_path, team.file_id)
+    else:
+        file_id = drive_file_manager.upload_file(file_path, file_name)
+    await cruds_raid.update_team_file_id(team.id, file_id, db)
+    pdf_writer.clear_pdf()
 
 
 @module.router.get(
@@ -115,7 +121,7 @@ async def update_participant(
 
     await cruds_raid.update_participant(participant_id, participant, db)
     team = await cruds_raid.get_team_by_participant_id(participant_id, db)
-    save_team_info(team)
+    await save_team_info(team, db)
 
 
 @module.router.post(
@@ -147,7 +153,7 @@ async def create_team(
         second_id=None,
     )
     created_team = await cruds_raid.create_team(db_team, db)
-    save_team_info(created_team)
+    await save_team_info(team, db)
     return created_team
 
 
@@ -228,7 +234,7 @@ async def update_team(
     if existing_team.id != team_id:
         raise HTTPException(status_code=403, detail="You are not in the team.")
     await cruds_raid.update_team(team_id, team, db)
-    save_team_info(team)
+    await save_team_info(team, db)
 
 
 @module.router.delete(
@@ -311,8 +317,7 @@ async def create_document(
     )
 
     team = await cruds_raid.get_team_by_participant_id(participant_id, db)
-    save_team_info(team)
-
+    await save_team_info(team, db)
     return document
 
 
@@ -443,8 +448,7 @@ async def set_security_file(
         await cruds_raid.add_security_file(model_security_file, db)
 
     team = await cruds_raid.get_team_by_participant_id(user.id, db)
-    save_team_info(team)
-
+    await save_team_info(team, db)
     return security_file
 
 
@@ -480,7 +484,7 @@ async def confirm_payment(
     Confirm payment
     """
     team = await cruds_raid.get_team_by_participant_id(participant_id, db)
-    save_team_info(team)
+    await save_team_info(team, db)
     return await cruds_raid.confirm_payment(participant_id, db)
 
 
@@ -499,7 +503,7 @@ async def validate_attestation_on_honour(
     if participant_id != user.id:
         raise HTTPException(status_code=403, detail="You are not the participant")
     team = await cruds_raid.get_team_by_participant_id(participant_id, db)
-    save_team_info(team)
+    await save_team_info(team, db)
     return await cruds_raid.validate_attestation_on_honour(participant_id, db)
 
 
@@ -578,6 +582,5 @@ async def join_team(
         )
 
     await cruds_raid.update_team_second_id(team.id, user.id, db)
-    save_team_info(team)
-
+    await save_team_info(team, db)
     await cruds_raid.delete_invite_token(invite_token.id, db)
