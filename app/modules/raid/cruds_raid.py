@@ -1,8 +1,8 @@
-from datetime import UTC, datetime
-from sqlalchemy.exc import IntegrityError
 from collections.abc import Sequence
+from datetime import UTC, datetime
 
 from sqlalchemy import delete, or_, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -384,8 +384,6 @@ async def delete_invite_token(
     db: AsyncSession,
 ) -> None:
     await db.execute(
-        delete(models_raid.InviteToken).where(
-            models_raid.InviteToken.id == token_id
-        )
+        delete(models_raid.InviteToken).where(models_raid.InviteToken.id == token_id)
     )
     await db.commit()

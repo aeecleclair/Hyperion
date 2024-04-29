@@ -2,7 +2,7 @@ from datetime import date
 
 from pydantic import BaseModel
 
-from app.utils.types.raid_type import Difficulty, DocumentType, MeetingPlace, Size
+from app.modules.raid.raid_type import Difficulty, DocumentType, MeetingPlace, Size
 
 
 class DocumentBase(BaseModel):
