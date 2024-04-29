@@ -101,7 +101,7 @@ class Team(Base):
         "Participant", foreign_keys=[captain_id]
     )
     second_id: Mapped[str] = mapped_column(
-        ForeignKey("raid_participant.id"), nullable=False
+        ForeignKey("raid_participant.id"), nullable=True
     )
     second: Mapped[Participant] = relationship("Participant", foreign_keys=[second_id])
     validation_progress: Mapped[float] = mapped_column(Float, nullable=False)
