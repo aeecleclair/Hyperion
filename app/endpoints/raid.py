@@ -314,9 +314,8 @@ async def delete_document(
 
 @router.post(
     "/raid/participant/{participant_id}/payment",
-    response_model=schemas_raid.Participant,
-    status_code=201,
-    tags=["raid"],
+    status_code=204,
+    tags=[Tags.raid],
 )
 async def confirm_payment(
     participant_id: str,
@@ -331,7 +330,7 @@ async def confirm_payment(
 @router.post(
     "/raid/participant/{participant_id}/honour",
     status_code=204,
-    tags=["raid"],
+    tags=[Tags.raid],
 )
 async def validate_attestation_on_honour(
     participant_id: str,
