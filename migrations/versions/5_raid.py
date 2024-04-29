@@ -90,7 +90,6 @@ def upgrade() -> None:
         sa.Column("student_card_id", sa.String(), nullable=True, default=None),
         sa.Column("raid_rules_id", sa.String(), nullable=True, default=None),
         sa.Column("attestation_on_honour", sa.Boolean(), nullable=False, default=False),
-        sa.Column("validation_progress", sa.Float(), nullable=False, default=0.0),
         sa.ForeignKeyConstraint(
             ["id_card_id"],
             ["raid_document.id"],
@@ -128,7 +127,6 @@ def upgrade() -> None:
         ),
         sa.Column("captain_id", sa.String(), nullable=False),
         sa.Column("second_id", sa.String(), nullable=True),
-        sa.Column("validation_progress", sa.Float(), nullable=False),
         sa.ForeignKeyConstraint(
             ["captain_id"],
             ["raid_participant.id"],
