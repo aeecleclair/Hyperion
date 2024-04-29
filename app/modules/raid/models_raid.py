@@ -116,3 +116,12 @@ class Team(Base):
     meeting_place: Mapped[MeetingPlace | None] = mapped_column(
         Enum(MeetingPlace), nullable=True
     )
+
+
+class InviteToken(Base):
+    __tablename__ = "raid_invite"
+    id: Mapped[str] = mapped_column(
+        String, primary_key=True, index=True, nullable=False
+    )
+    team_id: Mapped[str] = mapped_column(ForeignKey("raid_team.id"), nullable=False)
+    token: Mapped[str] = mapped_column(String, nullable=False)
