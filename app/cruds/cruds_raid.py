@@ -7,6 +7,16 @@ from app.models import models_raid
 from app.schemas import schemas_raid
 
 
+async def is_user_a_participant(
+    user_id: str,
+    db: AsyncSession,
+) -> bool:
+    participant = await db.execute(
+        select(models_raid.Participant).where(models_raid.Participant.id == user_id)
+    )
+    return bool(participant.scalars().first())
+
+
 async def get_team_by_participant_id(
     participant_id: str,
     db: AsyncSession,
