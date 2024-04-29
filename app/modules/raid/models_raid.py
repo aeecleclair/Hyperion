@@ -48,7 +48,7 @@ class Participant(Base):
     name: Mapped[str] = mapped_column(String, nullable=False)
     firstname: Mapped[str] = mapped_column(String, nullable=False)
     birthday: Mapped[date] = mapped_column(Date, nullable=False)
-    address: Mapped[str] = mapped_column(String, nullable=False)
+    address: Mapped[str | None] = mapped_column(String, nullable=True)
     phone: Mapped[str] = mapped_column(String, nullable=False)
     email: Mapped[str] = mapped_column(String, nullable=False)
     bike_size: Mapped[Size | None] = mapped_column(
