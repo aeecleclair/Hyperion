@@ -6,11 +6,11 @@ Create Date: 2024-04-03 23:49:38.345393
 
 """
 
+from enum import Enum
 from typing import Sequence, Union
 
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy import Enum
 
 # revision identifiers, used by Alembic.
 revision: str = "4a02570cc225"
@@ -70,6 +70,7 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id"),
     )
+
     op.create_index(op.f("ix_raid_document_id"), "raid_document", ["id"], unique=False)
     op.create_table(
         "raid_security_file",
