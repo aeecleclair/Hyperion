@@ -403,7 +403,8 @@ async def set_security_file(
     if existing_security_file:
         await cruds_raid.update_security_file(security_file, db)
     else:
-        await cruds_raid.add_security_file(security_file, db)
+        model_security_file = models_raid.SecurityFile(**security_file.model_dump())
+        await cruds_raid.add_security_file(model_security_file, db)
 
     return security_file
 
@@ -525,7 +526,9 @@ async def join_team(
         raise HTTPException(status_code=403, detail="Team is already full.")
 
     if team.captain_id == user.id:
-        raise HTTPException(status_code=403, detail="You are already the captain of this team.")
+        raise HTTPException(
+            status_code=403, detail="You are already the captain of this team."
+        )
 
     await cruds_raid.update_team_second_id(team.id, user.id, db)
 
