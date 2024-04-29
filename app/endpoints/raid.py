@@ -111,7 +111,15 @@ async def get_team_by_participant_id(
     """
     Get a team by participant id
     """
-    return await cruds_raid.get_team_by_participant_id(participant_id, db)
+    # If the user is not a participant, return an error
+    if not await cruds_raid.is_user_a_participant(participant_id, db):
+        raise HTTPException(status_code=403, detail="You are not a participant.")
+
+    participant_team = await cruds_raid.get_team_by_participant_id(participant_id, db)
+    # If the user does not have a team, return an error
+    if not participant_team:
+        raise HTTPException(status_code=404, detail="You do not have a team.")
+    return participant_team
 
 
 @router.get(
