@@ -34,9 +34,8 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 drive_file_manager = DriveFileManager()
 
 
-async def save_team_info(model_team: models_raid.Team, db: AsyncSession) -> None:
+async def save_team_info(team: models_raid.Team, db: AsyncSession) -> None:
     try:
-        team = schemas_raid.Team(**model_team.__dict__)
         pdf_writer = PDFWriter()
         file_path = pdf_writer.write_team(team)
         file_name = file_path.split("/")[-1]
@@ -404,7 +403,7 @@ async def read_document(
             status_code=404, detail="Participant owning the document not found."
         )
 
-    if not cruds_raid.are_user_in_the_same_team(
+    if not await cruds_raid.are_user_in_the_same_team(
         user.id, participant.id, db
     ) and not is_user_member_of_an_allowed_group(user, [GroupType.raid_admin]):
         raise HTTPException(
