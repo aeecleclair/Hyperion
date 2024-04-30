@@ -11,7 +11,6 @@ from app.core.notification import (
     schemas_notification,
 )
 from app.core.notification.notification_types import CustomTopic, Topic
-from app.core.notification.schemas_notification import Message
 from app.dependencies import (
     get_db,
     get_notification_manager,
