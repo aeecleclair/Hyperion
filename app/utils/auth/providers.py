@@ -331,4 +331,4 @@ class RAIDRegistering(BaseAuthClient):
     # When set to `None`, users from any group can use the auth client
     allowed_groups: list[GroupType] | None = None
     # Some clients may allow external users to authenticate
-    allow_external_users: True
+    allow_external_users: bool = True
