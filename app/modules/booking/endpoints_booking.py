@@ -278,7 +278,7 @@ async def create_booking(
 
     except Exception as error:
         hyperion_error_logger.error(
-            f"Error while sending cinema recap notification, {error}",
+            f"Error while sending BOOKING notification, {error}",
         )
 
     return result

@@ -277,7 +277,7 @@ async def create_advert(
         )
 
     except Exception as error:
-        hyperion_error_logger.error(f"Error while sending advert notification, {error}")
+        hyperion_error_logger.error(f"Error while sending ADVERT notification, {error}")
 
     return result
 
