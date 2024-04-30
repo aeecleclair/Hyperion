@@ -7,6 +7,8 @@ import pytest_asyncio
 from fastapi import HTTPException, UploadFile
 
 from app.core import models_core
+from app.types.core_data import BaseCoreData
+from app.types.exceptions import CoreDataNotFoundException
 from app.utils.tools import (
     delete_file_from_data,
     get_core_data,
@@ -17,8 +19,6 @@ from app.utils.tools import (
     save_pdf_first_page_as_image,
     set_core_data,
 )
-from app.utils.types.core_data import BaseCoreData
-from app.utils.types.exceptions import CoreDataNotFoundException
 from tests.commons import (
     TestingSessionLocal,
     add_object_to_db,
