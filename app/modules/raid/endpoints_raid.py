@@ -234,7 +234,8 @@ async def update_team(
     if existing_team.id != team_id:
         raise HTTPException(status_code=403, detail="You are not in the team.")
     await cruds_raid.update_team(team_id, team, db)
-    await save_team_info(team, db)
+    updated_team = await cruds_raid.get_team_by_id(team_id)
+    await save_team_info(updated_team, db)
 
 
 @module.router.delete(
@@ -282,7 +283,7 @@ async def create_document(
     """
     Create a document
     """
-    if not await cruds_raid.are_user_in_the_same_team(participant_id, db):
+    if not await cruds_raid.are_user_in_the_same_team(participant_id, user.id, db):
         raise HTTPException(status_code=403, detail="You are not the participant.")
 
     # existing_document = await cruds_raid.get_document_by_id(document.id, db)
