@@ -394,6 +394,8 @@ async def are_user_in_the_same_team(
 ) -> bool:
     team_1 = await get_team_by_participant_id(participant_id_1, db)
     team_2 = await get_team_by_participant_id(participant_id_2, db)
+    if team_1 is None or team_2 is None:
+        return False
     return team_1.id == team_2.id
 
 
