@@ -136,6 +136,7 @@ def test_delete_paper():
         )
 
     assert Path(f"data/ph/pdf/{paper.id}.pdf").is_file()
+    assert Path(f"data/ph/cover/{paper.id}.jpg").is_file()
 
     response = client.delete(
         f"/ph/{paper.id}",
@@ -143,4 +144,5 @@ def test_delete_paper():
     )
 
     assert not Path(f"data/ph/pdf/{paper.id}.pdf").is_file()
+    assert not Path(f"data/ph/cover/{paper.id}.jpg").is_file()
     assert response.status_code == 204

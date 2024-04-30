@@ -174,7 +174,7 @@ async def create_paper_pdf_and_cover(
         accepted_content_types=["application/pdf"],
     )
 
-    save_pdf_first_page_as_image(
+    await save_pdf_first_page_as_image(
         input_pdf_directory="ph/pdf",
         output_image_directory="ph/cover",
         filename=str(paper_id),
@@ -247,9 +247,14 @@ async def delete_paper(
             detail="Invalid paper_id",
         )
 
-    if Path.exists(Path(f"data/pdf/{paper_id}.pdf")):
+    if Path.exists(Path(f"data/ph/pdf/{paper_id}.pdf")):
         delete_file_from_data(
             directory="ph/pdf",
+            filename=str(paper_id),
+        )
+    if Path.exists(Path(f"data/ph/cover/{paper_id}.jpg")):
+        delete_file_from_data(
+            directory="ph/cover",
             filename=str(paper_id),
         )
 
