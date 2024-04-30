@@ -49,7 +49,12 @@ class PDFWriter(FPDF):
     def add_pdf(self) -> str:
         reader = PdfReader(io.BytesIO(self.output()))
         for i in range(len(self.pdf_paths)):
-            pages = PdfReader(self.pdf_paths[i]).pages
+            path = get_file_path_from_data(
+                "raid",
+                self.pdf_paths[i],
+                "assets/pdf/default_pdf.pdf",
+            )
+            pages = PdfReader(path).pages
             for j, page in enumerate(pages):
                 reader.pages[self.pdf_indexes[i] + j].merge_page(page2=page)
 
