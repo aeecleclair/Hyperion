@@ -12,14 +12,17 @@ class DriveFileManager:
         oauth_credentials = google.oauth2.credentials.Credentials(
             token="",
             refresh_token=config.REFRESH_TOKEN,
-            token_uri="https://oauth2.googleapis.com/token",
+            token_uri="https://oauth2.googleapis.com/token",  # noqa: S106
             client_id=config.CLIENT_ID,
             client_secret=config.CLIENT_SECRET,
             scopes=["https://www.googleapis.com/auth/drive"],
         )
 
         self.drive_service = build(
-            "drive", "v3", credentials=oauth_credentials, developerKey=config.API_KEY
+            "drive",
+            "v3",
+            credentials=oauth_credentials,
+            developerKey=config.API_KEY,
         )
         self.working_folder_name = "Dossiers d'inscription"
         self.working_folder_id = "1j1h_ly9ZxRMnhXiegs0DzKbavNwwxDu9"
@@ -31,7 +34,8 @@ class DriveFileManager:
             "parents": [self.working_folder_id],
         }
         media = googleapiclient.http.MediaFileUpload(
-            file_path, mimetype="application/pdf"
+            file_path,
+            mimetype="application/pdf",
         )
         response = (
             self.drive_service.files()
@@ -45,7 +49,8 @@ class DriveFileManager:
             "mimeType": "application/pdf",
         }
         media = googleapiclient.http.MediaFileUpload(
-            file_path, mimetype="application/pdf"
+            file_path,
+            mimetype="application/pdf",
         )
         if not file_id:
             return self.upload_file(file_path, file_id)

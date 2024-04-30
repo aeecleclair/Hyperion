@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -65,10 +65,12 @@ async def get_participant_by_id(
     Get a participant by id
     """
     if participant_id != user.id and not is_user_member_of_an_allowed_group(
-        user, [GroupType.raid_admin]
+        user,
+        [GroupType.raid_admin],
     ):
         raise HTTPException(
-            status_code=403, detail="You can not get data of another user"
+            status_code=403,
+            detail="You can not get data of another user",
         )
 
     participant = await cruds_raid.get_participant_by_id(participant_id, db)
@@ -299,7 +301,7 @@ async def create_document(
     #     pass  # TODO: Delete the existing document
 
     model_document = models_raid.Document(
-        uploaded_at=datetime.now().date(),
+        uploaded_at=datetime.now(UTC).date(),
         validated=False,
         id=document.id,
         name=document.name,
@@ -401,14 +403,18 @@ async def read_document(
     participant = await cruds_raid.get_user_by_document_id(document_id, db)
     if not participant:
         raise HTTPException(
-            status_code=404, detail="Participant owning the document not found."
+            status_code=404,
+            detail="Participant owning the document not found.",
         )
 
     if not await cruds_raid.are_user_in_the_same_team(
-        user.id, participant.id, db
+        user.id,
+        participant.id,
+        db,
     ) and not is_user_member_of_an_allowed_group(user, [GroupType.raid_admin]):
         raise HTTPException(
-            status_code=403, detail="You are not the owner of this document."
+            status_code=403,
+            detail="You are not the owner of this document.",
         )
 
     return get_file_from_data(
@@ -450,7 +456,8 @@ async def set_security_file(
     Confirm security file
     """
     existing_security_file = await cruds_raid.get_security_file_by_security_id(
-        security_file.id, db
+        security_file.id,
+        db,
     )
     if existing_security_file:
         await cruds_raid.update_security_file(security_file, db)
@@ -593,7 +600,8 @@ async def join_team(
 
     if team.captain_id == user.id:
         raise HTTPException(
-            status_code=403, detail="You are already the captain of this team."
+            status_code=403,
+            detail="You are already the captain of this team.",
         )
 
     await cruds_raid.update_team_second_id(team.id, user.id, db)
