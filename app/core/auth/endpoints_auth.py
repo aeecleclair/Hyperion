@@ -336,11 +336,11 @@ async def authorize_validation(
             if authorizereq.state:
                 url += "&state=" + authorizereq.state
             return RedirectResponse(url, status_code=status.HTTP_302_FOUND)
-    if auth_client.allow_external_users:
+    if not auth_client.allow_external_users:
         if is_user_external(user):
             # TODO We should show an HTML page explaining the issue
             hyperion_access_logger.warning(
-                f"Authorize-validation: external users are disabled for this auth provider {authorizereq.email} ({request_id})",
+                f"Authorize-validation: external users are disabled for this auth provider {auth_client.client_id} ({request_id})",
             )
             url = redirect_uri + "?error=" + "consent_required"
             if authorizereq.state:
