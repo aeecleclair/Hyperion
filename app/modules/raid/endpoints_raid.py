@@ -352,7 +352,7 @@ async def upload_document(
     #     )
 
     await save_file_as_data(
-        image=image,
+        upload_file=image,
         directory="raid",
         filename=str(document_id),
         request_id=request_id,
