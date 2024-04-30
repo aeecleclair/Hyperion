@@ -30,7 +30,7 @@ async def update_participant(
     await db.execute(
         update(models_raid.Participant)
         .where(models_raid.Participant.id == participant_id)
-        .values(**participant.model_dump(exclude_none=True))
+        .values(**participant.model_dump(exclude_none=True)),
     )
     await db.commit()
 
@@ -40,7 +40,7 @@ async def is_user_a_participant(
     db: AsyncSession,
 ) -> bool:
     participant = await db.execute(
-        select(models_raid.Participant).where(models_raid.Participant.id == user_id)
+        select(models_raid.Participant).where(models_raid.Participant.id == user_id),
     )
     return bool(participant.scalars().first())
 
@@ -55,11 +55,11 @@ async def get_team_by_participant_id(
             or_(
                 models_raid.Team.captain_id == participant_id,
                 models_raid.Team.second_id == participant_id,
-            )
+            ),
         )
         .options(
             selectinload("*"),
-        )
+        ),
     )
     return team.scalars().first()
 
@@ -70,7 +70,7 @@ async def get_all_teams(
     teams = await db.execute(
         select(models_raid.Team).options(
             selectinload("*"),
-        )
+        ),
     )
     return teams.scalars().all()
 
@@ -84,7 +84,7 @@ async def get_team_by_id(
         .where(models_raid.Team.id == team_id)
         .options(
             selectinload("*"),
-        )
+        ),
     )
     return team.scalars().first()
 
@@ -110,7 +110,7 @@ async def update_team(
     await db.execute(
         update(models_raid.Team)
         .where(models_raid.Team.id == team_id)
-        .values(**team.model_dump(exclude_none=True))
+        .values(**team.model_dump(exclude_none=True)),
     )
     await db.commit()
 
@@ -150,7 +150,7 @@ async def update_security_file(
     await db.execute(
         update(models_raid.SecurityFile)
         .where(models_raid.SecurityFile.id == security_file.id)
-        .values(**security_file.model_dump(exclude_none=True))
+        .values(**security_file.model_dump(exclude_none=True)),
     )
     await db.commit()
 
@@ -163,7 +163,7 @@ async def assign_security_file(
     await db.execute(
         update(models_raid.Participant)
         .where(models_raid.Participant.id == participant_id)
-        .values(security_file_id=security_file_id)
+        .values(security_file_id=security_file_id),
     )
     await db.commit()
 
@@ -190,7 +190,7 @@ async def assign_document(
     await db.execute(
         update(models_raid.Participant)
         .where(models_raid.Participant.id == participant_id)
-        .values({document_key: document_id})
+        .values({document_key: document_id}),
     )
     await db.commit()
 
@@ -202,7 +202,7 @@ async def validate_document(
     await db.execute(
         update(models_raid.Document)
         .where(models_raid.Document.id == document_id)
-        .values(validated=True)
+        .values(validated=True),
     )
     await db.commit()
 
@@ -212,13 +212,14 @@ async def get_document_by_id(
     db: AsyncSession,
 ) -> models_raid.Document | None:
     document = await db.execute(
-        select(models_raid.Document).where(models_raid.Document.id == document_id)
+        select(models_raid.Document).where(models_raid.Document.id == document_id),
     )
     return document.scalars().first()
 
 
 async def get_user_by_document_id(
-    document_id: str, db: AsyncSession
+    document_id: str,
+    db: AsyncSession,
 ) -> models_raid.Participant | None:
     document = await db.execute(
         select(models_raid.Participant).where(
@@ -228,7 +229,7 @@ async def get_user_by_document_id(
                 models_raid.Participant.student_card_id == document_id,
                 models_raid.Participant.raid_rules_id == document_id,
             ),
-        )
+        ),
     )
     return document.scalars().first()
 
@@ -254,7 +255,7 @@ async def update_document(
     await db.execute(
         update(models_raid.Document)
         .where(models_raid.Document.id == document_id)
-        .values(**document.model_dump(exclude_none=True))
+        .values(**document.model_dump(exclude_none=True)),
     )
     await db.commit()
 
@@ -266,7 +267,7 @@ async def mark_document_as_newly_updated(
     await db.execute(
         update(models_raid.Document)
         .where(models_raid.Document.id == document_id)
-        .values(uploaded_at=datetime.now(tz=UTC).date(), validated=False)
+        .values(uploaded_at=datetime.now(tz=UTC).date(), validated=False),
     )
 
     await db.commit()
@@ -279,7 +280,7 @@ async def confirm_payment(
     await db.execute(
         update(models_raid.Participant)
         .where(models_raid.Participant.id == participant_id)
-        .values(payment=True)
+        .values(payment=True),
     )
     await db.commit()
 
@@ -291,7 +292,7 @@ async def validate_attestation_on_honour(
     await db.execute(
         update(models_raid.Participant)
         .where(models_raid.Participant.id == participant_id)
-        .values(attestation_on_honour=True)
+        .values(attestation_on_honour=True),
     )
     await db.commit()
 
@@ -323,8 +324,8 @@ async def get_security_file_by_security_id(
 ) -> models_raid.SecurityFile | None:
     security_file = await db.execute(
         select(models_raid.SecurityFile).where(
-            models_raid.SecurityFile.id == security_id
-        )
+            models_raid.SecurityFile.id == security_id,
+        ),
     )
     return security_file.scalars().first()
 
@@ -348,8 +349,8 @@ async def get_invite_token_by_team_id(
 ) -> models_raid.InviteToken | None:
     invite = await db.execute(
         select(models_raid.InviteToken).where(
-            models_raid.InviteToken.team_id == team_id
-        )
+            models_raid.InviteToken.team_id == team_id,
+        ),
     )
     return invite.scalars().first()
 
@@ -359,7 +360,7 @@ async def get_invite_token_by_token(
     db: AsyncSession,
 ) -> models_raid.InviteToken | None:
     invite = await db.execute(
-        select(models_raid.InviteToken).where(models_raid.InviteToken.token == token)
+        select(models_raid.InviteToken).where(models_raid.InviteToken.token == token),
     )
     return invite.scalars().first()
 
@@ -372,7 +373,7 @@ async def update_team_second_id(
     await db.execute(
         update(models_raid.Team)
         .where(models_raid.Team.id == team_id)
-        .values(second_id=second_id)
+        .values(second_id=second_id),
     )
     await db.commit()
 
@@ -382,7 +383,7 @@ async def delete_invite_token(
     db: AsyncSession,
 ) -> None:
     await db.execute(
-        delete(models_raid.InviteToken).where(models_raid.InviteToken.id == token_id)
+        delete(models_raid.InviteToken).where(models_raid.InviteToken.id == token_id),
     )
     await db.commit()
 
@@ -407,6 +408,6 @@ async def update_team_file_id(
     await db.execute(
         update(models_raid.Team)
         .where(models_raid.Team.id == team_id)
-        .values(file_id=file_id)
+        .values(file_id=file_id),
     )
     await db.commit()

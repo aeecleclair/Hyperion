@@ -38,7 +38,12 @@ class PDFWriter(FPDF):
         if self.page_no() - 1 not in self.pdf_pages:
             self.set_font("times", "B", 20)
             self.cell(
-                0, 10, f"Dossier d'inscription de l'équipe {self.team.name}", 0, 1, "C"
+                0,
+                10,
+                f"Dossier d'inscription de l'équipe {self.team.name}",
+                0,
+                1,
+                "C",
             )
 
     def add_pdf(self) -> str:
@@ -111,7 +116,7 @@ class PDFWriter(FPDF):
                     self.pdf_indexes.append(self.page_no())
                     number_page = len(PdfReader(pdf).pages)
                     self.pdf_pages.extend(
-                        list(range(self.page_no(), self.page_no() + number_page))
+                        list(range(self.page_no(), self.page_no() + number_page)),
                     )
                     for _ in range(number_page):
                         self.add_page()
@@ -154,7 +159,9 @@ class PDFWriter(FPDF):
                     row.cell(datum)
 
     def write_security_file(
-        self, security_file: SecurityFile, participant: Participant
+        self,
+        security_file: SecurityFile,
+        participant: Participant,
     ):
         self.add_page()
         self.ln(6)
@@ -297,7 +304,9 @@ class PDFWriter(FPDF):
                     row.cell(datum)
 
     def write_participant_summary(
-        self, participant: Participant, is_second: bool = False
+        self,
+        participant: Participant,
+        is_second: bool = False,
     ):
         self.set_font("times", "B", 12)
         self.ln(4)
