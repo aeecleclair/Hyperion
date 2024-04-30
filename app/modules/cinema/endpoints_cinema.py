@@ -2,9 +2,8 @@ import logging
 import uuid
 from datetime import UTC, datetime
 
-from fastapi import Depends, File, HTTPException, UploadFile
+from fastapi import Depends, HTTPException, UploadFile
 from fastapi.responses import FileResponse
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, standard_responses
 from app.core.groups.groups_type import GroupType
@@ -12,10 +11,11 @@ from app.core.module import Module
 from app.core.notification.notification_types import CustomTopic, Topic
 from app.core.notification.schemas_notification import Message
 from app.dependencies import (
-    get_db,
+    Database,
+    MemberUser,
+    RequestId,
+    UserMemberCinema,
     get_notification_tool,
-    get_request_id,
-    is_user_a_member,
     is_user_a_member_of,
 )
 from app.modules.cinema import cruds_cinema, schemas_cinema
@@ -38,8 +38,8 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
     status_code=200,
 )
 async def get_sessions(
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     result = await cruds_cinema.get_sessions(db=db)
     return result
@@ -52,7 +52,7 @@ async def get_sessions(
 )
 async def create_session(
     session: schemas_cinema.CineSessionBase,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.cinema)),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
@@ -111,7 +111,7 @@ async def create_session(
 async def update_session(
     session_id: str,
     session_update: schemas_cinema.CineSessionUpdate,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.cinema)),
 ):
     await cruds_cinema.update_session(
@@ -124,8 +124,8 @@ async def update_session(
 @module.router.delete("/cinema/sessions/{session_id}", status_code=204)
 async def delete_session(
     session_id: str,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.cinema)),
+    db: Database,
+    user: UserMemberCinema,
 ):
     await cruds_cinema.delete_session(session_id=session_id, db=db)
 
@@ -137,10 +137,10 @@ async def delete_session(
 )
 async def create_campaigns_logo(
     session_id: str,
-    image: UploadFile = File(...),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.cinema)),
-    request_id: str = Depends(get_request_id),
-    db: AsyncSession = Depends(get_db),
+    image: UploadFile,
+    user: UserMemberCinema,
+    request_id: RequestId,
+    db: Database,
 ):
     session = await cruds_cinema.get_session_by_id(db=db, session_id=session_id)
     if session is None:
@@ -172,8 +172,8 @@ async def create_campaigns_logo(
 )
 async def read_session_poster(
     session_id: str,
-    user: models_core.CoreUser = Depends(is_user_a_member),
-    db: AsyncSession = Depends(get_db),
+    user: MemberUser,
+    db: Database,
 ):
     session = await cruds_cinema.get_session_by_id(db=db, session_id=session_id)
     if session is None:

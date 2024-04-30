@@ -3,14 +3,14 @@ Various FastAPI [dependencies](https://fastapi.tiangolo.com/tutorial/dependencie
 
 They are used in endpoints function signatures. For example:
 ```python
-async def get_users(db: AsyncSession = Depends(get_db)):
+async def get_users(db: Database):
 ```
 """
 
 import logging
 from collections.abc import AsyncGenerator, Callable, Coroutine
 from functools import lru_cache
-from typing import Any
+from typing import Annotated, Any
 
 import redis
 from fastapi import BackgroundTasks, Depends, HTTPException, Request, status
@@ -61,6 +61,9 @@ async def get_request_id(request: Request) -> str:
     return request.state.request_id
 
 
+RequestId = Annotated[str, Depends(get_request_id)]
+
+
 def get_db_engine(settings: Settings) -> AsyncEngine:
     """
     Return the (asynchronous) database engine, if the engine doesn't exit yet it will create one based on the settings
@@ -85,20 +88,6 @@ def get_db_engine(settings: Settings) -> AsyncEngine:
     return engine
 
 
-def get_session_maker() -> Callable[[], AsyncSession]:
-    """
-    Return the session maker
-    """
-    global SessionLocal
-    if SessionLocal is None:
-        hyperion_error_logger.error("Database engine is not initialized")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Database engine is not initialized",
-        )
-    return SessionLocal
-
-
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
     Return a database session
@@ -117,6 +106,9 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             await db.close()
 
 
+Database = Annotated[AsyncSession, Depends(get_db)]
+
+
 @lru_cache
 def get_settings() -> Settings:
     """
@@ -131,7 +123,7 @@ def get_settings() -> Settings:
 
 
 def get_redis_client(
-    settings: Settings = Depends(get_settings),
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> redis.Redis | None | bool:
     """
     Dependency that returns the redis client
@@ -154,7 +146,7 @@ def get_redis_client(
 
 
 def get_notification_manager(
-    settings: Settings = Depends(get_settings),
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> NotificationManager:
     """
     Dependency that returns the notification manager.
@@ -172,7 +164,7 @@ def get_notification_manager(
 
 def get_notification_tool(
     background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     notification_manager: NotificationManager = Depends(get_notification_manager),
 ) -> NotificationTool:
     """
@@ -188,7 +180,10 @@ def get_notification_tool(
 
 def get_user_from_token_with_scopes(
     scopes: list[list[ScopeType]],
-) -> Callable[[AsyncSession, Settings, str], Coroutine[Any, Any, models_core.CoreUser]]:
+) -> Callable[
+    [AsyncSession, Settings, str, str],
+    Coroutine[Any, Any, models_core.CoreUser],
+]:
     """
     Generate a dependency which will:
      * check the request header contain a valid JWT token
@@ -200,10 +195,10 @@ def get_user_from_token_with_scopes(
     """
 
     async def get_current_user(
-        db: AsyncSession = Depends(get_db),
-        settings: Settings = Depends(get_settings),
-        token: str = Depends(security.oauth2_scheme),
-        request_id: str = Depends(get_request_id),
+        db: Database,
+        settings: Annotated[Settings, Depends(get_settings)],
+        token: Annotated[str, Depends(security.oauth2_scheme)],
+        request_id: RequestId,
     ) -> models_core.CoreUser:
         """
         Dependency that makes sure the token is valid, contains the expected scopes and returns the corresponding user.
@@ -274,9 +269,12 @@ def is_user_a_member(
     return user
 
 
+MemberUser = Annotated[models_core.CoreUser, Depends(is_user_a_member)]
+
+
 def is_user_a_member_of(
     group_id: GroupType,
-) -> Callable[[models_core.CoreUser], Coroutine[Any, Any, models_core.CoreUser]]:
+) -> Callable[[models_core.CoreUser, str], Coroutine[Any, Any, models_core.CoreUser]]:
     """
     Generate a dependency which will:
         * check if the request header contains a valid API JWT token (a token that can be used to call endpoints from the API)
@@ -285,10 +283,13 @@ def is_user_a_member_of(
     """
 
     async def is_user_a_member_of(
-        user: models_core.CoreUser = Depends(
-            get_user_from_token_with_scopes([[ScopeType.API]]),
-        ),
-        request_id: str = Depends(get_request_id),
+        user: Annotated[
+            models_core.CoreUser,
+            Depends(
+                get_user_from_token_with_scopes([[ScopeType.API]]),
+            ),
+        ],
+        request_id: RequestId,
     ) -> models_core.CoreUser:
         """
         A dependency that checks that user is a member of the group with the given id then returns the corresponding user.
@@ -309,10 +310,32 @@ def is_user_a_member_of(
     return is_user_a_member_of
 
 
+UserMemberAdmin = Annotated[
+    models_core.CoreUser,
+    Depends(is_user_a_member_of(GroupType.admin)),
+]
+UserMemberAmap = Annotated[
+    models_core.CoreUser,
+    Depends(is_user_a_member_of(GroupType.amap)),
+]
+UserMemberBDE = Annotated[
+    models_core.CoreUser,
+    Depends(is_user_a_member_of(GroupType.BDE)),
+]
+UserMemberCAA = Annotated[
+    models_core.CoreUser,
+    Depends(is_user_a_member_of(GroupType.CAA)),
+]
+UserMemberCinema = Annotated[
+    models_core.CoreUser,
+    Depends(is_user_a_member_of(GroupType.cinema)),
+]
+
+
 async def get_token_data(
-    settings: Settings = Depends(get_settings),
-    token: str = Depends(security.oauth2_scheme),
-    request_id: str = Depends(get_request_id),
+    settings: Annotated[Settings, Depends(get_settings)],
+    token: Annotated[str, Depends(security.oauth2_scheme)],
+    request_id: RequestId,
 ) -> schemas_auth.TokenData:
     """
     Dependency that returns the token payload data

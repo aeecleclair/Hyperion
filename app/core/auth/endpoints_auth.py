@@ -3,6 +3,7 @@ import hashlib
 import logging
 import urllib.parse
 from datetime import UTC, datetime, timedelta
+from typing import Annotated
 
 from fastapi import (
     APIRouter,
@@ -30,8 +31,8 @@ from app.core.security import (
 )
 from app.core.users import cruds_users
 from app.dependencies import (
-    get_db,
-    get_request_id,
+    Database,
+    RequestId,
     get_settings,
     get_token_data,
     get_user_from_token_with_scopes,
@@ -59,9 +60,9 @@ hyperion_security_logger = logging.getLogger("hyperion.security")
     status_code=200,
 )
 async def login_for_access_token(
-    form_data: OAuth2PasswordRequestForm = Depends(),
-    db: AsyncSession = Depends(get_db),
-    settings: Settings = Depends(get_settings),
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    db: Database,
+    settings: Annotated[Settings, Depends(get_settings)],
 ):
     """
     Ask for a JWT acc   ess token using oauth password flow.
@@ -195,13 +196,16 @@ async def authorize_validation(
     # request need to be passed to Jinja2 to generate the HTML page
     request: Request,
     # User validation
-    authorizereq: schemas_auth.AuthorizeValidation = Depends(
-        schemas_auth.AuthorizeValidation.as_form,
-    ),
+    authorizereq: Annotated[
+        schemas_auth.AuthorizeValidation,
+        Depends(
+            schemas_auth.AuthorizeValidation.as_form,
+        ),
+    ],
     # Database
-    db: AsyncSession = Depends(get_db),
-    settings: Settings = Depends(get_settings),
-    request_id: str = Depends(get_request_id),
+    db: Database,
+    settings: Annotated[Settings, Depends(get_settings)],
+    request_id: RequestId,
 ):
     """
     Part 1 of the authorization code grant.
@@ -383,15 +387,16 @@ async def authorize_validation(
     response_model_exclude_none=True,
 )
 async def token(
+    *,
     response: Response,
     # OAuth and Openid connect parameters
     # The client id and secret must be passed either in the authorization header or with client_id and client_secret parameters
-    tokenreq: schemas_auth.TokenReq = Depends(schemas_auth.TokenReq.as_form),
-    authorization: str | None = Header(default=None),
+    tokenreq: Annotated[schemas_auth.TokenReq, Depends(schemas_auth.TokenReq.as_form)],
+    authorization: Annotated[str | None, Header()] = None,
     # Database
-    db: AsyncSession = Depends(get_db),
-    settings: Settings = Depends(get_settings),
-    request_id: str = Depends(get_request_id),
+    db: Database,
+    settings: Annotated[Settings, Depends(get_settings)],
+    request_id: RequestId,
 ):
     """
     Part 2 of the authorization code grant.
@@ -967,12 +972,15 @@ async def create_response_body(
     "/auth/userinfo",
 )
 async def auth_get_userinfo(
-    user: models_core.CoreUser = Depends(
-        get_user_from_token_with_scopes([[ScopeType.openid], [ScopeType.profile]]),
-    ),
-    token_data: schemas_auth.TokenData = Depends(get_token_data),
-    settings: Settings = Depends(get_settings),
-    request_id: str = Depends(get_request_id),
+    user: Annotated[
+        models_core.CoreUser,
+        Depends(
+            get_user_from_token_with_scopes([[ScopeType.openid], [ScopeType.profile]]),
+        ),
+    ],
+    token_data: Annotated[schemas_auth.TokenData, Depends(get_token_data)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    request_id: RequestId,
 ):
     """
     Openid connect specify an endpoint the client can use to get information about the user.
@@ -1019,7 +1027,7 @@ async def auth_get_userinfo(
     "/oidc/authorization-flow/jwks_uri",
 )
 def jwks_uri(
-    settings: Settings = Depends(get_settings),
+    settings: Annotated[Settings, Depends(get_settings)],
 ):
     return settings.RSA_PUBLIC_JWK
 
@@ -1028,7 +1036,7 @@ def jwks_uri(
     "/.well-known/openid-configuration",
 )
 async def oidc_configuration(
-    settings: Settings = Depends(get_settings),
+    settings: Annotated[Settings, Depends(get_settings)],
 ):
     # See https://ldapwiki.com/wiki/Openid-configuration
     return {

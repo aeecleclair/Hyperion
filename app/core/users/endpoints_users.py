@@ -2,6 +2,7 @@ import logging
 import re
 import uuid
 from datetime import UTC, datetime, timedelta
+from typing import Annotated
 
 import aiofiles
 from fastapi import (
@@ -9,7 +10,6 @@ from fastapi import (
     BackgroundTasks,
     Body,
     Depends,
-    File,
     HTTPException,
     Query,
     Request,
@@ -25,10 +25,10 @@ from app.core.groups import cruds_groups
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.users import cruds_users
 from app.dependencies import (
-    get_db,
-    get_request_id,
+    Database,
+    MemberUser,
+    RequestId,
     get_settings,
-    is_user_a_member,
     is_user_a_member_of,
 )
 from app.types.content_type import ContentType
@@ -49,7 +49,7 @@ templates = Jinja2Templates(directory="assets/templates")
     status_code=200,
 )
 async def read_users(
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
@@ -68,7 +68,7 @@ async def read_users(
     status_code=200,
 )
 async def count_users(
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
@@ -87,11 +87,12 @@ async def count_users(
     status_code=200,
 )
 async def search_users(
+    *,
     query: str,
-    includedGroups: list[str] = Query(default=[]),
-    excludedGroups: list[str] = Query(default=[]),
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    includedGroups: Annotated[list[str], Query()] = [],  # noqa: B006
+    excludedGroups: Annotated[list[str], Query()] = [],  # noqa: B006
+    db: Database,
+    user: MemberUser,
 ):
     """
     Search for a user using Fuzzy String Matching
@@ -116,7 +117,7 @@ async def search_users(
     status_code=200,
 )
 async def read_current_user(
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: MemberUser,
 ):
     """
     Return `CoreUser` representation of current user
@@ -135,9 +136,9 @@ async def read_current_user(
 async def create_user_by_user(
     user_create: schemas_core.CoreUserCreateRequest,
     background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db),
-    settings: Settings = Depends(get_settings),
-    request_id: str = Depends(get_request_id),
+    db: Database,
+    settings: Annotated[Settings, Depends(get_settings)],
+    request_id: RequestId,
 ):
     """
     Start the user account creation process. The user will be sent an email with a link to activate his account.
@@ -225,9 +226,9 @@ async def create_user_by_user(
 async def batch_create_users(
     user_creates: list[schemas_core.CoreBatchUserCreateRequest],
     background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db),
-    settings: Settings = Depends(get_settings),
-    request_id: str = Depends(get_request_id),
+    db: Database,
+    settings: Annotated[Settings, Depends(get_settings)],
+    request_id: RequestId,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
@@ -326,7 +327,7 @@ async def get_user_activation_page(
     # request need to be passed to Jinja2 to generate the HTML page
     request: Request,
     activation_token: str,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
 ):
     """
     Return a HTML page to activate an account. The activation token is passed as a query string.
@@ -372,8 +373,8 @@ async def get_user_activation_page(
 )
 async def activate_user(
     user: schemas_core.CoreUserActivateRequest,
-    db: AsyncSession = Depends(get_db),
-    request_id: str = Depends(get_request_id),
+    db: Database,
+    request_id: RequestId,
 ):
     """
     Activate the previously created account.
@@ -453,7 +454,7 @@ async def activate_user(
     status_code=200,
 )
 async def make_admin(
-    db: AsyncSession = Depends(get_db),
+    db: Database,
 ):
     """
     This endpoint is only usable if the database contains exactly one user.
@@ -491,10 +492,10 @@ async def make_admin(
 )
 async def recover_user(
     # We use embed for email parameter: https://fastapi.tiangolo.com/tutorial/body-multiple-params/#embed-a-single-body-parameter
-    email: str = Body(..., embed=True),
-    db: AsyncSession = Depends(get_db),
-    settings: Settings = Depends(get_settings),
-    request_id: str = Depends(get_request_id),
+    email: Annotated[str, Body(..., embed=True)],
+    db: Database,
+    settings: Annotated[Settings, Depends(get_settings)],
+    request_id: RequestId,
 ):
     """
     Allow a user to start a password reset process.
@@ -547,7 +548,7 @@ async def recover_user(
 )
 async def reset_password(
     reset_password_request: schemas_core.ResetPasswordRequest,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
 ):
     """
     Reset the user password, using a **reset_token** provided by `/users/recover` endpoint.
@@ -585,9 +586,9 @@ async def reset_password(
 )
 async def migrate_mail(
     mail_migration: schemas_core.MailMigrationRequest,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
-    settings: Settings = Depends(get_settings),
+    db: Database,
+    user: MemberUser,
+    settings: Annotated[Settings, Depends(get_settings)],
 ):
     """
     Due to a change in the email format, all student users need to migrate their email address.
@@ -667,7 +668,7 @@ async def migrate_mail(
 )
 async def migrate_mail_confirm(
     token: str,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
 ):
     """
     Due to a change in the email format, all student users need to migrate their email address.
@@ -730,7 +731,7 @@ async def migrate_mail_confirm(
 )
 async def change_password(
     change_password_request: schemas_core.ChangePasswordRequest,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
 ):
     """
     Change a user password.
@@ -768,7 +769,7 @@ async def change_password(
 )
 async def read_user(
     user_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
@@ -788,7 +789,7 @@ async def read_user(
 #    "/users/{user_id}",
 #    status_code=204,
 ## )
-# async def delete_user(user_id: str, db: AsyncSession = Depends(get_db), user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin))):
+# async def delete_user(user_id: str, db: Database, user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin))):
 #    """Delete user from database by id"""
 #    # TODO: WARNING - deleting an user without removing its relations ship in other tables will have unexpected consequences
 #
@@ -800,11 +801,11 @@ async def read_user(
     status_code=204,
 )
 async def delete_user(
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
-    settings: Settings = Depends(get_settings),
-    background_tasks: BackgroundTasks = BackgroundTasks(),
-    request_id: str = Depends(get_request_id),
+    db: Database,
+    user: MemberUser,
+    settings: Annotated[Settings, Depends(get_settings)],
+    background_tasks: Annotated[BackgroundTasks, BackgroundTasks()],
+    request_id: RequestId,
 ):
     """
     This endpoint will ask administrators to process to the user deletion.
@@ -821,8 +822,8 @@ async def delete_user(
 )
 async def update_current_user(
     user_update: schemas_core.CoreUserUpdate,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     Update the current user, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value
@@ -840,7 +841,7 @@ async def update_current_user(
 async def update_user(
     user_id: str,
     user_update: schemas_core.CoreUserUpdateAdmin,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
@@ -861,9 +862,9 @@ async def update_user(
     status_code=201,
 )
 async def create_current_user_profile_picture(
-    image: UploadFile = File(...),
-    user: models_core.CoreUser = Depends(is_user_a_member),
-    request_id: str = Depends(get_request_id),
+    image: UploadFile,
+    user: MemberUser,
+    request_id: RequestId,
 ):
     """
     Upload a profile picture for the current user.
@@ -893,7 +894,7 @@ async def create_current_user_profile_picture(
     status_code=200,
 )
 async def read_own_profile_picture(
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: MemberUser,
 ):
     """
     Get the profile picture of the authenticated user.
@@ -913,7 +914,7 @@ async def read_own_profile_picture(
 )
 async def read_user_profile_picture(
     user_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
 ):
     """
     Get the profile picture of an user.

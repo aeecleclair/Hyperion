@@ -1,19 +1,17 @@
 import uuid
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from fastapi.responses import FileResponse
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, standard_responses
-from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
 from app.dependencies import (
-    get_db,
-    get_request_id,
-    get_settings,
-    is_user_a_member,
+    Database,
+    MemberUser,
+    RequestId,
+    UserMemberBDE,
     is_user_a_member_of,
 )
 from app.modules.recommendation import (
@@ -40,8 +38,8 @@ module = Module(
     status_code=200,
 )
 async def get_recommendation(
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     Get recommendations.
@@ -59,8 +57,7 @@ async def get_recommendation(
 )
 async def create_recommendation(
     recommendation: schemas_recommendation.RecommendationBase,
-    db: AsyncSession = Depends(get_db),
-    settings: Settings = Depends(get_settings),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
 ):
     """
@@ -88,7 +85,7 @@ async def create_recommendation(
 async def edit_recommendation(
     recommendation_id: uuid.UUID,
     recommendation: schemas_recommendation.RecommendationEdit,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
 ):
     """
@@ -113,7 +110,7 @@ async def edit_recommendation(
 )
 async def delete_recommendation(
     recommendation_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
 ):
     """
@@ -138,8 +135,8 @@ async def delete_recommendation(
 )
 async def read_recommendation_image(
     recommendation_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     Get the image of a recommendation.
@@ -168,10 +165,10 @@ async def read_recommendation_image(
 )
 async def create_recommendation_image(
     recommendation_id: uuid.UUID,
-    image: UploadFile = File(),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
-    request_id: str = Depends(get_request_id),
-    db: AsyncSession = Depends(get_db),
+    image: UploadFile,
+    user: UserMemberBDE,
+    request_id: RequestId,
+    db: Database,
 ):
     """
     Add an image to a recommendation.

@@ -1,10 +1,10 @@
 import logging
 import uuid
 from datetime import UTC, datetime
+from typing import Annotated
 
-from fastapi import Depends, File, HTTPException, Query, UploadFile
+from fastapi import Depends, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, standard_responses
 from app.core.groups.groups_type import GroupType
@@ -12,10 +12,10 @@ from app.core.module import Module
 from app.core.notification.notification_types import CustomTopic, Topic
 from app.core.notification.schemas_notification import Message
 from app.dependencies import (
-    get_db,
+    Database,
+    MemberUser,
+    RequestId,
     get_notification_tool,
-    get_request_id,
-    is_user_a_member,
     is_user_a_member_of,
 )
 from app.modules.advert import cruds_advert, models_advert, schemas_advert
@@ -43,8 +43,8 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
     status_code=200,
 )
 async def read_advertisers(
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     Get existing advertisers.
@@ -60,8 +60,8 @@ async def read_advertisers(
 )
 async def create_advertiser(
     advertiser: schemas_advert.AdvertiserBase,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     Create a new advertiser.
@@ -96,7 +96,7 @@ async def create_advertiser(
 )
 async def delete_advertiser(
     advertiser_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
@@ -127,7 +127,7 @@ async def delete_advertiser(
 async def update_advertiser(
     advertiser_id: str,
     advertiser_update: schemas_advert.AdvertiserUpdate,
-    db: AsyncSession = Depends(get_db),
+    db: Database,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
@@ -158,8 +158,8 @@ async def update_advertiser(
     status_code=200,
 )
 async def get_current_user_advertisers(
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     Return all advertisers the current user can manage.
@@ -182,9 +182,10 @@ async def get_current_user_advertisers(
     status_code=200,
 )
 async def read_adverts(
-    advertisers: list[str] = Query(default=[]),
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    *,
+    advertisers: Annotated[list[str], Query()] = [],  # noqa: B006
+    db: Database,
+    user: MemberUser,
 ):
     """
     Get existing adverts. If advertisers optional parameter is used, search adverts by advertisers
@@ -208,8 +209,8 @@ async def read_adverts(
 )
 async def read_advert(
     advert_id: str,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     Get an advert
@@ -227,8 +228,8 @@ async def read_advert(
 )
 async def create_advert(
     advert: schemas_advert.AdvertBase,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
@@ -293,8 +294,8 @@ async def create_advert(
 async def update_advert(
     advert_id: str,
     advert_update: schemas_advert.AdvertUpdate,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     Edit an advert
@@ -330,8 +331,8 @@ async def update_advert(
 )
 async def delete_advert(
     advert_id: str,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     Delete an advert
@@ -364,8 +365,8 @@ async def delete_advert(
 )
 async def read_advert_image(
     advert_id: str,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: Database,
+    user: MemberUser,
 ):
     """
     Get the image of an advert
@@ -393,10 +394,10 @@ async def read_advert_image(
 )
 async def create_advert_image(
     advert_id: str,
-    image: UploadFile = File(...),
-    user: models_core.CoreUser = Depends(is_user_a_member),
-    request_id: str = Depends(get_request_id),
-    db: AsyncSession = Depends(get_db),
+    image: UploadFile,
+    user: MemberUser,
+    request_id: RequestId,
+    db: Database,
 ):
     """
     Add an image to an advert
