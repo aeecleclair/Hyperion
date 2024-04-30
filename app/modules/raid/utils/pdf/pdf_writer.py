@@ -8,7 +8,7 @@ from fpdf.fonts import FontFace
 from PIL import Image
 from pypdf import PdfReader, PdfWriter
 
-from app.modules.raid.schemas_raid import Document, Participant, SecurityFile, Team
+from app.modules.raid.models_raid import Document, Participant, SecurityFile, Team
 from app.modules.raid.utils.pdf.conversion_utils import (
     date_to_string,
     get_difficulty_label,
