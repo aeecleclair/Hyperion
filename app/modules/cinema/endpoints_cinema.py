@@ -1,6 +1,5 @@
 import logging
 import uuid
-from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from fastapi import Depends, File, HTTPException, UploadFile
@@ -11,7 +10,6 @@ from app.core import models_core, standard_responses
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
 from app.core.notification.notification_types import CustomTopic, Topic, TopicMessage
-from app.core.notification.schemas_notification import Message
 from app.dependencies import (
     get_db,
     get_notification_tool,
