@@ -1,3 +1,5 @@
+from collections.abc import Sequence
+
 from sqlalchemy import select
 from sqlalchemy.engine import Engine, create_engine
 from sqlalchemy.exc import IntegrityError
@@ -22,14 +24,47 @@ def get_sync_db_engine(settings: Settings) -> Engine:
     return engine
 
 
-def get_all_module_visibility_membership_sync(
+def get_all_module_visibility_by_root_sync(
+    root: str,
     db: Session,
-):
+) -> Sequence[models_core.ModuleVisibility]:
     """
     Return the every module with their visibility
     """
-    result = db.execute(select(models_core.ModuleVisibility))
+    result = db.execute(
+        select(models_core.ModuleVisibility).where(
+            models_core.ModuleVisibility.root == root,
+        ),
+    )
     return result.unique().scalars().all()
+
+
+def get_module_awareness_by_root(
+    root: str,
+    db: Session,
+) -> models_core.ModuleAwareness | None:
+    result = db.execute(
+        select(models_core.ModuleAwareness).where(
+            models_core.ModuleAwareness.root == root,
+        ),
+    )
+    return result.scalars().first()
+
+
+def create_module_awareness_sync(
+    module_awareness: models_core.ModuleAwareness,
+    db: Session,
+) -> models_core.ModuleAwareness:
+    """
+    Create a new module awareness in database and return it
+    """
+    db.add(module_awareness)
+    try:
+        db.commit()
+        return module_awareness
+    except IntegrityError as error:
+        db.rollback()
+        raise ValueError(error) from error
 
 
 def create_module_visibility_sync(

@@ -183,20 +183,17 @@ def initialize_module_visibility(engine: Engine) -> None:
     hyperion_error_logger = logging.getLogger("hyperion.error")
 
     with Session(engine) as db:
-        # Is run to create default module visibilies or when the table is empty
-        haveBeenInitialized = (
-            len(initialization.get_all_module_visibility_membership_sync(db)) > 0
-        )
-        if haveBeenInitialized:
-            hyperion_error_logger.info(
-                "Startup: Modules visibility settings have already been initialized",
-            )
-            return
-
-        hyperion_error_logger.info(
-            "Startup: Modules visibility settings are empty, initializing them",
-        )
         for module in module_list:
+            module_awareness = initialization.get_module_awareness_by_root(
+                root=module.root,
+                db=db,
+            )
+            if module_awareness is None:
+                # The module is known by Hyperion
+                # This mean visibilities for the module were already added
+                # We don't want to override custom visibility with default group ids
+                continue
+            # We add the module visibility for the default groups
             for default_group_id in module.default_allowed_groups_ids:
                 module_visibility = models_core.ModuleVisibility(
                     root=module.root,
@@ -208,6 +205,11 @@ def initialize_module_visibility(engine: Engine) -> None:
                     hyperion_error_logger.fatal(
                         f"Startup: Could not add module visibility {module.root}<{default_group_id}> in the database: {error}",
                     )
+            module_awareness = models_core.ModuleAwareness(root=module.root)
+            initialization.create_module_awareness_sync(
+                module_awareness=module_awareness,
+                db=db,
+            )
 
 
 def use_route_path_as_operation_ids(app: FastAPI) -> None:
