@@ -13,6 +13,7 @@ from app.dependencies import get_db, get_request_id, is_user, is_user_a_member_o
 from app.modules.raid import cruds_raid, models_raid, schemas_raid
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.modules.raid.utils.pdf.pdf_writer import PDFWriter
+from app.types.content_type import ContentType
 from app.utils.tools import (
     get_file_from_data,
     get_random_string,
@@ -366,10 +367,10 @@ async def upload_document(
         request_id=request_id,
         max_file_size=50 * 1024 * 1024,  # TODO : Change this value
         accepted_content_types=[
-            "image/jpeg",
-            "image/png",
-            "image/webp",
-            "application/pdf",
+            ContentType.jpg,
+            ContentType.png,
+            ContentType.webp,
+            ContentType.pdf,
         ],  # TODO : Change this value
     )
 
