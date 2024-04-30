@@ -31,6 +31,7 @@ from app.dependencies import (
     is_user_a_member,
     is_user_a_member_of,
 )
+from app.types.content_type import ContentType
 from app.utils.mail.mailworker import send_email
 from app.utils.tools import fuzzy_search_user, get_file_from_data, save_file_as_data
 
@@ -876,7 +877,11 @@ async def create_current_user_profile_picture(
         filename=str(user.id),
         request_id=request_id,
         max_file_size=4 * 1024 * 1024,
-        accepted_content_types=["image/jpeg", "image/png", "image/webp"],
+        accepted_content_types=[
+            ContentType.jpg,
+            ContentType.png,
+            ContentType.webp,
+        ],
     )
 
     return standard_responses.Result(success=True)

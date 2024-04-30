@@ -3,7 +3,7 @@ import uuid
 from pathlib import Path
 
 import pytest
-from fastapi import UploadFile
+from fastapi import HTTPException, UploadFile
 
 from app.utils.tools import (
     delete_file_from_data,
@@ -20,6 +20,20 @@ async def test_save_file():
     with Path("assets/images/default_profile_picture.png").open("rb") as file:
         await save_file_as_data(
             upload_file=UploadFile(file, headers={"content-type": "image/png"}),
+            directory="test",
+            filename=valid_uuid,
+            request_id="request_id",
+        )
+
+
+async def test_save_file_with_invalid_content_type():
+    valid_uuid = str(uuid.uuid4())
+    with (
+        pytest.raises(HTTPException, match="400: Invalid file format, supported*"),
+        Path("assets/images/default_profile_picture.png").open("rb") as file,
+    ):
+        await save_file_as_data(
+            upload_file=UploadFile(file, headers={"content-type": "test/test"}),
             directory="test",
             filename=valid_uuid,
             request_id="request_id",

@@ -10,6 +10,7 @@ from app.core.module import Module
 from app.core.users import cruds_users
 from app.dependencies import get_db, get_request_id, is_user_a_member
 from app.modules.phonebook import cruds_phonebook, models_phonebook, schemas_phonebook
+from app.types.content_type import ContentType
 from app.utils.tools import (
     get_file_from_data,
     is_user_member_of_an_allowed_group,
@@ -491,7 +492,11 @@ async def create_association_logo(
         filename=association_id,
         request_id=request_id,
         max_file_size=4 * 1024 * 1024,
-        accepted_content_types=["image/jpeg", "image/png", "image/webp"],
+        accepted_content_types=[
+            ContentType.jpg,
+            ContentType.png,
+            ContentType.webp,
+        ],
     )
     return standard_responses.Result(success=True)
 

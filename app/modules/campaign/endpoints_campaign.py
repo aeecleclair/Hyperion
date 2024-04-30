@@ -23,6 +23,7 @@ from app.dependencies import (
 )
 from app.modules.campaign import cruds_campaign, models_campaign, schemas_campaign
 from app.modules.campaign.types_campaign import ListType, StatusType
+from app.types.content_type import ContentType
 from app.utils.tools import (
     get_file_from_data,
     is_user_member_of_an_allowed_group,
@@ -844,7 +845,11 @@ async def create_campaigns_logo(
         filename=str(list_id),
         request_id=request_id,
         max_file_size=4 * 1024 * 1024,
-        accepted_content_types=["image/jpeg", "image/png", "image/webp"],
+        accepted_content_types=[
+            ContentType.jpg,
+            ContentType.png,
+            ContentType.webp,
+        ],
     )
 
     return standard_responses.Result(success=True)

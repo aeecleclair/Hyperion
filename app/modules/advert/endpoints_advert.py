@@ -19,6 +19,7 @@ from app.dependencies import (
     is_user_a_member_of,
 )
 from app.modules.advert import cruds_advert, models_advert, schemas_advert
+from app.types.content_type import ContentType
 from app.utils.communication.notifications import NotificationTool
 from app.utils.tools import (
     get_file_from_data,
@@ -415,7 +416,11 @@ async def create_advert_image(
         filename=str(advert_id),
         request_id=request_id,
         max_file_size=4 * 1024 * 1024,
-        accepted_content_types=["image/jpeg", "image/png", "image/webp"],
+        accepted_content_types=[
+            ContentType.jpg,
+            ContentType.png,
+            ContentType.webp,
+        ],
     )
 
     return standard_responses.Result(success=True)
