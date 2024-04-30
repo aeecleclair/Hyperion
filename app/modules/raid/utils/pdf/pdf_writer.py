@@ -1,5 +1,6 @@
 import io
 import os
+from pathlib import Path
 
 from fpdf import FPDF
 from fpdf.enums import TableCellFillMode, VAlign
@@ -20,7 +21,7 @@ from app.modules.raid.utils.pdf.conversion_utils import (
 from app.utils.tools import get_file_path_from_data
 
 
-def maximize_image(image_path: str, max_width: int, max_height: int) -> Image:
+def maximize_image(image_path: Path, max_width: int, max_height: int) -> Image:
     image = Image.open(image_path)
     width, height = image.size
     if width > height:
@@ -59,9 +60,9 @@ class PDFWriter(FPDF):
             self.cell(0, 10, f"Page {self.page_no()} - Raid Centrale Lyon", 0, 0, "C")
 
     def write_team(self, team: Team) -> str:
-        self.pdf_indexes = []
-        self.pdf_pages = []
-        self.pdf_paths = []
+        self.pdf_indexes: list[int] = []
+        self.pdf_pages: list[int] = []
+        self.pdf_paths: list[str] = []
         self.team = team
         self.file_name = (
             str(team.number) + "_" if team.number else ""
@@ -175,7 +176,7 @@ class PDFWriter(FPDF):
                     "Service de réanimation",
                     security_file.intensive_care_unit and "Oui" or "Non",
                 ]
-                if security_file.intensive_care_unit
+                if security_file.allergy
                 else None
             ),
             (
@@ -183,7 +184,7 @@ class PDFWriter(FPDF):
                     "Date du service de réanimation",
                     security_file.intensive_care_unit_when,
                 ]
-                if security_file.intensive_care_unit_when
+                if security_file.intensive_care_unit
                 else None
             ),
             [
