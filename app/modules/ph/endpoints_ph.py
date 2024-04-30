@@ -166,7 +166,7 @@ async def create_paper_pdf_and_cover(
         )
 
     await save_file_as_data(
-        image=pdf,
+        upload_file=pdf,
         directory="ph/pdf",
         filename=str(paper_id),
         request_id=request_id,
