@@ -307,7 +307,7 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
             hyperion_security_logger.warning(
                 f"Client information not available for {request.url.path}",
             )
-            return Response(status_code=400, content="No client information")
+            return HTTPException(status_code=400, detail="No client information")
 
         ip_address = request.client.host
         port = request.client.port
