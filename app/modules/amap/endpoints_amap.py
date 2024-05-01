@@ -937,8 +937,8 @@ async def create_cash_of_user(
                 # The notification will expire in 3 days
                 expire_on=datetime.now(UTC) + timedelta(days=3),
             )
-            await notification_tool.send_notification_to_user(
-                user_id=user_id,
+            await notification_tool.send_notification_to_users(
+                user_ids=[user_id],
                 message=message,
             )
         except Exception as error:

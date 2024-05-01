@@ -279,3 +279,15 @@ async def get_user_ids_by_topic(
         ),
     )
     return list(result.scalars().all())
+
+
+async def get_firebase_tokens_by_user_id(
+    user_id: str,
+    db: AsyncSession,
+) -> list[str]:
+    result = await db.execute(
+        select(models_notification.FirebaseDevice.firebase_device_token).where(
+            models_notification.FirebaseDevice.user_id == user_id,
+        ),
+    )
+    return list(result.scalars().all())

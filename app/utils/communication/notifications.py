@@ -197,9 +197,9 @@ class NotificationManager:
 
         await cruds_notification.create_batch_messages(messages=message_models, db=db)
 
-    async def send_notification_to_user(
+    async def send_notification_to_users(
         self,
-        user_id: str,
+        user_ids: list[str],
         message: Message,
         db: AsyncSession,
     ) -> None:
@@ -217,15 +217,14 @@ class NotificationManager:
             return
 
         # Get all firebase_device_token related to the user
-        firebase_devices = await cruds_notification.get_firebase_devices_by_user_id(
-            user_id=user_id,
-            db=db,
-        )
-
         firebase_device_tokens = [
-            device.firebase_device_token for device in firebase_devices
+            token
+            for user_id in user_ids
+            for token in await cruds_notification.get_firebase_tokens_by_user_id(
+                user_id=user_id,
+                db=db,
+            )
         ]
-
         await self._add_message_for_user_in_database(
             message=message,
             tokens=firebase_device_tokens,
@@ -239,20 +238,7 @@ class NotificationManager:
             )
         except Exception as error:
             hyperion_error_logger.warning(
-                f"Notification: Unable to send firebase notification to user {user_id} with device: {error}",
-            )
-
-    async def send_notification_to_users(
-        self,
-        user_ids: list[str],
-        message: Message,
-        db: AsyncSession,
-    ) -> None:
-        for user_id in user_ids:
-            await self.send_notification_to_user(
-                user_id=user_id,
-                message=message,
-                db=db,
+                f"Notification: Unable to send firebase notification to users {user_ids} with device: {error}",
             )
 
     async def send_notification_to_topic(
@@ -368,14 +354,6 @@ class NotificationTool:
         self.notification_manager = notification_manager
         self.db = db
 
-    async def send_notification_to_user(self, user_id: str, message: Message):
-        self.background_tasks.add_task(
-            self.notification_manager.send_notification_to_user,
-            user_id=user_id,
-            message=message,
-            db=self.db,
-        )
-
     async def send_notification_to_users(self, user_ids: list[str], message: Message):
         self.background_tasks.add_task(
             self.notification_manager.send_notification_to_users,
@@ -389,8 +367,7 @@ class NotificationTool:
         custom_topic: CustomTopic,
         message: Message,
     ):
-        self.background_tasks.add_task(
-            self.notification_manager.send_notification_to_topic,
+        await self.notification_manager.send_notification_to_topic(
             custom_topic=custom_topic,
             message=message,
             db=self.db,
