@@ -6,6 +6,7 @@ broadcaster==0.3.1                  # Working with websockets with multiple work
 calypsso==1.1.1
 fastapi==0.111.0
 firebase-admin==6.5.0               # Firebase is used for push notification
+fpdf2==2.7.8
 HelloAssoAPIWrapper==1.0.0
 google-auth-oauthlib==1.2.1
 icalendar==5.0.13
@@ -16,6 +17,7 @@ pydantic-settings==2.3.4
 pydantic==2.7.4
 pyjwt[crypto]==2.8.0                # generate and verify the JWT tokens, imported as `jwt`
 PyMuPDF==1.24.9                     # PDF processing
+pypdf==4.2.0
 python-dotenv==1.0.1                # load environment variables from .env file
 python-multipart==0.0.9             # a form data parser, as oauth flow requires form-data parameters
 redis==5.0.8
