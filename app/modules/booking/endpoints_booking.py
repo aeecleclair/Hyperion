@@ -6,7 +6,8 @@ from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
-from app.core.config import Settings
+
+# from app.core.config import Settings
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
@@ -266,13 +267,14 @@ async def create_booking(
     )
     await cruds_booking.create_booking(booking=db_booking, db=db)
     result = await cruds_booking.get_booking_by_id(db=db, booking_id=db_booking.id)
+
     try:
-        manager_group_id = result.room.manager.group_id
+        manager_group_id = result.room.manager_id
         manager_group = await cruds_groups.get_group_by_id(
             db=db,
             group_id=manager_group_id,
         )
-        if result and manager_group:
+        if result and manager_group_id:
             now = datetime.now(UTC)
             message = Message(
                 context=f"new-booking-{id}",
@@ -282,6 +284,7 @@ async def create_booking(
                 # The notification will expire in 3 days
                 expire_on=now.replace(day=now.day + 3),
             )
+
             await notification_tool.send_notification_to_users(
                 user_ids=[user.id for user in manager_group.members],
                 message=message,
