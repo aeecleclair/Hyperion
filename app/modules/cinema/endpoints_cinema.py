@@ -90,6 +90,9 @@ async def create_session(
                 "Novembre",
                 "Décembre",
             ]
+            # As the notification content is set in the back, the front won't be able to display it in the local timezone
+            # We decide to use UTC+2 for all users
+
             french_hour = db_session.start.astimezone(ZoneInfo("Europe/Paris"))
             message_content = (
                 db_session.name
