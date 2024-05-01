@@ -9,7 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import models_core, standard_responses
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
-from app.core.notification.notification_types import CustomTopic, Topic, TopicMessage
+from app.core.notification.notification_types import CustomTopic, Topic
+from app.core.notification.schemas_notification import Message
 from app.dependencies import (
     get_db,
     get_notification_tool,
@@ -266,12 +267,17 @@ async def create_advert(
         raise HTTPException(status_code=400, detail=str(error))
 
     try:
-        message = TopicMessage(
+        now = datetime.now(UTC)
+        message = Message(
+            context=f"new-advert-{id}",
+            is_visible=True,
             title=f"📣 Annonce - {result.title}",
             content=result.content,
+            # The notification will expire in 3 days
+            expire_on=now.replace(day=now.day + 3),
         )
 
-        notification_tool.send_notification_to_topic(
+        await notification_tool.send_notification_to_topic(
             custom_topic=CustomTopic(Topic.advert),
             message=message,
         )
