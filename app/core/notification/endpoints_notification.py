@@ -304,7 +304,7 @@ async def send_notification(
         title="Test notification",
         content="Ceci est un test de notification",
         # The notification will expire in 3 days
-        expire_on=now.replace(day=now.day + 3),
+        expire_on=datetime.now(UTC) + timedelta(days=3),
     )
     await notification_tool.send_notification_to_user(
         user_id=user.id,
