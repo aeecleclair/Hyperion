@@ -282,7 +282,7 @@ async def create_booking(
                 title="📅 Réservations - Nouvelle réservation ",
                 content=f"{result.applicant.nickname} - {result.room.name} {result.start.strftime('%m/%d/%Y, %H:%M')} - {result.reason}",
                 # The notification will expire in 3 days
-                expire_on=now.replace(day=now.day + 3),
+                expire_on=datetime.now(UTC) + timedelta(days=3),
             )
 
             await notification_tool.send_notification_to_users(
