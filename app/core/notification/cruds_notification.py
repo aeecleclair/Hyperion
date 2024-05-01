@@ -270,7 +270,7 @@ async def get_topic_membership_by_user_id_and_custom_topic(
 async def get_user_ids_by_topic(
     custom_topic: CustomTopic,
     db: AsyncSession,
-) -> Sequence[str]:
+) -> list[str]:
     result = await db.execute(
         select(models_notification.TopicMembership.user_id).where(
             models_notification.TopicMembership.topic == custom_topic.topic,
@@ -278,4 +278,4 @@ async def get_user_ids_by_topic(
             == custom_topic.topic_identifier,
         ),
     )
-    return result.scalars().all()
+    return list(result.scalars().all())
