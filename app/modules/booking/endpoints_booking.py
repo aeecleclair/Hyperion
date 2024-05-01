@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -275,7 +275,6 @@ async def create_booking(
             group_id=manager_group_id,
         )
         if manager_group:
-            now = datetime.now(UTC)
             message = Message(
                 context=f"new-booking-{id}",
                 is_visible=True,
