@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
 from app.core.notification import cruds_notification, models_notification
-from app.core.notification.notification_types import CustomTopic, TopicMessage
+from app.core.notification.notification_types import CustomTopic
 from app.core.notification.schemas_notification import Message
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
@@ -255,6 +255,22 @@ class NotificationManager:
                 db=db,
             )
 
+    async def send_notification_to_topic(
+        self,
+        custom_topic: CustomTopic,
+        message: Message,
+        db: AsyncSession,
+    ) -> None:
+        user_ids = await cruds_notification.get_user_ids_by_topic(
+            custom_topic=custom_topic,
+            db=db,
+        )
+        await self.send_notification_to_users(
+            user_ids=user_ids,
+            message=message,
+            db=db,
+        )
+
     async def subscribe_user_to_topic(
         self,
         custom_topic: CustomTopic,
@@ -368,17 +384,14 @@ class NotificationTool:
             db=self.db,
         )
 
-    def send_notification_to_topic(
+    async def send_notification_to_topic(
         self,
         custom_topic: CustomTopic,
-        message: TopicMessage,
+        message: Message,
     ):
-        messaging.send(
-            messaging.Message(
-                notification=messaging.Notification(
-                    title=message.title,
-                    body=message.content,
-                ),
-                topic=custom_topic.to_str(),
-            ),
+        self.background_tasks.add_task(
+            self.notification_manager.send_notification_to_topic,
+            custom_topic=custom_topic,
+            message=message,
+            db=self.db,
         )
