@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Path
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -297,7 +297,6 @@ async def send_notification(
 
     **Only admins can use this endpoint**
     """
-    now = datetime.now(UTC)
     message = schemas_notification.Message(
         context="Test",
         is_visible=True,
