@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from fastapi import Depends, HTTPException, Response
 from redis import Redis
@@ -720,23 +720,24 @@ async def open_ordering_of_delivery(
         )
 
     await cruds_amap.open_ordering_of_delivery(delivery_id=delivery_id, db=db)
-
-    try:
-        now = datetime.now(UTC)
-        message = Message(
-            context=f"amap-open-ordering-{delivery_id}",
-            is_visible=True,
-            title="🛒 AMAP - Nouvelle livraison disponible",
-            content="Viens commander !",
-            # The notification will expire in 3 days
-            expire_on=now.replace(day=now.day + 3),
-        )
-        await notification_tool.send_notification_to_topic(
-            custom_topic=CustomTopic(Topic.amap),
-            message=message,
-        )
-    except Exception as error:
-        hyperion_error_logger.error(f"Error while sending AMAP notification, {error}")
+    if notification_tool.notification_manager.use_firebase:
+        try:
+            message = Message(
+                context=f"amap-open-ordering-{delivery_id}",
+                is_visible=True,
+                title="🛒 AMAP - Nouvelle livraison disponible",
+                content="Viens commander !",
+                # The notification will expire in 3 days
+                expire_on=datetime.now(UTC) + timedelta(days=3),
+            )
+            await notification_tool.send_notification_to_topic(
+                custom_topic=CustomTopic(Topic.amap),
+                message=message,
+            )
+        except Exception as error:
+            hyperion_error_logger.error(
+                f"Error while sending AMAP notification, {error}"
+            )
 
 
 @module.router.post(
@@ -909,24 +910,24 @@ async def create_cash_of_user(
         user_id=user_id,
         db=db,
     )
-
-    try:
-        if result:
-            now = datetime.now(UTC)
+    if notification_tool.notification_manager.use_firebase:
+        try:
             message = Message(
                 context=f"amap-cash-{user_id}",
                 is_visible=True,
                 title="AMAP - Solde mis à jour",
                 content=f"Votre nouveau solde est de {cash} €.",
                 # The notification will expire in 3 days
-                expire_on=now.replace(day=now.day + 3),
+                expire_on=datetime.now(UTC) + timedelta(days=3),
             )
             await notification_tool.send_notification_to_user(
                 user_id=user_id,
                 message=message,
             )
-    except Exception as error:
-        hyperion_error_logger.error(f"Error while sending AMAP notification, {error}")
+        except Exception as error:
+            hyperion_error_logger.error(
+                f"Error while sending AMAP notification, {error}"
+            )
 
     return result
 
