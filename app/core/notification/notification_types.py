@@ -8,7 +8,6 @@ class Topic(str, Enum):
 
     cinema = "cinema"
     advert = "advert"
-    bookingadmin = "bookingadmin"
     amap = "amap"
     booking = "booking"
     event = "event"
