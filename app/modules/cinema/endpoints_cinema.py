@@ -1,5 +1,6 @@
 import logging
 import uuid
+from datetime import UTC, datetime
 from zoneinfo import ZoneInfo
 
 from fastapi import Depends, File, HTTPException, UploadFile
@@ -9,7 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import models_core, standard_responses
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
-from app.core.notification.notification_types import CustomTopic, Topic, TopicMessage
+from app.core.notification.notification_types import CustomTopic, Topic
+from app.core.notification.schemas_notification import Message
 from app.dependencies import (
     get_db,
     get_notification_tool,
@@ -92,12 +94,16 @@ async def create_session(
             + " à "
             + french_hour.strftime("%H:%M")
         )
-        message = TopicMessage(
+        now = datetime.now(UTC)
+        message = Message(
+            context=f"new-booking-{id}",
+            is_visible=True,
             title="🎬 Cinéma - Nouvelle séance",
             content=message_content,
+            # The notification will expire in 3 days
+            expire_on=now.replace(day=now.day + 3),
         )
-
-        notification_tool.send_notification_to_topic(
+        await notification_tool.send_notification_to_topic(
             custom_topic=CustomTopic(Topic.cinema),
             message=message,
         )
