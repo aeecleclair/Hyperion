@@ -298,7 +298,7 @@ async def send_notification(
     **Only admins can use this endpoint**
     """
     message = schemas_notification.Message(
-        context="Test",
+        context="notification-test",
         is_visible=True,
         title="Test notification",
         content="Ceci est un test de notification",

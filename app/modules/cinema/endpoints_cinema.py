@@ -103,7 +103,7 @@ async def create_session(
                 + french_hour.strftime("%H:%M")
             )
             message = Message(
-                context=f"new-booking-{id}",
+                context=f"cinema-new-{id}",
                 is_visible=True,
                 title="🎬 Cinéma - Nouvelle séance",
                 content=message_content,
