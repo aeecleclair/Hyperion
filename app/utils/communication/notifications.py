@@ -368,7 +368,7 @@ class NotificationTool:
         message: Message,
     ):
         self.background_tasks.add_task(
-            await self.notification_manager.send_notification_to_topic,
+            self.notification_manager.send_notification_to_topic,
             custom_topic=custom_topic,
             message=message,
             db=self.db,

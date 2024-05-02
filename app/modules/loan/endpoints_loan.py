@@ -880,7 +880,7 @@ async def return_loan(
         returned_date=datetime.now(UTC),
     )
     try:
-        device_tokens = await cruds_notification.get_firebase_device_tokens_by_user_id(
+        device_tokens = await cruds_notification.get_firebase_tokens_by_user_id(
             user_id=loan.borrower_id,
             db=db,
         )
@@ -945,7 +945,7 @@ async def extend_loan(
         db=db,
     )
     try:
-        device_tokens = await cruds_notification.get_firebase_device_tokens_by_user_id(
+        device_tokens = await cruds_notification.get_firebase_tokens_by_user_id(
             user_id=loan.borrower_id,
             db=db,
         )
