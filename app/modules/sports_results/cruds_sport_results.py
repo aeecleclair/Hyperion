@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from sqlite3 import IntegrityError
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.sports_results import models_sport_results
@@ -58,6 +58,18 @@ async def is_user_a_captain(
     return result.unique().scalars().first() is not None
 
 
+async def get_result_by_id(
+    result_id,
+    db: AsyncSession,
+) -> models_sport_results.Result:
+    result = await db.execute(
+        select(models_sport_results.Result).where(
+            models_sport_results.Result.id == result_id,
+        ),
+    )
+    return result.scalars().all()
+
+
 async def get_results(db: AsyncSession) -> Sequence[models_sport_results.Result]:
     result = await db.execute(
         select(models_sport_results.Result).order_by(
@@ -94,6 +106,21 @@ async def create_result(
     except IntegrityError as error:
         await db.rollback()
         raise ValueError(error)
+
+
+async def upadte_result(
+    result_id: str,
+    result_update: models_sport_results.ResultUpdate,
+    db: AsyncSession,
+):
+    await db.execute(
+        update(models_sport_results.Result)
+        .where(
+            models_sport_results.Result.id == result_id,
+        )
+        .values(**result_update.model_dump(exclude_none=True)),
+    )
+    await db.commit()
 
 
 async def delete_result(
