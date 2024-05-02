@@ -22,5 +22,13 @@ class ResultBase(BaseModel):
     match_date: date
 
 
+class ResultUpdate(BaseModel):
+    sport_id: str | None = None
+    score1: int | None = None
+    score2: int | None = None
+    rank: int | None = None
+    match_date: date | None = None
+
+
 class ResultComplete(ResultBase):
     id: str
