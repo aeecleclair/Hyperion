@@ -10,6 +10,7 @@ from app.core import models_core
 from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
+from app.core.notification import cruds_notification
 from app.core.notification.schemas_notification import Message
 from app.dependencies import (
     get_db,
@@ -878,6 +879,20 @@ async def return_loan(
         returned=True,
         returned_date=datetime.now(UTC),
     )
+    try:
+        device_tokens = await cruds_notification.get_firebase_device_tokens_by_user_id(
+            user_id=loan.borrower_id,
+            db=db,
+        )
+        await cruds_notification.remove_messages_by_context_and_firebase_device_tokens_list(
+            context=f"loan-new-{loan.id}-end-notif",
+            tokens=device_tokens,
+            db=db,
+        )
+    except Exception as error:
+        hyperion_error_logger.error(
+            f"Error while removing notification to borrower for his loan ending, {error}",
+        )
 
 
 @module.router.post(
@@ -889,6 +904,7 @@ async def extend_loan(
     loan_extend: schemas_loan.LoanExtend,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
+    notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
     A new `end` date or an extended `duration` can be provided. If the two are provided, only `end` will be used.
@@ -928,3 +944,35 @@ async def extend_loan(
         loan_update=loan_update,
         db=db,
     )
+    try:
+        device_tokens = await cruds_notification.get_firebase_device_tokens_by_user_id(
+            user_id=loan.borrower_id,
+            db=db,
+        )
+        await cruds_notification.remove_messages_by_context_and_firebase_device_tokens_list(
+            context=f"loan-new-{loan.id}-end-notif",
+            tokens=device_tokens,
+            db=db,
+        )
+    except Exception as error:
+        hyperion_error_logger.error(
+            f"Error while removing notification to borrower for his loan ending, {error}",
+        )
+    try:
+        message = Message(
+            context=f"loan-new-{loan.id}-end-notif",
+            is_visible=True,
+            title="📦 Prêt arrivé à échéance",
+            content=f"N'oublie pas de rendre ton prêt à l'association {loan.loaner.name} ! ",
+            delivery_datetime=loan.end,
+            expire_on=loan.end + timedelta(days=30),
+        )
+
+        await notification_tool.send_notification_to_users(
+            user_ids=[loan.borrower_id],
+            message=message,
+        )
+    except Exception as error:
+        hyperion_error_logger.error(
+            f"Error while sending notification to borrower for his loan ending, {error}",
+        )
