@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.modules.raid import models_raid, schemas_raid
+from app.modules.raid.raid_type import DocumentValidation
 
 
 async def create_participant(
@@ -195,14 +196,15 @@ async def assign_document(
     await db.commit()
 
 
-async def validate_document(
+async def update_document_validation(
     document_id: str,
+    validation: DocumentValidation,
     db: AsyncSession,
 ) -> None:
     await db.execute(
         update(models_raid.Document)
         .where(models_raid.Document.id == document_id)
-        .values(validation="accepted"),
+        .values(validation=validation),
     )
     await db.commit()
 
