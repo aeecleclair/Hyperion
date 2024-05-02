@@ -35,3 +35,10 @@ class Situation(str, Enum):  # the situation of the participant
     otherSchool = "otherSchool"
     corporatePartner = "corporatePartner"
     other = "other"
+
+
+class DocumentValidation(str, Enum):
+    pending = "pending"
+    accepted = "accepted"
+    refused = "refused"
+    temporary = "temporary"

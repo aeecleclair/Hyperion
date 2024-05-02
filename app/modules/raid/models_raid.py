@@ -5,7 +5,13 @@ from datetime import date
 from sqlalchemy import Boolean, Date, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.modules.raid.raid_type import Difficulty, DocumentType, MeetingPlace, Size
+from app.modules.raid.raid_type import (
+    Difficulty,
+    DocumentType,
+    DocumentValidation,
+    MeetingPlace,
+    Size,
+)
 from app.types.sqlalchemy import Base
 
 
@@ -19,7 +25,11 @@ class Document(Base):
     )
     name: Mapped[str] = mapped_column(String, nullable=False)
     uploaded_at: Mapped[date] = mapped_column(Date, nullable=False)
-    validated: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    validation: Mapped[DocumentValidation] = mapped_column(
+        Enum(DocumentValidation),
+        nullable=False,
+        default=DocumentValidation.pending,
+    )
     type: Mapped[DocumentType] = mapped_column(Enum(DocumentType), nullable=False)
 
     # user: Mapped["Participant"] = relationship("Participant")
@@ -146,14 +156,25 @@ class Participant(Base):
             self.situation
             and self.situation.split(" : ")[0] in ["centrale", "otherschool"]
             and self.student_card_id
-            and self.student_card.validated
+            and self.student_card.validation == DocumentValidation.accepted
         ):
             number_validated += 1
-        if self.id_card_id and self.id_card.validated:
+        if self.id_card_id and self.id_card.validation == DocumentValidation.accepted:
             number_validated += 1
-        if self.medical_certificate_id and self.medical_certificate.validated:
+        if (
+            self.medical_certificate_id
+            and self.medical_certificate.validation == DocumentValidation.accepted
+        ):
             number_validated += 1
-        if self.raid_rules_id and self.raid_rules.validated:
+        if (
+            self.medical_certificate_id
+            and self.medical_certificate.validation == DocumentValidation.temporary
+        ):
+            number_validated += 0.5
+        if (
+            self.raid_rules_id
+            and self.raid_rules.validation == DocumentValidation.accepted
+        ):
             number_validated += 1
         return number_validated
 
@@ -174,15 +195,29 @@ class Participant(Base):
             "otherschool",
         ]:
             number_total += 1
-            if self.student_card_id and self.student_card.validated:
+            if (
+                self.student_card_id
+                and self.student_card.validation == DocumentValidation.accepted
+            ):
                 number_validated += 1
-        if self.id_card_id and self.id_card.validated:
+        if self.id_card_id and self.id_card.validation == DocumentValidation.accepted:
             number_validated += 1
-        if self.medical_certificate_id and self.medical_certificate.validated:
+        if (
+            self.medical_certificate_id
+            and self.medical_certificate.validation == DocumentValidation.accepted
+        ):
             number_validated += 1
+        if (
+            self.medical_certificate_id
+            and self.medical_certificate.validation == DocumentValidation.temporary
+        ):
+            number_validated += 0.5
         if self.security_file_id:
             number_validated += 1
-        if self.raid_rules_id and self.raid_rules.validated:
+        if (
+            self.raid_rules_id
+            and self.raid_rules.validation == DocumentValidation.accepted
+        ):
             number_validated += 1
         if self.attestation_on_honour:
             number_validated += 1

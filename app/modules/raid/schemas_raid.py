@@ -2,7 +2,13 @@ from datetime import date
 
 from pydantic import BaseModel
 
-from app.modules.raid.raid_type import Difficulty, DocumentType, MeetingPlace, Size
+from app.modules.raid.raid_type import (
+    Difficulty,
+    DocumentType,
+    DocumentValidation,
+    MeetingPlace,
+    Size,
+)
 
 
 class DocumentBase(BaseModel):
@@ -20,7 +26,7 @@ class DocumentCreation(DocumentBase):
 class Document(DocumentBase):
     id: str
     uploaded_at: date
-    validated: bool
+    validation: DocumentValidation
 
     class Config:
         orm_mode = True
