@@ -433,13 +433,14 @@ async def read_document(
 )
 async def validate_document(
     document_id: str,
+    validation: DocumentValidation,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.raid_admin)),
 ):
     """
     Validate a document
     """
-    await cruds_raid.validate_document(document_id, db)
+    await cruds_raid.update_document_validation(document_id, validation, db)
     team = await cruds_raid.get_team_by_participant_id(user.id, db)
     if team:
         await save_team_info(team, db)
