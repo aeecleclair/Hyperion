@@ -84,6 +84,7 @@ class Participant(ParticipantPreview):
     security_file: SecurityFile | None
     student_card: Document | None = None
     raid_rules: Document | None = None
+    parent_authorization: Document | None = None
     attestation_on_honour: bool
 
     class Config:
