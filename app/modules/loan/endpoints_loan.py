@@ -945,20 +945,7 @@ async def extend_loan(
         db=db,
     )
     try:
-        device_tokens = await cruds_notification.get_firebase_tokens_by_user_id(
-            user_id=loan.borrower_id,
-            db=db,
-        )
-        await cruds_notification.remove_messages_by_context_and_firebase_device_tokens_list(
-            context=f"loan-new-{loan.id}-end-notif",
-            tokens=device_tokens,
-            db=db,
-        )
-    except Exception as error:
-        hyperion_error_logger.error(
-            f"Error while removing notification to borrower for his loan ending, {error}",
-        )
-    try:
+        # same context so the first notification will be removed
         message = Message(
             context=f"loan-new-{loan.id}-end-notif",
             is_visible=True,
