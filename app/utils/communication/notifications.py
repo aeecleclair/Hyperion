@@ -367,7 +367,8 @@ class NotificationTool:
         custom_topic: CustomTopic,
         message: Message,
     ):
-        await self.notification_manager.send_notification_to_topic(
+        self.background_tasks.add_task(
+            await self.notification_manager.send_notification_to_topic,
             custom_topic=custom_topic,
             message=message,
             db=self.db,
