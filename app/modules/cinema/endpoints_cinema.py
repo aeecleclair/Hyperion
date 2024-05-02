@@ -67,6 +67,18 @@ async def create_session(
         raise HTTPException(status_code=422, detail=str(error))
     if notification_tool.notification_manager.use_firebase:
         try:
+            today = datetime.now(UTC)
+            sunday = (today + timedelta(days=(6 - today.weekday()))).replace(
+                hour=11,
+                minute=0,
+                second=0,
+            )
+            next_week_sessions = await cruds_cinema.get_sessions_in_time_frame(
+                start_after=sunday,
+                start_before=sunday + timedelta(days=7),
+                db=db,
+            )
+            message_content = ""
             days = [
                 "Lundi",
                 "Mardi",
@@ -76,53 +88,26 @@ async def create_session(
                 "Samedi",
                 "Dimanche",
             ]
-            months = [
-                "Janvier",
-                "Février",
-                "Mars",
-                "Avril",
-                "Mai",
-                "Juin",
-                "Juillet",
-                "Août",
-                "Septembre",
-                "Octobre",
-                "Novembre",
-                "Décembre",
-            ]
-            # As the notification content is set in the back, the front won't be able to display it in the local timezone
-            # We decide to use UTC+2 for all users
-
-            french_hour = db_session.start.astimezone(ZoneInfo("Europe/Paris"))
-            message_content = (
-                db_session.name
-                + " - "
-                + days[db_session.start.weekday()]
-                + " "
-                + db_session.start.strftime("%d")
-                + " "
-                + months[db_session.start.month - 1]
-                + " à "
-                + french_hour.strftime("%H:%M")
-            )
+            for next_session in next_week_sessions:
+                message_content += f"{next_session.name} - {days[next_session.start.weekday()]} - {days[next_session.start.day]}\n"
             message = Message(
-                context=f"cinema-new-{id}",
+                # We use sunday date as context to avoid sending the recap twice
+                context=f"cinema-recap-{sunday}",
                 is_visible=True,
-                title="🎬 Cinéma - Nouvelle séance",
+                title="🎬 Cinéma - Programme de la semaine",
                 content=message_content,
-                # The notification will expire in 3 days
-                expire_on=datetime.now(UTC) + timedelta(days=3),
+                delivery_datetime=sunday,
+                # The notification will expire the next sunday
+                expire_on=sunday.replace(day=sunday.day + 7),
             )
             await notification_tool.send_notification_to_topic(
-                custom_topic=CustomTopic(Topic.cinema),
+                custom_topic=CustomTopic(topic=Topic.cinema),
                 message=message,
             )
-
         except Exception as error:
             hyperion_error_logger.error(
-                f"Error while sending CINEMA notification, {error}",
+                f"Error while sending cinema recap notification, {error}",
             )
-
     return result
 
 
