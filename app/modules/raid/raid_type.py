@@ -2,13 +2,13 @@ from enum import Enum
 
 
 class DocumentType(str, Enum):
-    id_card = "idCard"  # the id card of the participant
-    medical_certificate = (
+    idCard = "idCard"  # the id card of the participant
+    medicalCertificate = (
         "medicalCertificate"  # the medical certificate of the participant
     )
-    student_card = "studentCard"  # the student card of the participant
-    raid_rules = "raidRules"  # the rules of the raid
-    parent_authorization = "parentAuthorization"  # the parent authorization
+    studentCard = "studentCard"  # the student card of the participant
+    raidRules = "raidRules"  # the rules of the raid
+    parentAuthorization = "parentAuthorization"  # the parent authorization
 
 
 class Size(str, Enum):  # for the T-shirt and the bike
@@ -33,8 +33,8 @@ class Difficulty(str, Enum):  # the difficulty of the raid
 
 class Situation(str, Enum):  # the situation of the participant
     centrale = "centrale"
-    other_school = "otherSchool"
-    corporate_partner = "corporatePartner"
+    otherSchool = "otherSchool"
+    corporatePartner = "corporatePartner"
     other = "other"
 
 
