@@ -13,6 +13,7 @@ from app.modules.raid.utils.pdf.conversion_utils import (
     date_to_string,
     get_difficulty_label,
     get_document_label,
+    get_document_validation_label,
     get_meeting_place_label,
     get_situation_label,
     get_size_label,
@@ -144,7 +145,7 @@ class PDFWriter(FPDF):
             ["Date de téléversement", "Validé"],
             [
                 date_to_string(document.uploaded_at),
-                document.validated and "Oui" or "Non",
+                get_document_validation_label(document.validation),
             ],
         ]
         self.ln(6)

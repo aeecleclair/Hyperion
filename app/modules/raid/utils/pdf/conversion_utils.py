@@ -1,6 +1,6 @@
 from datetime import date
 
-from app.modules.raid.raid_type import Difficulty, DocumentType
+from app.modules.raid.raid_type import Difficulty, DocumentType, DocumentValidation
 
 
 def nullable_number_to_string(number: float | None) -> str:
@@ -60,3 +60,13 @@ def get_document_label(document_type: DocumentType) -> str:
     elif document_type == DocumentType.studentCard:
         return "Carte étudiante"
     return "Règlement du raid"
+
+
+def get_document_validation_label(validation_label: DocumentValidation) -> str:
+    if validation_label == DocumentValidation.accepted:
+        return "Validé"
+    elif validation_label == DocumentValidation.pending:
+        return "En attente"
+    elif validation_label == DocumentValidation.refused:
+        return "Refusé"
+    return "Validation temporaire"

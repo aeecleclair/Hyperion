@@ -11,6 +11,7 @@ from app.core.groups.groups_type import GroupType
 from app.core.module import Module
 from app.dependencies import get_db, get_request_id, is_user, is_user_a_member_of
 from app.modules.raid import cruds_raid, models_raid, schemas_raid
+from app.modules.raid.raid_type import DocumentValidation
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.modules.raid.utils.pdf.pdf_writer import PDFWriter
 from app.types.content_type import ContentType
@@ -302,7 +303,7 @@ async def create_document(
 
     model_document = models_raid.Document(
         uploaded_at=datetime.now(UTC).date(),
-        validated=False,
+        validation=DocumentValidation.pending,
         id=document.id,
         name=document.name,
         type=document.type,
@@ -318,6 +319,8 @@ async def create_document(
         document_type_id = "raid_rules_id"
     elif document.type == "studentCard":
         document_type_id = "student_card_id"
+    elif document.type == "parentAuthorization":
+        document_type_id = "parent_authorization_id"
 
     await cruds_raid.assign_document(
         participant_id=participant_id,
