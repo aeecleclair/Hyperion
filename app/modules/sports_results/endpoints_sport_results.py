@@ -33,16 +33,29 @@ async def get_results(
 
 
 @module.router.get(
-    "/sport-results/results/{sport_id}",
+    "/sport-results/results/sport/{sport_id}",
     response_model=list[schemas_sport_results.ResultComplete],
     status_code=200,
 )
-async def get_results_by_sport(
+async def get_results_by_sport_id(
     sport_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     return await cruds_sport_results.get_results_by_sport_id(sport_id, db=db)
+
+
+@module.router.get(
+    "/sport-results/results/{result_id}",
+    response_model=schemas_sport_results.ResultComplete,
+    status_code=200,
+)
+async def get_results_by_id(
+    result_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    return await cruds_sport_results.get_results_by_id(result_id, db=db)
 
 
 @module.router.get(
@@ -120,3 +133,67 @@ async def add_result(
         return await cruds_sport_results.create_result(result=result_db, db=db)
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error))
+
+
+@module.router.patch(
+    "/sport-results/{result_id}",
+    status_code=204,
+)
+async def update_result(
+    result_id: str,
+    result_update: schemas_sport_results.ResultUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    result = await cruds_sport_results.get_result_by_id(result_id=result_id, db=db)
+    if not result:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid id",
+        )
+
+    if not cruds_sport_results.is_user_a_captain_of_a_sport(
+        user.id,
+        result.sport_id,
+        db,
+    ) or not cruds_sport_results.is_user_a_captain_of_a_sport(
+        user.id,
+        result_update.sport_id,
+        db,
+    ):
+        raise HTTPException(status_code=401, detail="Not a captain")
+
+    await cruds_sport_results.update_result(
+        result_id=result_id,
+        result_update=result_update,
+        db=db,
+    )
+
+
+@module.router.delete(
+    "/sport-results/{result_id}",
+    status_code=204,
+)
+async def delete_result(
+    result_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    result = await cruds_sport_results.get_result_by_id(result_id=result_id, db=db)
+    if not result:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid id",
+        )
+
+    if not cruds_sport_results.is_user_a_captain_of_a_sport(
+        user.id,
+        result.sport_id,
+        db,
+    ):
+        raise HTTPException(status_code=401, detail="Not a captain")
+
+    await cruds_sport_results.delete_result(
+        result_id=result_id,
+        db=db,
+    )
