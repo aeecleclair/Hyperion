@@ -202,7 +202,7 @@ async def validate_document(
     await db.execute(
         update(models_raid.Document)
         .where(models_raid.Document.id == document_id)
-        .values(validated=True),
+        .values(validation="accepted"),
     )
     await db.commit()
 
@@ -267,7 +267,7 @@ async def mark_document_as_newly_updated(
     await db.execute(
         update(models_raid.Document)
         .where(models_raid.Document.id == document_id)
-        .values(uploaded_at=datetime.now(tz=UTC).date(), validated=False),
+        .values(uploaded_at=datetime.now(tz=UTC).date(), validation="pending"),
     )
 
     await db.commit()
