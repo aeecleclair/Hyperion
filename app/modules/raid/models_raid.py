@@ -132,6 +132,15 @@ class Participant(Base):
         "Document",
         foreign_keys=[raid_rules_id],
     )
+    parent_authorization_id: Mapped[str | None] = mapped_column(
+        ForeignKey("raid_document.id"),
+        nullable=True,
+        default=None,
+    )
+    parent_authorization: Mapped[Document] = relationship(
+        "Document",
+        foreign_keys=[parent_authorization_id],
+    )
     attestation_on_honour: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
@@ -161,16 +170,11 @@ class Participant(Base):
             number_validated += 1
         if self.id_card_id and self.id_card.validation == DocumentValidation.accepted:
             number_validated += 1
-        if (
-            self.medical_certificate_id
-            and self.medical_certificate.validation == DocumentValidation.accepted
-        ):
-            number_validated += 1
-        if (
-            self.medical_certificate_id
-            and self.medical_certificate.validation == DocumentValidation.temporary
-        ):
-            number_validated += 0.5
+        if self.medical_certificate_id:
+            if self.medical_certificate.validation == DocumentValidation.accepted:
+                number_validated += 1
+            elif self.medical_certificate.validation == DocumentValidation.temporary:
+                number_validated += 0.5
         if (
             self.raid_rules_id
             and self.raid_rules.validation == DocumentValidation.accepted
@@ -202,16 +206,11 @@ class Participant(Base):
                 number_validated += 1
         if self.id_card_id and self.id_card.validation == DocumentValidation.accepted:
             number_validated += 1
-        if (
-            self.medical_certificate_id
-            and self.medical_certificate.validation == DocumentValidation.accepted
-        ):
-            number_validated += 1
-        if (
-            self.medical_certificate_id
-            and self.medical_certificate.validation == DocumentValidation.temporary
-        ):
-            number_validated += 0.5
+        if self.medical_certificate_id:
+            if self.medical_certificate.validation == DocumentValidation.accepted:
+                number_validated += 1
+            elif self.medical_certificate.validation == DocumentValidation.temporary:
+                number_validated += 0.5
         if self.security_file_id:
             number_validated += 1
         if (
