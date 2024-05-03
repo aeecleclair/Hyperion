@@ -60,6 +60,21 @@ class SecurityFile(Base):
     emergency_person_name: Mapped[str | None] = mapped_column(String, nullable=True)
     emergency_person_phone: Mapped[str | None] = mapped_column(String, nullable=True)
 
+    @property
+    def validation(self) -> DocumentValidation:
+        validated_fields = 0
+        if self.emergency_person_firstname:
+            validated_fields += 1
+        if self.emergency_person_name:
+            validated_fields += 1
+        if self.emergency_person_phone:
+            validated_fields += 1
+        if validated_fields == 0:
+            return DocumentValidation.refused
+        if validated_fields == 3:
+            return DocumentValidation.accepted
+        return DocumentValidation.temporary
+
 
 class Participant(Base):
     __tablename__ = "raid_participant"
@@ -228,7 +243,10 @@ class Participant(Base):
             elif self.medical_certificate.validation == DocumentValidation.temporary:
                 number_validated += 0.5
         if self.security_file_id:
-            number_validated += 1
+            if self.security_file.validation == DocumentValidation.accepted:
+                number_validated += 1
+            elif self.security_file.validation == DocumentValidation.temporary:
+                number_validated += 0.5
         if (
             self.raid_rules_id
             and self.raid_rules.validation == DocumentValidation.accepted
