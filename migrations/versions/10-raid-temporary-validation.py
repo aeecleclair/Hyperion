@@ -39,6 +39,26 @@ def upgrade() -> None:
         batch_op.add_column(
             column=sa.Column("parent_authorization_id", sa.String(), nullable=True),
         )
+    with op.batch_alter_table("raid_document") as batch_op:
+        batch_op.alter_column(
+            column_name="type",
+            existing_type=sa.VARCHAR(length=20),
+            type_=sa.Enum(
+                "idCard",
+                "medicalCertificate",
+                "studentCard",
+                "raidRules",
+                "parentAuthorization",
+                name="documenttype",
+            ),
+            existing_nullable=False,
+        )
+    op.add_column(
+        "raid_participant",
+        sa.Column(
+            "is_minor", sa.Boolean(), nullable=False, server_default=sa.sql.false()
+        ),
+    )
     op.create_foreign_key(
         None, "raid_participant", "raid_document", ["parent_authorization_id"], ["id"]
     )
@@ -51,4 +71,19 @@ def downgrade() -> None:
     op.drop_column("raid_document", "validation")
     op.drop_constraint(None, "raid_participant", type_="foreignkey")
     op.drop_column("raid_participant", "parent_authorization_id")
+    op.drop_column("raid_participant", "is_minor")
+    op.alter_column(
+        "raid_document",
+        "type",
+        existing_type=sa.Enum(
+            "idCard",
+            "medicalCertificate",
+            "studentCard",
+            "raidRules",
+            "parentAuthorization",
+            name="documenttype",
+        ),
+        type_=sa.VARCHAR(length=20),
+        existing_nullable=False,
+    )
     # ### end Alembic commands ###
