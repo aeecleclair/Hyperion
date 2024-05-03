@@ -146,7 +146,7 @@ async def add_security_file(
 
 
 async def update_security_file(
-    security_file: schemas_raid.SecurityFile,
+    security_file: schemas_raid.SecurityFileBase,
     db: AsyncSession,
 ) -> None:
     await db.execute(
