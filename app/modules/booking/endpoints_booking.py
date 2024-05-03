@@ -1,6 +1,7 @@
 import logging
 import uuid
 from datetime import UTC, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -273,6 +274,8 @@ async def create_booking(
             db=db,
             group_id=manager_group_id,
         )
+        # Setting time to Paris timezone in order to have the correct time in the notification
+        result.start = result.start.astimezone(ZoneInfo("Europe/Paris"))
         if manager_group:
             message = Message(
                 context=f"booking-new-{id}",
