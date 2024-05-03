@@ -230,11 +230,13 @@ class Participant(Base):
                 number_validated += 1
         if self.is_minor:
             number_total += 1
-            if (
-                self.parent_authorization_id
-                and self.parent_authorization.validation == DocumentValidation.accepted
-            ):
-                number_validated += 1
+            if self.parent_authorization_id:
+                if self.parent_authorization.validation == DocumentValidation.accepted:
+                    number_validated += 1
+                elif (
+                    self.parent_authorization.validation == DocumentValidation.temporary
+                ):
+                    number_validated += 0.5
         if self.id_card_id and self.id_card.validation == DocumentValidation.accepted:
             number_validated += 1
         if self.medical_certificate_id:

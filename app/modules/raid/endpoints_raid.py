@@ -131,10 +131,15 @@ async def update_participant(
     if not await cruds_raid.are_user_in_the_same_team(user.id, participant_id, db):
         raise HTTPException(status_code=403, detail="You are not the participant.")
 
-    is_minor = participant.birthday < datetime.now(
-        UTC
-    ).date().replace(  # TODO: replace with RAID start date
-        year=datetime.now(UTC).year - 18
+    is_minor = (
+        participant.birthday
+        < datetime.now(UTC)
+        .date()
+        .replace(  # TODO: replace with RAID start date
+            year=datetime.now(UTC).year - 18
+        )
+        if participant.birthday
+        else False
     )
 
     await cruds_raid.update_participant(participant_id, participant, is_minor, db)
@@ -466,7 +471,7 @@ async def validate_document(
     status_code=201,
 )
 async def set_security_file(
-    security_file: schemas_raid.SecurityFile,
+    security_file: schemas_raid.SecurityFileBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user),
 ):
@@ -479,12 +484,14 @@ async def set_security_file(
     )
     if existing_security_file:
         await cruds_raid.update_security_file(security_file, db)
-    else:
-        model_security_file = models_raid.SecurityFile(
-            **security_file.model_dump(),
+        return await cruds_raid.get_security_file_by_security_id(
+            security_file.id,
+            db,
         )
-        await cruds_raid.add_security_file(model_security_file, db)
-    return security_file
+    model_security_file = models_raid.SecurityFile(
+        **security_file.model_dump(),
+    )
+    return await cruds_raid.add_security_file(model_security_file, db)
 
 
 @module.router.post(
