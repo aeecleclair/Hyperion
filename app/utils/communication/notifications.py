@@ -245,6 +245,12 @@ class NotificationManager:
         message: Message,
         db: AsyncSession,
     ) -> None:
+        if not self.use_firebase:
+            hyperion_error_logger.info(
+                "Firebase is disabled, not sending notification.",
+            )
+            return
+
         user_ids = await cruds_notification.get_user_ids_by_topic(
             custom_topic=custom_topic,
             db=db,

@@ -267,32 +267,31 @@ async def create_booking(
     )
     await cruds_booking.create_booking(booking=db_booking, db=db)
     result = await cruds_booking.get_booking_by_id(db=db, booking_id=db_booking.id)
-    if notification_tool.notification_manager.use_firebase:
-        try:
-            manager_group_id = result.room.manager_id
-            manager_group = await cruds_groups.get_group_by_id(
-                db=db,
-                group_id=manager_group_id,
+    try:
+        manager_group_id = result.room.manager_id
+        manager_group = await cruds_groups.get_group_by_id(
+            db=db,
+            group_id=manager_group_id,
+        )
+        if manager_group:
+            message = Message(
+                context=f"booking-new-{id}",
+                is_visible=True,
+                title="📅 Réservations - Nouvelle réservation ",
+                content=f"{result.applicant.nickname} - {result.room.name} {result.start.strftime('%m/%d/%Y, %H:%M')} - {result.reason}",
+                # The notification will expire in 3 days
+                expire_on=datetime.now(UTC) + timedelta(days=3),
             )
-            if manager_group:
-                message = Message(
-                    context=f"booking-new-{id}",
-                    is_visible=True,
-                    title="📅 Réservations - Nouvelle réservation ",
-                    content=f"{result.applicant.nickname} - {result.room.name} {result.start.strftime('%m/%d/%Y, %H:%M')} - {result.reason}",
-                    # The notification will expire in 3 days
-                    expire_on=datetime.now(UTC) + timedelta(days=3),
-                )
 
-                await notification_tool.send_notification_to_users(
-                    user_ids=[user.id for user in manager_group.members],
-                    message=message,
-                )
-
-        except Exception as error:
-            hyperion_error_logger.error(
-                f"Error while sending BOOKING notification, {error}",
+            await notification_tool.send_notification_to_users(
+                user_ids=[user.id for user in manager_group.members],
+                message=message,
             )
+
+    except Exception as error:
+        hyperion_error_logger.error(
+            f"Error while sending BOOKING notification, {error}",
+        )
 
     return result
 

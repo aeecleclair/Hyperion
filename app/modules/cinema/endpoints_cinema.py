@@ -64,49 +64,48 @@ async def create_session(
         result = await cruds_cinema.create_session(session=db_session, db=db)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
-    if notification_tool.notification_manager.use_firebase:
-        try:
-            today = datetime.now(UTC)
-            sunday = (today + timedelta(days=(6 - today.weekday()))).replace(
-                hour=11,
-                minute=0,
-                second=0,
-            )
-            next_week_sessions = await cruds_cinema.get_sessions_in_time_frame(
-                start_after=sunday,
-                start_before=sunday + timedelta(days=7),
-                db=db,
-            )
-            message_content = ""
-            days = [
-                "Lundi",
-                "Mardi",
-                "Mercredi",
-                "Jeudi",
-                "Vendredi",
-                "Samedi",
-                "Dimanche",
-            ]
-            for next_session in next_week_sessions:
-                message_content += f"{next_session.name} - {days[next_session.start.weekday()]} - {days[next_session.start.day]}\n"
-            message = Message(
-                # We use sunday date as context to avoid sending the recap twice
-                context=f"cinema-recap-{sunday}",
-                is_visible=True,
-                title="🎬 Cinéma - Programme de la semaine",
-                content=message_content,
-                delivery_datetime=sunday,
-                # The notification will expire the next sunday
-                expire_on=sunday.replace(day=sunday.day + 7),
-            )
-            await notification_tool.send_notification_to_topic(
-                custom_topic=CustomTopic(topic=Topic.cinema),
-                message=message,
-            )
-        except Exception as error:
-            hyperion_error_logger.error(
-                f"Error while sending cinema recap notification, {error}",
-            )
+    try:
+        today = datetime.now(UTC)
+        sunday = (today + timedelta(days=(6 - today.weekday()))).replace(
+            hour=11,
+            minute=0,
+            second=0,
+        )
+        next_week_sessions = await cruds_cinema.get_sessions_in_time_frame(
+            start_after=sunday,
+            start_before=sunday + timedelta(days=7),
+            db=db,
+        )
+        message_content = ""
+        days = [
+            "Lundi",
+            "Mardi",
+            "Mercredi",
+            "Jeudi",
+            "Vendredi",
+            "Samedi",
+            "Dimanche",
+        ]
+        for next_session in next_week_sessions:
+            message_content += f"{next_session.name} - {days[next_session.start.weekday()]} - {days[next_session.start.day]}\n"
+        message = Message(
+            # We use sunday date as context to avoid sending the recap twice
+            context=f"cinema-recap-{sunday}",
+            is_visible=True,
+            title="🎬 Cinéma - Programme de la semaine",
+            content=message_content,
+            delivery_datetime=sunday,
+            # The notification will expire the next sunday
+            expire_on=sunday.replace(day=sunday.day + 7),
+        )
+        await notification_tool.send_notification_to_topic(
+            custom_topic=CustomTopic(topic=Topic.cinema),
+            message=message,
+        )
+    except Exception as error:
+        hyperion_error_logger.error(
+            f"Error while sending cinema recap notification, {error}",
+        )
     return result
 
 
