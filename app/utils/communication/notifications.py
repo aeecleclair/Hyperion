@@ -217,14 +217,12 @@ class NotificationManager:
             return
 
         # Get all firebase_device_token related to the user
-        firebase_device_tokens = [
-            token
-            for user_id in user_ids
-            for token in await cruds_notification.get_firebase_tokens_by_user_id(
-                user_id=user_id,
+        firebase_device_tokens = (
+            await cruds_notification.get_firebase_tokens_by_user_ids(
+                user_ids=user_ids,
                 db=db,
             )
-        ]
+        )
         await self._add_message_for_user_in_database(
             message=message,
             tokens=firebase_device_tokens,

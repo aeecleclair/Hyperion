@@ -835,6 +835,7 @@ async def return_loan(
     loan_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
+    notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
     Mark a loan as returned. This will update items availability.
@@ -880,15 +881,34 @@ async def return_loan(
         returned_date=datetime.now(UTC),
     )
     try:
-        device_tokens = await cruds_notification.get_firebase_tokens_by_user_id(
-            user_id=loan.borrower_id,
+        device_tokens = await cruds_notification.get_firebase_tokens_by_user_ids(
+            user_ids=[loan.borrower_id],
             db=db,
         )
-        await cruds_notification.remove_messages_by_context_and_firebase_device_tokens_list(
-            context=f"loan-new-{loan.id}-end-notif",
-            tokens=device_tokens,
-            db=db,
-        )
+        if (
+            await cruds_notification.get_messages_by_context_and_firebase_tokens(
+                context=f"loan-new-{loan.id}-end-notif",
+                firebase_tokens=device_tokens,
+            )
+            != []
+        ):
+            await cruds_notification.remove_messages_by_context_and_firebase_device_tokens_list(
+                context=f"loan-new-{loan.id}-end-notif",
+                tokens=device_tokens,
+                db=db,
+            )
+        else:
+            message = Message(
+                context=f"loan-new-{loan.id}-end-notif",
+                is_visible=False,
+                title="",
+                content="",
+                expire_on=datetime.now(UTC) + timedelta(days=3),
+            )
+            await notification_tool.send_notification_to_users(
+                user_ids=[loan.borrower_id],
+                message=message,
+            )
     except Exception as error:
         hyperion_error_logger.error(
             f"Error while removing notification to borrower for his loan ending, {error}",
