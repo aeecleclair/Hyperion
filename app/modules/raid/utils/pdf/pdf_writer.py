@@ -111,6 +111,7 @@ class PDFWriter(FPDF):
             participant.medical_certificate,
             participant.student_card,
             participant.raid_rules,
+            participant.parent_authorization,
         ]:
             if document:
                 pdf = get_file_path_from_data("raid", document.id, "documents")
