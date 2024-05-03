@@ -147,6 +147,7 @@ class Participant(Base):
         default=False,
     )
     payment: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_minor: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     @property
     def number_of_document(self) -> int:
@@ -155,6 +156,8 @@ class Participant(Base):
             "centrale",
             "otherschool",
         ]:
+            number_total += 1
+        if self.is_minor:
             number_total += 1
         return number_total
 
@@ -170,14 +173,20 @@ class Participant(Base):
             number_validated += 1
         if self.id_card_id and self.id_card.validation == DocumentValidation.accepted:
             number_validated += 1
-        if self.medical_certificate_id:
-            if self.medical_certificate.validation == DocumentValidation.accepted:
-                number_validated += 1
-            elif self.medical_certificate.validation == DocumentValidation.temporary:
-                number_validated += 0.5
+        if (
+            self.medical_certificate_id
+            and self.medical_certificate.validation == DocumentValidation.accepted
+        ):
+            number_validated += 1
         if (
             self.raid_rules_id
             and self.raid_rules.validation == DocumentValidation.accepted
+        ):
+            number_validated += 1
+        if (
+            self.is_minor
+            and self.parent_authorization_id
+            and self.parent_authorization.validation == DocumentValidation.accepted
         ):
             number_validated += 1
         return number_validated
@@ -202,6 +211,13 @@ class Participant(Base):
             if (
                 self.student_card_id
                 and self.student_card.validation == DocumentValidation.accepted
+            ):
+                number_validated += 1
+        if self.is_minor:
+            number_total += 1
+            if (
+                self.parent_authorization_id
+                and self.parent_authorization.validation == DocumentValidation.accepted
             ):
                 number_validated += 1
         if self.id_card_id and self.id_card.validation == DocumentValidation.accepted:

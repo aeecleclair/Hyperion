@@ -86,6 +86,7 @@ class Participant(ParticipantPreview):
     raid_rules: Document | None = None
     parent_authorization: Document | None = None
     attestation_on_honour: bool
+    is_minor: bool
 
     class Config:
         orm_mode = True

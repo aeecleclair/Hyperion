@@ -98,7 +98,15 @@ async def create_participant(
     if await cruds_raid.is_user_a_participant(user.id, db):
         raise HTTPException(status_code=403, detail="You are already a participant.")
 
-    db_participant = models_raid.Participant(**participant.__dict__, id=user.id)
+    is_minor = participant.birthday < datetime.now(
+        UTC
+    ).date().replace(  # TODO: replace with RAID start date
+        year=datetime.now(UTC).year - 18
+    )
+
+    db_participant = models_raid.Participant(
+        **participant.__dict__, id=user.id, is_minor=is_minor
+    )
     return await cruds_raid.create_participant(db_participant, db)
 
 
@@ -123,7 +131,13 @@ async def update_participant(
     if not await cruds_raid.are_user_in_the_same_team(user.id, participant_id, db):
         raise HTTPException(status_code=403, detail="You are not the participant.")
 
-    await cruds_raid.update_participant(participant_id, participant, db)
+    is_minor = participant.birthday < datetime.now(
+        UTC
+    ).date().replace(  # TODO: replace with RAID start date
+        year=datetime.now(UTC).year - 18
+    )
+
+    await cruds_raid.update_participant(participant_id, participant, is_minor, db)
     team = await cruds_raid.get_team_by_participant_id(participant_id, db)
     if team:
         await save_team_info(team, db)

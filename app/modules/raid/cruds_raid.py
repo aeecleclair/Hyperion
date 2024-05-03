@@ -26,12 +26,13 @@ async def create_participant(
 async def update_participant(
     participant_id: str,
     participant: schemas_raid.ParticipantUpdate,
+    is_minor: bool,
     db: AsyncSession,
 ) -> None:
     await db.execute(
         update(models_raid.Participant)
         .where(models_raid.Participant.id == participant_id)
-        .values(**participant.model_dump(exclude_none=True)),
+        .values(**participant.model_dump(exclude_none=True), is_minor=is_minor),
     )
     await db.commit()
 
