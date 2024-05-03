@@ -159,9 +159,9 @@ async def create_campaigns_logo(
         request_id=request_id,
         max_file_size=4 * 1024 * 1024,
         accepted_content_types=[
-            ContentType("image/jpeg"),
-            ContentType("image/png"),
-            ContentType("image/webp"),
+            ContentType.jpg,
+            ContentType.png,
+            ContentType.webp,
         ],
     )
 
