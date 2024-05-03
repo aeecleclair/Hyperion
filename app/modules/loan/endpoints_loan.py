@@ -889,6 +889,7 @@ async def return_loan(
             await cruds_notification.get_messages_by_context_and_firebase_tokens(
                 context=f"loan-new-{loan.id}-end-notif",
                 firebase_tokens=device_tokens,
+                db=db,
             )
             != []
         ):
