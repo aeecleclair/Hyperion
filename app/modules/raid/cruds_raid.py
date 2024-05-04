@@ -141,6 +141,14 @@ async def update_team(
     await db.commit()
 
 
+async def delete_participant(
+    participant_id: str,
+    db: AsyncSession,
+) -> None:
+    await db.execute(delete(models_raid.Participant).where(models_raid.Participant.id == participant_id))
+    await db.commit()
+
+
 async def delete_team(
     team_id: str,
     db: AsyncSession,
