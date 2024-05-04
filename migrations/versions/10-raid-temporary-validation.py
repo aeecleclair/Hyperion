@@ -90,5 +90,3 @@ def downgrade() -> None:
         existing_nullable=False,
     )
     # ### end Alembic commands ###
-    )
-    # ### end Alembic commands ###
