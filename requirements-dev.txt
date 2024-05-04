@@ -5,7 +5,7 @@ mypy==1.10.0
 psycopg[binary]==3.1.18             # PostgreSQL adapter for synchronous operations at startup (database initializations & migrations), binary installation is the easiest way to install it
 pytest-asyncio==0.21.1
 pytest-cov==4.1.0
-pytest-mock==3.12.0
+pytest-mock==3.14.0
 pytest==8.0.2
 ruff==0.3.7
 types-aiofiles==23.2.0.20240106
