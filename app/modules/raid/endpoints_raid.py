@@ -657,6 +657,87 @@ async def join_team(
     await cruds_raid.delete_invite_token(invite_token.id, db)
 
 
+@module.router.post(
+    "/raid/teams/{team_id}/kick/{participant_id}",
+    response_model=schemas_raid.Team,
+    status_code=201,
+)
+async def kick_team_member(
+    team_id: str,
+    participant_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.raid_admin)),
+):
+    """
+    Leave a team
+    """
+    team = await cruds_raid.get_team_by_id(team_id, db)
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found.")
+    if team.captain_id == participant_id:
+        team_update: schemas_raid.TeamUpdate = schemas_raid.TeamUpdate(
+            captain_id=team.second_id,
+            second_id=None,
+        )
+    elif team.second_id == participant_id:
+        team_update: schemas_raid.TeamUpdate = schemas_raid.TeamUpdate(
+            second_id=None,
+        )
+    else:
+        raise HTTPException(status_code=404, detail="Participant not found.")
+    cruds_raid.update_team(
+        team_id,
+        team_update,
+        db,
+    )
+    await save_team_info(team, db)
+    return await cruds_raid.get_team_by_id(team_id, db)
+
+
+@module.router.post(
+    "/raid/teams/merge",
+    response_model=schemas_raid.Team,
+    status_code=201,
+)
+async def merge_teams(
+    team1_id: str,
+    team2_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.raid_admin)),
+):
+    """
+    Merge two teams
+    """
+    team1 = await cruds_raid.get_team_by_id(team1_id, db)
+    team2 = await cruds_raid.get_team_by_id(team2_id, db)
+    if not team1 or not team2:
+        raise HTTPException(status_code=404, detail="Team not found.")
+    if team1.second_id or team2.second_id:
+        raise HTTPException(status_code=403, detail="One of the team is full.")
+    if team1.captain_id == team2.captain_id:
+        raise HTTPException(status_code=403, detail="Teams are the same.")
+    new_name = f"{team1.name} & {team2.name}"
+    new_difficulty = team1.difficulty if team1.difficulty == team2.difficulty else None
+    new_meeting_place = (
+        team1.meeting_place if team1.meeting_place == team2.meeting_place else None
+    )
+    team_update: schemas_raid.TeamUpdate = schemas_raid.TeamUpdate(
+        second_id=team2.captain_id,
+        name=new_name,
+        difficulty=new_difficulty,
+        meeting_place=new_meeting_place,
+    )
+    cruds_raid.update_team(
+        team1_id,
+        team_update,
+        db,
+    )
+    await cruds_raid.delete_team(team2_id, db)
+    drive_file_manager.delete_file(team2.file_id)
+    await save_team_info(team1, db)
+    return await cruds_raid.get_team_by_id(team1_id, db)
+
+
 @module.router.get(
     "/raid/information",
     response_model=schemas_raid.RaidInformation,
