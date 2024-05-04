@@ -21,7 +21,16 @@ updates:
     schedule:
       interval: "monthly"
     groups:
-      dependencies:
+      types-dependencies:
         applies-to: version-updates
         patterns:
-          - "*"
+          - "types-*"
+          - "mypy"
+      tests-dependencies:
+        applies-to: version-updates
+        patterns:
+          - "pytest*"
+      patch-dependencies:
+        applies-to: version-updates
+        update-types:
+          - "patch"
