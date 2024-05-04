@@ -153,3 +153,13 @@ class InviteToken(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class RaidInformation(BaseModel):
+    raid_start_date: date | None = None
+    raid_end_date: date | None = None
+    raid_registering_end_date: date | None = None
+    payment_link: str | None = None
+
+    class Config:
+        orm_mode = True
