@@ -279,12 +279,15 @@ class Team(Base):
     captain: Mapped[Participant] = relationship(
         "Participant",
         foreign_keys=[captain_id],
+        cascade="all, delete-orphan",
     )
     second_id: Mapped[str | None] = mapped_column(
         ForeignKey("raid_participant.id"),
         nullable=True,
     )
-    second: Mapped[Participant] = relationship("Participant", foreign_keys=[second_id])
+    second: Mapped[Participant] = relationship(
+        "Participant", foreign_keys=[second_id], cascade="all, delete-orphan"
+    )
     meeting_place: Mapped[MeetingPlace | None] = mapped_column(
         Enum(MeetingPlace),
         nullable=True,
