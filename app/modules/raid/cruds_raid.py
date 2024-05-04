@@ -23,6 +23,17 @@ async def create_participant(
         raise ValueError("An error occurred while creating the participant.")
 
 
+async def get_all_participants(
+    db: AsyncSession,
+) -> Sequence[models_raid.Participant]:
+    participants = await db.execute(
+        select(models_raid.Participant).options(
+            selectinload("*"),
+        ),
+    )
+    return participants.scalars().all()
+
+
 async def update_participant(
     participant_id: str,
     participant: schemas_raid.ParticipantUpdate,
@@ -33,6 +44,19 @@ async def update_participant(
         update(models_raid.Participant)
         .where(models_raid.Participant.id == participant_id)
         .values(**participant.model_dump(exclude_none=True), is_minor=is_minor),
+    )
+    await db.commit()
+
+
+async def update_participant_minority(
+    participant_id: str,
+    is_minor: bool,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        update(models_raid.Participant)
+        .where(models_raid.Participant.id == participant_id)
+        .values(is_minor=is_minor),
     )
     await db.commit()
 

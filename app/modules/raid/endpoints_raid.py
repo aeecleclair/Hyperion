@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 
 from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -108,7 +108,16 @@ async def create_participant(
     else:
         majority_date = raid_information.raid_start_date
 
-    is_minor = participant.birthday < majority_date if participant.birthday else False
+    is_minor = (
+        date(
+            participant.birthday.year + 18,
+            participant.birthday.month,
+            participant.birthday.day,
+        )
+        > majority_date
+        if participant.birthday
+        else False
+    )
 
     db_participant = models_raid.Participant(
         **participant.__dict__, id=user.id, is_minor=is_minor
@@ -145,7 +154,16 @@ async def update_participant(
     else:
         majority_date = raid_information.raid_start_date
 
-    is_minor = participant.birthday < majority_date if participant.birthday else False
+    is_minor = (
+        date(
+            participant.birthday.year + 18,
+            participant.birthday.month,
+            participant.birthday.day,
+        )
+        > majority_date
+        if participant.birthday
+        else False
+    )
 
     await cruds_raid.update_participant(participant_id, participant, is_minor, db)
     team = await cruds_raid.get_team_by_participant_id(participant_id, db)
@@ -667,3 +685,17 @@ async def update_raid_information(
     Update raid information
     """
     await set_core_data(raid_information, db)
+    if raid_information.raid_start_date:
+        participants = await cruds_raid.get_all_participants(db)
+        for participant in participants:
+            is_minor = (
+                date(
+                    participant.birthday.year + 18,
+                    participant.birthday.month,
+                    participant.birthday.day,
+                )
+                > raid_information.raid_start_date
+                if participant.birthday
+                else False
+            )
+            await cruds_raid.update_participant_minority(participant.id, is_minor, db)
