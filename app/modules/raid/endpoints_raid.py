@@ -6,7 +6,7 @@ from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core, standard_responses
+from app.core import cruds_core, models_core, standard_responses
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
 from app.dependencies import get_db, get_request_id, is_user, is_user_a_member_of
@@ -16,10 +16,12 @@ from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.modules.raid.utils.pdf.pdf_writer import PDFWriter
 from app.types.content_type import ContentType
 from app.utils.tools import (
+    get_core_data,
     get_file_from_data,
     get_random_string,
     is_user_member_of_an_allowed_group,
     save_file_as_data,
+    set_core_data,
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
@@ -98,11 +100,15 @@ async def create_participant(
     if await cruds_raid.is_user_a_participant(user.id, db):
         raise HTTPException(status_code=403, detail="You are already a participant.")
 
-    is_minor = participant.birthday < datetime.now(
-        UTC
-    ).date().replace(  # TODO: replace with RAID start date
-        year=datetime.now(UTC).year - 18
-    )
+    raid_information = await get_core_data(schemas_raid.RaidInformation, db)
+    if not raid_information:
+        majority_date = datetime(
+            year=datetime.now(UTC).year - 17, month=1, day=1, tzinfo=UTC
+        )
+    else:
+        majority_date = raid_information.raid_start_date
+
+    is_minor = participant.birthday < majority_date if participant.birthday else False
 
     db_participant = models_raid.Participant(
         **participant.__dict__, id=user.id, is_minor=is_minor
@@ -131,16 +137,15 @@ async def update_participant(
     if not await cruds_raid.are_user_in_the_same_team(user.id, participant_id, db):
         raise HTTPException(status_code=403, detail="You are not the participant.")
 
-    is_minor = (
-        participant.birthday
-        < datetime.now(UTC)
-        .date()
-        .replace(  # TODO: replace with RAID start date
-            year=datetime.now(UTC).year - 18
+    raid_information = await get_core_data(schemas_raid.RaidInformation, db)
+    if not raid_information:
+        majority_date = datetime(
+            year=datetime.now(UTC).year - 17, month=1, day=1, tzinfo=UTC
         )
-        if participant.birthday
-        else False
-    )
+    else:
+        majority_date = raid_information.raid_start_date
+
+    is_minor = participant.birthday < majority_date if participant.birthday else False
 
     await cruds_raid.update_participant(participant_id, participant, is_minor, db)
     team = await cruds_raid.get_team_by_participant_id(participant_id, db)
@@ -632,3 +637,33 @@ async def join_team(
     await cruds_raid.update_team_second_id(team.id, user.id, db)
     await save_team_info(team, db)
     await cruds_raid.delete_invite_token(invite_token.id, db)
+
+
+@module.router.get(
+    "/raid/information",
+    response_model=schemas_raid.RaidInformation,
+    status_code=200,
+)
+async def get_raid_information(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user),
+):
+    """
+    Get raid information
+    """
+    return await get_core_data(schemas_raid.RaidInformation, db)
+
+
+@module.router.patch(
+    "/raid/information",
+    status_code=204,
+)
+async def update_raid_information(
+    raid_information: schemas_raid.RaidInformation,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.raid_admin)),
+):
+    """
+    Update raid information
+    """
+    await set_core_data(raid_information, db)
