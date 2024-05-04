@@ -8,9 +8,20 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
+    groups:
+      actions:
+        applies-to: version-updates
+        patterns:
+          - "*"
+
 
   # Maintain Python dependencies
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
       interval: "monthly"
+    groups:
+      dependencies:
+        applies-to: version-updates
+        patterns:
+          - "*"
