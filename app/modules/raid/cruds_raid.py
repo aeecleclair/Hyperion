@@ -154,14 +154,15 @@ async def update_team_captain_id(
     await db.commit()
 
 
-async def clear_second_id(
+async def update_team_second_id(
     team_id: str,
+    second_id: str | None,
     db: AsyncSession,
 ) -> None:
     await db.execute(
         update(models_raid.Team)
         .where(models_raid.Team.id == team_id)
-        .values(second_id=None),
+        .values(second_id=second_id),
     )
     await db.commit()
 
