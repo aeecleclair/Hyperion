@@ -682,12 +682,9 @@ async def kick_team_member(
             raise HTTPException(
                 status_code=403, detail="You can not kick the only member of the team."
             )
-        team_update: schemas_raid.TeamUpdate = schemas_raid.TeamUpdate(
-            captain_id=team.second_id,
-        )
-        await cruds_raid.update_team(
+        await cruds_raid.update_team_captain_id(
             team_id,
-            team_update,
+            team.second_id,
             db,
         )
     elif team.second_id != participant_id:
