@@ -65,6 +65,7 @@ class ParticipantBase(BaseModel):
 
 
 class ParticipantPreview(ParticipantBase):
+    id: str
     bike_size: Size | None
     t_shirt_size: Size | None
     situation: str | None
@@ -75,7 +76,6 @@ class ParticipantPreview(ParticipantBase):
 
 
 class Participant(ParticipantPreview):
-    id: str
     address: str | None
     other_school: str | None = None
     company: str | None = None
