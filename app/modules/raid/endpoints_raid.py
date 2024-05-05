@@ -689,7 +689,7 @@ async def kick_team_member(
         )
     elif team.second_id != participant_id:
         raise HTTPException(status_code=404, detail="Participant not found.")
-    await cruds_raid.clear_second_id(team_id, db)
+    await cruds_raid.update_team_second_id(team_id, None, db)
     await save_team_info(team, db)
     return await cruds_raid.get_team_by_id(team_id, db)
 
@@ -722,7 +722,6 @@ async def merge_teams(
         team1.meeting_place if team1.meeting_place == team2.meeting_place else None
     )
     team_update: schemas_raid.TeamUpdate = schemas_raid.TeamUpdate(
-        second_id=team2.captain_id,
         name=new_name,
         difficulty=new_difficulty,
         meeting_place=new_meeting_place,
@@ -732,6 +731,7 @@ async def merge_teams(
         team_update,
         db,
     )
+    await cruds_raid.update_team_second_id(team1_id, team2.captain_id, db)
     await cruds_raid.delete_team(team2_id, db)
     drive_file_manager.delete_file(team2.file_id)
     await save_team_info(team1, db)
