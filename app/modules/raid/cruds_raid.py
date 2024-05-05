@@ -141,6 +141,19 @@ async def update_team(
     await db.commit()
 
 
+async def update_team_captain_id(
+    team_id: str,
+    captain_id: str,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        update(models_raid.Team)
+        .where(models_raid.Team.id == team_id)
+        .values(captain_id=captain_id),
+    )
+    await db.commit()
+
+
 async def clear_second_id(
     team_id: str,
     db: AsyncSession,
