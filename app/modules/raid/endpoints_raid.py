@@ -1,4 +1,5 @@
 import logging
+import random
 import uuid
 from datetime import UTC, date, datetime, timedelta
 
@@ -9,12 +10,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import cruds_core, models_core, standard_responses
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
+from app.core.users import cruds_users
 from app.dependencies import get_db, get_request_id, is_user, is_user_a_member_of
 from app.modules.raid import cruds_raid, models_raid, schemas_raid
 from app.modules.raid.raid_type import DocumentValidation
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.modules.raid.utils.pdf.pdf_writer import PDFWriter
 from app.types.content_type import ContentType
+from app.types.floors_type import FloorsType
 from app.utils.tools import (
     get_core_data,
     get_file_from_data,
@@ -675,21 +678,21 @@ async def kick_team_member(
     if not team:
         raise HTTPException(status_code=404, detail="Team not found.")
     if team.captain_id == participant_id:
+        if not team.second_id:
+            raise HTTPException(
+                status_code=403, detail="You can not kick the only member of the team."
+            )
         team_update: schemas_raid.TeamUpdate = schemas_raid.TeamUpdate(
             captain_id=team.second_id,
-            second_id=None,
         )
-    elif team.second_id == participant_id:
-        team_update: schemas_raid.TeamUpdate = schemas_raid.TeamUpdate(
-            second_id=None,
+        await cruds_raid.update_team(
+            team_id,
+            team_update,
+            db,
         )
-    else:
+    elif team.second_id != participant_id:
         raise HTTPException(status_code=404, detail="Participant not found.")
-    cruds_raid.update_team(
-        team_id,
-        team_update,
-        db,
-    )
+    await cruds_raid.clear_second_id(team_id, db)
     await save_team_info(team, db)
     return await cruds_raid.get_team_by_id(team_id, db)
 
@@ -727,7 +730,7 @@ async def merge_teams(
         difficulty=new_difficulty,
         meeting_place=new_meeting_place,
     )
-    cruds_raid.update_team(
+    await cruds_raid.update_team(
         team1_id,
         team_update,
         db,
