@@ -141,11 +141,27 @@ async def update_team(
     await db.commit()
 
 
+async def clear_second_id(
+    team_id: str,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        update(models_raid.Team)
+        .where(models_raid.Team.id == team_id)
+        .values(second_id=None),
+    )
+    await db.commit()
+
+
 async def delete_participant(
     participant_id: str,
     db: AsyncSession,
 ) -> None:
-    await db.execute(delete(models_raid.Participant).where(models_raid.Participant.id == participant_id))
+    await db.execute(
+        delete(models_raid.Participant).where(
+            models_raid.Participant.id == participant_id
+        )
+    )
     await db.commit()
 
 
