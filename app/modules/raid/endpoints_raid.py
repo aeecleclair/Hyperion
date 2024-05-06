@@ -41,6 +41,16 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 drive_file_manager = DriveFileManager()
 
 
+async def set_team_number(team: models_raid.Team, db: AsyncSession) -> None:
+    new_team_number = await cruds_raid.get_number_of_team_by_difficulty(
+        team.difficulty, db
+    )
+    updated_team: schemas_raid.TeamUpdate = schemas_raid.TeamUpdate(
+        number=new_team_number
+    )
+    await cruds_raid.update_team(team.id, updated_team, db)
+
+
 async def save_team_info(team: models_raid.Team, db: AsyncSession) -> None:
     try:
         pdf_writer = PDFWriter()
@@ -55,6 +65,13 @@ async def save_team_info(team: models_raid.Team, db: AsyncSession) -> None:
     except Exception as error:
         hyperion_error_logger.error(f"Error while creating pdf, {error}")
         return None
+
+
+async def post_update_actions(team: models_raid.Team | None, db: AsyncSession) -> None:
+    if team:
+        if team.validation_progress == 1:
+            await set_team_number(team, db)
+        await save_team_info(team, db)
 
 
 @module.router.get(
@@ -170,8 +187,7 @@ async def update_participant(
 
     await cruds_raid.update_participant(participant_id, participant, is_minor, db)
     team = await cruds_raid.get_team_by_participant_id(participant_id, db)
-    if team:
-        await save_team_info(team, db)
+    await post_update_actions(team, db)
 
 
 @module.router.post(
@@ -203,7 +219,7 @@ async def create_team(
         second_id=None,
     )
     created_team = await cruds_raid.create_team(db_team, db)
-    await save_team_info(created_team, db)
+    await post_update_actions(created_team, db)
     return created_team
 
 
@@ -285,8 +301,7 @@ async def update_team(
         raise HTTPException(status_code=403, detail="You are not in the team.")
     await cruds_raid.update_team(team_id, team, db)
     updated_team = await cruds_raid.get_team_by_id(team_id, db)
-    if updated_team:
-        await save_team_info(updated_team, db)
+    await post_update_actions(updated_team, db)
 
 
 @module.router.delete(
@@ -374,8 +389,7 @@ async def create_document(
     )
 
     team = await cruds_raid.get_team_by_participant_id(participant_id, db)
-    if team:
-        await save_team_info(team, db)
+    await post_update_actions(team, db)
     return model_document
 
 
@@ -486,8 +500,7 @@ async def validate_document(
     """
     await cruds_raid.update_document_validation(document_id, validation, db)
     team = await cruds_raid.get_team_by_participant_id(user.id, db)
-    if team:
-        await save_team_info(team, db)
+    await post_update_actions(team, db)
 
 
 @module.router.post(
@@ -536,8 +549,7 @@ async def assign_security_file(
         raise HTTPException(status_code=403, detail="You are not the participant.")
     await cruds_raid.assign_security_file(participant_id, security_file_id, db)
     team = await cruds_raid.get_team_by_participant_id(user.id, db)
-    if team:
-        await save_team_info(team, db)
+    await post_update_actions(team, db)
 
 
 @module.router.post(
@@ -554,8 +566,7 @@ async def confirm_payment(
     """
     await cruds_raid.confirm_payment(participant_id, db)
     team = await cruds_raid.get_team_by_participant_id(participant_id, db)
-    if team:
-        await save_team_info(team, db)
+    await post_update_actions(team, db)
 
 
 @module.router.post(
@@ -574,8 +585,7 @@ async def validate_attestation_on_honour(
         raise HTTPException(status_code=403, detail="You are not the participant")
     await cruds_raid.validate_attestation_on_honour(participant_id, db)
     team = await cruds_raid.get_team_by_participant_id(participant_id, db)
-    if team:
-        await save_team_info(team, db)
+    await post_update_actions(team, db)
 
 
 @module.router.post(
@@ -655,7 +665,7 @@ async def join_team(
         )
 
     await cruds_raid.update_team_second_id(team.id, user.id, db)
-    await save_team_info(team, db)
+    await post_update_actions(team, db)
     await cruds_raid.delete_invite_token(invite_token.id, db)
 
 
@@ -689,7 +699,7 @@ async def kick_team_member(
     elif team.second_id != participant_id:
         raise HTTPException(status_code=404, detail="Participant not found.")
     await cruds_raid.update_team_second_id(team_id, None, db)
-    await save_team_info(team, db)
+    await post_update_actions(team, db)
     return await cruds_raid.get_team_by_id(team_id, db)
 
 
@@ -720,10 +730,12 @@ async def merge_teams(
     new_meeting_place = (
         team1.meeting_place if team1.meeting_place == team2.meeting_place else None
     )
+    new_number = min(team1.number, team2.number) if team1.number and team2.number else None
     team_update: schemas_raid.TeamUpdate = schemas_raid.TeamUpdate(
         name=new_name,
         difficulty=new_difficulty,
         meeting_place=new_meeting_place,
+        number=new_number,
     )
     await cruds_raid.update_team(
         team1_id,
@@ -733,7 +745,7 @@ async def merge_teams(
     await cruds_raid.update_team_second_id(team1_id, team2.captain_id, db)
     await cruds_raid.delete_team(team2_id, db)
     drive_file_manager.delete_file(team2.file_id)
-    await save_team_info(team1, db)
+    await post_update_actions(team1, db)
     return await cruds_raid.get_team_by_id(team1_id, db)
 
 
