@@ -160,6 +160,7 @@ class RaidInformation(BaseModel):
     raid_end_date: date | None = None
     raid_registering_end_date: date | None = None
     payment_link: str | None = None
+    contact: str | None = None
 
     class Config:
         orm_mode = True
