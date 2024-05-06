@@ -69,7 +69,7 @@ async def save_team_info(team: models_raid.Team, db: AsyncSession) -> None:
 
 async def post_update_actions(team: models_raid.Team | None, db: AsyncSession) -> None:
     if team:
-        if team.validation_progress == 1:
+        if team.validation_progress == 100:
             await set_team_number(team, db)
         await save_team_info(team, db)
 
