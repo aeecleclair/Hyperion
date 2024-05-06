@@ -203,8 +203,7 @@ async def create_team(
         second_id=None,
     )
     created_team = await cruds_raid.create_team(db_team, db)
-    if created_team:
-        await save_team_info(created_team, db)
+    await save_team_info(created_team, db)
     return created_team
 
 
@@ -553,10 +552,10 @@ async def confirm_payment(
     """
     Confirm payment
     """
+    await cruds_raid.confirm_payment(participant_id, db)
     team = await cruds_raid.get_team_by_participant_id(participant_id, db)
     if team:
         await save_team_info(team, db)
-    return await cruds_raid.confirm_payment(participant_id, db)
 
 
 @module.router.post(
@@ -573,10 +572,10 @@ async def validate_attestation_on_honour(
     """
     if participant_id != user.id:
         raise HTTPException(status_code=403, detail="You are not the participant")
+    await cruds_raid.validate_attestation_on_honour(participant_id, db)
     team = await cruds_raid.get_team_by_participant_id(participant_id, db)
     if team:
         await save_team_info(team, db)
-    return await cruds_raid.validate_attestation_on_honour(participant_id, db)
 
 
 @module.router.post(
