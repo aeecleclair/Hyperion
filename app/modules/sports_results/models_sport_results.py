@@ -42,4 +42,5 @@ class Result(Base):
     score1: Mapped[int] = mapped_column(Integer)
     score2: Mapped[int] = mapped_column(Integer)
     rank: Mapped[int] = mapped_column(Integer)
+    location: Mapped[str] = mapped_column(String)
     match_date: Mapped[date] = mapped_column(Date)
