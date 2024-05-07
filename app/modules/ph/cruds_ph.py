@@ -10,12 +10,12 @@ from app.modules.ph import models_ph, schemas_ph
 
 async def get_papers(
     db: AsyncSession,
-    end_date: date = date(2099, 12, 31),
+    end_date: date | None = None,
 ) -> Sequence[models_ph.Paper]:
     """Return papers from the latest to the oldest"""
     result = await db.execute(
         select(models_ph.Paper)
-        .where(models_ph.Paper.release_date <= end_date)
+        .where(models_ph.Paper.release_date <= (end_date or date.max))
         .order_by(models_ph.Paper.release_date.desc()),
     )
     return result.scalars().all()
