@@ -1,8 +1,15 @@
+import logging
+
 import google.oauth2.credentials
 import googleapiclient.http
 from googleapiclient.discovery import build
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.raid import schemas_raid
 from app.modules.raid.utils.drive.config import DriveSettings
+from app.utils.tools import get_core_data, set_core_data
+
+hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 class DriveFileManager:
@@ -24,14 +31,46 @@ class DriveFileManager:
             credentials=oauth_credentials,
             developerKey=config.API_KEY,
         )
-        self.working_folder_name = "Dossiers d'inscription"
-        self.working_folder_id = "1j1h_ly9ZxRMnhXiegs0DzKbavNwwxDu9"
 
-    def upload_file(self, file_path: str, file_name: str) -> str:
+        self.REGISTERING_FOLDER_NAME = "Équipes"
+        self.SECURITY_FOLDER_NAME = "Fiches sécurité"
+        self.drive_folders = None
+
+    async def init_folders(self, db: AsyncSession):
+        if not self.drive_folders:
+            self.drive_folders = await get_core_data(schemas_raid.RaidDriveFolders, db)
+            if not self.drive_folders.parent_folder_id:
+                hyperion_error_logger.error("No parent folder id found in database")
+                return
+            if not self.drive_folders.registering_folder_id:
+                self.drive_folders.registering_folder_id = self.create_folder(
+                    self.REGISTERING_FOLDER_NAME, self.drive_folders.parent_folder_id
+                )
+            if not self.drive_folders.security_folder_id:
+                self.drive_folders.security_folder_id = self.create_folder(
+                    self.SECURITY_FOLDER_NAME, self.drive_folders.parent_folder_id
+                )
+            await set_core_data(
+                self.drive_folders,
+                db,
+            )
+
+    def create_folder(self, folder_name: str, parent_folder_id: str) -> str:
+        file_metadata = {
+            "name": folder_name,
+            "mimeType": "application/vnd.google-apps.folder",
+            "parents": [parent_folder_id],
+        }
+        response = self.drive_service.files().create(body=file_metadata).execute()
+        return response.get("id")
+
+    async def upload_file(
+        self, file_path: str, file_name: str, parent_folder_id: str
+    ) -> str:
         file_metadata = {
             "name": file_name,
             "mimeType": "application/pdf",
-            "parents": [self.working_folder_id],
+            "parents": [parent_folder_id],
         }
         media = googleapiclient.http.MediaFileUpload(
             file_path,
@@ -43,6 +82,22 @@ class DriveFileManager:
             .execute()
         )
         return response.get("id")
+
+    async def upload_team_file(
+        self, file_path: str, file_name: str, db: AsyncSession
+    ) -> str:
+        await self.init_folders(db)
+        return await self.upload_file(
+            file_path, file_name, self.drive_folders.registering_folder_id
+        )
+
+    async def upload_participant_file(
+        self, file_path: str, file_name: str, db: AsyncSession
+    ) -> str:
+        await self.init_folders(db)
+        return await self.upload_file(
+            file_path, file_name, self.drive_folders.security_folder_id
+        )
 
     def replace_file(self, file_path: str, file_id: str) -> str:
         file_metadata = {

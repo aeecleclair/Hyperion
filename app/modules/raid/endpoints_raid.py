@@ -59,7 +59,9 @@ async def save_team_info(team: models_raid.Team, db: AsyncSession) -> None:
         if team.file_id:
             file_id = drive_file_manager.replace_file(file_path, team.file_id)
         else:
-            file_id = drive_file_manager.upload_file(file_path, file_name)
+            file_id = await drive_file_manager.upload_team_file(
+                file_path, file_name, db
+            )
         await cruds_raid.update_team_file_id(team.id, file_id, db)
         pdf_writer.clear_pdf()
     except Exception as error:
@@ -730,7 +732,9 @@ async def merge_teams(
     new_meeting_place = (
         team1.meeting_place if team1.meeting_place == team2.meeting_place else None
     )
-    new_number = min(team1.number, team2.number) if team1.number and team2.number else None
+    new_number = (
+        min(team1.number, team2.number) if team1.number and team2.number else None
+    )
     team_update: schemas_raid.TeamUpdate = schemas_raid.TeamUpdate(
         name=new_name,
         difficulty=new_difficulty,
@@ -791,3 +795,35 @@ async def update_raid_information(
                 else False
             )
             await cruds_raid.update_participant_minority(participant.id, is_minor, db)
+
+
+@module.router.patch(
+    "/raid/drive",
+    status_code=204,
+)
+async def update_drive_folders(
+    drive_folders: schemas_raid.RaidDriveFoldersCreation,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.raid_admin)),
+):
+    """
+    Update drive folders
+    """
+    schemas_folders = await get_core_data(schemas_raid.RaidDriveFolders, db)
+    schemas_folders.parent_folder_id = drive_folders.parent_folder_id
+    await set_core_data(schemas_folders, db)
+
+
+@module.router.get(
+    "/raid/drive",
+    response_model=schemas_raid.RaidDriveFoldersCreation,
+    status_code=200,
+)
+async def get_drive_folders(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.raid_admin)),
+):
+    """
+    Get drive folders
+    """
+    return await get_core_data(schemas_raid.RaidDriveFolders, db)
