@@ -275,14 +275,19 @@ async def create_booking(
             db=db,
             group_id=manager_group_id,
         )
+
         applicant_user = await cruds_users.get_user_by_id(
             db=db,
             user_id=result.applicant_id,
         )
-        if applicant_user.nickname:
-            applicant_nickname = applicant_user.nickname
+        if applicant_user:
+            if applicant_user.nickname:
+                applicant_nickname = applicant_user.nickname
+            else:
+                applicant_nickname = applicant_user.firstname
+            content = f"{applicant_nickname} - {result.room.name} {result.start.strftime('%m/%d/%Y, %H:%M')} - {result.reason}"
         else:
-            applicant_nickname = applicant_user.firstname
+            content = f"{result.room.name} {result.start.strftime('%m/%d/%Y, %H:%M')} - {result.reason}"
         # Setting time to Paris timezone in order to have the correct time in the notification
         result.start = result.start.astimezone(ZoneInfo("Europe/Paris"))
         if manager_group:
@@ -290,7 +295,7 @@ async def create_booking(
                 context=f"booking-new-{id}",
                 is_visible=True,
                 title="📅 Réservations - Nouvelle réservation ",
-                content=f"{applicant_nickname} - {result.room.name} {result.start.strftime('%m/%d/%Y, %H:%M')} - {result.reason}",
+                content=content,
                 # The notification will expire in 3 days
                 expire_on=datetime.now(UTC) + timedelta(days=3),
             )
