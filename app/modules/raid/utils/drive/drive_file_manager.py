@@ -65,16 +65,20 @@ class DriveFileManager:
         return response.get("id")
 
     async def upload_file(
-        self, file_path: str, file_name: str, parent_folder_id: str
+        self,
+        file_path: str,
+        file_name: str,
+        parent_folder_id: str,
+        mimetype: str = "application/pdf",
     ) -> str:
         file_metadata = {
             "name": file_name,
-            "mimeType": "application/pdf",
+            "mimeType": mimetype,
             "parents": [parent_folder_id],
         }
         media = googleapiclient.http.MediaFileUpload(
             file_path,
-            mimetype="application/pdf",
+            mimetype=mimetype,
         )
         response = (
             self.drive_service.files()
@@ -97,6 +101,17 @@ class DriveFileManager:
         await self.init_folders(db)
         return await self.upload_file(
             file_path, file_name, self.drive_folders.security_folder_id
+        )
+
+    async def upload_raid_file(
+        self, file_path: str, file_name: str, db: AsyncSession
+    ) -> str:
+        await self.init_folders(db)
+        return await self.upload_file(
+            file_path,
+            file_name,
+            self.drive_folders.parent_folder_id,
+            mimetype="text/csv",
         )
 
     def replace_file(self, file_path: str, file_id: str) -> str:
