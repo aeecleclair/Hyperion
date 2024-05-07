@@ -1,4 +1,6 @@
+import csv
 import logging
+import os
 import random
 import uuid
 from datetime import UTC, date, datetime, timedelta
@@ -27,9 +29,6 @@ from app.utils.tools import (
     set_core_data,
 )
 
-hyperion_error_logger = logging.getLogger("hyperion.error")
-
-
 module = Module(
     root="raid",
     tag="Raid",
@@ -39,6 +38,28 @@ module = Module(
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 drive_file_manager = DriveFileManager()
+
+
+async def write_teams_csv(teams: list[models_raid.Team], db: AsyncSession) -> None:
+    file_name = "Équipes - " + datetime.now(UTC).strftime("%Y-%m-%d_%H_%M_%S") + ".csv"
+    file_path = "data/raid/" + file_name
+    data = [["Team name", "Captain", "Second", "Difficulty", "Number"]]
+    for team in teams:
+        data.append(
+            [
+                team.name,
+                f"{team.captain.firstname} {team.captain.name}",
+                f"{team.second.firstname} {team.second.name}" if team.second else None,
+                team.difficulty,
+                team.number,
+            ]
+        )
+    file = open(file_path, mode="w", newline="", encoding="utf-8")
+    writer = csv.writer(file)
+    writer.writerows(data)
+    file.close()
+    await drive_file_manager.upload_raid_file(file_path, file_name, db)
+    os.remove(file_path)
 
 
 async def set_team_number(team: models_raid.Team, db: AsyncSession) -> None:
@@ -73,6 +94,9 @@ async def post_update_actions(team: models_raid.Team | None, db: AsyncSession) -
     if team:
         if team.validation_progress == 100:
             await set_team_number(team, db)
+            all_teams = await cruds_raid.get_all_validated_teams(db)
+            if all_teams:
+                await write_teams_csv(all_teams, db)
         await save_team_info(team, db)
 
 

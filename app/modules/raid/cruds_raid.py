@@ -101,6 +101,19 @@ async def get_all_teams(
     return teams.scalars().all()
 
 
+async def get_all_validated_teams(
+    db: AsyncSession,
+) -> Sequence[models_raid.Team]:
+    teams = await db.execute(
+        select(models_raid.Team)
+        .where(models_raid.Team.validation_progress == 100)
+        .options(
+            selectinload("*"),
+        ),
+    )
+    return teams.scalars().all()
+
+
 async def get_team_by_id(
     team_id: str,
     db: AsyncSession,
