@@ -7,7 +7,7 @@ from app.types.sqlalchemy import Base
 
 
 class Paper(Base):
-    __tablename__ = "papers"
+    __tablename__ = "ph_papers"
 
     id: Mapped[str] = mapped_column(String, primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String, nullable=False)

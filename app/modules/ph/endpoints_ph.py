@@ -121,6 +121,7 @@ async def create_paper(
 
         now = datetime.now(UTC)
 
+        # We only want to send a notification if the paper was released less than a month ago.
         if paper_db.release_date >= now.date() - timedelta(days=30):
             message = Message(
                 context=f"ph-{paper_db.id}",
