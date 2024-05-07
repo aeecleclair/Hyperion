@@ -19,6 +19,7 @@ class ResultBase(BaseModel):
     score1: int
     score2: int
     rank: int
+    location: str
     match_date: date
 
 
