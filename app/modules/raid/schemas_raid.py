@@ -164,3 +164,13 @@ class RaidInformation(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class RaidDriveFoldersCreation(BaseModel):
+    parent_folder_id: str
+
+
+class RaidDriveFolders(BaseModel):
+    parent_folder_id: str | None = None
+    registering_folder_id: str | None = None
+    security_folder_id: str | None = None
