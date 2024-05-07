@@ -1,5 +1,5 @@
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, time, timedelta
 from pathlib import Path
 
 from fastapi import Depends, File, HTTPException, UploadFile
@@ -126,15 +126,16 @@ async def create_paper(
                 context=f"ph-{paper_db.id}",
                 is_visible=True,
                 title=f"📗 PH - {paper_db.name}",
-                content="A new paper has been released! 🎉",
-                delivery_datetime=datetime.fromisoformat(
-                    paper_db.release_date.isoformat(),
+                content="Un nouveau journal est disponible! 🎉",
+                delivery_datetime=datetime.combine(
+                    paper_db.release_date,
+                    time(hour=8, tzinfo=UTC),
                 ),
                 # The notification will expire in 10 days
                 expire_on=now + timedelta(days=10),
             )
             await notification_tool.send_notification_to_topic(
-                custom_topic=CustomTopic(topic=Topic.advert),
+                custom_topic=CustomTopic(topic=Topic.ph),
                 message=message,
             )
         return await cruds_ph.create_paper(paper=paper_db, db=db)
