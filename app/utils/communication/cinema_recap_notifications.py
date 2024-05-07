@@ -48,8 +48,8 @@ async def cinema_recap_notification(result, db):
         is_visible=True,
         title="🎬 Cinéma - Programme de la semaine",
         content=message_content,
-        delivery_datetime=sunday,
+        delivery_datetime=sunday + timedelta(days=7),
         # The notification will expire the next sunday
-        expire_on=sunday + timedelta(days=7),
+        expire_on=sunday + timedelta(days=14),
     )
     return message
