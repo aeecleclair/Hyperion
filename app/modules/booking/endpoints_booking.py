@@ -275,10 +275,14 @@ async def create_booking(
             db=db,
             group_id=manager_group_id,
         )
-        applicant_nickname = await cruds_users.get_user_by_id(
+        applicant_user = await cruds_users.get_user_by_id(
             db=db,
             user_id=result.applicant_id,
-        ).nickname
+        )
+        if applicant_user.nickname:
+            applicant_nickname = applicant_user.nickname
+        else:
+            applicant_nickname = applicant_user.firstname
         # Setting time to Paris timezone in order to have the correct time in the notification
         result.start = result.start.astimezone(ZoneInfo("Europe/Paris"))
         if manager_group:
