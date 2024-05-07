@@ -13,6 +13,7 @@ from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
 from app.core.notification.schemas_notification import Message
+from app.core.users import cruds_users
 from app.dependencies import (
     get_db,
     get_notification_tool,
@@ -274,6 +275,10 @@ async def create_booking(
             db=db,
             group_id=manager_group_id,
         )
+        applicant_nickname = await cruds_users.get_user_by_id(
+            db=db,
+            user_id=result.applicant_id,
+        ).nickname
         # Setting time to Paris timezone in order to have the correct time in the notification
         result.start = result.start.astimezone(ZoneInfo("Europe/Paris"))
         if manager_group:
@@ -281,7 +286,7 @@ async def create_booking(
                 context=f"booking-new-{id}",
                 is_visible=True,
                 title="📅 Réservations - Nouvelle réservation ",
-                content=f"{result.applicant.nickname} - {result.room.name} {result.start.strftime('%m/%d/%Y, %H:%M')} - {result.reason}",
+                content=f"{applicant_nickname} - {result.room.name} {result.start.strftime('%m/%d/%Y, %H:%M')} - {result.reason}",
                 # The notification will expire in 3 days
                 expire_on=datetime.now(UTC) + timedelta(days=3),
             )

@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, time, timedelta
 from typing import TYPE_CHECKING
 
 from fastapi import Depends, HTTPException
@@ -632,12 +632,14 @@ async def create_loan(
             f"Error while sending notification to borrower of a new loan, {error}",
         )
     try:
+        delivery_time = time(11, 00, 00)
+        delivery_datetime = datetime.combine(loan.end, delivery_time)
         message = Message(
             context=f"loan-new-{loan.id}-end-notif",
             is_visible=True,
             title="📦 Prêt arrivé à échéance",
             content=f"N'oublie pas de rendre ton prêt à l'association {loan.loaner.name} ! ",
-            delivery_datetime=loan.end,
+            delivery_datetime=delivery_datetime,
             expire_on=loan.end + timedelta(days=30),
         )
 
@@ -645,6 +647,7 @@ async def create_loan(
             user_ids=[loan.borrower_id],
             message=message,
         )
+
     except Exception as error:
         hyperion_error_logger.error(
             f"Error while sending notification to borrower for his loan ending, {error}",
