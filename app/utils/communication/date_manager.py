@@ -1,7 +1,7 @@
 from datetime import date, datetime, timedelta
 
 
-async def get_date_day(date_object: date | datetime):
+def get_date_day(date_object: date | datetime):
     days = [
         "Lundi",
         "Mardi",
@@ -14,7 +14,7 @@ async def get_date_day(date_object: date | datetime):
     return days[date_object.weekday()]
 
 
-async def get_date_month(date_object: date | datetime):
+def get_date_month(date_object: date | datetime):
     months = [
         "janvier",
         "février",
@@ -32,7 +32,7 @@ async def get_date_month(date_object: date | datetime):
     return months[date_object.month]
 
 
-async def get_previous_sunday(date_object: datetime):
+def get_previous_sunday(date_object: datetime):
     return (date_object - timedelta(days=(date_object.weekday() + 1))).replace(
         hour=11,
         minute=0,
