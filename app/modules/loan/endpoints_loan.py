@@ -10,7 +10,6 @@ from app.core import models_core
 from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
-from app.core.notification import cruds_notification
 from app.core.notification.schemas_notification import Message
 from app.dependencies import (
     get_db,
@@ -883,35 +882,17 @@ async def return_loan(
         returned_date=datetime.now(UTC),
     )
     try:
-        device_tokens = await cruds_notification.get_firebase_tokens_by_user_ids(
-            user_ids=[loan.borrower_id],
-            db=db,
+        message = Message(
+            context=f"loan-new-{loan.id}-end-notif",
+            is_visible=False,
+            title="",
+            content="",
+            expire_on=datetime.now(UTC) + timedelta(days=3),
         )
-        if (
-            await cruds_notification.get_messages_by_context_and_firebase_tokens(
-                context=f"loan-new-{loan.id}-end-notif",
-                firebase_tokens=device_tokens,
-                db=db,
-            )
-            != []
-        ):
-            await cruds_notification.remove_messages_by_context_and_firebase_device_tokens_list(
-                context=f"loan-new-{loan.id}-end-notif",
-                tokens=device_tokens,
-                db=db,
-            )
-        else:
-            message = Message(
-                context=f"loan-new-{loan.id}-end-notif",
-                is_visible=False,
-                title="",
-                content="",
-                expire_on=datetime.now(UTC) + timedelta(days=3),
-            )
-            await notification_tool.send_notification_to_user(
-                user_id=loan.borrower_id,
-                message=message,
-            )
+        await notification_tool.send_notification_to_user(
+            user_id=loan.borrower_id,
+            message=message,
+        )
     except Exception as error:
         hyperion_error_logger.error(
             f"Error while removing notification to borrower for his loan ending, {error}",
