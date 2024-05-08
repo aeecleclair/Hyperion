@@ -142,36 +142,6 @@ class NotificationManager:
         # See https://stackoverflow.com/questions/59298850/firebase-messaging-background-message-handler-method-not-called-when-the-app
         await self._send_firebase_push_notification_by_tokens(tokens=tokens, db=db)
 
-    async def subscribe_tokens_to_topic(
-        self,
-        custom_topic: CustomTopic,
-        tokens: list[str],
-    ):
-        """
-        Subscribe a list of tokens to a given topic.
-        """
-        if not self.use_firebase:
-            return
-
-        response = messaging.subscribe_to_topic(tokens, custom_topic.to_str())
-        if response.failure_count > 0:
-            hyperion_error_logger.info(
-                f"Notification: Failed to subscribe to topic {custom_topic} due to {[error.reason for error in response.errors]}",
-            )
-
-    async def unsubscribe_tokens_to_topic(
-        self,
-        custom_topic: CustomTopic,
-        tokens: list[str],
-    ):
-        """
-        Unsubscribe a list of tokens to a given topic.
-        """
-        if not self.use_firebase:
-            return
-
-        messaging.unsubscribe_from_topic(tokens, custom_topic.to_str())
-
     async def _add_message_for_user_in_database(
         self,
         message: Message,
@@ -245,6 +215,13 @@ class NotificationManager:
         message: Message,
         db: AsyncSession,
     ) -> None:
+        """
+        Send a notification to a given topic.
+        This utils will find all users related to the topic and send a firebase "trigger" notification to each of them.
+        This notification will prompt Titan to query the API to get the notification content.
+
+        The "trigger" notification will only be send if firebase is correctly configured.
+        """
         if not self.use_firebase:
             hyperion_error_logger.info(
                 "Firebase is disabled, not sending notification.",
@@ -268,24 +245,8 @@ class NotificationManager:
         db: AsyncSession,
     ) -> None:
         """
-        Subscribe a list of tokens to a given topic.
+        Subscribe a user to a given topic.
         """
-        # Get all firebase_device_token related to the user
-        firebase_devices = await cruds_notification.get_firebase_devices_by_user_id(
-            user_id=user_id,
-            db=db,
-        )
-
-        firebase_device_tokens = [
-            device.firebase_device_token for device in firebase_devices
-        ]
-
-        if len(firebase_device_tokens) > 0:
-            # Asking firebase to subscribe with an empty list of tokens will raise an error
-            await self.subscribe_tokens_to_topic(
-                tokens=firebase_device_tokens,
-                custom_topic=custom_topic,
-            )
 
         existing_topic_membership = (
             await cruds_notification.get_topic_membership_by_user_id_and_custom_topic(
@@ -313,25 +274,8 @@ class NotificationManager:
         db: AsyncSession,
     ) -> None:
         """
-        Subscribe a list of tokens to a given topic.
+        Unsubscribe a user to a given topic.
         """
-        # Get all firebase_device_token related to the user
-        firebase_devices = await cruds_notification.get_firebase_devices_by_user_id(
-            user_id=user_id,
-            db=db,
-        )
-
-        firebase_device_tokens = [
-            device.firebase_device_token for device in firebase_devices
-        ]
-
-        if len(firebase_device_tokens) > 0:
-            # Asking firebase to unsubscribe with an empty list of tokens will raise an error
-            await self.unsubscribe_tokens_to_topic(
-                tokens=firebase_device_tokens,
-                custom_topic=custom_topic,
-            )
-
         await cruds_notification.delete_topic_membership(
             custom_topic=custom_topic,
             user_id=user_id,
