@@ -280,7 +280,7 @@ async def create_booking(
         message = Message(
             context=f"booking-new-{id}",
             is_visible=True,
-            title="📅 Réservations - Nouvelle réservation ",
+            title="📅 Réservations - Nouvelle réservation",
             content=content,
             # The notification will expire in 3 days
             expire_on=datetime.now(UTC) + timedelta(days=3),
