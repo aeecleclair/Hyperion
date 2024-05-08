@@ -734,20 +734,6 @@ async def open_ordering_of_delivery(
         message=message,
     )
 
-    now = datetime.now(UTC)
-    message = Message(
-        context=f"amap-open-ordering-{delivery_id}",
-        is_visible=True,
-        title="🛒 AMAP - Nouvelle livraison disponible",
-        content="Viens commander !",
-        # The notification will expire in 3 days
-        expire_on=now.replace(day=now.day + 3),
-    )
-    await notification_tool.send_notification_to_topic(
-        custom_topic=CustomTopic(Topic.amap),
-        message=message,
-    )
-
 
 @module.router.post(
     "/amap/deliveries/{delivery_id}/lock",
