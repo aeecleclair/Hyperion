@@ -7,8 +7,6 @@ from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
-
-# from app.core.config import Settings
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
@@ -280,16 +278,17 @@ async def create_booking(
             db=db,
             user_id=result.applicant_id,
         )
+        local_start = result.start.astimezone(ZoneInfo("Europe/Paris"))
         if applicant_user:
             if applicant_user.nickname:
                 applicant_nickname = applicant_user.nickname
             else:
                 applicant_nickname = applicant_user.firstname
-            content = f"{applicant_nickname} - {result.room.name} {result.start.strftime('%m/%d/%Y, %H:%M')} - {result.reason}"
+            content = f"{applicant_nickname} - {result.room.name} {local_start.strftime('%m/%d/%Y, %H:%M')} - {result.reason}"
         else:
-            content = f"{result.room.name} {result.start.strftime('%m/%d/%Y, %H:%M')} - {result.reason}"
+            content = f"{result.room.name} {local_start.strftime('%m/%d/%Y, %H:%M')} - {result.reason}"
         # Setting time to Paris timezone in order to have the correct time in the notification
-        result.start = result.start.astimezone(ZoneInfo("Europe/Paris"))
+
         if manager_group:
             message = Message(
                 context=f"booking-new-{id}",
