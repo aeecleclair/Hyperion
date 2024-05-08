@@ -1,10 +1,13 @@
 import io
 import os
+import pathlib
 from pathlib import Path
 
+import fitz
 from fpdf import FPDF
 from fpdf.enums import TableCellFillMode, VAlign
 from fpdf.fonts import FontFace
+from jinja2 import Environment, FileSystemLoader
 from PIL import Image
 from pypdf import PdfReader, PdfWriter
 
@@ -362,3 +365,31 @@ class PDFWriter(FPDF):
             row = table.row()
             row.cell(key)
             row.cell(label)
+
+
+class HTMLPDFWriter:
+    def __init__(self):
+        self.html = ""
+
+    def write_participant_security_file(self, participant: Participant, team_number: int):
+        file_name = (
+            str(team_number) + "_" if team_number else ""
+        ) + f"{participant.name}_{participant.firstname}_fiche_securite.pdf"
+        environment = Environment(loader=FileSystemLoader("./templates"))
+        csspath = pathlib.Path("./templates/output.css")
+        results_template = environment.get_template("main.html")
+        context = {**participant.__dict__, "team_number": team_number}
+        html_content = results_template.render(context)
+        css_content = csspath.read_bytes().decode()
+        story = fitz.Story(html=html_content, user_css=css_content)
+        writer = fitz.DocumentWriter("data/raid/" + file_name)
+        mediabox = fitz.paper_rect("a4")
+        where = mediabox + (36, 36, -36, -36)
+
+        more = True
+        while more:
+            page = writer.begin_page(mediabox)
+            more, _ = story.place(where)
+            story.draw(page)
+            writer.end_page()
+        writer.close()
