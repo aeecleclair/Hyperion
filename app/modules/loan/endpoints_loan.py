@@ -623,8 +623,8 @@ async def create_loan(
             content=f"Un prêt a été enregistré pour l'association {loan.loaner.name}",
             expire_on=datetime.now(UTC) + timedelta(days=3),
         )
-        await notification_tool.send_notification_to_users(
-            user_ids=[loan.borrower_id],
+        await notification_tool.send_notification_to_user(
+            user_id=loan.borrower_id,
             message=message,
         )
     except Exception as error:
@@ -643,8 +643,8 @@ async def create_loan(
             expire_on=loan.end + timedelta(days=30),
         )
 
-        await notification_tool.send_notification_to_users(
-            user_ids=[loan.borrower_id],
+        await notification_tool.send_notification_to_user(
+            user_id=loan.borrower_id,
             message=message,
         )
 
@@ -908,8 +908,8 @@ async def return_loan(
                 content="",
                 expire_on=datetime.now(UTC) + timedelta(days=3),
             )
-            await notification_tool.send_notification_to_users(
-                user_ids=[loan.borrower_id],
+            await notification_tool.send_notification_to_user(
+                user_id=loan.borrower_id,
                 message=message,
             )
     except Exception as error:
@@ -978,8 +978,8 @@ async def extend_loan(
             expire_on=loan.end + timedelta(days=30),
         )
 
-        await notification_tool.send_notification_to_users(
-            user_ids=[loan.borrower_id],
+        await notification_tool.send_notification_to_user(
+            user_id=loan.borrower_id,
             message=message,
         )
     except Exception as error:

@@ -275,8 +275,8 @@ async def send_notification(
         # The notification will expire in 3 days
         expire_on=datetime.now(UTC) + timedelta(days=3),
     )
-    await notification_tool.send_notification_to_users(
-        user_ids=[user.id],
+    await notification_tool.send_notification_to_user(
+        user_id=user.id,
         message=message,
     )
 

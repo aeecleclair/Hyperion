@@ -321,3 +321,15 @@ class NotificationTool:
             message=message,
             db=self.db,
         )
+
+    async def send_notification_to_user(
+        self,
+        user_id: str,
+        message: Message,
+        db: AsyncSession,
+    ) -> None:
+        await self.send_notification_to_users(
+            user_ids=[user_id],
+            message=message,
+            db=db,
+        )
