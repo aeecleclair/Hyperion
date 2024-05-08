@@ -70,7 +70,7 @@ async def create_session(
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
     session_date = result.start
-    sunday = await get_previous_sunday(session_date)
+    sunday = get_previous_sunday(session_date)
     next_week_sessions = await cruds_cinema.get_sessions_in_time_frame(
         start_after=sunday,
         start_before=sunday + timedelta(days=7),
