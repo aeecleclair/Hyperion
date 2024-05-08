@@ -11,7 +11,6 @@ from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
 from app.core.notification.schemas_notification import Message
-from app.core.users import cruds_users
 from app.dependencies import (
     get_db,
     get_notification_tool,
