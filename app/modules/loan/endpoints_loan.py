@@ -638,7 +638,7 @@ async def create_loan(
             context=f"loan-new-{loan.id}-end-notif",
             is_visible=True,
             title="📦 Prêt arrivé à échéance",
-            content=f"N'oublie pas de rendre ton prêt à l'association {loan.loaner.name} ! ",
+            content=f"N'oublie pas de rendre ton prêt à l'association {loan.loaner.name} !",
             delivery_datetime=delivery_datetime,
             expire_on=loan.end + timedelta(days=30),
         )
