@@ -69,36 +69,31 @@ async def create_session(
         result = await cruds_cinema.create_session(session=db_session, db=db)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
-    try:
-        session_date = result.start
-        sunday = await get_previous_sunday(session_date)
-        next_week_sessions = await cruds_cinema.get_sessions_in_time_frame(
-            start_after=sunday,
-            start_before=sunday + timedelta(days=7),
-            db=db,
-        )
-        message_content = ""
-        for next_session in next_week_sessions:
-            message_content += f"{get_date_day(next_session.start)} {next_session.start.day} {get_date_month(next_session.start)} - {next_session.name}\n"
-        message = Message(
-            # We use sunday date as context to avoid sending the recap twice
-            context=f"cinema-recap-{sunday}",
-            is_visible=True,
-            title="🎬 Cinéma - Programme de la semaine",
-            content=message_content,
-            delivery_datetime=sunday + timedelta(days=7),
-            # The notification will expire the next sunday
-            expire_on=sunday + timedelta(days=14),
-        )
+    session_date = result.start
+    sunday = await get_previous_sunday(session_date)
+    next_week_sessions = await cruds_cinema.get_sessions_in_time_frame(
+        start_after=sunday,
+        start_before=sunday + timedelta(days=7),
+        db=db,
+    )
+    message_content = ""
+    for next_session in next_week_sessions:
+        message_content += f"{get_date_day(next_session.start)} {next_session.start.day} {get_date_month(next_session.start)} - {next_session.name}\n"
+    message = Message(
+        # We use sunday date as context to avoid sending the recap twice
+        context=f"cinema-recap-{sunday}",
+        is_visible=True,
+        title="🎬 Cinéma - Programme de la semaine",
+        content=message_content,
+        delivery_datetime=sunday + timedelta(days=7),
+        # The notification will expire the next sunday
+        expire_on=sunday + timedelta(days=14),
+    )
 
-        await notification_tool.send_notification_to_topic(
-            custom_topic=CustomTopic(topic=Topic.cinema),
-            message=message,
-        )
-    except Exception as error:
-        hyperion_error_logger.error(
-            f"Error while sending cinema recap notification, {error}",
-        )
+    await notification_tool.send_notification_to_topic(
+        custom_topic=CustomTopic(topic=Topic.cinema),
+        message=message,
+    )
     return result
 
 

@@ -267,46 +267,40 @@ async def create_booking(
     )
     await cruds_booking.create_booking(booking=db_booking, db=db)
     result = await cruds_booking.get_booking_by_id(db=db, booking_id=db_booking.id)
-    try:
-        manager_group_id = result.room.manager_id
-        manager_group = await cruds_groups.get_group_by_id(
-            db=db,
-            group_id=manager_group_id,
-        )
+    manager_group_id = result.room.manager_id
+    manager_group = await cruds_groups.get_group_by_id(
+        db=db,
+        group_id=manager_group_id,
+    )
 
-        applicant_user = await cruds_users.get_user_by_id(
-            db=db,
-            user_id=result.applicant_id,
-        )
-        local_start = result.start.astimezone(ZoneInfo("Europe/Paris"))
-        if applicant_user:
-            if applicant_user.nickname:
-                applicant_nickname = applicant_user.nickname
-            else:
-                applicant_nickname = applicant_user.firstname
-            content = f"{applicant_nickname} - {result.room.name} {local_start.strftime('%m/%d/%Y, %H:%M')} - {result.reason}"
+    applicant_user = await cruds_users.get_user_by_id(
+        db=db,
+        user_id=result.applicant_id,
+    )
+    local_start = result.start.astimezone(ZoneInfo("Europe/Paris"))
+    if applicant_user:
+        if applicant_user.nickname:
+            applicant_nickname = applicant_user.nickname
         else:
-            content = f"{result.room.name} {local_start.strftime('%m/%d/%Y, %H:%M')} - {result.reason}"
-        # Setting time to Paris timezone in order to have the correct time in the notification
+            applicant_nickname = applicant_user.firstname
+        content = f"{applicant_nickname} - {result.room.name} {local_start.strftime('%m/%d/%Y, %H:%M')} - {result.reason}"
+    else:
+        content = f"{result.room.name} {local_start.strftime('%m/%d/%Y, %H:%M')} - {result.reason}"
+    # Setting time to Paris timezone in order to have the correct time in the notification
 
-        if manager_group:
-            message = Message(
-                context=f"booking-new-{id}",
-                is_visible=True,
-                title="📅 Réservations - Nouvelle réservation ",
-                content=content,
-                # The notification will expire in 3 days
-                expire_on=datetime.now(UTC) + timedelta(days=3),
-            )
+    if manager_group:
+        message = Message(
+            context=f"booking-new-{id}",
+            is_visible=True,
+            title="📅 Réservations - Nouvelle réservation ",
+            content=content,
+            # The notification will expire in 3 days
+            expire_on=datetime.now(UTC) + timedelta(days=3),
+        )
 
-            await notification_tool.send_notification_to_users(
-                user_ids=[user.id for user in manager_group.members],
-                message=message,
-            )
-
-    except Exception as error:
-        hyperion_error_logger.error(
-            f"Error while sending BOOKING notification, {error}",
+        await notification_tool.send_notification_to_users(
+            user_ids=[user.id for user in manager_group.members],
+            message=message,
         )
 
     return result

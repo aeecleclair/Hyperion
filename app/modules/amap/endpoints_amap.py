@@ -720,40 +720,33 @@ async def open_ordering_of_delivery(
         )
 
     await cruds_amap.open_ordering_of_delivery(delivery_id=delivery_id, db=db)
-    try:
-        message = Message(
-            context=f"amap-open-ordering-{delivery_id}",
-            is_visible=True,
-            title="🛒 AMAP - Nouvelle livraison disponible",
-            content="Viens commander !",
-            # The notification will expire in 3 days
-            expire_on=datetime.now(UTC) + timedelta(days=3),
-        )
-        await notification_tool.send_notification_to_topic(
-            custom_topic=CustomTopic(Topic.amap),
-            message=message,
-        )
-    except Exception as error:
-        hyperion_error_logger.error(
-            f"Error while sending AMAP notification, {error}",
-        )
 
-    try:
-        now = datetime.now(UTC)
-        message = Message(
-            context=f"amap-open-ordering-{delivery_id}",
-            is_visible=True,
-            title="🛒 AMAP - Nouvelle livraison disponible",
-            content="Viens commander !",
-            # The notification will expire in 3 days
-            expire_on=now.replace(day=now.day + 3),
-        )
-        await notification_tool.send_notification_to_topic(
-            custom_topic=CustomTopic(Topic.amap),
-            message=message,
-        )
-    except Exception as error:
-        hyperion_error_logger.error(f"Error while sending AMAP notification, {error}")
+    message = Message(
+        context=f"amap-open-ordering-{delivery_id}",
+        is_visible=True,
+        title="🛒 AMAP - Nouvelle livraison disponible",
+        content="Viens commander !",
+        # The notification will expire in 3 days
+        expire_on=datetime.now(UTC) + timedelta(days=3),
+    )
+    await notification_tool.send_notification_to_topic(
+        custom_topic=CustomTopic(Topic.amap),
+        message=message,
+    )
+
+    now = datetime.now(UTC)
+    message = Message(
+        context=f"amap-open-ordering-{delivery_id}",
+        is_visible=True,
+        title="🛒 AMAP - Nouvelle livraison disponible",
+        content="Viens commander !",
+        # The notification will expire in 3 days
+        expire_on=now.replace(day=now.day + 3),
+    )
+    await notification_tool.send_notification_to_topic(
+        custom_topic=CustomTopic(Topic.amap),
+        message=message,
+    )
 
 
 @module.router.post(
@@ -926,23 +919,19 @@ async def create_cash_of_user(
         user_id=user_id,
         db=db,
     )
-    try:
-        message = Message(
-            context=f"amap-cash-{user_id}",
-            is_visible=True,
-            title="AMAP - Solde mis à jour",
-            content=f"Votre nouveau solde est de {cash} €.",
-            # The notification will expire in 3 days
-            expire_on=datetime.now(UTC) + timedelta(days=3),
-        )
-        await notification_tool.send_notification_to_user(
-            user_id=user_id,
-            message=message,
-        )
-    except Exception as error:
-        hyperion_error_logger.error(
-            f"Error while sending AMAP notification, {error}",
-        )
+
+    message = Message(
+        context=f"amap-cash-{user_id}",
+        is_visible=True,
+        title="AMAP - Solde mis à jour",
+        content=f"Votre nouveau solde est de {cash} €.",
+        # The notification will expire in 3 days
+        expire_on=datetime.now(UTC) + timedelta(days=3),
+    )
+    await notification_tool.send_notification_to_user(
+        user_id=user_id,
+        message=message,
+    )
 
     return result
 

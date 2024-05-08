@@ -614,43 +614,34 @@ async def create_loan(
                 quantity=itemret.quantity,
             ),
         )
-    try:
-        message = Message(
-            context=f"loan-new-{loan.id}-begin-notif",
-            is_visible=True,
-            title="📦 Nouveau prêt",
-            content=f"Un prêt a été enregistré pour l'association {loan.loaner.name}",
-            expire_on=datetime.now(UTC) + timedelta(days=3),
-        )
-        await notification_tool.send_notification_to_user(
-            user_id=loan.borrower_id,
-            message=message,
-        )
-    except Exception as error:
-        hyperion_error_logger.error(
-            f"Error while sending notification to borrower of a new loan, {error}",
-        )
-    try:
-        delivery_time = time(11, 00, 00)
-        delivery_datetime = datetime.combine(loan.end, delivery_time)
-        message = Message(
-            context=f"loan-new-{loan.id}-end-notif",
-            is_visible=True,
-            title="📦 Prêt arrivé à échéance",
-            content=f"N'oublie pas de rendre ton prêt à l'association {loan.loaner.name} !",
-            delivery_datetime=delivery_datetime,
-            expire_on=loan.end + timedelta(days=30),
-        )
+    message = Message(
+        context=f"loan-new-{loan.id}-begin-notif",
+        is_visible=True,
+        title="📦 Nouveau prêt",
+        content=f"Un prêt a été enregistré pour l'association {loan.loaner.name}",
+        expire_on=datetime.now(UTC) + timedelta(days=3),
+    )
+    await notification_tool.send_notification_to_user(
+        user_id=loan.borrower_id,
+        message=message,
+    )
 
-        await notification_tool.send_notification_to_user(
-            user_id=loan.borrower_id,
-            message=message,
-        )
+    delivery_time = time(11, 00, 00)
+    delivery_datetime = datetime.combine(loan.end, delivery_time)
+    message = Message(
+        context=f"loan-new-{loan.id}-end-notif",
+        is_visible=True,
+        title="📦 Prêt arrivé à échéance",
+        content=f"N'oublie pas de rendre ton prêt à l'association {loan.loaner.name} !",
+        delivery_datetime=delivery_datetime,
+        expire_on=loan.end + timedelta(days=30),
+    )
 
-    except Exception as error:
-        hyperion_error_logger.error(
-            f"Error while sending notification to borrower for his loan ending, {error}",
-        )
+    await notification_tool.send_notification_to_user(
+        user_id=loan.borrower_id,
+        message=message,
+    )
+
     return schemas_loan.Loan(items_qty=items_qty_ret, **loan.__dict__)
 
 
@@ -881,22 +872,18 @@ async def return_loan(
         returned=True,
         returned_date=datetime.now(UTC),
     )
-    try:
-        message = Message(
-            context=f"loan-new-{loan.id}-end-notif",
-            is_visible=False,
-            title="",
-            content="",
-            expire_on=datetime.now(UTC) + timedelta(days=3),
-        )
-        await notification_tool.send_notification_to_user(
-            user_id=loan.borrower_id,
-            message=message,
-        )
-    except Exception as error:
-        hyperion_error_logger.error(
-            f"Error while removing notification to borrower for his loan ending, {error}",
-        )
+
+    message = Message(
+        context=f"loan-new-{loan.id}-end-notif",
+        is_visible=False,
+        title="",
+        content="",
+        expire_on=datetime.now(UTC) + timedelta(days=3),
+    )
+    await notification_tool.send_notification_to_user(
+        user_id=loan.borrower_id,
+        message=message,
+    )
 
 
 @module.router.post(
@@ -948,22 +935,17 @@ async def extend_loan(
         loan_update=loan_update,
         db=db,
     )
-    try:
-        # same context so the first notification will be removed
-        message = Message(
-            context=f"loan-new-{loan.id}-end-notif",
-            is_visible=True,
-            title="📦 Prêt arrivé à échéance",
-            content=f"N'oublie pas de rendre ton prêt à l'association {loan.loaner.name} ! ",
-            delivery_datetime=loan.end,
-            expire_on=loan.end + timedelta(days=30),
-        )
+    # same context so the first notification will be removed
+    message = Message(
+        context=f"loan-new-{loan.id}-end-notif",
+        is_visible=True,
+        title="📦 Prêt arrivé à échéance",
+        content=f"N'oublie pas de rendre ton prêt à l'association {loan.loaner.name} ! ",
+        delivery_datetime=loan.end,
+        expire_on=loan.end + timedelta(days=30),
+    )
 
-        await notification_tool.send_notification_to_user(
-            user_id=loan.borrower_id,
-            message=message,
-        )
-    except Exception as error:
-        hyperion_error_logger.error(
-            f"Error while sending notification to borrower for his loan ending, {error}",
-        )
+    await notification_tool.send_notification_to_user(
+        user_id=loan.borrower_id,
+        message=message,
+    )
