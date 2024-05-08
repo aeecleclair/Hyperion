@@ -78,7 +78,7 @@ async def create_session(
     )
     message_content = ""
     for next_session in next_week_sessions:
-        message_content += f"{get_date_day(next_session.start)} {next_session.start.day} {get_date_month(next_session.start)} - {next_session.name}\n"
+        message_content += f"{await get_date_day(next_session.start)} {next_session.start.day} {await get_date_month(next_session.start)} - {next_session.name}\n"
     message = Message(
         # We use sunday date as context to avoid sending the recap twice
         context=f"cinema-recap-{sunday}",
