@@ -426,21 +426,17 @@ async def update_membership(
                 detail="You are not allowed to update a membership with the role of president",
             )
 
-    membership_edit = schemas_phonebook.MembershipEdit(
-        **updated_membership.model_dump(),
-    )
-
     if updated_membership.order is not None:
         await cruds_phonebook.update_order_of_memberships(
+            db,
             old_membership.association_id,
             old_membership.mandate_year,
             old_membership.order,
             updated_membership.order,
-            db,
         )
 
     # We update the membership after updating the order to avoid conflicts
-    await cruds_phonebook.update_membership(membership_edit, membership_id, db)
+    await cruds_phonebook.update_membership(updated_membership, membership_id, db)
 
 
 @module.router.delete(
@@ -481,20 +477,11 @@ async def delete_membership(
             detail=f"You are not allowed to delete membership for association {membership.association_id}",
         )
 
-    association_memberships = (
-        await cruds_phonebook.get_memberships_by_association_id_and_mandate_year(
-            association_id=membership.association_id,
-            mandate_year=membership.mandate_year,
-            db=db,
-        )
-    )
-
     await cruds_phonebook.update_order_of_memberships(
+        db,
         membership.association_id,
         membership.mandate_year,
         membership.order,
-        len(association_memberships) - 1,
-        db,
     )
 
     await cruds_phonebook.delete_membership(membership_id, db)

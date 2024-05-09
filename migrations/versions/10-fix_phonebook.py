@@ -37,6 +37,9 @@ class RoleTags(Enum):
 
 
 def define_order_of_memberships(memberships) -> list[list]:
+    """
+    Use tag systeme to introduce a coherent order to older membership
+    """
     order = [tag.value for tag in RoleTags]
     order.append("Default")
     memberships2 = []
