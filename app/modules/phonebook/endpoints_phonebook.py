@@ -325,6 +325,18 @@ async def create_membership(
             detail=f"You are not allowed to create a new membership for association {membership.association_id}",
         )
 
+    if membership.role_tags is not None:
+        if RoleTags.president in membership.role_tags.split(
+            ";",
+        ) and not is_user_member_of_an_allowed_group(
+            user=user,
+            allowed_groups=[GroupType.CAA, GroupType.BDE],
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="You are not allowed to update a membership with the role of president",
+            )
+
     association = await cruds_phonebook.get_association_by_id(
         membership.association_id,
         db,
