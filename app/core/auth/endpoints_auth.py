@@ -38,7 +38,7 @@ from app.dependencies import (
 )
 from app.types.scopes_type import ScopeType
 from app.utils.auth.providers import BaseAuthClient
-from app.utils.tools import is_user_member_of_an_allowed_group
+from app.utils.tools import is_user_external, is_user_member_of_an_allowed_group
 
 router = APIRouter(tags=["Auth"])
 
@@ -79,7 +79,7 @@ async def login_for_access_token(
         )
     # We put the user id in the subject field of the token.
     # The subject `sub` is a JWT registered claim name, see https://datatracker.ietf.org/doc/html/rfc7519#section-4.1
-    data = schemas_auth.TokenData(sub=user.id, scopes=ScopeType.API)
+    data = schemas_auth.TokenData(sub=user.id, scopes=ScopeType.auth)
     access_token = create_access_token(settings=settings, data=data)
     return {"access_token": access_token, "token_type": "bearer"}
 
@@ -330,6 +330,16 @@ async def authorize_validation(
             # TODO We should show an HTML page explaining the issue
             hyperion_access_logger.warning(
                 f"Authorize-validation: user is not member of an allowed group {authorizereq.email} ({request_id})",
+            )
+            url = redirect_uri + "?error=" + "consent_required"
+            if authorizereq.state:
+                url += "&state=" + authorizereq.state
+            return RedirectResponse(url, status_code=status.HTTP_302_FOUND)
+    if auth_client.allow_external_users:
+        if is_user_external(user):
+            # TODO We should show an HTML page explaining the issue
+            hyperion_access_logger.warning(
+                f"Authorize-validation: external users are disabled for this auth provider {authorizereq.email} ({request_id})",
             )
             url = redirect_uri + "?error=" + "consent_required"
             if authorizereq.state:

@@ -28,7 +28,9 @@ token_simple: str = ""
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects():
     global calendar_user_bde
-    calendar_user_bde = await create_user_with_groups([GroupType.BDE])
+    calendar_user_bde = await create_user_with_groups(
+        [GroupType.student, GroupType.BDE],
+    )
 
     global token_bde
     token_bde = create_api_access_token(calendar_user_bde)

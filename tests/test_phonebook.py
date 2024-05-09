@@ -35,7 +35,9 @@ token_simple: str = ""
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects():
     global phonebook_user_BDE
-    phonebook_user_BDE = await create_user_with_groups([GroupType.BDE])
+    phonebook_user_BDE = await create_user_with_groups(
+        [GroupType.student, GroupType.BDE],
+    )
 
     global token_BDE
     token_BDE = create_api_access_token(phonebook_user_BDE)

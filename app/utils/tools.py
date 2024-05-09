@@ -51,6 +51,15 @@ def is_user_member_of_an_allowed_group(
     return False
 
 
+def is_user_external(
+    user: CoreUser,
+):
+    """
+    Users that are not members won't be able to use all features
+    """
+    return user.external is True
+
+
 def fuzzy_search_user(
     query: str,
     users: Sequence[models_core.CoreUser],

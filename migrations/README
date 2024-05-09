@@ -1,1 +1,6 @@
 Generic single-database configuration with an async dbapi.
+
+### Server default
+
+**Boolean**
+You need to use `server_default=sa.sql.false()`, otherwise the default value will be set to a string "false".

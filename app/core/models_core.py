@@ -2,7 +2,7 @@
 
 from datetime import date, datetime
 
-from sqlalchemy import Date, Enum, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Date, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.types.floors_type import FloorsType
@@ -35,8 +35,15 @@ class CoreUser(Base):
     birthday: Mapped[date | None] = mapped_column(Date)
     promo: Mapped[int | None] = mapped_column(Integer)
     phone: Mapped[str | None] = mapped_column(String)
-    floor: Mapped[FloorsType] = mapped_column(Enum(FloorsType), nullable=False)
+    floor: Mapped[FloorsType | None] = mapped_column(Enum(FloorsType))
     created_on: Mapped[datetime | None] = mapped_column(TZDateTime)
+
+    # Users that are externals (not members) won't be able to use all features
+    # These, self registered, external users may exist for:
+    # - accounts meant to be used by external services based on Hyperion SSO or Hyperion backend
+    # - new users that need to do additional steps before being able to all features,
+    #   like using a specific email address, going through an inscription process or being manually validated
+    external: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     # We use list["CoreGroup"] with quotes as CoreGroup is only defined after this class
     # Defining CoreUser after CoreGroup would cause a similar issue
@@ -60,6 +67,7 @@ class CoreUserUnconfirmed(Base):
     activation_token: Mapped[str] = mapped_column(String, nullable=False)
     created_on: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
     expire_on: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
+    external: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
 
 class CoreUserRecoverRequest(Base):

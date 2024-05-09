@@ -67,7 +67,7 @@ class CoreUser(CoreUserSimple):
     email: str
     birthday: date | None = None
     promo: int | None = None
-    floor: FloorsType
+    floor: FloorsType | None = None
     phone: str | None = None
     created_on: datetime | None = None
     groups: list[CoreGroupSimple] = []
@@ -95,6 +95,7 @@ class CoreUserUpdateAdmin(BaseModel):
     birthday: date | None = None
     phone: str | None = None
     floor: FloorsType | None = None
+    external: bool | None = None
 
     _normalize_name = field_validator("name")(validators.trailing_spaces_remover)
     _normalize_firstname = field_validator("firstname")(
@@ -112,6 +113,10 @@ class CoreUserCreateRequest(BaseModel):
     """
 
     email: str
+    accept_external: bool = Field(
+        False,
+        description="Allow Hyperion to create an external user. Without this, Hyperion will only allow non external students to be created. The email address will be used to determine if the user should be external or not. An external user may not have an ECL email address, he won't be able to access most features.",
+    )
 
     # Email normalization, this will modify the email variable
     # https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
@@ -129,6 +134,7 @@ class CoreBatchUserCreateRequest(BaseModel):
 
     email: str
     account_type: AccountType
+    external: bool = False
 
     # Email normalization, this will modify the email variable
     # https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
@@ -144,7 +150,7 @@ class CoreUserActivateRequest(CoreUserBase):
     password: str
     birthday: date | None = None
     phone: str | None = None
-    floor: FloorsType
+    floor: FloorsType | None = None
     promo: int | None = Field(
         default=None,
         description="Promotion of the student, an integer like 21",
