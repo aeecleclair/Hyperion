@@ -1,8 +1,9 @@
 from datetime import UTC, datetime
 
+from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from app.main import app
-from app.modules.flap import models_core, models_flappybird
+from app.modules.flap import models_flappybird
 from tests.commons import (
     TestingSessionLocal,
     client,

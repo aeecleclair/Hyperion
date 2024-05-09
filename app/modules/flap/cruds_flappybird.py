@@ -35,7 +35,7 @@ async def get_flappybird_score_leaderboard(
         .offset(skip)
         .limit(limit),
     )
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 async def get_flappybird_score_by_user_id(
@@ -49,7 +49,7 @@ async def get_flappybird_score_by_user_id(
             models_flappybird.FlappyBirdScore.user_id == user_id,
         ),
     )
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 async def get_flappybird_pb_by_user_id(
