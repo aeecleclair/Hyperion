@@ -9,6 +9,7 @@ from app.core.groups.groups_type import GroupType
 from app.core.users import cruds_users
 from app.dependencies import get_db, get_request_id, is_user_an_ecl_member
 from app.modules.phonebook import cruds_phonebook, models_phonebook, schemas_phonebook
+from app.modules.phonebook.types_phonebook import RoleTags
 from app.types.content_type import ContentType
 from app.types.module import Module
 from app.utils.tools import (
@@ -400,6 +401,18 @@ async def update_membership(
             status_code=403,
             detail=f"You are not allowed to update membership for association {old_membership.association_id}",
         )
+
+    if updated_membership.role_tags is not None:
+        if RoleTags.president in updated_membership.role_tags.split(
+            ";",
+        ) and not is_user_member_of_an_allowed_group(
+            user=user,
+            allowed_groups=[GroupType.CAA, GroupType.BDE],
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="You are not allowed to update a membership with the role of president",
+            )
 
     membership_edit = schemas_phonebook.MembershipEdit(
         **updated_membership.model_dump(),
