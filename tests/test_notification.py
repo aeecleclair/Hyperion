@@ -72,7 +72,7 @@ def test_register_second_firebase_device():
 
 def test_unregister_firebase_device():
     response = client.delete(
-        "/notification/devices/" + FIREBASE_TOKEN_2,
+        f"/notification/devices/{FIREBASE_TOKEN_2}",
         headers={
             "Authorization": f"Bearer {admin_user_token}",
         },
@@ -95,28 +95,28 @@ def test_get_devices():
 
 def test_get_messages():
     response = client.get(
-        "/notification/messages/" + FIREBASE_TOKEN_1,
+        f"/notification/messages/{FIREBASE_TOKEN_1}",
     )
     assert response.status_code == 200
 
 
 def test_subscribe_to_topic():
     response = client.post(
-        "/notification/topics/" + TOPIC_1 + "/subscribe",
+        f"/notification/topics/{TOPIC_1}/subscribe",
         headers={
             "Authorization": f"Bearer {admin_user_token}",
         },
     )
     assert response.status_code == 204
     response = client.post(
-        "/notification/topics/" + TOPIC_2 + "/subscribe",
+        f"/notification/topics/{TOPIC_2}/subscribe",
         headers={
             "Authorization": f"Bearer {admin_user_token}",
         },
     )
     assert response.status_code == 204
     response = client.post(
-        "/notification/topics/" + TOPIC_3 + "/subscribe",
+        f"/notification/topics/{TOPIC_3}/subscribe",
         headers={
             "Authorization": f"Bearer {admin_user_token}",
         },
@@ -126,7 +126,7 @@ def test_subscribe_to_topic():
 
 def test_un_subscribe_to_topic():
     response = client.post(
-        "/notification/topics/" + TOPIC_3 + "/unsubscribe",
+        f"/notification/topics/{TOPIC_3}/unsubscribe",
         headers={
             "Authorization": f"Bearer {admin_user_token}",
         },
@@ -136,7 +136,7 @@ def test_un_subscribe_to_topic():
 
 def test_un_subscribe_to_topic_the_user_is_not_subscribed_to():
     response = client.post(
-        "/notification/topics/" + TOPIC_4 + "/unsubscribe",
+        f"/notification/topics/{TOPIC_4}/unsubscribe",
         headers={
             "Authorization": f"Bearer {admin_user_token}",
         },
@@ -157,7 +157,7 @@ def test_get_topic():
 
 def test_get_topic_identifier():
     response = client.get(
-        "/notification/topics/" + TOPIC_1,
+        f"/notification/topics/{TOPIC_1}",
         headers={
             "Authorization": f"Bearer {admin_user_token}",
         },
