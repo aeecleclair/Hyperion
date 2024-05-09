@@ -172,17 +172,29 @@ async def update_membership(
         raise
 
 
-async def async def shift_order_of_memberships(
+async def update_order_of_memberships(
+    db: AsyncSession,
     association_id: str,
     mandate_year: int,
     old_order: int,
-    new_order: int,
-    db: AsyncSession,
+    new_order: int | None = None,
 ):
     """
     Shift the order of Memberships between `old_order` and `new_order`. This crud should be used to keep orders coherent when inserting, moving or removing a membership.
     The cruds won't update the membership that was at the `old_order`, you must call an other crud to update, or remove it to prevent order collisions. This cruds should be called first."""
-    if old_order > new_order:
+    
+    if new_order is None:
+        await db.execute(
+            update(models_phonebook.Membership)
+            .where(
+                models_phonebook.Membership.association_id == association_id,
+                models_phonebook.Membership.mandate_year == mandate_year,
+                models_phonebook.Membership.order > old_order,
+            )
+            .values(order=models_phonebook.Membership.order - 1),
+        )
+
+    elif old_order > new_order:
         await db.execute(
             update(models_phonebook.Membership)
             .where(
