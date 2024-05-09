@@ -27,7 +27,10 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
-        op.f("ix_flappy-bird_score_id"), "flappy-bird_score", ["id"], unique=False,
+        op.f("ix_flappy-bird_score_id"),
+        "flappy-bird_score",
+        ["id"],
+        unique=False,
     )
     # ### end Alembic commands ###
 

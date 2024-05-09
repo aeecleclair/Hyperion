@@ -13,7 +13,9 @@ class FlappyBirdScore(Base):
     id: Mapped[str] = mapped_column(String, primary_key=True, index=True)
 
     user_id: Mapped[str] = mapped_column(
-        String, ForeignKey("core_user.id"), nullable=False,
+        String,
+        ForeignKey("core_user.id"),
+        nullable=False,
     )
     user: Mapped[CoreUser] = relationship("CoreUser")
     value: Mapped[int] = mapped_column(Integer, nullable=False)
