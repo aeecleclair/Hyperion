@@ -1,4 +1,4 @@
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -12,8 +12,24 @@ async def get_flappybird_score_leaderboard(
     limit: int,
 ) -> list[models_flappybird.FlappyBirdScore]:
     """Return the flappybird leaderboard scores from postion skip to skip+limit"""
+    subquery = (
+        select(
+            func.max(models_flappybird.FlappyBirdScore.value).label("max_score"),
+            models_flappybird.FlappyBirdScore.user_id,
+        )
+        .group_by(models_flappybird.FlappyBirdScore.user_id)
+        .alias("subquery")
+    )
+
     result = await db.execute(
         select(models_flappybird.FlappyBirdScore)
+        .join(
+            subquery,
+            and_(
+                models_flappybird.FlappyBirdScore.user_id == subquery.c.user_id,
+                models_flappybird.FlappyBirdScore.value == subquery.c.max_score,
+            ),
+        )
         .options(selectinload(models_flappybird.FlappyBirdScore.user))
         .order_by(models_flappybird.FlappyBirdScore.value.desc())
         .offset(skip)
