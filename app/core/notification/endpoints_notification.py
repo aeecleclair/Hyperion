@@ -281,6 +281,34 @@ async def send_notification(
     )
 
 
+@router.post(
+    "/notification/send/future",
+    status_code=201,
+)
+async def send_future_notification(
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    notification_tool: NotificationTool = Depends(get_notification_tool),
+):
+    """
+    Send ourself a test notification.
+
+    **Only admins can use this endpoint**
+    """
+    message = schemas_notification.Message(
+        context="future-notification-test",
+        is_visible=True,
+        title="Test notification",
+        content="Ceci est un test de notification",
+        # The notification will expire in 3 days
+        expire_on=datetime.now(UTC) + timedelta(days=3),
+        delivery_datetime=datetime.now(UTC) + timedelta(minutes=3),
+    )
+    await notification_tool.send_notification_to_user(
+        user_id=user.id,
+        message=message,
+    )
+
+
 @router.get(
     "/notification/devices",
     status_code=200,
