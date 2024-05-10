@@ -38,7 +38,7 @@ async def get_flappybird_score(
 @module.router.get(
     "/flappybird/leaderboard/me",
     status_code=200,
-    response_model=schemas_flappybird.FlappyBirdScoreCompleteFeedBack | None,
+    response_model=schemas_flappybird.FlappyBirdScoreCompleteFeedBack,
 )
 async def get_current_user_flappybird_personal_best(
     db: AsyncSession = Depends(get_db),
@@ -51,21 +51,29 @@ async def get_current_user_flappybird_personal_best(
         )
     )
 
-    if user_personal_best_table is not None:
-        position = await cruds_flappybird.get_flappybird_score_position(
-            db=db,
-            score=user_personal_best_table,
+    if user_personal_best_table is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Not found",
         )
-        if position is not None:
-            user_personal_best = schemas_flappybird.FlappyBirdScoreCompleteFeedBack(
-                value=user_personal_best_table.value,
-                user=user_personal_best_table.user,
-                creation_time=user_personal_best_table.creation_time,
-                position=position,
-            )
 
-            return user_personal_best
-    return None
+    position = await cruds_flappybird.get_flappybird_score_position(
+        db=db,
+        score=user_personal_best_table,
+    )
+    if position is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Not found",
+        )
+    user_personal_best = schemas_flappybird.FlappyBirdScoreCompleteFeedBack(
+        value=user_personal_best_table.value,
+        user=user_personal_best_table.user,
+        creation_time=user_personal_best_table.creation_time,
+        position=position,
+    )
+
+    return user_personal_best
 
 
 @module.router.post(
