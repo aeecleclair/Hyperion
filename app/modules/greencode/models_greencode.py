@@ -20,17 +20,14 @@ class Item(Base):
 
 
 class Membership(Base):
-    __tablename__ = "greencode_items"
+    __tablename__ = "greencode_memberships"
 
     id: Mapped[str] = mapped_column(String, primary_key=True, nullable=False)
     item_id: Mapped[str] = mapped_column(
         ForeignKey("greencode_items.id"),
         primary_key=True,
     )
-    user_id: Mapped[str] = mapped_column(
-        ForeignKey("coreuser.id"),
-        primary_key=True,
-    )
+    user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), primary_key=True)
     user: Mapped[CoreUser] = relationship(
         "CoreUser",
         lazy="joined",
