@@ -104,7 +104,7 @@ async def create_flappybird_score(
         id=score_id,
         user_id=user.id,
         value=flappybird_score.value,
-        creation_time=creation_time.replace(tzinfo=None),
+        creation_time=creation_time,
         # We add all informations contained in the schema
     )
     try:
