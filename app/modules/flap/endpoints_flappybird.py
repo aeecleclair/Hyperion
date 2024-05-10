@@ -40,29 +40,31 @@ async def get_flappybird_score(
     status_code=200,
     response_model=schemas_flappybird.FlappyBirdScoreCompleteFeedBack | None,
 )
-async def get_current_user_flappybird_pb(
+async def get_current_user_flappybird_personal_best(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    user_pb_table = await cruds_flappybird.get_flappybird_pb_by_user_id(
-        db=db,
-        user_id=user.id,
+    user_personal_best_table = (
+        await cruds_flappybird.get_flappybird_personal_best_by_user_id(
+            db=db,
+            user_id=user.id,
+        )
     )
 
-    if user_pb_table is not None:
+    if user_personal_best_table is not None:
         position = await cruds_flappybird.get_flappybird_score_position(
             db=db,
-            score=user_pb_table,
+            score=user_personal_best_table,
         )
         if position is not None:
-            user_pb = schemas_flappybird.FlappyBirdScoreCompleteFeedBack(
-                value=user_pb_table.value,
-                user=user_pb_table.user,
-                creation_time=user_pb_table.creation_time,
+            user_personal_best = schemas_flappybird.FlappyBirdScoreCompleteFeedBack(
+                value=user_personal_best_table.value,
+                user=user_personal_best_table.user,
+                creation_time=user_personal_best_table.creation_time,
                 position=position,
             )
 
-            return user_pb
+            return user_personal_best
     return None
 
 

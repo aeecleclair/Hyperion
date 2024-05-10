@@ -42,19 +42,19 @@ async def get_flappybird_score_leaderboard(
     return list(result.scalars().all())
 
 
-async def get_flappybird_pb_by_user_id(
+async def get_flappybird_personal_best_by_user_id(
     db: AsyncSession,
     user_id: str,
 ) -> models_flappybird.FlappyBirdScore | None:
     """Return the flappybird PB in the leaderboard by user_id"""
 
-    pb_result = await db.execute(
+    personal_best_result = await db.execute(
         select(models_flappybird.FlappyBirdScore)
         .where(models_flappybird.FlappyBirdScore.user_id == user_id)
         .order_by(models_flappybird.FlappyBirdScore.value.desc())
         .limit(1),
     )
-    return pb_result.scalar()
+    return personal_best_result.scalar()
 
 
 async def get_flappybird_score_position(
