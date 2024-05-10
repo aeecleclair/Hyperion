@@ -102,7 +102,7 @@ check_untyped_defs = true
 
 
 [[tool.mypy.overrides]]
-module = ["firebase_admin", "icalendar"]
+module = ["firebase_admin", "icalendar", "fitz"]
 ignore_missing_imports = true
 
 
