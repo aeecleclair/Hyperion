@@ -91,7 +91,7 @@ async def create_flappybird_score(
     # To add it to the database, we need to create a model
 
     # We need to generate a new UUID for the score
-    score_id = str(uuid.uuid4())
+    score_id = uuid.uuid4()
     # And get the current date and time
     creation_time = datetime.now(UTC)
 

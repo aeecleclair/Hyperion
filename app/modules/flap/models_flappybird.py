@@ -10,8 +10,8 @@ from app.types.sqlalchemy import Base, PrimaryKey
 class FlappyBirdScore(Base):
     __tablename__ = "flappy-bird_score"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, index=True)
-
+    # id: Mapped[str] = mapped_column(String, primary_key=True, index=True)
+    id: Mapped[PrimaryKey]
     user_id: Mapped[str] = mapped_column(
         String,
         ForeignKey("core_user.id"),

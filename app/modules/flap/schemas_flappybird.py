@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime
 
 from pydantic import BaseModel
@@ -15,7 +16,7 @@ class FlappyBirdScore(FlappyBirdScoreBase):
 
 
 class FlappyBirdScoreInDB(FlappyBirdScore):
-    id: str
+    id: uuid.UUID
     user_id: str
 
 
