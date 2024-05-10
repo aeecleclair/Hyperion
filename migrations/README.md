@@ -19,6 +19,13 @@ alembic upgrade head
 > ```bash
 > alembic stamp head
 > ```
+>
+> If the database stamp is a migration that does not exist anymore, you can use the following command to
+> force Alembic to consider your database structure is up to date
+>
+> ```bash
+> alembic stamp --purge head
+> ```
 
 ### Write migration files
 
@@ -57,4 +64,4 @@ with op.batch_alter_table("table_name") as batch_op:
 ### Server default
 
 **Boolean**
-You need to use `server_default=sa.sql.false()`, otherwise the default value will be set to a string "false".
+You need to use `server_default=sa.sql.false()`
