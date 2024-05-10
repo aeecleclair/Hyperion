@@ -108,4 +108,4 @@ async def create_flappybird_score(
             db=db,
         )
     except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+        raise HTTPException(status_code=400, detail=str(error))
