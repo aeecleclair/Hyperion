@@ -23,9 +23,6 @@ async def init_objects():
     global user
     user = await create_user_with_groups([GroupType.student])
 
-    global user_id
-    user_id = "2e10a287-5e5d-4151-bfa5-bcfffa325433"
-
     global token
     token = create_api_access_token(user=user)
 
