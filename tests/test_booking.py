@@ -22,7 +22,7 @@ room_to_delete: models_booking.Room
 manager: models_booking.Manager
 manager_to_delete: models_booking.Manager
 admin_user: models_core.CoreUser
-manager_user: models_booking.CoreUser
+manager_user: models_core.CoreUser
 simple_user: models_core.CoreUser
 
 token_admin: str
