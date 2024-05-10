@@ -99,9 +99,18 @@ warn_redundant_casts = true
 warn_unused_ignores = true
 strict_equality = true
 check_untyped_defs = true
+disallow_subclassing_any = true
+disallow_untyped_decorators = true
+#disallow_any_generics = true
+#disallow_untyped_calls = true
 no_implicit_reexport = true
 warn_return_any = true
-
+# We currently don't type the return type of endpoints so we can not enable the two following rules
+# disallow_incomplete_defs = true
+# disallow_untyped_defs = true
+explicit_package_bases = true
+warn_no_return = true
+strict = true
 
 [[tool.mypy.overrides]]
 module = ["firebase_admin", "icalendar", "fitz"]

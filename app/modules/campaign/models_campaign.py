@@ -1,3 +1,5 @@
+from typing import Any
+
 from sqlalchemy import Enum, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -43,7 +45,7 @@ class Lists(Base):
     )
     program: Mapped[str | None] = mapped_column(String)
 
-    def as_dict(self):
+    def as_dict(self) -> dict[str, Any]:
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 
