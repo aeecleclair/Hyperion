@@ -4,7 +4,7 @@ import uuid
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core
+from app.core import models_core, schemas_core
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
 from app.core.users import cruds_users
@@ -39,7 +39,15 @@ async def get_items(
     **The user must be from greencode group to use this endpoint**
     """
 
-    return await cruds_greencode.get_items(db=db)
+    items = await cruds_greencode.get_items(db=db)
+    result: list[schemas_greencode.ItemAdmin] = []
+    for item in items:
+        users = [
+            schemas_core.CoreUserSimple(**membership.user.__dict__)
+            for membership in item.memberships
+        ]
+        result.append(schemas_greencode.ItemAdmin(users=users, **item.__dict__))
+    return result
 
 
 @module.router.get(
@@ -54,13 +62,12 @@ async def get_user_items(
     """
     Get current user's Items.
     """
-
     return await cruds_greencode.get_user_items(user_id=user.id, db=db)
 
 
 @module.router.get(
     "/greencode/{qr_code_content}",
-    response_model=list[schemas_greencode.ItemComplete],
+    response_model=schemas_greencode.ItemComplete,
     status_code=200,
 )
 async def get_item_by_qr_code(
@@ -100,7 +107,7 @@ async def create_item(
     **The user must be from greencode group to use this endpoint**
     """
 
-    db_item = models_greencode.Item(
+    db_item = models_greencode.GreenCodeItem(
         id=str(uuid.uuid4()),
         **item.model_dump(),
     )
@@ -168,8 +175,8 @@ async def update_advertiser(
 
 
 @module.router.get(
-    "/greencode/completion",
-    response_model=list[schemas_greencode.ItemComplete],
+    "/greencode/completion/all",
+    response_model=list[schemas_greencode.Completion],
     status_code=200,
 )
 async def get_completions(
@@ -185,22 +192,55 @@ async def get_completions(
     """
 
     total_count = await cruds_greencode.get_items_count(db=db)
-    user_count_tuples = await cruds_greencode.get_items_count_for_users(db=db)
+    greencode_users = await cruds_greencode.get_greencode_users(db=db)
 
     completions = [
         schemas_greencode.Completion(
             user=schemas_greencode.CoreUserSimple(**user.__dict__),
-            discovered_count=count,
+            discovered_count=await cruds_greencode.get_items_count_for_user(
+                user_id=user.id,
+                db=db,
+            ),
             total_count=total_count,
         )
-        for user, count in user_count_tuples
+        for user in greencode_users
     ]
     return completions
 
 
 @module.router.get(
+    "/greencode/completion/me",
+    response_model=schemas_greencode.Completion,
+    status_code=200,
+)
+async def get_current_user_completion(
+    db: AsyncSession = Depends(get_db),
+    current_user: models_core.CoreUser = Depends(
+        is_user_an_ecl_member,
+    ),
+):
+    """
+    Get current user completion
+
+    """
+
+    total_count = await cruds_greencode.get_items_count(db=db)
+    count = await cruds_greencode.get_items_count_for_user(
+        user_id=current_user.id,
+        db=db,
+    )
+
+    completion = schemas_greencode.Completion(
+        user=schemas_greencode.CoreUserSimple(**current_user.__dict__),
+        discovered_count=count,
+        total_count=total_count,
+    )
+    return completion
+
+
+@module.router.get(
     "/greencode/completion/{user_id}",
-    response_model=list[schemas_greencode.ItemComplete],
+    response_model=schemas_greencode.Completion,
     status_code=200,
 )
 async def get_user_completion(
@@ -229,9 +269,6 @@ async def get_user_completion(
         db=db,
     )
 
-    if count is None:
-        count = 0
-
     completion = schemas_greencode.Completion(
         user=schemas_greencode.CoreUserSimple(**user.__dict__),
         discovered_count=count,
@@ -240,37 +277,49 @@ async def get_user_completion(
     return completion
 
 
-@module.router.get(
-    "/greencode/completion/me",
-    response_model=list[schemas_greencode.ItemComplete],
-    status_code=200,
+@module.router.post(
+    "/greencode/completion/{item_id}/me",
+    status_code=204,
 )
-async def get_current_user_completion(
+async def create_current_user_membership(
+    item_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: models_core.CoreUser = Depends(
-        is_user_a_member_of(GroupType.greencode),
-    ),
+    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
-    Get current user completion
+    Create a new membership for item_id and user_id.
 
     """
 
-    total_count = await cruds_greencode.get_items_count(db=db)
-    count = await cruds_greencode.get_items_count_for_user(
-        user_id=current_user.id,
-        db=db,
-    )
+    try:
+        return await cruds_greencode.create_membership(
+            db=db,
+            item_id=item_id,
+            user_id=user.id,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))
 
-    if count is None:
-        count = 0
 
-    completion = schemas_greencode.Completion(
-        user=schemas_greencode.CoreUserSimple(**current_user.__dict__),
-        discovered_count=count,
-        total_count=total_count,
-    )
-    return completion
+@module.router.delete(
+    "/greencode/completion/{item_id}/me",
+    status_code=204,
+)
+async def delete_current_user_membership(
+    item_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
+):
+    """
+    Delete membership for item_id and user_id.
+
+    **The user must be from greencode group to use this endpoint**
+    """
+
+    try:
+        await cruds_greencode.delete_membership(item_id=item_id, user_id=user.id, db=db)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))
 
 
 @module.router.post(
@@ -317,50 +366,5 @@ async def delete_membership(
 
     try:
         await cruds_greencode.delete_membership(item_id=item_id, user_id=user_id, db=db)
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
-
-
-@module.router.post(
-    "/greencode/completion/{item_id}/me",
-    status_code=204,
-)
-async def create_current_user_membership(
-    item_id: str,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
-):
-    """
-    Create a new membership for item_id and user_id.
-
-    """
-
-    try:
-        return await cruds_greencode.create_membership(
-            db=db,
-            item_id=item_id,
-            user_id=user.id,
-        )
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
-
-
-@module.router.delete(
-    "/greencode/completion/{item_id}/me",
-    status_code=204,
-)
-async def delete_current_user_membership(
-    item_id: str,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.greencode)),
-):
-    """
-    Delete membership for item_id and user_id.
-
-    **The user must be from greencode group to use this endpoint**
-    """
-
-    try:
-        await cruds_greencode.delete_membership(item_id=item_id, user_id=user.id, db=db)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
