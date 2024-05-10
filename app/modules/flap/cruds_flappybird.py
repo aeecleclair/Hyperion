@@ -66,7 +66,10 @@ async def get_flappybird_score_position(
     result = await db.execute(
         select(func.count())
         .select_from(models_flappybird.FlappyBirdScore)
-        .order_by(models_flappybird.FlappyBirdScore.value.desc())
+        .order_by(
+            models_flappybird.FlappyBirdScore.value.desc(),
+            models_flappybird.FlappyBirdScore.user_id,
+        )
         .distinct(models_flappybird.FlappyBirdScore.user_id)
         .where(models_flappybird.FlappyBirdScore.value >= score.value),
     )
