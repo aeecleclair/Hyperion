@@ -27,6 +27,7 @@ async def get_flappybird_score(
     limit: int = 10,
     db: AsyncSession = Depends(get_db),
 ):
+    """Return the leaderboard score of the skip...limit"""
     leaderboard = await cruds_flappybird.get_flappybird_score_leaderboard(
         db=db,
         skip=skip,
