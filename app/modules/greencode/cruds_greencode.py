@@ -109,24 +109,26 @@ async def get_items_count_for_user(user_id: str, db: AsyncSession) -> int | None
 
 
 async def get_items_count_for_users(
-    user_id: str,
     db: AsyncSession,
 ) -> Sequence[tuple[CoreUser, int]]:
     result = await db.execute(
         select(
             models_greencode.Membership.user,
             func.count(models_greencode.Membership),
-        ).where(
-            models_greencode.Membership.user_id == user_id,
-        ),
+        ).group_by(models_greencode.Membership.user),
     )
     return result.scalars().all()
 
 
 async def create_membership(
-    membership: models_greencode.Membership,
+    item_id: str,
+    user_id: str,
     db: AsyncSession,
 ) -> models_greencode.Membership:
+    membership = models_greencode.Membership(
+        item_id=item_id,
+        user_id=user_id,
+    )
     db.add(membership)
     try:
         await db.commit()
@@ -136,10 +138,11 @@ async def create_membership(
     return membership
 
 
-async def delete_membership(membership_id: str, db: AsyncSession):
+async def delete_membership(item_id: str, user_id, db: AsyncSession):
     await db.execute(
         delete(models_greencode.Membership).where(
-            models_greencode.Membership.id == membership_id,
+            models_greencode.Membership.user_id == user_id,
+            models_greencode.Membership.item_id == item_id,
         ),
     )
     try:
