@@ -326,7 +326,7 @@ async def create_membership(
         )
 
     if membership.role_tags is not None:
-        if RoleTags.president in membership.role_tags.split(
+        if RoleTags.president.value in membership.role_tags.split(
             ";",
         ) and not is_user_member_of_an_allowed_group(
             user=user,
@@ -415,7 +415,7 @@ async def update_membership(
         )
 
     if updated_membership.role_tags is not None:
-        if RoleTags.president in updated_membership.role_tags.split(
+        if RoleTags.president.value in updated_membership.role_tags.split(
             ";",
         ) and not is_user_member_of_an_allowed_group(
             user=user,
