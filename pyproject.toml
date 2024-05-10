@@ -100,6 +100,7 @@ warn_unused_ignores = true
 strict_equality = true
 check_untyped_defs = true
 no_implicit_reexport = true
+warn_return_any = true
 
 
 [[tool.mypy.overrides]]

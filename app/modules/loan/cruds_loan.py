@@ -273,18 +273,15 @@ async def get_loan_contents_by_loan_id(
 async def get_loaned_quantity(
     item_id: str,
     db: AsyncSession,
-) -> int | None:
+) -> int:
     result = await db.execute(
         select(func.sum(models_loan.LoanContent.quantity)).where(
             models_loan.LoanContent.loan.has(returned=False)
             & (models_loan.LoanContent.item_id == item_id),
         ),
     )
-    qty = result.scalars().first()
-    if qty is None:
-        return 0
-    else:
-        return qty
+    qty: int | None = result.scalars().first()
+    return qty or 0
 
 
 async def delete_loan_content_by_loan_id(
