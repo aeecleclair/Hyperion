@@ -1,10 +1,10 @@
 from datetime import datetime
 
-from sqlalchemy import ForeignKey, Integer, String
+from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.models_core import CoreUser
-from app.types.sqlalchemy import Base, PrimaryKey, TZDateTime
+from app.types.sqlalchemy import Base, PrimaryKey
 
 
 class FlappyBirdScore(Base):
@@ -18,5 +18,5 @@ class FlappyBirdScore(Base):
         nullable=False,
     )
     user: Mapped[CoreUser] = relationship("CoreUser")
-    value: Mapped[int] = mapped_column(Integer, nullable=False)
-    creation_time: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
+    value: Mapped[int]
+    creation_time: Mapped[datetime]
