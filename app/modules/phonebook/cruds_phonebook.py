@@ -182,7 +182,7 @@ async def update_order_of_memberships(
     """
     Shift the order of Memberships between `old_order` and `new_order`. This crud should be used to keep orders coherent when inserting, moving or removing a membership.
     The cruds won't update the membership that was at the `old_order`, you must call an other crud to update, or remove it to prevent order collisions. This cruds should be called first."""
-    
+
     if new_order is None:
         await db.execute(
             update(models_phonebook.Membership)

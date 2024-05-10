@@ -1,11 +1,8 @@
-import uuid
-from pathlib import Path
-
 import pytest_asyncio
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
-from app.modules.phonebook import models_phonebook, schemas_phonebook
+from app.modules.phonebook import models_phonebook
 from app.modules.phonebook.types_phonebook import Kinds, RoleTags
 from tests.commons import (
     add_object_to_db,
@@ -845,7 +842,6 @@ def test_delete_association_admin():
         "/phonebook/associations",
         headers={"Authorization": f"Bearer {token_simple}"},
     ).json()
-    print(associations)
     association = next(
         (
             association
