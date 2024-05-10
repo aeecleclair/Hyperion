@@ -174,6 +174,99 @@ async def update_advertiser(
         raise HTTPException(status_code=422, detail=str(error))
 
 
+@module.router.post(
+    "/greencode/item/{item_id}/me",
+    status_code=204,
+)
+async def create_current_user_membership(
+    item_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
+):
+    """
+    Create a new membership for item_id and user_id.
+
+    """
+
+    try:
+        return await cruds_greencode.create_membership(
+            db=db,
+            item_id=item_id,
+            user_id=user.id,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))
+
+
+@module.router.delete(
+    "/greencode/item/{item_id}/me",
+    status_code=204,
+)
+async def delete_current_user_membership(
+    item_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
+):
+    """
+    Delete membership for item_id and user_id.
+
+    **The user must be from greencode group to use this endpoint**
+    """
+
+    try:
+        await cruds_greencode.delete_membership(item_id=item_id, user_id=user.id, db=db)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))
+
+
+@module.router.post(
+    "/greencode/item/{item_id}/{user_id}",
+    status_code=204,
+)
+async def create_membership(
+    item_id: str,
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.greencode)),
+):
+    """
+    Create a new membership for item_id and user_id.
+
+    **The user must be from greencode group to use this endpoint**
+    """
+
+    try:
+        return await cruds_greencode.create_membership(
+            db=db,
+            item_id=item_id,
+            user_id=user_id,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))
+
+
+@module.router.delete(
+    "/greencode/item/{item_id}/{user_id}",
+    status_code=204,
+)
+async def delete_membership(
+    item_id: str,
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.greencode)),
+):
+    """
+    Delete membership for item_id and user_id.
+
+    **The user must be from greencode group to use this endpoint**
+    """
+
+    try:
+        await cruds_greencode.delete_membership(item_id=item_id, user_id=user_id, db=db)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))
+
+
 @module.router.get(
     "/greencode/completion/all",
     response_model=list[schemas_greencode.Completion],
@@ -275,96 +368,3 @@ async def get_user_completion(
         total_count=total_count,
     )
     return completion
-
-
-@module.router.post(
-    "/greencode/completion/{item_id}/me",
-    status_code=204,
-)
-async def create_current_user_membership(
-    item_id: str,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
-):
-    """
-    Create a new membership for item_id and user_id.
-
-    """
-
-    try:
-        return await cruds_greencode.create_membership(
-            db=db,
-            item_id=item_id,
-            user_id=user.id,
-        )
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
-
-
-@module.router.delete(
-    "/greencode/completion/{item_id}/me",
-    status_code=204,
-)
-async def delete_current_user_membership(
-    item_id: str,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
-):
-    """
-    Delete membership for item_id and user_id.
-
-    **The user must be from greencode group to use this endpoint**
-    """
-
-    try:
-        await cruds_greencode.delete_membership(item_id=item_id, user_id=user.id, db=db)
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
-
-
-@module.router.post(
-    "/greencode/completion/{item_id}/{user_id}",
-    status_code=204,
-)
-async def create_membership(
-    item_id: str,
-    user_id: str,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.greencode)),
-):
-    """
-    Create a new membership for item_id and user_id.
-
-    **The user must be from greencode group to use this endpoint**
-    """
-
-    try:
-        return await cruds_greencode.create_membership(
-            db=db,
-            item_id=item_id,
-            user_id=user_id,
-        )
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
-
-
-@module.router.delete(
-    "/greencode/completion/{item_id}/{user_id}",
-    status_code=204,
-)
-async def delete_membership(
-    item_id: str,
-    user_id: str,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.greencode)),
-):
-    """
-    Delete membership for item_id and user_id.
-
-    **The user must be from greencode group to use this endpoint**
-    """
-
-    try:
-        await cruds_greencode.delete_membership(item_id=item_id, user_id=user_id, db=db)
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))

@@ -212,7 +212,7 @@ def test_get_user_completion():
 
 def test_create_membership_simple():
     response = client.post(
-        f"/greencode/completion/{item.id}/{user_simple.id}",
+        f"/greencode/item/{item.id}/{user_simple.id}",
         headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response.status_code == 403
@@ -220,7 +220,7 @@ def test_create_membership_simple():
 
 def test_create_membership():
     response = client.post(
-        f"/greencode/completion/{item.id}/{user_simple.id}",
+        f"/greencode/item/{item.id}/{user_simple.id}",
         headers={"Authorization": f"Bearer {token_greencode}"},
     )
     assert response.status_code == 204
@@ -228,7 +228,7 @@ def test_create_membership():
 
 def test_delete_membership_simple():
     response = client.delete(
-        f"/greencode/completion/{item.id}/{user_simple.id}",
+        f"/greencode/item/{item.id}/{user_simple.id}",
         headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response.status_code == 403
@@ -236,7 +236,7 @@ def test_delete_membership_simple():
 
 def test_delete_membership():
     response = client.delete(
-        f"/greencode/completion/{item.id}/{user_simple.id}",
+        f"/greencode/item/{item.id}/{user_simple.id}",
         headers={"Authorization": f"Bearer {token_greencode}"},
     )
     assert response.status_code == 204
@@ -244,7 +244,7 @@ def test_delete_membership():
 
 def test_create_current_user_membership():
     response = client.post(
-        f"/greencode/completion/{item.id}/me",
+        f"/greencode/item/{item.id}/me",
         headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response.status_code == 204
@@ -252,7 +252,7 @@ def test_create_current_user_membership():
 
 def test_delete_current_user_membership():
     response = client.delete(
-        f"/greencode/completion/{item.id}/me",
+        f"/greencode/item/{item.id}/me",
         headers={"Authorization": f"Bearer {token_with_membership}"},
     )
     assert response.status_code == 204
