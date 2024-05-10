@@ -9,18 +9,19 @@ class FlappyBirdScoreBase(BaseModel):
     value: int
 
 
-class FlappyBirdScoreInDB(FlappyBirdScoreBase):
+class FlappyBirdScore(FlappyBirdScoreBase):
+    user: CoreUserSimple
+    creation_time: datetime
+
+
+class FlappyBirdScoreInDB(FlappyBirdScore):
     id: str
     user_id: str
-    user: CoreUserSimple
-    creation_time: datetime
 
 
-class FlappyBirdScoreFeedback(BaseModel):
-    value: int
-    user: CoreUserSimple
-    creation_time: datetime
+class FlappyBirdScoreCompleteFeedBack(FlappyBirdScore):
+    """
+    A score, with it's position in the best players leaderboard
+    """
 
-
-class FlappyBirdScoreCompleteFeedBack(FlappyBirdScoreFeedback):
     position: int
