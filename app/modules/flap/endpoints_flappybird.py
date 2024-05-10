@@ -60,7 +60,7 @@ async def get_current_user_flappybird_personal_best(
 
     position = await cruds_flappybird.get_flappybird_score_position(
         db=db,
-        score=user_personal_best_table.value,
+        score_value=user_personal_best_table.value,
     )
     if position is None:
         raise HTTPException(

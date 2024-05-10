@@ -4,13 +4,13 @@ from sqlalchemy import ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.models_core import CoreUser
-from app.types.sqlalchemy import Base, TZDateTime
+from app.types.sqlalchemy import Base, PrimaryKey, TZDateTime
 
 
 class FlappyBirdScore(Base):
     __tablename__ = "flappy-bird_score"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, index=True)
+    id: Mapped[PrimaryKey]
 
     user_id: Mapped[str] = mapped_column(
         String,
