@@ -1,3 +1,4 @@
+import uuid
 from datetime import UTC, datetime
 
 import pytest_asyncio
@@ -28,7 +29,7 @@ async def init_objects():
 
     global flappybird_score
     flappybird_score = models_flappybird.FlappyBirdScore(
-        id="0b7dc7bf-0ab4-421a-bbe7-7ec064fcec8d",
+        id=uuid.uuid4(),
         user_id=user.id,
         user=user,
         value=25,
