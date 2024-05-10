@@ -59,9 +59,9 @@ async def get_flappybird_personal_best_by_user_id(
 
 async def get_flappybird_score_position(
     db: AsyncSession,
-    score: models_flappybird.FlappyBirdScore,
+    score_value: int,
 ) -> int | None:
-    """Return the flappybird position in the leaderboard by user_id"""
+    """Return the position in the leaderboard of a given score value"""
 
     result = await db.execute(
         select(func.count())
@@ -71,7 +71,7 @@ async def get_flappybird_score_position(
             models_flappybird.FlappyBirdScore.user_id,
         )
         .distinct(models_flappybird.FlappyBirdScore.user_id)
-        .where(models_flappybird.FlappyBirdScore.value >= score.value),
+        .where(models_flappybird.FlappyBirdScore.value >= score_value),
     )
 
     return result.scalar()
