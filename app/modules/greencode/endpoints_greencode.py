@@ -34,7 +34,7 @@ async def get_items(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.greencode)),
 ):
     """
-    Get all ItemAdmins.
+    Get all Item with all the users that discovered each Item.
 
     **The user must be from greencode group to use this endpoint**
     """
@@ -60,7 +60,7 @@ async def get_user_items(
     user: models_core.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
-    Get current user's Items.
+    Get current user's discovered Items.
     """
     return await cruds_greencode.get_user_items(user_id=user.id, db=db)
 
@@ -76,7 +76,7 @@ async def get_item_by_qr_code(
     user: models_core.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
-    Get item by Qr code content.
+    Get Item by Qr code content.
     """
 
     item = await cruds_greencode.get_item_by_qr_code_content(
@@ -102,7 +102,7 @@ async def create_item(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.greencode)),
 ):
     """
-    Create a new item.
+    Create a new Item.
 
     **The user must be from greencode group to use this endpoint**
     """
@@ -128,7 +128,7 @@ async def delete_item(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.greencode)),
 ):
     """
-    Delete an item.
+    Delete an Item by item_id.
 
     **This endpoint is only usable by greencode group**
     """
@@ -150,7 +150,7 @@ async def update_advertiser(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.greencode)),
 ):
     """
-    Update an item
+    Update an Item by item_id.
 
     **This endpoint is only usable by greencode group**
     """
@@ -184,7 +184,7 @@ async def create_current_user_membership(
     user: models_core.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
-    Create a new membership for item_id and user_id.
+    Create a new membership for item_id and current user.
 
     """
 
@@ -208,9 +208,8 @@ async def delete_current_user_membership(
     user: models_core.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
-    Delete membership for item_id and user_id.
+    Delete membership for item_id and current user.
 
-    **The user must be from greencode group to use this endpoint**
     """
 
     try:
@@ -344,7 +343,7 @@ async def get_user_completion(
     ),
 ):
     """
-    Get user completion by id.
+    Get user completion by user_id.
 
     **This endpoint is only usable by greencode group**
     """

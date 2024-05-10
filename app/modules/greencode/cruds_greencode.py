@@ -11,6 +11,7 @@ from app.modules.greencode import models_greencode, schemas_greencode
 
 
 async def get_items(db: AsyncSession) -> Sequence[models_greencode.GreenCodeItem]:
+    """Return all items."""
     result = await db.execute(
         select(models_greencode.GreenCodeItem).options(
             selectinload(models_greencode.GreenCodeItem.memberships).selectinload(
@@ -25,6 +26,8 @@ async def get_user_items(
     db: AsyncSession,
     user_id: str,
 ) -> Sequence[models_greencode.GreenCodeItem]:
+    """ "Return all items for a user_id."""
+
     result = await db.execute(
         select(models_greencode.GreenCodeItem).where(
             models_greencode.GreenCodeItem.memberships.any(
@@ -39,6 +42,7 @@ async def get_item_by_qr_code_content(
     db: AsyncSession,
     qr_code_content: Sequence[str],
 ) -> models_greencode.GreenCodeItem | None:
+    """Return an item by qr code content."""
     result = await db.execute(
         select(models_greencode.GreenCodeItem).where(
             models_greencode.GreenCodeItem.qr_code_content == qr_code_content,
@@ -51,6 +55,7 @@ async def get_item_by_id(
     db: AsyncSession,
     item_id: Sequence[str],
 ) -> models_greencode.GreenCodeItem | None:
+    """Return an item by item_id."""
     result = await db.execute(
         select(models_greencode.GreenCodeItem).where(
             models_greencode.GreenCodeItem.id == item_id,
@@ -63,6 +68,7 @@ async def create_item(
     item: models_greencode.GreenCodeItem,
     db: AsyncSession,
 ) -> models_greencode.GreenCodeItem:
+    """Create an item."""
     db.add(item)
     try:
         await db.commit()
@@ -73,6 +79,7 @@ async def create_item(
 
 
 async def delete_item(item_id: str, db: AsyncSession):
+    """Delete an item."""
     await db.execute(
         delete(models_greencode.GreenCodeItem).where(
             models_greencode.GreenCodeItem.id == item_id,
@@ -90,6 +97,7 @@ async def update_item(
     item_update: schemas_greencode.ItemUpdate,
     db: AsyncSession,
 ):
+    """Update an item."""
     await db.execute(
         update(models_greencode.GreenCodeItem)
         .where(models_greencode.GreenCodeItem.id == item_id)
@@ -103,11 +111,13 @@ async def update_item(
 
 
 async def get_items_count(db: AsyncSession) -> int:
+    """Return the total number of items."""
     result = await db.execute(select(models_greencode.GreenCodeItem.id))
     return len(result.scalars().all())
 
 
 async def get_items_count_for_user(user_id: str, db: AsyncSession) -> int:
+    """Return the total number of items discovered by a user by user_id."""
     result = await db.execute(
         select(models_greencode.GreenCodeMembership).where(
             models_greencode.GreenCodeMembership.user_id == user_id,
@@ -119,6 +129,7 @@ async def get_items_count_for_user(user_id: str, db: AsyncSession) -> int:
 async def get_greencode_users(
     db: AsyncSession,
 ) -> list[CoreUser]:
+    """Return all users who have discovered at least an item."""
     result = await db.execute(
         select(
             models_greencode.GreenCodeMembership,
@@ -137,6 +148,7 @@ async def create_membership(
     user_id: str,
     db: AsyncSession,
 ) -> models_greencode.GreenCodeMembership:
+    """Create a membership. Make user_id discover item_id."""
     membership = models_greencode.GreenCodeMembership(
         id=str(uuid.uuid4()),
         item_id=item_id,
@@ -152,6 +164,7 @@ async def create_membership(
 
 
 async def delete_membership(item_id: str, user_id, db: AsyncSession):
+    """Delete a membership. Make user_id undiscover item_id."""
     await db.execute(
         delete(models_greencode.GreenCodeMembership).where(
             models_greencode.GreenCodeMembership.user_id == user_id,
