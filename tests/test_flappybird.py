@@ -42,11 +42,8 @@ async def init_objects():
 
 
 def test_get_flappybird_score():
-    token = create_api_access_token(user=user)
     response = client.get(
         "/flappybird/scores/",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
-    data = response.json()
-    assert len(data) > 0

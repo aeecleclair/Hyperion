@@ -36,22 +36,6 @@ async def get_flappybird_score(
 
 
 @module.router.get(
-    "/flappybird/scores/{user_id}",
-    response_model=list[schemas_flappybird.FlappyBirdScoreInDB],
-    status_code=200,
-)
-async def get_flappybird_score_by_user(
-    user_id: str,
-    db: AsyncSession = Depends(get_db),
-):
-    user_scores = await cruds_flappybird.get_flappybird_score_by_user_id(
-        db=db,
-        user_id=user_id,
-    )
-    return user_scores
-
-
-@module.router.get(
     "/flappybird/leaderboard/me",
     status_code=200,
     response_model=schemas_flappybird.FlappyBirdScoreCompleteFeedBack | None,

@@ -1,9 +1,13 @@
+import logging
+
 from sqlalchemy import and_, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.modules.flap import models_flappybird
+
+hyperion_logger = logging.getLogger("hyperion.error")
 
 
 async def get_flappybird_score_leaderboard(
@@ -38,20 +42,6 @@ async def get_flappybird_score_leaderboard(
     return list(result.scalars().all())
 
 
-async def get_flappybird_score_by_user_id(
-    db: AsyncSession,
-    user_id: str,
-) -> list[models_flappybird.FlappyBirdScore]:
-    """Return all the flappybird scores by user_id"""
-
-    result = await db.execute(
-        select(models_flappybird.FlappyBirdScore).where(
-            models_flappybird.FlappyBirdScore.user_id == user_id,
-        ),
-    )
-    return list(result.scalars().all())
-
-
 async def get_flappybird_pb_by_user_id(
     db: AsyncSession,
     user_id: str,
@@ -64,7 +54,6 @@ async def get_flappybird_pb_by_user_id(
         .order_by(models_flappybird.FlappyBirdScore.value.desc())
         .limit(1),
     )
-
     return pb_result.scalar()
 
 
