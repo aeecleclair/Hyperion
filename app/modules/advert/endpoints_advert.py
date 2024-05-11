@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from fastapi import Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
@@ -265,23 +265,19 @@ async def create_advert(
         result = await cruds_advert.create_advert(db_advert=db_advert, db=db)
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error))
+    message = Message(
+        context=f"advert-new-{id}",
+        is_visible=True,
+        title=f"📣 Annonce - {result.title}",
+        content=result.content,
+        # The notification will expire in 3 days
+        expire_on=datetime.now(UTC) + timedelta(days=3),
+    )
 
-    try:
-        now = datetime.now(UTC)
-        message = Message(
-            context=f"advert-{result.id}",
-            is_visible=True,
-            title=f"📣 Annonce - {result.title}",
-            content=result.content,
-            # The notification will expire in 3 days
-            expire_on=now.replace(day=now.day + 3),
-        )
-        await notification_tool.send_notification_to_topic(
-            custom_topic=CustomTopic(topic=Topic.advert),
-            message=message,
-        )
-    except Exception as error:
-        hyperion_error_logger.error(f"Error while sending advert notification, {error}")
+    await notification_tool.send_notification_to_topic(
+        custom_topic=CustomTopic(Topic.advert),
+        message=message,
+    )
 
     return result
 

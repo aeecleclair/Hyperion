@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Path
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -61,21 +61,6 @@ async def register_firebase_device(
             db=db,
         )
 
-    # We also need to subscribe the new token to the topics the user is subscribed to
-    topic_memberships = await cruds_notification.get_topic_memberships_by_user_id(
-        user_id=user.id,
-        db=db,
-    )
-
-    for topic_membership in topic_memberships:
-        await notification_manager.subscribe_tokens_to_topic(
-            tokens=[firebase_token],
-            custom_topic=CustomTopic(
-                topic=topic_membership.topic,
-                topic_identifier=topic_membership.topic_identifier,
-            ),
-        )
-
     firebase_device = models_notification.FirebaseDevice(
         user_id=user.id,
         firebase_device_token=firebase_token,
@@ -104,21 +89,6 @@ async def unregister_firebase_device(
     **The user must be authenticated to use this endpoint**
     """
     # Anybody may unregister a device if they know its token, which should be secret
-
-    # We also need to unsubscribe the token to the topics the user is subscribed to
-    topic_memberships = await cruds_notification.get_topic_memberships_by_user_id(
-        user_id=user.id,
-        db=db,
-    )
-
-    for topic_membership in topic_memberships:
-        await notification_manager.unsubscribe_tokens_to_topic(
-            tokens=[firebase_token],
-            custom_topic=CustomTopic(
-                topic=topic_membership.topic,
-                topic_identifier=topic_membership.topic_identifier,
-            ),
-        )
 
     await cruds_notification.delete_firebase_devices(
         firebase_device_token=firebase_token,
@@ -254,12 +224,12 @@ async def get_topic(
 
 
 @router.get(
-    "/notification/topics/{topic_str}",
+    "/notification/topics/{topic}",
     status_code=200,
     response_model=list[str],
 )
 async def get_topic_identifier(
-    topic_str: str,
+    topic: Topic,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user),
 ):
@@ -272,7 +242,7 @@ async def get_topic_identifier(
     memberships = await cruds_notification.get_topic_memberships_with_identifiers_by_user_id_and_topic(
         user_id=user.id,
         db=db,
-        topic=Topic(topic_str),
+        topic=topic,
     )
 
     return [
@@ -289,7 +259,6 @@ async def get_topic_identifier(
     status_code=201,
 )
 async def send_notification(
-    message: schemas_notification.Message,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
@@ -298,6 +267,42 @@ async def send_notification(
 
     **Only admins can use this endpoint**
     """
+    message = schemas_notification.Message(
+        context="notification-test",
+        is_visible=True,
+        title="Test notification",
+        content="Ceci est un test de notification",
+        # The notification will expire in 3 days
+        expire_on=datetime.now(UTC) + timedelta(days=3),
+    )
+    await notification_tool.send_notification_to_user(
+        user_id=user.id,
+        message=message,
+    )
+
+
+@router.post(
+    "/notification/send/future",
+    status_code=201,
+)
+async def send_future_notification(
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    notification_tool: NotificationTool = Depends(get_notification_tool),
+):
+    """
+    Send ourself a test notification.
+
+    **Only admins can use this endpoint**
+    """
+    message = schemas_notification.Message(
+        context="future-notification-test",
+        is_visible=True,
+        title="Test notification",
+        content="Ceci est un test de notification",
+        # The notification will expire in 3 days
+        expire_on=datetime.now(UTC) + timedelta(days=3),
+        delivery_datetime=datetime.now(UTC) + timedelta(minutes=3),
+    )
     await notification_tool.send_notification_to_user(
         user_id=user.id,
         message=message,
