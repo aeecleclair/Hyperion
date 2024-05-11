@@ -49,7 +49,7 @@ def test_get_flappybird_score():
 
 def test_get_current_user_flappybird_personal_best():
     response = client.get(
-        "/flappybird/leaderboard/me/",
+        "/flappybird/scores/me/",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200

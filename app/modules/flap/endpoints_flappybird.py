@@ -37,7 +37,7 @@ async def get_flappybird_score(
 
 
 @module.router.get(
-    "/flappybird/leaderboard/me",
+    "/flappybird/scores/me",
     status_code=200,
     response_model=schemas_flappybird.FlappyBirdScoreCompleteFeedBack,
 )
