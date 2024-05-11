@@ -45,3 +45,22 @@ def test_get_flappybird_score():
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
+
+
+def test_get_current_user_flappybird_personal_best():
+    response = client.get(
+        "/flappybird/leaderboard/me/",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+
+
+def test_create_flappybird_score():
+    response = client.post(
+        "/flappybird/scores",
+        json={
+            "value": "26",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 201
