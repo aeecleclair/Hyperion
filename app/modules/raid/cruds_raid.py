@@ -186,8 +186,8 @@ async def delete_participant(
 ) -> None:
     await db.execute(
         delete(models_raid.Participant).where(
-            models_raid.Participant.id == participant_id
-        )
+            models_raid.Participant.id == participant_id,
+        ),
     )
     await db.commit()
 
@@ -454,19 +454,6 @@ async def get_invite_token_by_token(
         select(models_raid.InviteToken).where(models_raid.InviteToken.token == token),
     )
     return invite.scalars().first()
-
-
-async def update_team_second_id(
-    team_id: str,
-    second_id: str,
-    db: AsyncSession,
-) -> None:
-    await db.execute(
-        update(models_raid.Team)
-        .where(models_raid.Team.id == team_id)
-        .values(second_id=second_id),
-    )
-    await db.commit()
 
 
 async def delete_invite_token(

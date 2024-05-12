@@ -55,7 +55,7 @@ class SecurityFile(Base):
     family: Mapped[str | None] = mapped_column(String, nullable=True)
     participant: Mapped["Participant"] = relationship(back_populates="security_file")
     emergency_person_firstname: Mapped[str | None] = mapped_column(
-        String, nullable=True
+        String, nullable=True,
     )
     emergency_person_name: Mapped[str | None] = mapped_column(String, nullable=True)
     emergency_person_phone: Mapped[str | None] = mapped_column(String, nullable=True)
