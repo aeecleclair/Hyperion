@@ -1,25 +1,22 @@
 import csv
 import logging
-import os
-import random
 import uuid
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime
+from pathlib import Path
 
 from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import cruds_core, models_core, standard_responses
+from app.core import models_core, standard_responses
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
-from app.core.users import cruds_users
 from app.dependencies import get_db, get_request_id, is_user, is_user_a_member_of
 from app.modules.raid import cruds_raid, models_raid, schemas_raid
 from app.modules.raid.raid_type import DocumentValidation
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.modules.raid.utils.pdf.pdf_writer import HTMLPDFWriter, PDFWriter
 from app.types.content_type import ContentType
-from app.types.floors_type import FloorsType
 from app.utils.tools import (
     get_core_data,
     get_file_from_data,
@@ -52,22 +49,22 @@ async def write_teams_csv(teams: list[models_raid.Team], db: AsyncSession) -> No
                 f"{team.second.firstname} {team.second.name}" if team.second else None,
                 team.difficulty,
                 team.number,
-            ]
+            ],
         )
-    file = open(file_path, mode="w", newline="", encoding="utf-8")
+    file = Path.open(file_path, mode="w", newline="", encoding="utf-8")
     writer = csv.writer(file)
     writer.writerows(data)
     file.close()
     await drive_file_manager.upload_raid_file(file_path, file_name, db)
-    os.remove(file_path)
+    Path.unlink(file_path)
 
 
 async def set_team_number(team: models_raid.Team, db: AsyncSession) -> None:
     new_team_number = await cruds_raid.get_number_of_team_by_difficulty(
-        team.difficulty, db
+        team.difficulty, db,
     )
     updated_team: schemas_raid.TeamUpdate = schemas_raid.TeamUpdate(
-        number=new_team_number
+        number=new_team_number,
     )
     await cruds_raid.update_team(team.id, updated_team, db)
 
@@ -81,7 +78,7 @@ async def save_team_info(team: models_raid.Team, db: AsyncSession) -> None:
             file_id = drive_file_manager.replace_file(file_path, team.file_id)
         else:
             file_id = await drive_file_manager.upload_team_file(
-                file_path, file_name, db
+                file_path, file_name, db,
             )
         await cruds_raid.update_team_file_id(team.id, file_id, db)
         pdf_writer.clear_pdf()
@@ -101,7 +98,7 @@ async def post_update_actions(team: models_raid.Team | None, db: AsyncSession) -
 
 
 async def save_security_file(
-    participant: schemas_raid.Participant, team_number: int, db: AsyncSession
+    participant: schemas_raid.Participant, team_number: int, db: AsyncSession,
 ) -> None:
     try:
         pdf_writer = HTMLPDFWriter()
@@ -109,14 +106,14 @@ async def save_security_file(
         file_name = f"{str(team_number) + "_"  if team_number else ""}{participant.firstname}_{participant.name}_fiche_sécurité.pdf"
         if participant.security_file.file_id:
             file_id = drive_file_manager.replace_file(
-                file_path, participant.security_file.file_id
+                file_path, participant.security_file.file_id,
             )
         else:
             file_id = await drive_file_manager.upload_participant_file(
-                file_path, file_name, db
+                file_path, file_name, db,
             )
         await cruds_raid.update_security_file_id(
-            participant.security_file.id, file_id, db
+            participant.security_file.id, file_id, db,
         )
         pdf_writer.clear_pdf()
     except Exception as error:
@@ -173,7 +170,7 @@ async def create_participant(
     raid_information = await get_core_data(schemas_raid.RaidInformation, db)
     if not raid_information:
         majority_date = datetime(
-            year=datetime.now(UTC).year - 17, month=1, day=1, tzinfo=UTC
+            year=datetime.now(UTC).year - 17, month=1, day=1, tzinfo=UTC,
         )
     else:
         majority_date = raid_information.raid_start_date
@@ -190,7 +187,7 @@ async def create_participant(
     )
 
     db_participant = models_raid.Participant(
-        **participant.__dict__, id=user.id, is_minor=is_minor
+        **participant.__dict__, id=user.id, is_minor=is_minor,
     )
     return await cruds_raid.create_participant(db_participant, db)
 
@@ -219,7 +216,7 @@ async def update_participant(
     raid_information = await get_core_data(schemas_raid.RaidInformation, db)
     if not raid_information:
         majority_date = datetime(
-            year=datetime.now(UTC).year - 17, month=1, day=1, tzinfo=UTC
+            year=datetime.now(UTC).year - 17, month=1, day=1, tzinfo=UTC,
         )
     else:
         majority_date = raid_information.raid_start_date
@@ -752,7 +749,7 @@ async def kick_team_member(
     if team.captain_id == participant_id:
         if not team.second_id:
             raise HTTPException(
-                status_code=403, detail="You can not kick the only member of the team."
+                status_code=403, detail="You can not kick the only member of the team.",
             )
         await cruds_raid.update_team_captain_id(
             team_id,

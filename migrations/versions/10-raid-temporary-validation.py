@@ -9,8 +9,6 @@ from enum import Enum
 import sqlalchemy as sa
 from alembic import op
 
-from app.types.sqlalchemy import TZDateTime
-
 # revision identifiers, used by Alembic.
 revision: str = "ec5d90c1a3c2"
 down_revision: str | None = "0534d0f07976"
@@ -60,11 +58,11 @@ def upgrade() -> None:
     op.add_column(
         "raid_participant",
         sa.Column(
-            "is_minor", sa.Boolean(), nullable=False, server_default=sa.sql.false()
+            "is_minor", sa.Boolean(), nullable=False, server_default=sa.sql.false(),
         ),
     )
     op.create_foreign_key(
-        None, "raid_participant", "raid_document", ["parent_authorization_id"], ["id"]
+        None, "raid_participant", "raid_document", ["parent_authorization_id"], ["id"],
     )
     # ### end Alembic commands ###
 
