@@ -59,6 +59,7 @@ class SecurityFile(Base):
     )
     emergency_person_name: Mapped[str | None] = mapped_column(String, nullable=True)
     emergency_person_phone: Mapped[str | None] = mapped_column(String, nullable=True)
+    file_id: Mapped[str | None] = mapped_column(String, nullable=True)
 
     @property
     def validation(self) -> DocumentValidation:

@@ -45,7 +45,8 @@
                 Date de naissance
               </td>
               <td class="px-3 p-2 border border-slate-500">
-                {{birthday.strftime("%d/%m/%Y")}}
+                {{birthday.strftime("%d/%m/%Y") if birthday else "Non
+                rensignée"}}
               </td>
             </tr>
             <tr>
@@ -61,6 +62,9 @@
         <span class="ml-8 text-xl font-semibold text-green-700 mt-8"
           >ANTÉCÉDENTS</span
         >
+        {% if not security_file %}
+        <span class="font-semibold">Non renseignée</span>
+        {% else %}
         <table
           class="mx-8 mt-4 table-auto border-collapse border border-slate-500"
         >
@@ -132,6 +136,7 @@
             </tr>
           </tbody>
         </table>
+        {% endif %}
         <span class="ml-8 text-xl font-semibold text-green-700 mt-8"
           >PERSONNE À CONTACTER EN CAS D’URGENCE</span
         >
@@ -196,7 +201,8 @@
                 Date de naissance
               </td>
               <td class="px-3 p-2 border border-slate-500">
-                {{birthday.strftime("%d/%m/%Y")}}
+                {{birthday.strftime("%d/%m/%Y") if birthday else "Non
+                rensignée"}}
               </td>
             </tr>
             <tr>
@@ -212,6 +218,9 @@
         <span class="ml-8 text-xl font-semibold text-green-700 mt-8"
           >ANTÉCÉDENTS</span
         >
+        {% if not security_file %}
+        <span class="font-semibold">Non renseignée</span>
+        {% else %}
         <table
           class="mx-8 mt-4 table-auto border-collapse border border-slate-500"
         >
@@ -283,6 +292,7 @@
             </tr>
           </tbody>
         </table>
+        {% endif %}
         <span class="ml-8 text-xl font-semibold text-green-700 mt-8"
           >PERSONNE À CONTACTER EN CAS D’URGENCE</span
         >

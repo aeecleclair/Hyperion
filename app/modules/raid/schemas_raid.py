@@ -47,6 +47,7 @@ class SecurityFileBase(BaseModel):
     emergency_person_name: str | None = None
     emergency_person_phone: str | None = None
     id: str
+    file_id: str | None = None
 
 
 class SecurityFile(SecurityFileBase):

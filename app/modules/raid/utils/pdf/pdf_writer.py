@@ -4,6 +4,7 @@ import pathlib
 from pathlib import Path
 
 import fitz
+from fastapi.templating import Jinja2Templates
 from fpdf import FPDF
 from fpdf.enums import TableCellFillMode, VAlign
 from fpdf.fonts import FontFace
@@ -24,10 +25,11 @@ from app.modules.raid.utils.pdf.conversion_utils import (
 )
 from app.utils.tools import get_file_path_from_data
 
+templates = Jinja2Templates(directory="assets/templates")
+
 
 def maximize_image(image_path: Path, max_width: int, max_height: int) -> Image:
     image = Image.open(image_path)
-    width, height = image.size
     if width > height:
         image = image.rotate(270, expand=True)
     image.thumbnail((max_width, max_height), resample=Image.BILINEAR)
@@ -371,18 +373,20 @@ class HTMLPDFWriter:
     def __init__(self):
         self.html = ""
 
-    def write_participant_security_file(self, participant: Participant, team_number: int):
-        file_name = (
-            str(team_number) + "_" if team_number else ""
-        ) + f"{participant.name}_{participant.firstname}_fiche_securite.pdf"
-        environment = Environment(loader=FileSystemLoader("./templates"))
-        csspath = pathlib.Path("./templates/output.css")
+    def write_participant_security_file(
+        self, participant: Participant, team_number: int
+    ):
+        environment = Environment(loader=FileSystemLoader("assets/templates"))
+        print(environment.list_templates())
         results_template = environment.get_template("main.html")
+        print(results_template)
         context = {**participant.__dict__, "team_number": team_number}
         html_content = results_template.render(context)
+        print(html_content)
+        csspath = pathlib.Path("assets/templates/output.css")
         css_content = csspath.read_bytes().decode()
         story = fitz.Story(html=html_content, user_css=css_content)
-        writer = fitz.DocumentWriter("data/raid/" + file_name)
+        writer = fitz.DocumentWriter("data/raid/" + participant.id + ".pdf")
         mediabox = fitz.paper_rect("a4")
         where = mediabox + (36, 36, -36, -36)
 
@@ -393,3 +397,4 @@ class HTMLPDFWriter:
             story.draw(page)
             writer.end_page()
         writer.close()
+        return "data/raid/" + participant.id + ".pdf"

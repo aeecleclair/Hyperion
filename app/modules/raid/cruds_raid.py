@@ -232,6 +232,19 @@ async def update_security_file(
     await db.commit()
 
 
+async def update_security_file_id(
+    security_file_id: str,
+    file_id: str,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        update(models_raid.SecurityFile)
+        .where(models_raid.SecurityFile.id == security_file_id)
+        .values(file_id=file_id),
+    )
+    await db.commit()
+
+
 async def assign_security_file(
     participant_id: str,
     security_file_id: str,

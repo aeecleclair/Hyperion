@@ -17,7 +17,7 @@ from app.dependencies import get_db, get_request_id, is_user, is_user_a_member_o
 from app.modules.raid import cruds_raid, models_raid, schemas_raid
 from app.modules.raid.raid_type import DocumentValidation
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
-from app.modules.raid.utils.pdf.pdf_writer import PDFWriter
+from app.modules.raid.utils.pdf.pdf_writer import HTMLPDFWriter, PDFWriter
 from app.types.content_type import ContentType
 from app.types.floors_type import FloorsType
 from app.utils.tools import (
@@ -98,6 +98,30 @@ async def post_update_actions(team: models_raid.Team | None, db: AsyncSession) -
             if all_teams:
                 await write_teams_csv(all_teams, db)
         await save_team_info(team, db)
+
+
+async def save_security_file(
+    participant: schemas_raid.Participant, team_number: int, db: AsyncSession
+) -> None:
+    try:
+        pdf_writer = HTMLPDFWriter()
+        file_path = pdf_writer.write_participant_security_file(participant, team_number)
+        file_name = f"{str(team_number) + "_"  if team_number else ""}{participant.firstname}_{participant.name}_fiche_sécurité.pdf"
+        if participant.security_file.file_id:
+            file_id = drive_file_manager.replace_file(
+                file_path, participant.security_file.file_id
+            )
+        else:
+            file_id = await drive_file_manager.upload_participant_file(
+                file_path, file_name, db
+            )
+        await cruds_raid.update_security_file_id(
+            participant.security_file.id, file_id, db
+        )
+        pdf_writer.clear_pdf()
+    except Exception as error:
+        hyperion_error_logger.error(f"Error while creating pdf, {error.__dict__}")
+        return None
 
 
 @module.router.get(
@@ -348,6 +372,10 @@ async def delete_team(
     await cruds_raid.delete_team(team_id, db)
     if team.file_id:
         drive_file_manager.delete_file(team.file_id)
+        if team.captain.security_file.file_id:
+            drive_file_manager.delete_file(team.captain.security_file.file_id)
+        if team.second and team.second.security_file.file_id:
+            drive_file_manager.delete_file(team.second.security_file.file_id)
 
 
 @module.router.delete(
@@ -548,6 +576,10 @@ async def set_security_file(
     )
     if existing_security_file:
         await cruds_raid.update_security_file(security_file, db)
+        team = await cruds_raid.get_team_by_participant_id(user.id, db)
+        participant = await cruds_raid.get_participant_by_id(user.id, db)
+        if team and participant:
+            await save_security_file(participant, team.number, db)
         return await cruds_raid.get_security_file_by_security_id(
             security_file.id,
             db,
@@ -555,7 +587,12 @@ async def set_security_file(
     model_security_file = models_raid.SecurityFile(
         **security_file.model_dump(),
     )
-    return await cruds_raid.add_security_file(model_security_file, db)
+    created_security_file = await cruds_raid.add_security_file(model_security_file, db)
+    team = await cruds_raid.get_team_by_participant_id(user.id, db)
+    participant = await cruds_raid.get_participant_by_id(user.id, db)
+    if team and participant:
+        await save_security_file(participant, team.number, db)
+    return created_security_file
 
 
 @module.router.post(
