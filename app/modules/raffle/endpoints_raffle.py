@@ -22,6 +22,7 @@ from app.dependencies import (
 )
 from app.modules.raffle import cruds_raffle, models_raffle, schemas_raffle
 from app.modules.raffle.types_raffle import RaffleStatusType
+from app.types.content_type import ContentType
 from app.utils.redis import locker_get, locker_set
 from app.utils.tools import (
     get_display_name,
@@ -240,7 +241,11 @@ async def create_current_raffle_logo(
         filename=str(raffle_id),
         request_id=request_id,
         max_file_size=4 * 1024 * 1024,
-        accepted_content_types=["image/jpeg", "image/png", "image/webp"],
+        accepted_content_types=[
+            ContentType.jpg,
+            ContentType.png,
+            ContentType.webp,
+        ],
     )
 
     return standard_responses.Result(success=True)
@@ -786,7 +791,11 @@ async def create_prize_picture(
         filename=str(prize_id),
         request_id=request_id,
         max_file_size=4 * 1024 * 1024,
-        accepted_content_types=["image/jpeg", "image/png", "image/webp"],
+        accepted_content_types=[
+            ContentType.jpg,
+            ContentType.png,
+            ContentType.webp,
+        ],
     )
 
     return standard_responses.Result(success=True)

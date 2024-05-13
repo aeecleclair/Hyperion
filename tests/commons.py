@@ -125,7 +125,8 @@ async def create_user_with_groups(
     password: str | None = None,
     name: str | None = None,
     firstname: str | None = None,
-    floor: FloorsType = FloorsType.Autre,
+    floor: FloorsType | None = None,
+    external: bool = False,
 ) -> models_core.CoreUser:
     """
     Add a dummy user to the database
@@ -144,6 +145,7 @@ async def create_user_with_groups(
         name=name or get_random_string(),
         firstname=firstname or get_random_string(),
         floor=floor,
+        external=external,
     )
 
     async with TestingSessionLocal() as db:

@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from fastapi import Depends, HTTPException, Response
 from redis import Redis
@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
+from app.core.notification.notification_types import CustomTopic, Topic
 from app.core.notification.schemas_notification import Message
 from app.core.users import cruds_users
 from app.core.users.endpoints_users import read_user
@@ -706,6 +707,7 @@ async def open_ordering_of_delivery(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
+    notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
     if delivery is None:
@@ -718,6 +720,19 @@ async def open_ordering_of_delivery(
         )
 
     await cruds_amap.open_ordering_of_delivery(delivery_id=delivery_id, db=db)
+
+    message = Message(
+        context=f"amap-open-ordering-{delivery_id}",
+        is_visible=True,
+        title="🛒 AMAP - Nouvelle livraison disponible",
+        content="Viens commander !",
+        # The notification will expire in 3 days
+        expire_on=datetime.now(UTC) + timedelta(days=3),
+    )
+    await notification_tool.send_notification_to_topic(
+        custom_topic=CustomTopic(Topic.amap),
+        message=message,
+    )
 
 
 @module.router.post(
@@ -891,23 +906,18 @@ async def create_cash_of_user(
         db=db,
     )
 
-    try:
-        if result:
-            now = datetime.now(UTC)
-            message = Message(
-                context=f"amap-cash-{user_id}",
-                is_visible=True,
-                title="AMAP - Solde mis à jour",
-                content=f"Votre nouveau solde est de {result.balance} €.",
-                # The notification will expire in 3 days
-                expire_on=now.replace(day=now.day + 3),
-            )
-            await notification_tool.send_notification_to_user(
-                user_id=user_id,
-                message=message,
-            )
-    except Exception as error:
-        hyperion_error_logger.error(f"Error while sending AMAP notification, {error}")
+    message = Message(
+        context=f"amap-cash-{user_id}",
+        is_visible=True,
+        title="AMAP - Solde mis à jour",
+        content=f"Votre nouveau solde est de {cash} €.",
+        # The notification will expire in 3 days
+        expire_on=datetime.now(UTC) + timedelta(days=3),
+    )
+    await notification_tool.send_notification_to_user(
+        user_id=user_id,
+        message=message,
+    )
 
     return result
 

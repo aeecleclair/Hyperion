@@ -28,9 +28,11 @@ from app.dependencies import (
     get_db,
     get_request_id,
     get_settings,
-    is_user_a_member,
+    is_user,
     is_user_a_member_of,
+    is_user_an_ecl_member,
 )
+from app.types.content_type import ContentType
 from app.utils.mail.mailworker import send_email
 from app.utils.tools import fuzzy_search_user, get_file_from_data, save_file_as_data
 
@@ -90,7 +92,7 @@ async def search_users(
     includedGroups: list[str] = Query(default=[]),
     excludedGroups: list[str] = Query(default=[]),
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
     Search for a user using Fuzzy String Matching
@@ -115,7 +117,7 @@ async def search_users(
     status_code=200,
 )
 async def read_current_user(
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user),
 ):
     """
     Return `CoreUser` representation of current user
@@ -147,6 +149,9 @@ async def create_user_by_user(
     When creating **student** or **staff** account a valid ECL email is required.
     Only admin users can create other **account types**, contact ÉCLAIR for more information.
     """
+    # By default we mark the user as external
+    # but if it has an ECL email address, we will mark it as member
+    external = True
     # Check the account type
 
     # For staff and student
@@ -159,23 +164,35 @@ async def create_user_by_user(
     if re.match(r"^[\w\-.]*@(enise\.)?ec-lyon\.fr$", user_create.email):
         # Its a staff email address
         account_type = AccountType.staff
+        external = False
     elif re.match(
         r"^[\w\-.]*@etu(-enise)?\.ec-lyon\.fr$",
         user_create.email,
     ):
         # Its a student email address
         account_type = AccountType.student
+        external = False
     elif re.match(
         r"^[\w\-.]*@centraliens-lyon\.net$",
         user_create.email,
     ):
         # Its a former student email address
         account_type = AccountType.formerstudent
+        external = False
+    elif user_create.accept_external:
+        account_type = AccountType.external
     else:
         raise HTTPException(
             status_code=400,
             detail="Invalid ECL email address.",
         )
+
+    if not user_create.accept_external:
+        if external:
+            raise HTTPException(
+                status_code=400,
+                detail="The user could not be marked as external. Try to add accept_external=True in the request or use an internal email address.",
+            )
 
     # Make sure a confirmed account does not already exist
     db_user = await cruds_users.get_user_by_email(db=db, email=user_create.email)
@@ -209,6 +226,7 @@ async def create_user_by_user(
             db=db,
             settings=settings,
             request_id=request_id,
+            external=external,
         )
     except Exception as error:
         raise HTTPException(status_code=400, detail=str(error))
@@ -251,6 +269,7 @@ async def batch_create_users(
                 db=db,
                 settings=settings,
                 request_id=request_id,
+                external=user_create.external,
             )
         except Exception as error:
             failed[user_create.email] = str(error)
@@ -265,6 +284,7 @@ async def create_user(
     db: AsyncSession,
     settings: Settings,
     request_id: str,
+    external: bool,
 ) -> None:
     """
     User creation process. This function is used by both `/users/create` and `/users/admin/create` endpoints
@@ -289,6 +309,7 @@ async def create_user(
         created_on=datetime.now(UTC),
         expire_on=datetime.now(UTC)
         + timedelta(hours=settings.USER_ACTIVATION_TOKEN_EXPIRE_HOURS),
+        external=external,
     )
 
     await cruds_users.create_unconfirmed_user(user_unconfirmed=user_unconfirmed, db=db)
@@ -420,6 +441,7 @@ async def activate_user(
         phone=user.phone,
         floor=user.floor,
         created_on=datetime.now(UTC),
+        external=unconfirmed_user.external,
     )
     # We add the new user to the database
     try:
@@ -585,7 +607,7 @@ async def reset_password(
 async def migrate_mail(
     mail_migration: schemas_core.MailMigrationRequest,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user),
     settings: Settings = Depends(get_settings),
 ):
     """
@@ -800,7 +822,7 @@ async def read_user(
 )
 async def delete_user(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user),
     settings: Settings = Depends(get_settings),
     background_tasks: BackgroundTasks = BackgroundTasks(),
     request_id: str = Depends(get_request_id),
@@ -821,7 +843,7 @@ async def delete_user(
 async def update_current_user(
     user_update: schemas_core.CoreUserUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user),
 ):
     """
     Update the current user, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value
@@ -861,7 +883,7 @@ async def update_user(
 )
 async def create_current_user_profile_picture(
     image: UploadFile = File(...),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user),
     request_id: str = Depends(get_request_id),
 ):
     """
@@ -876,7 +898,11 @@ async def create_current_user_profile_picture(
         filename=str(user.id),
         request_id=request_id,
         max_file_size=4 * 1024 * 1024,
-        accepted_content_types=["image/jpeg", "image/png", "image/webp"],
+        accepted_content_types=[
+            ContentType.jpg,
+            ContentType.png,
+            ContentType.webp,
+        ],
     )
 
     return standard_responses.Result(success=True)
@@ -888,7 +914,7 @@ async def create_current_user_profile_picture(
     status_code=200,
 )
 async def read_own_profile_picture(
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user),
 ):
     """
     Get the profile picture of the authenticated user.

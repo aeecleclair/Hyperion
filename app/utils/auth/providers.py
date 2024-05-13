@@ -4,7 +4,8 @@ from typing import Any
 import unidecode
 
 from app.core import models_core
-from app.core.groups.groups_type import GroupType
+from app.core.groups.groups_type import GroupType, get_ecl_groups
+from app.types.floors_type import FloorsType
 from app.types.scopes_type import ScopeType
 from app.utils.tools import get_display_name, is_user_member_of_an_allowed_group
 
@@ -42,6 +43,9 @@ class BaseAuthClient:
     # but instead require to include the user information in the id_token
     # By setting this parameter to True, the userinfo will be added to the id_token.
     return_userinfo_in_id_token: bool = False
+
+    # Some clients may allow external users to authenticate
+    allow_external_users: bool = False
 
     def get_userinfo(self, user: models_core.CoreUser) -> dict[str, Any]:
         """
@@ -93,9 +97,8 @@ class AppAuthClient(BaseAuthClient):
     # See app.types.scopes_type.ScopeType for possible values
     # WARNING: to be able to use openid connect, `ScopeType.openid` should always be allowed
     allowed_scopes: set[ScopeType | str] = {ScopeType.API}
-    # Restrict the authentication to this client to specific Hyperion groups.
-    # When set to `None`, users from any group can use the auth client
-    allowed_groups: list[GroupType] | None = None
+
+    allow_external_users: bool = True
 
 
 class APIToolAuthClient(BaseAuthClient):
@@ -107,9 +110,7 @@ class APIToolAuthClient(BaseAuthClient):
 
 
 class NextcloudAuthClient(BaseAuthClient):
-    # Set of scopes the auth client is authorized to grant when issuing an access token.
-    # See app.types.scopes_type.ScopeType for possible values
-    allowed_scopes: set[ScopeType | str] = {ScopeType.openid}
+    allowed_groups: list[GroupType] | None = get_ecl_groups()
 
     # For Nextcloud:
     # Required iss : the issuer value form .well-known (corresponding code : https://github.com/pulsejet/nextcloud-oidc-login/blob/0c072ecaa02579384bb5e10fbb9d219bbd96cfb8/3rdparty/jumbojett/openid-connect-php/src/OpenIDConnectClient.php#L1255)
@@ -138,18 +139,9 @@ class NextcloudAuthClient(BaseAuthClient):
 
 
 class PiwigoAuthClient(BaseAuthClient):
-    # Set of scopes the auth client is authorized to grant when issuing an access token.
-    # See app.types.scopes_type.ScopeType for possible values
-    # WARNING: to be able to use openid connect, `ScopeType.openid` should always be allowed
-    allowed_scopes: set[ScopeType | str] = {ScopeType.openid}
     # Restrict the authentication to this client to specific Hyperion groups.
     # When set to `None`, users from any group can use the auth client
-    allowed_groups: list[GroupType] | None = None
-    # Sometimes, when the client is wrongly configured, it may return an incorrect return_uri. This may also be useful for debugging clients.
-    # `override_redirect_uri` allows to bypass all redirect_uri verifications and override the returned redirect_uri.
-    # This setting will override the previous `BaseAuthClient.redirect_uri``
-    # WARNING: This property is not part of OAuth or Openid connect specifications and should be used with caution.
-    override_redirect_uri: str | None = None
+    allowed_groups: list[GroupType] | None = get_ecl_groups()
 
     def get_userinfo(self, user: models_core.CoreUser) -> dict[str, Any]:
         """
@@ -253,7 +245,7 @@ class MinecraftAuthClient(BaseAuthClient):
             "id": user.id,
             "nickname": user.nickname,
             "promo": user.promo,
-            "floor": user.floor,
+            "floor": user.floor or FloorsType.Autre,
         }
 
 
@@ -300,6 +292,7 @@ class RalllyAuthClient(BaseAuthClient):
         ScopeType.profile,
         "email",
     }
+
     return_userinfo_in_id_token: bool = True
 
     @classmethod

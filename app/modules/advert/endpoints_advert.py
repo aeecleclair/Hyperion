@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from fastapi import Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
@@ -15,10 +15,11 @@ from app.dependencies import (
     get_db,
     get_notification_tool,
     get_request_id,
-    is_user_a_member,
     is_user_a_member_of,
+    is_user_an_ecl_member,
 )
 from app.modules.advert import cruds_advert, models_advert, schemas_advert
+from app.types.content_type import ContentType
 from app.utils.communication.notifications import NotificationTool
 from app.utils.tools import (
     get_file_from_data,
@@ -43,7 +44,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 )
 async def read_advertisers(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
     Get existing advertisers.
@@ -60,7 +61,7 @@ async def read_advertisers(
 async def create_advertiser(
     advertiser: schemas_advert.AdvertiserBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
     Create a new advertiser.
@@ -158,7 +159,7 @@ async def update_advertiser(
 )
 async def get_current_user_advertisers(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
     Return all advertisers the current user can manage.
@@ -183,7 +184,7 @@ async def get_current_user_advertisers(
 async def read_adverts(
     advertisers: list[str] = Query(default=[]),
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
     Get existing adverts. If advertisers optional parameter is used, search adverts by advertisers
@@ -208,7 +209,7 @@ async def read_adverts(
 async def read_advert(
     advert_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
     Get an advert
@@ -227,7 +228,7 @@ async def read_advert(
 async def create_advert(
     advert: schemas_advert.AdvertBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
@@ -264,23 +265,19 @@ async def create_advert(
         result = await cruds_advert.create_advert(db_advert=db_advert, db=db)
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error))
+    message = Message(
+        context=f"advert-new-{id}",
+        is_visible=True,
+        title=f"📣 Annonce - {result.title}",
+        content=result.content,
+        # The notification will expire in 3 days
+        expire_on=datetime.now(UTC) + timedelta(days=3),
+    )
 
-    try:
-        now = datetime.now(UTC)
-        message = Message(
-            context=f"advert-{result.id}",
-            is_visible=True,
-            title=f"📣 Annonce - {result.title}",
-            content=result.content,
-            # The notification will expire in 3 days
-            expire_on=now.replace(day=now.day + 3),
-        )
-        await notification_tool.send_notification_to_topic(
-            custom_topic=CustomTopic(topic=Topic.advert),
-            message=message,
-        )
-    except Exception as error:
-        hyperion_error_logger.error(f"Error while sending advert notification, {error}")
+    await notification_tool.send_notification_to_topic(
+        custom_topic=CustomTopic(Topic.advert),
+        message=message,
+    )
 
     return result
 
@@ -293,7 +290,7 @@ async def update_advert(
     advert_id: str,
     advert_update: schemas_advert.AdvertUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
     Edit an advert
@@ -330,7 +327,7 @@ async def update_advert(
 async def delete_advert(
     advert_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
     Delete an advert
@@ -364,7 +361,7 @@ async def delete_advert(
 async def read_advert_image(
     advert_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
     Get the image of an advert
@@ -393,7 +390,7 @@ async def read_advert_image(
 async def create_advert_image(
     advert_id: str,
     image: UploadFile = File(...),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
     request_id: str = Depends(get_request_id),
     db: AsyncSession = Depends(get_db),
 ):
@@ -415,7 +412,11 @@ async def create_advert_image(
         filename=str(advert_id),
         request_id=request_id,
         max_file_size=4 * 1024 * 1024,
-        accepted_content_types=["image/jpeg", "image/png", "image/webp"],
+        accepted_content_types=[
+            ContentType.jpg,
+            ContentType.png,
+            ContentType.webp,
+        ],
     )
 
     return standard_responses.Result(success=True)

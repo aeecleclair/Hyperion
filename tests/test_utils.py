@@ -3,16 +3,67 @@ import uuid
 from pathlib import Path
 
 import pytest
-from fastapi import UploadFile
+import pytest_asyncio
+from fastapi import HTTPException, UploadFile
 
+from app.core import models_core
+from app.types.core_data import BaseCoreData
+from app.types.exceptions import CoreDataNotFoundException
 from app.utils.tools import (
     delete_file_from_data,
+    get_core_data,
     get_file_from_data,
     get_file_path_from_data,
     save_bytes_as_data,
     save_file_as_data,
     save_pdf_first_page_as_image,
+    set_core_data,
 )
+from tests.commons import (
+    TestingSessionLocal,
+    add_object_to_db,
+    event_loop,  # noqa
+)
+
+
+class ExempleCoreData(BaseCoreData):
+    name: str = "default"
+    age: int = 18
+
+
+class ExempleDefaultCoreData(BaseCoreData):
+    name: str = "Default name"
+    age: int = 18
+
+
+class ExempleDefaultWithoutDefaultValuesCoreData(BaseCoreData):
+    name: str
+    age: int
+
+
+class ExempleExistingCoreData(BaseCoreData):
+    name: str = "default existing name"
+    age: int = 18
+
+
+core_data: models_core.CoreData
+
+
+@pytest_asyncio.fixture(scope="module", autouse=True)
+async def init_objects():
+    global core_data
+
+    core_data = models_core.CoreData(
+        schema="ExempleCoreData",
+        data='{"name": "Fabristpp", "age": 42}',
+    )
+    await add_object_to_db(core_data)
+
+    core_data = models_core.CoreData(
+        schema="ExempleExistingCoreData",
+        data='{"name": "default name", "age": 18}',
+    )
+    await add_object_to_db(core_data)
 
 
 async def test_save_file():
@@ -20,6 +71,20 @@ async def test_save_file():
     with Path("assets/images/default_profile_picture.png").open("rb") as file:
         await save_file_as_data(
             upload_file=UploadFile(file, headers={"content-type": "image/png"}),
+            directory="test",
+            filename=valid_uuid,
+            request_id="request_id",
+        )
+
+
+async def test_save_file_with_invalid_content_type():
+    valid_uuid = str(uuid.uuid4())
+    with (
+        pytest.raises(HTTPException, match="400: Invalid file format, supported*"),
+        Path("assets/images/default_profile_picture.png").open("rb") as file,
+    ):
+        await save_file_as_data(
+            upload_file=UploadFile(file, headers={"content-type": "test/test"}),
             directory="test",
             filename=valid_uuid,
             request_id="request_id",
@@ -167,3 +232,45 @@ async def test_save_pdf_first_page_as_image():
         request_id="request_id",
     )
     assert Path(f"data/test/image/{valid_uuid}.jpg").is_file()
+
+
+async def test_get_core_data():
+    async with TestingSessionLocal() as db:
+        exemple_core_data = await get_core_data(core_data_class=ExempleCoreData, db=db)
+        assert exemple_core_data.name == "Fabristpp"
+        assert exemple_core_data.age == 42
+
+
+async def test_get_default_core_data():
+    async with TestingSessionLocal() as db:
+        default_core_data = await get_core_data(
+            core_data_class=ExempleDefaultCoreData,
+            db=db,
+        )
+        assert default_core_data.name == "Default name"
+        assert default_core_data.age == 18
+
+
+async def test_get_default_without_default_values_core_data():
+    async with TestingSessionLocal() as db:
+        with pytest.raises(CoreDataNotFoundException):
+            await get_core_data(
+                core_data_class=ExempleDefaultWithoutDefaultValuesCoreData,
+                db=db,
+            )
+
+
+async def test_replace_core_data():
+    async with TestingSessionLocal() as db:
+        core_data = ExempleExistingCoreData(
+            name="ECLAIR",
+            age=42,
+        )
+        await set_core_data(core_data=core_data, db=db)
+
+        new_core_data = await get_core_data(
+            core_data_class=ExempleExistingCoreData,
+            db=db,
+        )
+        assert new_core_data.name == "ECLAIR"
+        assert new_core_data.age == 42

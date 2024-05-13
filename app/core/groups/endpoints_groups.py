@@ -17,8 +17,8 @@ from app.core.users import cruds_users
 from app.dependencies import (
     get_db,
     get_request_id,
-    is_user_a_member,
     is_user_a_member_of,
+    is_user_an_ecl_member,
 )
 
 router = APIRouter(tags=["Groups"])
@@ -33,12 +33,10 @@ hyperion_security_logger = logging.getLogger("hyperion.security")
 )
 async def read_groups(
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_a_member),
+    user=Depends(is_user_an_ecl_member),
 ):
     """
     Return all groups from database as a list of dictionaries
-
-    **This endpoint is only usable by administrators**
     """
 
     groups = await cruds_groups.get_groups(db)

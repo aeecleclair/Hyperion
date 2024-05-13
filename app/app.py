@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Literal
 import alembic.command as alembic_command
 import alembic.config as alembic_config
 import alembic.migration as alembic_migration
-from fastapi import FastAPI, Request, Response, status
+from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -302,12 +302,16 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         request_id = str(uuid.uuid4())
         request.state.request_id = request_id
 
-        if request.client is not None:
-            ip_address = request.client.host
-            port = request.client.port
-            client_address = f"{ip_address}:{port}"
-        else:
-            client_address = "unknown"
+        # This should never happen, but we log it just in case
+        if request.client is None:
+            hyperion_security_logger.warning(
+                f"Client information not available for {request.url.path}",
+            )
+            return HTTPException(status_code=400, detail="No client information")
+
+        ip_address = request.client.host
+        port = request.client.port
+        client_address = f"{ip_address}:{port}"
 
         settings: Settings = app.dependency_overrides.get(get_settings, get_settings)()
         redis_client: redis.Redis | Literal[False] | None = (

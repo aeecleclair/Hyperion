@@ -1,21 +1,22 @@
 import logging
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
+from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
-from app.core.notification.notification_types import CustomTopic, Topic
 from app.core.notification.schemas_notification import Message
 from app.dependencies import (
     get_db,
     get_notification_tool,
     get_settings,
-    is_user_a_member,
     is_user_a_member_of,
+    is_user_an_ecl_member,
 )
 from app.modules.booking import cruds_booking, models_booking, schemas_booking
 from app.modules.booking.types_booking import Decision
@@ -149,7 +150,7 @@ async def delete_manager(
 )
 async def get_current_user_managers(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
     Return all managers the current user is a member.
@@ -167,7 +168,7 @@ async def get_current_user_managers(
 )
 async def get_bookings_for_manager(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
     Return all bookings a user can manage.
@@ -189,7 +190,7 @@ async def get_bookings_for_manager(
 )
 async def get_confirmed_bookings_for_manager(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
     Return all confirmed bookings a user can manage.
@@ -210,7 +211,7 @@ async def get_confirmed_bookings_for_manager(
 )
 async def get_confirmed_bookings(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
     Return all confirmed bookings.
@@ -230,7 +231,7 @@ async def get_confirmed_bookings(
 )
 async def get_applicant_bookings(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
     Get the user bookings.
@@ -249,7 +250,7 @@ async def get_applicant_bookings(
 async def create_booking(
     booking: schemas_booking.BookingBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
@@ -265,26 +266,29 @@ async def create_booking(
     )
     await cruds_booking.create_booking(booking=db_booking, db=db)
     result = await cruds_booking.get_booking_by_id(db=db, booking_id=db_booking.id)
+    manager_group_id = result.room.manager_id
+    manager_group = await cruds_groups.get_group_by_id(
+        db=db,
+        group_id=manager_group_id,
+    )
+    local_start = result.start.astimezone(ZoneInfo("Europe/Paris"))
+    applicant_nickname = user.nickname if user.nickname else user.firstname
+    content = f"{applicant_nickname} - {result.room.name} {local_start.strftime('%m/%d/%Y, %H:%M')} - {result.reason}"
+    # Setting time to Paris timezone in order to have the correct time in the notification
 
-    try:
-        if result:
-            now = datetime.now(UTC)
-            message = Message(
-                # We use sunday date as context to avoid sending the recap twice
-                context=f"booking-create-{result.id}",
-                is_visible=True,
-                title="Réservations - Nouvelle réservation 📅",
-                content=f"{result.applicant.nickname} - {result.room.name} {result.start.strftime('%m/%d/%Y, %H:%M')} - {result.reason}",
-                # The notification will expire the next sunday
-                expire_on=now.replace(day=now.day + 3),
-            )
-            await notification_tool.send_notification_to_topic(
-                custom_topic=CustomTopic(topic=Topic.bookingadmin),
-                message=message,
-            )
-    except Exception as error:
-        hyperion_error_logger.error(
-            f"Error while sending cinema recap notification, {error}",
+    if manager_group:
+        message = Message(
+            context=f"booking-new-{id}",
+            is_visible=True,
+            title="📅 Réservations - Nouvelle réservation",
+            content=content,
+            # The notification will expire in 3 days
+            expire_on=datetime.now(UTC) + timedelta(days=3),
+        )
+
+        await notification_tool.send_notification_to_users(
+            user_ids=[user.id for user in manager_group.members],
+            message=message,
         )
 
     return result
@@ -298,7 +302,7 @@ async def edit_booking(
     booking_id: str,
     booking_edit: schemas_booking.BookingEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
     Edit a booking.
@@ -326,7 +330,7 @@ async def edit_booking(
             db=db,
         )
     except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @module.router.patch(
@@ -337,7 +341,7 @@ async def confirm_booking(
     booking_id: str,
     decision: Decision,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
     Give a decision to a booking.
@@ -370,7 +374,7 @@ async def confirm_booking(
 async def delete_booking(
     booking_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
     Remove a booking.
@@ -400,7 +404,7 @@ async def delete_booking(
 )
 async def get_rooms(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
     Get all rooms.
@@ -434,7 +438,7 @@ async def create_room(
         )
         return await cruds_booking.create_room(db=db, room=room_db)
     except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @module.router.patch(

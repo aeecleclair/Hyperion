@@ -45,6 +45,20 @@ async def get_messages_by_firebase_token(
     return result.scalars().all()
 
 
+async def get_messages_by_context_and_firebase_tokens(
+    context: str,
+    firebase_tokens: list[str],
+    db: AsyncSession,
+) -> Sequence[models_notification.Message]:
+    result = await db.execute(
+        select(models_notification.Message).where(
+            models_notification.Message.context == context,
+            models_notification.Message.firebase_device_token.in_(firebase_tokens),
+        ),
+    )
+    return result.scalars().all()
+
+
 async def remove_message_by_context_and_firebase_device_token(
     context: str,
     firebase_device_token: str,
@@ -265,3 +279,29 @@ async def get_topic_membership_by_user_id_and_custom_topic(
         ),
     )
     return result.scalars().first()
+
+
+async def get_user_ids_by_topic(
+    custom_topic: CustomTopic,
+    db: AsyncSession,
+) -> list[str]:
+    result = await db.execute(
+        select(models_notification.TopicMembership.user_id).where(
+            models_notification.TopicMembership.topic == custom_topic.topic,
+            models_notification.TopicMembership.topic_identifier
+            == custom_topic.topic_identifier,
+        ),
+    )
+    return list(result.scalars().all())
+
+
+async def get_firebase_tokens_by_user_ids(
+    user_ids: list[str],
+    db: AsyncSession,
+) -> list[str]:
+    result = await db.execute(
+        select(models_notification.FirebaseDevice.firebase_device_token).where(
+            models_notification.FirebaseDevice.user_id.in_(user_ids),
+        ),
+    )
+    return list(result.scalars().all())

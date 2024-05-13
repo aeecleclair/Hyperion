@@ -4,19 +4,24 @@ import re
 import secrets
 from collections.abc import Sequence
 from pathlib import Path
+from typing import TypeVar
 
 import aiofiles
 import fitz
 from fastapi import HTTPException, UploadFile
 from fastapi.responses import FileResponse
+from pydantic import ValidationError
 from rapidfuzz import process
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core
+from app.core import cruds_core, models_core
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
 from app.core.models_core import CoreUser
 from app.core.users import cruds_users
+from app.types import core_data
+from app.types.content_type import ContentType
+from app.types.exceptions import CoreDataNotFoundException
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
@@ -44,6 +49,15 @@ def is_user_member_of_an_allowed_group(
                 # We know the user is a member of at least one allowed group
                 return True
     return False
+
+
+def is_user_external(
+    user: CoreUser,
+):
+    """
+    Users that are not members won't be able to use all features
+    """
+    return user.external is True
 
 
 def fuzzy_search_user(
@@ -104,24 +118,20 @@ async def save_file_as_data(
     filename: str,
     request_id: str,
     max_file_size: int = 1024 * 1024 * 2,  # 2 MB
-    accepted_content_types: list[str] | None = None,
+    accepted_content_types: list[ContentType] | None = None,
 ):
     """
     Save an image or pdf file to the data folder.
 
     - The file will be saved in the `data` folder: "data/{directory}/{filename}.ext"
     - Maximum size is 2MB by default, it can be changed using `max_file_size` (in bytes) parameter.
-    - `accepted_content_types` is a list of accepted content types. By default, only images are accepted.
+    - `accepted_content_types` is a list of accepted content types. By default, all format are accepted.
         Use: `["image/jpeg", "image/png", "image/webp"]` to accept only images.
     - Filename should be an uuid.
 
     The file extension will be inferred from the provided content file.
     There should only be one file with the same filename, thus, saving a new file will remove the existing even if its extension was different.
-    Currently, compatible extensions are :
-     - png
-     - jpg
-     - webp
-     - pdf
+    Currently, compatible extensions are defined in the enum `ContentType`
 
     An HTTP Exception will be raised if an error occurres.
 
@@ -132,10 +142,10 @@ async def save_file_as_data(
     if accepted_content_types is None:
         # Accept only images by default
         accepted_content_types = [
-            "image/jpeg",
-            "image/png",
-            "image/webp",
-            "application/pdf",
+            ContentType.jpg,
+            ContentType.png,
+            ContentType.webp,
+            ContentType.pdf,
         ]
 
     if not uuid_regex.match(filename):
@@ -162,13 +172,7 @@ async def save_file_as_data(
     # We go back to the beginning of the file to save it on the disk
     await upload_file.seek(0)
 
-    extensions_mapping = {
-        "image/jpeg": "jpg",
-        "image/png": "png",
-        "image/webp": "webp",
-        "application/pdf": "pdf",
-    }
-    extension = extensions_mapping.get(upload_file.content_type, "")
+    extension = ContentType(upload_file.content_type).name
     # Remove the existing file if any and create the new one
 
     # If the directory does not exist, we want to create it
@@ -361,3 +365,75 @@ def get_random_string(length: int = 5) -> str:
     return "".join(
         secrets.choice("abcdefghijklmnopqrstuvwxyz0123456789") for _ in range(length)
     )
+
+
+CoreDataClass = TypeVar("CoreDataClass", bound=core_data.BaseCoreData)
+
+
+async def get_core_data(
+    core_data_class: type[CoreDataClass],
+    db: AsyncSession,
+) -> CoreDataClass:
+    """
+    Access the core data stored in the database, using the name of the class `core_data_class`.
+    If the core data does not exist, it returns a new instance of `core_data_class`, including its default values, or raise a CoreDataNotFoundException.
+    `core_data_class` should be a class extending `BaseCoreData`.
+
+    This method should be called using the class object, and not an instance of the class:
+    ```python
+    await get_core_data(ExempleCoreData, db)
+    ```
+
+    See `BaseCoreData` for more information.
+    """
+    # `core_data_class` contains the class object, and not an instance of the class.
+    # We can call `core_data_class.__name__` to get the name of the class
+    schema_name = core_data_class.__name__
+    core_data_model = await cruds_core.get_core_data_crud(
+        schema=schema_name,
+        db=db,
+    )
+
+    if core_data_model is None:
+        # Return default values
+        try:
+            return core_data_class()
+        except ValidationError as error:
+            # If creating a new instance of the class raises a ValidationError, it means that the class does not have default values
+            # We should then raise an exception
+            raise CoreDataNotFoundException() from error
+
+    return core_data_class.model_validate_json(
+        core_data_model.data,
+        strict=True,
+    )
+
+
+async def set_core_data(
+    core_data: core_data.BaseCoreData,
+    db: AsyncSession,
+) -> None:
+    """
+    Set the core data in the database using the name of the class `core_data` is an instance of.
+
+    This method should be called using an instance of a class extending `BaseCoreData`:
+    ```python
+    example_core_data = ExempleCoreData()
+    await get_core_data(example_core_data, db)
+    ```
+
+    See `BaseCoreData` for more information.
+    """
+    # `core_data` contains an instance of the class.
+    # We call `core_data_class.__class__.__name__` to get the name of the class
+    schema_name = core_data.__class__.__name__
+
+    core_data_model = models_core.CoreData(
+        schema=schema_name,
+        data=core_data.model_dump_json(),
+    )
+
+    # We want to remove the old data
+    await cruds_core.delete_core_data_crud(schema=schema_name, db=db)
+    # And then add the new one
+    await cruds_core.add_core_data_crud(core_data=core_data_model, db=db)

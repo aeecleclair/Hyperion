@@ -8,7 +8,8 @@ COPY ./migrations /app/migrations
 
 COPY ./assets /app/assets
 
-COPY ./requirements.txt /requirements.txt
-RUN pip install --upgrade -r /requirements.txt
+COPY ./requirements-common.txt /requirements-common.txt
+COPY ./requirements-prod.txt /requirements-prod.txt
+RUN pip install --upgrade -r /requirements-prod.txt
 
 COPY ./app/ /app/app/

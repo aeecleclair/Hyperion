@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core import models_core
+from app.core import models_core, schemas_core
 
 
 async def count_users(db: AsyncSession) -> int:
@@ -85,7 +85,11 @@ async def get_user_by_email(
     return result.scalars().first()
 
 
-async def update_user(db: AsyncSession, user_id: str, user_update):
+async def update_user(
+    db: AsyncSession,
+    user_id: str,
+    user_update: schemas_core.CoreUserUpdateAdmin | schemas_core.CoreUserUpdate,
+):
     await db.execute(
         update(models_core.CoreUser)
         .where(models_core.CoreUser.id == user_id)
