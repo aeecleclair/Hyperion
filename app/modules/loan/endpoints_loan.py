@@ -532,6 +532,12 @@ async def create_loan(
             status_code=400,
             detail="Invalid user_id",
         )
+    # The recorder id should be a valid user
+    if not await is_user_id_valid(user_id=loan_creation.recorder_id, db=db):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid user_id",
+        )
 
     # list of item and quantity borrowed
     items: list[tuple[models_loan.Item, int]] = []
@@ -578,6 +584,7 @@ async def create_loan(
         id=str(uuid.uuid4()),
         borrower_id=loan_creation.borrower_id,
         loaner_id=loan_creation.loaner_id,
+        recorder_id=loan_creation.recorder_id,
         start=loan_creation.start,
         end=loan_creation.end,
         notes=loan_creation.notes,
@@ -685,6 +692,13 @@ async def update_loan(
     # If a new borrower id was provided, it should be a valid user
     if loan_update.borrower_id:
         if not await is_user_id_valid(user_id=loan_update.borrower_id, db=db):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid user_id",
+            )
+    # If a new recorder id was provided, it should be a valid user
+    if loan_update.recorder_id:
+        if not await is_user_id_valid(user_id=loan_update.recorder_id, db=db):
             raise HTTPException(
                 status_code=400,
                 detail="Invalid user_id",

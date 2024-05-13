@@ -86,3 +86,7 @@ class Loan(Base):
         secondary="loan_content",
         lazy="joined",
     )
+
+    recorder_id: Mapped[str] = mapped_column(
+        String, ForeignKey("core_user_simple.id"), index=True
+    )

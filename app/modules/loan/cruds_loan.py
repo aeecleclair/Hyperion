@@ -215,7 +215,9 @@ async def get_loan_by_id(
     """Return loan with id from database as a dictionary"""
 
     result = await db.execute(
-        select(models_loan.Loan).where(models_loan.Loan.id == loan_id),
+        select(models_loan.Loan)
+        .where(models_loan.Loan.id == loan_id)
+        .options(selectinload(models_loan.Loan.recorder)),
     )
     return result.scalars().first()
 

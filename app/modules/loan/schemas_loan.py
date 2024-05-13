@@ -10,6 +10,7 @@ class LoanerBase(BaseModel):
     group_manager_id: str = Field(
         description="The group manager id should by a group identifier",
     )
+    recorder_id: str
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -103,6 +104,7 @@ class LoanInDBUpdate(BaseModel):
     """
 
     borrower_id: str | None = None
+    recorder_id: str | None = None
     start: date | None = None
     end: date | None = None
     notes: str | None = None
@@ -128,6 +130,7 @@ class Loan(LoanBase):
     returned_date: date | None
     items_qty: list[ItemQuantity]
     borrower: schemas_core.CoreUserSimple
+    recorder: schemas_core.CoreUserSimple
     loaner: Loaner
 
 

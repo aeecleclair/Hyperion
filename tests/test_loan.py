@@ -7,12 +7,12 @@ import pytest_asyncio
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from app.modules.loan import models_loan
+from tests.commons import event_loop  # noqa
 from tests.commons import (
     add_object_to_db,
     client,
     create_api_access_token,
     create_user_with_groups,
-    event_loop,  # noqa
 )
 
 admin_user: models_core.CoreUser | None = None
@@ -34,6 +34,7 @@ async def init_objects():
     global loan_user_loaner
     global loaner
     global loan_user_simple
+    global recorder_user_simple
     global loaner_to_delete
     global loan
     global item
@@ -49,6 +50,7 @@ async def init_objects():
     await add_object_to_db(loaner)
 
     loan_user_simple = await create_user_with_groups([GroupType.amap])
+    recorder_user_simple = await create_user_with_groups([GroupType.student])
 
     loaner_to_delete = models_loan.Loaner(
         id=str(uuid.uuid4()),
@@ -64,6 +66,7 @@ async def init_objects():
         suggested_lending_duration=timedelta(
             days=50,
         ).seconds,
+        recorder_id=recorder_user_simple.id,
         suggested_caution=10,
         total_quantity=8,
         loaner=loaner,
@@ -118,6 +121,7 @@ def test_create_loaners():
         json={
             "name": "BDE",
             "group_manager_id": "ce5f36e6-5377-489f-9696-de70e2477300",
+            "recorder_id": recorder_user_simple.id,
         },
         headers={"Authorization": f"Bearer {token_admin}"},
     )
@@ -130,6 +134,7 @@ def test_update_loaners():
         json={
             "name": "AE",
             "group_manager_id": "45649735-866a-49df-b04b-a13c74fd5886",
+            "recorder_id": recorder_user_simple.id,
         },
         headers={"Authorization": f"Bearer {token_admin}"},
     )
