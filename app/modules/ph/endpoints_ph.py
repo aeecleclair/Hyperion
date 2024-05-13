@@ -172,7 +172,7 @@ async def create_paper_pdf_and_cover(
         filename=str(paper_id),
         request_id=request_id,
         max_file_size=10 * 1024 * 1024,  # 10 MB
-        accepted_content_types=ContentType.pdf,
+        accepted_content_types=[ContentType.pdf],
     )
 
     await save_pdf_first_page_as_image(
