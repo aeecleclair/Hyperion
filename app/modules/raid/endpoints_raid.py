@@ -103,7 +103,7 @@ async def save_security_file(
     try:
         pdf_writer = HTMLPDFWriter()
         file_path = pdf_writer.write_participant_security_file(participant, team_number)
-        file_name = f"{str(team_number) + "_"  if team_number else ""}{participant.firstname}_{participant.name}_fiche_sécurité.pdf"
+        file_name = f"{str(team_number) + '_'  if team_number else ""}{participant.firstname}_{participant.name}_fiche_sécurité.pdf"
         if participant.security_file.file_id:
             file_id = drive_file_manager.replace_file(
                 file_path, participant.security_file.file_id,
