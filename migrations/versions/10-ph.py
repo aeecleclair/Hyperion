@@ -83,7 +83,10 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("user_id", "association_id", "mandate_year"),
     )
     op.create_index(
-        op.f("ix_phonebook_membership_id"), "phonebook_membership", ["id"], unique=False
+        op.f("ix_phonebook_membership_id"),
+        "phonebook_membership",
+        ["id"],
+        unique=False,
     )
     op.add_column("loan", sa.Column("returned_date", sa.Date(), nullable=True))
     op.alter_column(
@@ -124,10 +127,12 @@ def downgrade() -> None:
     op.drop_table("phonebook_membership")
     op.drop_table("recommendation")
     op.drop_index(
-        op.f("ix_phonebook_association_name"), table_name="phonebook_association"
+        op.f("ix_phonebook_association_name"),
+        table_name="phonebook_association",
     )
     op.drop_index(
-        op.f("ix_phonebook_association_id"), table_name="phonebook_association"
+        op.f("ix_phonebook_association_id"),
+        table_name="phonebook_association",
     )
     op.drop_table("phonebook_association")
     op.drop_index(op.f("ix_ph_papers_id"), table_name="ph_papers")

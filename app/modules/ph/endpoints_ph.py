@@ -1,6 +1,5 @@
 import uuid
 from datetime import UTC, datetime, time, timedelta
-from pathlib import Path
 
 from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
