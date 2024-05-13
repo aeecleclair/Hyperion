@@ -61,7 +61,8 @@ async def write_teams_csv(teams: list[models_raid.Team], db: AsyncSession) -> No
 
 async def set_team_number(team: models_raid.Team, db: AsyncSession) -> None:
     new_team_number = await cruds_raid.get_number_of_team_by_difficulty(
-        team.difficulty, db,
+        team.difficulty,
+        db,
     )
     updated_team: schemas_raid.TeamUpdate = schemas_raid.TeamUpdate(
         number=new_team_number,
@@ -78,7 +79,9 @@ async def save_team_info(team: models_raid.Team, db: AsyncSession) -> None:
             file_id = drive_file_manager.replace_file(file_path, team.file_id)
         else:
             file_id = await drive_file_manager.upload_team_file(
-                file_path, file_name, db,
+                file_path,
+                file_name,
+                db,
             )
         await cruds_raid.update_team_file_id(team.id, file_id, db)
         pdf_writer.clear_pdf()
@@ -98,22 +101,29 @@ async def post_update_actions(team: models_raid.Team | None, db: AsyncSession) -
 
 
 async def save_security_file(
-    participant: schemas_raid.Participant, team_number: int, db: AsyncSession,
+    participant: schemas_raid.Participant,
+    team_number: int,
+    db: AsyncSession,
 ) -> None:
     try:
         pdf_writer = HTMLPDFWriter()
         file_path = pdf_writer.write_participant_security_file(participant, team_number)
-        file_name = f"{str(team_number) + '_'  if team_number else ""}{participant.firstname}_{participant.name}_fiche_sécurité.pdf"
+        file_name = f"{str(team_number) + '_' if team_number else ''}{participant.firstname}_{participant.name}_fiche_sécurité.pdf"
         if participant.security_file.file_id:
             file_id = drive_file_manager.replace_file(
-                file_path, participant.security_file.file_id,
+                file_path,
+                participant.security_file.file_id,
             )
         else:
             file_id = await drive_file_manager.upload_participant_file(
-                file_path, file_name, db,
+                file_path,
+                file_name,
+                db,
             )
         await cruds_raid.update_security_file_id(
-            participant.security_file.id, file_id, db,
+            participant.security_file.id,
+            file_id,
+            db,
         )
         pdf_writer.clear_pdf()
     except Exception as error:
@@ -170,7 +180,10 @@ async def create_participant(
     raid_information = await get_core_data(schemas_raid.RaidInformation, db)
     if not raid_information:
         majority_date = datetime(
-            year=datetime.now(UTC).year - 17, month=1, day=1, tzinfo=UTC,
+            year=datetime.now(UTC).year - 17,
+            month=1,
+            day=1,
+            tzinfo=UTC,
         )
     else:
         majority_date = raid_information.raid_start_date
@@ -187,7 +200,9 @@ async def create_participant(
     )
 
     db_participant = models_raid.Participant(
-        **participant.__dict__, id=user.id, is_minor=is_minor,
+        **participant.__dict__,
+        id=user.id,
+        is_minor=is_minor,
     )
     return await cruds_raid.create_participant(db_participant, db)
 
@@ -216,7 +231,10 @@ async def update_participant(
     raid_information = await get_core_data(schemas_raid.RaidInformation, db)
     if not raid_information:
         majority_date = datetime(
-            year=datetime.now(UTC).year - 17, month=1, day=1, tzinfo=UTC,
+            year=datetime.now(UTC).year - 17,
+            month=1,
+            day=1,
+            tzinfo=UTC,
         )
     else:
         majority_date = raid_information.raid_start_date
@@ -749,7 +767,8 @@ async def kick_team_member(
     if team.captain_id == participant_id:
         if not team.second_id:
             raise HTTPException(
-                status_code=403, detail="You can not kick the only member of the team.",
+                status_code=403,
+                detail="You can not kick the only member of the team.",
             )
         await cruds_raid.update_team_captain_id(
             team_id,
