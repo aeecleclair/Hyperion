@@ -62,13 +62,19 @@ async def get_flappybird_score_position(
     score_value: int,
 ) -> int | None:
     """Return the position in the leaderboard of a given score value"""
+    subquery = (
+        select(
+            func.max(models_flappybird.FlappyBirdScore.value).label("max_score"),
+            models_flappybird.FlappyBirdScore.user_id,
+        )
+        .group_by(models_flappybird.FlappyBirdScore.user_id)
+        .alias("subquery")
+    )
 
     result = await db.execute(
         select(func.count())
-        .select_from(models_flappybird.FlappyBirdScore)
-        .order_by(models_flappybird.FlappyBirdScore.value.desc())
-        .group_by(models_flappybird.FlappyBirdScore.value)
-        .where(models_flappybird.FlappyBirdScore.value >= score_value),
+        .select_from(subquery)
+        .where(subquery.c.max_score >= score_value),
     )
 
     return result.scalar()
