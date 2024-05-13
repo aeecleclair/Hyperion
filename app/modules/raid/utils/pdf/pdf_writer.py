@@ -390,7 +390,7 @@ class HTMLPDFWriter:
         story = fitz.Story(html=html_content, user_css=css_content)
         writer = fitz.DocumentWriter("data/raid/" + participant.id + ".pdf")
         mediabox = fitz.paper_rect("a4")
-        where = (*mediabox, 36, 36, -36, -36)
+        where = mediabox + (36, 36, -36, -36)  # noqa: RUF005
 
         more = True
         while more:
