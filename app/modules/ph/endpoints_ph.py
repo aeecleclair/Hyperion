@@ -19,6 +19,7 @@ from app.dependencies import (
     is_user_a_member_of,
 )
 from app.modules.ph import cruds_ph, models_ph, schemas_ph
+from app.types.content_type import ContentType
 from app.utils.communication.notifications import NotificationTool
 from app.utils.tools import (
     delete_file_from_data,
@@ -172,7 +173,7 @@ async def create_paper_pdf_and_cover(
         filename=str(paper_id),
         request_id=request_id,
         max_file_size=10 * 1024 * 1024,  # 10 MB
-        accepted_content_types=["application/pdf"],
+        accepted_content_types=ContentType.pdf,
     )
 
     await save_pdf_first_page_as_image(
@@ -248,16 +249,15 @@ async def delete_paper(
             detail="Invalid paper_id",
         )
 
-    if Path.exists(Path(f"data/ph/pdf/{paper_id}.pdf")):
-        delete_file_from_data(
-            directory="ph/pdf",
-            filename=str(paper_id),
-        )
-    if Path.exists(Path(f"data/ph/cover/{paper_id}.jpg")):
-        delete_file_from_data(
-            directory="ph/cover",
-            filename=str(paper_id),
-        )
+    delete_file_from_data(
+        directory="ph/pdf",
+        filename=str(paper_id),
+    )
+
+    delete_file_from_data(
+        directory="ph/cover",
+        filename=str(paper_id),
+    )
 
     await cruds_ph.delete_paper(
         paper_id=paper_id,
