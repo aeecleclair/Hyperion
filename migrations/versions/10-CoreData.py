@@ -1,9 +1,6 @@
-"""Notifications 'create_on' migration
+"""Add CoreData table
 
-Revision ID: e3d06397960d
-Revises: 6afc765adaa2
-Create Date: 2024-03-17 19:19:14.297195
-
+Create Date: 2024-04-21 02:08:19.548067
 """
 
 from collections.abc import Sequence
@@ -16,26 +13,23 @@ if TYPE_CHECKING:
     from pytest_alembic import MigrationContext
 
 # revision identifiers, used by Alembic.
-revision: str = "e3d06397960d"
-down_revision: str | None = "17b92dc4b50d"
+revision: str = "36a686097ce6"
+down_revision: str | None = "c3acc9b8dd98"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    with op.batch_alter_table("notification_message") as batch_op:
-        batch_op.alter_column(
-            column_name="expire_on",
-            type_=sa.DateTime(timezone=False),
-        )
+    op.create_table(
+        "core_data",
+        sa.Column("schema", sa.String(), nullable=False),
+        sa.Column("data", sa.String(), nullable=False),
+        sa.PrimaryKeyConstraint("schema"),
+    )
 
 
 def downgrade() -> None:
-    with op.batch_alter_table("notification_message") as batch_op:
-        batch_op.alter_column(
-            column_name="expire_on",
-            type_=sa.Date(),
-        )
+    op.drop_table("core_data")
 
 
 def pre_test_upgrade(

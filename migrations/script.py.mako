@@ -2,7 +2,10 @@
 
 Create Date: ${create_date}
 """
-from collections.abc import Sequence
+from typing import Sequence, Union, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pytest_alembic import MigrationContext
 
 import sqlalchemy as sa
 from alembic import op
@@ -24,3 +27,17 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     ${downgrades if downgrades else "pass"}
+
+
+def pre_test_upgrade(
+    alembic_runner: "MigrationContext",
+    alembic_connection: sa.Connection,
+) -> None:
+    pass
+
+
+def test_upgrade(
+    alembic_runner: "MigrationContext",
+    alembic_connection: sa.Connection,
+) -> None:
+    pass
