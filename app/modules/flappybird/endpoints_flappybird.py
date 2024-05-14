@@ -8,7 +8,11 @@ from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
 from app.dependencies import get_db, is_user_a_member
-from app.modules.flap import cruds_flappybird, models_flappybird, schemas_flappybird
+from app.modules.flappybird import (
+    cruds_flappybird,
+    models_flappybird,
+    schemas_flappybird,
+)
 
 module = Module(
     root="flappybird",
