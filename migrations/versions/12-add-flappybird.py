@@ -4,6 +4,10 @@ Create Date: 2024-04-28 11:58:35.289610
 """
 
 from collections.abc import Sequence
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pytest_alembic import MigrationContext
 
 import sqlalchemy as sa
 from alembic import op
@@ -40,3 +44,17 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_flappy-bird_score_id"), table_name="flappy-bird_score")
     op.drop_table("flappy-bird_score")
     # ### end Alembic commands ###
+
+
+def pre_test_upgrade(
+    alembic_runner: "MigrationContext",
+    alembic_connection: sa.Connection,
+) -> None:
+    pass
+
+
+def test_upgrade(
+    alembic_runner: "MigrationContext",
+    alembic_connection: sa.Connection,
+) -> None:
+    pass
