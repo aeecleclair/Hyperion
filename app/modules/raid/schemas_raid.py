@@ -175,3 +175,12 @@ class RaidDriveFolders(BaseModel):
     parent_folder_id: str | None = None
     registering_folder_id: str | None = None
     security_folder_id: str | None = None
+
+
+class RaidPrice(BaseModel):
+    student_price: float
+    partner_price: float
+    t_shirt_price: float
+
+    class Config:
+        orm_mode = True
