@@ -178,9 +178,9 @@ class RaidDriveFolders(BaseModel):
 
 
 class RaidPrice(BaseModel):
-    student_price: float
-    partner_price: float
-    t_shirt_price: float
+    student_price: float | None = None
+    partner_price: float | None = None
+    t_shirt_price: float | None = None
 
     class Config:
         orm_mode = True
