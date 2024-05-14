@@ -86,13 +86,7 @@ line-ending = "auto"
 [tool.mypy]
 python_version = "3.11"
 plugins = ["pydantic.mypy"]
-exclude = '''(?x)(
-      .git
-    | __pycache__
-    | .pytest_cache
-    | .ruff_cache
-    | .venv
-)'''
+
 warn_unreachable = true
 warn_unused_configs = true
 warn_redundant_casts = true
