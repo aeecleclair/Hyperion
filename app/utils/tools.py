@@ -121,7 +121,7 @@ async def save_file_as_data(
     accepted_content_types: list[ContentType] | None = None,
 ):
     """
-    Save an image file to the data folder.
+    Save an image or pdf file to the data folder.
 
     - The file will be saved in the `data` folder: "data/{directory}/{filename}.ext"
     - Maximum size is 2MB by default, it can be changed using `max_file_size` (in bytes) parameter.
@@ -167,7 +167,7 @@ async def save_file_as_data(
     if file_size > max_file_size:
         raise HTTPException(
             status_code=413,
-            detail=f"File size is too big. Limit is {max_file_size} MB",
+            detail=f"File size is too big. Limit is {max_file_size/1024/1024} MB",
         )
     # We go back to the beginning of the file to save it on the disk
     await upload_file.seek(0)

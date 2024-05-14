@@ -99,7 +99,9 @@ def alembic_connection() -> Generator[Connection, None, None]:
     # We need to delete the test database before each test
     Path("test_migration.db").unlink(missing_ok=True)
 
-    connectable = create_engine(SQLALCHEMY_DATABASE_URL, echo=True)
+    # We use `echo=False` to disable SQLAlchemy logging for migrations
+    # as errors are easier to see without all SQLAlchemy info
+    connectable = create_engine(SQLALCHEMY_DATABASE_URL, echo=False)
 
     with connectable.begin() as connection:
         yield connection

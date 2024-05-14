@@ -28,6 +28,7 @@ class GroupType(str, Enum):
     BDE = "53a669d6-84b1-4352-8d7c-421c1fbd9c6a"
     CAA = "6c6d7e88-fdb8-4e42-b2b5-3d3cfd12e7d6"
     cinema = "ce5f36e6-5377-489f-9696-de70e2477300"
+    ph = "4ec5ae77-f955-4309-96a5-19cc3c8be71c"
 
     # Auth related groups
 
