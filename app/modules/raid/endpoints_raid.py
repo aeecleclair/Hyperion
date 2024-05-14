@@ -904,3 +904,33 @@ async def get_drive_folders(
     Get drive folders
     """
     return await get_core_data(schemas_raid.RaidDriveFolders, db)
+
+
+@module.router.get(
+    "/raid/price",
+    response_model=schemas_raid.RaidPrice,
+    status_code=200,
+)
+async def get_raid_price(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user),
+):
+    """
+    Get raid price
+    """
+    return await get_core_data(schemas_raid.RaidPrice, db)
+
+
+@module.router.patch(
+    "/raid/price",
+    status_code=204,
+)
+async def update_raid_price(
+    raid_price: schemas_raid.RaidPrice,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.raid_admin)),
+):
+    """
+    Update raid price
+    """
+    await set_core_data(raid_price, db)
