@@ -1,19 +1,27 @@
-"""init
+"""empty message
 
-Revision ID: f20685c9761e
+Revision ID: 17b92dc4b50d
 Revises:
-Create Date: 2024-02-20 22:10:15.519878
+Create Date: 2024-04-12 18:19:12.439926
 
 """
+
+from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
 from alembic import op
 
+from app.types.sqlalchemy import TZDateTime
+
+if TYPE_CHECKING:
+    from pytest_alembic import MigrationContext
+
 # revision identifiers, used by Alembic.
-revision = "f20685c9761e"
-down_revision = None
-branch_labels = None
-depends_on = None
+revision: str = "17b92dc4b50d"
+down_revision: str | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -79,7 +87,7 @@ def upgrade() -> None:
     op.create_table(
         "authorization_code",
         sa.Column("code", sa.String(), nullable=False),
-        sa.Column("expire_on", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("expire_on", TZDateTime(), nullable=False),
         sa.Column("scope", sa.String(), nullable=True),
         sa.Column("redirect_uri", sa.String(), nullable=True),
         sa.Column("user_id", sa.String(), nullable=False),
@@ -128,7 +136,7 @@ def upgrade() -> None:
         "cinema_session",
         sa.Column("id", sa.String(), nullable=False),
         sa.Column("name", sa.String(), nullable=False),
-        sa.Column("start", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("start", TZDateTime(), nullable=False),
         sa.Column("duration", sa.Integer(), nullable=False),
         sa.Column("overview", sa.String(), nullable=True),
         sa.Column("genre", sa.String(), nullable=True),
@@ -186,7 +194,7 @@ def upgrade() -> None:
             ),
             nullable=False,
         ),
-        sa.Column("created_on", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_on", TZDateTime(), nullable=True),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(op.f("ix_core_user_email"), "core_user", ["email"], unique=True)
@@ -196,8 +204,8 @@ def upgrade() -> None:
         sa.Column("email", sa.String(), nullable=False),
         sa.Column("user_id", sa.String(), nullable=False),
         sa.Column("reset_token", sa.String(), nullable=False),
-        sa.Column("created_on", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("expire_on", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("created_on", TZDateTime(), nullable=False),
+        sa.Column("expire_on", TZDateTime(), nullable=False),
         sa.PrimaryKeyConstraint("reset_token"),
     )
     op.create_table(
@@ -206,8 +214,8 @@ def upgrade() -> None:
         sa.Column("email", sa.String(), nullable=False),
         sa.Column("account_type", sa.String(), nullable=False),
         sa.Column("activation_token", sa.String(), nullable=False),
-        sa.Column("created_on", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("expire_on", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("created_on", TZDateTime(), nullable=False),
+        sa.Column("expire_on", TZDateTime(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
@@ -234,8 +242,8 @@ def upgrade() -> None:
         sa.Column("content", sa.String(), nullable=True),
         sa.Column("action_module", sa.String(), nullable=True),
         sa.Column("action_table", sa.String(), nullable=True),
-        sa.Column("delivery_datetime", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("expire_on", sa.Date(), nullable=False),
+        sa.Column("delivery_datetime", TZDateTime(), nullable=True),
+        sa.Column("expire_on", TZDateTime(), nullable=False),
         sa.PrimaryKeyConstraint("context", "firebase_device_token"),
     )
     op.create_index(
@@ -251,12 +259,55 @@ def upgrade() -> None:
         unique=False,
     )
     op.create_table(
+        "phonebook_association",
+        sa.Column("id", sa.String(), nullable=False),
+        sa.Column("name", sa.String(), nullable=False),
+        sa.Column("description", sa.String(), nullable=True),
+        sa.Column(
+            "kind",
+            sa.Enum(
+                "comity",
+                "section_ae",
+                "club_ae",
+                "section_use",
+                "club_use",
+                "association_independant",
+                name="kinds",
+            ),
+            nullable=False,
+        ),
+        sa.Column("mandate_year", sa.Integer(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_phonebook_association_id"),
+        "phonebook_association",
+        ["id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_phonebook_association_name"),
+        "phonebook_association",
+        ["name"],
+        unique=False,
+    )
+    op.create_table(
+        "recommendation",
+        sa.Column("id", sa.String(), nullable=False),
+        sa.Column("creation", TZDateTime(), nullable=False),
+        sa.Column("title", sa.String(), nullable=False),
+        sa.Column("code", sa.String(), nullable=True),
+        sa.Column("summary", sa.String(), nullable=False),
+        sa.Column("description", sa.String(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_table(
         "advert_adverts",
         sa.Column("id", sa.String(), nullable=False),
         sa.Column("advertiser_id", sa.String(), nullable=False),
         sa.Column("title", sa.String(), nullable=False),
         sa.Column("content", sa.String(), nullable=False),
-        sa.Column("date", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("date", TZDateTime(), nullable=False),
         sa.Column("tags", sa.String(), nullable=True),
         sa.ForeignKeyConstraint(
             ["advertiser_id"],
@@ -299,7 +350,7 @@ def upgrade() -> None:
             sa.Enum("midi", "soir", name="amapslottype"),
             nullable=False,
         ),
-        sa.Column("ordering_date", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("ordering_date", TZDateTime(), nullable=False),
         sa.Column("delivery_date", sa.Date(), nullable=False),
         sa.ForeignKeyConstraint(
             ["delivery_id"],
@@ -341,8 +392,8 @@ def upgrade() -> None:
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("organizer", sa.String(), nullable=False),
         sa.Column("applicant_id", sa.String(), nullable=False),
-        sa.Column("start", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("end", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("start", TZDateTime(), nullable=False),
+        sa.Column("end", TZDateTime(), nullable=False),
         sa.Column("all_day", sa.Boolean(), nullable=False),
         sa.Column("location", sa.String(), nullable=False),
         sa.Column(
@@ -439,6 +490,7 @@ def upgrade() -> None:
         sa.Column("notes", sa.TEXT(), nullable=True),
         sa.Column("caution", sa.String(), nullable=True),
         sa.Column("returned", sa.Boolean(), nullable=False),
+        sa.Column("returned_date", sa.Date(), nullable=True),
         sa.ForeignKeyConstraint(
             ["borrower_id"],
             ["core_user.id"],
@@ -459,7 +511,7 @@ def upgrade() -> None:
         sa.Column("loaner_id", sa.String(), nullable=False),
         sa.Column("suggested_caution", sa.Integer(), nullable=False),
         sa.Column("total_quantity", sa.Integer(), nullable=False),
-        sa.Column("suggested_lending_duration", sa.Interval(), nullable=False),
+        sa.Column("suggested_lending_duration", sa.Integer(), nullable=False),
         sa.ForeignKeyConstraint(
             ["loaner_id"],
             ["loaner.id"],
@@ -517,6 +569,30 @@ def upgrade() -> None:
         unique=False,
     )
     op.create_table(
+        "phonebook_membership",
+        sa.Column("id", sa.String(), nullable=False),
+        sa.Column("user_id", sa.String(), nullable=False),
+        sa.Column("association_id", sa.String(), nullable=False),
+        sa.Column("mandate_year", sa.Integer(), nullable=False),
+        sa.Column("role_name", sa.String(), nullable=False),
+        sa.Column("role_tags", sa.String(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["association_id"],
+            ["phonebook_association.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["user_id"],
+            ["core_user.id"],
+        ),
+        sa.PrimaryKeyConstraint("user_id", "association_id", "mandate_year"),
+    )
+    op.create_index(
+        op.f("ix_phonebook_membership_id"),
+        "phonebook_membership",
+        ["id"],
+        unique=False,
+    )
+    op.create_table(
         "raffle",
         sa.Column("id", sa.String(), nullable=False),
         sa.Column("name", sa.String(), nullable=False),
@@ -554,9 +630,9 @@ def upgrade() -> None:
     op.create_table(
         "refresh_token",
         sa.Column("client_id", sa.String(), nullable=False),
-        sa.Column("created_on", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("expire_on", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("revoked_on", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_on", TZDateTime(), nullable=False),
+        sa.Column("expire_on", TZDateTime(), nullable=False),
+        sa.Column("revoked_on", TZDateTime(), nullable=True),
         sa.Column("token", sa.String(), nullable=False),
         sa.Column("scope", sa.String(), nullable=True),
         sa.Column("user_id", sa.String(), nullable=False),
@@ -693,8 +769,9 @@ def upgrade() -> None:
         "booking",
         sa.Column("id", sa.String(), nullable=False),
         sa.Column("reason", sa.String(), nullable=False),
-        sa.Column("start", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("end", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("start", TZDateTime(), nullable=False),
+        sa.Column("end", TZDateTime(), nullable=False),
+        sa.Column("creation", TZDateTime(), nullable=False),
         sa.Column("note", sa.String(), nullable=True),
         sa.Column("room_id", sa.String(), nullable=False),
         sa.Column("key", sa.Boolean(), nullable=False),
@@ -774,6 +851,8 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_raffle_group_id"), table_name="raffle")
     op.drop_index(op.f("ix_raffle_description"), table_name="raffle")
     op.drop_table("raffle")
+    op.drop_index(op.f("ix_phonebook_membership_id"), table_name="phonebook_membership")
+    op.drop_table("phonebook_membership")
     op.drop_index(
         op.f("ix_notification_topic_membership_topic"),
         table_name="notification_topic_membership",
@@ -803,6 +882,16 @@ def downgrade() -> None:
     op.drop_table("amap_delivery_content")
     op.drop_table("amap_cash")
     op.drop_table("advert_adverts")
+    op.drop_table("recommendation")
+    op.drop_index(
+        op.f("ix_phonebook_association_name"),
+        table_name="phonebook_association",
+    )
+    op.drop_index(
+        op.f("ix_phonebook_association_id"),
+        table_name="phonebook_association",
+    )
+    op.drop_table("phonebook_association")
     op.drop_index(
         op.f("ix_notification_message_firebase_device_token"),
         table_name="notification_message",
@@ -841,3 +930,17 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_advert_advertisers_id"), table_name="advert_advertisers")
     op.drop_table("advert_advertisers")
     # ### end Alembic commands ###
+
+
+def pre_test_upgrade(
+    alembic_runner: "MigrationContext",
+    alembic_connection: sa.Connection,
+) -> None:
+    pass
+
+
+def test_upgrade(
+    alembic_runner: "MigrationContext",
+    alembic_connection: sa.Connection,
+) -> None:
+    pass

@@ -66,8 +66,8 @@ unfixable = []
 "app/dependencies.py" = ["B904"]
 # Migrations folder should not really be part of a Python package
 "migrations/env.py" = ["INP001"]
-# Allow raw SQL for migrations
-"migrations/versions/*" = ["S608"]
+# Allow raw SQL for migrations, allow assert for migration tests
+"migrations/versions/*" = ["S608", "S101"]
 
 [tool.ruff.lint.mccabe]
 # Flag errors (`C901`) whenever the complexity level exceeds 18.

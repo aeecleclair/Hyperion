@@ -4,9 +4,13 @@ Create Date: 2024-04-27 17:31:29.082701
 """
 
 from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
 from alembic import op
+
+if TYPE_CHECKING:
+    from pytest_alembic import MigrationContext
 
 # revision identifiers, used by Alembic.
 revision: str = "c3acc9b8dd98"
@@ -106,3 +110,17 @@ def downgrade() -> None:
             ),
             nullable=False,
         )
+
+
+def pre_test_upgrade(
+    alembic_runner: "MigrationContext",
+    alembic_connection: sa.Connection,
+) -> None:
+    pass
+
+
+def test_upgrade(
+    alembic_runner: "MigrationContext",
+    alembic_connection: sa.Connection,
+) -> None:
+    pass

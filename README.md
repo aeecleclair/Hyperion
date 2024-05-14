@@ -120,35 +120,7 @@ uvicorn app.main:app --reload
 
 ## Use Alembic migrations
 
-The project use Alembic migrations to manage database structure evolutions.
-
-When the database does not exist, SQLAlchemy will create a new database with an up to date structure. When the database already exist, migrations must be run to update the structure.
-
-### Run migrations
-
-These [migration files](./migrations/versions/) are automatically run before Hyperion startup.
-
-They can also be run manually using the following command:
-
-```bash
-alembic upgrade head
-```
-
-> If you want to force Alembic to consider your database structure is up to date, you can use the following command:
->
-> ```bash
-> alembic stamp head
-> ```
-
-### Write migration files
-
-To create a new migration file, use the following command:
-
-```bash
-alembic revision --autogenerate -m "Your message"
-```
-
-Files must be names with the following convention: `number-message.py
+See [migrations README](./migrations/README)
 
 ## OpenAPI specification
 
