@@ -4,17 +4,17 @@ from pydantic import BaseModel, computed_field
 
 
 class CheckoutPayment(BaseModel):
-    id: uuid
+    id: uuid.UUID
     paid_amount: int
 
 
 class Checkout(BaseModel):
-    id: uuid
+    id: uuid.UUID
     payment_url: str
 
 
 class CheckoutComplete(BaseModel):
-    id: uuid
+    id: uuid.UUID
     module: str
 
     name: str
