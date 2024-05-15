@@ -18,7 +18,7 @@ class PaymentTool:
             timeout=60,
         )
 
-    def init_checkout(
+    async def init_checkout(
         self,
         module: str,
         helloasso_slug: str,
@@ -28,6 +28,22 @@ class PaymentTool:
         payer_user: CoreUser | None,
         db: AsyncSession,
     ) -> schemas_payment.Checkout:
+        """
+        Init an HelloAsso checkout
+
+        Params:
+            helloasso_slug: the slug of the HelloAsso organization
+            checkout_amount: amount in centimes
+            checkout_name: name to display for the payment
+            redirection_uri: redirect the user after the payment.
+                The status of the payment will be included in a query param but can not be thrusted
+                This must be an https url
+            payer_user: prefill some information about the payer
+
+        Return:
+            id: id of the Hyperion's Checkout, you should save it to be able to get information about the checkout
+            payment_url: you need to redirect the user to this payment page
+        """
         payer: CheckoutPayer | None = None
         if payer_user:
             payer = CheckoutPayer(
@@ -60,11 +76,11 @@ class PaymentTool:
             name=checkout_name,
             amount=checkout_amount,
             paid_amount=0,
-            hello_asso_checkout_id=response.checkout_id,
+            hello_asso_checkout_id=response.id,
             hello_asso_order_id=None,
         )
 
-        cruds_payment.create_checkout(db=db, checkout=checkout_model)
+        await cruds_payment.create_checkout(db=db, checkout=checkout_model)
 
         return schemas_payment.Checkout(
             id=checkout_model_id,
@@ -73,7 +89,7 @@ class PaymentTool:
 
     def get_checkout(
         self,
-        checkout_id: uuid,
+        checkout_id: uuid.UUID,
         db: AsyncSession,
     ) -> schemas_payment.CheckoutComplete:
         checkout_model = cruds_payment.get_checkout_by_id(
