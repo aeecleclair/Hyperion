@@ -28,6 +28,7 @@ async def get_checkout_by_id(
     db: AsyncSession,
 ) -> models_payment.Checkout | None:
     result = await db.execute(
+        select(models_payment.Checkout).where(
         select(models_payment.Checkout)
         .where(
             models_payment.Checkout.id == checkout_id,
