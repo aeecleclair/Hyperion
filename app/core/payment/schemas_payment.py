@@ -25,5 +25,5 @@ class CheckoutComplete(BaseModel):
     @computed_field
     @property
     def payment_completed(self) -> bool:
-        total_paid = sum([payment.amount for payment in self.payments])
+        total_paid = sum([payment.paid_amount for payment in self.payments])
         return total_paid == self.amount
