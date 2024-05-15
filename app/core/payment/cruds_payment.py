@@ -21,7 +21,7 @@ async def create_checkout(
 
 
 async def get_checkout_by_id(
-    checkout_id: uuid,
+    checkout_id: uuid.UUID,
     db: AsyncSession,
 ) -> models_payment.Checkout | None:
     result = await db.execute(
