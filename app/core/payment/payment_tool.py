@@ -22,6 +22,12 @@ class PaymentTool:
     hello_asso: HelloAssoAPIWrapper | None
 
     def __init__(self, settings: Settings):
+        self.hello_asso = HelloAssoAPIWrapper(
+            api_base=settings.HELLOASSO_API_BASE,
+            client_id=settings.HELLOASSO_CLIENT_ID,
+            client_secret=settings.HELLOASSO_CLIENT_SECRET,
+            timeout=60,
+        )
         if (
             settings.HELLOASSO_API_BASE
             and settings.HELLOASSO_CLIENT_ID
