@@ -1,4 +1,6 @@
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import ForeignKey
+import uuid
 
 from app.types.sqlalchemy import Base, PrimaryKey
 
@@ -7,6 +9,7 @@ class CheckoutPayment(Base):
     __tablename__ = "payment_checkout_payment"
 
     id: Mapped[PrimaryKey]
+    checkout_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("payment_checkout.id"), nullable=False)
 
     paid_amount: Mapped[int]
     hello_asso_payment_id: Mapped[str] = mapped_column(index=True, unique=True)
