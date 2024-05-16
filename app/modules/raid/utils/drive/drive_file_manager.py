@@ -44,11 +44,13 @@ class DriveFileManager:
                 return
             if not self.drive_folders.registering_folder_id:
                 self.drive_folders.registering_folder_id = self.create_folder(
-                    self.REGISTERING_FOLDER_NAME, self.drive_folders.parent_folder_id,
+                    self.REGISTERING_FOLDER_NAME,
+                    self.drive_folders.parent_folder_id,
                 )
             if not self.drive_folders.security_folder_id:
                 self.drive_folders.security_folder_id = self.create_folder(
-                    self.SECURITY_FOLDER_NAME, self.drive_folders.parent_folder_id,
+                    self.SECURITY_FOLDER_NAME,
+                    self.drive_folders.parent_folder_id,
                 )
             await set_core_data(
                 self.drive_folders,
@@ -88,23 +90,36 @@ class DriveFileManager:
         return response.get("id")
 
     async def upload_team_file(
-        self, file_path: str, file_name: str, db: AsyncSession,
+        self,
+        file_path: str,
+        file_name: str,
+        db: AsyncSession,
     ) -> str:
         await self.init_folders(db)
         return await self.upload_file(
-            file_path, file_name, self.drive_folders.registering_folder_id,
+            file_path,
+            file_name,
+            self.drive_folders.registering_folder_id,
         )
 
     async def upload_participant_file(
-        self, file_path: str, file_name: str, db: AsyncSession,
+        self,
+        file_path: str,
+        file_name: str,
+        db: AsyncSession,
     ) -> str:
         await self.init_folders(db)
         return await self.upload_file(
-            file_path, file_name, self.drive_folders.security_folder_id,
+            file_path,
+            file_name,
+            self.drive_folders.security_folder_id,
         )
 
     async def upload_raid_file(
-        self, file_path: str, file_name: str, db: AsyncSession,
+        self,
+        file_path: str,
+        file_name: str,
+        db: AsyncSession,
     ) -> str:
         await self.init_folders(db)
         return await self.upload_file(

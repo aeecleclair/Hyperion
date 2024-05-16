@@ -293,7 +293,6 @@ class RalllyAuthClient(BaseAuthClient):
         "email",
     }
 
-
     return_userinfo_in_id_token: bool = True
 
     @classmethod

@@ -13,11 +13,7 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-<<<<<<<< HEAD:migrations/versions/14-Payment.py
 revision: str = "146039b64c92"
-========
-revision: str = "b78766673a16"
->>>>>>>> 2d117272 (Fix rebase and format):migrations/versions/14-payment.py
 down_revision: str | None = "fce1716123e2"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
@@ -31,9 +27,8 @@ def upgrade() -> None:
         sa.Column("module", sa.String(), nullable=False),
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("amount", sa.Integer(), nullable=False),
-        sa.Column("hello_asso_checkout_id", sa.Integer(), nullable=False),
+        sa.Column("hello_asso_checkout_id", sa.String(), nullable=False),
         sa.Column("hello_asso_order_id", sa.String(), nullable=True),
-        sa.Column("secret", sa.String(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
@@ -41,7 +36,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("checkout_id", sa.Uuid(), nullable=False),
         sa.Column("paid_amount", sa.Integer(), nullable=False),
-        sa.Column("hello_asso_payment_id", sa.Integer(), nullable=False),
+        sa.Column("hello_asso_payment_id", sa.String(), nullable=False),
         sa.ForeignKeyConstraint(["checkout_id"], ["payment_checkout.id"]),
         sa.PrimaryKeyConstraint("id"),
     )
