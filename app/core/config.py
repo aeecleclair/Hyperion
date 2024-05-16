@@ -112,6 +112,12 @@ class Settings(BaseSettings):
 
     CDR_PAYMENT_REDIRECTION_URL: str | None = None
 
+    # Drive configuration for the raid registering app
+    RAID_DRIVE_REFRESH_TOKEN: str | None = None
+    RAID_DRIVE_API_KEY: str | None = None
+    RAID_DRIVE_CLIENT_ID: str | None = None
+    RAID_DRIVE_CLIENT_SECRET: str | None = None
+
     ############################
     # PostgreSQL configuration #
     ############################
