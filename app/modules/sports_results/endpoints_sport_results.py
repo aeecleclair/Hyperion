@@ -114,7 +114,7 @@ async def add_result(
         result.sport_id,
         db,
     ):
-        raise HTTPException(status_code=401, detail="Not a captain")
+        raise HTTPException(status_code=403, detail="Not a captain")
 
     result_complete = schemas_sport_results.ResultComplete(
         id=str(uuid.uuid4()),
