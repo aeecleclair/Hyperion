@@ -5,8 +5,8 @@ import googleapiclient.http
 from googleapiclient.discovery import build
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.dependencies import get_settings
 from app.modules.raid import schemas_raid
-from app.modules.raid.utils.drive.config import DriveSettings
 from app.utils.tools import get_core_data, set_core_data
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
@@ -14,14 +14,14 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 
 class DriveFileManager:
     def __init__(self):
-        config = DriveSettings(_env_file=".google.env")
+        config = get_settings()
 
         oauth_credentials = google.oauth2.credentials.Credentials(
             token="",
-            refresh_token=config.REFRESH_TOKEN,
+            refresh_token=config.RAID_DRIVE_REFRESH_TOKEN,
             token_uri="https://oauth2.googleapis.com/token",  # noqa: S106
-            client_id=config.CLIENT_ID,
-            client_secret=config.CLIENT_SECRET,
+            client_id=config.RAID_DRIVE_CLIENT_ID,
+            client_secret=config.RAID_DRIVE_CLIENT_SECRET,
             scopes=["https://www.googleapis.com/auth/drive"],
         )
 
@@ -29,7 +29,7 @@ class DriveFileManager:
             "drive",
             "v3",
             credentials=oauth_credentials,
-            developerKey=config.API_KEY,
+            developerKey=config.RAID_DRIVE_API_KEY,
         )
 
         self.REGISTERING_FOLDER_NAME = "Équipes"
