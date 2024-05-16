@@ -9,6 +9,7 @@ from app.modules.raid.raid_type import (
     MeetingPlace,
     Size,
 )
+from app.types import core_data
 
 
 class DocumentBase(BaseModel):
@@ -156,31 +157,25 @@ class InviteToken(BaseModel):
         orm_mode = True
 
 
-class RaidInformation(BaseModel):
+class RaidInformation(core_data.BaseCoreData):
     raid_start_date: date | None = None
     raid_end_date: date | None = None
     raid_registering_end_date: date | None = None
     payment_link: str | None = None
     contact: str | None = None
 
-    class Config:
-        orm_mode = True
-
 
 class RaidDriveFoldersCreation(BaseModel):
     parent_folder_id: str
 
 
-class RaidDriveFolders(BaseModel):
+class RaidDriveFolders(core_data.BaseCoreData):
     parent_folder_id: str | None = None
     registering_folder_id: str | None = None
     security_folder_id: str | None = None
 
 
-class RaidPrice(BaseModel):
+class RaidPrice(core_data.BaseCoreData):
     student_price: float | None = None
     partner_price: float | None = None
     t_shirt_price: float | None = None
-
-    class Config:
-        orm_mode = True

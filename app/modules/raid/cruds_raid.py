@@ -37,14 +37,18 @@ async def get_all_participants(
 async def update_participant(
     participant_id: str,
     participant: schemas_raid.ParticipantUpdate,
-    is_minor: bool,
+    is_minor: bool | None,
     db: AsyncSession,
 ) -> None:
-    await db.execute(
+    query = (
         update(models_raid.Participant)
         .where(models_raid.Participant.id == participant_id)
-        .values(**participant.model_dump(exclude_none=True), is_minor=is_minor),
+        .values(**participant.model_dump(exclude_none=True))
     )
+
+    if is_minor:
+        query = query.values(is_minor=is_minor)
+    await db.execute(query)
     await db.commit()
 
 

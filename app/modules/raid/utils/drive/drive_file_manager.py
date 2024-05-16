@@ -129,7 +129,11 @@ class DriveFileManager:
             mimetype="text/csv",
         )
 
-    def replace_file(self, file_path: str, file_id: str) -> str:
+    async def replace_file(
+        self,
+        file_path: str,
+        file_id: str,
+    ) -> str:
         file_metadata = {
             "mimeType": "application/pdf",
         }
@@ -138,7 +142,7 @@ class DriveFileManager:
             mimetype="application/pdf",
         )
         if not file_id:
-            return self.upload_file(file_path, file_id)
+            return await self.upload_file(file_path, file_id)
         response = (
             self.drive_service.files()
             .update(fileId=file_id, body=file_metadata, media_body=media)
