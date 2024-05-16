@@ -84,7 +84,14 @@ async def save_team_info(team: models_raid.Team, db: AsyncSession) -> None:
         file_path = pdf_writer.write_team(team)
         file_name = file_path.split("/")[-1]
         if team.file_id:
-            file_id = drive_file_manager.replace_file(file_path, team.file_id)
+            try:
+                file_id = drive_file_manager.replace_file(file_path, team.file_id)
+            except Exception:
+                file_id = await drive_file_manager.upload_team_file(
+                    file_path,
+                    file_name,
+                    db,
+                )
         else:
             file_id = await drive_file_manager.upload_team_file(
                 file_path,
@@ -894,7 +901,11 @@ async def update_drive_folders(
     Update drive folders
     """
     schemas_folders = await get_core_data(schemas_raid.RaidDriveFolders, db)
-    schemas_folders.parent_folder_id = drive_folders.parent_folder_id
+    schemas_folders = schemas_raid.RaidDriveFolders(
+        parent_folder_id=drive_folders.parent_folder_id,
+        registering_folder_id=None,
+        security_folder_id=None,
+    )
     await set_core_data(schemas_folders, db)
 
 
