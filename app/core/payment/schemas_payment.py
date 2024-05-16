@@ -22,7 +22,7 @@ class CheckoutComplete(BaseModel):
 
     payments: list[CheckoutPayment]
 
-    @computed_field
+    @computed_field  # type: ignore[misc]
     @property
     def payment_completed(self) -> bool:
         total_paid = sum([payment.paid_amount for payment in self.payments])
