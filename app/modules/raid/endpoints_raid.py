@@ -147,7 +147,7 @@ async def save_security_file(
                 file_id,
                 db,
             )
-        pdf_writer.clear_pdf()
+        Path(file_path).unlink()
     except Exception as error:
         hyperion_error_logger.error(f"Error while creating pdf, {error.__dict__}")
         return None
@@ -592,12 +592,15 @@ async def validate_document(
 )
 async def set_security_file(
     security_file: schemas_raid.SecurityFileBase,
+    participant_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user),
 ):
     """
     Confirm security file
     """
+    if not await cruds_raid.are_user_in_the_same_team(user.id, participant_id, db):
+        raise HTTPException(status_code=403, detail="You are not the participant.")
     existing_security_file = await cruds_raid.get_security_file_by_security_id(
         security_file.id,
         db,
@@ -605,7 +608,7 @@ async def set_security_file(
     if existing_security_file:
         await cruds_raid.update_security_file(security_file, db)
         team = await cruds_raid.get_team_by_participant_id(user.id, db)
-        participant = await cruds_raid.get_participant_by_id(user.id, db)
+        participant = await cruds_raid.get_participant_by_id(participant_id, db)
         if team and participant:
             await save_security_file(participant, team.number, db)
         return await cruds_raid.get_security_file_by_security_id(
@@ -617,7 +620,7 @@ async def set_security_file(
     )
     created_security_file = await cruds_raid.add_security_file(model_security_file, db)
     team = await cruds_raid.get_team_by_participant_id(user.id, db)
-    participant = await cruds_raid.get_participant_by_id(user.id, db)
+    participant = await cruds_raid.get_participant_by_id(participant_id, db)
     if team and participant:
         await save_security_file(participant, team.number, db)
     return created_security_file

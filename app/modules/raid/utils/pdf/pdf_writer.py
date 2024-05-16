@@ -382,12 +382,12 @@ class HTMLPDFWriter:
             loader=FileSystemLoader("assets/templates"),
             autoescape=select_autoescape(["html"]),
         )
-        results_template = environment.get_template("main.html")
+        results_template = environment.get_template("template.html")
         context = {**participant.__dict__, "team_number": team_number}
         html_content = results_template.render(context)
-        csspath = pathlib.Path("assets/templates/output.css")
+        csspath = pathlib.Path("assets/templates/style.css")
         css_content = csspath.read_bytes().decode()
-        story = fitz.Story(html=html_content, user_css=css_content)
+        story = fitz.Story(html=html_content, user_css=css_content, em=10)
         writer = fitz.DocumentWriter("data/raid/" + participant.id + ".pdf")
         mediabox = fitz.paper_rect("a4")
         where = mediabox + (36, 36, -36, -36)  # noqa: RUF005
