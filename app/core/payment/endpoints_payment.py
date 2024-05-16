@@ -1,18 +1,14 @@
 import uuid
 
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse
-from helloasso_api_wrapper import HelloAssoAPIWrapper
 from helloasso_api_wrapper.models.api_notifications import (
     ApiNotificationType,
     NotificationResultContent,
 )
-from helloasso_api_wrapper.models.carts import CheckoutPayer, InitCheckoutBody
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import Settings
 from app.core.payment import cruds_payment, models_payment
-from app.dependencies import get_db, get_settings
+from app.dependencies import get_db
 
 router = APIRouter(tags=["Payments"])
 
