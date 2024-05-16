@@ -102,15 +102,15 @@ async def post_update_actions(team: models_raid.Team | None, db: AsyncSession) -
 
 async def save_security_file(
     participant: schemas_raid.Participant,
-    team_number: int,
+    team_number: int | None,
     db: AsyncSession,
 ) -> None:
     try:
         pdf_writer = HTMLPDFWriter()
         file_path = pdf_writer.write_participant_security_file(participant, team_number)
         file_name = f"{str(team_number) + '_' if team_number else ''}{participant.firstname}_{participant.name}_fiche_sécurité.pdf"
-        if participant.security_file.file_id:
-            file_id = drive_file_manager.replace_file(
+        if participant.security_file and participant.security_file.file_id:
+            file_id = await drive_file_manager.replace_file(
                 file_path,
                 participant.security_file.file_id,
             )
@@ -120,11 +120,18 @@ async def save_security_file(
                 file_name,
                 db,
             )
-        await cruds_raid.update_security_file_id(
-            participant.security_file.id,
-            file_id,
-            db,
-        )
+        if not participant.security_file:
+            security_file = schemas_raid.SecurityFile(
+                id=str(uuid.uuid4()),
+                file_id=file_id,
+            )
+            await cruds_raid.add_security_file(security_file, db)
+        else:
+            await cruds_raid.update_security_file_id(
+                participant.security_file.id,
+                file_id,
+                db,
+            )
         pdf_writer.clear_pdf()
     except Exception as error:
         hyperion_error_logger.error(f"Error while creating pdf, {error.__dict__}")
@@ -178,15 +185,11 @@ async def create_participant(
         raise HTTPException(status_code=403, detail="You are already a participant.")
 
     raid_information = await get_core_data(schemas_raid.RaidInformation, db)
-    if not raid_information.raid_start_date:
-        majority_date = datetime(
-            year=datetime.now(UTC).year + 1,
-            month=1,
-            day=1,
-            tzinfo=UTC,
-        )
-    else:
-        majority_date = raid_information.raid_start_date
+    raid_start_date = raid_information.raid_start_date or date(
+        year=datetime.now(UTC).year + 1,
+        month=1,
+        day=1,
+    )
 
     is_minor = (
         date(
@@ -194,9 +197,7 @@ async def create_participant(
             participant.birthday.month,
             participant.birthday.day,
         )
-        > majority_date
-        if participant.birthday
-        else False
+        > raid_start_date
     )
 
     db_participant = models_raid.Participant(
@@ -229,26 +230,23 @@ async def update_participant(
         raise HTTPException(status_code=403, detail="You are not the participant.")
 
     raid_information = await get_core_data(schemas_raid.RaidInformation, db)
-    if not raid_information.raid_start_date:
-        majority_date = datetime(
-            year=datetime.now(UTC).year + 1,
-            month=1,
-            day=1,
-            tzinfo=UTC,
-        )
-    else:
-        majority_date = raid_information.raid_start_date
-
-    is_minor = (
-        date(
-            participant.birthday.year + 18,
-            participant.birthday.month,
-            participant.birthday.day,
-        )
-        > majority_date
-        if participant.birthday
-        else False
+    raid_start_date = raid_information.raid_start_date or date(
+        year=datetime.now(UTC).year + 1,
+        month=1,
+        day=1,
     )
+
+    # We only want to change the is_minor value if the birthday is changed
+    is_minor = None
+    if participant.birthday:
+        is_minor = (
+            date(
+                participant.birthday.year + 18,
+                participant.birthday.month,
+                participant.birthday.day,
+            )
+            > raid_start_date
+        )
 
     await cruds_raid.update_participant(participant_id, participant, is_minor, db)
     team = await cruds_raid.get_team_by_participant_id(participant_id, db)
@@ -825,7 +823,8 @@ async def merge_teams(
     )
     await cruds_raid.update_team_second_id(team1_id, team2.captain_id, db)
     await cruds_raid.delete_team(team2_id, db)
-    drive_file_manager.delete_file(team2.file_id)
+    if team2.file_id:
+        drive_file_manager.delete_file(team2.file_id)
     await post_update_actions(team1, db)
     return await cruds_raid.get_team_by_id(team1_id, db)
 
