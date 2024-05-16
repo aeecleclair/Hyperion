@@ -1,9 +1,10 @@
-import csv
 import logging
 import uuid
+from collections.abc import Sequence
 from datetime import UTC, date, datetime
 from pathlib import Path
 
+import aiofiles
 from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -37,26 +38,33 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 drive_file_manager = DriveFileManager()
 
 
-async def write_teams_csv(teams: list[models_raid.Team], db: AsyncSession) -> None:
+async def write_teams_csv(teams: Sequence[models_raid.Team], db: AsyncSession) -> None:
     file_name = "Équipes - " + datetime.now(UTC).strftime("%Y-%m-%d_%H_%M_%S") + ".csv"
     file_path = "data/raid/" + file_name
-    data = [["Team name", "Captain", "Second", "Difficulty", "Number"]]
+    data: list[list[str]] = [["Team name", "Captain", "Second", "Difficulty", "Number"]]
     for team in teams:
         data.append(
             [
-                team.name,
-                f"{team.captain.firstname} {team.captain.name}",
-                f"{team.second.firstname} {team.second.name}" if team.second else None,
+                team.name.replace(",", " "),
+                f"{team.captain.firstname} {team.captain.name}".replace(",", " "),
+                f"{team.second.firstname} {team.second.name}".replace(",", " ")
+                if team.second
+                else "",
                 team.difficulty,
-                team.number,
+                str(team.number or ""),
             ],
         )
-    file = Path.open(file_path, mode="w", newline="", encoding="utf-8")
-    writer = csv.writer(file)
-    writer.writerows(data)
-    file.close()
+    async with aiofiles.open(
+        file_path,
+        mode="w",
+        newline="",
+        encoding="utf-8",
+    ) as file:
+        for line in data:
+            await file.write(",".join(line) + "\n")
+
     await drive_file_manager.upload_raid_file(file_path, file_name, db)
-    Path.unlink(file_path)
+    Path(file_path).unlink()
 
 
 async def set_team_number(team: models_raid.Team, db: AsyncSession) -> None:
@@ -101,7 +109,7 @@ async def post_update_actions(team: models_raid.Team | None, db: AsyncSession) -
 
 
 async def save_security_file(
-    participant: schemas_raid.Participant,
+    participant: models_raid.Participant,
     team_number: int | None,
     db: AsyncSession,
 ) -> None:
@@ -110,7 +118,7 @@ async def save_security_file(
         file_path = pdf_writer.write_participant_security_file(participant, team_number)
         file_name = f"{str(team_number) + '_' if team_number else ''}{participant.firstname}_{participant.name}_fiche_sécurité.pdf"
         if participant.security_file and participant.security_file.file_id:
-            file_id = await drive_file_manager.replace_file(
+            file_id = drive_file_manager.replace_file(
                 file_path,
                 participant.security_file.file_id,
             )
@@ -121,7 +129,7 @@ async def save_security_file(
                 db,
             )
         if not participant.security_file:
-            security_file = schemas_raid.SecurityFile(
+            security_file = models_raid.SecurityFile(
                 id=str(uuid.uuid4()),
                 file_id=file_id,
             )

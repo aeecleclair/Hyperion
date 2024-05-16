@@ -107,15 +107,16 @@ async def get_all_teams(
 
 async def get_all_validated_teams(
     db: AsyncSession,
-) -> Sequence[models_raid.Team]:
+) -> list[models_raid.Team]:
     teams = await db.execute(
-        select(models_raid.Team)
-        .where(models_raid.Team.validation_progress == 100)
-        .options(
+        select(models_raid.Team).options(
             selectinload("*"),
         ),
     )
-    return teams.scalars().all()
+    teams_found = teams.scalars().all()
+    # We can not use a where clause because the validation_progress is a Python property
+    # and is not usable in a SQL query
+    return list(filter(lambda team: team.validation_progress == 100, teams_found))
 
 
 async def get_team_by_id(
@@ -502,4 +503,4 @@ async def get_number_of_team_by_difficulty(
     result = await db.execute(
         select(func.count()).where(models_raid.Team.difficulty == difficulty),
     )
-    return result.scalar()
+    return result.scalar() or 0

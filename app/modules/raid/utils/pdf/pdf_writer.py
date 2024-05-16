@@ -376,7 +376,7 @@ class HTMLPDFWriter:
     def write_participant_security_file(
         self,
         participant: Participant,
-        team_number: int,
+        team_number: int | None,
     ):
         environment = Environment(
             loader=FileSystemLoader("assets/templates"),
