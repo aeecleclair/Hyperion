@@ -1,13 +1,9 @@
-"""raid
+"""empty message
 
-Revision ID: 4a02570cc225
-Revises: e3d06397960d
-Create Date: 2024-04-03 23:49:38.345393
-
+Create Date: 2024-05-16 15:10:24.610001
 """
 
 from collections.abc import Sequence
-from enum import Enum
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -17,46 +13,10 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "4a02570cc225"
+revision: str = "9d7d834743d1"
 down_revision: str | None = "146039b64c92"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
-
-
-class DocumentType(Enum):
-    idCard = "idCard"  # the id card of the participant
-    medicalCertificate = (
-        "medicalCertificate"  # the medical certificate of the participant
-    )
-    studentCard = "studentCard"  # the student card of the participant
-    raidRules = "raidRules"  # the rules of the raid
-
-
-class Size(Enum):  # for the T-shirt and the bike
-    XS = "XS"
-    S = "S"
-    M = "M"
-    L = "L"
-    XL = "XL"
-
-
-class MeetingPlace(Enum):  # place of meeting for the raid
-    centrale = "centrale"
-    bellecour = "bellecour"
-    anyway = "anyway"
-
-
-class Difficulty(Enum):  # the difficulty of the raid
-    discovery = "discovery"
-    sports = "sports"
-    expert = "expert"
-
-
-class Situation(Enum):  # the situation of the participant
-    centrale = "centrale"
-    otherSchool = "otherSchool"
-    corporatePartner = "corporatePartner"
-    other = "other"
 
 
 def upgrade() -> None:
@@ -66,15 +26,27 @@ def upgrade() -> None:
         sa.Column("id", sa.String(), nullable=False),
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("uploaded_at", sa.Date(), nullable=False),
-        sa.Column("validated", sa.Boolean(), nullable=False),
+        sa.Column(
+            "validation",
+            sa.Enum(
+                "pending", "accepted", "refused", "temporary", name="documentvalidation",
+            ),
+            nullable=False,
+        ),
         sa.Column(
             "type",
-            sa.Enum(DocumentType),
+            sa.Enum(
+                "idCard",
+                "medicalCertificate",
+                "studentCard",
+                "raidRules",
+                "parentAuthorization",
+                name="documenttype",
+            ),
             nullable=False,
         ),
         sa.PrimaryKeyConstraint("id"),
     )
-
     op.create_index(op.f("ix_raid_document_id"), "raid_document", ["id"], unique=False)
     op.create_table(
         "raid_security_file",
@@ -89,13 +61,14 @@ def upgrade() -> None:
         sa.Column("surgical_operation", sa.String(), nullable=True),
         sa.Column("trauma", sa.String(), nullable=True),
         sa.Column("family", sa.String(), nullable=True),
+        sa.Column("emergency_person_firstname", sa.String(), nullable=True),
+        sa.Column("emergency_person_name", sa.String(), nullable=True),
+        sa.Column("emergency_person_phone", sa.String(), nullable=True),
+        sa.Column("file_id", sa.String(), nullable=True),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
-        op.f("ix_raid_security_file_id"),
-        "raid_security_file",
-        ["id"],
-        unique=False,
+        op.f("ix_raid_security_file_id"), "raid_security_file", ["id"], unique=False,
     )
     op.create_table(
         "raid_participant",
@@ -106,10 +79,12 @@ def upgrade() -> None:
         sa.Column("address", sa.String(), nullable=True),
         sa.Column("phone", sa.String(), nullable=False),
         sa.Column("email", sa.String(), nullable=False),
-        sa.Column("bike_size", sa.Enum(Size), nullable=True),
+        sa.Column(
+            "bike_size", sa.Enum("XS", "S", "M", "L", "XL", name="size"), nullable=True,
+        ),
         sa.Column(
             "t_shirt_size",
-            sa.Enum(Size),
+            sa.Enum("XS", "S", "M", "L", "XL", name="size"),
             nullable=True,
         ),
         sa.Column("situation", sa.String(), nullable=True),
@@ -121,35 +96,20 @@ def upgrade() -> None:
         sa.Column("security_file_id", sa.String(), nullable=True),
         sa.Column("student_card_id", sa.String(), nullable=True),
         sa.Column("raid_rules_id", sa.String(), nullable=True),
+        sa.Column("parent_authorization_id", sa.String(), nullable=True),
         sa.Column("attestation_on_honour", sa.Boolean(), nullable=False),
         sa.Column("payment", sa.Boolean(), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["id_card_id"],
-            ["raid_document.id"],
-        ),
-        sa.ForeignKeyConstraint(
-            ["medical_certificate_id"],
-            ["raid_document.id"],
-        ),
-        sa.ForeignKeyConstraint(
-            ["raid_rules_id"],
-            ["raid_document.id"],
-        ),
-        sa.ForeignKeyConstraint(
-            ["security_file_id"],
-            ["raid_security_file.id"],
-        ),
-        sa.ForeignKeyConstraint(
-            ["student_card_id"],
-            ["raid_document.id"],
-        ),
+        sa.Column("is_minor", sa.Boolean(), nullable=False),
+        sa.ForeignKeyConstraint(["id_card_id"], ["raid_document.id"]),
+        sa.ForeignKeyConstraint(["medical_certificate_id"], ["raid_document.id"]),
+        sa.ForeignKeyConstraint(["parent_authorization_id"], ["raid_document.id"]),
+        sa.ForeignKeyConstraint(["raid_rules_id"], ["raid_document.id"]),
+        sa.ForeignKeyConstraint(["security_file_id"], ["raid_security_file.id"]),
+        sa.ForeignKeyConstraint(["student_card_id"], ["raid_document.id"]),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
-        op.f("ix_raid_participant_id"),
-        "raid_participant",
-        ["id"],
-        unique=False,
+        op.f("ix_raid_participant_id"), "raid_participant", ["id"], unique=False,
     )
     op.create_table(
         "raid_team",
@@ -158,24 +118,19 @@ def upgrade() -> None:
         sa.Column("number", sa.Integer(), nullable=True),
         sa.Column(
             "difficulty",
-            sa.Enum(Difficulty),
+            sa.Enum("discovery", "sports", "expert", name="difficulty"),
             nullable=True,
         ),
         sa.Column("captain_id", sa.String(), nullable=False),
         sa.Column("second_id", sa.String(), nullable=True),
         sa.Column(
             "meeting_place",
-            sa.Enum(MeetingPlace),
+            sa.Enum("centrale", "bellecour", "anyway", name="meetingplace"),
             nullable=True,
         ),
-        sa.ForeignKeyConstraint(
-            ["captain_id"],
-            ["raid_participant.id"],
-        ),
-        sa.ForeignKeyConstraint(
-            ["second_id"],
-            ["raid_participant.id"],
-        ),
+        sa.Column("file_id", sa.String(), nullable=True),
+        sa.ForeignKeyConstraint(["captain_id"], ["raid_participant.id"]),
+        sa.ForeignKeyConstraint(["second_id"], ["raid_participant.id"]),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(op.f("ix_raid_team_id"), "raid_team", ["id"], unique=False)
@@ -184,10 +139,7 @@ def upgrade() -> None:
         sa.Column("id", sa.String(), nullable=False),
         sa.Column("team_id", sa.String(), nullable=False),
         sa.Column("token", sa.String(), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["team_id"],
-            ["raid_team.id"],
-        ),
+        sa.ForeignKeyConstraint(["team_id"], ["raid_team.id"]),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(op.f("ix_raid_invite_id"), "raid_invite", ["id"], unique=False)
@@ -206,11 +158,6 @@ def downgrade() -> None:
     op.drop_table("raid_security_file")
     op.drop_index(op.f("ix_raid_document_id"), table_name="raid_document")
     op.drop_table("raid_document")
-    sa.Enum(Difficulty).drop(op.get_bind())
-    sa.Enum(MeetingPlace).drop(op.get_bind())
-    sa.Enum(Size).drop(op.get_bind())
-    sa.Enum(DocumentType).drop(op.get_bind())
-
     # ### end Alembic commands ###
 
 
