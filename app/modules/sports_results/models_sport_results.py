@@ -7,14 +7,14 @@ from app.database import Base
 
 
 class CaptainMembership(Base):
-    __tablename__ = "sport-team-captain-membership"
+    __tablename__ = "sport_team_captain_membership"
 
     user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), primary_key=True)
     sport_id: Mapped[str] = mapped_column(String)
 
 
 class Captain(Base):
-    __tablename__ = "sport-team-captains"
+    __tablename__ = "sport_team-_captains"
 
     user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), primary_key=True)
     sport: Mapped["Sport"] = relationship(
@@ -24,7 +24,7 @@ class Captain(Base):
 
 
 class Sport(Base):
-    __tablename__ = "sports"
+    __tablename__ = "sport_sports"
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
     name: Mapped[str] = mapped_column(String, unique=True)
@@ -35,7 +35,7 @@ class Sport(Base):
 
 
 class Result(Base):
-    __tablename__ = "result"
+    __tablename__ = "sport_results"
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
     sport_id: Mapped[str] = mapped_column(String)
