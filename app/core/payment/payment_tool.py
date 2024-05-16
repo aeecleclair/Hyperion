@@ -11,6 +11,12 @@ from app.core.payment import cruds_payment, models_payment, schemas_payment
 
 class PaymentTool:
     def __init__(self, settings: Settings):
+        if (
+            not settings.HELLOASSO_API_BASE
+            or not settings.HELLOASSO_CLIENT_ID
+            or not settings.HELLOASSO_CLIENT_SECRET
+        ):
+            raise ValueError("HelloAsso API credentials are not set")
         self.hello_asso = HelloAssoAPIWrapper(
             api_base=settings.HELLOASSO_API_BASE,
             client_id=settings.HELLOASSO_CLIENT_ID,
