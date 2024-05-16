@@ -29,9 +29,7 @@ from app.dependencies import (
     get_request_id,
     get_settings,
     is_user,
-    is_user,
     is_user_a_member_of,
-    is_user_an_ecl_member,
     is_user_an_ecl_member,
 )
 from app.types.content_type import ContentType

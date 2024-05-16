@@ -58,11 +58,18 @@ def upgrade() -> None:
     op.add_column(
         "raid_participant",
         sa.Column(
-            "is_minor", sa.Boolean(), nullable=False, server_default=sa.sql.false(),
+            "is_minor",
+            sa.Boolean(),
+            nullable=False,
+            server_default=sa.sql.false(),
         ),
     )
     op.create_foreign_key(
-        None, "raid_participant", "raid_document", ["parent_authorization_id"], ["id"],
+        None,
+        "raid_participant",
+        "raid_document",
+        ["parent_authorization_id"],
+        ["id"],
     )
     # ### end Alembic commands ###
 
