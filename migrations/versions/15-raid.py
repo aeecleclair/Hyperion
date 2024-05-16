@@ -8,6 +8,10 @@ Create Date: 2024-04-03 23:49:38.345393
 
 from collections.abc import Sequence
 from enum import Enum
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pytest_alembic import MigrationContext
 
 import sqlalchemy as sa
 from alembic import op
@@ -208,3 +212,17 @@ def downgrade() -> None:
     sa.Enum(DocumentType).drop(op.get_bind())
 
     # ### end Alembic commands ###
+
+
+def pre_test_upgrade(
+    alembic_runner: "MigrationContext",
+    alembic_connection: sa.Connection,
+) -> None:
+    pass
+
+
+def test_upgrade(
+    alembic_runner: "MigrationContext",
+    alembic_connection: sa.Connection,
+) -> None:
+    pass
