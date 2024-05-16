@@ -15,7 +15,6 @@ from tests.commons import (
     client,
     create_api_access_token,
     create_user_with_groups,
-    event_loop,  # noqa
 )
 
 BDE_user: models_core.CoreUser | None = None

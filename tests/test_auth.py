@@ -13,7 +13,6 @@ from app.types.floors_type import FloorsType
 from tests.commons import (
     add_object_to_db,
     client,
-    event_loop,  # noqa
 )
 
 user: models_core.CoreUser

@@ -1,10 +1,8 @@
-import asyncio
 import logging
 import uuid
 from collections.abc import AsyncGenerator
 from functools import lru_cache
 
-import pytest
 import redis
 from fastapi import Depends
 from fastapi.testclient import TestClient
@@ -102,20 +100,6 @@ client = TestClient(test_app)  # Create a client to execute tests
 
 with client:  # That syntax trigger the lifespan defined in main.py
     pass
-
-
-# We need to redefine the event_loop (which is function scoped by default)
-# to be able to use session scoped fixture (the function that initialize the db objects in each test file)
-# See https://github.com/tortoise/tortoise-orm/issues/638#issuecomment-830124562
-@pytest.fixture(scope="module")
-def event_loop():
-    """Overrides pytest default function scoped event loop"""
-    policy = asyncio.get_event_loop_policy()
-    loop = policy.new_event_loop()
-    try:
-        yield loop
-    finally:
-        loop.close()
 
 
 async def create_user_with_groups(

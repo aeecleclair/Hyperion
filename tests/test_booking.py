@@ -13,7 +13,6 @@ from tests.commons import (
     client,
     create_api_access_token,
     create_user_with_groups,
-    event_loop,  # noqa
 )
 
 booking: models_booking.Booking | None = None
