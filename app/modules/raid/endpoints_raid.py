@@ -178,9 +178,9 @@ async def create_participant(
         raise HTTPException(status_code=403, detail="You are already a participant.")
 
     raid_information = await get_core_data(schemas_raid.RaidInformation, db)
-    if not raid_information:
+    if not raid_information.raid_start_date:
         majority_date = datetime(
-            year=datetime.now(UTC).year - 17,
+            year=datetime.now(UTC).year + 1,
             month=1,
             day=1,
             tzinfo=UTC,
@@ -229,9 +229,9 @@ async def update_participant(
         raise HTTPException(status_code=403, detail="You are not the participant.")
 
     raid_information = await get_core_data(schemas_raid.RaidInformation, db)
-    if not raid_information:
+    if not raid_information.raid_start_date:
         majority_date = datetime(
-            year=datetime.now(UTC).year - 17,
+            year=datetime.now(UTC).year + 1,
             month=1,
             day=1,
             tzinfo=UTC,
