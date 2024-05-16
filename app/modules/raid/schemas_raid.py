@@ -20,17 +20,11 @@ class DocumentBase(BaseModel):
 class DocumentCreation(DocumentBase):
     id: str
 
-    class Config:
-        orm_mode = True
-
 
 class Document(DocumentBase):
     id: str
     uploaded_at: date
     validation: DocumentValidation
-
-    class Config:
-        orm_mode = True
 
 
 class SecurityFileBase(BaseModel):
@@ -53,9 +47,6 @@ class SecurityFileBase(BaseModel):
 
 class SecurityFile(SecurityFileBase):
     validation: DocumentValidation
-
-    class Config:
-        orm_mode = True
 
 
 class ParticipantBase(BaseModel):
@@ -91,9 +82,6 @@ class Participant(ParticipantPreview):
     attestation_on_honour: bool
     is_minor: bool
 
-    class Config:
-        orm_mode = True
-
 
 class ParticipantUpdate(BaseModel):
     name: str | None = None
@@ -124,9 +112,6 @@ class TeamPreview(TeamBase):
     meeting_place: MeetingPlace | None
     validation_progress: float
 
-    class Config:
-        orm_mode = True
-
 
 class Team(TeamBase):
     id: str
@@ -137,9 +122,6 @@ class Team(TeamBase):
     meeting_place: MeetingPlace | None
     validation_progress: float
     file_id: str | None
-
-    class Config:
-        orm_mode = True
 
 
 class TeamUpdate(BaseModel):
@@ -152,9 +134,6 @@ class TeamUpdate(BaseModel):
 class InviteToken(BaseModel):
     team_id: str
     token: str
-
-    class Config:
-        orm_mode = True
 
 
 class RaidInformation(core_data.BaseCoreData):

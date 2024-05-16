@@ -210,7 +210,7 @@ class Participant(Base):
 
     @property
     def validation_progress(self) -> float:
-        number_validated = 0
+        number_validated: float = 0
         number_total = 10
         if self.address:
             number_validated += 1
