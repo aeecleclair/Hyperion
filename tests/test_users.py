@@ -5,8 +5,6 @@ import pytest_asyncio
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
-
-# We need to import event_loop for pytest-asyncio routine defined bellow
 from tests.commons import (
     client,
     create_api_access_token,

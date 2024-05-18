@@ -7,8 +7,6 @@ from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from app.modules.booking.types_booking import Decision
 from app.modules.calendar import models_calendar
-
-# We need to import event_loop for pytest-asyncio routine defined bellow
 from tests.commons import (
     add_object_to_db,
     client,
