@@ -10,6 +10,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, standard_responses
+from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
 from app.core.payment.payment_tool import PaymentTool
@@ -972,6 +973,7 @@ async def update_raid_price(
 async def get_payment_url(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Get payment url
@@ -983,15 +985,13 @@ async def get_payment_url(
     participant = await cruds_raid.get_participant_by_id(user.id, db)
     if participant.t_shirt_size:
         price += raid_prices.t_shirt_price
-    payment_tool = PaymentTool(
-        settings=get_settings(),
-    )
+    payment_tool = PaymentTool(settings=settings)
     checkout = await payment_tool.init_checkout(
         module="Raid",
         helloasso_slug="AEECL",
         checkout_amount=price,
         checkout_name="Inscription Raid",
-        redirection_uri="https://raid.aeecl.be",
+        redirection_uri=settings.RAID_PAYMENT_REDIRECTION_URL,
         payer_user=user,
         db=db,
     )

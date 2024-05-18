@@ -118,6 +118,8 @@ class Settings(BaseSettings):
     RAID_DRIVE_CLIENT_ID: str | None = None
     RAID_DRIVE_CLIENT_SECRET: str | None = None
 
+    RAID_PAYMENT_REDIRECTION_URL: str | None = None
+
     ############################
     # PostgreSQL configuration #
     ############################
