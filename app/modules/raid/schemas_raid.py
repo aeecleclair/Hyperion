@@ -155,9 +155,9 @@ class RaidDriveFolders(core_data.BaseCoreData):
 
 
 class RaidPrice(core_data.BaseCoreData):
-    student_price: float | None = None
-    partner_price: float | None = None
-    t_shirt_price: float | None = None
+    student_price: int | None = None
+    partner_price: int | None = None
+    t_shirt_price: int | None = None
 
 
 class PaymentUrl(BaseModel):
