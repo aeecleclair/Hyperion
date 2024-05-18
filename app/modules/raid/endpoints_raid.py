@@ -12,7 +12,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import models_core, standard_responses
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
-from app.dependencies import get_db, get_request_id, is_user, is_user_a_member_of
+from app.core.payment.payment_tool import PaymentTool
+from app.dependencies import (
+    get_db,
+    get_request_id,
+    get_settings,
+    is_user,
+    is_user_a_member_of,
+)
 from app.modules.raid import cruds_raid, models_raid, schemas_raid
 from app.modules.raid.raid_type import DocumentValidation
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
@@ -955,3 +962,39 @@ async def update_raid_price(
     Update raid price
     """
     await set_core_data(raid_price, db)
+
+
+@module.router.get(
+    "/raid/pay",
+    response_model=schemas_raid.PaymentUrl,
+    status_code=201,
+)
+async def get_payment_url(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user),
+):
+    """
+    Get payment url
+    """
+    raid_prices = await get_core_data(schemas_raid.RaidPrice, db)
+    if not raid_prices.student_price or not raid_prices.t_shirt_price:
+        raise HTTPException(status_code=404, detail="Prices not set.")
+    price = raid_prices.student_price
+    participant = await cruds_raid.get_participant_by_id(user.id, db)
+    if participant.t_shirt_size:
+        price += raid_prices.t_shirt_price
+    payment_tool = PaymentTool(
+        settings=get_settings(),
+    )
+    checkout = await payment_tool.init_checkout(
+        module="Raid",
+        helloasso_slug="AEECL",
+        checkout_amount=price,
+        checkout_name="Inscription Raid",
+        redirection_uri="https://raid.aeecl.be",
+        payer_user=user,
+        db=db,
+    )
+    return schemas_raid.PaymentUrl(
+        url=checkout.payment_url,
+    )
