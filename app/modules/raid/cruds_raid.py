@@ -40,10 +40,16 @@ async def update_participant(
     is_minor: bool | None,
     db: AsyncSession,
 ) -> None:
+    participant_dict = participant.model_dump(exclude_none=True)
+    participant_dict["t_shirt_size"] = (
+        participant.t_shirt_size.value if participant.t_shirt_size else None
+    )
     query = (
         update(models_raid.Participant)
         .where(models_raid.Participant.id == participant_id)
-        .values(**participant.model_dump(exclude_none=True))
+        .values(
+            **participant_dict,
+        )
     )
 
     if is_minor:
