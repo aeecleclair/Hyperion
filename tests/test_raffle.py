@@ -7,15 +7,12 @@ from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from app.modules.raffle import models_raffle
 from app.modules.raffle.types_raffle import RaffleStatusType
-
-# We need to import event_loop for pytest-asyncio routine defined bellow
 from tests.commons import (
     add_object_to_db,
     change_redis_client_status,
     client,
     create_api_access_token,
     create_user_with_groups,
-    event_loop,  # noqa
 )
 
 BDE_user: models_core.CoreUser | None = None

@@ -8,12 +8,9 @@ import pytest_asyncio
 
 from app.core import models_core
 from app.types.floors_type import FloorsType
-
-# We need to import event_loop for pytest-asyncio routine defined bellow
 from tests.commons import (
     add_object_to_db,
     client,
-    event_loop,  # noqa
 )
 
 user: models_core.CoreUser

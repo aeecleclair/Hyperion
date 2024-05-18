@@ -22,7 +22,6 @@ from app.utils.tools import (
 from tests.commons import (
     TestingSessionLocal,
     add_object_to_db,
-    event_loop,  # noqa
 )
 
 
