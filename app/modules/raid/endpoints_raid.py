@@ -271,7 +271,20 @@ async def update_participant(
             > raid_start_date
         )
 
-    await cruds_raid.update_participant(participant_id, participant, is_minor, db)
+    saved_participant = await cruds_raid.get_participant_by_id(participant_id, db)
+    participant_dict = participant.model_dump(exclude_none=True)
+    # We remove the value to control it the way we want
+    if participant_dict.get("t_shirt_size"):
+        del participant_dict["t_shirt_size"]
+    # If the t_shirt_payment is not set, we can change the t_shirt_size
+    if not saved_participant.t_shirt_payment:
+        participant_dict["t_shirt_size"] = (
+            participant.t_shirt_size.value if participant.t_shirt_size else None
+        )
+    # If the t_shirt_payment is set, we can only change the t_shirt_size, but can not make it null
+    elif participant.t_shirt_size:
+        participant_dict["t_shirt_size"] = participant.t_shirt_size.value
+    await cruds_raid.update_participant(participant_id, participant_dict, is_minor, db)
     team = await cruds_raid.get_team_by_participant_id(participant_id, db)
     await post_update_actions(team, db)
 
