@@ -1,3 +1,4 @@
+import uuid
 from collections.abc import Sequence
 from datetime import date
 
@@ -23,7 +24,7 @@ async def get_papers(
 
 async def get_paper_by_id(
     db: AsyncSession,
-    paper_id: str,
+    paper_id: uuid.UUID,
 ) -> Sequence[models_ph.Paper]:
     result = await db.execute(
         select(models_ph.Paper).where(models_ph.Paper.id == paper_id),
@@ -47,7 +48,7 @@ async def create_paper(
 
 
 async def update_paper(
-    paper_id: str,
+    paper_id: uuid.UUID,
     paper_update: schemas_ph.PaperUpdate,
     db: AsyncSession,
 ):
@@ -60,7 +61,7 @@ async def update_paper(
 
 
 async def delete_paper(
-    paper_id: str,
+    paper_id: uuid.UUID,
     db: AsyncSession,
 ):
     await db.execute(

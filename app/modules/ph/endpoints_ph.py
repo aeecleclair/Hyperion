@@ -40,7 +40,7 @@ module = Module(
     status_code=200,
 )
 async def get_paper_pdf(
-    paper_id: str,
+    paper_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
@@ -109,7 +109,7 @@ async def create_paper(
     """Create a new paper."""
 
     paper_complete = schemas_ph.PaperComplete(
-        id=str(uuid.uuid4()),
+        id=uuid.uuid4(),
         **paper.model_dump(),
     )
     try:
@@ -153,7 +153,7 @@ async def create_paper(
     status_code=201,
 )
 async def create_paper_pdf_and_cover(
-    paper_id: str,
+    paper_id: uuid.UUID,
     pdf: UploadFile = File(...),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.ph)),
     request_id: str = Depends(get_request_id),
@@ -190,7 +190,7 @@ async def create_paper_pdf_and_cover(
     status_code=200,
 )
 async def get_cover(
-    paper_id: str,
+    paper_id: uuid.UUID,
     user: models_core.CoreUser = Depends(is_user_a_member),
     db: AsyncSession = Depends(get_db),
 ):
@@ -213,7 +213,7 @@ async def get_cover(
     status_code=204,
 )
 async def update_paper(
-    paper_id: str,
+    paper_id: uuid.UUID,
     paper_update: schemas_ph.PaperUpdate,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.ph)),
     db: AsyncSession = Depends(get_db),
@@ -237,7 +237,7 @@ async def update_paper(
     status_code=204,
 )
 async def delete_paper(
-    paper_id: str,
+    paper_id: uuid.UUID,
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.ph)),
     db: AsyncSession = Depends(get_db),
 ):
