@@ -1,16 +1,20 @@
+import logging
 import uuid
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from helloasso_api_wrapper.models.api_notifications import (
     ApiNotificationType,
     NotificationResultContent,
 )
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.payment import cruds_payment, models_payment
 from app.dependencies import get_db
 
 router = APIRouter(tags=["Payments"])
+
+hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 @router.post(
@@ -19,12 +23,21 @@ router = APIRouter(tags=["Payments"])
 )
 async def webhook(
     request: Request,
-    content: NotificationResultContent,
     db: AsyncSession = Depends(get_db),
 ):
-    # TODO: don't return a 422
-    # res = await request.json()
-    # print(res)
+    try:
+        # We validate the body of the request ourself
+        # to prevent FastAPI from returning a 422 error to HelloAsso
+        # without logging the error
+        content = NotificationResultContent.model_validate(await request.json())
+    except ValidationError:
+        hyperion_error_logger.error(
+            f"Payment: could not validate the webhook body: {await request.body()}",
+        )
+        raise HTTPException(
+            status_code=400,
+            detail="Could not validate the webhook body",
+        )
     if content.eventType == ApiNotificationType.Order:
         pass
     if content.eventType == ApiNotificationType.Payment:
