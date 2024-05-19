@@ -46,7 +46,7 @@ async def init_objects():
 
     global item
     item = models_greencode.GreenCodeItem(
-        id=str(uuid.uuid4()),
+        id=uuid.uuid4(),
         qr_code_content="QRCodeContent",
         title="Item",
         content="Example of item",
@@ -55,7 +55,7 @@ async def init_objects():
 
     global item_to_delete
     item_to_delete = models_greencode.GreenCodeItem(
-        id=str(uuid.uuid4()),
+        id=uuid.uuid4(),
         qr_code_content="Another QRCodeContent",
         title="Item to delete",
         content="I will be deleted soon!",
@@ -63,7 +63,6 @@ async def init_objects():
     await add_object_to_db(item_to_delete)
 
     membership = models_greencode.GreenCodeMembership(
-        id=str(uuid.uuid4()),
         user_id=user_with_membership.id,
         item_id=item.id,
     )
@@ -85,7 +84,7 @@ def test_get_items_for_user_greencode():
         headers={"Authorization": f"Bearer {token_greencode}"},
     )
     assert response.status_code == 200
-    assert response.json()[0]["id"] == item.id
+    assert response.json()[0]["id"] == str(item.id)
 
 
 def test_get_user_items():
@@ -94,7 +93,7 @@ def test_get_user_items():
         headers={"Authorization": f"Bearer {token_with_membership}"},
     )
     assert response.status_code == 200
-    assert response.json()[0]["id"] == item.id
+    assert response.json()[0]["id"] == str(item.id)
 
 
 def test_get_item_by_qr_code():
@@ -103,7 +102,7 @@ def test_get_item_by_qr_code():
         headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response.status_code == 200
-    assert response.json()["id"] == item.id
+    assert response.json()["id"] == str(item.id)
 
 
 def test_create_item():

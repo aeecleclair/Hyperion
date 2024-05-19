@@ -1,3 +1,5 @@
+import uuid
+
 from pydantic import BaseModel, ConfigDict
 
 from app.core.schemas_core import CoreUserSimple
@@ -16,7 +18,7 @@ class ItemUpdate(BaseModel):
 
 
 class ItemComplete(ItemBase):
-    id: str
+    id: uuid.UUID
     model_config = ConfigDict(from_attributes=True)
 
 

@@ -108,7 +108,7 @@ async def create_item(
     """
 
     db_item = models_greencode.GreenCodeItem(
-        id=str(uuid.uuid4()),
+        id=uuid.uuid4(),
         **item.model_dump(),
     )
 
@@ -123,7 +123,7 @@ async def create_item(
     status_code=204,
 )
 async def delete_item(
-    item_id: str,
+    item_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.greencode)),
 ):
@@ -144,7 +144,7 @@ async def delete_item(
     status_code=204,
 )
 async def update_item(
-    item_id: str,
+    item_id: uuid.UUID,
     item_update: schemas_greencode.ItemUpdate,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.greencode)),
@@ -179,7 +179,7 @@ async def update_item(
     status_code=204,
 )
 async def create_current_user_membership(
-    item_id: str,
+    item_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_an_ecl_member),
 ):
@@ -203,7 +203,7 @@ async def create_current_user_membership(
     status_code=204,
 )
 async def delete_current_user_membership(
-    item_id: str,
+    item_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_an_ecl_member),
 ):
@@ -223,7 +223,7 @@ async def delete_current_user_membership(
     status_code=204,
 )
 async def create_membership(
-    item_id: str,
+    item_id: uuid.UUID,
     user_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.greencode)),
@@ -249,7 +249,7 @@ async def create_membership(
     status_code=204,
 )
 async def delete_membership(
-    item_id: str,
+    item_id: uuid.UUID,
     user_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.greencode)),
