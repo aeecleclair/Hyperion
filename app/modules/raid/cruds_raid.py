@@ -387,6 +387,18 @@ async def confirm_payment(
     await db.commit()
 
 
+async def confirm_t_shirt_payment(
+    participant_id: str,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        update(models_raid.Participant)
+        .where(models_raid.Participant.id == participant_id)
+        .values(t_shirt_payment=True),
+    )
+    await db.commit()
+
+
 async def validate_attestation_on_honour(
     participant_id: str,
     db: AsyncSession,
