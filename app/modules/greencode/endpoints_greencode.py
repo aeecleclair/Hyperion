@@ -112,10 +112,7 @@ async def create_item(
         **item.model_dump(),
     )
 
-    try:
-        return await cruds_greencode.create_item(db=db, item=db_item)
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+    return await cruds_greencode.create_item(db=db, item=db_item)
 
 
 @module.router.delete(
@@ -133,10 +130,7 @@ async def delete_item(
     **This endpoint is only usable by greencode group**
     """
 
-    try:
-        await cruds_greencode.delete_item(item_id=item_id, db=db)
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+    await cruds_greencode.delete_item(item_id=item_id, db=db)
 
 
 @module.router.patch(
@@ -164,14 +158,11 @@ async def update_item(
             detail="Invalid item_id",
         )
 
-    try:
-        await cruds_greencode.update_item(
-            item_id=item_id,
-            item_update=item_update,
-            db=db,
-        )
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+    await cruds_greencode.update_item(
+        item_id=item_id,
+        item_update=item_update,
+        db=db,
+    )
 
 
 @module.router.post(
@@ -188,14 +179,11 @@ async def create_current_user_membership(
 
     """
 
-    try:
-        return await cruds_greencode.create_membership(
-            db=db,
-            item_id=item_id,
-            user_id=user.id,
-        )
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+    return await cruds_greencode.create_membership(
+        db=db,
+        item_id=item_id,
+        user_id=user.id,
+    )
 
 
 @module.router.delete(
@@ -212,10 +200,7 @@ async def delete_current_user_membership(
 
     """
 
-    try:
-        await cruds_greencode.delete_membership(item_id=item_id, user_id=user.id, db=db)
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+    await cruds_greencode.delete_membership(item_id=item_id, user_id=user.id, db=db)
 
 
 @module.router.post(
@@ -234,14 +219,11 @@ async def create_membership(
     **The user must be from greencode group to use this endpoint**
     """
 
-    try:
-        return await cruds_greencode.create_membership(
-            db=db,
-            item_id=item_id,
-            user_id=user_id,
-        )
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+    return await cruds_greencode.create_membership(
+        db=db,
+        item_id=item_id,
+        user_id=user_id,
+    )
 
 
 @module.router.delete(
@@ -260,10 +242,7 @@ async def delete_membership(
     **The user must be from greencode group to use this endpoint**
     """
 
-    try:
-        await cruds_greencode.delete_membership(item_id=item_id, user_id=user_id, db=db)
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+    await cruds_greencode.delete_membership(item_id=item_id, user_id=user_id, db=db)
 
 
 @module.router.get(
