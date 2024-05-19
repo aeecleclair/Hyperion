@@ -672,6 +672,26 @@ async def confirm_payment(
 
 
 @module.router.post(
+    "/raid/participant/{participant_id}/t_shirt_payment",
+    status_code=204,
+)
+async def confirm_t_shirt_payment(
+    participant_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.raid_admin)),
+):
+    """
+    Confirm T shirt payment
+    """
+    participant = await cruds_raid.get_participant_by_id(participant_id, db)
+    if not participant.t_shirt_size:
+        raise HTTPException(status_code=403, detail="T shirt size not set.")
+    await cruds_raid.confirm_t_shirt_payment(participant_id, db)
+    team = await cruds_raid.get_team_by_participant_id(participant_id, db)
+    await post_update_actions(team, db)
+
+
+@module.router.post(
     "/raid/participant/{participant_id}/honour",
     status_code=204,
 )
@@ -981,16 +1001,23 @@ async def get_payment_url(
     raid_prices = await get_core_data(schemas_raid.RaidPrice, db)
     if not raid_prices.student_price or not raid_prices.t_shirt_price:
         raise HTTPException(status_code=404, detail="Prices not set.")
-    price = raid_prices.student_price
+    price = 0
+    checkout_name = ""
     participant = await cruds_raid.get_participant_by_id(user.id, db)
-    if participant.t_shirt_size:
+    if not participant.payment:
+        price += raid_prices.student_price
+        checkout_name += "Inscription Raid"
+    if participant.t_shirt_size and not participant.t_shirt_payment:
         price += raid_prices.t_shirt_price
+        if not participant.payment:
+            checkout_name += " + "
+        checkout_name += "T Shirt taille" + participant.t_shirt_size.value
     payment_tool = PaymentTool(settings=settings)
     checkout = await payment_tool.init_checkout(
         module="Raid",
         helloasso_slug="AEECL",
         checkout_amount=price,
-        checkout_name="Inscription Raid",
+        checkout_name=checkout_name,
         redirection_uri=settings.RAID_PAYMENT_REDIRECTION_URL,
         payer_user=user,
         db=db,
