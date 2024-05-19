@@ -143,7 +143,7 @@ async def delete_item(
     "/greencode/item/{item_id}",
     status_code=204,
 )
-async def update_advertiser(
+async def update_item(
     item_id: str,
     item_update: schemas_greencode.ItemUpdate,
     db: AsyncSession = Depends(get_db),
