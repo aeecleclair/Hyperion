@@ -14,7 +14,6 @@ class GreenCodeItem(Base):
     content: Mapped[str] = mapped_column(String, nullable=False)
     memberships: Mapped[list["GreenCodeMembership"]] = relationship(
         "GreenCodeMembership",
-        back_populates="item",
     )
 
 
