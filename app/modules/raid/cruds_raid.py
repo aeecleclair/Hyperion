@@ -1,5 +1,6 @@
 from collections.abc import Sequence
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
@@ -36,20 +37,14 @@ async def get_all_participants(
 
 async def update_participant(
     participant_id: str,
-    participant: schemas_raid.ParticipantUpdate,
+    participant: dict[str, Any],
     is_minor: bool | None,
     db: AsyncSession,
 ) -> None:
-    participant_dict = participant.model_dump(exclude_none=True)
-    participant_dict["t_shirt_size"] = (
-        participant.t_shirt_size.value if participant.t_shirt_size else None
-    )
     query = (
         update(models_raid.Participant)
         .where(models_raid.Participant.id == participant_id)
-        .values(
-            **participant_dict,
-        )
+        .values(participant)
     )
 
     if is_minor:
