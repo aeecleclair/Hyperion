@@ -4,6 +4,10 @@ Create Date: 2024-05-19 11:22:07.692889
 """
 
 from collections.abc import Sequence
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pytest_alembic import MigrationContext
 
 import sqlalchemy as sa
 from alembic import op
@@ -42,3 +46,17 @@ def downgrade() -> None:
     op.drop_table("greencode_memberships")
     op.drop_table("greencode_items")
     # ### end Alembic commands ###
+
+
+def pre_test_upgrade(
+    alembic_runner: "MigrationContext",
+    alembic_connection: sa.Connection,
+) -> None:
+    pass
+
+
+def test_upgrade(
+    alembic_runner: "MigrationContext",
+    alembic_connection: sa.Connection,
+) -> None:
+    pass
