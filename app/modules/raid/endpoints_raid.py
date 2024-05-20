@@ -9,7 +9,7 @@ from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core, standard_responses
+from app.core import models_core
 from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
 from app.core.module import Module
@@ -162,7 +162,7 @@ async def save_security_file(
 
 
 async def get_participant(
-    participant_id: str, db: AsyncSession
+    participant_id: str, db: AsyncSession,
 ) -> models_raid.Participant:
     participant = await cruds_raid.get_participant_by_id(participant_id, db)
     if not participant:
