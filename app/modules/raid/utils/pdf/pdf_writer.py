@@ -187,7 +187,7 @@ class PDFWriter(FPDF):
             "C",
         )
         self.set_font("times", "", 12)
-        data = [
+        data: list[list[str] | None] = [
             ["Allergie", security_file.allergy if security_file.allergy else "Aucune"],
             ["Asthme", security_file.asthma and "Oui" or "Non"],
             (
@@ -201,7 +201,9 @@ class PDFWriter(FPDF):
             (
                 [
                     "Date du service de réanimation",
-                    security_file.intensive_care_unit_when,
+                    security_file.intensive_care_unit_when
+                    if security_file.intensive_care_unit_when
+                    else "Non renseignée",
                 ]
                 if security_file.intensive_care_unit
                 else None
@@ -324,15 +326,23 @@ class PDFWriter(FPDF):
         self.ln(4)
         self.cell(0, 12, is_second and "Coéquipier" or "Capitaine", 0, 1, "L")
         self.set_font("times", "", 12)
-        data = [
+        data: list[list[str] | None] = [
             ["Nom", participant.name],
             ["Prénom", participant.firstname],
             ["Date de naissance", date_to_string(participant.birthday)],
-            ["Adresse", participant.address],
+            [
+                "Adresse",
+                participant.address if participant.address else "Non renseignée",
+            ],
             ["Téléphone", participant.phone],
             ["Email", participant.email],
             ["Taille du vélo", get_size_label(participant.bike_size)],
-            ["Taille du t-shirt", get_size_label(participant.t_shirt_size)],
+            [
+                "Taille du t-shirt",
+                get_size_label(participant.t_shirt_size) + " (payé)"
+                if participant.t_shirt_payment
+                else " (non payé)",
+            ],
             ["Situation", get_situation_label(participant.situation)],
             ["Ecole", participant.other_school] if participant.other_school else None,
             ["Entreprise", participant.company] if participant.company else None,
