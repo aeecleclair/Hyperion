@@ -627,6 +627,7 @@ async def set_security_file(
             db,
         )
     model_security_file = models_raid.SecurityFile(
+        id=str(uuid.uuid4()),
         **security_file.model_dump(),
     )
     created_security_file = await cruds_raid.add_security_file(model_security_file, db)
@@ -652,6 +653,9 @@ async def assign_security_file(
     """
     if not await cruds_raid.are_user_in_the_same_team(user.id, participant_id, db):
         raise HTTPException(status_code=403, detail="You are not the participant.")
+    participant = await cruds_raid.get_participant_by_id(participant_id, db)
+    if participant.security_file and participant.security_file.id == security_file_id:
+        return
     await cruds_raid.assign_security_file(participant_id, security_file_id, db)
     team = await cruds_raid.get_team_by_participant_id(user.id, db)
     await post_update_actions(team, db)
