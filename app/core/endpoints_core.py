@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import cruds_core, models_core, schemas_core
 from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
+from app.core.module import module_list
 from app.dependencies import (
     get_db,
     get_settings,
@@ -164,9 +165,6 @@ async def get_module_visibility(
 
     **This endpoint is only usable by administrators**
     """
-    from app.api import (  # We need to do it here, because the list is not initialized at startup
-        module_list,
-    )
 
     return_module_visibilities = []
     for module in module_list:
