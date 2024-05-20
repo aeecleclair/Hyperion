@@ -4,15 +4,13 @@ Create Date: 2024-05-19 18:53:34.099346
 """
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from pytest_alembic import MigrationContext
 
 import sqlalchemy as sa
 from alembic import op
-
-from app.types.sqlalchemy import TZDateTime
 
 # revision identifiers, used by Alembic.
 revision: str = "a92c02b47da4"
@@ -30,7 +28,7 @@ def upgrade() -> None:
                 sa.Boolean(),
                 nullable=False,
                 server_default=sa.false(),
-            )
+            ),
         )
     # ### end Alembic commands ###
 

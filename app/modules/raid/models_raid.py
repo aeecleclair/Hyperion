@@ -165,7 +165,7 @@ class Participant(Base):
     )
     payment: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     t_shirt_payment: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=False
+        Boolean, nullable=False, default=False,
     )
     is_minor: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
