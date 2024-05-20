@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import cruds_core, models_core, schemas_core
 from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
+from app.core.module import module_list
 from app.dependencies import (
     get_db,
     get_settings,

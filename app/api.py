@@ -7,6 +7,7 @@ from fastapi import APIRouter
 from app.core import endpoints_core
 from app.core.auth import endpoints_auth
 from app.core.groups import endpoints_groups
+from app.core.module import module_list
 from app.core.notification import endpoints_notification
 from app.core.payment import endpoints_payment
 from app.core.users import endpoints_users
