@@ -22,7 +22,7 @@ from app.dependencies import (
     is_user_a_member_of,
 )
 from app.modules.raid import cruds_raid, models_raid, schemas_raid
-from app.modules.raid.raid_type import DocumentValidation
+from app.modules.raid.raid_type import DocumentType, DocumentValidation
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.modules.raid.utils.pdf.pdf_writer import HTMLPDFWriter, PDFWriter
 from app.types.content_type import ContentType
@@ -448,7 +448,7 @@ async def delete_all_teams(
 )
 async def create_document(
     participant_id: str,
-    document: schemas_raid.DocumentCreation,
+    document: schemas_raid.DocumentBase,
     user: models_core.CoreUser = Depends(is_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -458,20 +458,15 @@ async def create_document(
     if not await cruds_raid.are_user_in_the_same_team(participant_id, user.id, db):
         raise HTTPException(status_code=403, detail="You are not the participant.")
 
-    # existing_document = await cruds_raid.get_document_by_id(document.id, db)
+    saved_document = await cruds_raid.get_document_by_id(document.id, db)
+    if not saved_document:
+        raise HTTPException(status_code=404, detail="Document not found.")
 
-    # if existing_document:
-    #     pass  # TODO: Delete the existing document
-
-    model_document = models_raid.Document(
-        uploaded_at=datetime.now(UTC).date(),
-        validation=DocumentValidation.pending,
-        id=document.id,
+    document_update = schemas_raid.DocumentUpdate(
         name=document.name,
         type=document.type,
     )
-
-    await cruds_raid.create_document(model_document, db)
+    await cruds_raid.update_document(document.id, document_update, db)
 
     document_type_id = "id_card_id"
 
@@ -493,17 +488,16 @@ async def create_document(
 
     team = await cruds_raid.get_team_by_participant_id(participant_id, db)
     await post_update_actions(team, db)
-    return model_document
+    return await cruds_raid.get_document_by_id(document.id, db)
 
 
 @module.router.post(
-    "/raid/document/{document_id}",
-    response_model=standard_responses.Result,
+    "/raid/document",
+    response_model=schemas_raid.DocumentCreation,
     status_code=201,
 )
 async def upload_document(
-    document_id: str,
-    image: UploadFile = File(...),
+    file: UploadFile = File(...),
     request_id: str = Depends(get_request_id),
     user: models_core.CoreUser = Depends(is_user),
     db: AsyncSession = Depends(get_db),
@@ -511,23 +505,10 @@ async def upload_document(
     """
     Upload a document
     """
-    # document_obj = await cruds_raid.get_document_by_id(document_id=document_id, db=db)
-    # if not document_obj:
-    #     raise HTTPException(status_code=404, detail="Document not found.")
-    # participant = await cruds_raid.get_user_by_document_id(
-    #     document_id=document_id, db=db
-    # )
-    # if not participant:
-    #     raise HTTPException(
-    #         status_code=404, detail="Participant owning hte document not found."
-    #     )
-    # if not participant.id == user.id:
-    #     raise HTTPException(
-    #         status_code=403, detail="You are not the owner of this document."
-    #     )
+    document_id = str(uuid.uuid4())
 
     await save_file_as_data(
-        upload_file=image,
+        upload_file=file,
         directory="raid",
         filename=str(document_id),
         request_id=request_id,
@@ -540,9 +521,18 @@ async def upload_document(
         ],  # TODO : Change this value
     )
 
-    await cruds_raid.mark_document_as_newly_updated(document_id=document_id, db=db)
+    model_document = models_raid.Document(
+        uploaded_at=datetime.now(UTC).date(),
+        validation=DocumentValidation.pending,
+        id=document_id,
+        # Default values, updated with the document assignation
+        name=file.filename,
+        type=DocumentType.idCard,
+    )
 
-    return standard_responses.Result(success=True)
+    await cruds_raid.create_document(model_document, db)
+
+    return schemas_raid.DocumentCreation(id=document_id)
 
 
 @module.router.get(

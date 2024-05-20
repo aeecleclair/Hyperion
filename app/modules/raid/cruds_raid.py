@@ -346,7 +346,7 @@ async def upload_document(
 
 async def update_document(
     document_id: str,
-    document: schemas_raid.DocumentBase,
+    document: schemas_raid.DocumentUpdate,
     db: AsyncSession,
 ) -> None:
     await db.execute(

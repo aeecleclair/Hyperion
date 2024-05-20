@@ -15,14 +15,19 @@ from app.types import core_data
 class DocumentBase(BaseModel):
     type: DocumentType
     name: str
-
-
-class DocumentCreation(DocumentBase):
     id: str
+
+
+class DocumentCreation(BaseModel):
+    id: str
+
+
+class DocumentUpdate(BaseModel):
+    type: DocumentType | None = None
+    name: str | None = None
 
 
 class Document(DocumentBase):
-    id: str
     uploaded_at: date
     validation: DocumentValidation
 
