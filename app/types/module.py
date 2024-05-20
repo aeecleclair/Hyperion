@@ -1,6 +1,13 @@
+from typing import TYPE_CHECKING
+
 from fastapi import APIRouter
 
 from app.core.groups.groups_type import GroupType
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class Module:
@@ -20,3 +27,6 @@ class Module:
         self.root = root
         self.default_allowed_groups_ids = default_allowed_groups_ids
         self.router = router or APIRouter(tags=[tag])
+        self.payment_callback: Callable[[str, AsyncSession], Awaitable[None]] | None = (
+            None
+        )
