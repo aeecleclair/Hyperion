@@ -24,6 +24,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
     status_code=204,
 )
 async def webhook(
+    content: NotificationResultContent,
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
