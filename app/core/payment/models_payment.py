@@ -10,9 +10,7 @@ class CheckoutPayment(Base):
     __tablename__ = "payment_checkout_payment"
 
     id: Mapped[PrimaryKey]
-    checkout_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("payment_checkout.id"), nullable=False,
-    )
+    checkout_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("payment_checkout.id"))
 
     paid_amount: Mapped[int]
     hello_asso_payment_id: Mapped[str] = mapped_column(index=True, unique=True)
