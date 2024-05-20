@@ -161,6 +161,15 @@ async def save_security_file(
         return None
 
 
+async def get_participant(
+    participant_id: str, db: AsyncSession
+) -> models_raid.Participant:
+    participant = await cruds_raid.get_participant_by_id(participant_id, db)
+    if not participant:
+        raise HTTPException(status_code=404, detail="Participant not found.")
+    return participant
+
+
 @module.router.get(
     "/raid/participants/{participant_id}",
     response_model=schemas_raid.Participant,
@@ -183,10 +192,7 @@ async def get_participant_by_id(
             detail="You can not get data of another user",
         )
 
-    participant = await cruds_raid.get_participant_by_id(participant_id, db)
-    if not participant:
-        raise HTTPException(status_code=404, detail="Participant not found.")
-
+    participant = await get_participant(participant_id, db)
     return participant
 
 
@@ -271,7 +277,7 @@ async def update_participant(
             > raid_start_date
         )
 
-    saved_participant = await cruds_raid.get_participant_by_id(participant_id, db)
+    saved_participant = await get_participant(participant_id, db)
     participant_dict = participant.model_dump(exclude_none=True)
     # We remove the value to control it the way we want
     if participant_dict.get("t_shirt_size"):
@@ -612,11 +618,13 @@ async def set_security_file(
     """
     if not await cruds_raid.are_user_in_the_same_team(user.id, participant_id, db):
         raise HTTPException(status_code=403, detail="You are not the participant.")
-    existing_security_file = await cruds_raid.get_security_file_by_security_id(
-        security_file.id,
-        db,
-    )
-    if existing_security_file:
+    existing_security_file = None
+    if security_file.id:
+        existing_security_file = await cruds_raid.get_security_file_by_security_id(
+            security_file.id,
+            db,
+        )
+    if existing_security_file and security_file.id:
         await cruds_raid.update_security_file(security_file, db)
         team = await cruds_raid.get_team_by_participant_id(user.id, db)
         participant = await cruds_raid.get_participant_by_id(participant_id, db)
@@ -653,7 +661,7 @@ async def assign_security_file(
     """
     if not await cruds_raid.are_user_in_the_same_team(user.id, participant_id, db):
         raise HTTPException(status_code=403, detail="You are not the participant.")
-    participant = await cruds_raid.get_participant_by_id(participant_id, db)
+    participant = await get_participant(participant_id, db)
     if participant.security_file and participant.security_file.id == security_file_id:
         return
     await cruds_raid.assign_security_file(participant_id, security_file_id, db)
@@ -691,7 +699,7 @@ async def confirm_t_shirt_payment(
     Confirm T shirt payment
     """
     participant = await cruds_raid.get_participant_by_id(participant_id, db)
-    if not participant.t_shirt_size:
+    if not participant or not participant.t_shirt_size:
         raise HTTPException(status_code=403, detail="T shirt size not set.")
     await cruds_raid.confirm_t_shirt_payment(participant_id, db)
     team = await cruds_raid.get_team_by_participant_id(participant_id, db)
@@ -1011,21 +1019,22 @@ async def get_payment_url(
     price = 0
     checkout_name = ""
     participant = await cruds_raid.get_participant_by_id(user.id, db)
-    if not participant.payment:
-        price += raid_prices.student_price
-        checkout_name += "Inscription Raid"
-    if participant.t_shirt_size and not participant.t_shirt_payment:
-        price += raid_prices.t_shirt_price
+    if participant:
         if not participant.payment:
-            checkout_name += " + "
-        checkout_name += "T Shirt taille" + participant.t_shirt_size.value
+            price += raid_prices.student_price
+            checkout_name += "Inscription Raid"
+        if participant.t_shirt_size and not participant.t_shirt_payment:
+            price += raid_prices.t_shirt_price
+            if not participant.payment:
+                checkout_name += " + "
+            checkout_name += "T Shirt taille" + participant.t_shirt_size.value
     payment_tool = PaymentTool(settings=settings)
     checkout = await payment_tool.init_checkout(
         module="Raid",
         helloasso_slug="AEECL",
         checkout_amount=price,
         checkout_name=checkout_name,
-        redirection_uri=settings.RAID_PAYMENT_REDIRECTION_URL,
+        redirection_uri=settings.RAID_PAYMENT_REDIRECTION_URL or "",
         payer_user=user,
         db=db,
     )
