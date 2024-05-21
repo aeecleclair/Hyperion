@@ -1,6 +1,6 @@
 import logging
 import uuid
-from collections.abc import AsyncGenerator, Iterator
+from collections.abc import AsyncGenerator
 from functools import lru_cache
 
 import redis

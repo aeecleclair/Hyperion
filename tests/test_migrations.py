@@ -76,7 +76,7 @@ def alembic_config() -> Config:
 
 
 @pytest.fixture()
-def alembic_engine(alembic_connection) -> Connection:
+def alembic_engine(alembic_connection: Connection) -> Connection:
     """
     Override this fixture to provide pytest-alembic powered tests with a database handle.
 
