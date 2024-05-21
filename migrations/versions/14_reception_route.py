@@ -5,7 +5,7 @@ Create Date: 2024-05-21 15:56:00.444337
 
 from collections.abc import Sequence
 from enum import Enum
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from pytest_alembic import MigrationContext
