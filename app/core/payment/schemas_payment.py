@@ -27,3 +27,8 @@ class CheckoutComplete(BaseModel):
     def payment_completed(self) -> bool:
         total_paid = sum([payment.paid_amount for payment in self.payments])
         return total_paid == self.amount
+
+
+class HelloAssoCheckoutMetadata(BaseModel):
+    hyperion_checkout_id: str
+    secret: str
