@@ -17,7 +17,10 @@ class Seller(Base):
     __tablename__ = "reception_seller"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID, index=True, nullable=False, primary_key=True
+        UUID,
+        index=True,
+        nullable=False,
+        primary_key=True,
     )
     name: Mapped[str] = mapped_column(String, nullable=False)
     products: Mapped[list["ReceptionProduct"]] = relationship("ReceptionProduct")
@@ -55,7 +58,10 @@ class ReceptionProduct(Base):
     __tablename__ = "reception_product"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID, index=True, nullable=False, primary_key=True
+        UUID,
+        index=True,
+        nullable=False,
+        primary_key=True,
     )
     seller_id: Mapped[uuid.UUID] = mapped_column(
         UUID,
@@ -71,7 +77,8 @@ class ReceptionProduct(Base):
         secondaryjoin="ReceptionProduct.id==ProductConstraints.product_constraint_id",
     )
     document_constraints: Mapped[list["Document"]] = relationship(
-        "Document", secondary="document_constraints_association_table"
+        "Document",
+        secondary="document_constraints_association_table",
     )
 
 
@@ -79,7 +86,10 @@ class Curriculum(Base):
     __tablename__ = "reception_curriculum"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID, index=True, nullable=False, primary_key=True
+        UUID,
+        index=True,
+        nullable=False,
+        primary_key=True,
     )
     name: Mapped[str] = mapped_column(String, nullable=False)
 
@@ -115,7 +125,10 @@ class ProductVariant(Base):
     __tablename__ = "reception_product_variant"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID, index=True, nullable=False, primary_key=True
+        UUID,
+        index=True,
+        nullable=False,
+        primary_key=True,
     )
     product_id: Mapped[uuid.UUID] = mapped_column(
         UUID,
@@ -127,7 +140,8 @@ class ProductVariant(Base):
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False)
     unique: Mapped[bool] = mapped_column(Boolean, nullable=False)
     allowed_curriculum: Mapped[Curriculum] = relationship(
-        "Curriculum", secondary="allowed_curriculum_association_table"
+        "Curriculum",
+        secondary="allowed_curriculum_association_table",
     )
 
 
@@ -135,7 +149,10 @@ class Document(Base):
     __tablename__ = "reception_document"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID, index=True, nullable=False, primary_key=True
+        UUID,
+        index=True,
+        nullable=False,
+        primary_key=True,
     )
     name: Mapped[str] = mapped_column(String, nullable=False)
 
@@ -171,7 +188,9 @@ class Signature(Base):
         primary_key=True,
     )
     signature_type: Mapped[DocumentSignatureType] = mapped_column(
-        String, nullable=False, index=True
+        String,
+        nullable=False,
+        index=True,
     )
     numeric_signature_id: Mapped[str] = mapped_column(String, nullable=True)
 
@@ -179,14 +198,21 @@ class Signature(Base):
 class Payment(Base):
     __tablename__ = "reception_payment"
 
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID,
+        index=True,
+        nullable=False,
+        primary_key=True,
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID,
         ForeignKey("core_user.id"),
-        primary_key=True,
     )
     total: Mapped[int] = mapped_column(Integer, nullable=False)
     payment_type: Mapped[PaymentType] = mapped_column(
-        String, nullable=False, index=True
+        String,
+        nullable=False,
+        index=True,
     )
 
 
@@ -194,14 +220,19 @@ class Membership(Base):
     __tablename__ = "reception_membership"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID, index=True, nullable=False, primary_key=True
+        UUID,
+        index=True,
+        nullable=False,
+        primary_key=True,
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID,
         ForeignKey("core_user.id"),
     )
     membership: Mapped[AvailableMembership] = mapped_column(
-        String, nullable=False, index=True
+        String,
+        nullable=False,
+        index=True,
     )
     start_date: Mapped[date] = mapped_column(Date, nullable=False)
     end_date: Mapped[date] = mapped_column(Date, nullable=False)
