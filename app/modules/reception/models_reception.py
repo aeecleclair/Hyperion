@@ -1,7 +1,7 @@
 import uuid
 from datetime import date
 
-from sqlalchemy import Boolean, Column, Date, ForeignKey, Integer, String, Table
+from sqlalchemy import Column, ForeignKey, String, Table
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -10,25 +10,19 @@ from app.modules.reception.types_reception import (
     DocumentSignatureType,
     PaymentType,
 )
-from app.types.sqlalchemy import Base
+from app.types.sqlalchemy import Base, PrimaryKey
 
 
 class Seller(Base):
     __tablename__ = "reception_seller"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID,
-        index=True,
-        nullable=False,
-        primary_key=True,
-    )
-    name: Mapped[str] = mapped_column(String, nullable=False)
+    id: Mapped[PrimaryKey]
+    name: Mapped[str]
     products: Mapped[list["ReceptionProduct"]] = relationship("ReceptionProduct")
     group_id: Mapped[uuid.UUID] = mapped_column(
-        UUID,
         ForeignKey("core_group.id"),
     )
-    order: Mapped[int] = mapped_column(Integer)
+    order: Mapped[int]
 
 
 document_constraints_association_table = Table(
@@ -57,19 +51,14 @@ class ProductConstraints(Base):
 class ReceptionProduct(Base):
     __tablename__ = "reception_product"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID,
-        index=True,
-        nullable=False,
-        primary_key=True,
-    )
+    id: Mapped[PrimaryKey]
     seller_id: Mapped[uuid.UUID] = mapped_column(
         UUID,
         ForeignKey("reception_seller.id"),
     )
-    name: Mapped[str] = mapped_column(String, nullable=False)
-    description: Mapped[str] = mapped_column(String, nullable=True)
-    public_display: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    name: Mapped[str]
+    description: Mapped[str | None]
+    public_display: Mapped[bool]
     product_constraints: Mapped[list["ReceptionProduct"]] = relationship(
         "ReceptionProduct",
         secondary="product_constraints_association_table",
@@ -85,13 +74,8 @@ class ReceptionProduct(Base):
 class Curriculum(Base):
     __tablename__ = "reception_curriculum"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID,
-        index=True,
-        nullable=False,
-        primary_key=True,
-    )
-    name: Mapped[str] = mapped_column(String, nullable=False)
+    id: Mapped[PrimaryKey]
+    name: Mapped[str]
 
 
 class CurriculumMembership(Base):
@@ -124,21 +108,15 @@ allowed_curriculum_association_table = Table(
 class ProductVariant(Base):
     __tablename__ = "reception_product_variant"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID,
-        index=True,
-        nullable=False,
-        primary_key=True,
-    )
+    id: Mapped[PrimaryKey]
     product_id: Mapped[uuid.UUID] = mapped_column(
-        UUID,
         ForeignKey("reception_product.id"),
     )
-    name: Mapped[str] = mapped_column(String, nullable=False)
-    description: Mapped[str] = mapped_column(String, nullable=True)
-    price: Mapped[int] = mapped_column(Integer, nullable=False)
-    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False)
-    unique: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    name: Mapped[str]
+    description: Mapped[str | None] = mapped_column(String, nullable=True)
+    price: Mapped[int]
+    enabled: Mapped[bool]
+    unique: Mapped[bool]
     allowed_curriculum: Mapped[Curriculum] = relationship(
         "Curriculum",
         secondary="allowed_curriculum_association_table",
@@ -148,13 +126,8 @@ class ProductVariant(Base):
 class Document(Base):
     __tablename__ = "reception_document"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID,
-        index=True,
-        nullable=False,
-        primary_key=True,
-    )
-    name: Mapped[str] = mapped_column(String, nullable=False)
+    id: Mapped[PrimaryKey]
+    name: Mapped[str]
 
 
 class Purchase(Base):
@@ -170,8 +143,8 @@ class Purchase(Base):
         ForeignKey("reception_product_variant.id"),
         primary_key=True,
     )
-    quantity: Mapped[int] = mapped_column(Integer, nullable=False)
-    paid: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    quantity: Mapped[int]
+    paid: Mapped[bool]
 
 
 class Signature(Base):
@@ -188,30 +161,21 @@ class Signature(Base):
         primary_key=True,
     )
     signature_type: Mapped[DocumentSignatureType] = mapped_column(
-        String,
-        nullable=False,
         index=True,
     )
-    numeric_signature_id: Mapped[str] = mapped_column(String, nullable=True)
+    numeric_signature_id: Mapped[str | None]
 
 
 class Payment(Base):
     __tablename__ = "reception_payment"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID,
-        index=True,
-        nullable=False,
-        primary_key=True,
-    )
+    id: Mapped[PrimaryKey]
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID,
         ForeignKey("core_user.id"),
     )
-    total: Mapped[int] = mapped_column(Integer, nullable=False)
+    total: Mapped[int]
     payment_type: Mapped[PaymentType] = mapped_column(
-        String,
-        nullable=False,
         index=True,
     )
 
@@ -219,27 +183,20 @@ class Payment(Base):
 class Membership(Base):
     __tablename__ = "reception_membership"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID,
-        index=True,
-        nullable=False,
-        primary_key=True,
-    )
+    id: Mapped[PrimaryKey]
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID,
         ForeignKey("core_user.id"),
     )
     membership: Mapped[AvailableMembership] = mapped_column(
-        String,
-        nullable=False,
         index=True,
     )
-    start_date: Mapped[date] = mapped_column(Date, nullable=False)
-    end_date: Mapped[date] = mapped_column(Date, nullable=False)
+    start_date: Mapped[date]
+    end_date: Mapped[date]
 
 
 class Status(Base):
     __tablename__ = "reception_status"
 
-    id: Mapped[str] = mapped_column(String, nullable=False, primary_key=True)
-    editable: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    id: Mapped[str] = mapped_column(primary_key=True)
+    editable: Mapped[bool]
