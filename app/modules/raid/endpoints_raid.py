@@ -12,7 +12,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import models_core
 from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
-from app.core.module import Module
 from app.core.payment.payment_tool import PaymentTool
 from app.dependencies import (
     get_db,
@@ -26,6 +25,7 @@ from app.modules.raid.raid_type import DocumentType, DocumentValidation
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.modules.raid.utils.pdf.pdf_writer import HTMLPDFWriter, PDFWriter
 from app.types.content_type import ContentType
+from app.types.module import Module
 from app.utils.tools import (
     get_core_data,
     get_file_from_data,
@@ -162,7 +162,8 @@ async def save_security_file(
 
 
 async def get_participant(
-    participant_id: str, db: AsyncSession,
+    participant_id: str,
+    db: AsyncSession,
 ) -> models_raid.Participant:
     participant = await cruds_raid.get_participant_by_id(participant_id, db)
     if not participant:

@@ -14,7 +14,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "9d7d834743d1"
-down_revision: str | None = "146039b64c92"
+down_revision: str | None = "1dadc35d79a5"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -29,7 +29,11 @@ def upgrade() -> None:
         sa.Column(
             "validation",
             sa.Enum(
-                "pending", "accepted", "refused", "temporary", name="documentvalidation",
+                "pending",
+                "accepted",
+                "refused",
+                "temporary",
+                name="documentvalidation",
             ),
             nullable=False,
         ),
@@ -68,7 +72,10 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
-        op.f("ix_raid_security_file_id"), "raid_security_file", ["id"], unique=False,
+        op.f("ix_raid_security_file_id"),
+        "raid_security_file",
+        ["id"],
+        unique=False,
     )
     op.create_table(
         "raid_participant",
@@ -80,7 +87,9 @@ def upgrade() -> None:
         sa.Column("phone", sa.String(), nullable=False),
         sa.Column("email", sa.String(), nullable=False),
         sa.Column(
-            "bike_size", sa.Enum("XS", "S", "M", "L", "XL", name="size"), nullable=True,
+            "bike_size",
+            sa.Enum("XS", "S", "M", "L", "XL", name="size"),
+            nullable=True,
         ),
         sa.Column(
             "t_shirt_size",
@@ -109,7 +118,10 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
-        op.f("ix_raid_participant_id"), "raid_participant", ["id"], unique=False,
+        op.f("ix_raid_participant_id"),
+        "raid_participant",
+        ["id"],
+        unique=False,
     )
     op.create_table(
         "raid_team",
