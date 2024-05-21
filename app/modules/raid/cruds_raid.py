@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.modules.raid import models_raid, schemas_raid
-from app.modules.raid.raid_type import DocumentValidation
+from app.modules.raid.raid_type import Difficulty, DocumentValidation
 
 
 async def create_participant(
@@ -510,7 +510,7 @@ async def update_team_file_id(
 
 
 async def get_number_of_team_by_difficulty(
-    difficulty: schemas_raid.Difficulty,
+    difficulty: Difficulty,
     db: AsyncSession,
 ) -> int:
     result = await db.execute(

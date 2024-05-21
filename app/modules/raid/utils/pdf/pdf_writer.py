@@ -100,7 +100,7 @@ class PDFWriter(FPDF):
         return self.add_pdf()
 
     def clear_pdf(self):
-        Path.unlink("data/raid/" + self.file_name)
+        Path("data/raid/" + self.file_name).unlink()
         self = PDFWriter()
 
     def write_empty_participant(self):
