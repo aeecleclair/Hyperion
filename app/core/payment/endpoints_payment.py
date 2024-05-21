@@ -10,10 +10,8 @@ from helloasso_api_wrapper.models.api_notifications import (
 from pydantic import TypeAdapter, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import Settings
 from app.core.payment import cruds_payment, models_payment, schemas_payment
-from app.core.payment.payment_tool import PaymentTool
-from app.dependencies import get_db, get_settings
+from app.dependencies import get_db
 from app.modules.module_list import module_list
 
 router = APIRouter(tags=["Payments"])
@@ -115,4 +113,3 @@ async def webhook(
             hyperion_error_logger.error(
                 f"Payment: call to module {checkout.module} payment callback failed with an error {error}",
             )
-
