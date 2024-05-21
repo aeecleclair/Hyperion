@@ -739,7 +739,6 @@ async def get_status(
 
 @module.router.patch(
     "/reception/memberships/",
-    response_model=schemas_reception.Status,
     status_code=204,
 )
 async def update_status(
