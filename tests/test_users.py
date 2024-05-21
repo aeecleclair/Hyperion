@@ -29,7 +29,7 @@ student_user_password = "password"
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
-async def init_objects():
+async def init_objects() -> None:
     global admin_user, student_user, student_user_with_old_email
 
     admin_user = await create_user_with_groups(
@@ -91,7 +91,7 @@ def test_search_users():
     assert all(user["id"] not in group_users for user in data)
 
 
-def test_read_current_user():
+def test_read_current_user() -> None:
     token = create_api_access_token(student_user)
     response = client.get(
         "/users/me",
@@ -102,7 +102,7 @@ def test_read_current_user():
     assert data["id"] == student_user.id
 
 
-def test_read_user():
+def test_read_user() -> None:
     token = create_api_access_token(admin_user)
     response = client.get(
         f"/users/{student_user.id}",
@@ -213,7 +213,7 @@ def test_recover_and_reset_password(mocker):
     assert response.status_code == 201
 
 
-def test_update_user():
+def test_update_user() -> None:
     # A non admin user should not be allowed to use this endpoint
     token = create_api_access_token(student_user)
     response = client.patch(
@@ -256,7 +256,7 @@ async def test_invalid_migrate_mail():
     assert response.status_code == 400
 
 
-async def test_migrate_mail(mocker):
+async def test_migrate_mail(mocker) -> None:
     # NOTE: we don't want to mock app.core.security.generate_token but
     # app.core.users.endpoints_users.security.generate_token which is the imported version of the function
     mocker.patch(

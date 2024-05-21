@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 import pytest_asyncio
 from fastapi import HTTPException, UploadFile
+from starlette.datastructures import Headers
 
 from app.core import models_core
 from app.types.core_data import BaseCoreData
@@ -69,7 +70,10 @@ async def test_save_file():
     valid_uuid = str(uuid.uuid4())
     with Path("assets/images/default_profile_picture.png").open("rb") as file:
         await save_file_as_data(
-            upload_file=UploadFile(file, headers={"content-type": "image/png"}),
+            upload_file=UploadFile(
+                file,
+                headers=Headers({"content-type": "image/png"}),
+            ),
             directory="test",
             filename=valid_uuid,
             request_id="request_id",
@@ -83,7 +87,10 @@ async def test_save_file_with_invalid_content_type():
         Path("assets/images/default_profile_picture.png").open("rb") as file,
     ):
         await save_file_as_data(
-            upload_file=UploadFile(file, headers={"content-type": "test/test"}),
+            upload_file=UploadFile(
+                file,
+                headers=Headers({"content-type": "test/test"}),
+            ),
             directory="test",
             filename=valid_uuid,
             request_id="request_id",

@@ -2,6 +2,7 @@
 
 import logging
 import uuid
+from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
@@ -244,7 +245,7 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     # Creating a lifespan which will be called when the application starts then shuts down
     # https://fastapi.tiangolo.com/advanced/events/
     @asynccontextmanager
-    async def lifespan(app: FastAPI):
+    async def lifespan(app: FastAPI) -> AsyncGenerator:
         yield
         hyperion_error_logger.info("Shutting down")
 
@@ -287,8 +288,8 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     @app.middleware("http")
     async def logging_middleware(
         request: Request,
-        call_next,
-    ):
+        call_next: Callable[[Request], Awaitable[Response]],
+    ) -> Response:
         """
         This middleware is called around each request.
         It logs the request and inject a unique identifier in the request that should be used to associate logs saved during the request.
@@ -307,7 +308,7 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
             hyperion_security_logger.warning(
                 f"Client information not available for {request.url.path}",
             )
-            return HTTPException(status_code=400, detail="No client information")
+            raise HTTPException(status_code=400, detail="No client information")
 
         ip_address = request.client.host
         port = request.client.port

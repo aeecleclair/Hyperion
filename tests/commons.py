@@ -26,7 +26,7 @@ from app.utils.tools import get_random_string
 @lru_cache
 def override_get_settings() -> Settings:
     """Override the get_settings function to use the testing session"""
-    return Settings(_env_file=".env.test", _env_file_encoding="utf-8")  # type: ignore[call-arg] # See https://github.com/pydantic/pydantic/issues/3072, TODO: remove when fixes
+    return Settings(_env_file=".env.test", _env_file_encoding="utf-8")
 
 
 settings = override_get_settings()
@@ -76,7 +76,7 @@ def override_get_redis_client(
     return redis_client
 
 
-def change_redis_client_status(activated: bool):
+def change_redis_client_status(activated: bool) -> None:
     global redis_client
     if activated:
         if settings.REDIS_HOST != "":
@@ -154,7 +154,7 @@ async def create_user_with_groups(
     return user
 
 
-def create_api_access_token(user: models_core.CoreUser):
+def create_api_access_token(user: models_core.CoreUser) -> str:
     """
     Create a JWT access token for the `user` with the scope `API`
     """

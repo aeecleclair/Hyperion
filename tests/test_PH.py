@@ -16,7 +16,12 @@ from tests.commons import (
 
 ph_user_ph: models_core.CoreUser
 ph_user_simple: models_core.CoreUser
+
+token_ph: str
 token_simple: str
+
+paper: models_ph.Paper
+paper2: models_ph.Paper
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
