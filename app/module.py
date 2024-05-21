@@ -2,7 +2,7 @@ import importlib
 import logging
 from pathlib import Path
 
-from app.core.module import Module
+from app.types.module import Module
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
