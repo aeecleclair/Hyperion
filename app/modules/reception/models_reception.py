@@ -93,8 +93,8 @@ class CurriculumMembership(Base):
     )
 
 
-allowed_curriculum_association_table = Table(
-    "allowed_curriculum_association_table",
+reception_allowed_curriculum = Table(
+    "reception_allowed_curriculum",
     Base.metadata,
     Column(
         "product_variant_id",
@@ -119,7 +119,7 @@ class ProductVariant(Base):
     unique: Mapped[bool]
     allowed_curriculum: Mapped[Curriculum] = relationship(
         "Curriculum",
-        secondary="allowed_curriculum_association_table",
+        secondary="reception_allowed_curriculum",
     )
 
 
