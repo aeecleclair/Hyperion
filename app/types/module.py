@@ -11,6 +11,8 @@ if TYPE_CHECKING:
 
     from sqlalchemy.ext.asyncio import AsyncSession
 
+    from app.core.payment import schemas_payment
+
 
 class Module:
     def __init__(
