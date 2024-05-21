@@ -8,13 +8,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import cruds_core, models_core, schemas_core
 from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
-from app.core.module import module_list
 from app.dependencies import (
     get_db,
     get_settings,
     is_user,
     is_user_a_member_of,
 )
+from app.modules.module_list import module_list
 from app.utils.tools import is_group_id_valid
 
 router = APIRouter(tags=["Core"])

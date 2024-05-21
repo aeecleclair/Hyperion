@@ -7,9 +7,9 @@ from fastapi import APIRouter
 from app.core import endpoints_core
 from app.core.auth import endpoints_auth
 from app.core.groups import endpoints_groups
-from app.core.module import module_list
 from app.core.notification import endpoints_notification
 from app.core.users import endpoints_users
+from app.modules.module_list import module_list
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
