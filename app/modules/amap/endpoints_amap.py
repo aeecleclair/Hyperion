@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, schemas_core
 from app.core.groups.groups_type import GroupType
-from app.core.module import Module
 from app.core.notification.notification_types import CustomTopic, Topic
 from app.core.notification.schemas_notification import Message
 from app.core.users import cruds_users
@@ -23,6 +22,7 @@ from app.dependencies import (
 )
 from app.modules.amap import cruds_amap, models_amap, schemas_amap
 from app.modules.amap.types_amap import DeliveryStatusType
+from app.types.module import Module
 from app.utils.communication.notifications import NotificationTool
 from app.utils.redis import locker_get, locker_set
 from app.utils.tools import is_user_member_of_an_allowed_group

@@ -7,7 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
-from app.core.module import Module
 from app.core.notification.notification_types import CustomTopic, Topic
 from app.core.notification.schemas_notification import Message
 from app.dependencies import (
@@ -19,6 +18,7 @@ from app.dependencies import (
 )
 from app.modules.ph import cruds_ph, models_ph, schemas_ph
 from app.types.content_type import ContentType
+from app.types.module import Module
 from app.utils.communication.notifications import NotificationTool
 from app.utils.tools import (
     delete_file_from_data,

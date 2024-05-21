@@ -1,5 +1,5 @@
 from app.core.groups.groups_type import GroupType
-from app.core.module import Module
+from app.types.module import Module
 
 module = Module(
     root="centralisation",
