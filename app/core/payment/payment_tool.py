@@ -4,6 +4,7 @@ from helloasso_api_wrapper import HelloAssoAPIWrapper
 from helloasso_api_wrapper.models.carts import CheckoutPayer, InitCheckoutBody
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import security
 from app.core.config import Settings
 from app.core.models_core import CoreUser
 from app.core.payment import cruds_payment, models_payment, schemas_payment
@@ -31,8 +32,8 @@ class PaymentTool:
         checkout_amount: int,
         checkout_name: str,
         redirection_uri: str,
-        payer_user: CoreUser | None,
         db: AsyncSession,
+        payer_user: CoreUser | None = None,
     ) -> schemas_payment.Checkout:
         """
         Init an HelloAsso checkout
@@ -58,6 +59,10 @@ class PaymentTool:
                 email=payer_user.email,
                 dateOfBirth=payer_user.birthday,
             )
+
+        checkout_model_id = uuid.uuid4()
+        secret = security.generate_token(nbytes=12)
+
         init_checkout_body = InitCheckoutBody(
             totalAmount=checkout_amount,
             initialAmount=checkout_amount,
@@ -67,6 +72,10 @@ class PaymentTool:
             returnUrl=redirection_uri,
             containsDonation=False,
             payer=payer,
+            metadata=schemas_payment.HelloAssoCheckoutMetadata(
+                secret=secret,
+                hyperion_checkout_id=str(checkout_model_id),
+            ).model_dump(),
         )
 
         response = self.hello_asso.checkout_intents_management.init_a_checkout(
@@ -74,16 +83,14 @@ class PaymentTool:
             init_checkout_body,
         )
 
-        checkout_model_id = uuid.uuid4()
-
         checkout_model = models_payment.Checkout(
             id=checkout_model_id,
             module=module,
             name=checkout_name,
             amount=checkout_amount,
-            paid_amount=0,
             hello_asso_checkout_id=response.id,
             hello_asso_order_id=None,
+            secret=secret,
         )
 
         await cruds_payment.create_checkout(db=db, checkout=checkout_model)
