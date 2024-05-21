@@ -25,16 +25,16 @@ class Seller(Base):
     order: Mapped[int]
 
 
-document_constraints_association_table = Table(
-    "document_constraints_association_table",
+reception_document_constraint = Table(
+    "reception_document_constraint",
     Base.metadata,
     Column("product_id", ForeignKey("reception_product.id"), primary_key=True),
     Column("document_id", ForeignKey("reception_document.id"), primary_key=True),
 )
 
 
-class ProductConstraints(Base):
-    __tablename__ = "product_constraints_association_table"
+class ProductConstraint(Base):
+    __tablename__ = "reception_product_constraint"
 
     product_id: Mapped[uuid.UUID] = mapped_column(
         UUID,
@@ -61,13 +61,13 @@ class ReceptionProduct(Base):
     public_display: Mapped[bool]
     product_constraints: Mapped[list["ReceptionProduct"]] = relationship(
         "ReceptionProduct",
-        secondary="product_constraints_association_table",
-        primaryjoin="ReceptionProduct.id==ProductConstraints.product_id",
-        secondaryjoin="ReceptionProduct.id==ProductConstraints.product_constraint_id",
+        secondary="reception_product_constraint",
+        primaryjoin="ReceptionProduct.id==ProductConstraint.product_id",
+        secondaryjoin="ReceptionProduct.id==ProductConstraint.product_constraint_id",
     )
     document_constraints: Mapped[list["Document"]] = relationship(
         "Document",
-        secondary="document_constraints_association_table",
+        secondary="reception_document_constraint",
     )
 
 
