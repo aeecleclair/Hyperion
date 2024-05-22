@@ -146,7 +146,8 @@ class DriveFileManager:
             .update(fileId=file_id, body=file_metadata, media_body=media)
             .execute()
         )
-        return response.get("id")
+        result: str = response.get("id")
+        return result
 
     def delete_file(self, file_id: str) -> bool:
         self.drive_service.files().delete(fileId=file_id).execute()
