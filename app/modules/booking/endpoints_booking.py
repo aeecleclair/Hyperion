@@ -9,7 +9,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import models_core
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
-from app.core.module import Module
 from app.core.notification.schemas_notification import Message
 from app.dependencies import (
     get_db,
@@ -20,6 +19,7 @@ from app.dependencies import (
 )
 from app.modules.booking import cruds_booking, models_booking, schemas_booking
 from app.modules.booking.types_booking import Decision
+from app.types.module import Module
 from app.utils.communication.notifications import NotificationTool
 from app.utils.tools import is_group_id_valid, is_user_member_of_an_allowed_group
 

@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, standard_responses
 from app.core.groups.groups_type import GroupType
-from app.core.module import Module
 from app.core.notification.notification_types import CustomTopic, Topic
 from app.core.notification.schemas_notification import Message
 from app.dependencies import (
@@ -20,6 +19,7 @@ from app.dependencies import (
 )
 from app.modules.cinema import cruds_cinema, schemas_cinema
 from app.types.content_type import ContentType
+from app.types.module import Module
 from app.utils.communication.date_manager import (
     get_date_day,
     get_date_month,

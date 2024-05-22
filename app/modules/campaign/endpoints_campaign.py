@@ -12,7 +12,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import models_core, standard_responses
 from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
-from app.core.module import Module
 from app.core.users import cruds_users
 from app.dependencies import (
     get_db,
@@ -24,6 +23,7 @@ from app.dependencies import (
 from app.modules.campaign import cruds_campaign, models_campaign, schemas_campaign
 from app.modules.campaign.types_campaign import ListType, StatusType
 from app.types.content_type import ContentType
+from app.types.module import Module
 from app.utils.tools import (
     get_file_from_data,
     is_user_member_of_an_allowed_group,

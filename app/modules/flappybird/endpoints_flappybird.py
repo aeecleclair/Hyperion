@@ -6,13 +6,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
-from app.core.module import Module
 from app.dependencies import get_db, is_user_a_member
 from app.modules.flappybird import (
     cruds_flappybird,
     models_flappybird,
     schemas_flappybird,
 )
+from app.types.module import Module
 
 module = Module(
     root="flappybird",

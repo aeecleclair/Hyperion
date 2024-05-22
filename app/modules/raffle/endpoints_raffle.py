@@ -10,7 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import models_core, standard_responses
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
-from app.core.module import Module
 from app.core.users import cruds_users
 from app.core.users.endpoints_users import read_user
 from app.dependencies import (
@@ -23,6 +22,7 @@ from app.dependencies import (
 from app.modules.raffle import cruds_raffle, models_raffle, schemas_raffle
 from app.modules.raffle.types_raffle import RaffleStatusType
 from app.types.content_type import ContentType
+from app.types.module import Module
 from app.utils.redis import locker_get, locker_set
 from app.utils.tools import (
     get_display_name,

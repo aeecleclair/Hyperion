@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import models_core, standard_responses
 from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
-from app.core.module import Module
 from app.dependencies import (
     get_db,
     get_request_id,
@@ -22,6 +21,7 @@ from app.modules.recommendation import (
     schemas_recommendation,
 )
 from app.types.content_type import ContentType
+from app.types.module import Module
 from app.utils.tools import get_file_from_data, save_file_as_data
 
 router = APIRouter()
