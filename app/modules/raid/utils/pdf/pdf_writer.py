@@ -11,6 +11,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from PIL import Image
 from pypdf import PdfReader, PdfWriter
 
+from app.modules.raid import schemas_raid
 from app.modules.raid.models_raid import Document, Participant, SecurityFile, Team
 from app.modules.raid.utils.pdf.conversion_utils import (
     date_to_string,
@@ -386,6 +387,7 @@ class HTMLPDFWriter:
     def write_participant_security_file(
         self,
         participant: Participant,
+        information: schemas_raid.RaidInformation,
         team_number: int | None,
     ):
         environment = Environment(
@@ -393,7 +395,17 @@ class HTMLPDFWriter:
             autoescape=select_autoescape(["html"]),
         )
         results_template = environment.get_template("template.html")
-        context = {**participant.__dict__, "team_number": team_number}
+        context = {
+            **participant.__dict__,
+            "information": {
+                "president": information.president.__dict__,
+                "rescue": information.rescue.__dict__,
+                "security_responsible": information.security_responsible.__dict__,
+                "volunteer_responsible": information.volunteer_responsible.__dict__,
+            },
+            "team_number": team_number,
+        }
+        print(context.get("information").get("president"))
         html_content = results_template.render(context)
         csspath = pathlib.Path("assets/templates/style.css")
         css_content = csspath.read_bytes().decode()
