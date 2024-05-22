@@ -12,7 +12,7 @@ from app.modules.raid.raid_type import (
     MeetingPlace,
     Size,
 )
-from app.types.sqlalchemy import Base
+from app.types.sqlalchemy import Base, PrimaryKey
 
 
 class Document(Base):
@@ -322,3 +322,18 @@ class InviteToken(Base):
     )
     team_id: Mapped[str] = mapped_column(ForeignKey("raid_team.id"), nullable=False)
     token: Mapped[str] = mapped_column(String, nullable=False)
+
+
+class ParticipantCheckout(Base):
+    __tablename__ = "raid_participant_checkout"
+    id: Mapped[str] = mapped_column(
+        String,
+        primary_key=True,
+        index=True,
+        nullable=False,
+    )
+    participant_id: Mapped[str] = mapped_column(
+        ForeignKey("raid_participant.id"),
+        nullable=False,
+    )
+    checkout_id: Mapped[str] = mapped_column(ForeignKey("payment_checkout.id"))
