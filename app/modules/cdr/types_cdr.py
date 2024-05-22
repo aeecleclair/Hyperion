@@ -36,3 +36,13 @@ class CdrStatus(str, Enum):
 
     def __str__(self):
         return f"{self.name}<{self.value}"
+
+
+class CdrLogActionType(str, Enum):
+    purchase_add = "purchase_add"
+    purchase_delete = "purchase_delete"
+    payment_add = "payment_add"
+    payment_delete = "payment_delete"
+
+    def __str__(self):
+        return f"{self.name}<{self.value}"
