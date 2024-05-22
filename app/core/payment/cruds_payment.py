@@ -50,7 +50,7 @@ async def get_checkout_by_hello_asso_checkout_id(
 
 
 async def get_checkout_by_hello_asso_checkout_id(
-    hello_asso_checkout_id: str,
+    hello_asso_checkout_id: int,
     db: AsyncSession,
 ) -> models_payment.Checkout | None:
     result = await db.execute(
