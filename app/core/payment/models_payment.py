@@ -30,7 +30,7 @@ class Checkout(Base):
     name: Mapped[str]
     amount: Mapped[int]
 
-    hello_asso_checkout_id: Mapped[str]
+    hello_asso_checkout_id: Mapped[int]
     # TODO: remove ?
     hello_asso_order_id: Mapped[str | None]
 
