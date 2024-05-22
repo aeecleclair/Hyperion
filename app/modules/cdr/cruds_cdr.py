@@ -29,6 +29,18 @@ async def get_sellers_by_group_id(
     return result.scalars().all()
 
 
+async def get_sellers_by_group_ids(
+    db: AsyncSession,
+    group_ids: list[UUID],
+) -> Sequence[models_cdr.Seller]:
+    result = await db.execute(
+        select(models_cdr.Seller)
+        .where(models_cdr.Seller.group_id.in_(group_ids))
+        .options(selectinload(models_cdr.Seller.products)),
+    )
+    return result.scalars().all()
+
+
 async def get_seller_by_id(
     db: AsyncSession,
     seller_id: UUID,

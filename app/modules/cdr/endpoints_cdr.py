@@ -112,10 +112,7 @@ async def get_sellers_of_user(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_seller),
 ):
-    sellers: list[models_cdr.Seller] = []
-    for group in user.groups:
-        sellers.extend(await cruds_cdr.get_sellers_by_group_id(db, uuid.UUID(group.id)))
-    return sellers
+    return await cruds_cdr.get_sellers_by_group_ids(db, list(map(lambda x:uuid.UUID(x), user.groups)))
 
 
 @module.router.get(
@@ -1118,7 +1115,7 @@ async def get_status(
 
 
 @module.router.patch(
-    "/cdr/memberships/",
+    "/cdr/status/",
     status_code=204,
 )
 async def update_status(
