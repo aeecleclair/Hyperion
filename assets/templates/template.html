@@ -269,13 +269,17 @@
             Responsable Sécurité
           </td>
           <td class="px-3 p-2 border border-slate-500">
-            {{security_file.emergency_person_name}}
+            {{
+                information.security_responsible.firstname + " " + information.security_responsible.name + " - " + information.security_responsible.phone if information.security_responsible.firstname and information.security_responsible.name and information.security_responsible.phone else "Non renseigné"
+            }}
           </td>
         </tr>
         <tr>
           <td class="px-3 p-2 border border-slate-500 w-56">Président·e</td>
           <td class="px-3 p-2 border border-slate-500">
-            {{security_file.emergency_person_firstname}}
+            {{
+                information.president.firstname + " " + information.president.name + " - " + information.president.phone if information.president.firstname and information.president.name and information.president.phone else "Non renseigné"
+            }}
           </td>
         </tr>
         <tr>
@@ -283,13 +287,15 @@
             Responsable Bénévole
           </td>
           <td class="px-3 p-2 border border-slate-500">
-            {{security_file.emergency_person_phone}}
+            {{
+                information.volunteer_responsible.firstname + " " + information.volunteer_responsible.name + " - " + information.volunteer_responsible.phone if information.volunteer_responsible.firstname and information.volunteer_responsible.name and information.volunteer_responsible.phone else "Non renseigné"
+            }}
           </td>
         </tr>
         <tr>
           <td class="px-3 p-2 border border-slate-500 w-56">Secouristes</td>
           <td class="px-3 p-2 border border-slate-500">
-            {{security_file.emergency_person_phone}}
+            {{information.rescue.phone if information.rescue.phone else "Non renseigné"}}
           </td>
         </tr>
       </tbody>

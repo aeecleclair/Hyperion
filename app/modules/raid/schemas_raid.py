@@ -143,12 +143,22 @@ class InviteToken(BaseModel):
     token: str
 
 
+class EmergencyContact(BaseModel):
+    firstname: str | None = None
+    name: str | None = None
+    phone: str | None = None
+
+
 class RaidInformation(core_data.BaseCoreData):
     raid_start_date: date | None = None
     raid_end_date: date | None = None
     raid_registering_end_date: date | None = None
     payment_link: str | None = None
     contact: str | None = None
+    president: EmergencyContact | None = None
+    volunteer_responsible: EmergencyContact | None = None
+    security_responsible: EmergencyContact | None = None
+    rescue: EmergencyContact | None = None
 
 
 class RaidDriveFoldersCreation(BaseModel):
