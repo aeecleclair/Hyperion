@@ -112,7 +112,10 @@ async def get_sellers_of_user(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_seller),
 ):
-    return await cruds_cdr.get_sellers_by_group_ids(db, list(map(lambda x:uuid.UUID(x), user.groups)))
+    return await cruds_cdr.get_sellers_by_group_ids(
+        db,
+        [uuid.UUID(x.id) for x in user.groups],
+    )
 
 
 @module.router.get(
