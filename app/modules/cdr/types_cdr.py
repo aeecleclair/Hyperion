@@ -6,7 +6,7 @@ class DocumentSignatureType(str, Enum):
     material = "material"
 
     def __str__(self):
-        return f"{self.name}<{self.value}"
+        return f"{self.name}<{self.value}>"
 
 
 class PaymentType(str, Enum):
@@ -17,7 +17,7 @@ class PaymentType(str, Enum):
     archived = "archived"
 
     def __str__(self):
-        return f"{self.name}<{self.value}"
+        return f"{self.name}<{self.value}>"
 
 
 class AvailableMembership(str, Enum):
@@ -25,7 +25,7 @@ class AvailableMembership(str, Enum):
     useecl = "USEECL"
 
     def __str__(self):
-        return f"{self.name}<{self.value}"
+        return f"{self.name}<{self.value}>"
 
 
 class CdrStatus(str, Enum):
@@ -35,7 +35,7 @@ class CdrStatus(str, Enum):
     closed = "closed"
 
     def __str__(self):
-        return f"{self.name}<{self.value}"
+        return f"{self.name}<{self.value}>"
 
 
 class CdrLogActionType(str, Enum):
@@ -45,4 +45,4 @@ class CdrLogActionType(str, Enum):
     payment_delete = "payment_delete"
 
     def __str__(self):
-        return f"{self.name}<{self.value}"
+        return f"{self.name}<{self.value}>"
