@@ -6,6 +6,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.modules.cdr.types_cdr import (
     AvailableMembership,
+    CdrLogActionType,
     DocumentSignatureType,
     PaymentType,
 )
@@ -181,3 +182,18 @@ class Membership(Base):
     )
     start_date: Mapped[date]
     end_date: Mapped[date]
+
+
+class CdrAction(Base):
+    __tablename__ = "cdr_action"
+
+    id: Mapped[PrimaryKey]
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("core_user.id"),
+        nullable=True,
+    )  # Who made the request
+    subject_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("core_user.id"),
+    )  # For who the request was made
+    action_type: Mapped[CdrLogActionType]
+    action: Mapped[str]
