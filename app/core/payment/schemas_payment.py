@@ -7,6 +7,8 @@ class CheckoutPayment(BaseModel):
     id: uuid.UUID
     paid_amount: int
 
+    checkout_id: uuid.UUID
+
 
 class Checkout(BaseModel):
     id: uuid.UUID
