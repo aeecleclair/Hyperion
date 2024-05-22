@@ -22,11 +22,12 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     op.create_table(
         "ph_papers",
-        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("id", sa.String(), nullable=False),
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("release_date", sa.Date(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
+    op.create_index(op.f("ix_ph_papers_id"), "ph_papers", ["id"], unique=False)
 
     with op.batch_alter_table("notification_topic_membership") as batch_op:
         batch_op.alter_column(
@@ -49,6 +50,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    op.drop_index(op.f("ix_ph_papers_id"), table_name="ph_papers")
     op.drop_table("ph_papers")
     with op.batch_alter_table("notification_topic_membership") as batch_op:
         batch_op.alter_column(
