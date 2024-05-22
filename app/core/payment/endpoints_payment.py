@@ -86,6 +86,15 @@ async def webhook(
                 detail=f"Could not find checkout {checkout_metadata.hyperion_checkout_id} in database",
             )
 
+        if checkout.secret != checkout_metadata.secret:
+            hyperion_error_logger.error(
+                f"Payment: secret mismatch for checkout {checkout.id}",
+            )
+            raise HTTPException(
+                status_code=400,
+                detail="Secret mismatch",
+            )
+
         checkout_payment_model = models_payment.CheckoutPayment(
             id=uuid.uuid4(),
             checkout_id=checkout.id,
