@@ -426,16 +426,16 @@ async def update_membership(
                 detail="You are not allowed to update a membership with the role of president",
             )
 
-    if updated_membership.order is not None:
+    if updated_membership.member_order is not None:
         await cruds_phonebook.update_order_of_memberships(
             db,
             old_membership.association_id,
             old_membership.mandate_year,
-            old_membership.order,
-            updated_membership.order,
+            old_membership.member_order,
+            updated_membership.member_order,
         )
 
-    # We update the membership after updating the order to avoid conflicts
+    # We update the membership after updating the member_order to avoid conflicts
     await cruds_phonebook.update_membership(updated_membership, membership_id, db)
 
 
@@ -481,7 +481,7 @@ async def delete_membership(
         db,
         membership.association_id,
         membership.mandate_year,
-        membership.order,
+        membership.member_order,
     )
 
     await cruds_phonebook.delete_membership(membership_id, db)
