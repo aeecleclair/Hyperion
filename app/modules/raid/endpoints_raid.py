@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import models_core
 from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
+from app.core.payment import schemas_payment
 from app.core.payment.payment_tool import PaymentTool
 from app.dependencies import (
     get_db,
@@ -35,15 +36,33 @@ from app.utils.tools import (
     set_core_data,
 )
 
-module = Module(
-    root="raid",
-    tag="Raid",
-    default_allowed_groups_ids=[GroupType.student, GroupType.staff],
-)
-
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 drive_file_manager = DriveFileManager()
+
+
+async def validate_payment(
+    checkout_payment: schemas_payment.CheckoutPayment,
+    db: AsyncSession,
+) -> None:
+    paid_amount = checkout_payment.paid_amount
+    checkout_id = checkout_payment.id
+    prices = await get_core_data(schemas_raid.RaidPrice, db)
+    if paid_amount == prices.student_price:
+        await cruds_raid.confirm_payment(checkout_payment.id, db)
+    elif paid_amount == prices.t_shirt_price:
+        await cruds_raid.confirm_t_shirt_payment(checkout_payment.id, db)
+    elif paid_amount == prices.student_price + prices.t_shirt_price:
+        await cruds_raid.confirm_payment(checkout_payment.id, db)
+        await cruds_raid.confirm_t_shirt_payment(checkout_payment.id, db)
+
+
+module = Module(
+    root="raid",
+    tag="Raid",
+    validate_payment=validate_payment,
+    default_allowed_groups_ids=[GroupType.student, GroupType.staff],
+)
 
 
 async def write_teams_csv(teams: Sequence[models_raid.Team], db: AsyncSession) -> None:
@@ -1050,7 +1069,7 @@ async def get_payment_url(
             checkout_name += "T Shirt taille" + participant.t_shirt_size.value
     payment_tool = PaymentTool(settings=settings)
     checkout = await payment_tool.init_checkout(
-        module="Raid",
+        module="raid",
         helloasso_slug="AEECL",
         checkout_amount=price,
         checkout_name=checkout_name,
