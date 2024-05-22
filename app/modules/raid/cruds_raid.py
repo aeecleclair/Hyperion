@@ -517,3 +517,27 @@ async def get_number_of_team_by_difficulty(
         select(func.count()).where(models_raid.Team.difficulty == difficulty),
     )
     return result.scalar() or 0
+
+
+async def create_participant_checkout(
+    checkout: models_raid.ParticipantCheckout,
+    db: AsyncSession,
+) -> models_raid.ParticipantCheckout:
+    db.add(checkout)
+    try:
+        await db.commit()
+        return checkout
+    except IntegrityError:
+        await db.rollback()
+        raise ValueError("An error occurred while creating the participant checkout.")
+
+async def get_participant_checkout_by_checkout_id(
+    checkout_id: str,
+    db: AsyncSession,
+) -> models_raid.ParticipantCheckout | None:
+    checkout = await db.execute(
+        select(models_raid.ParticipantCheckout).where(
+            models_raid.ParticipantCheckout.checkout_id == checkout_id,
+        ),
+    )
+    return checkout.scalars().first()

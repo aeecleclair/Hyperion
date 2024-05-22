@@ -179,3 +179,8 @@ class RaidPrice(core_data.BaseCoreData):
 
 class PaymentUrl(BaseModel):
     url: str
+
+
+class ParticipantCheckout(BaseModel):
+    participant_id: str
+    checkout_id: str

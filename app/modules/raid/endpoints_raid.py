@@ -47,14 +47,20 @@ async def validate_payment(
 ) -> None:
     paid_amount = checkout_payment.paid_amount
     checkout_id = checkout_payment.id
+    participant_checkout = cruds_raid.get_participant_checkout_by_checkout_id(checkout_id, db)
+    if not participant_checkout:
+        raise HTTPException(status_code=404, detail="Checkout not found.")
+    participant_id = participant_checkout.participant_id
     prices = await get_core_data(schemas_raid.RaidPrice, db)
     if paid_amount == prices.student_price:
-        await cruds_raid.confirm_payment(checkout_payment.id, db)
+        await cruds_raid.confirm_payment(participant_id, db)
     elif paid_amount == prices.t_shirt_price:
-        await cruds_raid.confirm_t_shirt_payment(checkout_payment.id, db)
+        await cruds_raid.confirm_t_shirt_payment(participant_id, db)
     elif paid_amount == prices.student_price + prices.t_shirt_price:
-        await cruds_raid.confirm_payment(checkout_payment.id, db)
-        await cruds_raid.confirm_t_shirt_payment(checkout_payment.id, db)
+        await cruds_raid.confirm_payment(participant_id, db)
+        await cruds_raid.confirm_t_shirt_payment(participant_id, db)
+    else:
+        hyperion_error_logger.error("Invalid payment amount")
 
 
 module = Module(
@@ -1069,13 +1075,20 @@ async def get_payment_url(
             checkout_name += "T Shirt taille" + participant.t_shirt_size.value
     payment_tool = PaymentTool(settings=settings)
     checkout = await payment_tool.init_checkout(
-        module="raid",
+        module=module.root,
         helloasso_slug="AEECL",
         checkout_amount=price,
         checkout_name=checkout_name,
         redirection_uri=settings.RAID_PAYMENT_REDIRECTION_URL or "",
         payer_user=user,
         db=db,
+    )
+    await cruds_raid.create_participant_checkout(
+        schemas_raid.ParticipantCheckout(
+            id=str(uuid.uuid4()),
+            participant_id=user.id,
+            checkout_id=checkout.id,
+        ),
     )
     return schemas_raid.PaymentUrl(
         url=checkout.payment_url,
