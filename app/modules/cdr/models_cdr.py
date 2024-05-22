@@ -25,12 +25,17 @@ class Seller(Base):
     order: Mapped[int]
 
 
-cdr_document_constraint = Table(
-    "cdr_document_constraint",
-    Base.metadata,
-    Column("product_id", ForeignKey("cdr_product.id"), primary_key=True),
-    Column("document_id", ForeignKey("cdr_document.id"), primary_key=True),
-)
+class DocumentConstraint(Base):
+    __tablename__ = "cdr_document_constraint"
+
+    product_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("cdr_product.id"),
+        primary_key=True,
+    )
+    document_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("cdr_document.id"),
+        primary_key=True,
+    )
 
 
 class ProductConstraint(Base):
@@ -55,16 +60,18 @@ class CdrProduct(Base):
     )
     name: Mapped[str]
     description: Mapped[str | None]
-    public_display: Mapped[bool]
+    available_online: Mapped[bool]
     product_constraints: Mapped[list["CdrProduct"]] = relationship(
         "CdrProduct",
         secondary="cdr_product_constraint",
         primaryjoin="CdrProduct.id==ProductConstraint.product_id",
         secondaryjoin="CdrProduct.id==ProductConstraint.product_constraint_id",
+        lazy="selectin",
     )
     document_constraints: Mapped[list["Document"]] = relationship(
         "Document",
         secondary="cdr_document_constraint",
+        lazy="selectin",
     )
 
 

@@ -145,7 +145,7 @@ def upgrade() -> None:
         sa.Column("seller_id", sa.Uuid(), nullable=False),
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("description", sa.String(), nullable=True),
-        sa.Column("public_display", sa.Boolean(), nullable=False),
+        sa.Column("available_online", sa.Boolean(), nullable=False),
         sa.ForeignKeyConstraint(["seller_id"], ["cdr_seller.id"]),
         sa.PrimaryKeyConstraint("id"),
     )
