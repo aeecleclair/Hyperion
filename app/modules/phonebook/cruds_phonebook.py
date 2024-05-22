@@ -180,8 +180,8 @@ async def update_order_of_memberships(
     new_order: int | None = None,
 ):
     """
-    Shift the order of Memberships between `old_order` and `new_order`. This crud should be used to keep orders coherent when inserting, moving or removing a membership.
-    The cruds won't update the membership that was at the `old_order`, you must call an other crud to update, or remove it to prevent order collisions. This cruds should be called first."""
+    Shift the member_order of Memberships between `old_order` and `new_order`. This crud should be used to keep orders coherent when inserting, moving or removing a membership.
+    The cruds won't update the membership that was at the `old_order`, you must call an other crud to update, or remove it to prevent member_order collisions. This cruds should be called first."""
 
     if new_order is None:
         await db.execute(
@@ -189,9 +189,9 @@ async def update_order_of_memberships(
             .where(
                 models_phonebook.Membership.association_id == association_id,
                 models_phonebook.Membership.mandate_year == mandate_year,
-                models_phonebook.Membership.order > old_order,
+                models_phonebook.Membership.member_order > old_order,
             )
-            .values(order=models_phonebook.Membership.order - 1),
+            .values(member_order=models_phonebook.Membership.member_order - 1),
         )
 
     elif old_order > new_order:
@@ -200,10 +200,10 @@ async def update_order_of_memberships(
             .where(
                 models_phonebook.Membership.association_id == association_id,
                 models_phonebook.Membership.mandate_year == mandate_year,
-                models_phonebook.Membership.order >= new_order,
-                models_phonebook.Membership.order < old_order,
+                models_phonebook.Membership.member_order >= new_order,
+                models_phonebook.Membership.member_order < old_order,
             )
-            .values(order=models_phonebook.Membership.order + 1),
+            .values(member_order=models_phonebook.Membership.member_order + 1),
         )
     else:
         await db.execute(
@@ -211,10 +211,10 @@ async def update_order_of_memberships(
             .where(
                 models_phonebook.Membership.association_id == association_id,
                 models_phonebook.Membership.mandate_year == mandate_year,
-                models_phonebook.Membership.order > old_order,
-                models_phonebook.Membership.order <= new_order,
+                models_phonebook.Membership.member_order > old_order,
+                models_phonebook.Membership.member_order <= new_order,
             )
-            .values(order=models_phonebook.Membership.order - 1),
+            .values(member_order=models_phonebook.Membership.member_order - 1),
         )
     try:
         await db.commit()
@@ -262,7 +262,7 @@ async def get_memberships_by_association_id(
         .where(
             models_phonebook.Membership.association_id == association_id,
         )
-        .order_by(models_phonebook.Membership.order),
+        .order_by(models_phonebook.Membership.member_order),
     )
     return result.scalars().all()
 
@@ -279,7 +279,7 @@ async def get_memberships_by_association_id_and_mandate_year(
             models_phonebook.Membership.association_id == association_id,
             models_phonebook.Membership.mandate_year == mandate_year,
         )
-        .order_by(models_phonebook.Membership.order),
+        .order_by(models_phonebook.Membership.member_order),
     )
     return result.scalars().all()
 

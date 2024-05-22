@@ -9,20 +9,23 @@ from tests.commons import (
     client,
     create_api_access_token,
     create_user_with_groups,
-    event_loop,  # noqa
 )
 
-association: models_phonebook.Association | None = None
-associations_to_delete_admin: models_phonebook.Association | None = None
-associations_to_delete_simple: models_phonebook.Association | None = None
+association1: models_phonebook.Association
+association2: models_phonebook.Association
+association3: models_phonebook.Association
 
-membership: models_phonebook.Membership | None = None
-membership_to_delete_admin: models_phonebook.Membership | None = None
-membership_to_delete_president: models_phonebook.Membership | None = None
-membership_to_delete_simple: models_phonebook.Membership | None = None
-phonebook_user_BDE: models_core.CoreUser | None = None
-phonebook_user_president: models_core.CoreUser | None = None
-phonebook_user_simple: models_core.CoreUser | None = None
+membership1: models_phonebook.Membership
+membership2: models_phonebook.Membership
+membership3: models_phonebook.Membership
+membership4: models_phonebook.Membership
+membership5: models_phonebook.Membership
+membership6: models_phonebook.Membership
+phonebook_user_BDE: models_core.CoreUser
+phonebook_user_president: models_core.CoreUser
+phonebook_user_simple: models_core.CoreUser
+phonebook_user_simple2: models_core.CoreUser
+phonebook_user_simple3: models_core.CoreUser
 
 token_BDE: str = ""
 token_president: str = ""
@@ -401,7 +404,7 @@ def test_update_association_simple():
         ),
         None,
     )
-
+    assert association is not None
     assert association["name"] == "ECLAIR"
     assert association["mandate_year"] == 2023
 
@@ -430,6 +433,7 @@ def test_update_association_admin():
         None,
     )
 
+    assert association is not None
     assert association["name"] == "Bazar"
     assert association["description"] == "Bazar description"
 
@@ -458,6 +462,7 @@ def test_update_association_president():
         None,
     )
 
+    assert association is not None
     assert association["name"] == "eclair"
     assert association["description"] == "en minuscule"
 
@@ -482,18 +487,20 @@ def test_update_membership_simple():
         None,
     )
 
-    assert (
-        next(
-            (
-                membership
-                for membership in user_president["memberships"]
-                if membership["association_id"] == association1.id
-                and membership["mandate_year"] == association1.mandate_year
-            ),
-            None,
-        )["role_name"]
-        == "Prez"
+    assert user_president is not None
+
+    membership = next(
+        (
+            membership
+            for membership in user_president["memberships"]
+            if membership["association_id"] == association1.id
+            and membership["mandate_year"] == association1.mandate_year
+        ),
+        None,
     )
+
+    assert membership is not None
+    assert membership["role_name"] == "Prez"
 
 
 def test_update_membership_admin():
@@ -516,18 +523,20 @@ def test_update_membership_admin():
         None,
     )
 
-    assert (
-        next(
-            (
-                membership
-                for membership in user_president["memberships"]
-                if membership["association_id"] == association1.id
-                and membership["mandate_year"] == association1.mandate_year
-            ),
-            None,
-        )["role_name"]
-        == "Autre rôle"
+    assert user_president is not None
+
+    membership = next(
+        (
+            membership
+            for membership in user_president["memberships"]
+            if membership["association_id"] == association1.id
+            and membership["mandate_year"] == association1.mandate_year
+        ),
+        None,
     )
+
+    assert membership is not None
+    assert membership["role_name"] == "Autre rôle"
 
 
 def test_update_membership_president():
@@ -549,19 +558,20 @@ def test_update_membership_president():
         (member for member in members if member["id"] == phonebook_user_president.id),
         None,
     )
+    assert user_president is not None
 
-    assert (
-        next(
-            (
-                membership
-                for membership in user_president["memberships"]
-                if membership["association_id"] == association1.id
-                and membership["mandate_year"] == association1.mandate_year
-            ),
-            None,
-        )["role_name"]
-        == "Un super rôle"
+    membership = next(
+        (
+            membership
+            for membership in user_president["memberships"]
+            if membership["association_id"] == association1.id
+            and membership["mandate_year"] == association1.mandate_year
+        ),
+        None,
     )
+
+    assert membership is not None
+    assert membership["role_name"] == "Un super rôle"
 
 
 def test_update_membership_president_with_president_tag():
@@ -584,18 +594,20 @@ def test_update_membership_president_with_president_tag():
         None,
     )
 
-    assert (
-        next(
-            (
-                membership
-                for membership in user_BDE["memberships"]
-                if membership["association_id"] == association1.id
-                and membership["mandate_year"] == 2023
-            ),
-            None,
-        )["role_tags"]
-        == ""
+    assert user_BDE is not None
+
+    membership = next(
+        (
+            membership
+            for membership in user_BDE["memberships"]
+            if membership["association_id"] == association1.id
+            and membership["mandate_year"] == association1.mandate_year
+        ),
+        None,
     )
+
+    assert membership is not None
+    assert membership["role_tags"] == ""
 
 
 def test_update_membership_admin_with_president_tag():
@@ -618,18 +630,20 @@ def test_update_membership_admin_with_president_tag():
         None,
     )
 
-    assert (
-        next(
-            (
-                membership
-                for membership in user_BDE["memberships"]
-                if membership["association_id"] == association1.id
-                and membership["mandate_year"] == 2023
-            ),
-            None,
-        )["role_tags"]
-        == RoleTags.president.value
+    assert user_BDE is not None
+
+    membership = next(
+        (
+            membership
+            for membership in user_BDE["memberships"]
+            if membership["association_id"] == association1.id
+            and membership["mandate_year"] == association1.mandate_year
+        ),
+        None,
     )
+
+    assert membership is not None
+    assert membership["role_tags"] == RoleTags.president.value
 
 
 def test_update_membership_order():
@@ -665,67 +679,72 @@ def test_update_membership_order():
         None,
     )
 
-    assert (
-        next(
-            (
-                membership
-                for membership in user_president["memberships"]
-                if membership["association_id"] == association1.id
-                and membership["mandate_year"] == 2023
-            ),
-            None,
-        )["order"]
-        == 2
+    assert user_president is not None
+    assert user_BDE is not None
+    assert user_simple is not None
+    assert user_simple2 is not None
+
+    membership_president = next(
+        (
+            membership
+            for membership in user_president["memberships"]
+            if membership["association_id"] == association1.id
+            and membership["mandate_year"] == 2023
+        ),
+        None,
     )
 
-    assert (
-        next(
-            (
-                membership
-                for membership in user_president["memberships"]
-                if membership["association_id"] == association1.id
-                and membership["mandate_year"] == 2022
-            ),
-            None,
-        )["order"]
-        == 0
+    assert membership_president is not None
+    assert membership_president["order"] == 2
+
+    membership_president2 = next(
+        (
+            membership
+            for membership in user_president["memberships"]
+            if membership["association_id"] == association1.id
+            and membership["mandate_year"] == 2022
+        ),
+        None,
     )
 
-    assert (
-        next(
-            (
-                membership
-                for membership in user_BDE["memberships"]
-                if membership["association_id"] == association1.id
-            ),
-            None,
-        )["order"]
-        == 0
+    assert membership_president2 is not None
+    assert membership_president2["order"] == 0
+
+    membership_BDE = next(
+        (
+            membership
+            for membership in user_BDE["memberships"]
+            if membership["association_id"] == association1.id
+        ),
+        None,
     )
 
-    assert (
-        next(
-            (
-                membership
-                for membership in user_simple["memberships"]
-                if membership["association_id"] == association1.id
-            ),
-            None,
-        )["order"]
-        == 1
+    assert membership_BDE is not None
+    assert membership_BDE["order"] == 0
+
+    membership_simple = next(
+        (
+            membership
+            for membership in user_simple["memberships"]
+            if membership["association_id"] == association1.id
+        ),
+        None,
     )
 
-    assert (
-        next(
-            (
-                membership
-                for membership in user_simple2["memberships"]
-                if membership["association_id"] == association1.id
-            ),
-            None,
-        )["order"]
-        == 3
+    assert membership_simple is not None
+    assert membership_simple["order"] == 1
+
+    membership_simple2 = next(
+        (
+            membership
+            for membership in user_simple2["memberships"]
+            if membership["association_id"] == association2.id
+        ),
+        None,
     )
+
+    assert membership_simple2 is not None
+    assert membership_simple2["order"] == 1
 
 
 # ---------------------------------------------------------------------------- #
@@ -795,17 +814,19 @@ def test_delete_membership_update_order():
         None,
     )
 
-    assert (
-        next(
-            (
-                membership
-                for membership in user_BDE["memberships"]
-                if membership["association_id"] == association1.id
-            ),
-            None,
-        )["order"]
-        == 0
+    assert user_BDE is not None
+
+    membership = next(
+        (
+            membership
+            for membership in user_BDE["memberships"]
+            if membership["association_id"] == association1.id
+        ),
+        None,
     )
+
+    assert membership is not None
+    assert membership["order"] == 0
 
 
 def test_delete_association_simple():
@@ -827,6 +848,7 @@ def test_delete_association_simple():
         ),
         None,
     )
+    assert association is not None
     assert association["name"] == "eclair"
     assert association["description"] == "en minuscule"
 
