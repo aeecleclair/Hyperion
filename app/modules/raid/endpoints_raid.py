@@ -125,12 +125,15 @@ async def post_update_actions(team: models_raid.Team | None, db: AsyncSession) -
 
 async def save_security_file(
     participant: models_raid.Participant,
+    information: schemas_raid.RaidInformation,
     team_number: int | None,
     db: AsyncSession,
 ) -> None:
     try:
         pdf_writer = HTMLPDFWriter()
-        file_path = pdf_writer.write_participant_security_file(participant, team_number)
+        file_path = pdf_writer.write_participant_security_file(
+            participant, information, team_number
+        )
         file_name = f"{str(team_number) + '_' if team_number else ''}{participant.firstname}_{participant.name}_fiche_sécurité.pdf"
         if participant.security_file and participant.security_file.file_id:
             file_id = drive_file_manager.replace_file(
@@ -630,7 +633,8 @@ async def set_security_file(
         team = await cruds_raid.get_team_by_participant_id(user.id, db)
         participant = await cruds_raid.get_participant_by_id(participant_id, db)
         if team and participant:
-            await save_security_file(participant, team.number, db)
+            information = await get_core_data(schemas_raid.RaidInformation, db)
+            await save_security_file(participant, information, team.number, db)
         return await cruds_raid.get_security_file_by_security_id(
             security_file.id,
             db,
@@ -643,7 +647,8 @@ async def set_security_file(
     team = await cruds_raid.get_team_by_participant_id(user.id, db)
     participant = await cruds_raid.get_participant_by_id(participant_id, db)
     if team and participant:
-        await save_security_file(participant, team.number, db)
+        information = await get_core_data(schemas_raid.RaidInformation, db)
+        await save_security_file(participant, information, team.number, db)
     return created_security_file
 
 
@@ -933,6 +938,19 @@ async def update_raid_information(
                 else False
             )
             await cruds_raid.update_participant_minority(participant.id, is_minor, db)
+    if (
+        raid_information.president
+        or raid_information.rescue
+        or raid_information.security_responsible
+        or raid_information.volunteer_responsible
+    ):
+        participants = await cruds_raid.get_all_participants(db)
+        information = await get_core_data(schemas_raid.RaidInformation, db)
+        for participant in participants:
+            team = await cruds_raid.get_team_by_participant_id(participant.id, db)
+            participant = await cruds_raid.get_participant_by_id(participant.id, db)
+            if team and participant:
+                await save_security_file(participant, information, team.number, db)
 
 
 @module.router.patch(
@@ -954,6 +972,7 @@ async def update_drive_folders(
         security_folder_id=None,
     )
     await set_core_data(schemas_folders, db)
+    await drive_file_manager.init_folders(drive_folders.parent_folder_id)
 
 
 @module.router.get(
