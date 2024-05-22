@@ -16,7 +16,7 @@ class ProductBase(BaseModel):
     name: str
     description: str | None = None
     seller_id: UUID
-    public_display: bool
+    available_online: bool
     unique: bool
 
 
@@ -29,7 +29,7 @@ class ProductComplete(ProductBase):
 class ProductEdit(BaseModel):
     name: str | None = None
     description: str | None = None
-    public_display: bool | None = None
+    available_online: bool | None = None
     unique: bool | None = None
 
 
