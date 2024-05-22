@@ -61,6 +61,8 @@ async def validate_payment(
         await cruds_raid.confirm_t_shirt_payment(participant_id, db)
     else:
         hyperion_error_logger.error("Invalid payment amount")
+    team = await cruds_raid.get_team_by_participant_id(participant_id, db)
+    await post_update_actions(team, db)
 
 
 module = Module(
