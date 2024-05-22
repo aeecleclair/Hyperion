@@ -26,3 +26,13 @@ class AvailableMembership(str, Enum):
 
     def __str__(self):
         return f"{self.name}<{self.value}"
+
+
+class CdrStatus(str, Enum):
+    pending = "pending"
+    online = "online"
+    onsite = "onsite"
+    closed = "closed"
+
+    def __str__(self):
+        return f"{self.name}<{self.value}"

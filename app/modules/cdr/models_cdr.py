@@ -5,7 +5,7 @@ from sqlalchemy import Column, ForeignKey, String, Table
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.modules.reception.types_reception import (
+from app.modules.cdr.types_cdr import (
     AvailableMembership,
     DocumentSignatureType,
     PaymentType,
@@ -14,72 +14,72 @@ from app.types.sqlalchemy import Base, PrimaryKey
 
 
 class Seller(Base):
-    __tablename__ = "reception_seller"
+    __tablename__ = "cdr_seller"
 
     id: Mapped[PrimaryKey]
     name: Mapped[str]
-    products: Mapped[list["ReceptionProduct"]] = relationship("ReceptionProduct")
+    products: Mapped[list["CdrProduct"]] = relationship("CdrProduct")
     group_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("core_group.id"),
     )
     order: Mapped[int]
 
 
-reception_document_constraint = Table(
-    "reception_document_constraint",
+cdr_document_constraint = Table(
+    "cdr_document_constraint",
     Base.metadata,
-    Column("product_id", ForeignKey("reception_product.id"), primary_key=True),
-    Column("document_id", ForeignKey("reception_document.id"), primary_key=True),
+    Column("product_id", ForeignKey("cdr_product.id"), primary_key=True),
+    Column("document_id", ForeignKey("cdr_document.id"), primary_key=True),
 )
 
 
 class ProductConstraint(Base):
-    __tablename__ = "reception_product_constraint"
+    __tablename__ = "cdr_product_constraint"
 
     product_id: Mapped[uuid.UUID] = mapped_column(
         UUID,
-        ForeignKey("reception_product.id"),
+        ForeignKey("cdr_product.id"),
         primary_key=True,
     )
     product_constraint_id: Mapped[uuid.UUID] = mapped_column(
         UUID,
-        ForeignKey("reception_product.id"),
+        ForeignKey("cdr_product.id"),
         primary_key=True,
     )
 
 
-class ReceptionProduct(Base):
-    __tablename__ = "reception_product"
+class CdrProduct(Base):
+    __tablename__ = "cdr_product"
 
     id: Mapped[PrimaryKey]
     seller_id: Mapped[uuid.UUID] = mapped_column(
         UUID,
-        ForeignKey("reception_seller.id"),
+        ForeignKey("cdr_seller.id"),
     )
     name: Mapped[str]
     description: Mapped[str | None]
     public_display: Mapped[bool]
-    product_constraints: Mapped[list["ReceptionProduct"]] = relationship(
-        "ReceptionProduct",
-        secondary="reception_product_constraint",
-        primaryjoin="ReceptionProduct.id==ProductConstraint.product_id",
-        secondaryjoin="ReceptionProduct.id==ProductConstraint.product_constraint_id",
+    product_constraints: Mapped[list["CdrProduct"]] = relationship(
+        "CdrProduct",
+        secondary="cdr_product_constraint",
+        primaryjoin="CdrProduct.id==ProductConstraint.product_id",
+        secondaryjoin="CdrProduct.id==ProductConstraint.product_constraint_id",
     )
     document_constraints: Mapped[list["Document"]] = relationship(
         "Document",
-        secondary="reception_document_constraint",
+        secondary="cdr_document_constraint",
     )
 
 
 class Curriculum(Base):
-    __tablename__ = "reception_curriculum"
+    __tablename__ = "cdr_curriculum"
 
     id: Mapped[PrimaryKey]
     name: Mapped[str]
 
 
 class CurriculumMembership(Base):
-    __tablename__ = "reception_curriculum_membership"
+    __tablename__ = "cdr_curriculum_membership"
 
     user_id = mapped_column(
         UUID,
@@ -88,29 +88,29 @@ class CurriculumMembership(Base):
     )
     curriculum_id = mapped_column(
         UUID,
-        ForeignKey("reception_curriculum.id"),
+        ForeignKey("cdr_curriculum.id"),
         primary_key=True,
     )
 
 
-reception_allowed_curriculum = Table(
-    "reception_allowed_curriculum",
+cdr_allowed_curriculum = Table(
+    "cdr_allowed_curriculum",
     Base.metadata,
     Column(
         "product_variant_id",
-        ForeignKey("reception_product_variant.id"),
+        ForeignKey("cdr_product_variant.id"),
         primary_key=True,
     ),
-    Column("curriculum_id", ForeignKey("reception_curriculum.id"), primary_key=True),
+    Column("curriculum_id", ForeignKey("cdr_curriculum.id"), primary_key=True),
 )
 
 
 class ProductVariant(Base):
-    __tablename__ = "reception_product_variant"
+    __tablename__ = "cdr_product_variant"
 
     id: Mapped[PrimaryKey]
     product_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("reception_product.id"),
+        ForeignKey("cdr_product.id"),
     )
     name: Mapped[str]
     description: Mapped[str | None] = mapped_column(String, nullable=True)
@@ -119,19 +119,19 @@ class ProductVariant(Base):
     unique: Mapped[bool]
     allowed_curriculum: Mapped[Curriculum] = relationship(
         "Curriculum",
-        secondary="reception_allowed_curriculum",
+        secondary="cdr_allowed_curriculum",
     )
 
 
 class Document(Base):
-    __tablename__ = "reception_document"
+    __tablename__ = "cdr_document"
 
     id: Mapped[PrimaryKey]
     name: Mapped[str]
 
 
 class Purchase(Base):
-    __tablename__ = "reception_purchase"
+    __tablename__ = "cdr_purchase"
 
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID,
@@ -140,7 +140,7 @@ class Purchase(Base):
     )
     product_variant_id: Mapped[uuid.UUID] = mapped_column(
         UUID,
-        ForeignKey("reception_product_variant.id"),
+        ForeignKey("cdr_product_variant.id"),
         primary_key=True,
     )
     quantity: Mapped[int]
@@ -148,7 +148,7 @@ class Purchase(Base):
 
 
 class Signature(Base):
-    __tablename__ = "reception_signature"
+    __tablename__ = "cdr_signature"
 
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID,
@@ -157,7 +157,7 @@ class Signature(Base):
     )
     document_id: Mapped[uuid.UUID] = mapped_column(
         UUID,
-        ForeignKey("reception_document.id"),
+        ForeignKey("cdr_document.id"),
         primary_key=True,
     )
     signature_type: Mapped[DocumentSignatureType] = mapped_column(
@@ -167,7 +167,7 @@ class Signature(Base):
 
 
 class Payment(Base):
-    __tablename__ = "reception_payment"
+    __tablename__ = "cdr_payment"
 
     id: Mapped[PrimaryKey]
     user_id: Mapped[uuid.UUID] = mapped_column(
@@ -181,7 +181,7 @@ class Payment(Base):
 
 
 class Membership(Base):
-    __tablename__ = "reception_membership"
+    __tablename__ = "cdr_membership"
 
     id: Mapped[PrimaryKey]
     user_id: Mapped[uuid.UUID] = mapped_column(
@@ -193,10 +193,3 @@ class Membership(Base):
     )
     start_date: Mapped[date]
     end_date: Mapped[date]
-
-
-class Status(Base):
-    __tablename__ = "reception_status"
-
-    id: Mapped[str] = mapped_column(primary_key=True)
-    editable: Mapped[bool]
