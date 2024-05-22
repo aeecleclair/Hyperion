@@ -2,7 +2,6 @@ import uuid
 from datetime import date
 
 from sqlalchemy import Column, ForeignKey, String, Table
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.modules.cdr.types_cdr import (
@@ -37,12 +36,10 @@ class ProductConstraint(Base):
     __tablename__ = "cdr_product_constraint"
 
     product_id: Mapped[uuid.UUID] = mapped_column(
-        UUID,
         ForeignKey("cdr_product.id"),
         primary_key=True,
     )
     product_constraint_id: Mapped[uuid.UUID] = mapped_column(
-        UUID,
         ForeignKey("cdr_product.id"),
         primary_key=True,
     )
@@ -53,7 +50,6 @@ class CdrProduct(Base):
 
     id: Mapped[PrimaryKey]
     seller_id: Mapped[uuid.UUID] = mapped_column(
-        UUID,
         ForeignKey("cdr_seller.id"),
     )
     name: Mapped[str]
@@ -82,12 +78,10 @@ class CurriculumMembership(Base):
     __tablename__ = "cdr_curriculum_membership"
 
     user_id = mapped_column(
-        UUID,
         ForeignKey("core_user.id"),
         primary_key=True,
     )
     curriculum_id = mapped_column(
-        UUID,
         ForeignKey("cdr_curriculum.id"),
         primary_key=True,
     )
@@ -134,12 +128,10 @@ class Purchase(Base):
     __tablename__ = "cdr_purchase"
 
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID,
         ForeignKey("core_user.id"),
         primary_key=True,
     )
     product_variant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID,
         ForeignKey("cdr_product_variant.id"),
         primary_key=True,
     )
@@ -151,12 +143,10 @@ class Signature(Base):
     __tablename__ = "cdr_signature"
 
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID,
         ForeignKey("core_user.id"),
         primary_key=True,
     )
     document_id: Mapped[uuid.UUID] = mapped_column(
-        UUID,
         ForeignKey("cdr_document.id"),
         primary_key=True,
     )
@@ -171,7 +161,6 @@ class Payment(Base):
 
     id: Mapped[PrimaryKey]
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID,
         ForeignKey("core_user.id"),
     )
     total: Mapped[int]
@@ -185,7 +174,6 @@ class Membership(Base):
 
     id: Mapped[PrimaryKey]
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID,
         ForeignKey("core_user.id"),
     )
     membership: Mapped[AvailableMembership] = mapped_column(

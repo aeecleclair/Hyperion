@@ -13,8 +13,6 @@ if TYPE_CHECKING:
 import sqlalchemy as sa
 from alembic import op
 
-from app.types.sqlalchemy import TZDateTime
-
 # revision identifiers, used by Alembic.
 revision: str = "5d05a19f14bc"
 down_revision: str | None = "fce1716123e2"
@@ -55,15 +53,9 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
-        "cdr_status",
-        sa.Column("id", sa.String(), nullable=False),
-        sa.Column("editable", sa.Boolean(), nullable=False),
-        sa.PrimaryKeyConstraint("id"),
-    )
-    op.create_table(
         "cdr_curriculum_membership",
-        sa.Column("user_id", sa.UUID(), nullable=False),
-        sa.Column("curriculum_id", sa.UUID(), nullable=False),
+        sa.Column("user_id", sa.String(), nullable=False),
+        sa.Column("curriculum_id", sa.Uuid(), nullable=False),
         sa.ForeignKeyConstraint(["curriculum_id"], ["cdr_curriculum.id"]),
         sa.ForeignKeyConstraint(["user_id"], ["core_user.id"]),
         sa.PrimaryKeyConstraint("user_id", "curriculum_id"),
@@ -71,14 +63,14 @@ def upgrade() -> None:
     op.create_table(
         "cdr_membership",
         sa.Column("id", sa.Uuid(), nullable=False),
-        sa.Column("user_id", sa.UUID(), nullable=False),
+        sa.Column("user_id", sa.String(), nullable=False),
         sa.Column(
             "membership",
             sa.Enum(AvailableMembership, name="availablemembership"),
             nullable=False,
         ),
-        sa.Column("start_date", TZDateTime(), nullable=False),
-        sa.Column("end_date", TZDateTime(), nullable=False),
+        sa.Column("start_date", sa.Date(), nullable=False),
+        sa.Column("end_date", sa.Date(), nullable=False),
         sa.ForeignKeyConstraint(["user_id"], ["core_user.id"]),
         sa.PrimaryKeyConstraint("id"),
     )
@@ -91,7 +83,7 @@ def upgrade() -> None:
     op.create_table(
         "cdr_payment",
         sa.Column("id", sa.Uuid(), nullable=False),
-        sa.Column("user_id", sa.UUID(), nullable=False),
+        sa.Column("user_id", sa.String(), nullable=False),
         sa.Column("total", sa.Integer(), nullable=False),
         sa.Column(
             "payment_type",
@@ -122,8 +114,8 @@ def upgrade() -> None:
     )
     op.create_table(
         "cdr_signature",
-        sa.Column("user_id", sa.UUID(), nullable=False),
-        sa.Column("document_id", sa.UUID(), nullable=False),
+        sa.Column("user_id", sa.String(), nullable=False),
+        sa.Column("document_id", sa.Uuid(), nullable=False),
         sa.Column(
             "signature_type",
             sa.Enum(DocumentSignatureType, name="documentsignaturetype"),
@@ -143,7 +135,7 @@ def upgrade() -> None:
     op.create_table(
         "cdr_product",
         sa.Column("id", sa.Uuid(), nullable=False),
-        sa.Column("seller_id", sa.UUID(), nullable=False),
+        sa.Column("seller_id", sa.Uuid(), nullable=False),
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("description", sa.String(), nullable=True),
         sa.Column("public_display", sa.Boolean(), nullable=False),
@@ -160,8 +152,8 @@ def upgrade() -> None:
     )
     op.create_table(
         "cdr_product_constraint",
-        sa.Column("product_id", sa.UUID(), nullable=False),
-        sa.Column("product_constraint_id", sa.UUID(), nullable=False),
+        sa.Column("product_id", sa.Uuid(), nullable=False),
+        sa.Column("product_constraint_id", sa.Uuid(), nullable=False),
         sa.ForeignKeyConstraint(["product_constraint_id"], ["cdr_product.id"]),
         sa.ForeignKeyConstraint(["product_id"], ["cdr_product.id"]),
         sa.PrimaryKeyConstraint("product_id", "product_constraint_id"),
@@ -191,8 +183,8 @@ def upgrade() -> None:
     )
     op.create_table(
         "cdr_purchase",
-        sa.Column("user_id", sa.UUID(), nullable=False),
-        sa.Column("product_variant_id", sa.UUID(), nullable=False),
+        sa.Column("user_id", sa.String(), nullable=False),
+        sa.Column("product_variant_id", sa.Uuid(), nullable=False),
         sa.Column("quantity", sa.Integer(), nullable=False),
         sa.Column("paid", sa.Boolean(), nullable=False),
         sa.ForeignKeyConstraint(
@@ -230,7 +222,6 @@ def downgrade() -> None:
     )
     op.drop_table("cdr_membership")
     op.drop_table("cdr_curriculum_membership")
-    op.drop_table("cdr_status")
     op.drop_table("cdr_document")
     op.drop_table("cdr_curriculum")
 
