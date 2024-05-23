@@ -276,6 +276,13 @@ async def delete_product_variant(
     )
 
 
+async def get_documents(
+    db: AsyncSession,
+) -> Sequence[models_cdr.Document]:
+    result = await db.execute(select(models_cdr.Document))
+    return result.scalars().all()
+
+
 async def get_document_by_id(
     db: AsyncSession,
     document_id: UUID,
@@ -284,6 +291,36 @@ async def get_document_by_id(
         select(models_cdr.Document).where(models_cdr.Document.id == document_id),
     )
     return result.scalars().first()
+
+
+async def create_document(
+    db: AsyncSession,
+    document: models_cdr.Document,
+):
+    db.add(document)
+
+
+async def get_document_constraints_by_document_id(
+    db: AsyncSession,
+    document_id: UUID,
+) -> Sequence[models_cdr.DocumentConstraint]:
+    result = await db.execute(
+        select(models_cdr.DocumentConstraint).where(
+            models_cdr.DocumentConstraint.document_id == document_id,
+        ),
+    )
+    return result.scalars().all()
+
+
+async def delete_document(
+    db: AsyncSession,
+    document_id: UUID,
+):
+    await db.execute(
+        delete(models_cdr.Document).where(
+            models_cdr.Document.id == document_id,
+        ),
+    )
 
 
 async def get_curriculum_by_id(

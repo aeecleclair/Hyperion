@@ -884,7 +884,7 @@ async def delete_product_variant(
     product_id: uuid.UUID,
     variant_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_a_seller),
 ):
     status = await get_core_data(schemas_cdr.Status, db)
     db_product = await cruds_cdr.get_product_by_id(product_id=product_id, db=db)
@@ -929,9 +929,9 @@ async def delete_product_variant(
 )
 async def get_documents(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_a_seller),
 ):
-    pass
+    return await cruds_cdr.get_documents(db)
 
 
 @module.router.get(
@@ -944,7 +944,12 @@ async def get_document_by_id(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    pass
+    document = await cruds_cdr.get_document_by_id(db=db, document_id=document_id)
+    if not document:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid document_id",
+        )
 
 
 @module.router.post(
@@ -955,9 +960,25 @@ async def get_document_by_id(
 async def create_document(
     document: schemas_cdr.DocumentBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_a_seller),
 ):
-    pass
+    status = await get_core_data(schemas_cdr.Status, db)
+    if status.status == CdrStatus.closed:
+        raise HTTPException(
+            status_code=403,
+            detail="CDR is closed. You can't add a new document.",
+        )
+    db_document = models_cdr.Document(
+        id=str(uuid.uuid4()),
+        name=document.name,
+    )
+    try:
+        await cruds_cdr.create_document(db, db_document)
+        await db.commit()
+        return db_document
+    except Exception as error:
+        await db.rollback()
+        raise HTTPException(status_code=422, detail=str(error))
 
 
 @module.router.delete(
@@ -967,9 +988,31 @@ async def create_document(
 async def delete_document(
     document_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_a_seller),
 ):
-    pass
+    db_document = await cruds_cdr.get_document_by_id(document_id=document_id, db=db)
+    if not db_document:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid document_id",
+        )
+    if await cruds_cdr.get_document_constraints_by_document_id(
+        db=db,
+        document_id=document_id,
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="You can't delete a document that is a constraint for a product.",
+        )
+    try:
+        await cruds_cdr.delete_document(
+            document_id=document_id,
+            db=db,
+        )
+        await db.commit()
+    except Exception as error:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @module.router.get(
