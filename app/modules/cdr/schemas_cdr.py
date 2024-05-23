@@ -84,14 +84,15 @@ class DocumentComplete(DocumentBase):
 
 
 class PurchaseBase(BaseModel):
-    user_id: UUID
-    product_variant_id: UUID
     quantity: int
     paid: bool
 
+    model_config = ConfigDict(from_attributes=True)
+
 
 class PurchaseComplete(PurchaseBase):
-    id: UUID
+    user_id: UUID
+    product_variant_id: UUID
 
     model_config = ConfigDict(from_attributes=True)
 
