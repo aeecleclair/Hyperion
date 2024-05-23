@@ -531,7 +531,9 @@ async def create_participant_checkout(
         await db.rollback()
         raise ValueError("An error occurred while creating the participant checkout.")
 
+
 async def get_participant_checkout_by_checkout_id(
+    # TODO: use UUID
     checkout_id: str,
     db: AsyncSession,
 ) -> models_raid.ParticipantCheckout | None:
