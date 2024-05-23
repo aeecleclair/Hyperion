@@ -6,7 +6,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
-from app.core.module import Module
 from app.dependencies import (
     get_db,
     get_request_id,
@@ -16,6 +15,7 @@ from app.dependencies import (
 )
 from app.modules.cdr import cruds_cdr, models_cdr, schemas_cdr
 from app.modules.cdr.types_cdr import AvailableMembership, CdrStatus
+from app.types.module import Module
 from app.utils.tools import (
     get_core_data,
     is_user_member_of_an_allowed_group,
