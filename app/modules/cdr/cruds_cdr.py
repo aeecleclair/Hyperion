@@ -416,6 +416,69 @@ async def mark_purchase_as_paid(
     )
 
 
+async def get_signatures(
+    db: AsyncSession,
+) -> Sequence[models_cdr.Signature]:
+    result = await db.execute(select(models_cdr.Signature))
+    return result.scalars().all()
+
+
+async def get_signatures_by_user_id(
+    db: AsyncSession,
+    user_id: UUID,
+) -> Sequence[models_cdr.Signature]:
+    result = await db.execute(
+        select(models_cdr.Signature).where(models_cdr.Signature.user_id == user_id),
+    )
+    return result.scalars().all()
+
+
+async def get_signatures_by_document_id(
+    db: AsyncSession,
+    document_id: UUID,
+) -> Sequence[models_cdr.Signature]:
+    result = await db.execute(
+        select(models_cdr.Signature).where(
+            models_cdr.Signature.document_id == document_id,
+        ),
+    )
+    return result.scalars().all()
+
+
+async def get_signature_by_id(
+    db: AsyncSession,
+    user_id: UUID,
+    document_id: UUID,
+) -> models_cdr.Signature | None:
+    result = await db.execute(
+        select(models_cdr.Signature).where(
+            models_cdr.Signature.user_id == user_id,
+            models_cdr.Signature.document_id == document_id,
+        ),
+    )
+    return result.scalars().first()
+
+
+async def create_signature(
+    db: AsyncSession,
+    signature: models_cdr.Signature,
+):
+    db.add(signature)
+
+
+async def delete_signature(
+    db: AsyncSession,
+    user_id: UUID,
+    document_id: UUID,
+):
+    await db.execute(
+        delete(models_cdr.Signature).where(
+            models_cdr.Signature.user_id == user_id,
+            models_cdr.Signature.document_id == document_id,
+        ),
+    )
+
+
 async def get_curriculum_by_id(
     db: AsyncSession,
     curriculum_id: UUID,
