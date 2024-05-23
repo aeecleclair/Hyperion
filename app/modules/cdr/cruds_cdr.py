@@ -479,6 +479,31 @@ async def delete_signature(
     )
 
 
+async def get_curriculums(
+    db: AsyncSession,
+) -> Sequence[models_cdr.Curriculum]:
+    result = await db.execute(select(models_cdr.Curriculum))
+    return result.scalars().all()
+
+
+async def get_curriculums_by_user_id(
+    db: AsyncSession,
+    user_id: UUID,
+) -> Sequence[models_cdr.Curriculum]:
+    result_memberships = await db.execute(
+        select(models_cdr.CurriculumMembership).where(
+            models_cdr.CurriculumMembership.user_id == user_id,
+        ),
+    )
+    curriculum_ids = [c.curriculum_id for c in result_memberships.scalars().all()]
+    result = await db.execute(
+        select(models_cdr.Curriculum).where(
+            models_cdr.Curriculum.id.in_(curriculum_ids),
+        ),
+    )
+    return result.scalars().all()
+
+
 async def get_curriculum_by_id(
     db: AsyncSession,
     curriculum_id: UUID,
@@ -487,3 +512,51 @@ async def get_curriculum_by_id(
         select(models_cdr.Curriculum).where(models_cdr.Curriculum.id == curriculum_id),
     )
     return result.scalars().first()
+
+
+async def create_curriculum(
+    db: AsyncSession,
+    curriculum: models_cdr.Curriculum,
+):
+    db.add(curriculum)
+
+
+async def delete_curriculum(
+    db: AsyncSession,
+    curriculum_id: UUID,
+):
+    await db.execute(
+        delete(models_cdr.AllowedCurriculum).where(
+            models_cdr.AllowedCurriculum.curriculum_id == curriculum_id,
+        ),
+    )
+    await db.execute(
+        delete(models_cdr.CurriculumMembership).where(
+            models_cdr.CurriculumMembership.curriculum_id == curriculum_id,
+        ),
+    )
+    await db.execute(
+        delete(models_cdr.Curriculum).where(
+            models_cdr.Curriculum.id == curriculum_id,
+        ),
+    )
+
+
+async def create_curriculum_membership(
+    db: AsyncSession,
+    curriculum_membership: models_cdr.CurriculumMembership,
+):
+    db.add(curriculum_membership)
+
+
+async def delete_curriculum_membership(
+    db: AsyncSession,
+    user_id: UUID,
+    curriculum_id: UUID,
+):
+    await db.execute(
+        delete(models_cdr.CurriculumMembership).where(
+            models_cdr.CurriculumMembership.user_id == user_id,
+            models_cdr.CurriculumMembership.curriculum_id == curriculum_id,
+        ),
+    )
