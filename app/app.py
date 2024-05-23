@@ -21,12 +21,12 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import api
-from app.api import module_list
 from app.core import models_core
 from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
 from app.core.log import LogConfig
 from app.dependencies import get_db_engine, get_redis_client, get_settings
+from app.modules.module_list import module_list
 from app.types.sqlalchemy import Base
 from app.utils import initialization
 from app.utils.redis import limiter

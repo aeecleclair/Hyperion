@@ -7,10 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
-from app.core.module import Module
 from app.dependencies import get_db, is_user_a_member_of, is_user_an_ecl_member
 from app.modules.calendar import cruds_calendar, models_calendar, schemas_calendar
 from app.modules.calendar.types_calendar import Decision
+from app.types.module import Module
 from app.utils.tools import is_user_member_of_an_allowed_group
 
 module = Module(

@@ -14,6 +14,7 @@ from app.dependencies import (
     is_user,
     is_user_a_member_of,
 )
+from app.modules.module_list import module_list
 from app.utils.tools import is_group_id_valid
 
 router = APIRouter(tags=["Core"])
@@ -164,9 +165,6 @@ async def get_module_visibility(
 
     **This endpoint is only usable by administrators**
     """
-    from app.api import (  # We need to do it here, because the list is not initialized at startup
-        module_list,
-    )
 
     return_module_visibilities = []
     for module in module_list:

@@ -6,11 +6,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, standard_responses
 from app.core.groups.groups_type import GroupType
-from app.core.module import Module
 from app.core.users import cruds_users
 from app.dependencies import get_db, get_request_id, is_user_an_ecl_member
 from app.modules.phonebook import cruds_phonebook, models_phonebook, schemas_phonebook
 from app.types.content_type import ContentType
+from app.types.module import Module
 from app.utils.tools import (
     get_file_from_data,
     is_user_member_of_an_allowed_group,
