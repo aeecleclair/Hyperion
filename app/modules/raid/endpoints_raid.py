@@ -47,6 +47,8 @@ async def validate_payment(
 ) -> None:
     paid_amount = checkout_payment.paid_amount
     checkout_id = checkout_payment.id
+    hyperion_error_logger.info(f"RAID: Callback Checkout id {checkout_id}")
+
     participant_checkout = await cruds_raid.get_participant_checkout_by_checkout_id(
         str(checkout_id),
         db,
@@ -1088,6 +1090,7 @@ async def get_payment_url(
         payer_user=user,
         db=db,
     )
+    hyperion_error_logger.info(f"RAID: Logging Checkout id {checkout.id}")
     await cruds_raid.create_participant_checkout(
         models_raid.ParticipantCheckout(
             id=str(uuid.uuid4()),
