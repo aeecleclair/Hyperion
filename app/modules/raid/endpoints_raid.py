@@ -47,7 +47,9 @@ async def validate_payment(
 ) -> None:
     paid_amount = checkout_payment.paid_amount
     checkout_id = checkout_payment.id
-    participant_checkout = cruds_raid.get_participant_checkout_by_checkout_id(checkout_id, db)
+    participant_checkout = cruds_raid.get_participant_checkout_by_checkout_id(
+        checkout_id, db
+    )
     if not participant_checkout:
         raise HTTPException(status_code=404, detail="Checkout not found.")
     participant_id = participant_checkout.participant_id
@@ -68,7 +70,7 @@ async def validate_payment(
 module = Module(
     root="raid",
     tag="Raid",
-    validate_payment=validate_payment,
+    payment_callback=validate_payment,
     default_allowed_groups_ids=[GroupType.student, GroupType.staff],
 )
 
