@@ -950,6 +950,7 @@ async def get_document_by_id(
             status_code=404,
             detail="Invalid document_id",
         )
+    return document
 
 
 @module.router.post(
@@ -1022,9 +1023,9 @@ async def delete_document(
 )
 async def get_purchases(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
 ):
-    pass
+    return await cruds_cdr.get_purchases(db)
 
 
 @module.router.get(
@@ -1037,71 +1038,205 @@ async def get_purchases_by_user_id(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    pass
-
-
-@module.router.get(
-    "/cdr/purchases/{purchase_id}/",
-    response_model=schemas_cdr.PurchaseComplete,
-    status_code=200,
-)
-async def get_purchase_by_id(
-    purchase_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
-):
-    pass
+    if not (
+        user_id == user.id
+        or is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="You're not allowed to see other users purchases.",
+        )
+    return await cruds_cdr.get_purchases_by_user_id(db=db, user_id=user_id)
 
 
 @module.router.post(
-    "/cdr/purchases/",
+    "/cdr/users/{user_id}/purchases/{product_variant_id}",
     response_model=schemas_cdr.PurchaseComplete,
     status_code=201,
 )
 async def create_purchase(
+    user_id: uuid.UUID,
+    product_variant_id: uuid.UUID,
     purchase: schemas_cdr.PurchaseBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    pass
+    status = await get_core_data(schemas_cdr.Status, db)
+    if status.status == CdrStatus.pending:
+        raise HTTPException(
+            status_code=403,
+            detail="CDR hasn't started yet.",
+        )
+    product_variant = await cruds_cdr.get_product_variant_by_id(
+        db=db,
+        variant_id=product_variant_id,
+    )
+    if not product_variant:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid product_variant_id",
+        )
+    product = await cruds_cdr.get_product_by_id(
+        db=db,
+        product_id=product_variant.product_id,
+    )
+    if not product:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid product.",
+        )
+    if not (
+        (user_id == user.id and product.available_online)
+        or await is_user_in_a_seller_group(product.seller_id, user=user)
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="You're not allowed to make this purchase for another user, or to buy a non online available product.",
+        )
+    db_purchase = models_cdr.Purchase(
+        **purchase.model_dump(),
+    )
+    try:
+        await cruds_cdr.create_purchase(db, db_purchase)
+        await db.commit()
+        return db_purchase
+    except Exception as error:
+        await db.rollback()
+        raise HTTPException(status_code=422, detail=str(error))
 
 
 @module.router.patch(
-    "/cdr/purchases/{purchase_id}/",
+    "/cdr/users/{user_id}/purchases/{product_variant_id}/",
     status_code=204,
 )
 async def update_purchase(
-    purchase_id: uuid.UUID,
+    user_id: uuid.UUID,
+    product_variant_id: uuid.UUID,
     purchase: schemas_cdr.PurchaseEdit,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    pass
+    status = await get_core_data(schemas_cdr.Status, db)
+    if status.status == CdrStatus.pending:
+        raise HTTPException(
+            status_code=403,
+            detail="CDR hasn't started yet.",
+        )
+    db_purchase = await cruds_cdr.get_purchase_by_id(
+        db=db,
+        user_id=user_id,
+        product_variant_id=product_variant_id,
+    )
+    if not db_purchase:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid purchase.",
+        )
+    product_variant = await cruds_cdr.get_product_variant_by_id(
+        db=db,
+        variant_id=product_variant_id,
+    )
+    if not product_variant:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid product variant.",
+        )
+    product = await cruds_cdr.get_product_by_id(
+        db=db,
+        product_id=product_variant.product_id,
+    )
+    if not product:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid product.",
+        )
+    if not (
+        (user_id == user.id and product.available_online)
+        or await is_user_in_a_seller_group(product.seller_id, user=user)
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="You're not allowed to make this purchase for another user, or to buy a non online available product.",
+        )
+    try:
+        await cruds_cdr.update_purchase(
+            db=db,
+            user_id=user_id,
+            product_variant_id=product_variant_id,
+            purchase=purchase,
+        )
+        await db.commit()
+        return db_purchase
+    except Exception as error:
+        await db.rollback()
+        raise HTTPException(status_code=422, detail=str(error))
 
 
 @module.router.patch(
-    "/cdr/purchases/{purchase_id}/paid/",
+    "/cdr/users/{user_id}/purchases/{product_variant_id}/paid/",
     status_code=204,
 )
 async def mark_purchase_as_paid(
-    purchase_id: uuid.UUID,
+    user_id: uuid.UUID,
+    product_variant_id: uuid.UUID,
     paid: bool,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
 ):
-    pass
+    db_purchase = await cruds_cdr.get_purchase_by_id(
+        db=db,
+        user_id=user_id,
+        product_variant_id=product_variant_id,
+    )
+    if not db_purchase:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid purchase",
+        )
+    try:
+        await cruds_cdr.mark_purchase_as_paid(
+            db=db,
+            user_id=user_id,
+            product_variant_id=product_variant_id,
+            paid=paid,
+        )
+        await db.commit()
+        return db_purchase
+    except Exception as error:
+        await db.rollback()
+        raise HTTPException(status_code=422, detail=str(error))
 
 
 @module.router.delete(
-    "/cdr/purchases/{purchase_id}/",
+    "/cdr/users/{user_id}/purchases/{product_variant_id}/",
     status_code=204,
 )
 async def delete_purchase(
-    purchase_id: uuid.UUID,
+    user_id: uuid.UUID,
+    product_variant_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
 ):
-    pass
+    db_purchase = await cruds_cdr.get_purchase_by_id(
+        user_id=user_id,
+        product_variant_id=product_variant_id,
+        db=db,
+    )
+    if not db_purchase:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid purchase_id",
+        )
+    try:
+        await cruds_cdr.delete_purchase(
+            user_id=user_id,
+            product_variant_id=product_variant_id,
+            db=db,
+        )
+        await db.commit()
+    except Exception as error:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @module.router.get(

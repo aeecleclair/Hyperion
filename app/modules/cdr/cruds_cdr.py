@@ -147,6 +147,16 @@ async def delete_product(
     await db.execute(
         delete(models_cdr.CdrProduct).where(models_cdr.CdrProduct.id == product_id),
     )
+    await db.execute(
+        delete(models_cdr.ProductConstraint).where(
+            models_cdr.ProductConstraint.product_id == product_id,
+        ),
+    )
+    await db.execute(
+        delete(models_cdr.DocumentConstraint).where(
+            models_cdr.DocumentConstraint.product_id == product_id,
+        ),
+    )
 
 
 async def create_product_constraint(
@@ -320,6 +330,89 @@ async def delete_document(
         delete(models_cdr.Document).where(
             models_cdr.Document.id == document_id,
         ),
+    )
+
+
+async def get_purchases(
+    db: AsyncSession,
+) -> Sequence[models_cdr.Purchase]:
+    result = await db.execute(select(models_cdr.Purchase))
+    return result.scalars().all()
+
+
+async def get_purchases_by_user_id(
+    db: AsyncSession,
+    user_id: UUID,
+) -> Sequence[models_cdr.Purchase]:
+    result = await db.execute(
+        select(models_cdr.Purchase).where(models_cdr.Purchase.user_id == user_id),
+    )
+    return result.scalars().all()
+
+
+async def get_purchase_by_id(
+    db: AsyncSession,
+    user_id: UUID,
+    product_variant_id: UUID,
+) -> models_cdr.Purchase | None:
+    result = await db.execute(
+        select(models_cdr.Purchase).where(
+            models_cdr.Purchase.user_id == user_id,
+            models_cdr.Purchase.product_variant_id == product_variant_id,
+        ),
+    )
+    return result.scalars().first()
+
+
+async def create_purchase(
+    db: AsyncSession,
+    purchase: models_cdr.Purchase,
+):
+    db.add(purchase)
+
+
+async def update_purchase(
+    db: AsyncSession,
+    user_id: UUID,
+    product_variant_id: UUID,
+    purchase: schemas_cdr.PurchaseEdit,
+):
+    await db.execute(
+        update(models_cdr.Purchase)
+        .where(
+            models_cdr.Purchase.user_id == user_id,
+            models_cdr.Purchase.product_variant_id == product_variant_id,
+        )
+        .values(**purchase.model_dump(exclude_none=True)),
+    )
+
+
+async def delete_purchase(
+    db: AsyncSession,
+    user_id: UUID,
+    product_variant_id: UUID,
+):
+    await db.execute(
+        delete(models_cdr.Purchase).where(
+            models_cdr.Purchase.user_id == user_id,
+            models_cdr.Purchase.product_variant_id == product_variant_id,
+        ),
+    )
+
+
+async def mark_purchase_as_paid(
+    db: AsyncSession,
+    user_id: UUID,
+    product_variant_id: UUID,
+    paid: bool,
+):
+    await db.execute(
+        update(models_cdr.Purchase)
+        .where(
+            models_cdr.Purchase.user_id == user_id,
+            models_cdr.Purchase.product_variant_id == product_variant_id,
+        )
+        .values(paid=paid),
     )
 
 
