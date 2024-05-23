@@ -58,6 +58,18 @@ async def is_user_a_captain(
     return result.unique().scalars().first() is not None
 
 
+async def get_captain_by_id(
+    captain_id,
+    db: AsyncSession,
+) -> models_sport_results.Captain:
+    captain = await db.execute(
+        select(models_sport_results.Captain).where(
+            models_sport_results.Captain.id == captain_id,
+        ),
+    )
+    return captain.scalars().all()
+
+
 async def get_result_by_id(
     result_id,
     db: AsyncSession,
@@ -151,6 +163,21 @@ async def add_captain(
     except IntegrityError as error:
         await db.rollback()
         raise ValueError(error)
+
+
+async def update_captain(
+    captain_id: str,
+    captain_update: models_sport_results.CaptainUpdate,
+    db: AsyncSession,
+):
+    await db.execute(
+        update(models_sport_results.Captain)
+        .where(
+            models_sport_results.Captain.id == captain_id,
+        )
+        .values(**captain_update.model_dump(exclude_none=True)),
+    )
+    await db.commit()
 
 
 async def delete_captain(

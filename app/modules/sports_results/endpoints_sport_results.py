@@ -99,6 +99,92 @@ async def is_user_a_captain_of_a_sport(
     )
 
 
+@module.router.get(
+    "/sport-results/captain/sport/{sport_id}",
+    response_model=list[schemas_sport_results.Captain],
+    status_code=200,
+)
+async def get_captains_by_sport_id(
+    sport_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    return await cruds_sport_results.get_captains_by_sport_id(
+        sport_id,
+        db=db,
+    )
+
+
+@module.router.post(
+    "/sport-results/captain",
+    response_model=schemas_sport_results.Captain,
+    status_code=201,
+)
+async def add_captain(
+    captain: schemas_sport_results.CaptainBase,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    captain_complete = schemas_sport_results.CaptainComplete(
+        id=str(uuid.uuid4()),
+        **captain.model_dump(),
+    )
+    try:
+        captain_db = models_sport_results.Captain(
+            id=captain_complete.id,
+            user_id=captain_complete.user_id,
+            sport=captain_complete.sport,
+        )
+        return await cruds_sport_results.create_captain(captain=captain_db, db=db)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+@module.router.patch(
+    "/sport-results/captain/{captain_id}",
+    status_code=204,
+)
+async def update_captain(
+    captain_id: str,
+    captain_update: schemas_sport_results.CaptainUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDS)),
+):
+    captain = await cruds_sport_results.get_captain_by_id(captain_id=captain_id, db=db)
+    if not captain:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid id",
+        )
+
+    await cruds_sport_results.update_captain(
+        captain_id=captain_id,
+        captain_update=captain_update,
+        db=db,
+    )
+
+
+@module.router.delete(
+    "/sport-results/{captain_id}",
+    status_code=204,
+)
+async def delete_captain(
+    captain_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDS)),
+):
+    captain = await cruds_sport_results.get_captain_by_id(captain_id=captain_id, db=db)
+    if not captain:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid id",
+        )
+
+    await cruds_sport_results.delete_captain(
+        captain_id=captain_id,
+        db=db,
+    )
+
+
 @module.router.post(
     "/sport-results/result",
     response_model=schemas_sport_results.ResultComplete,
