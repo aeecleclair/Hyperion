@@ -1089,10 +1089,11 @@ async def get_payment_url(
         db=db,
     )
     await cruds_raid.create_participant_checkout(
-        schemas_raid.ParticipantCheckout(
+        models_raid.ParticipantCheckout(
             id=str(uuid.uuid4()),
             participant_id=user.id,
-            checkout_id=checkout.id,
+            # TODO: use UUID
+            checkout_id=str(checkout.id),
         ),
         db=db,
     )
