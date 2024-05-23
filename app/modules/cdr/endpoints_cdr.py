@@ -1390,7 +1390,7 @@ async def get_curriculums(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    pass
+    return await cruds_cdr.get_curriculums(db)
 
 
 @module.router.get(
@@ -1403,7 +1403,15 @@ async def get_curriculums_by_user_id(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    pass
+    if not user_id == user.id or is_user_member_of_an_allowed_group(
+        user,
+        [GroupType.admin_cdr],
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="You are not allowed to see another user's curriculums.",
+        )
+    return await cruds_cdr.get_curriculums_by_user_id(db, user_id=user_id)
 
 
 @module.router.get(
@@ -1412,10 +1420,20 @@ async def get_curriculums_by_user_id(
     status_code=200,
 )
 async def get_curriculum_by_id(
+    curriculum_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    pass
+    curriculum = await cruds_cdr.get_curriculum_by_id(
+        db=db,
+        curriculum_id=curriculum_id,
+    )
+    if not curriculum:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid curriculum_id",
+        )
+    return curriculum
 
 
 @module.router.post(
@@ -1428,20 +1446,23 @@ async def create_curriculum(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
 ):
-    pass
-
-
-@module.router.patch(
-    "/cdr/curriculums/{curriculum_id}/",
-    status_code=204,
-)
-async def update_curriculum(
-    curriculum_id: uuid.UUID,
-    curriculum: schemas_cdr.CurriculumBase,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
-):
-    pass
+    status = await get_core_data(schemas_cdr.Status, db)
+    if status.status == CdrStatus.closed:
+        raise HTTPException(
+            status_code=403,
+            detail="CDR is closed. You can't add a new curriculum.",
+        )
+    db_curriculum = models_cdr.Curriculum(
+        id=str(uuid.uuid4()),
+        name=curriculum.name,
+    )
+    try:
+        await cruds_cdr.create_curriculum(db, db_curriculum)
+        await db.commit()
+        return db_curriculum
+    except Exception as error:
+        await db.rollback()
+        raise HTTPException(status_code=422, detail=str(error))
 
 
 @module.router.delete(
@@ -1453,12 +1474,29 @@ async def delete_curriculum(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
 ):
-    pass
+    db_curriculum = await cruds_cdr.get_curriculum_by_id(
+        curriculum_id=curriculum_id,
+        db=db,
+    )
+    if not db_curriculum:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid curriculum_id",
+        )
+    try:
+        await cruds_cdr.delete_curriculum(
+            curriculum_id=curriculum_id,
+            db=db,
+        )
+        await db.commit()
+    except Exception as error:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @module.router.post(
     "/cdr/users/{user_id}/curriculums/{curriculum_id}/",
-    response_model=schemas_cdr.CurriculumComplete,
+    response_model=list[schemas_cdr.CurriculumComplete],
     status_code=201,
 )
 async def create_curriculum_membership(
@@ -1467,7 +1505,34 @@ async def create_curriculum_membership(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    pass
+    curriculum = await cruds_cdr.get_curriculum_by_id(
+        db=db,
+        curriculum_id=curriculum_id,
+    )
+    if not curriculum:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid curriculum_id",
+        )
+    if not (
+        user_id == user.id
+        or is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="You can't affect a curriculum to another user.",
+        )
+    db_curriculum_membership = models_cdr.CurriculumMembership(
+        user_id=user_id,
+        curriculum_id=curriculum_id,
+    )
+    try:
+        await cruds_cdr.create_curriculum_membership(db, db_curriculum_membership)
+        await db.commit()
+        return await cruds_cdr.get_curriculums_by_user_id(user_id=user_id, db=db)
+    except Exception as error:
+        await db.rollback()
+        raise HTTPException(status_code=422, detail=str(error))
 
 
 @module.router.delete(
@@ -1480,7 +1545,34 @@ async def delete_curriculum_membership(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    pass
+    membership = await cruds_cdr.delete_curriculum_membership(
+        db=db,
+        user_id=user_id,
+        curriculum_id=curriculum_id,
+    )
+    if not membership:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid curriculum_id",
+        )
+    if not (
+        user_id == user.id
+        or is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="You can't remove a curriculum to another user.",
+        )
+    try:
+        await cruds_cdr.delete_curriculum_membership(
+            db=db,
+            user_id=user_id,
+            curriculum_id=curriculum_id,
+        )
+        await db.commit()
+    except Exception as error:
+        await db.rollback()
+        raise HTTPException(status_code=422, detail=str(error))
 
 
 @module.router.get(
