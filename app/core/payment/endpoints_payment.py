@@ -45,6 +45,9 @@ async def webhook(
             )
         else:
             checkout_metadata = None
+        hyperion_error_logger.info(
+            f"Payment: callback {content}",
+        )
     except ValidationError as error:
         hyperion_error_logger.error(
             f"Payment: could not validate the webhook body: {await request.json()}, failed with error {error}",
@@ -65,10 +68,16 @@ async def webhook(
             )
         )
         if existing_checkout_payment_model is not None:
+            hyperion_error_logger.info(
+                f"Payment: callback for hello_asso_payment_id {content.data.id} already exist",
+            )
             return
 
         # If no metadata are included, this should not be a checkout we initiated
         if not checkout_metadata:
+            hyperion_error_logger.info(
+                "Payment: missing checkout_metadata",
+            )
             return
 
         checkout = await cruds_payment.get_checkout_by_id(
@@ -111,6 +120,9 @@ async def webhook(
             for module in module_list:
                 if module.root == checkout.module:
                     if module.payment_callback is not None:
+                        hyperion_error_logger.info(
+                            f"Payment: calling module {checkout.module} payment callback",
+                        )
                         checkout_payment_schema = (
                             schemas_payment.CheckoutPayment.model_validate(
                                 checkout_payment_model.__dict__,
