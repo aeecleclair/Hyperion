@@ -87,8 +87,6 @@ class PurchaseBase(BaseModel):
     quantity: int
     paid: bool
 
-    model_config = ConfigDict(from_attributes=True)
-
 
 class PurchaseComplete(PurchaseBase):
     user_id: UUID
@@ -101,11 +99,16 @@ class PurchaseEdit(BaseModel):
     quantity: int | None = None
 
 
-class Signature(BaseModel):
-    user_id: UUID
-    document_id: UUID
+class SignatureBase(BaseModel):
     signature_type: DocumentSignatureType
     numeric_signature_id: str | None = None
+
+
+class SignatureComplete(SignatureBase):
+    user_id: UUID
+    document_id: UUID
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CurriculumBase(BaseModel):

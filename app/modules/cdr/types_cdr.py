@@ -2,8 +2,8 @@ from enum import Enum
 
 
 class DocumentSignatureType(str, Enum):
-    physical = "physical"
     material = "material"
+    numeric = "numeric"
 
     def __str__(self):
         return f"{self.name}<{self.value}>"
