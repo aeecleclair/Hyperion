@@ -46,7 +46,7 @@ async def validate_payment(
     db: AsyncSession,
 ) -> None:
     paid_amount = checkout_payment.paid_amount
-    checkout_id = checkout_payment.id
+    checkout_id = checkout_payment.checkout_id
     hyperion_error_logger.info(f"RAID: Callback Checkout id {checkout_id}")
 
     participant_checkout = await cruds_raid.get_participant_checkout_by_checkout_id(
