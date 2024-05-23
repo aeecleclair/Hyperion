@@ -3,19 +3,28 @@ from datetime import date
 from pydantic import BaseModel
 
 
-class Captain(BaseModel):
+class CaptainBase(BaseModel):
     user_id: str
     sport: "SportComplete"
 
 
+class CaptainUpdate(BaseModel):
+    user_id: str | None = None
+    sport: "SportComplete | None" = None
+
+
+class CaptainComplete(CaptainBase):
+    id: str
+
+
 class SportBase(BaseModel):
     name: str
-    captains: list[Captain]
+    captains: list[CaptainComplete]
 
 
 class SportUpdate(BaseModel):
     name: str | None = None
-    captains: list[Captain] | None = None
+    captains: list[CaptainComplete] | None = None
 
 
 class SportComplete(SportBase):
