@@ -6,6 +6,7 @@ from functools import lru_cache
 import redis
 from fastapi import Depends
 from fastapi.testclient import TestClient
+from sqlalchemy import NullPool
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
@@ -41,7 +42,7 @@ else:
     SQLALCHEMY_DATABASE_URL = f"postgresql+asyncpg://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}/{settings.POSTGRES_DB}"
 
 
-engine = create_async_engine(SQLALCHEMY_DATABASE_URL, echo=True)
+engine = create_async_engine(SQLALCHEMY_DATABASE_URL, echo=True, poolclass=NullPool)
 
 TestingSessionLocal = async_sessionmaker(
     engine,
@@ -97,9 +98,6 @@ test_app.dependency_overrides[get_redis_client] = override_get_redis_client
 
 
 client = TestClient(test_app)  # Create a client to execute tests
-
-with client:  # That syntax trigger the lifespan defined in main.py
-    pass
 
 
 async def create_user_with_groups(
