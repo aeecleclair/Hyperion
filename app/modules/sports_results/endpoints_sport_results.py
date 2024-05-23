@@ -162,7 +162,7 @@ async def update_result(
         result_update.sport_id,
         db,
     ):
-        raise HTTPException(status_code=401, detail="Not a captain")
+        raise HTTPException(status_code=403, detail="Not a captain")
 
     await cruds_sport_results.update_result(
         result_id=result_id,
@@ -192,7 +192,7 @@ async def delete_result(
         result.sport_id,
         db,
     ):
-        raise HTTPException(status_code=401, detail="Not a captain")
+        raise HTTPException(status_code=403, detail="Not a captain")
 
     await cruds_sport_results.delete_result(
         result_id=result_id,
