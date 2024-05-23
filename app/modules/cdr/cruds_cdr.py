@@ -189,11 +189,108 @@ async def delete_document_constraint(
     )
 
 
+async def get_product_variants(
+    db: AsyncSession,
+    product_id: UUID,
+) -> Sequence[models_cdr.ProductVariant]:
+    result = await db.execute(
+        select(models_cdr.ProductVariant).where(
+            models_cdr.ProductVariant.product_id == product_id,
+        ),
+    )
+    return result.scalars().all()
+
+
+async def get_enabled_product_variants(
+    db: AsyncSession,
+    product_id: UUID,
+) -> Sequence[models_cdr.ProductVariant]:
+    result = await db.execute(
+        select(models_cdr.ProductVariant).where(
+            models_cdr.ProductVariant.product_id == product_id,
+            models_cdr.ProductVariant.enabled,
+        ),
+    )
+    return result.scalars().all()
+
+
+async def get_product_variant_by_id(
+    db: AsyncSession,
+    variant_id: UUID,
+) -> models_cdr.ProductVariant | None:
+    result = await db.execute(
+        select(models_cdr.ProductVariant).where(
+            models_cdr.ProductVariant.id == variant_id,
+        ),
+    )
+    return result.scalars().first()
+
+
+async def create_product_variant(
+    db: AsyncSession,
+    product_variant: models_cdr.ProductVariant,
+):
+    db.add(product_variant)
+
+
+async def update_product_variant(
+    db: AsyncSession,
+    variant_id: UUID,
+    product_variant: schemas_cdr.ProductVariantEdit,
+):
+    await db.execute(
+        update(models_cdr.ProductVariant)
+        .where(models_cdr.ProductVariant.id == variant_id)
+        .values(**product_variant.model_dump(exclude_none=True)),
+    )
+
+
+async def create_allowed_curriculum(
+    db: AsyncSession,
+    allowed_curriculum: models_cdr.AllowedCurriculum,
+):
+    db.add(allowed_curriculum)
+
+
+async def delete_allowed_curriculum(
+    db: AsyncSession,
+    variant_id: UUID,
+    curriculum_id: UUID,
+):
+    await db.execute(
+        delete(models_cdr.AllowedCurriculum).where(
+            models_cdr.AllowedCurriculum.product_variant_id == variant_id,
+            models_cdr.AllowedCurriculum.curriculum_id == curriculum_id,
+        ),
+    )
+
+
+async def delete_product_variant(
+    db: AsyncSession,
+    variant_id: UUID,
+):
+    await db.execute(
+        delete(models_cdr.ProductVariant).where(
+            models_cdr.ProductVariant.id == variant_id,
+        ),
+    )
+
+
 async def get_document_by_id(
     db: AsyncSession,
     document_id: UUID,
 ) -> models_cdr.Document | None:
     result = await db.execute(
         select(models_cdr.Document).where(models_cdr.Document.id == document_id),
+    )
+    return result.scalars().first()
+
+
+async def get_curriculum_by_id(
+    db: AsyncSession,
+    curriculum_id: UUID,
+) -> models_cdr.Curriculum | None:
+    result = await db.execute(
+        select(models_cdr.Curriculum).where(models_cdr.Curriculum.id == curriculum_id),
     )
     return result.scalars().first()
