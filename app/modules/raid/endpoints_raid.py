@@ -47,8 +47,9 @@ async def validate_payment(
 ) -> None:
     paid_amount = checkout_payment.paid_amount
     checkout_id = checkout_payment.id
-    participant_checkout = cruds_raid.get_participant_checkout_by_checkout_id(
-        checkout_id, db
+    participant_checkout = await cruds_raid.get_participant_checkout_by_checkout_id(
+        str(checkout_id),
+        db,
     )
     if not participant_checkout:
         raise HTTPException(status_code=404, detail="Checkout not found.")
@@ -1001,7 +1002,7 @@ async def update_drive_folders(
         security_folder_id=None,
     )
     await set_core_data(schemas_folders, db)
-    await drive_file_manager.init_folders(drive_folders.parent_folder_id)
+    await drive_file_manager.init_folders(db=db)
 
 
 @module.router.get(
@@ -1093,6 +1094,7 @@ async def get_payment_url(
             participant_id=user.id,
             checkout_id=checkout.id,
         ),
+        db=db,
     )
     return schemas_raid.PaymentUrl(
         url=checkout.payment_url,
