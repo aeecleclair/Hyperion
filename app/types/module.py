@@ -19,6 +19,11 @@ class Module:
         tag: str,
         default_allowed_groups_ids: list[GroupType],
         router: APIRouter | None = None,
+        payment_callback: Callable[
+            [schemas_payment.CheckoutPayment, AsyncSession],
+            Awaitable[None],
+        ]
+        | None = None,
     ):
         """
         Initialize a new Module object.
@@ -33,4 +38,4 @@ class Module:
         self.payment_callback: (
             Callable[[schemas_payment.CheckoutPayment, AsyncSession], Awaitable[None]]
             | None
-        ) = None
+        ) = payment_callback
