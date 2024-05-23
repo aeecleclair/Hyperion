@@ -1,3 +1,4 @@
+import uuid
 from datetime import date
 
 from pydantic import BaseModel
@@ -11,7 +12,7 @@ class PaperBase(BaseModel):
 
 
 class PaperComplete(PaperBase):
-    id: str
+    id: uuid.UUID
 
 
 class PaperUpdate(BaseModel):

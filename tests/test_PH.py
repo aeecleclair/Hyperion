@@ -40,7 +40,7 @@ async def init_objects():
 
     global paper
     paper = models_ph.Paper(
-        id=str(uuid.uuid4()),
+        id=uuid.uuid4(),
         name="OnlyPhans",
         release_date=datetime.date(2023, 10, 21),
     )
@@ -48,7 +48,7 @@ async def init_objects():
 
     global paper2
     paper2 = models_ph.Paper(
-        id=str(uuid.uuid4()),
+        id=uuid.uuid4(),
         name="OnlyPhans du futur",
         release_date=datetime.date(2090, 10, 21),
     )
@@ -75,8 +75,10 @@ def test_get_papers():
     )
     response_json = response.json()
     assert response.status_code == 200
-    assert paper.id in [response_paper["id"] for response_paper in response_json]
-    assert paper2.id not in [response_paper["id"] for response_paper in response_json]
+    assert str(paper.id) in [response_paper["id"] for response_paper in response_json]
+    assert str(paper2.id) not in [
+        response_paper["id"] for response_paper in response_json
+    ]
 
 
 def test_get_papers_admin():
@@ -86,8 +88,8 @@ def test_get_papers_admin():
     )
     response_json = response.json()
     assert response.status_code == 200
-    assert paper.id in [response_paper["id"] for response_paper in response_json]
-    assert paper2.id in [response_paper["id"] for response_paper in response_json]
+    assert str(paper.id) in [response_paper["id"] for response_paper in response_json]
+    assert str(paper2.id) in [response_paper["id"] for response_paper in response_json]
 
 
 def test_create_paper_pdf_and_cover():
