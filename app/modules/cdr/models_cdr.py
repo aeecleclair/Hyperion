@@ -1,7 +1,7 @@
 import uuid
 from datetime import date
 
-from sqlalchemy import Column, ForeignKey, String, Table
+from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.modules.cdr.types_cdr import (
@@ -95,16 +95,17 @@ class CurriculumMembership(Base):
     )
 
 
-cdr_allowed_curriculum = Table(
-    "cdr_allowed_curriculum",
-    Base.metadata,
-    Column(
-        "product_variant_id",
+class AllowedCurriculum(Base):
+    __tablename__ = "cdr_allowed_curriculum"
+
+    product_variant_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("cdr_product_variant.id"),
         primary_key=True,
-    ),
-    Column("curriculum_id", ForeignKey("cdr_curriculum.id"), primary_key=True),
-)
+    )
+    curriculum_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("cdr_curriculum.id"),
+        primary_key=True,
+    )
 
 
 class ProductVariant(Base):
