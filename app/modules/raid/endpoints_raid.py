@@ -673,7 +673,7 @@ async def set_security_file(
         )
     model_security_file = models_raid.SecurityFile(
         id=str(uuid.uuid4()),
-        **security_file.model_dump(),
+        **security_file.model_dump(exclude_none=True),
     )
     created_security_file = await cruds_raid.add_security_file(model_security_file, db)
     team = await cruds_raid.get_team_by_participant_id(user.id, db)
