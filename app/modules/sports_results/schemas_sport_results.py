@@ -10,12 +10,12 @@ class Captain(BaseModel):
 
 class SportBase(BaseModel):
     name: str
-    capitains: list[Captain]
+    captains: list[Captain]
 
 
 class SportUpdate(BaseModel):
     name: str | None = None
-    capitains: list[Captain] | None = None
+    captains: list[Captain] | None = None
 
 
 class SportComplete(SportBase):
