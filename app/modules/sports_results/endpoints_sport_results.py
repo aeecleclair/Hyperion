@@ -233,7 +233,7 @@ async def update_sport(
     sport_id: str,
     sport_update: schemas_sport_results.SportUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDS)),
 ):
     sport = await cruds_sport_results.get_sport_by_id(sport_id=sport_id, db=db)
     if not sport:
@@ -256,7 +256,7 @@ async def update_sport(
 async def delete_sport(
     sport_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDS)),
 ):
     sport = await cruds_sport_results.get_sport_by_id(sport_id=sport_id, db=db)
     if not sport:
