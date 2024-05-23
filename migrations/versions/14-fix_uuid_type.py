@@ -24,6 +24,7 @@ def upgrade() -> None:
         batch_op.alter_column(
             "id",
             type_=sa.Uuid(),
+            postgresql_using="id::uuid",
         )
     op.drop_index("ix_ph_papers_id", table_name="ph_papers")
 
