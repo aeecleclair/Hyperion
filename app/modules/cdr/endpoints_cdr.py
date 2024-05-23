@@ -14,7 +14,11 @@ from app.dependencies import (
     is_user_a_member_of,
 )
 from app.modules.cdr import cruds_cdr, models_cdr, schemas_cdr
-from app.modules.cdr.types_cdr import AvailableMembership, CdrStatus
+from app.modules.cdr.types_cdr import (
+    AvailableMembership,
+    CdrStatus,
+    DocumentSignatureType,
+)
 from app.types.module import Module
 from app.utils.tools import (
     get_core_data,
@@ -1241,19 +1245,19 @@ async def delete_purchase(
 
 @module.router.get(
     "/cdr/signatures/",
-    response_model=list[schemas_cdr.Signature],
+    response_model=list[schemas_cdr.SignatureComplete],
     status_code=200,
 )
 async def get_signatures(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
 ):
-    pass
+    return await cruds_cdr.get_signatures(db)
 
 
 @module.router.get(
     "/cdr/users/{user_id}/signatures/",
-    response_model=list[schemas_cdr.Signature],
+    response_model=list[schemas_cdr.SignatureComplete],
     status_code=200,
 )
 async def get_signatures_by_user_id(
@@ -1261,45 +1265,120 @@ async def get_signatures_by_user_id(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    pass
+    if not (
+        user_id == user.id
+        or is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="You're not allowed to see other users signatures.",
+        )
+    return await cruds_cdr.get_signatures_by_user_id(db=db, user_id=user_id)
 
 
 @module.router.get(
     "/cdr/documents/{document_id}/signatures/",
-    response_model=list[schemas_cdr.Signature],
+    response_model=list[schemas_cdr.SignatureComplete],
     status_code=200,
 )
 async def get_signatures_by_document_id(
     document_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
+    user: models_core.CoreUser = Depends(is_user_a_seller),
 ):
-    pass
+    return await cruds_cdr.get_signatures_by_document_id(db=db, document_id=document_id)
 
 
 @module.router.post(
-    "/cdr/signatures/",
-    response_model=schemas_cdr.Signature,
+    "/cdr/users/{user_id}/signatures/{document_id}",
+    response_model=schemas_cdr.SignatureComplete,
     status_code=201,
 )
 async def create_signature(
-    signature: schemas_cdr.Signature,
+    user_id: uuid.UUID,
+    document_id: uuid.UUID,
+    signature: schemas_cdr.SignatureBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    pass
+    status = await get_core_data(schemas_cdr.Status, db)
+    if status.status == CdrStatus.pending:
+        raise HTTPException(
+            status_code=403,
+            detail="CDR hasn't started yet.",
+        )
+    document = await cruds_cdr.get_document_by_id(
+        db=db,
+        document_id=document_id,
+    )
+    if not document:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid document_id",
+        )
+    if not (
+        (
+            user_id == user.id
+            and signature.signature_type == DocumentSignatureType.numeric
+        )
+        or await is_user_a_seller(user)
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="You're not allowed to make this signature.",
+        )
+    if (
+        signature.signature_type == DocumentSignatureType.numeric
+        and not signature.numeric_signature_id
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Numeric signature must include signature id.",
+        )
+    db_signature = models_cdr.Signature(
+        user_id=user_id,
+        document_id=document_id,
+        **signature.model_dump(),
+    )
+    try:
+        await cruds_cdr.create_signature(db, db_signature)
+        await db.commit()
+        return db_signature
+    except Exception as error:
+        await db.rollback()
+        raise HTTPException(status_code=422, detail=str(error))
 
 
 @module.router.delete(
-    "/cdr/signatures/{signature_id}/",
+    "/cdr/users/{user_id}/signatures/{document_id}/",
     status_code=204,
 )
 async def delete_signature(
-    signature_id: uuid.UUID,
+    user_id: uuid.UUID,
+    document_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
 ):
-    pass
+    db_purchase = await cruds_cdr.get_signature_by_id(
+        user_id=user_id,
+        document_id=document_id,
+        db=db,
+    )
+    if not db_purchase:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid signature",
+        )
+    try:
+        await cruds_cdr.delete_signature(
+            user_id=user_id,
+            document_id=document_id,
+            db=db,
+        )
+        await db.commit()
+    except Exception as error:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @module.router.get(
