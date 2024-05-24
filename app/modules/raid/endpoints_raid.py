@@ -178,18 +178,11 @@ async def save_security_file(
                 file_name,
                 db,
             )
-        if not participant.security_file:
-            security_file = models_raid.SecurityFile(
-                id=str(uuid.uuid4()),
-                file_id=file_id,
-            )
-            await cruds_raid.add_security_file(security_file, db)
-        else:
-            await cruds_raid.update_security_file_id(
-                participant.security_file.id,
-                file_id,
-                db,
-            )
+        await cruds_raid.update_security_file_id(
+            participant.security_file.id,
+            file_id,
+            db,
+        )
         Path(file_path).unlink()
     except Exception as error:
         hyperion_error_logger.error(f"Error while creating pdf, {error.__dict__}")
@@ -662,11 +655,12 @@ async def set_security_file(
         )
     if existing_security_file and security_file.id:
         await cruds_raid.update_security_file(security_file, db)
+        participant = await get_participant(participant_id, db)
         team = await cruds_raid.get_team_by_participant_id(user.id, db)
-        participant = await cruds_raid.get_participant_by_id(participant_id, db)
         if team and participant:
             information = await get_core_data(schemas_raid.RaidInformation, db)
             await save_security_file(participant, information, team.number, db)
+        await post_update_actions(team, db)
         return await cruds_raid.get_security_file_by_security_id(
             security_file.id,
             db,
@@ -676,35 +670,14 @@ async def set_security_file(
         **security_file.model_dump(exclude_none=True),
     )
     created_security_file = await cruds_raid.add_security_file(model_security_file, db)
+    await cruds_raid.assign_security_file(participant_id, created_security_file.id, db)
+    participant = await get_participant(participant_id, db)
     team = await cruds_raid.get_team_by_participant_id(user.id, db)
-    participant = await cruds_raid.get_participant_by_id(participant_id, db)
     if team and participant:
         information = await get_core_data(schemas_raid.RaidInformation, db)
         await save_security_file(participant, information, team.number, db)
-    return created_security_file
-
-
-@module.router.post(
-    "/raid/participant/{participant_id}/security_file",
-    status_code=204,
-)
-async def assign_security_file(
-    participant_id: str,
-    security_file_id: str,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
-):
-    """
-    Assign security file
-    """
-    if not await cruds_raid.are_user_in_the_same_team(user.id, participant_id, db):
-        raise HTTPException(status_code=403, detail="You are not the participant.")
-    participant = await get_participant(participant_id, db)
-    if participant.security_file and participant.security_file.id == security_file_id:
-        return
-    await cruds_raid.assign_security_file(participant_id, security_file_id, db)
-    team = await cruds_raid.get_team_by_participant_id(user.id, db)
     await post_update_actions(team, db)
+    return created_security_file
 
 
 @module.router.post(
