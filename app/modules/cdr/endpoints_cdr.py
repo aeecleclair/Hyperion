@@ -147,10 +147,7 @@ async def check_request_consistency(
                 status_code=403,
                 detail="Document is not related to this seller.",
             )
-    if db_product:
-        return db_product
-    else:
-        return None
+    return db_product
 
 
 @module.router.get(
@@ -172,7 +169,7 @@ async def get_sellers(
 )
 async def get_sellers_by_user_id(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_seller),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     return await cruds_cdr.get_sellers_by_group_ids(
         db,
@@ -212,7 +209,7 @@ async def create_seller(
         return await cruds_cdr.get_seller_by_id(db=db, seller_id=db_seller.id)
     except Exception as error:
         await db.rollback()
-        raise HTTPException(status_code=422, detail=str(error))
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @module.router.patch(
@@ -324,7 +321,7 @@ async def create_product(
         return await cruds_cdr.get_product_by_id(db, db_product.id)
     except Exception as error:
         await db.rollback()
-        raise HTTPException(status_code=422, detail=str(error))
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @module.router.post(
@@ -366,7 +363,7 @@ async def create_document_constraint(
         return await cruds_cdr.get_product_by_id(product_id=product_id, db=db)
     except Exception as error:
         await db.rollback()
-        raise HTTPException(status_code=422, detail=str(error))
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @module.router.post(
@@ -423,7 +420,7 @@ async def create_product_constraint(
         return await cruds_cdr.get_product_by_id(product_id=product_id, db=db)
     except Exception as error:
         await db.rollback()
-        raise HTTPException(status_code=422, detail=str(error))
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @module.router.patch(
@@ -635,7 +632,7 @@ async def create_product_variant(
         return db_product_variant
     except Exception as error:
         await db.rollback()
-        raise HTTPException(status_code=422, detail=str(error))
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @module.router.patch(
@@ -733,7 +730,7 @@ async def create_allowed_curriculum(
         return await cruds_cdr.get_product_variant_by_id(variant_id=variant_id, db=db)
     except Exception as error:
         await db.rollback()
-        raise HTTPException(status_code=422, detail=str(error))
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @module.router.delete(
@@ -877,7 +874,7 @@ async def create_document(
         return db_document
     except Exception as error:
         await db.rollback()
-        raise HTTPException(status_code=422, detail=str(error))
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @module.router.delete(
@@ -978,7 +975,7 @@ async def create_purchase(
     db_purchase = models_cdr.Purchase(
         user_id=user_id,
         product_variant_id=product_variant_id,
-        paid=False,
+        validated=False,
         **purchase.model_dump(),
     )
     db_action = models_cdr.CdrAction(
@@ -995,7 +992,7 @@ async def create_purchase(
         return db_purchase
     except Exception as error:
         await db.rollback()
-        raise HTTPException(status_code=422, detail=str(error))
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @module.router.patch(
@@ -1062,17 +1059,17 @@ async def update_purchase(
         return db_purchase
     except Exception as error:
         await db.rollback()
-        raise HTTPException(status_code=422, detail=str(error))
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @module.router.patch(
-    "/cdr/users/{user_id}/purchases/{product_variant_id}/paid/",
+    "/cdr/users/{user_id}/purchases/{product_variant_id}/validated/",
     status_code=204,
 )
-async def mark_purchase_as_paid(
+async def mark_purchase_as_validated(
     user_id: str,
     product_variant_id: UUID,
-    paid: bool,
+    validated: bool,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
 ):
@@ -1087,17 +1084,17 @@ async def mark_purchase_as_paid(
             detail="Invalid purchase",
         )
     try:
-        await cruds_cdr.mark_purchase_as_paid(
+        await cruds_cdr.mark_purchase_as_validated(
             db=db,
             user_id=user_id,
             product_variant_id=product_variant_id,
-            paid=paid,
+            validated=validated,
         )
         await db.commit()
         return db_purchase
     except Exception as error:
         await db.rollback()
-        raise HTTPException(status_code=422, detail=str(error))
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @module.router.delete(
@@ -1218,7 +1215,7 @@ async def create_signature(
         return db_signature
     except Exception as error:
         await db.rollback()
-        raise HTTPException(status_code=422, detail=str(error))
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @module.router.delete(
@@ -1291,7 +1288,7 @@ async def create_curriculum(
         return db_curriculum
     except Exception as error:
         await db.rollback()
-        raise HTTPException(status_code=422, detail=str(error))
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @module.router.delete(
@@ -1345,7 +1342,7 @@ async def create_curriculum_membership(
         await db.commit()
     except Exception as error:
         await db.rollback()
-        raise HTTPException(status_code=422, detail=str(error))
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @module.router.delete(
@@ -1384,7 +1381,7 @@ async def delete_curriculum_membership(
         await db.commit()
     except Exception as error:
         await db.rollback()
-        raise HTTPException(status_code=422, detail=str(error))
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @module.router.get(
@@ -1444,7 +1441,7 @@ async def create_payment(
         return db_payment
     except Exception as error:
         await db.rollback()
-        raise HTTPException(status_code=422, detail=str(error))
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @module.router.delete(
@@ -1531,7 +1528,7 @@ async def create_membership(
         return db_membership
     except Exception as error:
         await db.rollback()
-        raise HTTPException(status_code=422, detail=str(error))
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @module.router.delete(
