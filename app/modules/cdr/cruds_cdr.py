@@ -591,3 +591,86 @@ async def delete_curriculum_membership(
             models_cdr.CurriculumMembership.curriculum_id == curriculum_id,
         ),
     )
+
+
+async def get_payments_by_user_id(
+    db: AsyncSession,
+    user_id: UUID,
+) -> Sequence[models_cdr.Payment]:
+    result = await db.execute(
+        select(models_cdr.Payment).where(models_cdr.Payment.user_id == user_id),
+    )
+    return result.scalars().all()
+
+
+async def get_payment_by_id(
+    db: AsyncSession,
+    payment_id: UUID,
+) -> models_cdr.Payment | None:
+    result = await db.execute(
+        select(models_cdr.Payment).where(models_cdr.Payment.id == payment_id),
+    )
+    return result.scalars().first()
+
+
+async def create_payment(
+    db: AsyncSession,
+    payment: models_cdr.Payment,
+):
+    db.add(payment)
+
+
+async def delete_payment(
+    db: AsyncSession,
+    payment_id: UUID,
+):
+    await db.execute(
+        delete(models_cdr.Payment).where(
+            models_cdr.Payment.id == payment_id,
+        ),
+    )
+
+
+async def get_memberships_by_user_id(
+    db: AsyncSession,
+    user_id: UUID,
+) -> Sequence[models_cdr.Membership]:
+    result = await db.execute(
+        select(models_cdr.Membership).where(models_cdr.Membership.user_id == user_id),
+    )
+    return result.scalars().all()
+
+
+async def get_membership_by_id(
+    db: AsyncSession,
+    membership_id: UUID,
+) -> models_cdr.Membership | None:
+    result = await db.execute(
+        select(models_cdr.Membership).where(models_cdr.Membership.id == membership_id),
+    )
+    return result.scalars().first()
+
+
+async def create_membership(
+    db: AsyncSession,
+    membership: models_cdr.Membership,
+):
+    db.add(membership)
+
+
+async def delete_membership(
+    db: AsyncSession,
+    membership_id: UUID,
+):
+    await db.execute(
+        delete(models_cdr.Membership).where(
+            models_cdr.Membership.id == membership_id,
+        ),
+    )
+
+
+async def create_action(
+    db: AsyncSession,
+    action: models_cdr.CdrAction,
+):
+    db.add(action)
