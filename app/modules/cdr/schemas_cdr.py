@@ -15,13 +15,13 @@ from app.types.core_data import BaseCoreData
 class ProductBase(BaseModel):
     name: str
     description: str | None = None
-    seller_id: UUID
     available_online: bool
     unique: bool
 
 
 class ProductComplete(ProductBase):
     id: UUID
+    seller_id: UUID
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -79,6 +79,7 @@ class DocumentBase(BaseModel):
 
 class DocumentComplete(DocumentBase):
     id: UUID
+    seller_id: UUID
 
     model_config = ConfigDict(from_attributes=True)
 

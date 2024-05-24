@@ -130,6 +130,9 @@ class Document(Base):
     __tablename__ = "cdr_document"
 
     id: Mapped[PrimaryKey]
+    seller_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("cdr_seller.id"),
+    )
     name: Mapped[str]
 
 

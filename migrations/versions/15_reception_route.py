@@ -56,7 +56,9 @@ def upgrade() -> None:
     op.create_table(
         "cdr_document",
         sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("seller_id", sa.Uuid(), nullable=False),
         sa.Column("name", sa.String(), nullable=False),
+        sa.ForeignKeyConstraint(["seller_id"], ["cdr_seller.id"]),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(

@@ -17,6 +17,21 @@ async def get_sellers(
     return result.scalars().all()
 
 
+async def get_online_sellers(
+    db: AsyncSession,
+) -> Sequence[models_cdr.Seller]:
+    online_products = await db.execute(
+        select(models_cdr.CdrProduct).where(models_cdr.CdrProduct.available_online),
+    )
+    seller_ids = set(product.seller_id for product in online_products.scalars().all())
+    result = await db.execute(
+        select(models_cdr.Seller)
+        .where(models_cdr.Seller.id.in_(seller_ids))
+        .options(selectinload(models_cdr.Seller.products)),
+    )
+    return result.scalars().all()
+
+
 async def get_sellers_by_group_id(
     db: AsyncSession,
     group_id: UUID,
@@ -97,6 +112,19 @@ async def get_products_by_seller_id(
     result = await db.execute(
         select(models_cdr.CdrProduct).where(
             models_cdr.CdrProduct.seller_id == seller_id,
+        ),
+    )
+    return result.scalars().all()
+
+
+async def get_online_products_by_seller_id(
+    db: AsyncSession,
+    seller_id: UUID,
+) -> Sequence[models_cdr.CdrProduct]:
+    result = await db.execute(
+        select(models_cdr.CdrProduct).where(
+            models_cdr.CdrProduct.seller_id == seller_id,
+            models_cdr.CdrProduct.available_online,
         ),
     )
     return result.scalars().all()
@@ -286,10 +314,13 @@ async def delete_product_variant(
     )
 
 
-async def get_documents(
+async def get_documents_by_seller_id(
     db: AsyncSession,
+    seller_id: UUID,
 ) -> Sequence[models_cdr.Document]:
-    result = await db.execute(select(models_cdr.Document))
+    result = await db.execute(
+        select(models_cdr.Document).where(models_cdr.Document.seller_id == seller_id),
+    )
     return result.scalars().all()
 
 

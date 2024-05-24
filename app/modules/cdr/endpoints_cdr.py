@@ -1,5 +1,5 @@
 import logging
-import uuid
+from uuid import UUID, uuid4
 
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,7 +15,6 @@ from app.dependencies import (
 )
 from app.modules.cdr import cruds_cdr, models_cdr, schemas_cdr
 from app.modules.cdr.types_cdr import (
-    AvailableMembership,
     CdrStatus,
     DocumentSignatureType,
 )
@@ -64,7 +63,7 @@ async def is_user_a_seller(
 
 
 async def is_user_in_a_seller_group(
-    seller_id: uuid.UUID,
+    seller_id: UUID,
     user: models_core.CoreUser = Depends(
         is_user_a_member,
     ),
@@ -95,6 +94,65 @@ async def is_user_in_a_seller_group(
     )
 
 
+async def check_request_consistency(
+    db: AsyncSession,
+    seller_id: UUID | None = None,
+    product_id: UUID | None = None,
+    variant_id: UUID | None = None,
+    document_id: UUID | None = None,
+) -> models_cdr.CdrProduct | None:
+    if seller_id:
+        db_seller = await cruds_cdr.get_seller_by_id(db=db, seller_id=seller_id)
+        if not db_seller:
+            raise HTTPException(
+                status_code=404,
+                detail="Invalid seller_id",
+            )
+    if product_id:
+        db_product = await cruds_cdr.get_product_by_id(db=db, product_id=product_id)
+        if not db_product:
+            raise HTTPException(
+                status_code=404,
+                detail="Invalid product_id",
+            )
+        if seller_id and seller_id != db_product.seller_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Product is not related to this seller.",
+            )
+    if variant_id:
+        db_variant = await cruds_cdr.get_product_variant_by_id(
+            db=db,
+            variant_id=variant_id,
+        )
+        if not db_variant:
+            raise HTTPException(
+                status_code=404,
+                detail="Invalid variant_id",
+            )
+        if product_id and product_id != db_variant.product_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Variant is not related to this product.",
+            )
+    if document_id:
+        db_document = await cruds_cdr.get_document_by_id(db=db, document_id=document_id)
+        if not db_document:
+            raise HTTPException(
+                status_code=404,
+                detail="Invalid document_id",
+            )
+        if seller_id and seller_id != db_document.seller_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Document is not related to this seller.",
+            )
+    if db_product:
+        return db_product
+    else:
+        return None
+
+
 @module.router.get(
     "/cdr/sellers/",
     response_model=list[schemas_cdr.SellerComplete],
@@ -118,49 +176,20 @@ async def get_sellers_of_user(
 ):
     return await cruds_cdr.get_sellers_by_group_ids(
         db,
-        [uuid.UUID(x.id) for x in user.groups],
+        [UUID(x.id) for x in user.groups],
     )
 
 
 @module.router.get(
-    "/cdr/groups/{group_id}/sellers/",
+    "/cdr/online/sellers/",
     response_model=list[schemas_cdr.SellerComplete],
     status_code=200,
 )
-async def get_sellers_by_group_id(
-    group_id: uuid.UUID,
+async def get_online_sellers(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    return await cruds_cdr.get_sellers_by_group_id(db, group_id)
-
-
-@module.router.get(
-    "/cdr/sellers/{seller_id}/",
-    response_model=schemas_cdr.SellerComplete,
-    status_code=200,
-)
-async def get_seller_by_id(
-    seller_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_seller),
-):
-    seller = await cruds_cdr.get_seller_by_id(db, seller_id)
-    if not seller:
-        raise HTTPException(
-            status_code=404,
-            detail="Seller not found.",
-        )
-    if not is_user_member_of_an_allowed_group(
-        user,
-        [GroupType.admin_cdr, str(seller.group_id)],
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="Access forbidden : you must be part of this seller group or be cdr admin.",
-        )
-
-    return seller
+    return await cruds_cdr.get_online_sellers(db)
 
 
 @module.router.post(
@@ -174,7 +203,7 @@ async def create_seller(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
 ):
     db_seller = models_cdr.Seller(
-        id=str(uuid.uuid4()),
+        id=uuid4(),
         **seller.model_dump(),
     )
     try:
@@ -191,17 +220,12 @@ async def create_seller(
     status_code=204,
 )
 async def update_seller(
-    seller_id: uuid.UUID,
+    seller_id: UUID,
     seller: schemas_cdr.SellerEdit,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
 ):
-    db_seller = await cruds_cdr.get_seller_by_id(seller_id=seller_id, db=db)
-    if not db_seller:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid seller_id",
-        )
+    await check_request_consistency(db=db, seller_id=seller_id)
     try:
         await cruds_cdr.update_seller(
             seller_id=seller_id,
@@ -219,16 +243,11 @@ async def update_seller(
     status_code=204,
 )
 async def delete_seller(
-    seller_id: uuid.UUID,
+    seller_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
 ):
-    db_seller = await cruds_cdr.get_seller_by_id(seller_id=seller_id, db=db)
-    if not db_seller:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid seller_id",
-        )
+    await check_request_consistency(db=db, seller_id=seller_id)
     try:
         await cruds_cdr.delete_seller(
             seller_id=seller_id,
@@ -241,24 +260,12 @@ async def delete_seller(
 
 
 @module.router.get(
-    "/cdr/products/",
-    response_model=list[schemas_cdr.ProductComplete],
-    status_code=200,
-)
-async def get_products(
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
-):
-    return await cruds_cdr.get_products(db)
-
-
-@module.router.get(
     "/cdr/sellers/{seller_id}/products/",
     response_model=list[schemas_cdr.ProductComplete],
     status_code=200,
 )
 async def get_products_by_seller_id(
-    seller_id: uuid.UUID,
+    seller_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_seller),
 ):
@@ -267,48 +274,31 @@ async def get_products_by_seller_id(
 
 
 @module.router.get(
-    "/cdr/products/available_online/",
+    "/cdr/online/sellers/{seller_id}/products/",
     response_model=list[schemas_cdr.ProductComplete],
     status_code=200,
 )
 async def get_available_online_products(
+    seller_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    return await cruds_cdr.get_available_online_products(db)
-
-
-@module.router.get(
-    "/cdr/products/{product_id}/",
-    response_model=schemas_cdr.ProductComplete,
-    status_code=200,
-)
-async def get_product_by_id(
-    product_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
-):
-    product = await cruds_cdr.get_product_by_id(db, product_id)
-    if not product:
-        raise HTTPException(
-            status_code=404,
-            detail="Not found.",
-        )
-    return product
+    return await cruds_cdr.get_online_products_by_seller_id(db, seller_id)
 
 
 @module.router.post(
-    "/cdr/products/",
+    "/cdr/sellers/{seller_id}/products/",
     response_model=schemas_cdr.ProductComplete,
     status_code=201,
 )
 async def create_product(
+    seller_id: UUID,
     product: schemas_cdr.ProductBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_seller),
 ):
     await is_user_in_a_seller_group(
-        product.seller_id,
+        seller_id,
         user,
     )
     status = await get_core_data(schemas_cdr.Status, db)
@@ -318,7 +308,8 @@ async def create_product(
             detail="CDR is closed. You cant add a new product.",
         )
     db_product = models_cdr.CdrProduct(
-        id=str(uuid.uuid4()),
+        id=uuid4(),
+        seller_id=seller_id,
         **product.model_dump(),
     )
     try:
@@ -331,30 +322,25 @@ async def create_product(
 
 
 @module.router.post(
-    "/cdr/products/{product_id}/document_constraint/{document_id}",
+    "/cdr/sellers/{seller_id}/products/{product_id}/document_constraint/{document_id}",
     response_model=schemas_cdr.ProductComplete,
     status_code=201,
 )
 async def create_document_constraint(
-    product_id: uuid.UUID,
-    document_id: uuid.UUID,
+    seller_id: UUID,
+    product_id: UUID,
+    document_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_seller),
 ):
-    db_product = await cruds_cdr.get_product_by_id(product_id=product_id, db=db)
-    if not db_product:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid product_id",
-        )
-    db_document = await cruds_cdr.get_document_by_id(document_id=document_id, db=db)
-    if not db_document:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid document_id",
-        )
+    await check_request_consistency(
+        db=db,
+        seller_id=seller_id,
+        product_id=product_id,
+        document_id=document_id,
+    )
     await is_user_in_a_seller_group(
-        db_product.seller_id,
+        seller_id,
         user,
     )
     status = await get_core_data(schemas_cdr.Status, db)
@@ -377,37 +363,39 @@ async def create_document_constraint(
 
 
 @module.router.post(
-    "/cdr/products/{product_id}/product_constraint/{constraint_id}",
+    "/cdr/sellers/{seller_id}/products/{product_id}/product_constraint/{constraint_id}",
     response_model=schemas_cdr.ProductComplete,
     status_code=201,
 )
 async def create_product_constraint(
-    product_id: uuid.UUID,
-    constraint_id: uuid.UUID,
+    seller_id: UUID,
+    product_id: UUID,
+    constraint_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_seller),
 ):
-    db_product = await cruds_cdr.get_product_by_id(product_id=product_id, db=db)
-    if not db_product:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid product_id",
-        )
+    db_product = await check_request_consistency(
+        db=db,
+        seller_id=seller_id,
+        product_id=product_id,
+    )
     db_constraint = await cruds_cdr.get_product_by_id(product_id=constraint_id, db=db)
     if not db_constraint:
         raise HTTPException(
             status_code=404,
-            detail="Invalid document_id",
+            detail="Invalid constraint_id",
         )
     await is_user_in_a_seller_group(
-        db_product.seller_id,
+        seller_id,
         user,
     )
     status = await get_core_data(schemas_cdr.Status, db)
     if status.status in [
         CdrStatus.onsite,
         CdrStatus.closed,
-    ] or (status.status == CdrStatus.online and db_product.available_online):
+    ] or (
+        db_product and status.status == CdrStatus.online and db_product.available_online
+    ):
         raise HTTPException(
             status_code=403,
             detail="This product can't be edited now. Please try creating a new product.",
@@ -426,30 +414,32 @@ async def create_product_constraint(
 
 
 @module.router.patch(
-    "/cdr/products/{product_id}/",
+    "/cdr/sellers/{seller_id}/products/{product_id}/",
     status_code=204,
 )
 async def update_product(
-    product_id: uuid.UUID,
+    seller_id: UUID,
+    product_id: UUID,
     product: schemas_cdr.ProductEdit,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     status = await get_core_data(schemas_cdr.Status, db)
-    db_product = await cruds_cdr.get_product_by_id(product_id=product_id, db=db)
-    if not db_product:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid product_id",
-        )
+    db_product = await check_request_consistency(
+        db=db,
+        seller_id=seller_id,
+        product_id=product_id,
+    )
     await is_user_in_a_seller_group(
-        db_product.seller_id,
+        seller_id,
         user,
     )
     if status.status in [
         CdrStatus.onsite,
         CdrStatus.closed,
-    ] or (status.status == CdrStatus.online and db_product.available_online):
+    ] or (
+        db_product and status.status == CdrStatus.online and db_product.available_online
+    ):
         raise HTTPException(
             status_code=403,
             detail="This product can't be edited now. Please try creating a new product.",
@@ -467,29 +457,31 @@ async def update_product(
 
 
 @module.router.delete(
-    "/cdr/products/{product_id}/",
+    "/cdr/sellers/{seller_id}/products/{product_id}/",
     status_code=204,
 )
 async def delete_product(
-    product_id: uuid.UUID,
+    seller_id: UUID,
+    product_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     status = await get_core_data(schemas_cdr.Status, db)
-    db_product = await cruds_cdr.get_product_by_id(product_id=product_id, db=db)
-    if not db_product:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid product_id",
-        )
+    db_product = await check_request_consistency(
+        db=db,
+        seller_id=seller_id,
+        product_id=product_id,
+    )
     await is_user_in_a_seller_group(
-        db_product.seller_id,
+        seller_id,
         user,
     )
     if status.status in [
         CdrStatus.onsite,
         CdrStatus.closed,
-    ] or (status.status == CdrStatus.online and db_product.available_online):
+    ] or (
+        db_product and status.status == CdrStatus.online and db_product.available_online
+    ):
         raise HTTPException(
             status_code=403,
             detail="You can't delete a product once CDR has started.",
@@ -506,30 +498,32 @@ async def delete_product(
 
 
 @module.router.delete(
-    "/cdr/products/{product_id}/document_constraint/{document_id}",
+    "/cdr/sellers/{seller_id}/products/{product_id}/document_constraint/{document_id}",
     status_code=204,
 )
 async def delete_document_constraint(
-    product_id: uuid.UUID,
-    document_id: uuid.UUID,
+    seller_id: UUID,
+    product_id: UUID,
+    document_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_seller),
 ):
-    db_product = await cruds_cdr.get_product_by_id(product_id=product_id, db=db)
-    if not db_product:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid product_id",
-        )
+    db_product = await check_request_consistency(
+        db=db,
+        seller_id=seller_id,
+        product_id=product_id,
+    )
     await is_user_in_a_seller_group(
-        db_product.seller_id,
+        seller_id,
         user,
     )
     status = await get_core_data(schemas_cdr.Status, db)
     if status.status in [
         CdrStatus.onsite,
         CdrStatus.closed,
-    ] or (status.status == CdrStatus.online and db_product.available_online):
+    ] or (
+        db_product and status.status == CdrStatus.online and db_product.available_online
+    ):
         raise HTTPException(
             status_code=403,
             detail="You can't delete a constraint once CDR has started.",
@@ -547,30 +541,32 @@ async def delete_document_constraint(
 
 
 @module.router.delete(
-    "/cdr/products/{product_id}/product_constraint/{constraint_id}",
+    "/cdr/sellers/{seller_id}/products/{product_id}/product_constraint/{constraint_id}",
     status_code=204,
 )
 async def delete_product_constraint(
-    product_id: uuid.UUID,
-    constraint_id: uuid.UUID,
+    seller_id: UUID,
+    product_id: UUID,
+    constraint_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_seller),
 ):
-    db_product = await cruds_cdr.get_product_by_id(product_id=product_id, db=db)
-    if not db_product:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid product_id",
-        )
+    db_product = await check_request_consistency(
+        db=db,
+        seller_id=seller_id,
+        product_id=product_id,
+    )
     await is_user_in_a_seller_group(
-        db_product.seller_id,
+        seller_id,
         user,
     )
     status = await get_core_data(schemas_cdr.Status, db)
     if status.status in [
         CdrStatus.onsite,
         CdrStatus.closed,
-    ] or (status.status == CdrStatus.online and db_product.available_online):
+    ] or (
+        db_product and status.status == CdrStatus.online and db_product.available_online
+    ):
         raise HTTPException(
             status_code=403,
             detail="You can't delete a constraint once CDR has started.",
@@ -587,113 +583,21 @@ async def delete_product_constraint(
         raise HTTPException(status_code=400, detail=str(error))
 
 
-@module.router.get(
-    "/cdr/products/{product_id}/variants/",
-    response_model=list[schemas_cdr.ProductVariantComplete],
-    status_code=200,
-)
-async def get_product_variants(
-    product_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
-):
-    product = await cruds_cdr.get_product_by_id(db=db, product_id=product_id)
-    if not product:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid product_id",
-        )
-    if not (
-        product.available_online
-        or await is_user_in_a_seller_group(product.seller_id, user)
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="You are not allowed to access this product's variants.",
-        )
-    return await cruds_cdr.get_product_variants(db=db, product_id=product_id)
-
-
-@module.router.get(
-    "/cdr/products/{product_id}/variants/{variant_id}/",
-    response_model=schemas_cdr.ProductVariantComplete,
-    status_code=200,
-)
-async def get_product_variant_by_id(
-    product_id: uuid.UUID,
-    variant_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
-):
-    product = await cruds_cdr.get_product_by_id(db=db, product_id=product_id)
-    if not product:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid product_id",
-        )
-    if not (
-        product.available_online
-        or await is_user_in_a_seller_group(product.seller_id, user)
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="You are not allowed to access this product's variants.",
-        )
-    variant = await cruds_cdr.get_product_variant_by_id(db=db, variant_id=variant_id)
-    if (not variant) or variant.product_id != product_id:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid variant_id",
-        )
-    return variant
-
-
-@module.router.get(
-    "/cdr/products/{product_id}/variants/enabled/",
-    response_model=list[schemas_cdr.ProductVariantComplete],
-    status_code=200,
-)
-async def get_enabled_product_variants(
-    product_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
-):
-    product = await cruds_cdr.get_product_by_id(db=db, product_id=product_id)
-    if not product:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid product_id",
-        )
-    if not (
-        product.available_online
-        or await is_user_in_a_seller_group(product.seller_id, user)
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="You are not allowed to access this product's variants.",
-        )
-    return await cruds_cdr.get_enabled_product_variants(db=db, product_id=product_id)
-
-
 @module.router.post(
-    "/cdr/products/{product_id}/variants/",
+    "/cdr/sellers/{seller_id}/products/{product_id}/variants/",
     response_model=schemas_cdr.ProductVariantComplete,
     status_code=201,
 )
 async def create_product_variant(
-    product_id: uuid.UUID,
+    seller_id: UUID,
+    product_id: UUID,
     product_variant: schemas_cdr.ProductVariantBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    product = await cruds_cdr.get_product_by_id(db=db, product_id=product_id)
-    if not product:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid product_id",
-        )
+    await check_request_consistency(db=db, seller_id=seller_id, product_id=product_id)
     await is_user_in_a_seller_group(
-        product.seller_id,
+        seller_id,
         user,
     )
     status = await get_core_data(schemas_cdr.Status, db)
@@ -703,7 +607,7 @@ async def create_product_variant(
             detail="CDR is closed. You cant add a new product.",
         )
     db_product_variant = models_cdr.ProductVariant(
-        id=str(uuid.uuid4()),
+        id=uuid4(),
         product_id=product_id,
         **product_variant.model_dump(),
     )
@@ -717,43 +621,37 @@ async def create_product_variant(
 
 
 @module.router.patch(
-    "/cdr/products/{product_id}/variants/{variant_id}/",
+    "/cdr/sellers/{seller_id}/products/{product_id}/variants/{variant_id}/",
     status_code=204,
 )
 async def update_product_variant(
-    product_id: uuid.UUID,
-    variant_id: uuid.UUID,
+    seller_id: UUID,
+    product_id: UUID,
+    variant_id: UUID,
     product_variant: schemas_cdr.ProductVariantEdit,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     status = await get_core_data(schemas_cdr.Status, db)
-    db_product = await cruds_cdr.get_product_by_id(product_id=product_id, db=db)
-    if not db_product:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid product_id",
-        )
+    db_product = await check_request_consistency(
+        db=db,
+        seller_id=seller_id,
+        product_id=product_id,
+        variant_id=variant_id,
+    )
     await is_user_in_a_seller_group(
-        db_product.seller_id,
+        seller_id,
         user,
     )
     if status.status in [
         CdrStatus.onsite,
         CdrStatus.closed,
-    ] or (status.status == CdrStatus.online and db_product.available_online):
+    ] or (
+        db_product and status.status == CdrStatus.online and db_product.available_online
+    ):
         raise HTTPException(
             status_code=403,
             detail="This product can't be edited now. Please try creating a new product.",
-        )
-    db_product_variant = await cruds_cdr.get_product_variant_by_id(
-        db=db,
-        variant_id=variant_id,
-    )
-    if not db_product_variant or db_product_variant.product_id != product_id:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid variant_id",
         )
     try:
         await cruds_cdr.update_product_variant(
@@ -773,24 +671,19 @@ async def update_product_variant(
     status_code=201,
 )
 async def create_allowed_curriculum(
-    product_id: uuid.UUID,
-    variant_id: uuid.UUID,
-    curriculum_id: uuid.UUID,
+    seller_id: UUID,
+    product_id: UUID,
+    variant_id: UUID,
+    curriculum_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_seller),
 ):
-    db_product = await cruds_cdr.get_product_by_id(product_id=product_id, db=db)
-    if not db_product:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid product_id",
-        )
-    db_variant = await cruds_cdr.get_product_variant_by_id(variant_id=variant_id, db=db)
-    if not db_variant or db_variant.product_id != product_id:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid variant_id",
-        )
+    await check_request_consistency(
+        db=db,
+        seller_id=seller_id,
+        product_id=product_id,
+        variant_id=variant_id,
+    )
     db_curriculum = await cruds_cdr.get_curriculum_by_id(
         curriculum_id=curriculum_id,
         db=db,
@@ -801,7 +694,7 @@ async def create_allowed_curriculum(
             detail="Invalid curriculum_id",
         )
     await is_user_in_a_seller_group(
-        db_product.seller_id,
+        seller_id,
         user,
     )
     status = await get_core_data(schemas_cdr.Status, db)
@@ -824,28 +717,23 @@ async def create_allowed_curriculum(
 
 
 @module.router.delete(
-    "/cdr/products/{product_id}/variants/{variant_id}/curriculum/{curriculum_id}",
+    "/cdr/sellers/{seller_id}//products/{product_id}/variants/{variant_id}/curriculum/{curriculum_id}",
     status_code=204,
 )
 async def delete_allowed_curriculum(
-    product_id: uuid.UUID,
-    variant_id: uuid.UUID,
-    curriculum_id: uuid.UUID,
+    seller_id: UUID,
+    product_id: UUID,
+    variant_id: UUID,
+    curriculum_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_seller),
 ):
-    db_product = await cruds_cdr.get_product_by_id(product_id=product_id, db=db)
-    if not db_product:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid product_id",
-        )
-    db_variant = await cruds_cdr.get_product_variant_by_id(variant_id=variant_id, db=db)
-    if not db_variant or db_variant.product_id != product_id:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid variant_id",
-        )
+    db_product = await check_request_consistency(
+        db=db,
+        seller_id=seller_id,
+        product_id=product_id,
+        variant_id=variant_id,
+    )
     db_curriculum = await cruds_cdr.get_curriculum_by_id(
         curriculum_id=curriculum_id,
         db=db,
@@ -856,14 +744,16 @@ async def delete_allowed_curriculum(
             detail="Invalid curriculum_id",
         )
     await is_user_in_a_seller_group(
-        db_product.seller_id,
+        seller_id,
         user,
     )
     status = await get_core_data(schemas_cdr.Status, db)
     if status.status in [
         CdrStatus.onsite,
         CdrStatus.closed,
-    ] or (status.status == CdrStatus.online and db_product.available_online):
+    ] or (
+        db_product and status.status == CdrStatus.online and db_product.available_online
+    ):
         raise HTTPException(
             status_code=403,
             detail="You can't delete a allowed curriculum once CDR has started.",
@@ -881,36 +771,33 @@ async def delete_allowed_curriculum(
 
 
 @module.router.delete(
-    "/cdr/products/{product_id}/variants/{variant_id}/",
+    "/cdr/sellers/{seller_id}/products/{product_id}/variants/{variant_id}/",
     status_code=204,
 )
 async def delete_product_variant(
-    product_id: uuid.UUID,
-    variant_id: uuid.UUID,
+    seller_id: UUID,
+    product_id: UUID,
+    variant_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_seller),
 ):
     status = await get_core_data(schemas_cdr.Status, db)
-    db_product = await cruds_cdr.get_product_by_id(product_id=product_id, db=db)
-    if not db_product:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid product_id",
-        )
-    db_variant = await cruds_cdr.get_product_variant_by_id(variant_id=variant_id, db=db)
-    if not db_variant or db_variant.product_id != product_id:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid variant_id",
-        )
+    db_product = await check_request_consistency(
+        db=db,
+        seller_id=seller_id,
+        product_id=product_id,
+        variant_id=variant_id,
+    )
     await is_user_in_a_seller_group(
-        db_product.seller_id,
+        seller_id,
         user,
     )
     if status.status in [
         CdrStatus.onsite,
         CdrStatus.closed,
-    ] or (status.status == CdrStatus.online and db_product.available_online):
+    ] or (
+        db_product and status.status == CdrStatus.online and db_product.available_online
+    ):
         raise HTTPException(
             status_code=403,
             detail="You can't delete a product once CDR has started.",
@@ -927,42 +814,25 @@ async def delete_product_variant(
 
 
 @module.router.get(
-    "/cdr/documents/",
+    "/cdr/sellers/{seller_id}/documents/",
     response_model=list[schemas_cdr.DocumentComplete],
     status_code=200,
 )
 async def get_documents(
+    seller_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_seller),
 ):
-    return await cruds_cdr.get_documents(db)
-
-
-@module.router.get(
-    "/cdr/documents/{document_id}/",
-    response_model=schemas_cdr.DocumentComplete,
-    status_code=200,
-)
-async def get_document_by_id(
-    document_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
-):
-    document = await cruds_cdr.get_document_by_id(db=db, document_id=document_id)
-    if not document:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid document_id",
-        )
-    return document
+    return await cruds_cdr.get_documents_by_seller_id(db, seller_id=seller_id)
 
 
 @module.router.post(
-    "/cdr/documents/",
+    "/cdr/sellers/{seller_id}/documents/",
     response_model=schemas_cdr.DocumentComplete,
     status_code=201,
 )
 async def create_document(
+    seller_id: UUID,
     document: schemas_cdr.DocumentBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_seller),
@@ -973,8 +843,10 @@ async def create_document(
             status_code=403,
             detail="CDR is closed. You can't add a new document.",
         )
+    await check_request_consistency(db=db, seller_id=seller_id)
     db_document = models_cdr.Document(
-        id=str(uuid.uuid4()),
+        id=uuid4(),
+        seller_id=seller_id,
         name=document.name,
     )
     try:
@@ -987,20 +859,16 @@ async def create_document(
 
 
 @module.router.delete(
-    "/cdr/documents/{document_id}/",
+    "/cdr/sellers/{seller_id}/documents/{document_id}/",
     status_code=204,
 )
 async def delete_document(
-    document_id: uuid.UUID,
+    seller_id: UUID,
+    document_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_seller),
 ):
-    db_document = await cruds_cdr.get_document_by_id(document_id=document_id, db=db)
-    if not db_document:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid document_id",
-        )
+    await check_request_consistency(db=db, seller_id=seller_id, document_id=document_id)
     if await cruds_cdr.get_document_constraints_by_document_id(
         db=db,
         document_id=document_id,
@@ -1021,24 +889,12 @@ async def delete_document(
 
 
 @module.router.get(
-    "/cdr/purchases/",
-    response_model=list[schemas_cdr.PurchaseComplete],
-    status_code=200,
-)
-async def get_purchases(
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
-):
-    return await cruds_cdr.get_purchases(db)
-
-
-@module.router.get(
     "/cdr/users/{user_id}/purchases/",
     response_model=list[schemas_cdr.PurchaseComplete],
     status_code=200,
 )
 async def get_purchases_by_user_id(
-    user_id: uuid.UUID,
+    user_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
@@ -1059,8 +915,8 @@ async def get_purchases_by_user_id(
     status_code=201,
 )
 async def create_purchase(
-    user_id: uuid.UUID,
-    product_variant_id: uuid.UUID,
+    user_id: UUID,
+    product_variant_id: UUID,
     purchase: schemas_cdr.PurchaseBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
@@ -1114,8 +970,8 @@ async def create_purchase(
     status_code=204,
 )
 async def update_purchase(
-    user_id: uuid.UUID,
-    product_variant_id: uuid.UUID,
+    user_id: UUID,
+    product_variant_id: UUID,
     purchase: schemas_cdr.PurchaseEdit,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
@@ -1181,8 +1037,8 @@ async def update_purchase(
     status_code=204,
 )
 async def mark_purchase_as_paid(
-    user_id: uuid.UUID,
-    product_variant_id: uuid.UUID,
+    user_id: UUID,
+    product_variant_id: UUID,
     paid: bool,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
@@ -1216,8 +1072,8 @@ async def mark_purchase_as_paid(
     status_code=204,
 )
 async def delete_purchase(
-    user_id: uuid.UUID,
-    product_variant_id: uuid.UUID,
+    user_id: UUID,
+    product_variant_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
 ):
@@ -1244,24 +1100,12 @@ async def delete_purchase(
 
 
 @module.router.get(
-    "/cdr/signatures/",
-    response_model=list[schemas_cdr.SignatureComplete],
-    status_code=200,
-)
-async def get_signatures(
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
-):
-    return await cruds_cdr.get_signatures(db)
-
-
-@module.router.get(
     "/cdr/users/{user_id}/signatures/",
     response_model=list[schemas_cdr.SignatureComplete],
     status_code=200,
 )
 async def get_signatures_by_user_id(
-    user_id: uuid.UUID,
+    user_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
@@ -1276,27 +1120,14 @@ async def get_signatures_by_user_id(
     return await cruds_cdr.get_signatures_by_user_id(db=db, user_id=user_id)
 
 
-@module.router.get(
-    "/cdr/documents/{document_id}/signatures/",
-    response_model=list[schemas_cdr.SignatureComplete],
-    status_code=200,
-)
-async def get_signatures_by_document_id(
-    document_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_seller),
-):
-    return await cruds_cdr.get_signatures_by_document_id(db=db, document_id=document_id)
-
-
 @module.router.post(
     "/cdr/users/{user_id}/signatures/{document_id}",
     response_model=schemas_cdr.SignatureComplete,
     status_code=201,
 )
 async def create_signature(
-    user_id: uuid.UUID,
-    document_id: uuid.UUID,
+    user_id: UUID,
+    document_id: UUID,
     signature: schemas_cdr.SignatureBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
@@ -1354,8 +1185,8 @@ async def create_signature(
     status_code=204,
 )
 async def delete_signature(
-    user_id: uuid.UUID,
-    document_id: uuid.UUID,
+    user_id: UUID,
+    document_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
 ):
@@ -1393,49 +1224,6 @@ async def get_curriculums(
     return await cruds_cdr.get_curriculums(db)
 
 
-@module.router.get(
-    "/cdr/users/{user_id}/curriculums/",
-    response_model=list[schemas_cdr.CurriculumComplete],
-    status_code=200,
-)
-async def get_curriculums_by_user_id(
-    user_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
-):
-    if not user_id == user.id or is_user_member_of_an_allowed_group(
-        user,
-        [GroupType.admin_cdr],
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="You are not allowed to see another user's curriculums.",
-        )
-    return await cruds_cdr.get_curriculums_by_user_id(db, user_id=user_id)
-
-
-@module.router.get(
-    "/cdr/curriculums/{curriculum_id}/",
-    response_model=schemas_cdr.CurriculumComplete,
-    status_code=200,
-)
-async def get_curriculum_by_id(
-    curriculum_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
-):
-    curriculum = await cruds_cdr.get_curriculum_by_id(
-        db=db,
-        curriculum_id=curriculum_id,
-    )
-    if not curriculum:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid curriculum_id",
-        )
-    return curriculum
-
-
 @module.router.post(
     "/cdr/curriculums/",
     response_model=schemas_cdr.CurriculumComplete,
@@ -1453,7 +1241,7 @@ async def create_curriculum(
             detail="CDR is closed. You can't add a new curriculum.",
         )
     db_curriculum = models_cdr.Curriculum(
-        id=str(uuid.uuid4()),
+        id=uuid4(),
         name=curriculum.name,
     )
     try:
@@ -1470,7 +1258,7 @@ async def create_curriculum(
     status_code=204,
 )
 async def delete_curriculum(
-    curriculum_id: uuid.UUID,
+    curriculum_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
 ):
@@ -1494,54 +1282,13 @@ async def delete_curriculum(
         raise HTTPException(status_code=400, detail=str(error))
 
 
-@module.router.post(
-    "/cdr/users/{user_id}/curriculums/{curriculum_id}/",
-    response_model=list[schemas_cdr.CurriculumComplete],
-    status_code=201,
-)
-async def create_curriculum_membership(
-    user_id: uuid.UUID,
-    curriculum_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
-):
-    curriculum = await cruds_cdr.get_curriculum_by_id(
-        db=db,
-        curriculum_id=curriculum_id,
-    )
-    if not curriculum:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid curriculum_id",
-        )
-    if not (
-        user_id == user.id
-        or is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="You can't affect a curriculum to another user.",
-        )
-    db_curriculum_membership = models_cdr.CurriculumMembership(
-        user_id=user_id,
-        curriculum_id=curriculum_id,
-    )
-    try:
-        await cruds_cdr.create_curriculum_membership(db, db_curriculum_membership)
-        await db.commit()
-        return await cruds_cdr.get_curriculums_by_user_id(user_id=user_id, db=db)
-    except Exception as error:
-        await db.rollback()
-        raise HTTPException(status_code=422, detail=str(error))
-
-
 @module.router.delete(
     "/cdr/users/{user_id}/curriculums/{curriculum_id}/",
     status_code=204,
 )
 async def delete_curriculum_membership(
-    user_id: uuid.UUID,
-    curriculum_id: uuid.UUID,
+    user_id: UUID,
+    curriculum_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
@@ -1576,39 +1323,14 @@ async def delete_curriculum_membership(
 
 
 @module.router.get(
-    "/cdr/payments/",
-    response_model=list[schemas_cdr.PaymentComplete],
-    status_code=200,
-)
-async def get_payments(
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
-):
-    pass
-
-
-@module.router.get(
     "/cdr/users/{user_id}/payments/",
     response_model=list[schemas_cdr.PaymentComplete],
     status_code=200,
 )
 async def get_payments_by_user_id(
-    user_id: uuid.UUID,
+    user_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
-):
-    pass
-
-
-@module.router.get(
-    "/cdr/payments/{payment_id}/",
-    response_model=list[schemas_cdr.PaymentComplete],
-    status_code=200,
-)
-async def get_payment_by_id(
-    payment_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
 ):
     pass
 
@@ -1631,32 +1353,7 @@ async def create_payment(
     status_code=204,
 )
 async def delete_payment(
-    payment_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
-):
-    pass
-
-
-@module.router.get(
-    "/cdr/memberships/",
-    response_model=list[schemas_cdr.MembershipComplete],
-    status_code=200,
-)
-async def get_memberships(
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
-):
-    pass
-
-
-@module.router.get(
-    "/cdr/memberships/type/{membership_type}/",
-    response_model=list[schemas_cdr.MembershipComplete],
-    status_code=200,
-)
-async def get_memberships_by_type(
-    membership_type: AvailableMembership,
+    payment_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
 ):
@@ -1669,7 +1366,7 @@ async def get_memberships_by_type(
     status_code=200,
 )
 async def get_memberships_by_user_id(
-    user_id: uuid.UUID,
+    user_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
@@ -1682,7 +1379,7 @@ async def get_memberships_by_user_id(
     status_code=200,
 )
 async def get_memberships_by_id(
-    membership_id: uuid.UUID,
+    membership_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
 ):
@@ -1707,7 +1404,7 @@ async def create_membership(
     status_code=204,
 )
 async def update_membership(
-    membership_id: uuid.UUID,
+    membership_id: UUID,
     membership: schemas_cdr.MembershipEdit,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
@@ -1720,7 +1417,7 @@ async def update_membership(
     status_code=204,
 )
 async def delete_membership(
-    membership_id: uuid.UUID,
+    membership_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
 ):
