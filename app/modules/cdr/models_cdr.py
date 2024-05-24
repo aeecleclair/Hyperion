@@ -20,6 +20,7 @@ class Seller(Base):
     name: Mapped[str]
     group_id = mapped_column(
         ForeignKey("core_group.id"),
+        nullable=False,
     )
     order: Mapped[int]
 
@@ -57,8 +58,10 @@ class CdrProduct(Base):
     seller_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("cdr_seller.id"),
     )
-    name: Mapped[str]
-    description: Mapped[str | None]
+    name_fr: Mapped[str]
+    name_en: Mapped[str]
+    description_fr: Mapped[str | None] = mapped_column(String, nullable=True)
+    description_en: Mapped[str | None] = mapped_column(String, nullable=True)
     available_online: Mapped[bool]
     product_constraints: Mapped[list["CdrProduct"]] = relationship(
         "CdrProduct",
@@ -119,8 +122,10 @@ class ProductVariant(Base):
     product_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("cdr_product.id"),
     )
-    name: Mapped[str]
-    description: Mapped[str | None] = mapped_column(String, nullable=True)
+    name_fr: Mapped[str]
+    name_en: Mapped[str]
+    description_fr: Mapped[str | None] = mapped_column(String, nullable=True)
+    description_en: Mapped[str | None] = mapped_column(String, nullable=True)
     price: Mapped[int]
     enabled: Mapped[bool]
     unique: Mapped[bool]
@@ -152,7 +157,7 @@ class Purchase(Base):
         primary_key=True,
     )
     quantity: Mapped[int]
-    paid: Mapped[bool]
+    validated: Mapped[bool]
 
 
 class Signature(Base):
@@ -178,6 +183,7 @@ class Payment(Base):
     id: Mapped[PrimaryKey]
     user_id = mapped_column(
         ForeignKey("core_user.id"),
+        nullable=False,
     )
     total: Mapped[int]
     payment_type: Mapped[PaymentType] = mapped_column(
@@ -191,6 +197,7 @@ class Membership(Base):
     id: Mapped[PrimaryKey]
     user_id = mapped_column(
         ForeignKey("core_user.id"),
+        nullable=False,
     )
     membership: Mapped[AvailableMembership] = mapped_column(
         index=True,
@@ -209,6 +216,7 @@ class CdrAction(Base):
     )  # Who made the request
     subject_id = mapped_column(
         ForeignKey("core_user.id"),
+        nullable=False,
     )  # For who the request was made
     action_type: Mapped[CdrLogActionType]
     action: Mapped[str]

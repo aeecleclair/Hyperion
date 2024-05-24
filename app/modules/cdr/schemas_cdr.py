@@ -24,8 +24,10 @@ class DocumentComplete(DocumentBase):
 
 
 class ProductVariantBase(BaseModel):
-    name: str
-    description: str | None = None
+    name_fr: str
+    name_en: str
+    description_fr: str | None = None
+    description_en: str | None = None
     price: int
     enabled: bool
     unique: bool
@@ -39,16 +41,20 @@ class ProductVariantComplete(ProductVariantBase):
 
 
 class ProductVariantEdit(BaseModel):
-    name: str | None = None
-    description: str | None = None
+    name_fr: str | None = None
+    name_en: str | None = None
+    description_fr: str | None = None
+    description_en: str | None = None
     price: int | None = None
     enabled: bool | None = None
     unique: bool | None = None
 
 
 class ProductBase(BaseModel):
-    name: str
-    description: str | None = None
+    name_fr: str
+    name_en: str
+    description_fr: str | None = None
+    description_en: str | None = None
     available_online: bool
 
 
@@ -71,7 +77,10 @@ class ProductComplete(ProductBase):
 
 
 class ProductEdit(BaseModel):
-    name: str | None = None
+    name_fr: str | None = None
+    name_en: str | None = None
+    description_fr: str | None = None
+    description_en: str | None = None
     description: str | None = None
     available_online: bool | None = None
 
@@ -101,7 +110,7 @@ class PurchaseBase(BaseModel):
 class PurchaseComplete(PurchaseBase):
     user_id: str
     product_variant_id: UUID
-    paid: bool
+    validated: bool
 
     model_config = ConfigDict(from_attributes=True)
 
