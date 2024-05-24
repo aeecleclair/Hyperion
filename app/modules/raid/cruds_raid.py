@@ -543,3 +543,15 @@ async def get_participant_checkout_by_checkout_id(
         ),
     )
     return checkout.scalars().first()
+
+
+async def get_security_file_by_security_file_id(
+    security_file_id: str,
+    db: AsyncSession,
+) -> models_raid.SecurityFile | None:
+    security_file = await db.execute(
+        select(models_raid.SecurityFile).where(
+            models_raid.SecurityFile.id == security_file_id,
+        ),
+    )
+    return security_file.scalars().first()
