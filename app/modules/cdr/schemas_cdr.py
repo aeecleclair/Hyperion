@@ -12,44 +12,15 @@ from app.modules.cdr.types_cdr import (
 from app.types.core_data import BaseCoreData
 
 
-class ProductBase(BaseModel):
+class DocumentBase(BaseModel):
     name: str
-    description: str | None = None
-    available_online: bool
-    unique: bool
 
 
-class ProductComplete(ProductBase):
+class DocumentComplete(DocumentBase):
     id: UUID
     seller_id: UUID
 
     model_config = ConfigDict(from_attributes=True)
-
-
-class ProductEdit(BaseModel):
-    name: str | None = None
-    description: str | None = None
-    available_online: bool | None = None
-    unique: bool | None = None
-
-
-class SellerBase(BaseModel):
-    name: str
-    group_id: UUID
-    order: int
-
-
-class SellerComplete(SellerBase):
-    id: UUID
-    products: list[ProductComplete] = []
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class SellerEdit(BaseModel):
-    name: str | None = None
-    group_id: UUID | None = None
-    order: int | None = None
 
 
 class ProductVariantBase(BaseModel):
@@ -57,6 +28,7 @@ class ProductVariantBase(BaseModel):
     description: str | None = None
     price: int
     enabled: bool
+    unique: bool
 
 
 class ProductVariantComplete(ProductVariantBase):
@@ -71,27 +43,65 @@ class ProductVariantEdit(BaseModel):
     description: str | None = None
     price: int | None = None
     enabled: bool | None = None
+    unique: bool | None = None
 
 
-class DocumentBase(BaseModel):
+class ProductBase(BaseModel):
     name: str
+    description: str | None = None
+    available_online: bool
 
 
-class DocumentComplete(DocumentBase):
+class ProductCompleteNoConstraint(ProductBase):
     id: UUID
     seller_id: UUID
+    variants: list[ProductVariantComplete] = []
 
     model_config = ConfigDict(from_attributes=True)
 
 
+class ProductComplete(ProductBase):
+    id: UUID
+    seller_id: UUID
+    variants: list[ProductVariantComplete] = []
+    product_constraints: list[ProductCompleteNoConstraint] = []
+    document_constraints: list[DocumentComplete] = []
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProductEdit(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    available_online: bool | None = None
+
+
+class SellerBase(BaseModel):
+    name: str
+    group_id: str
+    order: int
+
+
+class SellerComplete(SellerBase):
+    id: UUID
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SellerEdit(BaseModel):
+    name: str | None = None
+    group_id: str | None = None
+    order: int | None = None
+
+
 class PurchaseBase(BaseModel):
     quantity: int
-    paid: bool
 
 
 class PurchaseComplete(PurchaseBase):
-    user_id: UUID
+    user_id: str
     product_variant_id: UUID
+    paid: bool
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -106,7 +116,7 @@ class SignatureBase(BaseModel):
 
 
 class SignatureComplete(SignatureBase):
-    user_id: UUID
+    user_id: str
     document_id: UUID
 
     model_config = ConfigDict(from_attributes=True)
@@ -123,19 +133,19 @@ class CurriculumComplete(CurriculumBase):
 
 
 class PaymentBase(BaseModel):
-    user_id: UUID
     total: int
     payment_type: PaymentType
 
 
 class PaymentComplete(PaymentBase):
     id: UUID
+    user_id: str
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class MembershipBase(BaseModel):
-    user_id: UUID
+    user_id: str
     membership: AvailableMembership
     start_date: date
     end_date: date

@@ -3,7 +3,6 @@ from uuid import UUID
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.modules.cdr import models_cdr, schemas_cdr
 
@@ -12,7 +11,7 @@ async def get_sellers(
     db: AsyncSession,
 ) -> Sequence[models_cdr.Seller]:
     result = await db.execute(
-        select(models_cdr.Seller).options(selectinload(models_cdr.Seller.products)),
+        select(models_cdr.Seller),
     )
     return result.scalars().all()
 
@@ -25,33 +24,27 @@ async def get_online_sellers(
     )
     seller_ids = set(product.seller_id for product in online_products.scalars().all())
     result = await db.execute(
-        select(models_cdr.Seller)
-        .where(models_cdr.Seller.id.in_(seller_ids))
-        .options(selectinload(models_cdr.Seller.products)),
+        select(models_cdr.Seller).where(models_cdr.Seller.id.in_(seller_ids)),
     )
     return result.scalars().all()
 
 
 async def get_sellers_by_group_id(
     db: AsyncSession,
-    group_id: UUID,
+    group_id: str,
 ) -> Sequence[models_cdr.Seller]:
     result = await db.execute(
-        select(models_cdr.Seller)
-        .where(models_cdr.Seller.group_id == group_id)
-        .options(selectinload(models_cdr.Seller.products)),
+        select(models_cdr.Seller).where(models_cdr.Seller.group_id == group_id),
     )
     return result.scalars().all()
 
 
 async def get_sellers_by_group_ids(
     db: AsyncSession,
-    group_ids: list[UUID],
+    group_ids: list[str],
 ) -> Sequence[models_cdr.Seller]:
     result = await db.execute(
-        select(models_cdr.Seller)
-        .where(models_cdr.Seller.group_id.in_(group_ids))
-        .options(selectinload(models_cdr.Seller.products)),
+        select(models_cdr.Seller).where(models_cdr.Seller.group_id.in_(group_ids)),
     )
     return result.scalars().all()
 
@@ -61,14 +54,12 @@ async def get_seller_by_id(
     seller_id: UUID,
 ) -> models_cdr.Seller | None:
     result = await db.execute(
-        select(models_cdr.Seller)
-        .where(models_cdr.Seller.id == seller_id)
-        .options(selectinload(models_cdr.Seller.products)),
+        select(models_cdr.Seller).where(models_cdr.Seller.id == seller_id),
     )
     return result.scalars().first()
 
 
-async def create_seller(
+def create_seller(
     db: AsyncSession,
     seller: models_cdr.Seller,
 ):
@@ -114,7 +105,7 @@ async def get_products_by_seller_id(
             models_cdr.CdrProduct.seller_id == seller_id,
         ),
     )
-    return result.scalars().all()
+    return result.unique().scalars().all()
 
 
 async def get_online_products_by_seller_id(
@@ -127,7 +118,7 @@ async def get_online_products_by_seller_id(
             models_cdr.CdrProduct.available_online,
         ),
     )
-    return result.scalars().all()
+    return result.unique().scalars().all()
 
 
 async def get_available_online_products(
@@ -136,7 +127,7 @@ async def get_available_online_products(
     result = await db.execute(
         select(models_cdr.CdrProduct).where(models_cdr.CdrProduct.available_online),
     )
-    return result.scalars().all()
+    return result.unique().scalars().all()
 
 
 async def get_product_by_id(
@@ -146,10 +137,10 @@ async def get_product_by_id(
     result = await db.execute(
         select(models_cdr.CdrProduct).where(models_cdr.CdrProduct.id == product_id),
     )
-    return result.scalars().first()
+    return result.unique().scalars().first()
 
 
-async def create_product(
+def create_product(
     db: AsyncSession,
     product: models_cdr.CdrProduct,
 ):
@@ -173,6 +164,11 @@ async def delete_product(
     product_id: UUID,
 ):
     await db.execute(
+        delete(models_cdr.ProductConstraint).where(
+            models_cdr.ProductConstraint.product_constraint_id == product_id,
+        ),
+    )
+    await db.execute(
         delete(models_cdr.CdrProduct).where(models_cdr.CdrProduct.id == product_id),
     )
     await db.execute(
@@ -187,14 +183,14 @@ async def delete_product(
     )
 
 
-async def create_product_constraint(
+def create_product_constraint(
     db: AsyncSession,
     product_constraint: models_cdr.ProductConstraint,
 ):
     db.add(product_constraint)
 
 
-async def create_document_constraint(
+def create_document_constraint(
     db: AsyncSession,
     document_constraint: models_cdr.DocumentConstraint,
 ):
@@ -264,7 +260,7 @@ async def get_product_variant_by_id(
     return result.scalars().first()
 
 
-async def create_product_variant(
+def create_product_variant(
     db: AsyncSession,
     product_variant: models_cdr.ProductVariant,
 ):
@@ -283,7 +279,7 @@ async def update_product_variant(
     )
 
 
-async def create_allowed_curriculum(
+def create_allowed_curriculum(
     db: AsyncSession,
     allowed_curriculum: models_cdr.AllowedCurriculum,
 ):
@@ -334,7 +330,7 @@ async def get_document_by_id(
     return result.scalars().first()
 
 
-async def create_document(
+def create_document(
     db: AsyncSession,
     document: models_cdr.Document,
 ):
@@ -373,7 +369,7 @@ async def get_purchases(
 
 async def get_purchases_by_user_id(
     db: AsyncSession,
-    user_id: UUID,
+    user_id: str,
 ) -> Sequence[models_cdr.Purchase]:
     result = await db.execute(
         select(models_cdr.Purchase).where(models_cdr.Purchase.user_id == user_id),
@@ -383,7 +379,7 @@ async def get_purchases_by_user_id(
 
 async def get_purchase_by_id(
     db: AsyncSession,
-    user_id: UUID,
+    user_id: str,
     product_variant_id: UUID,
 ) -> models_cdr.Purchase | None:
     result = await db.execute(
@@ -395,7 +391,7 @@ async def get_purchase_by_id(
     return result.scalars().first()
 
 
-async def create_purchase(
+def create_purchase(
     db: AsyncSession,
     purchase: models_cdr.Purchase,
 ):
@@ -404,7 +400,7 @@ async def create_purchase(
 
 async def update_purchase(
     db: AsyncSession,
-    user_id: UUID,
+    user_id: str,
     product_variant_id: UUID,
     purchase: schemas_cdr.PurchaseEdit,
 ):
@@ -420,7 +416,7 @@ async def update_purchase(
 
 async def delete_purchase(
     db: AsyncSession,
-    user_id: UUID,
+    user_id: str,
     product_variant_id: UUID,
 ):
     await db.execute(
@@ -433,7 +429,7 @@ async def delete_purchase(
 
 async def mark_purchase_as_paid(
     db: AsyncSession,
-    user_id: UUID,
+    user_id: str,
     product_variant_id: UUID,
     paid: bool,
 ):
@@ -456,7 +452,7 @@ async def get_signatures(
 
 async def get_signatures_by_user_id(
     db: AsyncSession,
-    user_id: UUID,
+    user_id: str,
 ) -> Sequence[models_cdr.Signature]:
     result = await db.execute(
         select(models_cdr.Signature).where(models_cdr.Signature.user_id == user_id),
@@ -478,7 +474,7 @@ async def get_signatures_by_document_id(
 
 async def get_signature_by_id(
     db: AsyncSession,
-    user_id: UUID,
+    user_id: str,
     document_id: UUID,
 ) -> models_cdr.Signature | None:
     result = await db.execute(
@@ -490,7 +486,7 @@ async def get_signature_by_id(
     return result.scalars().first()
 
 
-async def create_signature(
+def create_signature(
     db: AsyncSession,
     signature: models_cdr.Signature,
 ):
@@ -499,7 +495,7 @@ async def create_signature(
 
 async def delete_signature(
     db: AsyncSession,
-    user_id: UUID,
+    user_id: str,
     document_id: UUID,
 ):
     await db.execute(
@@ -519,7 +515,7 @@ async def get_curriculums(
 
 async def get_curriculums_by_user_id(
     db: AsyncSession,
-    user_id: UUID,
+    user_id: str,
 ) -> Sequence[models_cdr.Curriculum]:
     result_memberships = await db.execute(
         select(models_cdr.CurriculumMembership).where(
@@ -545,7 +541,7 @@ async def get_curriculum_by_id(
     return result.scalars().first()
 
 
-async def create_curriculum(
+def create_curriculum(
     db: AsyncSession,
     curriculum: models_cdr.Curriculum,
 ):
@@ -573,7 +569,7 @@ async def delete_curriculum(
     )
 
 
-async def create_curriculum_membership(
+def create_curriculum_membership(
     db: AsyncSession,
     curriculum_membership: models_cdr.CurriculumMembership,
 ):
@@ -582,7 +578,7 @@ async def create_curriculum_membership(
 
 async def delete_curriculum_membership(
     db: AsyncSession,
-    user_id: UUID,
+    user_id: str,
     curriculum_id: UUID,
 ):
     await db.execute(
@@ -595,7 +591,7 @@ async def delete_curriculum_membership(
 
 async def get_payments_by_user_id(
     db: AsyncSession,
-    user_id: UUID,
+    user_id: str,
 ) -> Sequence[models_cdr.Payment]:
     result = await db.execute(
         select(models_cdr.Payment).where(models_cdr.Payment.user_id == user_id),
@@ -613,7 +609,7 @@ async def get_payment_by_id(
     return result.scalars().first()
 
 
-async def create_payment(
+def create_payment(
     db: AsyncSession,
     payment: models_cdr.Payment,
 ):
@@ -633,7 +629,7 @@ async def delete_payment(
 
 async def get_memberships_by_user_id(
     db: AsyncSession,
-    user_id: UUID,
+    user_id: str,
 ) -> Sequence[models_cdr.Membership]:
     result = await db.execute(
         select(models_cdr.Membership).where(models_cdr.Membership.user_id == user_id),
@@ -651,7 +647,7 @@ async def get_membership_by_id(
     return result.scalars().first()
 
 
-async def create_membership(
+def create_membership(
     db: AsyncSession,
     membership: models_cdr.Membership,
 ):
@@ -669,7 +665,7 @@ async def delete_membership(
     )
 
 
-async def create_action(
+def create_action(
     db: AsyncSession,
     action: models_cdr.CdrAction,
 ):
