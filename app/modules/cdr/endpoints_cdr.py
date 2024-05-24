@@ -15,6 +15,7 @@ from app.dependencies import (
 )
 from app.modules.cdr import cruds_cdr, models_cdr, schemas_cdr
 from app.modules.cdr.types_cdr import (
+    CdrLogActionType,
     CdrStatus,
     DocumentSignatureType,
 )
@@ -956,8 +957,16 @@ async def create_purchase(
     db_purchase = models_cdr.Purchase(
         **purchase.model_dump(),
     )
+    db_action = models_cdr.CdrAction(
+        id=uuid4(),
+        user_id=user.id,
+        subject_id=db_purchase.user_id,
+        action_type=CdrLogActionType.purchase_add,
+        action=str(db_purchase),
+    )
     try:
         await cruds_cdr.create_purchase(db, db_purchase)
+        await cruds_cdr.create_action(db, db_action)
         await db.commit()
         return db_purchase
     except Exception as error:
@@ -1087,12 +1096,20 @@ async def delete_purchase(
             status_code=404,
             detail="Invalid purchase_id",
         )
+    db_action = models_cdr.CdrAction(
+        id=uuid4(),
+        user_id=user.id,
+        subject_id=db_purchase.user_id,
+        action_type=CdrLogActionType.purchase_delete,
+        action=str(db_purchase),
+    )
     try:
         await cruds_cdr.delete_purchase(
             user_id=user_id,
             product_variant_id=product_variant_id,
             db=db,
         )
+        await cruds_cdr.create_action(db, db_action)
         await db.commit()
     except Exception as error:
         await db.rollback()
@@ -1190,12 +1207,12 @@ async def delete_signature(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
 ):
-    db_purchase = await cruds_cdr.get_signature_by_id(
+    db_signature = await cruds_cdr.get_signature_by_id(
         user_id=user_id,
         document_id=document_id,
         db=db,
     )
-    if not db_purchase:
+    if not db_signature:
         raise HTTPException(
             status_code=404,
             detail="Invalid signature",
@@ -1332,7 +1349,15 @@ async def get_payments_by_user_id(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    pass
+    if not (
+        user_id == user.id
+        or is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="You're not allowed to see other users payments.",
+        )
+    return await cruds_cdr.get_payments_by_user_id(db=db, user_id=user_id)
 
 
 @module.router.post(
@@ -1341,11 +1366,43 @@ async def get_payments_by_user_id(
     status_code=201,
 )
 async def create_payment(
-    curriculum: schemas_cdr.PaymentBase,
+    payment: schemas_cdr.PaymentBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    pass
+    status = await get_core_data(schemas_cdr.Status, db)
+    if status.status == CdrStatus.pending:
+        raise HTTPException(
+            status_code=403,
+            detail="CDR hasn't started yet.",
+        )
+    if not (
+        payment.user_id == user.id
+        or is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="You're not allowed to make a payment for another user.",
+        )
+    db_payment = models_cdr.Payment(
+        id=uuid4(),
+        **payment.model_dump(),
+    )
+    db_action = models_cdr.CdrAction(
+        id=uuid4(),
+        user_id=user.id,
+        subject_id=payment.user_id,
+        action_type=CdrLogActionType.payment_add,
+        action=str(db_payment),
+    )
+    try:
+        await cruds_cdr.create_payment(db, db_payment)
+        await cruds_cdr.create_action(db, db_action)
+        await db.commit()
+        return db_payment
+    except Exception as error:
+        await db.rollback()
+        raise HTTPException(status_code=422, detail=str(error))
 
 
 @module.router.delete(
@@ -1357,7 +1414,32 @@ async def delete_payment(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
 ):
-    pass
+    db_payment = await cruds_cdr.get_payment_by_id(
+        payment_id=payment_id,
+        db=db,
+    )
+    if not db_payment:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid payment_id",
+        )
+    db_action = models_cdr.CdrAction(
+        id=uuid4(),
+        user_id=user.id,
+        subject_id=db_payment.user_id,
+        action_type=CdrLogActionType.payment_delete,
+        action=str(db_payment),
+    )
+    try:
+        await cruds_cdr.delete_payment(
+            payment_id=payment_id,
+            db=db,
+        )
+        await cruds_cdr.create_action(db, db_action)
+        await db.commit()
+    except Exception as error:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @module.router.get(
@@ -1370,20 +1452,15 @@ async def get_memberships_by_user_id(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    pass
-
-
-@module.router.get(
-    "/cdr/memberships/{membership_id}/",
-    response_model=schemas_cdr.MembershipComplete,
-    status_code=200,
-)
-async def get_memberships_by_id(
-    membership_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
-):
-    pass
+    if not (
+        user_id == user.id
+        or is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="You're not allowed to see other users memberships.",
+        )
+    return await cruds_cdr.get_memberships_by_user_id(db=db, user_id=user_id)
 
 
 @module.router.post(
@@ -1394,22 +1471,19 @@ async def get_memberships_by_id(
 async def create_membership(
     membership: schemas_cdr.MembershipBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
 ):
-    pass
-
-
-@module.router.patch(
-    "/cdr/memberships/{membership_id}/",
-    status_code=204,
-)
-async def update_membership(
-    membership_id: UUID,
-    membership: schemas_cdr.MembershipEdit,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
-):
-    pass
+    db_membership = models_cdr.Membership(
+        id=uuid4(),
+        **membership.model_dump(),
+    )
+    try:
+        await cruds_cdr.create_membership(db, db_membership)
+        await db.commit()
+        return db_membership
+    except Exception as error:
+        await db.rollback()
+        raise HTTPException(status_code=422, detail=str(error))
 
 
 @module.router.delete(
@@ -1421,7 +1495,24 @@ async def delete_membership(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
 ):
-    pass
+    db_membership = await cruds_cdr.get_membership_by_id(
+        membership_id=membership_id,
+        db=db,
+    )
+    if not db_membership:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid membership_id",
+        )
+    try:
+        await cruds_cdr.delete_membership(
+            membership_id=membership_id,
+            db=db,
+        )
+        await db.commit()
+    except Exception as error:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @module.router.get(
