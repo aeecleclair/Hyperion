@@ -18,8 +18,7 @@ class Seller(Base):
 
     id: Mapped[PrimaryKey]
     name: Mapped[str]
-    products: Mapped[list["CdrProduct"]] = relationship("CdrProduct")
-    group_id: Mapped[uuid.UUID] = mapped_column(
+    group_id = mapped_column(
         ForeignKey("core_group.id"),
     )
     order: Mapped[int]
@@ -64,13 +63,18 @@ class CdrProduct(Base):
     product_constraints: Mapped[list["CdrProduct"]] = relationship(
         "CdrProduct",
         secondary="cdr_product_constraint",
-        primaryjoin="CdrProduct.id==ProductConstraint.product_id",
-        secondaryjoin="CdrProduct.id==ProductConstraint.product_constraint_id",
-        lazy="selectin",
+        primaryjoin="ProductConstraint.product_id==CdrProduct.id",
+        secondaryjoin="ProductConstraint.product_constraint_id==CdrProduct.id",
+        lazy="joined",
+        join_depth=1,
     )
     document_constraints: Mapped[list["Document"]] = relationship(
         "Document",
         secondary="cdr_document_constraint",
+        lazy="selectin",
+    )
+    variants: Mapped[list["ProductVariant"]] = relationship(
+        "ProductVariant",
         lazy="selectin",
     )
 
@@ -139,7 +143,7 @@ class Document(Base):
 class Purchase(Base):
     __tablename__ = "cdr_purchase"
 
-    user_id: Mapped[uuid.UUID] = mapped_column(
+    user_id = mapped_column(
         ForeignKey("core_user.id"),
         primary_key=True,
     )
@@ -154,7 +158,7 @@ class Purchase(Base):
 class Signature(Base):
     __tablename__ = "cdr_signature"
 
-    user_id: Mapped[uuid.UUID] = mapped_column(
+    user_id = mapped_column(
         ForeignKey("core_user.id"),
         primary_key=True,
     )
@@ -172,7 +176,7 @@ class Payment(Base):
     __tablename__ = "cdr_payment"
 
     id: Mapped[PrimaryKey]
-    user_id: Mapped[uuid.UUID] = mapped_column(
+    user_id = mapped_column(
         ForeignKey("core_user.id"),
     )
     total: Mapped[int]
@@ -185,7 +189,7 @@ class Membership(Base):
     __tablename__ = "cdr_membership"
 
     id: Mapped[PrimaryKey]
-    user_id: Mapped[uuid.UUID] = mapped_column(
+    user_id = mapped_column(
         ForeignKey("core_user.id"),
     )
     membership: Mapped[AvailableMembership] = mapped_column(
@@ -199,11 +203,11 @@ class CdrAction(Base):
     __tablename__ = "cdr_action"
 
     id: Mapped[PrimaryKey]
-    user_id: Mapped[uuid.UUID] = mapped_column(
+    user_id = mapped_column(
         ForeignKey("core_user.id"),
         nullable=True,
     )  # Who made the request
-    subject_id: Mapped[uuid.UUID] = mapped_column(
+    subject_id = mapped_column(
         ForeignKey("core_user.id"),
     )  # For who the request was made
     action_type: Mapped[CdrLogActionType]
