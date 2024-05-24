@@ -427,11 +427,11 @@ async def delete_purchase(
     )
 
 
-async def mark_purchase_as_paid(
+async def mark_purchase_as_validated(
     db: AsyncSession,
     user_id: str,
     product_variant_id: UUID,
-    paid: bool,
+    validated: bool,
 ):
     await db.execute(
         update(models_cdr.Purchase)
@@ -439,7 +439,7 @@ async def mark_purchase_as_paid(
             models_cdr.Purchase.user_id == user_id,
             models_cdr.Purchase.product_variant_id == product_variant_id,
         )
-        .values(paid=paid),
+        .values(validated=validated),
     )
 
 
