@@ -63,7 +63,8 @@ class DriveFileManager:
             "parents": [parent_folder_id],
         }
         response = self.drive_service.files().create(body=file_metadata).execute()
-        return response.get("id")
+        folder_id: str = response.get("id")
+        return folder_id
 
     async def upload_file(
         self,
@@ -86,7 +87,8 @@ class DriveFileManager:
             .create(body=file_metadata, media_body=media)
             .execute()
         )
-        return response.get("id")
+        folder_id: str = response.get("id")
+        return folder_id
 
     async def upload_team_file(
         self,
