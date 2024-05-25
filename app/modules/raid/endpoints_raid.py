@@ -57,11 +57,15 @@ async def validate_payment(
         raise ValueError(f"RAID participant checkout {checkout_id} not found.")
     participant_id = participant_checkout.participant_id
     prices = await get_core_data(schemas_raid.RaidPrice, db)
-    if paid_amount == prices.student_price:
+    if prices.student_price and paid_amount == prices.student_price:
         await cruds_raid.confirm_payment(participant_id, db)
-    elif paid_amount == prices.t_shirt_price:
+    elif prices.t_shirt_price and paid_amount == prices.t_shirt_price:
         await cruds_raid.confirm_t_shirt_payment(participant_id, db)
-    elif paid_amount == prices.student_price + prices.t_shirt_price:
+    elif (
+        prices.student_price
+        and prices.t_shirt_price
+        and paid_amount == prices.student_price + prices.t_shirt_price
+    ):
         await cruds_raid.confirm_payment(participant_id, db)
         await cruds_raid.confirm_t_shirt_payment(participant_id, db)
     else:
