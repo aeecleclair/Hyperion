@@ -38,7 +38,7 @@ from app.utils.tools import (
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
-drive_file_manager = DriveFileManager()
+drive_file_manager = DriveFileManager(settings=get_settings())
 
 
 async def validate_payment(
