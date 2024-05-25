@@ -28,12 +28,11 @@ class CineSessionUpdate(BaseModel):
     genre: str | None = None
     tagline: str | None = None
 
-"""
 class Movie(BaseModel):
-    genres: dict[str, any] | None = None
+    genres: list[str] | None = None
     overview: str | None = None
     poster_path: str | None = None
     title: str | None = None
     runtime: int | None = None
     tagline: str | None = None
-"""
+

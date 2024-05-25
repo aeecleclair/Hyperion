@@ -54,13 +54,9 @@ module = Module(
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
-
-def search_movie(movie_id: str):
-    return get_json(
-        host + f"find/{movie_id}?api_key={API_Key}&language=fr-FR&external_source=imdb_id"
-    )
-
-@module.router.get("/cinema/movie/{movie_id}")
+@module.router.get(
+        "/cinema/movie/{movie_id}",
+)
 def get_movie(movie_id):
     url = host + f"movie/{movie_id}" + f"?api_key={API_Key}&language=fr-FR"
     print(movie_id)
@@ -69,7 +65,7 @@ def get_movie(movie_id):
     print(json.dumps(json.loads(r), indent=4))
     return r
 
-#print(get_movie("tt0816692"))
+print(json.dumps(json.loads(get_movie("tt0816692")), indent = 4))
 
 
 @module.router.get(
