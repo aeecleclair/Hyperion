@@ -1,13 +1,13 @@
 import logging
 import uuid
 from datetime import timedelta
-from os import getenv
 from json import loads
-from dotenv import load_dotenv
-from requests import get
+from os import getenv
 
+from dotenv import load_dotenv
 from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
+from requests import RequestException, get
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, standard_responses
@@ -32,7 +32,6 @@ from app.utils.communication.date_manager import (
 from app.utils.communication.notifications import NotificationTool
 from app.utils.tools import get_file_from_data, save_file_as_data
 
-
 load_dotenv()
 API_key = getenv("THE_MOVIE_DB_API")
 
@@ -46,22 +45,24 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 @module.router.get(
-        "/cinema/movie/{movie_id}",
-        response_model=schemas_cinema.Movie
+    "/cinema/movie/{movie_id}",
+    response_model=schemas_cinema.Movie,
 )
 def get_movie(movie_id):
     url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={API_key}&language=fr-FR"
-    r = get(url, timeout=5)
-    assert r.status_code == 200, r.status_code
-    response = loads(r.content)
-    return schemas_cinema.Movie(
-        genres=response["genres"],
-        overview=response["overview"],
-        poster_path=response["poster_path"],
-        title=response["title"],
-        runtime=response["runtime"],
-        tagline=response["tagline"]
-    )
+    try:
+        r = get(url, timeout=5)
+        response = loads(r.content)
+        return schemas_cinema.Movie(
+            genres=response["genres"],
+            overview=response["overview"],
+            poster_path=response["poster_path"],
+            title=response["title"],
+            runtime=response["runtime"],
+            tagline=response["tagline"],
+        )
+    except RequestException as error:
+        raise HTTPException(status_code=504, detail=str(error))
 
 
 @module.router.get(
