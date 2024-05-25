@@ -1,4 +1,5 @@
 import logging
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from fastapi import Depends, HTTPException
@@ -682,7 +683,7 @@ async def update_product_variant(
 
 
 @module.router.post(
-    "/cdr/products/{product_id}/variants/{variant_id}/curriculums/{curriculum_id}/",
+    "/cdr/sellers/{seller_id}/products/{product_id}/variants/{variant_id}/curriculums/{curriculum_id}/",
     response_model=schemas_cdr.ProductVariantComplete,
     status_code=201,
 )
@@ -734,7 +735,7 @@ async def create_allowed_curriculum(
 
 
 @module.router.delete(
-    "/cdr/sellers/{seller_id}//products/{product_id}/variants/{variant_id}/curriculums/{curriculum_id}/",
+    "/cdr/sellers/{seller_id}/products/{product_id}/variants/{variant_id}/curriculums/{curriculum_id}/",
     status_code=204,
 )
 async def delete_allowed_curriculum(
@@ -854,7 +855,7 @@ async def create_document(
     seller_id: UUID,
     document: schemas_cdr.DocumentBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_seller),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     status = await get_core_data(schemas_cdr.Status, db)
     if status.status == CdrStatus.closed:
@@ -863,6 +864,14 @@ async def create_document(
             detail="CDR is closed. You can't add a new document.",
         )
     await check_request_consistency(db=db, seller_id=seller_id)
+    if not (
+        await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
+        or is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="You must be part of this seller group.",
+        )
     db_document = models_cdr.Document(
         id=uuid4(),
         seller_id=seller_id,
@@ -976,7 +985,7 @@ async def create_purchase(
         user_id=user_id,
         product_variant_id=product_variant_id,
         validated=False,
-        **purchase.model_dump(),
+        quantity=purchase.quantity,
     )
     db_action = models_cdr.CdrAction(
         id=uuid4(),
@@ -984,6 +993,7 @@ async def create_purchase(
         subject_id=db_purchase.user_id,
         action_type=CdrLogActionType.purchase_add,
         action=str(db_purchase),
+        timestamp=datetime.now(UTC),
     )
     try:
         cruds_cdr.create_purchase(db, db_purchase)
@@ -1105,8 +1115,34 @@ async def delete_purchase(
     user_id: str,
     product_variant_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    product_variant = await cruds_cdr.get_product_variant_by_id(
+        db=db,
+        variant_id=product_variant_id,
+    )
+    if not product_variant:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid product_variant_id",
+        )
+    product = await cruds_cdr.get_product_by_id(
+        db=db,
+        product_id=product_variant.product_id,
+    )
+    if not product:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid product.",
+        )
+    if not (
+        (user_id == user.id and product.available_online)
+        or await is_user_in_a_seller_group(product.seller_id, user=user, db=db)
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="You're not allowed to make this purchase for another user, or to buy a non online available product.",
+        )
     db_purchase = await cruds_cdr.get_purchase_by_id(
         user_id=user_id,
         product_variant_id=product_variant_id,
@@ -1123,6 +1159,7 @@ async def delete_purchase(
         subject_id=db_purchase.user_id,
         action_type=CdrLogActionType.purchase_delete,
         action=str(db_purchase),
+        timestamp=datetime.now(UTC),
     )
     try:
         await cruds_cdr.delete_purchase(
@@ -1433,6 +1470,7 @@ async def create_payment(
         subject_id=user_id,
         action_type=CdrLogActionType.payment_add,
         action=str(db_payment),
+        timestamp=datetime.now(UTC),
     )
     try:
         cruds_cdr.create_payment(db, db_payment)
@@ -1474,6 +1512,7 @@ async def delete_payment(
         subject_id=user_id,
         action_type=CdrLogActionType.payment_delete,
         action=str(db_payment),
+        timestamp=datetime.now(UTC),
     )
     try:
         await cruds_cdr.delete_payment(

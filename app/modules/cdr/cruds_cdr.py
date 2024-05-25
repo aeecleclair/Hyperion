@@ -22,7 +22,9 @@ async def get_online_sellers(
     online_products = await db.execute(
         select(models_cdr.CdrProduct).where(models_cdr.CdrProduct.available_online),
     )
-    seller_ids = set(product.seller_id for product in online_products.scalars().all())
+    seller_ids = set(
+        product.seller_id for product in online_products.unique().scalars().all()
+    )
     result = await db.execute(
         select(models_cdr.Seller).where(models_cdr.Seller.id.in_(seller_ids)),
     )
