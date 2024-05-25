@@ -148,6 +148,5 @@ class DriveFileManager:
         result: str = response.get("id")
         return result
 
-    def delete_file(self, file_id: str) -> bool:
+    def delete_file(self, file_id: str) -> None:
         self.drive_service.files().delete(fileId=file_id).execute()
-        return True
