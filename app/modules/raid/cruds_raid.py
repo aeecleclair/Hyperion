@@ -29,6 +29,7 @@ async def get_all_participants(
 ) -> Sequence[models_raid.Participant]:
     participants = await db.execute(
         select(models_raid.Participant).options(
+            # Since there is nested classes in the Participant model, we need to load all the related data
             selectinload("*"),
         ),
     )
@@ -89,6 +90,7 @@ async def get_team_by_participant_id(
             ),
         )
         .options(
+            # Since there is nested classes in the Team model, we need to load all the related data
             selectinload("*"),
         ),
     )
@@ -100,6 +102,7 @@ async def get_all_teams(
 ) -> Sequence[models_raid.Team]:
     teams = await db.execute(
         select(models_raid.Team).options(
+            # Since there is nested classes in the Team model, we need to load all the related data
             selectinload("*"),
         ),
     )
@@ -111,6 +114,7 @@ async def get_all_validated_teams(
 ) -> list[models_raid.Team]:
     teams = await db.execute(
         select(models_raid.Team).options(
+            # Since there is nested classes in the Team model, we need to load all the related data
             selectinload("*"),
         ),
     )
@@ -128,6 +132,7 @@ async def get_team_by_id(
         select(models_raid.Team)
         .where(models_raid.Team.id == team_id)
         .options(
+            # Since there is nested classes in the Team model, we need to load all the related data
             selectinload("*"),
         ),
     )
