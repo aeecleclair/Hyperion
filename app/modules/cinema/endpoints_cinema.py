@@ -2,15 +2,14 @@ import logging
 import uuid
 from datetime import timedelta
 from json import loads
-from os import getenv
 
-from dotenv import load_dotenv
 from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from requests import RequestException, get
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, standard_responses
+from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
 from app.core.notification.notification_types import CustomTopic, Topic
 from app.core.notification.schemas_notification import Message
@@ -18,6 +17,7 @@ from app.dependencies import (
     get_db,
     get_notification_tool,
     get_request_id,
+    get_settings,
     is_user_a_member,
     is_user_a_member_of,
 )
@@ -32,9 +32,6 @@ from app.utils.communication.date_manager import (
 from app.utils.communication.notifications import NotificationTool
 from app.utils.tools import get_file_from_data, save_file_as_data
 
-load_dotenv()
-API_key = getenv("THE_MOVIE_DB_API")
-
 module = Module(
     root="cinema",
     tag="Cinema",
@@ -48,7 +45,11 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
     "/cinema/movie/{movie_id}",
     response_model=schemas_cinema.Movie,
 )
-def get_movie(movie_id):
+def get_movie(
+    movie_id: str,
+    settings: Settings = Depends(get_settings),
+):
+    API_key = settings.THE_MOVIE_DB_API
     url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={API_key}&language=fr-FR"
     try:
         r = get(url, timeout=5)

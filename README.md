@@ -60,28 +60,6 @@ Activate it
 pyenv activate hyperion
 ```
 
-### Linux (using WSL)
-
-[Use the automatic installer](https://github.com/pyenv/pyenv?tab=readme-ov-file#automatic-installer)
-
-Then install the correct Python version (use `pyenv install -l` to list available versions)
-
-```bash
-pyenv install 3.11.8
-```
-
-Create the virtual environment
-
-```bash
-pyenv virtualenv 3.11.8 hyperion
-```
-
-Activate it
-
-```bash
-pyenv activate hyperion
-```
-
 ## Install dependencies
 
 ### Development requirements

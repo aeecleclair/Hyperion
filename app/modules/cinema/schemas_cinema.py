@@ -28,6 +28,7 @@ class CineSessionUpdate(BaseModel):
     genre: str | None = None
     tagline: str | None = None
 
+
 class Movie(BaseModel):
     genres: list[dict] | None = None
     overview: str | None = None
