@@ -54,7 +54,7 @@ async def validate_payment(
         db,
     )
     if not participant_checkout:
-        raise HTTPException(status_code=404, detail="Checkout not found.")
+        raise ValueError(f"RAID participant checkout {checkout_id} not found.")
     participant_id = participant_checkout.participant_id
     prices = await get_core_data(schemas_raid.RaidPrice, db)
     if paid_amount == prices.student_price:
