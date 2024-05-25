@@ -1,6 +1,10 @@
 import logging
 import uuid
 from datetime import timedelta
+from os import getenv
+from json import loads
+from dotenv import load_dotenv
+from requests import get
 
 from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -29,22 +33,8 @@ from app.utils.communication.notifications import NotificationTool
 from app.utils.tools import get_file_from_data, save_file_as_data
 
 
-import os
-import json
-from dotenv import load_dotenv
-import requests
-
 load_dotenv()
-API_Key = os.getenv("THE_MOVIE_DB_API")
-host = "https://api.themoviedb.org/3/"
-
-def get_json(url):
-    r = requests.get(url)
-    assert r.status_code == 200, r.status_code
-    response = r.content
-    #response = json.loads(response)
-    #response = json.dumps(response)
-    return response
+API_key = getenv("THE_MOVIE_DB_API")
 
 module = Module(
     root="cinema",
@@ -54,18 +44,24 @@ module = Module(
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
+
 @module.router.get(
         "/cinema/movie/{movie_id}",
+        response_model=schemas_cinema.Movie
 )
 def get_movie(movie_id):
-    url = host + f"movie/{movie_id}" + f"?api_key={API_Key}&language=fr-FR"
-    print(movie_id)
-    print(url)
-    r = get_json(url)
-    print(json.dumps(json.loads(r), indent=4))
-    return r
-
-print(json.dumps(json.loads(get_movie("tt0816692")), indent = 4))
+    url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={API_key}&language=fr-FR"
+    r = get(url, timeout=5)
+    assert r.status_code == 200, r.status_code
+    response = loads(r.content)
+    return schemas_cinema.Movie(
+        genres=response["genres"],
+        overview=response["overview"],
+        poster_path=response["poster_path"],
+        title=response["title"],
+        runtime=response["runtime"],
+        tagline=response["tagline"]
+    )
 
 
 @module.router.get(
