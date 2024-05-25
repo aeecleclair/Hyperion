@@ -308,7 +308,7 @@ class RalllyAuthClient(BaseAuthClient):
         }
 
 
-class RAIDRegistering(BaseAuthClient):
+class RAIDRegisteringAuthClient(BaseAuthClient):
     """
     An auth client for The Raid registering website
     """
