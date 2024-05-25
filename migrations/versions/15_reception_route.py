@@ -13,6 +13,8 @@ if TYPE_CHECKING:
 import sqlalchemy as sa
 from alembic import op
 
+from app.types.sqlalchemy import TZDateTime
+
 # revision identifiers, used by Alembic.
 revision: str = "5d05a19f14bc"
 down_revision: str | None = "7b078dd0e7e4"
@@ -218,6 +220,7 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("action", sa.String(), nullable=False),
+        sa.Column("timestamp", TZDateTime(), nullable=False),
         sa.ForeignKeyConstraint(["user_id"], ["core_user.id"]),
         sa.ForeignKeyConstraint(["subject_id"], ["core_user.id"]),
         sa.PrimaryKeyConstraint("id"),

@@ -1,5 +1,5 @@
 import uuid
-from datetime import date
+from datetime import date, datetime
 
 from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -10,7 +10,7 @@ from app.modules.cdr.types_cdr import (
     DocumentSignatureType,
     PaymentType,
 )
-from app.types.sqlalchemy import Base, PrimaryKey
+from app.types.sqlalchemy import Base, PrimaryKey, TZDateTime
 
 
 class Seller(Base):
@@ -220,3 +220,4 @@ class CdrAction(Base):
     )  # For who the request was made
     action_type: Mapped[CdrLogActionType]
     action: Mapped[str]
+    timestamp: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
