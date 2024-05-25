@@ -953,8 +953,7 @@ async def update_raid_information(
         information = await get_core_data(schemas_raid.RaidInformation, db)
         for participant in participants:
             team = await cruds_raid.get_team_by_participant_id(participant.id, db)
-            participant = await cruds_raid.get_participant_by_id(participant.id, db)
-            if team and participant:
+            if team:
                 await save_security_file(participant, information, team.number, db)
 
 
