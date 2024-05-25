@@ -29,16 +29,6 @@ async def get_online_sellers(
     return result.scalars().all()
 
 
-async def get_sellers_by_group_id(
-    db: AsyncSession,
-    group_id: str,
-) -> Sequence[models_cdr.Seller]:
-    result = await db.execute(
-        select(models_cdr.Seller).where(models_cdr.Seller.group_id == group_id),
-    )
-    return result.scalars().all()
-
-
 async def get_sellers_by_group_ids(
     db: AsyncSession,
     group_ids: list[str],
@@ -87,15 +77,6 @@ async def delete_seller(
     )
 
 
-async def get_products(
-    db: AsyncSession,
-) -> Sequence[models_cdr.CdrProduct]:
-    result = await db.execute(
-        select(models_cdr.CdrProduct),
-    )
-    return result.scalars().all()
-
-
 async def get_products_by_seller_id(
     db: AsyncSession,
     seller_id: UUID,
@@ -117,15 +98,6 @@ async def get_online_products_by_seller_id(
             models_cdr.CdrProduct.seller_id == seller_id,
             models_cdr.CdrProduct.available_online,
         ),
-    )
-    return result.unique().scalars().all()
-
-
-async def get_available_online_products(
-    db: AsyncSession,
-) -> Sequence[models_cdr.CdrProduct]:
-    result = await db.execute(
-        select(models_cdr.CdrProduct).where(models_cdr.CdrProduct.available_online),
     )
     return result.unique().scalars().all()
 
@@ -221,31 +193,6 @@ async def delete_document_constraint(
             models_cdr.DocumentConstraint.document_id == document_id,
         ),
     )
-
-
-async def get_product_variants(
-    db: AsyncSession,
-    product_id: UUID,
-) -> Sequence[models_cdr.ProductVariant]:
-    result = await db.execute(
-        select(models_cdr.ProductVariant).where(
-            models_cdr.ProductVariant.product_id == product_id,
-        ),
-    )
-    return result.scalars().all()
-
-
-async def get_enabled_product_variants(
-    db: AsyncSession,
-    product_id: UUID,
-) -> Sequence[models_cdr.ProductVariant]:
-    result = await db.execute(
-        select(models_cdr.ProductVariant).where(
-            models_cdr.ProductVariant.product_id == product_id,
-            models_cdr.ProductVariant.enabled,
-        ),
-    )
-    return result.scalars().all()
 
 
 async def get_product_variant_by_id(
@@ -360,13 +307,6 @@ async def delete_document(
     )
 
 
-async def get_purchases(
-    db: AsyncSession,
-) -> Sequence[models_cdr.Purchase]:
-    result = await db.execute(select(models_cdr.Purchase))
-    return result.scalars().all()
-
-
 async def get_purchases_by_user_id(
     db: AsyncSession,
     user_id: str,
@@ -443,31 +383,12 @@ async def mark_purchase_as_validated(
     )
 
 
-async def get_signatures(
-    db: AsyncSession,
-) -> Sequence[models_cdr.Signature]:
-    result = await db.execute(select(models_cdr.Signature))
-    return result.scalars().all()
-
-
 async def get_signatures_by_user_id(
     db: AsyncSession,
     user_id: str,
 ) -> Sequence[models_cdr.Signature]:
     result = await db.execute(
         select(models_cdr.Signature).where(models_cdr.Signature.user_id == user_id),
-    )
-    return result.scalars().all()
-
-
-async def get_signatures_by_document_id(
-    db: AsyncSession,
-    document_id: UUID,
-) -> Sequence[models_cdr.Signature]:
-    result = await db.execute(
-        select(models_cdr.Signature).where(
-            models_cdr.Signature.document_id == document_id,
-        ),
     )
     return result.scalars().all()
 
@@ -510,24 +431,6 @@ async def get_curriculums(
     db: AsyncSession,
 ) -> Sequence[models_cdr.Curriculum]:
     result = await db.execute(select(models_cdr.Curriculum))
-    return result.scalars().all()
-
-
-async def get_curriculums_by_user_id(
-    db: AsyncSession,
-    user_id: str,
-) -> Sequence[models_cdr.Curriculum]:
-    result_memberships = await db.execute(
-        select(models_cdr.CurriculumMembership).where(
-            models_cdr.CurriculumMembership.user_id == user_id,
-        ),
-    )
-    curriculum_ids = [c.curriculum_id for c in result_memberships.scalars().all()]
-    result = await db.execute(
-        select(models_cdr.Curriculum).where(
-            models_cdr.Curriculum.id.in_(curriculum_ids),
-        ),
-    )
     return result.scalars().all()
 
 
