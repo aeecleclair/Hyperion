@@ -889,6 +889,18 @@ def test_create_update_delete_validate_purchase():
         f"/cdr/users/{cdr_admin.id}/purchases/{variant.id}/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
+    assert response.status_code == 403
+
+    response = client.patch(
+        f"/cdr/users/{cdr_admin.id}/purchases/{variant.id}/validated/?validated=False",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 204
+
+    response = client.delete(
+        f"/cdr/users/{cdr_admin.id}/purchases/{variant.id}/",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
     assert response.status_code == 204
 
     response = client.get(

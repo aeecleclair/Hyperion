@@ -36,40 +36,15 @@ module = Module(
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
-async def is_user_a_seller(
-    user: models_core.CoreUser = Depends(
-        is_user_a_member,
-    ),
-    request_id: str = Depends(get_request_id),
-    db: AsyncSession = Depends(get_db),
-) -> models_core.CoreUser:
-    sellers = await cruds_cdr.get_sellers(db)
-
-    sellers_groups = [str(seller.group_id) for seller in sellers]
-    sellers_groups.append(GroupType.admin_cdr)
-
-    if is_user_member_of_an_allowed_group(
-        user=user,
-        allowed_groups=sellers_groups,
-    ):
-        return user
-
-    hyperion_access_logger.warning(
-        f"Is_user_a_member_of: Unauthorized, user is not a seller ({request_id})",
-    )
-
-    raise HTTPException(
-        status_code=403,
-        detail="Unauthorized, user is not a seller.",
-    )
-
-
 async def is_user_in_a_seller_group(
     seller_id: UUID,
     user: models_core.CoreUser,
     db: AsyncSession,
     request_id: str = Depends(get_request_id),
 ):
+    """
+    Check if the user is in the group related to a seller or CDR Admin.
+    """
     seller = await cruds_cdr.get_seller_by_id(db, seller_id=seller_id)
 
     if not seller:
@@ -101,6 +76,9 @@ async def check_request_consistency(
     variant_id: UUID | None = None,
     document_id: UUID | None = None,
 ) -> models_cdr.CdrProduct | None:
+    """
+    Check that given ids are consistent, ie. product's seller_id is the given seller_id.
+    """
     db_product: models_cdr.CdrProduct | None = None
     if seller_id:
         db_seller = await cruds_cdr.get_seller_by_id(db=db, seller_id=seller_id)
@@ -160,6 +138,11 @@ async def get_sellers(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
 ):
+    """
+    Get all sellers.
+
+    **User must be CDR Admin to use this endpoint**
+    """
     return await cruds_cdr.get_sellers(db)
 
 
@@ -172,6 +155,11 @@ async def get_sellers_by_user_id(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Get sellers user is part of the group.
+
+    **User must be authenticated to use this endpoint**
+    """
     return await cruds_cdr.get_sellers_by_group_ids(
         db,
         [x.id for x in user.groups],
@@ -187,6 +175,11 @@ async def get_online_sellers(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Get all sellers that has online available products.
+
+    **User must be authenticated to use this endpoint**
+    """
     return await cruds_cdr.get_online_sellers(db)
 
 
@@ -200,6 +193,11 @@ async def create_seller(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
 ):
+    """
+    Create a seller.
+
+    **User must be CDR Admin to use this endpoint**
+    """
     db_seller = models_cdr.Seller(
         id=uuid4(),
         **seller.model_dump(),
@@ -223,6 +221,11 @@ async def update_seller(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
 ):
+    """
+    Update a seller.
+
+    **User must be CDR Admin to use this endpoint**
+    """
     await check_request_consistency(db=db, seller_id=seller_id)
     try:
         await cruds_cdr.update_seller(
@@ -245,6 +248,11 @@ async def delete_seller(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
 ):
+    """
+    Delete a seller.
+
+    **User must be CDR Admin to use this endpoint**
+    """
     await check_request_consistency(db=db, seller_id=seller_id)
     if await cruds_cdr.get_products_by_seller_id(db=db, seller_id=seller_id):
         raise HTTPException(
@@ -270,8 +278,13 @@ async def delete_seller(
 async def get_products_by_seller_id(
     seller_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_seller),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Get a seller's products.
+
+    **User must be part of the seller's group to use this endpoint**
+    """
     await is_user_in_a_seller_group(seller_id, user=user, db=db)
     return await cruds_cdr.get_products_by_seller_id(db, seller_id)
 
@@ -286,6 +299,11 @@ async def get_available_online_products(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Get a seller's online available products.
+
+    **User must be authenticated to use this endpoint**
+    """
     return await cruds_cdr.get_online_products_by_seller_id(db, seller_id)
 
 
@@ -298,8 +316,13 @@ async def create_product(
     seller_id: UUID,
     product: schemas_cdr.ProductBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_seller),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Create a product.
+
+    **User must be part of the seller's group to use this endpoint**
+    """
     await is_user_in_a_seller_group(
         seller_id,
         user=user,
@@ -335,19 +358,25 @@ async def create_document_constraint(
     product_id: UUID,
     document_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_seller),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Add a document in a product's document constraints.
+
+    **User must be part of the seller's group to use this endpoint**
+    """
+    await is_user_in_a_seller_group(
+        seller_id,
+        user,
+        db=db,
+    )
     await check_request_consistency(
         db=db,
         seller_id=seller_id,
         product_id=product_id,
         document_id=document_id,
     )
-    await is_user_in_a_seller_group(
-        seller_id,
-        user,
-        db=db,
-    )
+
     status = await get_core_data(schemas_cdr.Status, db)
     if status.status == CdrStatus.closed:
         raise HTTPException(
@@ -377,8 +406,18 @@ async def create_product_constraint(
     product_id: UUID,
     constraint_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_seller),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Add a product in a product's product constraints.
+
+    **User must be part of the seller's group to use this endpoint**
+    """
+    await is_user_in_a_seller_group(
+        seller_id,
+        user,
+        db=db,
+    )
     db_product = await check_request_consistency(
         db=db,
         seller_id=seller_id,
@@ -395,11 +434,7 @@ async def create_product_constraint(
             status_code=403,
             detail="You can't add a product as a constraint for itself.",
         )
-    await is_user_in_a_seller_group(
-        seller_id,
-        user,
-        db=db,
-    )
+
     status = await get_core_data(schemas_cdr.Status, db)
     if status.status in [
         CdrStatus.onsite,
@@ -435,16 +470,21 @@ async def update_product(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Edit a product.
+
+    **User must be part of the seller's group to use this endpoint**
+    """
+    await is_user_in_a_seller_group(
+        seller_id,
+        user,
+        db=db,
+    )
     status = await get_core_data(schemas_cdr.Status, db)
     db_product = await check_request_consistency(
         db=db,
         seller_id=seller_id,
         product_id=product_id,
-    )
-    await is_user_in_a_seller_group(
-        seller_id,
-        user,
-        db=db,
     )
     if status.status in [
         CdrStatus.onsite,
@@ -478,16 +518,21 @@ async def delete_product(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Delete a product.
+
+    **User must be part of the seller's group to use this endpoint**
+    """
+    await is_user_in_a_seller_group(
+        seller_id,
+        user,
+        db=db,
+    )
     status = await get_core_data(schemas_cdr.Status, db)
     db_product = await check_request_consistency(
         db=db,
         seller_id=seller_id,
         product_id=product_id,
-    )
-    await is_user_in_a_seller_group(
-        seller_id,
-        user,
-        db=db,
     )
     if status.status in [
         CdrStatus.onsite,
@@ -519,17 +564,22 @@ async def delete_document_constraint(
     product_id: UUID,
     document_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_seller),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    db_product = await check_request_consistency(
-        db=db,
-        seller_id=seller_id,
-        product_id=product_id,
-    )
+    """
+    Remove a document from a product's document constraints.
+
+    **User must be part of the seller's group to use this endpoint**
+    """
     await is_user_in_a_seller_group(
         seller_id,
         user,
         db=db,
+    )
+    db_product = await check_request_consistency(
+        db=db,
+        seller_id=seller_id,
+        product_id=product_id,
     )
     status = await get_core_data(schemas_cdr.Status, db)
     if status.status in [
@@ -563,17 +613,22 @@ async def delete_product_constraint(
     product_id: UUID,
     constraint_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_seller),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    db_product = await check_request_consistency(
-        db=db,
-        seller_id=seller_id,
-        product_id=product_id,
-    )
+    """
+    Remove a product from a product's document constraints.
+
+    **User must be part of the seller's group to use this endpoint**
+    """
     await is_user_in_a_seller_group(
         seller_id,
         user,
         db=db,
+    )
+    db_product = await check_request_consistency(
+        db=db,
+        seller_id=seller_id,
+        product_id=product_id,
     )
     status = await get_core_data(schemas_cdr.Status, db)
     if status.status in [
@@ -610,12 +665,17 @@ async def create_product_variant(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    await check_request_consistency(db=db, seller_id=seller_id, product_id=product_id)
+    """
+    Create a product variant.
+
+    **User must be part of the seller's group to use this endpoint**
+    """
     await is_user_in_a_seller_group(
         seller_id,
         user,
         db=db,
     )
+    await check_request_consistency(db=db, seller_id=seller_id, product_id=product_id)
     status = await get_core_data(schemas_cdr.Status, db)
     if status.status == CdrStatus.closed:
         raise HTTPException(
@@ -648,17 +708,22 @@ async def update_product_variant(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Edit a product variant.
+
+    **User must be part of the seller's group to use this endpoint**
+    """
+    await is_user_in_a_seller_group(
+        seller_id,
+        user,
+        db=db,
+    )
     status = await get_core_data(schemas_cdr.Status, db)
     db_product = await check_request_consistency(
         db=db,
         seller_id=seller_id,
         product_id=product_id,
         variant_id=variant_id,
-    )
-    await is_user_in_a_seller_group(
-        seller_id,
-        user,
-        db=db,
     )
     if status.status in [
         CdrStatus.onsite,
@@ -693,8 +758,18 @@ async def create_allowed_curriculum(
     variant_id: UUID,
     curriculum_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_seller),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Add a curriculum in a product variant's allowed curriculums.
+
+    **User must be part of the seller's group to use this endpoint**
+    """
+    await is_user_in_a_seller_group(
+        seller_id,
+        user,
+        db=db,
+    )
     await check_request_consistency(
         db=db,
         seller_id=seller_id,
@@ -710,11 +785,7 @@ async def create_allowed_curriculum(
             status_code=404,
             detail="Invalid curriculum_id",
         )
-    await is_user_in_a_seller_group(
-        seller_id,
-        user,
-        db=db,
-    )
+
     status = await get_core_data(schemas_cdr.Status, db)
     if status.status == CdrStatus.closed:
         raise HTTPException(
@@ -744,8 +815,18 @@ async def delete_allowed_curriculum(
     variant_id: UUID,
     curriculum_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_seller),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Remove a curriculum from a product variant's allowed curriculums.
+
+    **User must be part of the seller's group to use this endpoint**
+    """
+    await is_user_in_a_seller_group(
+        seller_id,
+        user,
+        db=db,
+    )
     db_product = await check_request_consistency(
         db=db,
         seller_id=seller_id,
@@ -761,11 +842,6 @@ async def delete_allowed_curriculum(
             status_code=404,
             detail="Invalid curriculum_id",
         )
-    await is_user_in_a_seller_group(
-        seller_id,
-        user,
-        db=db,
-    )
     status = await get_core_data(schemas_cdr.Status, db)
     if status.status in [
         CdrStatus.onsite,
@@ -798,19 +874,24 @@ async def delete_product_variant(
     product_id: UUID,
     variant_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_seller),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Delete a product variant.
+
+    **User must be part of the seller's group to use this endpoint**
+    """
+    await is_user_in_a_seller_group(
+        seller_id,
+        user,
+        db=db,
+    )
     status = await get_core_data(schemas_cdr.Status, db)
     db_product = await check_request_consistency(
         db=db,
         seller_id=seller_id,
         product_id=product_id,
         variant_id=variant_id,
-    )
-    await is_user_in_a_seller_group(
-        seller_id,
-        user,
-        db=db,
     )
     if status.status in [
         CdrStatus.onsite,
@@ -841,8 +922,18 @@ async def delete_product_variant(
 async def get_documents(
     seller_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_seller),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Get a seller's documents.
+
+    **User must be part of the seller's group to use this endpoint**
+    """
+    await is_user_in_a_seller_group(
+        seller_id,
+        user,
+        db=db,
+    )
     return await cruds_cdr.get_documents_by_seller_id(db, seller_id=seller_id)
 
 
@@ -857,6 +948,12 @@ async def create_document(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Create a document.
+
+    **User must be part of the seller's group to use this endpoint**
+    """
+    await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
     status = await get_core_data(schemas_cdr.Status, db)
     if status.status == CdrStatus.closed:
         raise HTTPException(
@@ -864,14 +961,6 @@ async def create_document(
             detail="CDR is closed. You can't add a new document.",
         )
     await check_request_consistency(db=db, seller_id=seller_id)
-    if not (
-        await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
-        or is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="You must be part of this seller group.",
-        )
     db_document = models_cdr.Document(
         id=uuid4(),
         seller_id=seller_id,
@@ -894,8 +983,14 @@ async def delete_document(
     seller_id: UUID,
     document_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_seller),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Delete a document.
+
+    **User must be part of the seller's group to use this endpoint**
+    """
+    await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
     await check_request_consistency(db=db, seller_id=seller_id, document_id=document_id)
     if await cruds_cdr.get_document_constraints_by_document_id(
         db=db,
@@ -926,6 +1021,11 @@ async def get_purchases_by_user_id(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Get a user's purchases.
+
+    **User must get his own purchases or be CDR Admin to use this endpoint**
+    """
     if not (
         user_id == user.id
         or is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])
@@ -948,9 +1048,13 @@ async def get_purchases_by_user_id_by_seller_id(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Get a user's purchases.
+
+    **User must get his own purchases or be part of the seller's group to use this endpoint**
+    """
     if not (
         user_id == user.id
-        or is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])
         or await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
     ):
         raise HTTPException(
@@ -976,6 +1080,11 @@ async def create_purchase(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Create a purchase.
+
+    **User must create a purchase for themself and for an online available product or be part of the seller's group to use this endpoint**
+    """
     status = await get_core_data(schemas_cdr.Status, db)
     if status.status == CdrStatus.pending:
         raise HTTPException(
@@ -1043,6 +1152,11 @@ async def update_purchase(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Edit a purchase.
+
+    **User must create a purchase for themself and for an online available product or be part of the seller's group to use this endpoint**
+    """
     status = await get_core_data(schemas_cdr.Status, db)
     if status.status == CdrStatus.pending:
         raise HTTPException(
@@ -1110,6 +1224,11 @@ async def mark_purchase_as_validated(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
 ):
+    """
+    Validate a purchase.
+
+    **User must be CDR Admin to use this endpoint**
+    """
     db_purchase = await cruds_cdr.get_purchase_by_id(
         db=db,
         user_id=user_id,
@@ -1144,6 +1263,11 @@ async def delete_purchase(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Delete a purchase.
+
+    **User must create a purchase for themself and for an online available product or be part of the seller's group to use this endpoint**
+    """
     product_variant = await cruds_cdr.get_product_variant_by_id(
         db=db,
         variant_id=product_variant_id,
@@ -1180,6 +1304,11 @@ async def delete_purchase(
             status_code=404,
             detail="Invalid purchase_id",
         )
+    if db_purchase.validated:
+        raise HTTPException(
+            status_code=403,
+            detail="You can't remove a validated purchase",
+        )
     db_action = models_cdr.CdrAction(
         id=uuid4(),
         user_id=user.id,
@@ -1211,6 +1340,11 @@ async def get_signatures_by_user_id(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Get a user's signatures.
+
+    **User must get his own signatures or be CDR Admin to use this endpoint**
+    """
     if not (
         user_id == user.id
         or is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])
@@ -1233,9 +1367,13 @@ async def get_signatures_by_user_id_by_seller_id(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Get a user's signatures for a single seller.
+
+    **User must get his own signatures or be part of the seller's group to use this endpoint**
+    """
     if not (
         user_id == user.id
-        or is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])
         or await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
     ):
         raise HTTPException(
@@ -1261,6 +1399,11 @@ async def create_signature(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Create a signature.
+
+    **User must sign numerically or be part of the seller's group to use this endpoint**
+    """
     status = await get_core_data(schemas_cdr.Status, db)
     if status.status == CdrStatus.pending:
         raise HTTPException(
@@ -1276,12 +1419,16 @@ async def create_signature(
             status_code=404,
             detail="Invalid document_id",
         )
+    sellers = await cruds_cdr.get_sellers(db)
+
+    sellers_groups = [str(seller.group_id) for seller in sellers]
+    sellers_groups.append(GroupType.admin_cdr)
     if not (
         (
             user_id == user.id
             and signature.signature_type == DocumentSignatureType.numeric
         )
-        or await is_user_a_seller(user=user, db=db)
+        or is_user_member_of_an_allowed_group(user=user, allowed_groups=sellers_groups)
     ):
         raise HTTPException(
             status_code=403,
@@ -1319,6 +1466,11 @@ async def delete_signature(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
 ):
+    """
+    Delete a signature.
+
+    **User must be CDR Admin to use this endpoint**
+    """
     db_signature = await cruds_cdr.get_signature_by_id(
         user_id=user_id,
         document_id=document_id,
@@ -1350,6 +1502,11 @@ async def get_curriculums(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Get all curriculums.
+
+    **User be authenticated to use this endpoint**
+    """
     return await cruds_cdr.get_curriculums(db)
 
 
@@ -1363,6 +1520,11 @@ async def create_curriculum(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
 ):
+    """
+    Create a curriculum.
+
+    **User must be CDR Admin to use this endpoint**
+    """
     status = await get_core_data(schemas_cdr.Status, db)
     if status.status == CdrStatus.closed:
         raise HTTPException(
@@ -1391,6 +1553,11 @@ async def delete_curriculum(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
 ):
+    """
+    Delete a curriculum.
+
+    **User must be CDR Admin to use this endpoint**
+    """
     db_curriculum = await cruds_cdr.get_curriculum_by_id(
         curriculum_id=curriculum_id,
         db=db,
@@ -1421,6 +1588,11 @@ async def create_curriculum_membership(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Add a curriculum to a user.
+
+    **User must add a curriculum to themself or be CDR Admin to use this endpoint**
+    """
     if not (
         user_id == user.id
         or is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])
@@ -1454,6 +1626,11 @@ async def delete_curriculum_membership(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Remove a curriculum from a user.
+
+    **User must add a curriculum to themself or be CDR Admin to use this endpoint**
+    """
     membership = await cruds_cdr.get_curriculum_by_id(
         db=db,
         curriculum_id=curriculum_id,
@@ -1493,6 +1670,11 @@ async def get_payments_by_user_id(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    """
+    Get a user's payments.
+
+    **User must get his own payments or be CDR Admin to use this endpoint**
+    """
     if not (
         user_id == user.id
         or is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])
@@ -1515,6 +1697,11 @@ async def create_payment(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
 ):
+    """
+    Create a payment.
+
+    **User must be CDR Admin to use this endpoint**
+    """
     status = await get_core_data(schemas_cdr.Status, db)
     if status.status == CdrStatus.pending:
         raise HTTPException(
@@ -1554,6 +1741,11 @@ async def delete_payment(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
 ):
+    """
+    Remove a payment.
+
+    **User must be CDR Admin to use this endpoint**
+    """
     db_payment = await cruds_cdr.get_payment_by_id(
         payment_id=payment_id,
         db=db,
