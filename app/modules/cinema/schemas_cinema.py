@@ -29,8 +29,8 @@ class CineSessionUpdate(BaseModel):
     tagline: str | None = None
 
 
-class Movie(BaseModel):
-    genres: list[dict] | None = None
+class TheMovieDB(BaseModel):
+    genres: list[dict[str, int | str]] | None = None
     overview: str | None = None
     poster_path: str | None = None
     title: str | None = None

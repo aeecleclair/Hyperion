@@ -1,11 +1,11 @@
+import json
 import logging
 import uuid
 from datetime import timedelta
-from json import loads
 
+import requests
 from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
-from requests import RequestException, get
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, standard_responses
@@ -42,28 +42,41 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 @module.router.get(
-    "/cinema/movie/{movie_id}",
-    response_model=schemas_cinema.Movie,
+    "/cinema/themoviedb/{themoviedb_id}",
+    response_model=schemas_cinema.TheMovieDB,
 )
 def get_movie(
-    movie_id: str,
+    themoviedb_id: str,
     settings: Settings = Depends(get_settings),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.cinema)),
 ):
+    """
+    Makes a HTTP request to the Internet Movie Database
+    using an API key and returns a TheMovieDB object
+    https://developer.themoviedb.org/reference/movie-details
+    """
     API_key = settings.THE_MOVIE_DB_API
-    url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={API_key}&language=fr-FR"
+    if API_key is None:
+        raise HTTPException(status_code=500, detail="No API key provided")
     try:
-        r = get(url, timeout=5)
-        response = loads(r.content)
-        return schemas_cinema.Movie(
-            genres=response["genres"],
-            overview=response["overview"],
-            poster_path=response["poster_path"],
-            title=response["title"],
-            runtime=response["runtime"],
-            tagline=response["tagline"],
+        response = requests.get(
+            url=f"https://api.themoviedb.org/3/movie/{themoviedb_id}",
+            params={
+                "api_key": API_key,
+                "language": "fr-FR",
+            },
+            timeout=5,
         )
-    except RequestException as error:
-        raise HTTPException(status_code=504, detail=str(error))
+        if response.status_code != 200:
+            raise HTTPException(
+                status_code=500,
+                detail=json.loads(response.content),
+            )
+        kwargs: dict = json.loads(response.content)
+        return schemas_cinema.TheMovieDB(**kwargs)
+    except requests.RequestException as error:
+        hyperion_error_logger.error(error)
+        raise HTTPException(status_code=504, detail="Could not reach the IMdB server")
 
 
 @module.router.get(
