@@ -50,39 +50,25 @@ class LogConfig:
             "disable_existing_loggers": not settings.LOG_DEBUG_MESSAGES,
             "formatters": {
                 "default": {
-                    "()": "uvicorn.logging.DefaultFormatter",
-                    "fmt": self.LOG_FORMAT,
+                    "format": self.LOG_FORMAT,
                     "datefmt": "%d-%b-%y %H:%M:%S",
                 },
                 "console_formatter": {
-                    "()": "uvicorn.logging.DefaultFormatter",
-                    "fmt": self.CONSOLE_LOG_FORMAT,
+                    "format": self.CONSOLE_LOG_FORMAT,
                     "datefmt": "%d-%b-%y %H:%M:%S",
                 },
                 "matrix": {
-                    "()": "uvicorn.logging.DefaultFormatter",
-                    "fmt": self.MATRIX_LOG_FORMAT,
+                    "format": self.MATRIX_LOG_FORMAT,
                     "datefmt": "%d-%b-%y %H:%M:%S",
                 },
             },
             "handlers": {
-                # Debug console is a handler which is only enabled if Hyperion is in Debug mode
-                "debug_console": {
-                    "formatter": "console_formatter",
-                    # If settings.LOG_DEBUG_MESSAGES is set, the default handlers should print DEBUG log messages to the console.
-                    "class": (
-                        "logging.StreamHandler"
-                        if settings.LOG_DEBUG_MESSAGES
-                        else "logging.NullHandler"
-                    ),
-                    "level": "DEBUG",
-                },
                 # Console handler is always active, even in production.
                 # It should be used to log errors and information about the server (starting up, hostname...)
                 "console": {
                     "formatter": "console_formatter",
                     "class": "logging.StreamHandler",
-                    "level": "INFO",
+                    "level": MINIMUM_LOG_LEVEL,
                 },
                 # Matrix_errors handler send text messages to a Matrix server
                 "matrix_errors": {
@@ -93,8 +79,7 @@ class LogConfig:
                     "token": settings.MATRIX_TOKEN,
                     "server_base_url": settings.MATRIX_SERVER_BASE_URL,
                     "enabled": (
-                        settings.MATRIX_TOKEN is not None
-                        and settings.MATRIX_LOG_ERROR_ROOM_ID is not None
+                        settings.MATRIX_TOKEN and settings.MATRIX_LOG_ERROR_ROOM_ID
                     ),
                     "level": "ERROR",
                 },
@@ -106,8 +91,7 @@ class LogConfig:
                     "token": settings.MATRIX_TOKEN,
                     "server_base_url": settings.MATRIX_SERVER_BASE_URL,
                     "enabled": (
-                        settings.MATRIX_TOKEN is not None
-                        and settings.MATRIX_LOG_AMAP_ROOM_ID is not None
+                        settings.MATRIX_TOKEN and settings.MATRIX_LOG_AMAP_ROOM_ID
                     ),
                     "level": "INFO",
                 },
@@ -167,12 +151,18 @@ class LogConfig:
             #  - error related handlers (ex: file_errors and matrix_errors), they log all errors regardless of their provenance
             #  - default handler which logs to the console for development and debugging purpose
             "loggers": {
+                "root": {
+                    "level": "DEBUG",
+                    "handlers": ["console"],
+                },
+                "hyperion": {
+                    "propagate": False,
+                },
                 # hyperion.access should log incoming request and JWT verifications
                 "hyperion.access": {
                     "handlers": [
                         "file_access",
                         "console",
-                        "debug_console",
                     ],
                     "level": MINIMUM_LOG_LEVEL,
                 },
@@ -181,7 +171,6 @@ class LogConfig:
                         "file_security",
                         "matrix_errors",
                         "console",
-                        "debug_console",
                     ],
                     "level": MINIMUM_LOG_LEVEL,
                 },
@@ -192,7 +181,6 @@ class LogConfig:
                         "file_errors",
                         "matrix_errors",
                         "console",
-                        "debug_console",
                     ],
                     "level": MINIMUM_LOG_LEVEL,
                 },
@@ -201,12 +189,14 @@ class LogConfig:
                         "file_amap",
                         "matrix_amap",
                         "console",
-                        "debug_console",
                     ],
                     "level": MINIMUM_LOG_LEVEL,
                 },
                 "hyperion.raffle": {
-                    "handlers": ["file_raffle", "console", "debug_console"],
+                    "handlers": [
+                        "file_raffle",
+                        "console",
+                    ],
                     "level": MINIMUM_LOG_LEVEL,
                 },
                 # We disable "uvicorn.access" to replace it with our custom "hyperion.access" which add custom information like the request_id
@@ -216,9 +206,9 @@ class LogConfig:
                         "file_errors",
                         "matrix_errors",
                         "console",
-                        "debug_console",
                     ],
                     "level": MINIMUM_LOG_LEVEL,
+                    "propagate": False,
                 },
             },
         }

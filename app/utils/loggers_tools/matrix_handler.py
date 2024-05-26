@@ -1,6 +1,8 @@
 import logging
 from logging import StreamHandler
 
+from typing_extensions import override
+
 from app.utils.communication.matrix import Matrix
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
@@ -35,12 +37,8 @@ class MatrixHandler(StreamHandler):
                 token=token,
                 server_base_url=server_base_url,
             )
-        else:
-            # We use warning level so that the message is not sent to matrix again
-            hyperion_error_logger.warning(
-                "MatrixHandler isn't configured in the .env file, disabling the handler",
-            )
 
+    @override
     def emit(self, record):
         if self.enabled:
             msg = self.format(record)

@@ -239,6 +239,21 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     hyperion_security_logger = logging.getLogger("hyperion.security")
     hyperion_error_logger = logging.getLogger("hyperion.error")
 
+    # We use warning level so that the message is not sent to matrix again
+    if not settings.MATRIX_TOKEN:
+        hyperion_error_logger.warning(
+            "Matrix handlers are not configured in the .env file",
+        )
+    else:
+        if not settings.MATRIX_LOG_ERROR_ROOM_ID:
+            hyperion_error_logger.warning(
+                "Matrix handler is disabled for the error room",
+            )
+        if not settings.MATRIX_LOG_AMAP_ROOM_ID:
+            hyperion_error_logger.warning(
+                "Matrix handler is disabled for the AMAP room",
+            )
+
     # Create folder for calendars if they don't already exists
     Path("data/ics/").mkdir(parents=True, exist_ok=True)
     Path("data/core/").mkdir(parents=True, exist_ok=True)
