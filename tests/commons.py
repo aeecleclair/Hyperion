@@ -43,7 +43,13 @@ else:
     SQLALCHEMY_DATABASE_URL_SYNC = f"postgresql+psycopg://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}/{settings.POSTGRES_DB}"
 
 
-engine = create_async_engine(SQLALCHEMY_DATABASE_URL, echo=True, poolclass=NullPool)
+engine = create_async_engine(
+    SQLALCHEMY_DATABASE_URL,
+    echo=True,
+    # We need to use NullPool to run tests with Postgresql
+    # See https://docs.sqlalchemy.org/en/20/orm/extensions/asyncio.html#using-multiple-asyncio-event-loops
+    poolclass=NullPool,
+)
 
 TestingSessionLocal = async_sessionmaker(
     engine,
