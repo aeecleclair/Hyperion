@@ -1,10 +1,12 @@
+import functools
 import logging
 import os
 import re
 import secrets
-from collections.abc import Sequence
+from collections.abc import Coroutine, Sequence
+from copy import copy
 from pathlib import Path
-from typing import TYPE_CHECKING, TypeVar
+from typing import Any, TYPE_CHECKING, TypeVar
 
 import aiofiles
 import fitz
@@ -13,6 +15,8 @@ from fastapi.responses import FileResponse
 from fastapi.templating import Jinja2Templates
 from jellyfish import jaro_winkler_similarity
 from pydantic import ValidationError
+from rapidfuzz import process
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import cruds_core, models_core, security
@@ -472,6 +476,24 @@ async def set_core_data(
     await cruds_core.add_core_data_crud(core_data=core_data_model, db=db)
 
 
+def unitOfWork(
+    function,
+) -> functools._Wrapped[..., Any, (AsyncSession, Any, Any), Coroutine[Any, Any, None]]:
+    async def _commit(self):
+        pass
+
+    @functools.wraps(function)
+    async def wrapper(db: AsyncSession, *args, **kwargs):
+        new_db = copy(db)
+        new_db.commit = _commit.__get__(db, AsyncSession)
+        await function(new_db, *args, **kwargs)
+        try:
+            await db.commit()
+        except IntegrityError as error:
+            await db.rollback()
+            raise ValueError(error)
+
+    return wrapper
 async def create_and_send_email_migration(
     user_id: str,
     new_email: str,
