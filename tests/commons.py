@@ -34,14 +34,13 @@ settings = override_get_settings()
 
 test_app = get_application(settings=settings, drop_db=True)  # Create the test's app
 
+# Connect to the test's database
 if settings.SQLITE_DB:
-    SQLALCHEMY_DATABASE_URL = (
-        f"sqlite+aiosqlite:///./{settings.SQLITE_DB}"  # Connect to the test's database
-    )
+    SQLALCHEMY_DATABASE_URL = f"sqlite+aiosqlite:///./{settings.SQLITE_DB}"
     SQLALCHEMY_DATABASE_URL_SYNC = f"sqlite:///./{settings.SQLITE_DB}"
 else:
     SQLALCHEMY_DATABASE_URL = f"postgresql+asyncpg://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}/{settings.POSTGRES_DB}"
-    SQLALCHEMY_DATABASE_URL_SYNC = f"postgresql://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}/{settings.POSTGRES_DB}"
+    SQLALCHEMY_DATABASE_URL_SYNC = f"postgresql+psycopg://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}/{settings.POSTGRES_DB}"
 
 
 engine = create_async_engine(SQLALCHEMY_DATABASE_URL, echo=True, poolclass=NullPool)
