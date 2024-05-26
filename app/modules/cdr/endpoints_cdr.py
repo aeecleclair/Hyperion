@@ -937,6 +937,33 @@ async def get_purchases_by_user_id(
     return await cruds_cdr.get_purchases_by_user_id(db=db, user_id=user_id)
 
 
+@module.router.get(
+    "/cdr/sellers/{seller_id}/users/{user_id}/purchases/",
+    response_model=list[schemas_cdr.PurchaseComplete],
+    status_code=200,
+)
+async def get_purchases_by_user_id_by_seller_id(
+    seller_id: UUID,
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    if not (
+        user_id == user.id
+        or is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])
+        or await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="You're not allowed to see other users purchases for this group.",
+        )
+    return await cruds_cdr.get_purchases_by_user_id_by_seller_id(
+        db=db,
+        user_id=user_id,
+        seller_id=seller_id,
+    )
+
+
 @module.router.post(
     "/cdr/users/{user_id}/purchases/{product_variant_id}/",
     response_model=schemas_cdr.PurchaseComplete,
@@ -1195,6 +1222,33 @@ async def get_signatures_by_user_id(
     return await cruds_cdr.get_signatures_by_user_id(db=db, user_id=user_id)
 
 
+@module.router.get(
+    "/cdr/sellers/{seller_id}/users/{user_id}/signatures/",
+    response_model=list[schemas_cdr.SignatureComplete],
+    status_code=200,
+)
+async def get_signatures_by_user_id_by_seller_id(
+    seller_id: UUID,
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    if not (
+        user_id == user.id
+        or is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])
+        or await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="You're not allowed to see other users signatures.",
+        )
+    return await cruds_cdr.get_signatures_by_user_id_by_seller_id(
+        db=db,
+        user_id=user_id,
+        seller_id=seller_id,
+    )
+
+
 @module.router.post(
     "/cdr/users/{user_id}/signatures/{document_id}/",
     response_model=schemas_cdr.SignatureComplete,
@@ -1244,7 +1298,7 @@ async def create_signature(
     db_signature = models_cdr.Signature(
         user_id=user_id,
         document_id=document_id,
-        **signature.model_dump(),
+        **signature.model_dump(exclude_none=False),
     )
     try:
         cruds_cdr.create_signature(db, db_signature)
@@ -1359,7 +1413,7 @@ async def delete_curriculum(
 
 @module.router.post(
     "/cdr/users/{user_id}/curriculums/{curriculum_id}/",
-    status_code=204,
+    status_code=201,
 )
 async def create_curriculum_membership(
     user_id: str,
@@ -1367,6 +1421,14 @@ async def create_curriculum_membership(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    if not (
+        user_id == user.id
+        or is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="You can't remove a curriculum to another user.",
+        )
     try:
         curriculum_membership = models_cdr.CurriculumMembership(
             user_id=user_id,

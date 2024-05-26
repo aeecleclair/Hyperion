@@ -333,6 +333,23 @@ async def get_purchase_by_id(
     return result.scalars().first()
 
 
+async def get_purchases_by_user_id_by_seller_id(
+    db: AsyncSession,
+    user_id: str,
+    seller_id: UUID,
+) -> Sequence[models_cdr.Purchase]:
+    result = await db.execute(
+        select(models_cdr.Purchase)
+        .join(models_cdr.ProductVariant)
+        .join(models_cdr.CdrProduct)
+        .where(
+            models_cdr.CdrProduct.seller_id == seller_id,
+            models_cdr.Purchase.user_id == user_id,
+        ),
+    )
+    return result.scalars().all()
+
+
 def create_purchase(
     db: AsyncSession,
     purchase: models_cdr.Purchase,
@@ -391,6 +408,22 @@ async def get_signatures_by_user_id(
 ) -> Sequence[models_cdr.Signature]:
     result = await db.execute(
         select(models_cdr.Signature).where(models_cdr.Signature.user_id == user_id),
+    )
+    return result.scalars().all()
+
+
+async def get_signatures_by_user_id_by_seller_id(
+    db: AsyncSession,
+    user_id: str,
+    seller_id: UUID,
+) -> Sequence[models_cdr.Signature]:
+    result = await db.execute(
+        select(models_cdr.Signature)
+        .join(models_cdr.Document)
+        .where(
+            models_cdr.Document.seller_id == seller_id,
+            models_cdr.Signature.user_id == user_id,
+        ),
     )
     return result.scalars().all()
 
