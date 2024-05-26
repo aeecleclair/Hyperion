@@ -131,9 +131,6 @@ def get_settings() -> Settings:
     return Settings(_env_file=".env")
 
 
-# (issue ouverte sur github: https://github.com/pydantic/pydantic/issues/3072)
-
-
 def get_redis_client(
     settings: Settings = Depends(get_settings),
 ) -> redis.Redis | None | bool:

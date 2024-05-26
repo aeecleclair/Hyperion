@@ -7,13 +7,11 @@ from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
-from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
 from app.core.notification.schemas_notification import Message
 from app.dependencies import (
     get_db,
     get_notification_tool,
-    get_settings,
     is_user_a_member,
     is_user_a_member_of,
 )
@@ -500,7 +498,6 @@ async def create_loan(
     loan_creation: schemas_loan.LoanCreation,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
-    settings: Settings = Depends(get_settings),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
