@@ -7,6 +7,8 @@ from app.core.groups.groups_type import GroupType
 from app.modules.cdr import models_cdr
 from app.modules.cdr.types_cdr import (
     CdrStatus,
+    DocumentSignatureType,
+    PaymentType,
 )
 from tests.commons import (
     add_object_to_db,
@@ -36,6 +38,10 @@ variant: models_cdr.ProductVariant
 curriculum: models_cdr.Curriculum
 
 purchase: models_cdr.Purchase
+
+signature: models_cdr.Signature
+
+payment: models_cdr.Payment
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
@@ -137,6 +143,24 @@ async def init_objects():
         validated=False,
     )
     await add_object_to_db(purchase)
+
+    global signature
+    signature = models_cdr.Signature(
+        user_id=cdr_user.id,
+        document_id=document.id,
+        signature_type=DocumentSignatureType.numeric,
+        numeric_signature_id="somedocumensoid",
+    )
+    await add_object_to_db(signature)
+
+    global payment
+    payment = models_cdr.Payment(
+        id=uuid.uuid4(),
+        user_id=cdr_user.id,
+        total=5000,
+        payment_type=PaymentType.cash,
+    )
+    await add_object_to_db(payment)
 
 
 def test_get_all_sellers():
@@ -700,6 +724,44 @@ def test_get_purchases_by_user_id():
     ]
 
 
+def test_get_purchases_by_user_id_by_seller_id():
+    response = client.get(
+        f"/cdr/sellers/{seller.id}/users/{cdr_user.id}/purchases/",
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 200
+    assert str(purchase.product_variant_id) in [
+        x["product_variant_id"] for x in response.json()
+    ]
+
+    response = client.get(
+        f"/cdr/sellers/{seller.id}/users/{cdr_user.id}/purchases/",
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 200
+    assert str(purchase.product_variant_id) in [
+        x["product_variant_id"] for x in response.json()
+    ]
+
+    response = client.get(
+        f"/cdr/sellers/{online_seller.id}/users/{cdr_user.id}/purchases/",
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 200
+    assert str(purchase.product_variant_id) not in [
+        x["product_variant_id"] for x in response.json()
+    ]
+
+    response = client.get(
+        f"/cdr/sellers/{seller.id}/users/{cdr_bde.id}/purchases/",
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 200
+    assert str(purchase.product_variant_id) not in [
+        x["product_variant_id"] for x in response.json()
+    ]
+
+
 def test_change_status():
     response = client.get(
         "/cdr/status/",
@@ -835,3 +897,268 @@ def test_create_update_delete_validate_purchase():
     )
     assert response.status_code == 200
     assert str(variant.id) not in [x["product_variant_id"] for x in response.json()]
+
+
+def test_get_signatures_by_user_id():
+    response = client.get(
+        f"/cdr/users/{cdr_user.id}/signatures/",
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 200
+    assert str(signature.document_id) in [x["document_id"] for x in response.json()]
+
+    response = client.get(
+        f"/cdr/users/{cdr_user.id}/signatures/",
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 403
+
+    response = client.get(
+        f"/cdr/users/{cdr_user.id}/signatures/",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 200
+    assert str(signature.document_id) in [x["document_id"] for x in response.json()]
+
+    response = client.get(
+        f"/cdr/users/{cdr_bde.id}/signatures/",
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 200
+    assert str(signature.document_id) not in [x["document_id"] for x in response.json()]
+
+
+def test_get_signatures_by_user_id_by_seller_id():
+    response = client.get(
+        f"/cdr/sellers/{seller.id}/users/{cdr_user.id}/signatures/",
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 200
+    assert str(signature.document_id) in [x["document_id"] for x in response.json()]
+
+    response = client.get(
+        f"/cdr/sellers/{seller.id}/users/{cdr_user.id}/signatures/",
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 200
+    assert str(signature.document_id) in [x["document_id"] for x in response.json()]
+
+    response = client.get(
+        f"/cdr/sellers/{online_seller.id}/users/{cdr_user.id}/signatures/",
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 200
+    assert str(signature.document_id) not in [x["document_id"] for x in response.json()]
+
+    response = client.get(
+        f"/cdr/sellers/{seller.id}/users/{cdr_bde.id}/signatures/",
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 200
+    assert str(signature.document_id) not in [x["document_id"] for x in response.json()]
+
+
+def test_create_delete_signature():
+    response = client.patch(
+        "/cdr/status/",
+        json={"status": "online"},
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+
+    response = client.patch(
+        "/cdr/status/",
+        json={"status": "onsite"},
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+
+    response = client.post(
+        f"/cdr/users/{cdr_admin.id}/signatures/{document.id}/",
+        json={
+            "signature_type": DocumentSignatureType.material,
+        },
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 201
+
+    response = client.post(
+        f"/cdr/users/{cdr_user.id}/signatures/{document.id}/",
+        json={
+            "signature_type": DocumentSignatureType.material,
+        },
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 403
+
+    response = client.get(
+        f"/cdr/users/{cdr_admin.id}/signatures/",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 200
+    assert str(document.id) in [x["document_id"] for x in response.json()]
+
+    response = client.delete(
+        f"/cdr/users/{cdr_admin.id}/signatures/{document.id}/",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 204
+
+    response = client.get(
+        f"/cdr/users/{cdr_admin.id}/signatures/",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 200
+    assert str(document.id) not in [x["document_id"] for x in response.json()]
+
+
+def test_get_curriculums():
+    response = client.get(
+        "/cdr/curriculums/",
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 200
+    assert str(curriculum.id) in [x["id"] for x in response.json()]
+
+
+def test_create_delete_curriculum():
+    response = client.post(
+        "/cdr/curriculums/",
+        json={
+            "name": "Cursus crée",
+        },
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 201
+
+    curriculum_id = uuid.UUID(response.json()["id"])
+
+    response = client.post(
+        "/cdr/curriculums/",
+        json={
+            "name": "Cursus crée",
+        },
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 403
+
+    response = client.get(
+        "/cdr/curriculums/",
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 200
+    assert str(curriculum_id) in [x["id"] for x in response.json()]
+
+    response = client.delete(
+        f"/cdr/curriculums/{curriculum_id}/",
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 403
+
+    response = client.delete(
+        f"/cdr/curriculums/{curriculum_id}/",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 204
+
+    response = client.get(
+        "/cdr/curriculums/",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 200
+    assert str(curriculum_id) not in [x["id"] for x in response.json()]
+
+
+def test_create_delete_curriculum_membership():
+    response = client.post(
+        f"/cdr/users/{cdr_user.id!s}/curriculums/{curriculum.id!s}/",
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 201
+
+    response = client.delete(
+        f"/cdr/users/{cdr_user.id!s}/curriculums/{curriculum.id!s}/",
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 204
+
+    response = client.post(
+        f"/cdr/users/{cdr_user.id!s}/curriculums/{curriculum.id!s}/",
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 403
+
+
+def test_get_payments_by_user_id():
+    response = client.get(
+        f"/cdr/users/{cdr_user.id}/payments/",
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 200
+    assert str(payment.id) in [x["id"] for x in response.json()]
+
+    response = client.get(
+        f"/cdr/users/{cdr_bde.id}/payments/",
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 403
+
+    response = client.get(
+        f"/cdr/users/{cdr_bde.id}/payments/",
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 200
+    assert str(payment.id) not in [x["id"] for x in response.json()]
+
+
+def test_create_delete_payment():
+    response = client.patch(
+        "/cdr/status/",
+        json={"status": "online"},
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+
+    response = client.patch(
+        "/cdr/status/",
+        json={"status": "onsite"},
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+
+    response = client.post(
+        f"/cdr/users/{cdr_user.id}/payments/",
+        json={
+            "total": 12345,
+            "payment_type": PaymentType.card,
+        },
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 201
+    payment_id = uuid.UUID(response.json()["id"])
+
+    response = client.post(
+        f"/cdr/users/{cdr_admin.id}/payments/",
+        json={
+            "total": 12345,
+            "payment_type": PaymentType.card,
+        },
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 403
+
+    response = client.get(
+        f"/cdr/users/{cdr_user.id}/payments/",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 200
+    assert str(payment_id) in [x["id"] for x in response.json()]
+
+    response = client.delete(
+        f"/cdr/users/{cdr_user.id}/payments/{payment_id}/",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 204
+
+    response = client.get(
+        f"/cdr/users/{cdr_user.id}/payments/",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 200
+    assert str(payment_id) not in [x["id"] for x in response.json()]
