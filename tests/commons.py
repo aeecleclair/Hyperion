@@ -5,19 +5,17 @@ from functools import lru_cache
 
 import redis
 from fastapi import Depends
-from fastapi.testclient import TestClient
 from sqlalchemy import NullPool
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.app import get_application
 from app.core import models_core, security
 from app.core.auth import schemas_auth
 from app.core.config import Settings
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
 from app.core.users import cruds_users
-from app.dependencies import get_db, get_redis_client, get_settings
+from app.dependencies import get_settings
 from app.types.floors_type import FloorsType
 from app.types.sqlalchemy import Base
 from app.utils.redis import connect, disconnect
@@ -32,7 +30,6 @@ def override_get_settings() -> Settings:
 
 settings = override_get_settings()
 
-test_app = get_application(settings=settings, drop_db=True)  # Create the test's app
 
 # Connect to the test's database
 if settings.SQLITE_DB:
@@ -97,14 +94,6 @@ def change_redis_client_status(activated: bool) -> None:
             redis_client.flushdb()
             disconnect(redis_client)
         redis_client = False
-
-
-test_app.dependency_overrides[get_db] = override_get_db
-test_app.dependency_overrides[get_settings] = override_get_settings
-test_app.dependency_overrides[get_redis_client] = override_get_redis_client
-
-
-client = TestClient(test_app)  # Create a client to execute tests
 
 
 async def create_user_with_groups(

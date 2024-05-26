@@ -2,13 +2,13 @@ import datetime
 import uuid
 
 import pytest_asyncio
+from fastapi.testclient import TestClient
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from app.modules.booking import models_booking
 from tests.commons import (
     add_object_to_db,
-    client,
     create_api_access_token,
     create_user_with_groups,
 )
@@ -116,7 +116,7 @@ async def init_objects() -> None:
     await add_object_to_db(booking_to_delete)
 
 
-def test_get_managers() -> None:
+def test_get_managers(client: TestClient) -> None:
     response = client.get(
         "/booking/managers",
         headers={"Authorization": f"Bearer {token_admin}"},
@@ -124,7 +124,7 @@ def test_get_managers() -> None:
     assert response.status_code == 200
 
 
-def test_post_manager() -> None:
+def test_post_manager(client: TestClient) -> None:
     response = client.post(
         "/booking/managers",
         json={
@@ -137,7 +137,7 @@ def test_post_manager() -> None:
     assert response.status_code == 201
 
 
-def test_edit_manager() -> None:
+def test_edit_manager(client: TestClient) -> None:
     response = client.patch(
         f"/booking/managers/{manager_to_delete.id}",
         json={"name": "Test"},
@@ -152,7 +152,7 @@ def test_edit_manager() -> None:
     assert response.status_code == 204
 
 
-def test_delete_manager() -> None:
+def test_delete_manager(client: TestClient) -> None:
     response = client.delete(
         f"/booking/managers/{manager_to_delete.id}",
         headers={"Authorization": f"Bearer {token_admin}"},
@@ -160,7 +160,7 @@ def test_delete_manager() -> None:
     assert response.status_code == 204
 
 
-def test_get_user_managers() -> None:
+def test_get_user_managers(client: TestClient) -> None:
     response = client.get(
         "/booking/managers/users/me",
         headers={"Authorization": f"Bearer {token_manager}"},
@@ -168,7 +168,7 @@ def test_get_user_managers() -> None:
     assert response.status_code == 200
 
 
-def test_get_user_bookings_manage() -> None:
+def test_get_user_bookings_manage(client: TestClient) -> None:
     response = client.get(
         "/booking/bookings/users/me/manage",
         headers={"Authorization": f"Bearer {token_manager}"},
@@ -176,7 +176,7 @@ def test_get_user_bookings_manage() -> None:
     assert response.status_code == 200
 
 
-def test_get_user_bookings_manage_confirmed() -> None:
+def test_get_user_bookings_manage_confirmed(client: TestClient) -> None:
     response = client.get(
         "/booking/bookings/confirmed/users/me/manage",
         headers={"Authorization": f"Bearer {token_manager}"},
@@ -185,7 +185,7 @@ def test_get_user_bookings_manage_confirmed() -> None:
     assert booking_id in [booking["id"] for booking in response.json()]
 
 
-def test_get_bookings_confirmed() -> None:
+def test_get_bookings_confirmed(client: TestClient) -> None:
     response = client.get(
         "/booking/bookings/confirmed",
         headers={"Authorization": f"Bearer {token_manager}"},
@@ -193,7 +193,7 @@ def test_get_bookings_confirmed() -> None:
     assert response.status_code == 200
 
 
-def test_get_user_bookings() -> None:
+def test_get_user_bookings(client: TestClient) -> None:
     response = client.get(
         "/booking/bookings/users/me",
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -201,7 +201,7 @@ def test_get_user_bookings() -> None:
     assert response.status_code == 200
 
 
-def test_post_bookings() -> None:
+def test_post_bookings(client: TestClient) -> None:
     response = client.post(
         "/booking/bookings",
         json={
@@ -221,7 +221,7 @@ def test_post_bookings() -> None:
     assert response.status_code == 201
 
 
-def test_edit_booking() -> None:
+def test_edit_booking(client: TestClient) -> None:
     response = client.patch(
         f"/booking/bookings/{booking.id}",
         json={"reason": "Pas un test"},
@@ -230,7 +230,7 @@ def test_edit_booking() -> None:
     assert response.status_code == 204
 
 
-def test_reply_booking() -> None:
+def test_reply_booking(client: TestClient) -> None:
     response = client.patch(
         f"/booking/bookings/{booking.id}/reply/declined",
         headers={"Authorization": f"Bearer {token_manager}"},
@@ -238,7 +238,7 @@ def test_reply_booking() -> None:
     assert response.status_code == 204
 
 
-def test_delete_booking() -> None:
+def test_delete_booking(client: TestClient) -> None:
     response = client.delete(
         f"/booking/bookings/{booking_to_delete.id}",
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -246,7 +246,7 @@ def test_delete_booking() -> None:
     assert response.status_code == 204
 
 
-def test_get_room() -> None:
+def test_get_room(client: TestClient) -> None:
     response = client.get(
         "/booking/rooms",
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -256,7 +256,7 @@ def test_get_room() -> None:
     assert len(json) == 2
 
 
-def test_post_room() -> None:
+def test_post_room(client: TestClient) -> None:
     response = client.post(
         "/booking/rooms",
         json={"name": "Local JE", "manager_id": manager.id},
@@ -265,7 +265,7 @@ def test_post_room() -> None:
     assert response.status_code == 201
 
 
-def test_edit_room() -> None:
+def test_edit_room(client: TestClient) -> None:
     response = client.patch(
         f"/booking/rooms/{room.id}",
         json={"name": "Foyer", "manager_id": manager.id},
@@ -274,7 +274,7 @@ def test_edit_room() -> None:
     assert response.status_code == 204
 
 
-def test_delete_room() -> None:
+def test_delete_room(client: TestClient) -> None:
     # create a room to delete
     response = client.delete(
         f"/booking/rooms/{room_to_delete.id}",

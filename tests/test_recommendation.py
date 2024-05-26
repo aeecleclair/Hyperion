@@ -3,12 +3,12 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest_asyncio
+from fastapi.testclient import TestClient
 
 from app.core.groups.groups_type import GroupType
 from app.modules.recommendation import models_recommendation
 from tests.commons import (
     add_object_to_db,
-    client,
     create_api_access_token,
     create_user_with_groups,
 )
@@ -19,7 +19,7 @@ recommendation: models_recommendation.Recommendation
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
-async def init_objects():
+async def init_objects() -> None:
     user_simple = await create_user_with_groups([GroupType.student])
 
     global token_simple
@@ -42,7 +42,7 @@ async def init_objects():
     await add_object_to_db(recommendation)
 
 
-def test_create_picture():
+def test_create_picture(client: TestClient) -> None:
     with Path("assets/images/default_recommendation.png").open("rb") as image:
         response = client.post(
             f"/recommendation/recommendations/{recommendation.id}/picture",
@@ -52,7 +52,7 @@ def test_create_picture():
     assert response.status_code == 201
 
 
-def test_create_picture_for_non_existing_recommendation():
+def test_create_picture_for_non_existing_recommendation(client: TestClient) -> None:
     with Path("assets/images/default_recommendation.png").open("rb") as image:
         false_id = "be3017e8-ae8b-4488-a21a-41547c9cc846"
         response = client.post(
@@ -63,7 +63,7 @@ def test_create_picture_for_non_existing_recommendation():
     assert response.status_code == 404
 
 
-def test_get_picture():
+def test_get_picture(client: TestClient) -> None:
     response = client.get(
         f"/recommendation/recommendations/{recommendation.id}/picture",
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -71,7 +71,7 @@ def test_get_picture():
     assert response.status_code == 200
 
 
-def test_get_recommendation():
+def test_get_recommendation(client: TestClient) -> None:
     response = client.get(
         "/recommendation/recommendations",
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -79,7 +79,7 @@ def test_get_recommendation():
     assert response.status_code == 200
 
 
-def test_create_recommendation():
+def test_create_recommendation(client: TestClient) -> None:
     response = client.post(
         "/recommendation/recommendations",
         json={
@@ -93,7 +93,7 @@ def test_create_recommendation():
     assert response.status_code == 201
 
 
-def test_create_recommendation_with_no_body():
+def test_create_recommendation_with_no_body(client: TestClient) -> None:
     response = client.post(
         "/recommendation/recommendations",
         json={},
@@ -102,7 +102,7 @@ def test_create_recommendation_with_no_body():
     assert response.status_code == 422
 
 
-def test_edit_recommendation():
+def test_edit_recommendation(client: TestClient) -> None:
     response = client.patch(
         f"/recommendation/recommendations/{recommendation.id}",
         json={"title": "Nouveau titre"},
@@ -111,7 +111,7 @@ def test_edit_recommendation():
     assert response.status_code == 204
 
 
-def test_edit_recommendation_with_no_body():
+def test_edit_recommendation_with_no_body(client: TestClient) -> None:
     response = client.patch(
         f"/recommendation/recommendations/{recommendation.id}",
         json={},
@@ -120,7 +120,7 @@ def test_edit_recommendation_with_no_body():
     assert response.status_code == 204
 
 
-def test_edit_for_non_existing_recommendation():
+def test_edit_for_non_existing_recommendation(client: TestClient) -> None:
     false_id = "098cdfb7-609a-493f-8d5a-47bbdba213da"
     response = client.patch(
         f"/recommendation/recommendations/{false_id}",
@@ -130,7 +130,7 @@ def test_edit_for_non_existing_recommendation():
     assert response.status_code == 404
 
 
-def test_delete_recommendation():
+def test_delete_recommendation(client: TestClient) -> None:
     response = client.delete(
         f"/recommendation/recommendations/{recommendation.id}",
         headers={"Authorization": f"Bearer {token_BDE}"},
@@ -138,7 +138,7 @@ def test_delete_recommendation():
     assert response.status_code == 204
 
 
-def test_delete_for_non_existing_recommendation():
+def test_delete_for_non_existing_recommendation(client: TestClient) -> None:
     false_id = "cfba17a6-58b8-4595-afb9-3c9e4e169a14"
     response = client.delete(
         f"/recommendation/recommendations/{false_id}",

@@ -3,11 +3,11 @@ import json
 from urllib.parse import parse_qs, urlparse
 
 import pytest_asyncio
+from fastapi.testclient import TestClient
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from tests.commons import (
-    client,
     create_user_with_groups,
 )
 
@@ -66,7 +66,7 @@ def test_simple_token():
     assert response.status_code == 403  # forbidden
 
 
-def test_authorization_code_flow_PKCE() -> None:
+def test_authorization_code_flow_PKCE(client: TestClient) -> None:
     code_verifier = "AntoineMonBelAntoine"
     code_challenge = "ws9GS3kBIFwDfNghvEk7GRlDvbUkSmZen8q2R4v3lBU="  # base64.urlsafe_b64encode(hashlib.sha256("AntoineMonBelAntoine".encode()).digest())
     data = {
@@ -147,7 +147,7 @@ def test_authorization_code_flow_PKCE() -> None:
     assert response.status_code == 400
 
 
-def test_authorization_code_flow_secret() -> None:
+def test_authorization_code_flow_secret(client: TestClient) -> None:
     data = {
         "client_id": "AppAuthClientWithClientSecret",
         "client_secret": "secret",
@@ -228,7 +228,7 @@ def test_authorization_code_flow_secret() -> None:
     assert response.status_code == 400
 
 
-def test_get_user_info() -> None:
+def test_get_user_info(client: TestClient) -> None:
     # We first need an access token to query user info endpoints #
     data = {
         "client_id": "BaseAuthClient",
@@ -278,7 +278,7 @@ def test_get_user_info() -> None:
     assert json["name"] == user.firstname
 
 
-def test_get_user_info_in_id_token() -> None:
+def test_get_user_info_in_id_token(client: TestClient) -> None:
     # We first need an access token to query user info endpoints #
     data = {
         "client_id": "RalllyAuthClient",

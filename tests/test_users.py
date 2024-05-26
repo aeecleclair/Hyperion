@@ -2,11 +2,12 @@ from pathlib import Path
 
 import pytest
 import pytest_asyncio
+from fastapi.testclient import TestClient
+from pytest_mock import MockerFixture
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from tests.commons import (
-    client,
     create_api_access_token,
     create_user_with_groups,
 )
@@ -54,7 +55,7 @@ async def init_objects() -> None:
     token_student_user = create_api_access_token(student_user)
 
 
-def test_count_users():
+def test_count_users(client: TestClient) -> None:
     response = client.get(
         "/users/count",
         headers={"Authorization": f"Bearer {token_admin_user}"},
@@ -63,7 +64,7 @@ def test_count_users():
     assert response.json() >= 3
 
 
-def test_search_users():
+def test_search_users(client: TestClient) -> None:
     group = GroupType.student.value
 
     response = client.get(
@@ -91,7 +92,7 @@ def test_search_users():
     assert all(user["id"] not in group_users for user in data)
 
 
-def test_read_current_user() -> None:
+def test_read_current_user(client: TestClient) -> None:
     token = create_api_access_token(student_user)
     response = client.get(
         "/users/me",
@@ -102,7 +103,7 @@ def test_read_current_user() -> None:
     assert data["id"] == student_user.id
 
 
-def test_read_user() -> None:
+def test_read_user(client: TestClient) -> None:
     token = create_api_access_token(admin_user)
     response = client.get(
         f"/users/{student_user.id}",
@@ -127,7 +128,11 @@ def test_read_user() -> None:
         ("fab@ecl22.ec-lyon.fr", 400),
     ],
 )
-def test_create_user_by_user_with_email(email, expected_code):
+def test_create_user_by_user_with_email(
+    email: str,
+    expected_code: int,
+    client: TestClient,
+) -> None:
     response = client.post(
         "/users/create",
         json={
@@ -137,7 +142,7 @@ def test_create_user_by_user_with_email(email, expected_code):
     assert response.status_code == expected_code
 
 
-def test_create_and_activate_user(mocker):
+def test_create_and_activate_user(mocker: MockerFixture, client: TestClient) -> None:
     # NOTE: we don't want to mock app.core.security.generate_token but
     # app.core.users.endpoints_users.security.generate_token which is the imported version of the function
     mocker.patch(
@@ -168,7 +173,7 @@ def test_create_and_activate_user(mocker):
     assert response.status_code == 201
 
 
-def test_update_batch_create_users():
+def test_update_batch_create_users(client: TestClient) -> None:
     student = "39691052-2ae5-4e12-99d0-7a9f5f2b0136"
     response = client.post(
         "/users/batch-creation",
@@ -182,7 +187,7 @@ def test_update_batch_create_users():
     assert response.status_code == 201
 
 
-def test_can_not_make_admin_when_there_are_multiple_users():
+def test_can_not_make_admin_when_there_are_multiple_users(client: TestClient) -> None:
     response = client.post(
         "/users/make-admin",
         headers={"Authorization": f"Bearer {token_admin_user}"},
@@ -190,7 +195,7 @@ def test_can_not_make_admin_when_there_are_multiple_users():
     assert response.status_code == 403
 
 
-def test_recover_and_reset_password(mocker):
+def test_recover_and_reset_password(mocker: MockerFixture, client: TestClient) -> None:
     # NOTE: we don't want to mock app.core.security.generate_token but
     # app.core.users.endpoints_users.security.generate_token which is the imported version of the function
     mocker.patch(
@@ -213,7 +218,7 @@ def test_recover_and_reset_password(mocker):
     assert response.status_code == 201
 
 
-def test_update_user() -> None:
+def test_update_user(client: TestClient) -> None:
     # A non admin user should not be allowed to use this endpoint
     token = create_api_access_token(student_user)
     response = client.patch(
@@ -233,7 +238,7 @@ def test_update_user() -> None:
     assert response.status_code == 204
 
 
-async def test_invalid_migrate_mail():
+async def test_invalid_migrate_mail(client: TestClient) -> None:
     student_user_with_old_email_token = create_api_access_token(
         student_user_with_old_email,
     )
@@ -256,7 +261,7 @@ async def test_invalid_migrate_mail():
     assert response.status_code == 400
 
 
-async def test_migrate_mail(mocker) -> None:
+async def test_migrate_mail(mocker: MockerFixture, client: TestClient) -> None:
     # NOTE: we don't want to mock app.core.security.generate_token but
     # app.core.users.endpoints_users.security.generate_token which is the imported version of the function
     mocker.patch(
@@ -291,7 +296,7 @@ async def test_migrate_mail(mocker) -> None:
     assert response.status_code == 200
 
 
-def test_change_password():
+def test_change_password(client: TestClient) -> None:
     response = client.post(
         "/users/change-password",
         json={
@@ -304,7 +309,7 @@ def test_change_password():
     assert response.status_code == 201
 
 
-def test_read_users():
+def test_read_users(client: TestClient) -> None:
     response = client.get(
         "/users/",
         headers={"Authorization": f"Bearer {token_admin_user}"},
@@ -312,7 +317,7 @@ def test_read_users():
     assert response.status_code == 200
 
 
-def test_update_current_user():
+def test_update_current_user(client: TestClient) -> None:
     token = create_api_access_token(admin_user)
     response = client.patch(
         "/users/me",
@@ -322,7 +327,7 @@ def test_update_current_user():
     assert response.status_code == 204
 
 
-def test_create_current_user_profile_picture():
+def test_create_current_user_profile_picture(client: TestClient) -> None:
     token = create_api_access_token(student_user)
 
     with Path("assets/images/default_profile_picture.png").open("rb") as image:
@@ -335,7 +340,7 @@ def test_create_current_user_profile_picture():
     assert response.status_code == 201
 
 
-def test_read_own_profile_picture():
+def test_read_own_profile_picture(client: TestClient) -> None:
     token = create_api_access_token(student_user)
 
     response = client.get(
@@ -346,7 +351,7 @@ def test_read_own_profile_picture():
     assert response.status_code == 200
 
 
-def test_read_user_profile_picture():
+def test_read_user_profile_picture(client: TestClient) -> None:
     token = create_api_access_token(student_user)
 
     response = client.get(

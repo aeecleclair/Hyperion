@@ -3,13 +3,13 @@ import uuid
 from datetime import timedelta
 
 import pytest_asyncio
+from fastapi.testclient import TestClient
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from app.modules.loan import models_loan
 from tests.commons import (
     add_object_to_db,
-    client,
     create_api_access_token,
     create_user_with_groups,
 )
@@ -103,7 +103,7 @@ async def init_objects() -> None:
     token_simple = create_api_access_token(loan_user_simple)
 
 
-def test_get_loaners() -> None:
+def test_get_loaners(client: TestClient) -> None:
     response = client.get(
         "/loans/loaners/",
         headers={"Authorization": f"Bearer {token_admin}"},
@@ -111,7 +111,7 @@ def test_get_loaners() -> None:
     assert response.status_code == 200
 
 
-def test_create_loaners() -> None:
+def test_create_loaners(client: TestClient) -> None:
     response = client.post(
         "/loans/loaners/",
         json={
@@ -123,7 +123,7 @@ def test_create_loaners() -> None:
     assert response.status_code == 201
 
 
-def test_update_loaners() -> None:
+def test_update_loaners(client: TestClient) -> None:
     response = client.patch(
         f"/loans/loaners/{loaner_to_delete.id}",
         json={
@@ -135,7 +135,7 @@ def test_update_loaners() -> None:
     assert response.status_code == 204
 
 
-def test_delete_loaners() -> None:
+def test_delete_loaners(client: TestClient) -> None:
     response = client.delete(
         f"/loans/loaners/{loaner_to_delete.id}",
         headers={"Authorization": f"Bearer {token_admin}"},
@@ -143,7 +143,7 @@ def test_delete_loaners() -> None:
     assert response.status_code == 204
 
 
-def test_get_loans_by_loaner() -> None:
+def test_get_loans_by_loaner(client: TestClient) -> None:
     response = client.get(
         f"/loans/loaners/{loaner.id}/loans",
         headers={"Authorization": f"Bearer {token_loaner}"},
@@ -151,7 +151,7 @@ def test_get_loans_by_loaner() -> None:
     assert response.status_code == 200
 
 
-def test_get_items_for_loaner() -> None:
+def test_get_items_for_loaner(client: TestClient) -> None:
     response = client.get(
         f"/loans/loaners/{loaner.id}/items",
         headers={"Authorization": f"Bearer {token_loaner}"},
@@ -159,7 +159,7 @@ def test_get_items_for_loaner() -> None:
     assert response.status_code == 200
 
 
-def test_create_items_for_loaner() -> None:
+def test_create_items_for_loaner(client: TestClient) -> None:
     response = client.post(
         f"/loans/loaners/{loaner.id}/items",
         json={
@@ -173,7 +173,7 @@ def test_create_items_for_loaner() -> None:
     assert response.status_code == 201
 
 
-def test_update_items_for_loaner() -> None:
+def test_update_items_for_loaner(client: TestClient) -> None:
     response = client.patch(
         f"/loans/loaners/{loaner.id}/items/{item.id}",
         json={
@@ -187,7 +187,7 @@ def test_update_items_for_loaner() -> None:
     assert response.status_code == 204
 
 
-def test_delete_loaner_item() -> None:
+def test_delete_loaner_item(client: TestClient) -> None:
     response = client.delete(
         f"/loans/loaners/{loaner.id}/items/{item_to_delete.id}",
         headers={"Authorization": f"Bearer {token_loaner}"},
@@ -195,7 +195,7 @@ def test_delete_loaner_item() -> None:
     assert response.status_code == 204
 
 
-def test_get_current_user_loans() -> None:
+def test_get_current_user_loans(client: TestClient) -> None:
     response = client.get(
         "/loans/users/me",
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -203,7 +203,7 @@ def test_get_current_user_loans() -> None:
     assert response.status_code == 200
 
 
-def test_get_current_user_loaners() -> None:
+def test_get_current_user_loaners(client: TestClient) -> None:
     response = client.get(
         "/loans/users/me/loaners",
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -211,7 +211,7 @@ def test_get_current_user_loaners() -> None:
     assert response.status_code == 200
 
 
-def test_create_loan() -> None:
+def test_create_loan(client: TestClient) -> None:
     response = client.post(
         "/loans/",
         json={
@@ -233,7 +233,7 @@ def test_create_loan() -> None:
     assert response.status_code == 201
 
 
-def test_update_loan() -> None:
+def test_update_loan(client: TestClient) -> None:
     response = client.patch(
         f"/loans/{loan.id}",
         json={
@@ -255,7 +255,7 @@ def test_update_loan() -> None:
     assert response.status_code == 204
 
 
-def test_return_loan() -> None:
+def test_return_loan(client: TestClient) -> None:
     response = client.post(
         f"/loans/{loan.id}/return",
         headers={"Authorization": f"Bearer {token_loaner}"},
@@ -263,7 +263,7 @@ def test_return_loan() -> None:
     assert response.status_code == 204
 
 
-def test_extend_loan() -> None:
+def test_extend_loan(client: TestClient) -> None:
     response = client.post(
         f"/loans/{loan.id}/extend",
         json={
@@ -274,7 +274,7 @@ def test_extend_loan() -> None:
     assert response.status_code == 204
 
 
-def test_delete_loan() -> None:
+def test_delete_loan(client: TestClient) -> None:
     response = client.delete(
         f"/loans/{loan.id}",
         headers={"Authorization": f"Bearer {token_loaner}"},

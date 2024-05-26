@@ -1,10 +1,10 @@
 import pytest_asyncio
+from fastapi.testclient import TestClient
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from tests.commons import (
     add_object_to_db,
-    client,
     create_api_access_token,
     create_user_with_groups,
 )
@@ -29,7 +29,7 @@ async def init_objects() -> None:
     admin_user = await create_user_with_groups([GroupType.admin])
 
 
-def test_read_groups() -> None:
+def test_read_groups(client: TestClient) -> None:
     token = create_api_access_token(admin_user)
 
     response = client.get(
@@ -39,7 +39,7 @@ def test_read_groups() -> None:
     assert response.status_code == 200
 
 
-def test_read_group() -> None:
+def test_read_group(client: TestClient) -> None:
     token = create_api_access_token(admin_user)
 
     response = client.get(
@@ -51,7 +51,7 @@ def test_read_group() -> None:
     assert data["name"] == "eclair"
 
 
-def test_create_group() -> None:
+def test_create_group(client: TestClient) -> None:
     token = create_api_access_token(admin_user)
 
     response = client.post(
@@ -65,7 +65,7 @@ def test_create_group() -> None:
     assert response.status_code == 201
 
 
-def test_update_group() -> None:
+def test_update_group(client: TestClient) -> None:
     token = create_api_access_token(admin_user)
 
     response = client.patch(
@@ -78,7 +78,7 @@ def test_update_group() -> None:
     assert response.status_code == 204
 
 
-def test_create_membership() -> None:
+def test_create_membership(client: TestClient) -> None:
     token = create_api_access_token(admin_user)
 
     response = client.post(
@@ -93,7 +93,7 @@ def test_create_membership() -> None:
     assert response.status_code == 201
 
 
-def test_delete_membership() -> None:
+def test_delete_membership(client: TestClient) -> None:
     token = create_api_access_token(admin_user)
 
     response = client.request(

@@ -1,10 +1,10 @@
 import pytest_asyncio
+from fastapi.testclient import TestClient
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from tests.commons import (
     add_object_to_db,
-    client,
     create_api_access_token,
     create_user_with_groups,
 )
@@ -33,7 +33,7 @@ async def init_objects() -> None:
     await add_object_to_db(module_visibility)
 
 
-def test_get_module_visibility() -> None:
+def test_get_module_visibility(client: TestClient) -> None:
     response = client.get(
         "/module-visibility",
         headers={"Authorization": f"Bearer {token_admin}"},
@@ -41,7 +41,7 @@ def test_get_module_visibility() -> None:
     assert response.status_code == 200
 
 
-def test_get_my_module_visibility() -> None:
+def test_get_my_module_visibility(client: TestClient) -> None:
     response = client.get(
         "/module-visibility/me",
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -49,7 +49,7 @@ def test_get_my_module_visibility() -> None:
     assert response.status_code == 200
 
 
-def test_add_module_visibility() -> None:
+def test_add_module_visibility(client: TestClient) -> None:
     response = client.post(
         "/module-visibility/",
         json={
@@ -61,7 +61,7 @@ def test_add_module_visibility() -> None:
     assert response.status_code == 201
 
 
-def test_delete_loaners() -> None:
+def test_delete_loaners(client: TestClient) -> None:
     response = client.delete(
         f"/module-visibility/{root}/{group_id}",
         headers={"Authorization": f"Bearer {token_admin}"},
@@ -69,7 +69,7 @@ def test_delete_loaners() -> None:
     assert response.status_code == 204
 
 
-def test_get_information() -> None:
+def test_get_information(client: TestClient) -> None:
     response = client.get(
         "/information",
     )
@@ -78,42 +78,42 @@ def test_get_information() -> None:
     assert data["ready"] is True
 
 
-def test_get_privacy() -> None:
+def test_get_privacy(client: TestClient) -> None:
     response = client.get(
         "/privacy",
     )
     assert response.status_code == 200
 
 
-def test_get_terms_and_conditions() -> None:
+def test_get_terms_and_conditions(client: TestClient) -> None:
     response = client.get(
         "/terms-and-conditions",
     )
     assert response.status_code == 200
 
 
-def test_get_support() -> None:
+def test_get_support(client: TestClient) -> None:
     response = client.get(
         "/support",
     )
     assert response.status_code == 200
 
 
-def test_get_security_txt() -> None:
+def test_get_security_txt(client: TestClient) -> None:
     response = client.get(
         "/security.txt",
     )
     assert response.status_code == 200
 
 
-def test_get_wellknown_security_txt() -> None:
+def test_get_wellknown_security_txt(client: TestClient) -> None:
     response = client.get(
         "/.well-known/security.txt",
     )
     assert response.status_code == 200
 
 
-def test_get_stylesheet() -> None:
+def test_get_stylesheet(client: TestClient) -> None:
     response = client.get(
         "/style/connexion.css",
     )
@@ -126,14 +126,14 @@ def test_get_stylesheet() -> None:
     assert response.status_code == 404
 
 
-def test_get_favicon() -> None:
+def test_get_favicon(client: TestClient) -> None:
     response = client.get(
         "/favicon.ico",
     )
     assert response.status_code == 200
 
 
-def test_cors_authorized_origin() -> None:
+def test_cors_authorized_origin(client: TestClient) -> None:
     origin = "https://test-authorized-origin.com"
     headers = {
         "Access-Control-Request-Method": "GET",
@@ -143,7 +143,7 @@ def test_cors_authorized_origin() -> None:
     assert response.headers["access-control-allow-origin"] == origin
 
 
-def test_cors_unauthorized_origin() -> None:
+def test_cors_unauthorized_origin(client: TestClient) -> None:
     origin = "https://test-UNauthorized-origin.com"
     headers = {
         "Access-Control-Request-Method": "GET",
