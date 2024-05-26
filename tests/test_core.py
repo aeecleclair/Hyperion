@@ -1,8 +1,15 @@
+import datetime
+
 import pytest_asyncio
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
+from app.core.users import cruds_users
+from app.utils.tools import unitOfWork
 from tests.commons import (
+    TestingSessionLocal,
     add_object_to_db,
     client,
     create_api_access_token,
@@ -152,3 +159,35 @@ def test_cors_unauthorized_origin() -> None:
     response = client.get("/information", headers=headers)
     # The origin should not be in the response as it is not authorized. We will check `None != origin`
     assert response.headers.get("access-control-allow-origin", None) != origin
+
+
+@unitOfWork
+async def uow(
+    db: AsyncSession,
+    user: models_core.CoreUserUnconfirmed,
+) -> models_core.CoreUserUnconfirmed | None:
+    await cruds_users.create_unconfirmed_user(db, user)
+    user_unconfirmed_request = await db.execute(
+        select(models_core.CoreUserUnconfirmed).filter_by(id=user.id),
+    )
+    return user_unconfirmed_request.scalars().first()
+
+
+async def test_unit_of_work_decorator() -> None:
+    user_unconfirmed = models_core.CoreUserUnconfirmed(
+        id="test",
+        email="test@demo.fr",
+        account_type="test",
+        activation_token="test",
+        created_on=datetime.datetime.now(tz=datetime.UTC),
+        expire_on=datetime.datetime.now(tz=datetime.UTC),
+        external=False,
+    )
+    async with TestingSessionLocal() as db:
+        user = await uow(db, user_unconfirmed)
+        assert user is None
+        user_unconfirmed_request = await db.execute(
+            select(models_core.CoreUserUnconfirmed).filter_by(id=user_unconfirmed.id),
+        )
+        user = user_unconfirmed_request.scalars().first()
+        assert user is not None
