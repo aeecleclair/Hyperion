@@ -78,6 +78,11 @@ def downgrade() -> None:
     op.drop_column("core_user_unconfirmed", "external")
     op.drop_column("core_user", "external")
 
+    core_user = sa.sql.table("core_user", sa.Column("floor"))
+    op.execute(
+        core_user.update().where(core_user.c.floor.is_(None)).values(floor="Autre"),
+    )
+
     with op.batch_alter_table("core_user") as batch_op:
         batch_op.alter_column(
             "floor",
@@ -108,6 +113,7 @@ def downgrade() -> None:
                 "X6",
                 name="floorstype",
             ),
+            # We make this column non nullable, we must provide a default value
             nullable=False,
         )
 
