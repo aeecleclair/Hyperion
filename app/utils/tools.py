@@ -1,10 +1,10 @@
-import functools
 import logging
 import os
 import re
 import secrets
-from collections.abc import Coroutine, Sequence
+from collections.abc import Callable, Sequence
 from copy import copy
+from functools import wraps
 from pathlib import Path
 from typing import Any, TypeVar
 
@@ -444,11 +444,11 @@ async def set_core_data(
 
 def unitOfWork(
     function,
-) -> functools._Wrapped[..., Any, (AsyncSession, Any, Any), Coroutine[Any, Any, None]]:
+) -> Callable[..., Any]:
     async def _commit(self):
         pass
 
-    @functools.wraps(function)
+    @wraps(function)
     async def wrapper(db: AsyncSession, *args, **kwargs):
         new_db = copy(db)
         new_db.commit = _commit.__get__(db, AsyncSession)
