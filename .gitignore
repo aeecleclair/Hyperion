@@ -27,7 +27,3 @@ logs/
 
 # Pytest-cov
 .coverage
-
-# Migration tests
-test_migration.db
-test_migration.db-journal
