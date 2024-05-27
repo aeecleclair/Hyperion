@@ -254,10 +254,13 @@ async def delete_seller(
     **User must be CDR Admin to use this endpoint**
     """
     await check_request_consistency(db=db, seller_id=seller_id)
-    if await cruds_cdr.get_products_by_seller_id(db=db, seller_id=seller_id):
+    if await cruds_cdr.get_products_by_seller_id(
+        db=db,
+        seller_id=seller_id,
+    ) or await cruds_cdr.get_documents_by_seller_id(db=db, seller_id=seller_id):
         raise HTTPException(
             status_code=403,
-            detail="Please delete all this seller products first.",
+            detail="Please delete all this seller products and documents first.",
         )
     try:
         await cruds_cdr.delete_seller(
@@ -543,6 +546,12 @@ async def delete_product(
         raise HTTPException(
             status_code=403,
             detail="You can't delete a product once CDR has started.",
+        )
+    variants = await cruds_cdr.get_product_variants(db=db, product_id=product_id)
+    if variants:
+        raise HTTPException(
+            status_code=403,
+            detail="You can't delete this product because some variants are related to it.",
         )
     try:
         await cruds_cdr.delete_product(
