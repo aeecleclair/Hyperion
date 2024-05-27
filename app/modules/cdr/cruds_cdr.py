@@ -209,6 +209,18 @@ async def get_product_variant_by_id(
     return result.scalars().first()
 
 
+async def get_product_variants(
+    db: AsyncSession,
+    product_id: UUID,
+) -> Sequence[models_cdr.ProductVariant]:
+    result = await db.execute(
+        select(models_cdr.ProductVariant).where(
+            models_cdr.ProductVariant.product_id == product_id,
+        ),
+    )
+    return result.scalars().all()
+
+
 def create_product_variant(
     db: AsyncSession,
     product_variant: models_cdr.ProductVariant,
