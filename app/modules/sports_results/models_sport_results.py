@@ -3,7 +3,7 @@ from datetime import date
 from sqlalchemy import Date, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.database import Base
+from app.types.sqlalchemy import Base
 
 
 class CaptainMembership(Base):
@@ -16,7 +16,8 @@ class CaptainMembership(Base):
 class Captain(Base):
     __tablename__ = "sport_team-_captains"
 
-    user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), primary_key=True)
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"))
     sport: Mapped["Sport"] = relationship(
         "Sport",
         back_populates="captain",

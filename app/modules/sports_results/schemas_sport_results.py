@@ -17,6 +17,16 @@ class CaptainComplete(CaptainBase):
     id: str
 
 
+class CaptainMembershipBase(BaseModel):
+    user_id: str
+    sport_id: str
+
+
+class CaptainMembershipUpdate(BaseModel):
+    user_id: str | None = None
+    sport_id: str | None = None
+
+
 class SportBase(BaseModel):
     name: str
     captains: list[CaptainComplete]
