@@ -1062,14 +1062,9 @@ async def get_purchases_by_user_id_by_seller_id(
 
     **User must get his own purchases or be part of the seller's group to use this endpoint**
     """
-    if not (
-        user_id == user.id
-        or await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="You're not allowed to see other users purchases for this group.",
-        )
+    if user_id != user.id:
+        await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
+
     return await cruds_cdr.get_purchases_by_user_id_by_seller_id(
         db=db,
         user_id=user_id,
@@ -1118,14 +1113,8 @@ async def create_purchase(
             status_code=404,
             detail="Invalid product.",
         )
-    if not (
-        (user_id == user.id and product.available_online)
-        or await is_user_in_a_seller_group(product.seller_id, user=user, db=db)
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="You're not allowed to make this purchase for another user, or to buy a non online available product.",
-        )
+    if not (user_id == user.id and product.available_online):
+        await is_user_in_a_seller_group(product.seller_id, user=user, db=db)
 
     db_purchase = models_cdr.Purchase(
         user_id=user_id,
@@ -1201,14 +1190,9 @@ async def update_purchase(
             status_code=404,
             detail="Invalid product.",
         )
-    if not (
-        (user_id == user.id and product.available_online)
-        or await is_user_in_a_seller_group(product.seller_id, user=user, db=db)
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="You're not allowed to make this purchase for another user, or to buy a non online available product.",
-        )
+    if not (user_id == user.id and product.available_online):
+        await is_user_in_a_seller_group(product.seller_id, user=user, db=db)
+
     try:
         await cruds_cdr.update_purchase(
             db=db,
@@ -1249,7 +1233,7 @@ async def mark_purchase_as_validated(
             status_code=404,
             detail="Invalid purchase",
         )
-    
+
     product_variant = await cruds_cdr.get_product_variant_by_id(
         db=db,
         variant_id=product_variant_id,
@@ -1271,21 +1255,36 @@ async def mark_purchase_as_validated(
     for product_constraint in product.product_constraints:
         has_constraint = False
         for variant in product_constraint.variants:
-            purchase = await cruds_cdr.get_purchase_by_id(db=db, user_id=user_id, product_variant_id=variant.id)
+            purchase = await cruds_cdr.get_purchase_by_id(
+                db=db,
+                user_id=user_id,
+                product_variant_id=variant.id,
+            )
             if purchase:
                 has_constraint = True
         if not has_constraint:
             if product_constraint.related_membership:
-                memberships = await cruds_cdr.get_actual_memberships_by_user_id(db=db, user_id=user_id)
-                if product_constraint.related_membership not in [m["membership"] for m in memberships]:
+                memberships = await cruds_cdr.get_actual_memberships_by_user_id(
+                    db=db,
+                    user_id=user_id,
+                )
+                if product_constraint.related_membership not in [
+                    m.membership for m in memberships
+                ]:
                     raise HTTPException(
                         status_code=403,
                         detail=f"Product constraint {product_constraint} not satisfied.",
                     )
     for document_constraint in product.document_constraints:
-        signature = await cruds_cdr.get_signature_by_id(db=db, user_id=user_id, document_id=document_constraint.id)
+        signature = await cruds_cdr.get_signature_by_id(
+            db=db,
+            user_id=user_id,
+            document_id=document_constraint.id,
+        )
         if not signature:
-            if product_constraint.related_membership not in [m["membership"] for m in memberships]:
+            if product_constraint.related_membership not in [
+                m.membership for m in memberships
+            ]:
                 raise HTTPException(
                     status_code=403,
                     detail=f"Document signature constraint {document_constraint} not satisfied.",
@@ -1337,14 +1336,9 @@ async def delete_purchase(
             status_code=404,
             detail="Invalid product.",
         )
-    if not (
-        (user_id == user.id and product.available_online)
-        or await is_user_in_a_seller_group(product.seller_id, user=user, db=db)
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="You're not allowed to make this purchase for another user, or to buy a non online available product.",
-        )
+    if not (user_id == user.id and product.available_online):
+        await is_user_in_a_seller_group(product.seller_id, user=user, db=db)
+
     db_purchase = await cruds_cdr.get_purchase_by_id(
         user_id=user_id,
         product_variant_id=product_variant_id,
@@ -1423,14 +1417,9 @@ async def get_signatures_by_user_id_by_seller_id(
 
     **User must get his own signatures or be part of the seller's group to use this endpoint**
     """
-    if not (
-        user_id == user.id
-        or await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="You're not allowed to see other users signatures.",
-        )
+    if user_id != user.id:
+        await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
+
     return await cruds_cdr.get_signatures_by_user_id_by_seller_id(
         db=db,
         user_id=user_id,
@@ -1853,17 +1842,19 @@ async def get_memberships_by_user_id(
 
 
 @module.router.post(
-    "/cdr/memberships/",
+    "/cdr/users/{user_id}/memberships/",
     response_model=schemas_cdr.MembershipComplete,
     status_code=201,
 )
 async def create_membership(
+    user_id: str,
     membership: schemas_cdr.MembershipBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
 ):
     db_membership = models_cdr.Membership(
         id=uuid4(),
+        user_id=user_id,
         **membership.model_dump(),
     )
     try:
@@ -1876,10 +1867,11 @@ async def create_membership(
 
 
 @module.router.delete(
-    "/cdr/memberships/{membership_id}/",
+    "/cdr/users/{user_id}/memberships/{membership_id}/",
     status_code=204,
 )
 async def delete_membership(
+    user_id: str,
     membership_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
@@ -1888,7 +1880,7 @@ async def delete_membership(
         membership_id=membership_id,
         db=db,
     )
-    if not db_membership:
+    if not db_membership or db_membership.user_id != user_id:
         raise HTTPException(
             status_code=404,
             detail="Invalid membership_id",
