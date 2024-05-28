@@ -80,6 +80,7 @@ class CdrProduct(Base):
         "ProductVariant",
         lazy="selectin",
     )
+    related_membership: Mapped[AvailableMembership | None] = mapped_column(String, nullable=True)
 
 
 class Curriculum(Base):
@@ -133,7 +134,6 @@ class ProductVariant(Base):
         "Curriculum",
         secondary="cdr_allowed_curriculum",
     )
-
 
 class Document(Base):
     __tablename__ = "cdr_document"
