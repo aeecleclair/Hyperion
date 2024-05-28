@@ -2354,7 +2354,7 @@ def test_create_curriculum_closed():
 def test_change_status_admin_online_not_pending():
     response = client.patch(
         "/cdr/status/",
-        json={"status": "closed"},
+        json={"status": "online"},
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 403
