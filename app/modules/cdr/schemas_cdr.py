@@ -156,7 +156,6 @@ class PaymentComplete(PaymentBase):
 
 
 class MembershipBase(BaseModel):
-    user_id: str
     membership: AvailableMembership
     start_date: date
     end_date: date
@@ -164,6 +163,7 @@ class MembershipBase(BaseModel):
 
 class MembershipComplete(MembershipBase):
     id: UUID
+    user_id: str
 
     model_config = ConfigDict(from_attributes=True)
 

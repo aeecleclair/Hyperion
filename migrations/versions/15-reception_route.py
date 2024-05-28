@@ -152,6 +152,15 @@ def upgrade() -> None:
         sa.Column("description_fr", sa.String(), nullable=True),
         sa.Column("description_en", sa.String(), nullable=True),
         sa.Column("available_online", sa.Boolean(), nullable=False),
+        sa.Column(
+            "related_membership",
+            sa.Enum(
+                AvailableMembership,
+                name="availablemembership",
+                extend_existing=True,
+            ),
+            nullable=True,
+        ),
         sa.ForeignKeyConstraint(["seller_id"], ["cdr_seller.id"]),
         sa.PrimaryKeyConstraint("id"),
     )
