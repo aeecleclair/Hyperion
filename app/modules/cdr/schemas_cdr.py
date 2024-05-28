@@ -62,6 +62,7 @@ class ProductCompleteNoConstraint(ProductBase):
     id: UUID
     seller_id: UUID
     variants: list[ProductVariantComplete] = []
+    related_membership: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -83,6 +84,7 @@ class ProductEdit(BaseModel):
     description_en: str | None = None
     description: str | None = None
     available_online: bool | None = None
+    related_membership: str | None = None
 
 
 class SellerBase(BaseModel):
