@@ -1,11 +1,11 @@
 from collections.abc import Sequence
 from uuid import UUID
+from datetime import date
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.cdr import models_cdr, schemas_cdr
-
 
 async def get_sellers(
     db: AsyncSession,
@@ -583,6 +583,16 @@ async def get_memberships_by_user_id(
 ) -> Sequence[models_cdr.Membership]:
     result = await db.execute(
         select(models_cdr.Membership).where(models_cdr.Membership.user_id == user_id),
+    )
+    return result.scalars().all()
+
+
+async def get_actual_memberships_by_user_id(
+    db: AsyncSession,
+    user_id: str,
+) -> Sequence[models_cdr.Membership]:
+    result = await db.execute(
+        select(models_cdr.Membership).where(models_cdr.Membership.user_id == user_id, models_cdr.Membership.end_date>date.today()),
     )
     return result.scalars().all()
 

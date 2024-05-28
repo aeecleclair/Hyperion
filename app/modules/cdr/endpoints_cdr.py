@@ -1126,6 +1126,7 @@ async def create_purchase(
             status_code=403,
             detail="You're not allowed to make this purchase for another user, or to buy a non online available product.",
         )
+
     db_purchase = models_cdr.Purchase(
         user_id=user_id,
         product_variant_id=product_variant_id,
@@ -1248,6 +1249,47 @@ async def mark_purchase_as_validated(
             status_code=404,
             detail="Invalid purchase",
         )
+    
+    product_variant = await cruds_cdr.get_product_variant_by_id(
+        db=db,
+        variant_id=product_variant_id,
+    )
+    if not product_variant:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid product_variant_id",
+        )
+    product = await cruds_cdr.get_product_by_id(
+        db=db,
+        product_id=product_variant.product_id,
+    )
+    if not product:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid product.",
+        )
+    for product_constraint in product.product_constraints:
+        has_constraint = False
+        for variant in product_constraint.variants:
+            purchase = await cruds_cdr.get_purchase_by_id(db=db, user_id=user_id, product_variant_id=variant.id)
+            if purchase:
+                has_constraint = True
+        if not has_constraint:
+            if product_constraint.related_membership:
+                memberships = await cruds_cdr.get_actual_memberships_by_user_id(db=db, user_id=user_id)
+                if product_constraint.related_membership not in [m["membership"] for m in memberships]:
+                    raise HTTPException(
+                        status_code=403,
+                        detail=f"Product constraint {product_constraint} not satisfied.",
+                    )
+    for document_constraint in product.document_constraints:
+        signature = await cruds_cdr.get_signature_by_id(db=db, user_id=user_id, document_id=document_constraint.id)
+        if not signature:
+            if product_constraint.related_membership not in [m["membership"] for m in memberships]:
+                raise HTTPException(
+                    status_code=403,
+                    detail=f"Document signature constraint {document_constraint} not satisfied.",
+                )
     try:
         await cruds_cdr.mark_purchase_as_validated(
             db=db,
