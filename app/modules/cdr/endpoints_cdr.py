@@ -1610,11 +1610,11 @@ async def create_curriculum_membership(
             status_code=403,
             detail="You can't remove a curriculum to another user.",
         )
+    curriculum_membership = models_cdr.CurriculumMembership(
+        user_id=user_id,
+        curriculum_id=curriculum_id,
+    )
     try:
-        curriculum_membership = models_cdr.CurriculumMembership(
-            user_id=user_id,
-            curriculum_id=curriculum_id,
-        )
         cruds_cdr.create_curriculum_membership(
             db=db,
             curriculum_membership=curriculum_membership,
