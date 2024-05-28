@@ -5,13 +5,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
-from app.core.module import Module
 from app.dependencies import get_db, is_user_a_member, is_user_a_member_of
 from app.modules.sports_results import (
     cruds_sport_results,
     models_sport_results,
     schemas_sport_results,
 )
+from app.types.module import Module
 
 module = Module(
     root="sport-results",
@@ -55,12 +55,12 @@ async def get_results_by_id(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    return await cruds_sport_results.get_results_by_id(result_id, db=db)
+    return await cruds_sport_results.get_result_by_id(result_id, db=db)
 
 
 @module.router.get(
     "/sport-results/sports/",
-    response_model=list[schemas_sport_results.Sport],
+    response_model=list[schemas_sport_results.SportComplete],
     status_code=200,
 )
 async def get_sports(
@@ -101,7 +101,7 @@ async def is_user_a_captain_of_a_sport(
 
 @module.router.get(
     "/sport-results/captain/sport/{sport_id}",
-    response_model=list[schemas_sport_results.Captain],
+    response_model=list[schemas_sport_results.CaptainComplete],
     status_code=200,
 )
 async def get_captains_by_sport_id(
@@ -116,7 +116,7 @@ async def get_captains_by_sport_id(
 
 @module.router.post(
     "/sport-results/captain",
-    response_model=schemas_sport_results.Captain,
+    response_model=schemas_sport_results.CaptainBase,
     status_code=201,
 )
 async def add_captain(
@@ -134,7 +134,7 @@ async def add_captain(
             user_id=captain_complete.user_id,
             sport=captain_complete.sport,
         )
-        return await cruds_sport_results.create_captain(captain=captain_db, db=db)
+        return await cruds_sport_results.add_captain(captain=captain_db, db=db)
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error))
 
@@ -181,6 +181,7 @@ async def delete_captain(
 
     await cruds_sport_results.delete_captain(
         captain_id=captain_id,
+        user_id=captain.user_id,
         db=db,
     )
 
@@ -217,7 +218,7 @@ async def add_result(
             location=result_complete.location,
             match_date=result_complete.match_date,
         )
-        return await cruds_sport_results.create_result(result=result_db, db=db)
+        return await cruds_sport_results.add_result(result=result_db, db=db)
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error))
 
@@ -243,7 +244,10 @@ async def update_result(
         user.id,
         result.sport_id,
         db,
-    ) or not cruds_sport_results.is_user_a_captain_of_a_sport(
+    ):
+        raise HTTPException(status_code=403, detail="Not a captain")
+
+    if result_update.sport_id and not cruds_sport_results.is_user_a_captain_of_a_sport(
         user.id,
         result_update.sport_id,
         db,
@@ -288,7 +292,7 @@ async def delete_result(
 
 @module.router.post(
     "/sport-results/sport/",
-    response_model=schemas_sport_results.Sport,
+    response_model=schemas_sport_results.SportComplete,
     status_code=201,
 )
 async def add_sport(
@@ -306,7 +310,7 @@ async def add_sport(
             name=sport_complete.name,
             captains=sport_complete.captains,
         )
-        return await cruds_sport_results.create_sport(sport=sport_db, db=db)
+        return await cruds_sport_results.add_sport(sport=sport_db, db=db)
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error))
 
