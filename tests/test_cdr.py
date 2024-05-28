@@ -1,4 +1,5 @@
 import uuid
+from datetime import date
 
 import pytest_asyncio
 
@@ -6,6 +7,7 @@ from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from app.modules.cdr import models_cdr
 from app.modules.cdr.types_cdr import (
+    AvailableMembership,
     CdrStatus,
     DocumentSignatureType,
     PaymentType,
@@ -36,6 +38,7 @@ usable_product: models_cdr.CdrProduct
 
 document: models_cdr.Document
 unused_document: models_cdr.Document
+other_document: models_cdr.Document
 
 document_constraint: models_cdr.DocumentConstraint
 product_constraint: models_cdr.ProductConstraint
@@ -51,6 +54,8 @@ purchase: models_cdr.Purchase
 signature: models_cdr.Signature
 
 payment: models_cdr.Payment
+
+membership: models_cdr.Membership
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
@@ -162,6 +167,14 @@ async def init_objects():
     )
     await add_object_to_db(unused_document)
 
+    global other_document
+    other_document = models_cdr.Document(
+        id=uuid.uuid4(),
+        seller_id=online_seller.id,
+        name="Document non utilisé",
+    )
+    await add_object_to_db(other_document)
+
     global document_constraint
     document_constraint = models_cdr.DocumentConstraint(
         product_id=product.id,
@@ -240,6 +253,16 @@ async def init_objects():
         payment_type=PaymentType.cash,
     )
     await add_object_to_db(payment)
+
+    global membership
+    membership = models_cdr.Membership(
+        id=uuid.uuid4(),
+        user_id=cdr_user.id,
+        membership=AvailableMembership.aeecl,
+        start_date=date(2022, 9, 1),
+        end_date=date(2026, 9, 1),
+    )
+    await add_object_to_db(membership)
 
 
 def test_get_all_sellers_admin():
@@ -643,6 +666,22 @@ def test_create_document_constraint_seller():
             ]
 
 
+def test_create_document_constraint_other_seller():
+    response = client.post(
+        f"/cdr/sellers/{seller.id!s}/products/{product.id!s}/document_constraints/{other_document.id!s}/",
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 403
+
+
+def test_create_document_constraint_wrong_id():
+    response = client.post(
+        f"/cdr/sellers/{seller.id!s}/products/{product.id!s}/document_constraints/{uuid.uuid4()}/",
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 404
+
+
 def test_create_document_constraint_again():
     response = client.post(
         f"/cdr/sellers/{seller.id!s}/products/{product.id!s}/document_constraints/{unused_document.id!s}/",
@@ -961,6 +1000,17 @@ def test_patch_product_variant_wrong_id():
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 404
+
+
+def test_patch_product_variant_other_product_variant():
+    response = client.patch(
+        f"/cdr/sellers/{seller.id!s}/products/{online_product.id!s}/variants/{variant.id}/",
+        json={
+            "name_fr": "Variante modifiée",
+        },
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 403
 
 
 def test_patch_product_variant_user():
@@ -2086,6 +2136,104 @@ def test_delete_payment_admin():
     assert str(payment.id) not in [x["id"] for x in response.json()]
 
 
+def test_get_memberships_by_user_id_user():
+    response = client.get(
+        f"/cdr/users/{cdr_user.id}/memberships/",
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 200
+    assert str(membership.id) in [x["id"] for x in response.json()]
+
+
+def test_get_memberships_by_user_id_other_user():
+    response = client.get(
+        f"/cdr/users/{cdr_bde.id}/memberships/",
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 403
+
+
+def test_get_memberships_by_user_id_admin():
+    response = client.get(
+        f"/cdr/users/{cdr_user.id}/memberships/",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 200
+    assert str(membership.id) in [x["id"] for x in response.json()]
+
+
+def test_create_membership_user():
+    response = client.post(
+        f"/cdr/users/{cdr_user.id}/memberships/",
+        json={
+            "membership": AvailableMembership.useecl,
+            "start_date": str(date(2024, 6, 1)),
+            "end_date": str(date(2028, 6, 1)),
+        },
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 403
+
+
+def test_create_membership_admin():
+    response = client.post(
+        f"/cdr/users/{cdr_user.id}/memberships/",
+        json={
+            "membership": AvailableMembership.useecl,
+            "start_date": str(date(2024, 6, 1)),
+            "end_date": str(date(2028, 6, 1)),
+        },
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 201
+    membership_id = uuid.UUID(response.json()["id"])
+
+    response = client.get(
+        f"/cdr/users/{cdr_user.id}/memberships/",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 200
+    assert str(membership_id) in [x["id"] for x in response.json()]
+
+
+def test_delete_membership_user():
+    response = client.delete(
+        f"/cdr/users/{cdr_user.id}/memberships/{membership.id}",
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 403
+
+    response = client.get(
+        f"/cdr/users/{cdr_user.id}/memberships/",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 200
+    assert str(membership.id) in [x["id"] for x in response.json()]
+
+
+def test_delete_membership_wrong_id():
+    response = client.delete(
+        f"/cdr/users/{cdr_user.id}/memberships/{uuid.uuid4()}",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 404
+
+
+def test_delete_membership_admin():
+    response = client.delete(
+        f"/cdr/users/{cdr_user.id}/memberships/{membership.id}",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 204
+
+    response = client.get(
+        f"/cdr/users/{cdr_user.id}/memberships/",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 200
+    assert str(membership.id) not in [x["id"] for x in response.json()]
+
+
 def test_change_status_admin_closed():
     response = client.patch(
         "/cdr/status/",
@@ -2201,6 +2349,22 @@ def test_create_curriculum_closed():
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 403
+
+
+def test_change_status_admin_online_not_pending():
+    response = client.patch(
+        "/cdr/status/",
+        json={"status": "closed"},
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 403
+
+    response = client.get(
+        "/cdr/status/",
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 200
+    assert response.json()["status"] == CdrStatus.closed
 
 
 def test_change_status_admin_pending():
