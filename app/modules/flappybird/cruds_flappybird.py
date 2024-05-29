@@ -1,6 +1,6 @@
 import logging
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, desc, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -16,29 +16,51 @@ async def get_flappybird_score_leaderboard(
     limit: int,
 ) -> list[models_flappybird.FlappyBirdScore]:
     """Return the flappybird leaderboard scores from postion skip to skip+limit"""
-    subquery = (
+    subquery_max_score = (
         select(
-            func.max(models_flappybird.FlappyBirdScore.value).label("max_score"),
             models_flappybird.FlappyBirdScore.user_id,
+            func.max(models_flappybird.FlappyBirdScore.value).label("max_score"),
         )
         .group_by(models_flappybird.FlappyBirdScore.user_id)
-        .alias("subquery")
+        .cte("subquery_max_score")
     )
-
-    result = await db.execute(
+    # Subrequest to get (the best score of the user) id
+    subquery_score_id = (
+        select(
+            models_flappybird.FlappyBirdScore.id,
+            models_flappybird.FlappyBirdScore.user_id,
+            models_flappybird.FlappyBirdScore.value,
+        )
+        .join(
+            subquery_max_score,
+            and_(
+                models_flappybird.FlappyBirdScore.user_id
+                == subquery_max_score.c.user_id,
+                models_flappybird.FlappyBirdScore.value
+                == subquery_max_score.c.max_score,
+            ),
+        )
+        .order_by(
+            models_flappybird.FlappyBirdScore.user_id,
+            desc(models_flappybird.FlappyBirdScore.id),
+        )
+        .distinct(models_flappybird.FlappyBirdScore.user_id)
+        .cte("subquery_score_id")
+    )
+    # Main request to get the best score of each user
+    query = (
         select(models_flappybird.FlappyBirdScore)
         .join(
-            subquery,
-            and_(
-                models_flappybird.FlappyBirdScore.user_id == subquery.c.user_id,
-                models_flappybird.FlappyBirdScore.value == subquery.c.max_score,
-            ),
+            subquery_score_id,
+            models_flappybird.FlappyBirdScore.id == subquery_score_id.c.id,
         )
         .options(selectinload(models_flappybird.FlappyBirdScore.user))
         .order_by(models_flappybird.FlappyBirdScore.value.desc())
         .offset(skip)
-        .limit(limit),
+        .limit(limit)
     )
+
+    result = await db.execute(query)
     return list(result.scalars().all())
 
 
