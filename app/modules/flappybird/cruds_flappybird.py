@@ -1,6 +1,6 @@
 import logging
 
-from sqlalchemy import and_, desc, func, select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
