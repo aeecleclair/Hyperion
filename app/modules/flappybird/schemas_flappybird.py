@@ -20,6 +20,10 @@ class FlappyBirdScoreInDB(FlappyBirdScore):
     user_id: str
 
 
+class FlappyBirdBestScoreInDB(FlappyBirdScoreInDB):
+    pass
+
+
 class FlappyBirdScoreCompleteFeedBack(FlappyBirdScore):
     """
     A score, with it's position in the best players leaderboard

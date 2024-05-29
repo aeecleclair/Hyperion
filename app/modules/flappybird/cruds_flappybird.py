@@ -1,6 +1,6 @@
 import logging
 
-from sqlalchemy import and_, desc, func, select
+from sqlalchemy import and_, desc, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -14,67 +14,28 @@ async def get_flappybird_score_leaderboard(
     db: AsyncSession,
     skip: int,
     limit: int,
-) -> list[models_flappybird.FlappyBirdScore]:
+) -> list[models_flappybird.FlappyBirdBestScore]:
     """Return the flappybird leaderboard scores from postion skip to skip+limit"""
-    subquery_max_score = (
-        select(
-            models_flappybird.FlappyBirdScore.user_id,
-            func.max(models_flappybird.FlappyBirdScore.value).label("max_score"),
-        )
-        .group_by(models_flappybird.FlappyBirdScore.user_id)
-        .cte("subquery_max_score")
-    )
-    # Subrequest to get (the best score of the user) id
-    subquery_score_id = (
-        select(
-            models_flappybird.FlappyBirdScore.id,
-            models_flappybird.FlappyBirdScore.user_id,
-            models_flappybird.FlappyBirdScore.value,
-        )
-        .join(
-            subquery_max_score,
-            and_(
-                models_flappybird.FlappyBirdScore.user_id
-                == subquery_max_score.c.user_id,
-                models_flappybird.FlappyBirdScore.value
-                == subquery_max_score.c.max_score,
-            ),
-        )
-        .order_by(
-            models_flappybird.FlappyBirdScore.user_id,
-            desc(models_flappybird.FlappyBirdScore.id),
-        )
-        .distinct(models_flappybird.FlappyBirdScore.user_id)
-        .cte("subquery_score_id")
-    )
-    # Main request to get the best score of each user
-    query = (
-        select(models_flappybird.FlappyBirdScore)
-        .join(
-            subquery_score_id,
-            models_flappybird.FlappyBirdScore.id == subquery_score_id.c.id,
-        )
-        .options(selectinload(models_flappybird.FlappyBirdScore.user))
-        .order_by(models_flappybird.FlappyBirdScore.value.desc())
+    result = await db.execute(
+        select(models_flappybird.FlappyBirdBestScore)
+        .order_by(models_flappybird.FlappyBirdBestScore.value.desc())
         .offset(skip)
         .limit(limit)
+        .options(selectinload(models_flappybird.FlappyBirdBestScore.user)),
     )
-
-    result = await db.execute(query)
     return list(result.scalars().all())
 
 
 async def get_flappybird_personal_best_by_user_id(
     db: AsyncSession,
     user_id: str,
-) -> models_flappybird.FlappyBirdScore | None:
+) -> models_flappybird.FlappyBirdBestScore | None:
     """Return the flappybird PB in the leaderboard by user_id"""
 
     personal_best_result = await db.execute(
-        select(models_flappybird.FlappyBirdScore)
-        .where(models_flappybird.FlappyBirdScore.user_id == user_id)
-        .order_by(models_flappybird.FlappyBirdScore.value.desc())
-        .limit(1),
+        select(models_flappybird.FlappyBirdBestScore).where(
+            models_flappybird.FlappyBirdBestScore.user_id == user_id,
+        ),
     )
     return personal_best_result.scalar()
 
@@ -84,19 +45,11 @@ async def get_flappybird_score_position(
     score_value: int,
 ) -> int | None:
     """Return the position in the leaderboard of a given score value"""
-    subquery = (
-        select(
-            func.max(models_flappybird.FlappyBirdScore.value).label("max_score"),
-            models_flappybird.FlappyBirdScore.user_id,
-        )
-        .group_by(models_flappybird.FlappyBirdScore.user_id)
-        .alias("subquery")
-    )
 
     result = await db.execute(
-        select(func.count())
-        .select_from(subquery)
-        .where(subquery.c.max_score >= score_value),
+        select(func.count()).where(
+            models_flappybird.FlappyBirdBestScore.value >= score_value,
+        ),
     )
 
     return result.scalar()
@@ -114,3 +67,32 @@ async def create_flappybird_score(
     except IntegrityError as error:
         await db.rollback()
         raise ValueError(error)
+
+
+async def create_flappybird_best_score(
+    db: AsyncSession,
+    flappybird_best_score: models_flappybird.FlappyBirdBestScore,
+) -> models_flappybird.FlappyBirdBestScore:
+    """Add a FlappyBirdBestScore in database"""
+    db.add(flappybird_best_score)
+    try:
+        await db.commit()
+        return flappybird_best_score
+    except IntegrityError as error:
+        await db.rollback()
+        raise ValueError(error)
+
+
+async def update_flappybird_best_score(
+    db: AsyncSession,
+    flappybird_best_score: models_flappybird.FlappyBirdBestScore,
+):
+    """Add a FlappyBirdBestScore in database"""
+    await db.execute(
+        update(models_flappybird.FlappyBirdBestScore)
+        .where(
+            models_flappybird.FlappyBirdBestScore.user_id
+            == flappybird_best_score.user_id,
+        )
+        .values(value=flappybird_best_score.value),
+    )
