@@ -4,7 +4,7 @@ Create Date: 2024-05-29 16:01:45.295276
 """
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from pytest_alembic import MigrationContext
