@@ -1,4 +1,3 @@
-import json
 import logging
 import uuid
 from datetime import timedelta
@@ -70,7 +69,7 @@ def get_movie(
         )
         if response.status_code != 200:
             hyperion_error_logger.error(
-                f"Code {response.status_code} for IMDb request with movie ID {themoviedb_id}. JSON  response: {response.json()}"
+                f"Code {response.status_code} for IMDb request with movie ID {themoviedb_id}. JSON  response: {response.json()}",
             )
             raise HTTPException(
                 status_code=404,
