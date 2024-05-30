@@ -70,11 +70,11 @@ def get_movie(
         )
         if response.status_code != 200:
             hyperion_error_logger.error(
-                f"Code {response.status_code} for IMDb request with movie ID {themoviedb_id}"
+                f"Code {response.status_code} for IMDb request with movie ID {themoviedb_id}. JSON  response: {response.json()}"
             )
             raise HTTPException(
                 status_code=404,
-                detail=f"Movie not found for IMDb movie ID {themoviedb_id}",
+                detail=f"Movie not found for IMDb movie ID {themoviedb_id} (code {response.status_code})",
             )
         return schemas_cinema.TheMovieDB(**response.json())
     except requests.RequestException as error:
