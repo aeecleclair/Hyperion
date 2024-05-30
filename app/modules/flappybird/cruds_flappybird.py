@@ -85,14 +85,14 @@ async def create_flappybird_best_score(
 
 async def update_flappybird_best_score(
     db: AsyncSession,
-    flappybird_best_score: models_flappybird.FlappyBirdBestScore,
+    user_id: str,
+    best_score: int,
 ):
     """Add a FlappyBirdBestScore in database"""
     await db.execute(
         update(models_flappybird.FlappyBirdBestScore)
         .where(
-            models_flappybird.FlappyBirdBestScore.user_id
-            == flappybird_best_score.user_id,
+            models_flappybird.FlappyBirdBestScore.user_id == user_id,
         )
-        .values(value=flappybird_best_score.value),
+        .values(value=best_score),
     )

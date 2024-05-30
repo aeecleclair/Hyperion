@@ -23,7 +23,7 @@ module = Module(
 
 @module.router.get(
     "/flappybird/scores",
-    response_model=list[schemas_flappybird.FlappyBirdBestScoreInDB],
+    response_model=list[schemas_flappybird.FlappyBirdScoreInDB],
     status_code=200,
 )
 async def get_flappybird_score(
@@ -116,22 +116,17 @@ async def create_flappybird_score(
         db=db,
     )
     if not personal_best:
-        try:
-            await cruds_flappybird.create_flappybird_best_score(
-                flappybird_best_score=db_flappybird_best_score,
-                db=db,
-            )
-        except ValueError as error:
-            raise HTTPException(status_code=400, detail=str(error))
+        await cruds_flappybird.create_flappybird_best_score(
+            flappybird_best_score=db_flappybird_best_score,
+            db=db,
+        )
     else:
         if personal_best.value < flappybird_score.value:
-            try:
-                await cruds_flappybird.update_flappybird_best_score(
-                    flappybird_best_score=db_flappybird_best_score,
-                    db=db,
-                )
-            except ValueError as error:
-                raise HTTPException(status_code=400, detail=str(error))
+            await cruds_flappybird.update_flappybird_best_score(
+                user_id=user.id,
+                best_score=flappybird_score.value,
+                db=db,
+            )
         await cruds_flappybird.create_flappybird_score(
             flappybird_score=db_flappybird_score,
             db=db,

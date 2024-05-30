@@ -73,3 +73,14 @@ def test_create_flappybird_score():
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 201
+
+
+def test_update_flappybird_score():
+    response = client.post(
+        "/flappybird/scores",
+        json={
+            "value": "24",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 201
