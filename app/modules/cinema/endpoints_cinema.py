@@ -57,7 +57,8 @@ def get_movie(
     """
     API_key = settings.THE_MOVIE_DB_API
     if API_key is None:
-        raise HTTPException(status_code=500, detail="No API key provided")
+        hyperion_error_logger.error("No API key provided for module cinema")
+        raise HTTPException(status_code=501, detail="No API key provided")
     try:
         response = requests.get(
             url=f"https://api.themoviedb.org/3/movie/{themoviedb_id}",
@@ -68,12 +69,14 @@ def get_movie(
             timeout=5,
         )
         if response.status_code != 200:
-            raise HTTPException(
-                status_code=500,
-                detail=json.loads(response.content),
+            hyperion_error_logger.error(
+                f"Code {response.status_code} for IMDb request with movie ID {themoviedb_id}"
             )
-        kwargs: dict = json.loads(response.content)
-        return schemas_cinema.TheMovieDB(**kwargs)
+            raise HTTPException(
+                status_code=404,
+                detail=f"Movie not found for IMDb movie ID {themoviedb_id}",
+            )
+        return schemas_cinema.TheMovieDB(**response.json())
     except requests.RequestException as error:
         hyperion_error_logger.error(error)
         raise HTTPException(status_code=504, detail="Could not reach the IMdB server")
