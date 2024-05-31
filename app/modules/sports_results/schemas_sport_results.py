@@ -5,26 +5,16 @@ from pydantic import BaseModel
 
 class CaptainBase(BaseModel):
     user_id: str
-    sport: "SportComplete"
+    sports: list["SportComplete"]
 
 
 class CaptainUpdate(BaseModel):
     user_id: str | None = None
-    sport: "SportComplete | None" = None
+    sports: "list[SportComplete] | None" = None
 
 
 class CaptainComplete(CaptainBase):
     id: str
-
-
-class CaptainMembershipBase(BaseModel):
-    user_id: str
-    sport_id: str
-
-
-class CaptainMembershipUpdate(BaseModel):
-    user_id: str | None = None
-    sport_id: str | None = None
 
 
 class SportBase(BaseModel):
@@ -43,9 +33,9 @@ class SportComplete(SportBase):
 
 class ResultBase(BaseModel):
     sport_id: str
-    score1: int
-    score2: int
-    rank: int
+    score1: int | None
+    score2: int | None
+    rank: int | None
     location: str
     match_date: date
 

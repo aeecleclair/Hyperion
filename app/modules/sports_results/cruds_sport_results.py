@@ -45,10 +45,12 @@ async def is_user_a_captain_of_a_sport(
 ) -> bool:
     result = await db.execute(
         select(
-            models_sport_results.CaptainMembership,
+            models_sport_results.Captain,
         ).where(
-            models_sport_results.CaptainMembership.sport_id == sport_id,
-            models_sport_results.CaptainMembership.user_id == user_id,
+            models_sport_results.Captain.sports.any(
+                models_sport_results.Captain.sports.id == sport_id,
+            ),
+            models_sport_results.Captain.user_id == user_id,
         ),
     )
 
@@ -61,9 +63,9 @@ async def is_user_a_captain(
 ) -> bool:
     result = await db.execute(
         select(
-            models_sport_results.CaptainMembership,
+            models_sport_results.Captain,
         ).where(
-            models_sport_results.CaptainMembership.user_id == user_id,
+            models_sport_results.Captain.user_id == user_id,
         ),
     )
 
@@ -164,11 +166,6 @@ async def add_captain(
     db: AsyncSession,
 ) -> models_sport_results.Captain:
     db.add(captain)
-    captain_membership = models_sport_results.CaptainMembership(
-        user_id=captain.user_id,
-        sport_id=captain.sport.id,
-    )
-    db.add(captain_membership)
     try:
         await db.commit()
         return captain
@@ -193,17 +190,12 @@ async def update_captain(
 
 
 async def delete_captain(
-    user_id: str,
+    captain_id: str,
     db: AsyncSession,
 ):
     await db.execute(
         delete(models_sport_results.Captain).where(
-            models_sport_results.Captain.user_id == user_id,
-        ),
-    )
-    await db.execute(
-        delete(models_sport_results.CaptainMembership).where(
-            models_sport_results.CaptainMembership.user_id == user_id,
+            models_sport_results.Captain.id == captain_id,
         ),
     )
     await db.commit()
