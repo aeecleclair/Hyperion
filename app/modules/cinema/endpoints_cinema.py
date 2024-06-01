@@ -44,7 +44,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
     "/cinema/themoviedb/{themoviedb_id}",
     response_model=schemas_cinema.TheMovieDB,
 )
-def get_movie(
+async def get_movie(
     themoviedb_id: str,
     settings: Settings = Depends(get_settings),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.cinema)),
