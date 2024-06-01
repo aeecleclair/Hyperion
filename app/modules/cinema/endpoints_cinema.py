@@ -2,7 +2,7 @@ import logging
 import uuid
 from datetime import timedelta
 
-import requests
+import httpx
 from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -59,14 +59,14 @@ async def get_movie(
         hyperion_error_logger.error("No API key provided for module cinema")
         raise HTTPException(status_code=501, detail="No API key provided")
     try:
-        response = requests.get(
-            url=f"https://api.themoviedb.org/3/movie/{themoviedb_id}",
-            params={
-                "api_key": API_key,
-                "language": "fr-FR",
-            },
-            timeout=5,
-        )
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                url=f"https://api.themoviedb.org/3/movie/{themoviedb_id}",
+                params={
+                    "api_key": API_key,
+                    "language": "fr-FR",
+                },
+            )
         if response.status_code != 200:
             hyperion_error_logger.error(
                 f"Code {response.status_code} for IMDb request with movie ID {themoviedb_id}. JSON  response: {response.json()}",
@@ -76,7 +76,7 @@ async def get_movie(
                 detail=f"Movie not found for IMDb movie ID {themoviedb_id} (code {response.status_code})",
             )
         return schemas_cinema.TheMovieDB(**response.json())
-    except requests.RequestException as error:
+    except httpx.RequestError as error:
         hyperion_error_logger.error(error)
         raise HTTPException(status_code=504, detail="Could not reach the IMdB server")
 
