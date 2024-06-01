@@ -53,6 +53,7 @@ async def get_movie(
     Makes a HTTP request to the Internet Movie Database
     using an API key and returns a TheMovieDB object
     https://developer.themoviedb.org/reference/movie-details
+    https://developer.themoviedb.org/docs/errors
     """
     API_key = settings.THE_MOVIE_DB_API
     if API_key is None:
@@ -67,15 +68,30 @@ async def get_movie(
                     "language": "fr-FR",
                 },
             )
-        if response.status_code != 200:
-            hyperion_error_logger.error(
-                f"Code {response.status_code} for IMDb request with movie ID {themoviedb_id}. JSON  response: {response.json()}",
-            )
-            raise HTTPException(
-                status_code=404,
-                detail=f"Movie not found for IMDb movie ID {themoviedb_id} (code {response.status_code})",
-            )
-        return schemas_cinema.TheMovieDB(**response.json())
+        match response.status_code:
+            case 200:
+                return schemas_cinema.TheMovieDB(**response.json())
+            case 401:
+                hyperion_error_logger.error(
+                    f"INVALID API KEY - Code 401 for IMDb request. JSON  response: {response.json()}"
+                )
+                raise HTTPException(
+                    status_code=501,
+                    detail="Invalid API key",
+                )
+            case 404:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Movie not found for IMDb movie ID {themoviedb_id} (code {response.status_code})",
+                )
+            case _:
+                hyperion_error_logger.error(
+                    f"Code {response.status_code} for IMDb request with movie ID {themoviedb_id}. JSON response: {response.json()}",
+                )
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Unknown error (code {response.status_code})",
+                )
     except httpx.RequestError as error:
         hyperion_error_logger.error(error)
         raise HTTPException(status_code=504, detail="Could not reach the IMdB server")
