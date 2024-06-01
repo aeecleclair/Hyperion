@@ -73,7 +73,7 @@ async def get_movie(
                 return schemas_cinema.TheMovieDB(**response.json())
             case 401:
                 hyperion_error_logger.error(
-                    f"INVALID API KEY - Code 401 for IMDb request. JSON  response: {response.json()}"
+                    f"INVALID API KEY - Code 401 for IMDb request. JSON  response: {response.json()}",
                 )
                 raise HTTPException(
                     status_code=501,
