@@ -29,6 +29,7 @@ from app.core.groups.groups_type import GroupType
 from app.core.log import LogConfig
 from app.dependencies import get_db_engine, get_redis_client, get_settings
 from app.modules.module_list import module_list
+from app.types.exceptions import ContentHTTPException
 from app.types.sqlalchemy import Base
 from app.utils import initialization
 from app.utils.redis import limiter
@@ -385,6 +386,17 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             content=jsonable_encoder({"detail": exc.errors(), "body": exc.body}),
+        )
+
+    @app.exception_handler(ContentHTTPException)
+    async def auth_exception_handler(
+        request: Request,
+        exc: ContentHTTPException,
+    ):
+        return JSONResponse(
+            status_code=exc.status_code,
+            content=jsonable_encoder(exc.content),
+            headers=exc.headers,
         )
 
     return app
