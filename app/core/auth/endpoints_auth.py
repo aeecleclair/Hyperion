@@ -14,7 +14,7 @@ from fastapi import (
     Response,
     status,
 )
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -36,6 +36,7 @@ from app.dependencies import (
     get_token_data,
     get_user_from_token_with_scopes,
 )
+from app.types.exceptions import AuthHTTPException
 from app.types.scopes_type import ScopeType
 from app.utils.auth.providers import BaseAuthClient
 from app.utils.tools import is_user_external, is_user_member_of_an_allowed_group
@@ -257,7 +258,7 @@ async def authorize_validation(
             f"Authorize-validation: Invalid client_id {authorizereq.client_id}. Is `AUTH_CLIENTS` variable correctly configured in the dotenv? ({request_id})",
         )
         raise HTTPException(
-            status_code=422,
+            status_code=400,
             detail="Invalid client_id",
         )
 
@@ -279,7 +280,7 @@ async def authorize_validation(
                 f"Authorize-validation: Mismatching redirect_uri, received {authorizereq.redirect_uri} but expected one of {auth_client.redirect_uri} ({request_id})",
             )
             raise HTTPException(
-                status_code=422,
+                status_code=400,
                 detail="Mismatching redirect_uri",
             )
         else:
@@ -460,12 +461,10 @@ async def token(
         hyperion_access_logger.warning(
             f"Token: Unsupported grant_type, received {tokenreq.grant_type} ({request_id})",
         )
-        return JSONResponse(
+        raise AuthHTTPException(
             status_code=400,
-            content={
-                "error": "unsupported_grant_type",
-                "error_description": f"{tokenreq.grant_type} is not supported",
-            },
+            error="unsupported_grant_type",
+            error_description=f"{tokenreq.grant_type} is not supported",
         )
 
 
@@ -480,12 +479,10 @@ async def authorization_code_grant(
         hyperion_access_logger.warning(
             f"Token authorization_code_grant: Unprovided authorization code ({request_id})",
         )
-        return JSONResponse(
+        raise AuthHTTPException(
             status_code=400,
-            content={
-                "error": "invalid_request",
-                "error_description": "An authorization code should be provided",
-            },
+            error="invalid_request",
+            error_description="An authorization code should be provided",
         )
 
     # We need to check that the authorization code that was provided in the request is the one that was previously saved in the database
@@ -497,12 +494,10 @@ async def authorization_code_grant(
         hyperion_access_logger.warning(
             f"Token authorization_code_grant: Invalid authorization code ({request_id})",
         )
-        return JSONResponse(
+        raise AuthHTTPException(
             status_code=400,
-            content={
-                "error": "invalid_request",
-                "error_description": "The provided authorization code is invalid",
-            },
+            error="invalid_request",
+            error_description="The provided authorization code is invalid",
         )
 
     # The authorization code should only be usable once
@@ -514,12 +509,10 @@ async def authorization_code_grant(
         hyperion_access_logger.warning(
             f"Token authorization_code_grant: Unprovided client_id ({request_id})",
         )
-        return JSONResponse(
+        raise AuthHTTPException(
             status_code=400,
-            content={
-                "error": "invalid_client",
-                "error_description": "Invalid client_id or secret",
-            },
+            error="invalid_client",
+            error_description="Invalid client_id or secret",
         )
 
     auth_client: BaseAuthClient | None = settings.KNOWN_AUTH_CLIENTS.get(
@@ -530,12 +523,10 @@ async def authorization_code_grant(
         hyperion_access_logger.warning(
             f"Token authorization_code_grant: Invalid client_id {tokenreq.client_id}. Is `AUTH_CLIENTS` variable correctly configured in the dotenv? ({request_id})",
         )
-        return JSONResponse(
+        raise AuthHTTPException(
             status_code=400,
-            content={
-                "error": "invalid_client",
-                "error_description": "Invalid client id or secret",
-            },
+            error="invalid_client",
+            error_description="Invalid client id or secret",
         )
 
     # If the auth provider expect to use a client secret, we don't use PKCE
@@ -548,24 +539,20 @@ async def authorization_code_grant(
             hyperion_access_logger.warning(
                 f"Token authorization_code_grant: PKCE related parameters should not be used when using a client secret ({request_id})",
             )
-            return JSONResponse(
+            raise AuthHTTPException(
                 status_code=400,
-                content={
-                    "error": "invalid_request",
-                    "error_description": "PKCE related parameters should not be used",
-                },
+                error="invalid_request",
+                error_description="PKCE related parameters should not be used",
             )
         # We need to check the correct client_secret was provided
         if auth_client.secret != tokenreq.client_secret:
             hyperion_access_logger.warning(
                 f"Token authorization_code_grant: Invalid secret for client {tokenreq.client_id} ({request_id})",
             )
-            return JSONResponse(
+            raise AuthHTTPException(
                 status_code=400,
-                content={
-                    "error": "invalid_client",
-                    "error_description": "Invalid client id or secret",
-                },
+                error="invalid_client",
+                error_description="Invalid client id or secret",
             )
 
     # If there is no client secret, we use PKCE
@@ -578,12 +565,10 @@ async def authorization_code_grant(
             hyperion_access_logger.warning(
                 f"Token authorization_code_grant: A client secret should not be used when using PKCE ({request_id})",
             )
-            return JSONResponse(
+            raise AuthHTTPException(
                 status_code=400,
-                content={
-                    "error": "invalid_request",
-                    "error_description": "A client secret should not be used with PKCE",
-                },
+                error="invalid_request",
+                error_description="A client secret should not be used with PKCE",
             )
         # We need to verify the hash correspond
         # The hash is a H256, urlbase64 encoded
@@ -602,23 +587,19 @@ async def authorization_code_grant(
             hyperion_access_logger.warning(
                 f"Token authorization_code_grant: Invalid code_verifier ({request_id})",
             )
-            return JSONResponse(
+            raise AuthHTTPException(
                 status_code=400,
-                content={
-                    "error": "invalid_request",
-                    "error_description": "Invalid code_verifier",
-                },
+                error="invalid_request",
+                error_description="Invalid code_verifier",
             )
     else:
         hyperion_access_logger.warning(
             f"Token authorization_code_grant: Client must provide a client_secret or a code_verifier ({request_id})",
         )
-        return JSONResponse(
+        raise AuthHTTPException(
             status_code=400,
-            content={
-                "error": "invalid_request",
-                "error_description": "Client must provide a client_secret or a code_verifier",
-            },
+            error="invalid_request",
+            error_description="Client must provide a client_secret or a code_verifier",
         )
 
     # We can check the authorization code
@@ -626,12 +607,10 @@ async def authorization_code_grant(
         hyperion_access_logger.warning(
             f"Token authorization_code_grant: Expired authorization code ({request_id})",
         )
-        return JSONResponse(
+        raise AuthHTTPException(
             status_code=400,
-            content={
-                "error": "invalid_request",
-                "error_description": "Expired authorization code",
-            },
+            error="invalid_request",
+            error_description="Expired authorization code",
         )
 
     # The auth_client allows to override the redirect_uri and bypass related verifications
@@ -648,12 +627,10 @@ async def authorization_code_grant(
             hyperion_access_logger.warning(
                 f"Token authorization_code_grant: redirect_uri {tokenreq.redirect_uri} do not match hardcoded redirect_uri ({request_id})",
             )
-            return JSONResponse(
+            raise AuthHTTPException(
                 status_code=400,
-                content={
-                    "error": "invalid_request",
-                    "error_description": "redirect_uri does not match",
-                },
+                error="invalid_request",
+                error_description="redirect_uri does not match",
             )
 
     # If a redirect_uri was provided in the previous request, we need to check they match
@@ -664,12 +641,10 @@ async def authorization_code_grant(
         hyperion_access_logger.warning(
             f"Token authorization_code_grant: redirect_uri {tokenreq.redirect_uri} do not match the redirect_uri provided previously {db_authorization_code.redirect_uri} ({request_id})",
         )
-        return JSONResponse(
+        raise AuthHTTPException(
             status_code=400,
-            content={
-                "error": "invalid_request",
-                "error_description": "redirect_uri should remain identical",
-            },
+            error="invalid_request",
+            error_description="redirect_uri should remain identical",
         )
 
     refresh_token = generate_token()
@@ -714,12 +689,10 @@ async def refresh_token_grant(
         hyperion_access_logger.warning(
             f"Token refresh_token_grant: refresh_token was not provided ({request_id})",
         )
-        return JSONResponse(
+        raise AuthHTTPException(
             status_code=400,
-            content={
-                "error": "invalid_request",
-                "error_description": "refresh_token is required",
-            },
+            error="invalid_request",
+            error_description="refresh_token is required",
         )
 
     db_refresh_token = await cruds_auth.get_refresh_token_by_token(
@@ -731,12 +704,10 @@ async def refresh_token_grant(
         hyperion_access_logger.warning(
             f"Token refresh_token_grant: invalid refresh token ({request_id})",
         )
-        return JSONResponse(
+        raise AuthHTTPException(
             status_code=400,
-            content={
-                "error": "invalid_request",
-                "error_description": "Invalid refresh token",
-            },
+            error="invalid_request",
+            error_description="Invalid refresh token",
         )
     elif db_refresh_token.revoked_on is not None:
         # If the client tries to use a revoked refresh_token, we want to revoke all other refresh tokens from this client and user
@@ -748,12 +719,10 @@ async def refresh_token_grant(
         hyperion_security_logger.warning(
             f"Tentative to use a revoked refresh token ({request_id})",
         )
-        return JSONResponse(
+        raise AuthHTTPException(
             status_code=400,
-            content={
-                "error": "invalid_request",
-                "error_description": "The provided refresh token has been revoked",
-            },
+            error="invalid_request",
+            error_description="The provided refresh token has been revoked",
         )
 
     await cruds_auth.revoke_refresh_token_by_token(db=db, token=tokenreq.refresh_token)
@@ -763,24 +732,20 @@ async def refresh_token_grant(
             db=db,
             token=db_refresh_token.token,
         )
-        return JSONResponse(
+        raise AuthHTTPException(
             status_code=400,
-            content={
-                "error": "invalid_request",
-                "error_description": "The provided refresh token has expired",
-            },
+            error="invalid_request",
+            error_description="The provided refresh token has expired",
         )
 
     if tokenreq.client_id is None:
         hyperion_access_logger.warning(
             f"Token refresh_token_grant: Unprovided client_id ({request_id})",
         )
-        return JSONResponse(
+        raise AuthHTTPException(
             status_code=400,
-            content={
-                "error": "invalid_client",
-                "error_description": "Invalid client_id or secret",
-            },
+            error="invalid_client",
+            error_description="Invalid client_id or secret",
         )
 
     auth_client: BaseAuthClient | None = settings.KNOWN_AUTH_CLIENTS.get(
@@ -791,12 +756,10 @@ async def refresh_token_grant(
         hyperion_access_logger.warning(
             f"Token authorization_code_grant: Invalid client_id {tokenreq.client_id} ({request_id})",
         )
-        return JSONResponse(
+        raise AuthHTTPException(
             status_code=400,
-            content={
-                "error": "invalid_client",
-                "error_description": "Invalid client id or secret",
-            },
+            error="invalid_client",
+            error_description="Invalid client id or secret",
         )
 
     # If the auth provider expects to use a client secret, we don't use PKCE
@@ -806,12 +769,10 @@ async def refresh_token_grant(
             hyperion_access_logger.warning(
                 f"Token authorization_code_grant: Invalid secret for client {tokenreq.client_id} ({request_id})",
             )
-            return JSONResponse(
+            raise AuthHTTPException(
                 status_code=400,
-                content={
-                    "error": "invalid_client",
-                    "error_description": "Invalid client id or secret",
-                },
+                error="invalid_client",
+                error_description="Invalid client id or secret",
             )
     else:
         # We use PKCE, a client secret should not have been provided
@@ -819,12 +780,10 @@ async def refresh_token_grant(
             hyperion_access_logger.warning(
                 f"Token authorization_code_grant: With PKCE, a client secret should not have been provided ({request_id})",
             )
-            return JSONResponse(
+            raise AuthHTTPException(
                 status_code=400,
-                content={
-                    "error": "invalid_client",
-                    "error_description": "Invalid client id or secret",
-                },
+                error="invalid_client",
+                error_description="Invalid client id or secret",
             )
 
     # If everything is good we can finally create the new access/refresh tokens
