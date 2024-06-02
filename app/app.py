@@ -16,6 +16,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
+from fastapi_responses import custom_openapi
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -257,6 +258,9 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     )
     app.include_router(api.api_router)
     use_route_path_as_operation_ids(app)
+
+    # We use fastapi_responses to include raised Exceptions in the openapi file
+    app.openapi = custom_openapi(app)
 
     app.add_middleware(
         CORSMiddleware,
