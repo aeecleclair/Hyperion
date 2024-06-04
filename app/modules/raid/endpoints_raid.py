@@ -943,8 +943,13 @@ async def update_raid_information(
     """
     Update raid information
     """
+    # Checking the last saved information is a temporary fix for core data not supporting exclude None on update
+    last_information = await get_core_data(schemas_raid.RaidInformation, db)
     await set_core_data(raid_information, db)
-    if raid_information.raid_start_date:
+    if (
+        raid_information.raid_start_date
+        and raid_information.raid_start_date != last_information.raid_start_date
+    ):
         participants = await cruds_raid.get_all_participants(db)
         for participant in participants:
             is_minor = (
@@ -959,10 +964,24 @@ async def update_raid_information(
             )
             await cruds_raid.update_participant_minority(participant.id, is_minor, db)
     if (
-        raid_information.president
-        or raid_information.rescue
-        or raid_information.security_responsible
-        or raid_information.volunteer_responsible
+        (
+            raid_information.president
+            and raid_information.presidents != last_information.presidents
+        )
+        or (
+            raid_information.rescue
+            and raid_information.rescues != last_information.rescues
+        )
+        or (
+            raid_information.security_responsible
+            and raid_information.security_responsibles
+            != last_information.security_responsibles
+        )
+        or (
+            raid_information.volunteer_responsible
+            and raid_information.volunteer_responsibles
+            != last_information.volunteer_responsibles
+        )
     ):
         participants = await cruds_raid.get_all_participants(db)
         information = await get_core_data(schemas_raid.RaidInformation, db)
