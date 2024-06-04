@@ -12,8 +12,9 @@ COPY ./migrations /app/migrations
 
 COPY ./assets /app/assets
 
-COPY ./requirements-common.txt /requirements-common.txt
-COPY ./requirements-prod.txt /requirements-prod.txt
-RUN pip install --upgrade -r /requirements-prod.txt
+COPY ./requirements.txt /requirements.txt
+
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+RUN uv pip install --upgrade -r /requirements.txt
 
 COPY ./app/ /app/app/
