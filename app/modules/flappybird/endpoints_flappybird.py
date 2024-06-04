@@ -104,12 +104,31 @@ async def create_flappybird_score(
         user_id=user.id,
         value=flappybird_score.value,
         creation_time=creation_time,
-        # We add all informations contained in the schema
     )
-    try:
-        return await cruds_flappybird.create_flappybird_score(
+    db_flappybird_best_score = models_flappybird.FlappyBirdBestScore(
+        id=score_id,
+        user_id=user.id,
+        value=flappybird_score.value,
+        creation_time=creation_time,
+    )
+    personal_best = await cruds_flappybird.get_flappybird_personal_best_by_user_id(
+        user_id=user.id,
+        db=db,
+    )
+    if not personal_best:
+        await cruds_flappybird.create_flappybird_best_score(
+            flappybird_best_score=db_flappybird_best_score,
+            db=db,
+        )
+    else:
+        if personal_best.value < flappybird_score.value:
+            await cruds_flappybird.update_flappybird_best_score(
+                user_id=user.id,
+                best_score=flappybird_score.value,
+                db=db,
+            )
+        await cruds_flappybird.create_flappybird_score(
             flappybird_score=db_flappybird_score,
             db=db,
         )
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+    return db_flappybird_score
