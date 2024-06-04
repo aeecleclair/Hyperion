@@ -32,7 +32,7 @@ async def get_captains_by_sport_id(
 ) -> Sequence[models_sport_results.Captain]:
     result = await db.execute(
         select(models_sport_results.Captain).where(
-            models_sport_results.Captain.sport.id == sport_id,
+            models_sport_results.Captain.sports.id == sport_id,
         ),
     )
     return result.scalars().all()
@@ -234,23 +234,19 @@ async def delete_sport(
     db: AsyncSession,
 ):
     await db.execute(
-        delete(models_sport_results.Sport).where(
-            models_sport_results.Sport.id == sport_id,
-        ),
-    )
-    await db.execute(
         delete(models_sport_results.Result).where(
             models_sport_results.Result.sport_id == sport_id,
         ),
     )
     await db.execute(
-        delete(models_sport_results.CaptainMembership).where(
-            models_sport_results.CaptainMembership.sport_id == sport_id,
+        #####################################
+        delete(models_sport_results.Captain).where(
+            models_sport_results.Captain.sports.id == sport_id,
         ),
     )
     await db.execute(
-        delete(models_sport_results.Captain).where(
-            models_sport_results.Captain.sport.id == sport_id,
+        delete(models_sport_results.Sport).where(
+            models_sport_results.Sport.id == sport_id,
         ),
     )
     await db.commit()

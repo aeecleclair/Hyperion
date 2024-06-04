@@ -50,7 +50,7 @@ async def get_results_by_sport_id(
     response_model=schemas_sport_results.ResultComplete,
     status_code=200,
 )
-async def get_results_by_id(
+async def get_result_by_id(
     result_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
@@ -122,7 +122,7 @@ async def get_captains_by_sport_id(
 async def add_captain(
     captain: schemas_sport_results.CaptainBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDS)),
 ):
     captain_complete = schemas_sport_results.CaptainComplete(
         id=str(uuid.uuid4()),
@@ -132,7 +132,7 @@ async def add_captain(
         captain_db = models_sport_results.Captain(
             id=captain_complete.id,
             user_id=captain_complete.user_id,
-            sport=captain_complete.sport,
+            sports=captain_complete.sports,
         )
         return await cruds_sport_results.add_captain(captain=captain_db, db=db)
     except ValueError as error:
@@ -181,7 +181,6 @@ async def delete_captain(
 
     await cruds_sport_results.delete_captain(
         captain_id=captain_id,
-        user_id=captain.user_id,
         db=db,
     )
 
