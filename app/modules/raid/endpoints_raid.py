@@ -595,6 +595,17 @@ async def read_document(
 
     participant = await cruds_raid.get_user_by_document_id(document_id, db)
     if not participant:
+        # The document can be a global document
+        information = await get_core_data(schemas_raid.RaidInformation, db)
+        if (
+            information.raid_rules_id == document_id
+            or information.raid_information_id == document_id
+        ):
+            return get_file_from_data(
+                default_asset="assets/documents/raid_rules.pdf",
+                directory="raid",
+                filename=str(document_id),
+            )
         raise HTTPException(
             status_code=404,
             detail="Participant owning the document not found.",
