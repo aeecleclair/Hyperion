@@ -2,11 +2,13 @@ import logging
 import uuid
 from datetime import timedelta
 
+import httpx
 from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, standard_responses
+from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
 from app.core.notification.notification_types import CustomTopic, Topic
 from app.core.notification.schemas_notification import Message
@@ -14,6 +16,7 @@ from app.dependencies import (
     get_db,
     get_notification_tool,
     get_request_id,
+    get_settings,
     is_user_a_member,
     is_user_a_member_of,
 )
@@ -35,6 +38,63 @@ module = Module(
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
+
+
+@module.router.get(
+    "/cinema/themoviedb/{themoviedb_id}",
+    response_model=schemas_cinema.TheMovieDB,
+)
+async def get_movie(
+    themoviedb_id: str,
+    settings: Settings = Depends(get_settings),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.cinema)),
+):
+    """
+    Makes a HTTP request to the Internet Movie Database
+    using an API key and returns a TheMovieDB object
+    https://developer.themoviedb.org/reference/movie-details
+    https://developer.themoviedb.org/docs/errors
+    """
+    API_key = settings.THE_MOVIE_DB_API
+    if API_key is None:
+        hyperion_error_logger.error("No API key provided for module cinema")
+        raise HTTPException(status_code=501, detail="No API key provided")
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                url=f"https://api.themoviedb.org/3/movie/{themoviedb_id}",
+                params={
+                    "api_key": API_key,
+                    "language": "fr-FR",
+                },
+            )
+        match response.status_code:
+            case 200:
+                return schemas_cinema.TheMovieDB(**response.json())
+            case 401:
+                hyperion_error_logger.error(
+                    f"INVALID API KEY - Code 401 for IMDb request. JSON  response: {response.json()}",
+                )
+                raise HTTPException(
+                    status_code=501,
+                    detail="Invalid API key",
+                )
+            case 404:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Movie not found for IMDb movie ID {themoviedb_id} (code {response.status_code})",
+                )
+            case _:
+                hyperion_error_logger.error(
+                    f"Code {response.status_code} for IMDb request with movie ID {themoviedb_id}. JSON response: {response.json()}",
+                )
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Unknown error (code {response.status_code})",
+                )
+    except httpx.RequestError as error:
+        hyperion_error_logger.error(error)
+        raise HTTPException(status_code=504, detail="Could not reach the IMdB server")
 
 
 @module.router.get(

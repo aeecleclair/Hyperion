@@ -60,6 +60,13 @@ class Settings(BaseSettings):
     MATRIX_LOG_ERROR_ROOM_ID: str | None = None
     MATRIX_LOG_AMAP_ROOM_ID: str | None = None
 
+    #############################
+    # Token to use the IMDB API #
+    #############################
+    # This API key is required in order to send requests to the Internet Movie Database.
+    # It is only used in the Cinema module.
+    THE_MOVIE_DB_API: str | None = None
+
     ########################
     # Redis configuration #
     ########################
