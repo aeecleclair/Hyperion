@@ -45,7 +45,8 @@ class MatrixHandler(StreamHandler):
 
             try:
                 self.matrix.send_message(self.room_id, msg)
-            except ValueError as err:
+            # We should catch and log any error, as Python may discarded them in production
+            except Exception as err:
                 # We use warning level so that the message is not sent to matrix again
                 hyperion_error_logger.warning(
                     f"MatrixHandler: Unable to send message to Matrix server: {err}",
