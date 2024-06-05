@@ -145,9 +145,9 @@ async def create_session(
         is_visible=True,
         title="🎬 Cinéma - Programme de la semaine",
         content=message_content,
-        delivery_datetime=sunday + timedelta(days=7),
+        delivery_datetime=sunday,
         # The notification will expire the next sunday
-        expire_on=sunday + timedelta(days=14),
+        expire_on=sunday + timedelta(days=7),
     )
 
     await notification_tool.send_notification_to_topic(

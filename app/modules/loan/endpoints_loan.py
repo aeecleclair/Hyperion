@@ -626,15 +626,17 @@ async def create_loan(
         message=message,
     )
 
-    delivery_time = time(11, 00, 00)
-    delivery_datetime = datetime.combine(loan.end, delivery_time)
+    delivery_time = time(11, 00, 00, tzinfo=UTC)
+    delivery_datetime = datetime.combine(loan.end, delivery_time, tzinfo=UTC)
+    expire_on_date = loan.end + timedelta(days=30)
+    expire_on_datetime = datetime.combine(expire_on_date, delivery_time, tzinfo=UTC)
     message = Message(
         context=f"loan-new-{loan.id}-end-notif",
         is_visible=True,
         title="📦 Prêt arrivé à échéance",
         content=f"N'oublie pas de rendre ton prêt à l'association {loan.loaner.name} !",
         delivery_datetime=delivery_datetime,
-        expire_on=loan.end + timedelta(days=30),
+        expire_on=expire_on_datetime,
     )
 
     await notification_tool.send_notification_to_user(
