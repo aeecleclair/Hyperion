@@ -15,4 +15,4 @@ class Session(Base):
     duration: Mapped[int] = mapped_column(Integer, nullable=False)
     overview: Mapped[str] = mapped_column(String, nullable=True)
     genre: Mapped[str] = mapped_column(String, nullable=True)
-    tagline: Mapped[str] = mapped_column(String, nullable=True)
+    year: Mapped[str] = mapped_column(String, nullable=True)

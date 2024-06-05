@@ -12,7 +12,7 @@ class CineSessionBase(CineSessionTime):
     name: str
     overview: str | None = None
     genre: str | None = None
-    tagline: str | None = None
+    year: str | None = None
 
 
 class CineSessionComplete(CineSessionBase):
@@ -26,4 +26,4 @@ class CineSessionUpdate(BaseModel):
     duration: int | None = None
     overview: str | None = None
     genre: str | None = None
-    tagline: str | None = None
+    year: str | None = None
