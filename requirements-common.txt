@@ -2,7 +2,7 @@ aiofiles==23.2.1                    # Asynchronous file manipulation
 alembic==1.13.1                     # database migrations
 asyncpg==0.29.0                     # PostgreSQL adapter for asynchronous operations
 bcrypt==4.1.3                       # password hashing
-fastapi==0.110.3
+fastapi==0.111.0
 firebase-admin==6.5.0               # Firebase is used for push notification
 icalendar==5.0.12
 Jinja2==3.1.4                       # template engine for html files
