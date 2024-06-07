@@ -1145,6 +1145,14 @@ def jwks_uri(
 
 
 @router.get(
+    "/.well-known/oauth-authorization-server",
+)
+async def oauth_configuration(
+    settings: Settings = Depends(get_settings),
+):
+    return await oidc_configuration(settings)
+
+@router.get(
     "/.well-known/openid-configuration",
 )
 async def oidc_configuration(
