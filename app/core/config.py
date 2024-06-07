@@ -109,7 +109,7 @@ class Settings(BaseSettings):
 
     # Hyperion follows Semantic Versioning
     # https://semver.org/
-    HYPERION_VERSION: str = "2.4.1-alpha"
+    HYPERION_VERSION: str = "2.5.2-alpha"
     MINIMAL_TITAN_VERSION_CODE: int = 113
 
     MINIMAL_TITAN_VERSION: str = "0.0.1"  # deprecated, use MINIMAL_TITAN_VERSION_CODE
