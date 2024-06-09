@@ -721,3 +721,30 @@ def test_token_introspection_with_revoked_refresh_token(
     json = response.json()
 
     assert json["active"] is False
+
+
+def test_get_jwks_uri() -> None:
+    response = client.get(
+        "/oidc/authorization-flow/jwks_uri",
+    )
+    assert response.status_code == 200
+    json = response.json()
+    assert len(json["keys"]) >= 1
+
+
+def test_get_oauth_configuration() -> None:
+    response = client.get(
+        "/.well-known/oauth-authorization-server",
+    )
+    assert response.status_code == 200
+    json = response.json()
+    assert json["issuer"] == "http://127.0.0.1:8000"
+
+
+def test_get_oidc_configuration() -> None:
+    response = client.get(
+        "/.well-known/openid-configuration",
+    )
+    assert response.status_code == 200
+    json = response.json()
+    assert json["issuer"] == "http://127.0.0.1:8000"
