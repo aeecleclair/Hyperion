@@ -50,10 +50,10 @@ async def get_movie(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.cinema)),
 ):
     """
-    Makes a HTTP request to the Internet Movie Database
+    Makes a HTTP request to The Movie Database (TMDB)
     using an API key and returns a TheMovieDB object
-    https://developer.themoviedb.org/reference/movie-details
-    https://developer.themoviedb.org/docs/errors
+    * https://developer.themoviedb.org/reference/movie-details
+    * https://developer.themoviedb.org/docs/errors
     """
     API_key = settings.THE_MOVIE_DB_API
     if API_key is None:
@@ -73,7 +73,7 @@ async def get_movie(
                 return schemas_cinema.TheMovieDB(**response.json())
             case 401:
                 hyperion_error_logger.error(
-                    f"INVALID API KEY - Code 401 for IMDb request. JSON  response: {response.json()}",
+                    f"INVALID API KEY - Code 401 for TMDB request. JSON  response: {response.json()}",
                 )
                 raise HTTPException(
                     status_code=501,
@@ -82,11 +82,11 @@ async def get_movie(
             case 404:
                 raise HTTPException(
                     status_code=404,
-                    detail=f"Movie not found for IMDb movie ID {themoviedb_id} (code {response.status_code})",
+                    detail=f"Movie not found for TMDB movie ID {themoviedb_id} (code {response.status_code})",
                 )
             case _:
                 hyperion_error_logger.error(
-                    f"Code {response.status_code} for IMDb request with movie ID {themoviedb_id}. JSON response: {response.json()}",
+                    f"Code {response.status_code} for TMDB request with movie ID {themoviedb_id}. JSON response: {response.json()}",
                 )
                 raise HTTPException(
                     status_code=500,
@@ -94,7 +94,7 @@ async def get_movie(
                 )
     except httpx.RequestError as error:
         hyperion_error_logger.error(error)
-        raise HTTPException(status_code=504, detail="Could not reach the IMdB server")
+        raise HTTPException(status_code=504, detail="Could not reach the TMDB server")
 
 
 @module.router.get(
