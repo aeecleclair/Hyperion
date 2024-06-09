@@ -1,37 +1,44 @@
 import base64
 import json
-import uuid
-from datetime import date, datetime
 from urllib.parse import parse_qs, urlparse
 
 import pytest_asyncio
 
 from app.core import models_core
-from app.types.floors_type import FloorsType
+from app.core.groups.groups_type import GroupType
 from tests.commons import (
-    add_object_to_db,
     client,
+    create_user_with_groups,
 )
 
 user: models_core.CoreUser
+external_user: models_core.CoreUser
+ecl_user: models_core.CoreUser
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
     global user
-    user = models_core.CoreUser(
-        id=str(uuid.uuid4()),
+    user = await create_user_with_groups(
+        groups=[],
         email="email@myecl.fr",
-        password_hash="$2b$13$laYmIYSoJxqtNSQZyXu7juK8LXkOAuA8y6FZ8vzEBpV.gq2sBOxTu",  # "azerty"
-        name="Fabristpp",
-        firstname="Antoine",
-        nickname="Nickname",
-        birthday=date.fromisoformat("2000-01-01"),
-        floor=FloorsType.Autre,
-        created_on=datetime.fromisoformat("2000-01-01T00:00:00Z"),
-        external=False,
+        password="azerty",
     )
-    await add_object_to_db(user)
+
+    global ecl_user
+    ecl_user = await create_user_with_groups(
+        groups=[GroupType.student],
+        email="email@etu.ec-lyon.fr",
+        password="azerty",
+    )
+
+    global external_user
+    external_user = await create_user_with_groups(
+        groups=[],
+        email="external@myecl.fr",
+        password="azerty",
+        external=True,
+    )
 
 
 def test_simple_token():
