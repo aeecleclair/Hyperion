@@ -336,7 +336,7 @@ async def authorize_validation(
             if authorizereq.state:
                 url += "&state=" + authorizereq.state
             return RedirectResponse(url, status_code=status.HTTP_302_FOUND)
-    if auth_client.allow_external_users:
+    if not auth_client.allow_external_users:
         if is_user_external(user):
             # TODO We should show an HTML page explaining the issue
             hyperion_access_logger.warning(
