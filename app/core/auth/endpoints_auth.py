@@ -65,7 +65,7 @@ async def login_for_access_token(
     settings: Settings = Depends(get_settings),
 ):
     """
-    Ask for a JWT acc   ess token using oauth password flow.
+    Ask for a JWT access token using oauth password flow.
 
     *username* and *password* must be provided
 
@@ -126,9 +126,9 @@ async def get_authorize_page(
     **This endpoint is a UI endpoint which send and html page response. It will redirect to `/auth/authorization-flow/authorize-validation`**
     """
     return templates.TemplateResponse(
+        request,
         "connexion.html",
         {
-            "request": request,
             "response_type": authorizereq.response_type,
             "redirect_uri": authorizereq.redirect_uri,
             "client_id": authorizereq.client_id,
@@ -173,9 +173,9 @@ async def post_authorize_page(
     """
 
     return templates.TemplateResponse(
+        request,
         "connexion.html",
         {
-            "request": request,
             "response_type": response_type,
             "redirect_uri": redirect_uri,
             "client_id": client_id,
@@ -306,9 +306,9 @@ async def authorize_validation(
             f"Authorize-validation: Invalid user email or password for email {authorizereq.email} ({request_id})",
         )
         return templates.TemplateResponse(
+            request,
             "connexion.html",
             {
-                "request": request,
                 "response_type": authorizereq.response_type,
                 "redirect_uri": redirect_uri,
                 "client_id": authorizereq.client_id,
