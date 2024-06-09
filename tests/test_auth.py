@@ -34,27 +34,29 @@ async def init_objects() -> None:
     await add_object_to_db(user)
 
 
-# def test_simple_token():
-#    response = client.post(
-#        "/auth/simple_token",
-#        data={
-#            "username": "email@myecl.fr",
-#            "password": "azerty",
-#        },
-#    )
-#    assert response.status_code == 200
-#    json = response.json()
-#
-#    # Response data validation
-#    assert "access_token" in json
-#    assert json["token_type"] == "bearer"
-#
-#    # access_token validation
-#    response = client.get(
-#        "/users/", headers={"Authorization": f"Bearer {json['access_token']}"}
-#    )
-#    assert response.status_code != 401  # unauthorized
-#    assert response.status_code != 403  # forbidden
+def test_simple_token():
+    response = client.post(
+        "/auth/simple_token",
+        data={
+            "username": "email@myecl.fr",
+            "password": "azerty",
+        },
+    )
+    assert response.status_code == 200
+    json = response.json()
+
+    # Response data validation
+    assert "access_token" in json
+    assert json["token_type"] == "bearer"
+
+    # The given token should not allow to access API endpoints
+    response = client.get(
+        "/users/",
+        headers={
+            "Authorization": f"Bearer {json['access_token']}",
+        },
+    )
+    assert response.status_code == 403  # forbidden
 
 
 def test_authorization_code_flow_PKCE() -> None:
