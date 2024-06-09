@@ -12,10 +12,10 @@ from collections.abc import AsyncGenerator, Callable, Coroutine
 from functools import lru_cache
 from typing import Any, cast
 
+import jwt
 import redis
 from fastapi import BackgroundTasks, Depends, HTTPException, Request, status
-from jose import jwt
-from jose.exceptions import JWTError
+from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -214,13 +214,13 @@ def get_user_from_token_with_scopes(
             payload = jwt.decode(
                 token,
                 settings.ACCESS_TOKEN_SECRET_KEY,
-                algorithms=[security.jwt_algorithme],
+                algorithms=[security.jwt_algorithm],
             )
             token_data = schemas_auth.TokenData(**payload)
             hyperion_access_logger.info(
                 f"Get_current_user: Decoded a token for user {token_data.sub} ({request_id})",
             )
-        except (JWTError, ValidationError) as error:
+        except (InvalidTokenError, ValidationError) as error:
             hyperion_access_logger.warning(
                 f"Get_current_user: Failed to decode a token: {error} ({request_id})",
             )
@@ -385,19 +385,27 @@ async def get_token_data(
         payload = jwt.decode(
             token,
             settings.ACCESS_TOKEN_SECRET_KEY,
-            algorithms=[security.jwt_algorithme],
+            algorithms=[security.jwt_algorithm],
         )
         token_data = schemas_auth.TokenData(**payload)
         hyperion_access_logger.info(
             f"Get_token_data: Decoded a token for user {token_data.sub} ({request_id})",
         )
-    except (JWTError, ValidationError) as error:
+    except (InvalidTokenError, ValidationError) as error:
         hyperion_access_logger.warning(
             f"Get_token_data: Failed to decode a token: {error} ({request_id})",
         )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Could not validate credentials",
+        )
+    except ExpiredSignatureError as error:
+        hyperion_access_logger.warning(
+            f"Get_token_data: Token has expired: {error} ({request_id})",
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Token has expired",
         )
 
     return token_data
