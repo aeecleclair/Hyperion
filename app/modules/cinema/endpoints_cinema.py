@@ -50,10 +50,10 @@ async def get_movie(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.cinema)),
 ):
     """
-    Makes a HTTP request to the Internet Movie Database
+    Makes a HTTP request to The Movie Database (TMDB)
     using an API key and returns a TheMovieDB object
-    https://developer.themoviedb.org/reference/movie-details
-    https://developer.themoviedb.org/docs/errors
+    * https://developer.themoviedb.org/reference/movie-details
+    * https://developer.themoviedb.org/docs/errors
     """
     API_key = settings.THE_MOVIE_DB_API
     if API_key is None:
