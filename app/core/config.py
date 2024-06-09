@@ -138,12 +138,18 @@ class Settings(BaseSettings):
     # In the pem certificates newlines can be replaced by `\n`
     RSA_PRIVATE_PEM_STRING: bytes
 
-    # Host or url of the API, used for Openid connect discovery endpoint
+    # Host or url of the instance of Hyperion
+    # This url will be especially used for oidc/oauth2 discovery endpoint and links send be email
     # NOTE: A trailing / is required
     CLIENT_URL: str
-    DOCKER_URL: (
-        str  # During dev, docker container can not directly access the client url
-    )
+
+    # Sometimes, when running third services with oidc inside Docker containers, and running Hyperion on your local device
+    # you may need to use a different url for call made from docker and call made from your device
+    # For exemple:
+    #   you will access the login page from your browser http://localhost:8000/auth/authorize
+    #   but the docker container should call http://host.docker.internal:8000/auth/token and not your localhost address
+    # NOTE: A trailing / is required
+    OVERRIDDEN_CLIENT_URL_FOR_OIDC: str | None = None
 
     # Openid connect issuer name
     AUTH_ISSUER: str = "hyperion"
@@ -236,6 +242,25 @@ class Settings(BaseSettings):
 
     # Validators may be used to perform more complexe validation
     # For example, we can check that at least one of two optional fields is set or that the RSA key is provided and valid
+
+    @model_validator(mode="after")
+    def check_client_urls(self) -> "Settings":
+        """
+        All fields are optional, but the dotenv should configure SQLITE_DB or a Postgres database
+        """
+        if not self.CLIENT_URL[-1] == "/":
+            raise ValueError(
+                "CLIENT_URL must contains a trailing slash",
+            )
+        if (
+            self.OVERRIDDEN_CLIENT_URL_FOR_OIDC
+            and not self.OVERRIDDEN_CLIENT_URL_FOR_OIDC[-1] == "/"
+        ):
+            raise ValueError(
+                "OVERRIDDEN_CLIENT_URL_FOR_OIDC must contains a trailing slash",
+            )
+
+        return self
 
     @model_validator(mode="after")
     def check_database_settings(self) -> "Settings":
