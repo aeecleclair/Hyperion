@@ -326,3 +326,172 @@ def test_get_user_info_in_id_token() -> None:
 
     global user
     assert json_payload["email"] == user.email
+
+
+# Invalid service configuration
+def test_authorization_code_flow_with_invalid_client_id() -> None:
+    data_with_invalid_client_id = {
+        "client_id": "InvalidClientId",
+        "client_secret": "secret",
+        "redirect_uri": "http://127.0.0.1:8000/docs",
+        "response_type": "code",
+        "scope": "API openid",
+        "state": "azerty",
+        "email": "email@myecl.fr",
+        "password": "azerty",
+    }
+    response = client.post(
+        "/auth/authorization-flow/authorize-validation",
+        data=data_with_invalid_client_id,
+        follow_redirects=False,
+    )
+    assert response.status_code == 422
+    json = response.json()
+    assert json["detail"] == "Invalid client_id"
+
+
+# Invalid service configuration
+def test_authorization_code_flow_with_invalid_redirect_uri() -> None:
+    data_with_invalid_client_id = {
+        "client_id": "AppAuthClientWithClientSecret",
+        "client_secret": "secret",
+        "redirect_uri": "http://invalid-redirect-uri",
+        "response_type": "code",
+        "scope": "API openid",
+        "state": "azerty",
+        "email": "email@myecl.fr",
+        "password": "azerty",
+    }
+    response = client.post(
+        "/auth/authorization-flow/authorize-validation",
+        data=data_with_invalid_client_id,
+        follow_redirects=False,
+    )
+    assert response.status_code == 422
+    json = response.json()
+    assert json["detail"] == "Mismatching redirect_uri"
+
+
+# Invalid service configuration
+def test_authorization_code_flow_with_invalid_response_type() -> None:
+    data_with_invalid_client_id = {
+        "client_id": "AppAuthClientWithClientSecret",
+        "client_secret": "secret",
+        "redirect_uri": "http://127.0.0.1:8000/docs",
+        "response_type": "invalid_response_type",
+        "scope": "API openid",
+        "state": "azerty",
+        "email": "email@myecl.fr",
+        "password": "azerty",
+    }
+    response = client.post(
+        "/auth/authorization-flow/authorize-validation",
+        data=data_with_invalid_client_id,
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+
+    url = urlparse(response.headers["Location"])
+    query = parse_qs(url.query)
+    assert query["error"][0] == "unsupported_response_type"
+
+
+# Invalid user response
+def test_authorization_code_flow_with_invalid_user_credentials() -> None:
+    data_with_invalid_client_id = {
+        "client_id": "AppAuthClientWithClientSecret",
+        "client_secret": "secret",
+        "redirect_uri": "http://127.0.0.1:8000/docs",
+        "response_type": "code",
+        "scope": "API openid",
+        "state": "azerty",
+        "email": "email@myecl.fr",
+        "password": "other invalid password",
+    }
+    response = client.post(
+        "/auth/authorization-flow/authorize-validation",
+        data=data_with_invalid_client_id,
+        follow_redirects=False,
+    )
+    assert response.status_code != 302
+
+
+# Valid user response
+def test_authorization_code_flow_with_auth_client_restricting_allowed_groups_and_user_member_of_an_allowed_group() -> (
+    None
+):
+    # For an user that is a member of a required group #
+    data_with_invalid_client_id = {
+        "client_id": "AcceptingOnlyECLUsersAuthClient",
+        "client_secret": "secret",
+        "redirect_uri": "http://127.0.0.1:8000/docs",
+        "response_type": "code",
+        "scope": "API openid",
+        "state": "azerty",
+        "email": "email@etu.ec-lyon.fr",
+        "password": "azerty",
+    }
+    response = client.post(
+        "/auth/authorization-flow/authorize-validation",
+        data=data_with_invalid_client_id,
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+
+    url = urlparse(response.headers["Location"])
+    query = parse_qs(url.query)
+    assert (url.path, query["state"][0]) == ("/docs", "azerty")
+    assert query["code"][0] != ""
+
+
+def test_authorization_code_flow_with_auth_client_restricting_allowed_groups_and_user_not_member_of_an_allowed_group() -> (
+    None
+):
+    # For an user that is not a member of a required group #
+    data_with_invalid_client_id = {
+        "client_id": "AcceptingOnlyECLUsersAuthClient",
+        "client_secret": "secret",
+        "redirect_uri": "http://127.0.0.1:8000/docs",
+        "response_type": "code",
+        "scope": "API openid",
+        "state": "azerty",
+        "email": "email@myecl.fr",
+        "password": "azerty",
+    }
+    response = client.post(
+        "/auth/authorization-flow/authorize-validation",
+        data=data_with_invalid_client_id,
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+
+    url = urlparse(response.headers["Location"])
+    query = parse_qs(url.query)
+    assert query["error"][0] == "consent_required"
+
+
+def test_authorization_code_flow_with_auth_client_restricting_external_users_and_user_external() -> (
+    None
+):
+    # For an user that is not a member of a required group #
+    data_with_invalid_client_id = {
+        "client_id": "RalllyAuthClient",
+        "client_secret": "secret",
+        "redirect_uri": "http://127.0.0.1:8000/docs",
+        "response_type": "code",
+        "scope": "API openid",
+        "state": "azerty",
+        "email": "external@myecl.fr",
+        "password": "azerty",
+    }
+    response = client.post(
+        "/auth/authorization-flow/authorize-validation",
+        data=data_with_invalid_client_id,
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+
+    url = urlparse(response.headers["Location"])
+    query = parse_qs(url.query)
+    assert query["error"][0] == "consent_required"
+
