@@ -494,4 +494,3 @@ def test_authorization_code_flow_with_auth_client_restricting_external_users_and
     url = urlparse(response.headers["Location"])
     query = parse_qs(url.query)
     assert query["error"][0] == "consent_required"
-
