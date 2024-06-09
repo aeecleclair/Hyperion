@@ -73,7 +73,7 @@ async def get_movie(
                 return schemas_cinema.TheMovieDB(**response.json())
             case 401:
                 hyperion_error_logger.error(
-                    f"INVALID API KEY - Code 401 for TMDb request. JSON  response: {response.json()}",
+                    f"INVALID API KEY - Code 401 for TMDB request. JSON  response: {response.json()}",
                 )
                 raise HTTPException(
                     status_code=501,
@@ -82,11 +82,11 @@ async def get_movie(
             case 404:
                 raise HTTPException(
                     status_code=404,
-                    detail=f"Movie not found for TMDb movie ID {themoviedb_id} (code {response.status_code})",
+                    detail=f"Movie not found for TMDB movie ID {themoviedb_id} (code {response.status_code})",
                 )
             case _:
                 hyperion_error_logger.error(
-                    f"Code {response.status_code} for TMDb request with movie ID {themoviedb_id}. JSON response: {response.json()}",
+                    f"Code {response.status_code} for TMDB request with movie ID {themoviedb_id}. JSON response: {response.json()}",
                 )
                 raise HTTPException(
                     status_code=500,
@@ -94,7 +94,7 @@ async def get_movie(
                 )
     except httpx.RequestError as error:
         hyperion_error_logger.error(error)
-        raise HTTPException(status_code=504, detail="Could not reach the TMdB server")
+        raise HTTPException(status_code=504, detail="Could not reach the TMDB server")
 
 
 @module.router.get(
