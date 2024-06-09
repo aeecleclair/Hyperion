@@ -1165,13 +1165,16 @@ async def oidc_configuration(
 
 
 def get_oidc_provider_metadata(settings: Settings):
+    overridden_client_url = (
+        settings.OVERRIDDEN_CLIENT_URL_FOR_OIDC or settings.CLIENT_URL
+    )
     return {
         "issuer": settings.CLIENT_URL[:-1],  # We want to remove the trailing slash
         "authorization_endpoint": settings.CLIENT_URL + "auth/authorize",
-        "token_endpoint": settings.DOCKER_URL + "auth/token",
-        "userinfo_endpoint": settings.DOCKER_URL + "auth/userinfo",
+        "token_endpoint": overridden_client_url + "auth/token",
+        "userinfo_endpoint": overridden_client_url + "auth/userinfo",
         "introspection_endpoint": settings.DOCKER_URL + "auth/introspect",
-        "jwks_uri": settings.DOCKER_URL + "oidc/authorization-flow/jwks_uri",
+        "jwks_uri": overridden_client_url + "oidc/authorization-flow/jwks_uri",
         # RECOMMENDED The OAuth 2.0 / OpenID Connect URL of the OP's Dynamic Client Registration Endpoint OpenID.Registration.
         # TODO: is this relevant?
         # TODO: add for Calypsso
