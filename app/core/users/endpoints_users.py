@@ -341,54 +341,6 @@ async def create_user(
         )
 
 
-@router.get(
-    "/users/activate",
-    response_class=HTMLResponse,
-    status_code=201,
-)
-async def get_user_activation_page(
-    # request need to be passed to Jinja2 to generate the HTML page
-    request: Request,
-    activation_token: str,
-    db: AsyncSession = Depends(get_db),
-):
-    """
-    Return a HTML page to activate an account. The activation token is passed as a query string.
-
-    **This endpoint is an UI endpoint which send and html page response.
-    """
-
-    unconfirmed_user = await cruds_users.get_unconfirmed_user_by_activation_token(
-        db=db,
-        activation_token=activation_token,
-    )
-    if unconfirmed_user is None:
-        return templates.TemplateResponse(
-            "error.html",
-            {
-                "request": request,
-                "message": "The activation token is invalid",
-            },
-        )
-    if unconfirmed_user.expire_on < datetime.now(UTC):
-        return templates.TemplateResponse(
-            "error.html",
-            {
-                "request": request,
-                "message": "The activation token has expired",
-            },
-        )
-
-    return templates.TemplateResponse(
-        "activation.html",
-        {
-            "request": request,
-            "activation_token": activation_token,
-            "user_email": unconfirmed_user.email,
-        },
-    )
-
-
 @router.post(
     "/users/activate",
     response_model=standard_responses.Result,
