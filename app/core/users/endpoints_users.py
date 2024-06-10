@@ -297,7 +297,7 @@ async def create_user(
         raise ValueError(f"An account with the email {email} already exist")
     # There might be an unconfirmed user in the database but its not an issue. We will generate a second activation token.
 
-    activation_token = security.generate_token(nbytes=8)
+    activation_token = security.generate_token(nbytes=16)
 
     # Add the unconfirmed user to the unconfirmed_user table
 
