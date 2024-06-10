@@ -58,7 +58,7 @@ class AuthorizeValidation(Authorize):
     def as_form(
         cls,
         client_id: str = Form(...),
-        redirect_uri: str = Form(None),
+        redirect_uri: str | None = Form(None),
         response_type: str = Form(...),
         scope: str | None = Form(None),
         state: str | None = Form(None),
