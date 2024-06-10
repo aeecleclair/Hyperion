@@ -317,9 +317,13 @@ async def create_user(
     # After adding the unconfirmed user to the database, we got an activation token that need to be send by email,
     # in order to make sure the email address is valid
 
+    calypsso_activate_url = (
+        f"{settings.CLIENT_URL}calypsso/activate/?activation_code={activation_token}"
+    )
+
     if settings.SMTP_ACTIVE:
         activation_content = templates.get_template("activation_mail.html").render(
-            {"activation_token": activation_token},
+            {"calypsso_activate_url": calypsso_activate_url},
         )
         background_tasks.add_task(
             send_email,
@@ -333,7 +337,7 @@ async def create_user(
         )
     else:
         hyperion_security_logger.info(
-            f"Create_user: Creating an unconfirmed account for {email} with token {activation_token} ({request_id})",
+            f"Create_user: Creating an unconfirmed account for {email}: {calypsso_activate_url} ({request_id})",
         )
 
 
