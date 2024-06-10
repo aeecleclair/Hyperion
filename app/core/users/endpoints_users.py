@@ -547,9 +547,15 @@ async def recover_user(
             recover_request=recover_request,
         )
 
+        calypsso_reset_url = (
+            f"{settings.CLIENT_URL}calypsso/reset-password/?reset_token={reset_token}"
+        )
+
         if settings.SMTP_ACTIVE:
             reset_content = templates.get_template("reset_mail.html").render(
-                {"reset_token": reset_token},
+                {
+                    "calypsso_reset_url": calypsso_reset_url,
+                },
             )
             send_email(
                 recipient=db_user.email,
@@ -559,7 +565,7 @@ async def recover_user(
             )
         else:
             hyperion_security_logger.info(
-                f"Reset password for {email} with token {reset_token} ({request_id})",
+                f"Reset password for {email}: {calypsso_reset_url} ({request_id})",
             )
 
     return standard_responses.Result()
