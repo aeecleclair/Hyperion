@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Literal
 import alembic.command as alembic_command
 import alembic.config as alembic_config
 import alembic.migration as alembic_migration
+from calypsso import get_calypsso_app
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
@@ -265,6 +266,10 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # TODO: we may want to log an error if the directory is empty
+    calypsso = get_calypsso_app()
+    app.mount("/calypsso", calypsso)
 
     # Initialize database connection
     app.dependency_overrides.get(get_db_engine, get_db_engine)(
