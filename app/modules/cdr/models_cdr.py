@@ -132,9 +132,10 @@ class ProductVariant(Base):
     price: Mapped[int]
     enabled: Mapped[bool]
     unique: Mapped[bool]
-    allowed_curriculum: Mapped[Curriculum] = relationship(
+    allowed_curriculum: Mapped[list[Curriculum]] = relationship(
         "Curriculum",
         secondary="cdr_allowed_curriculum",
+        lazy="selectin"
     )
 
 
