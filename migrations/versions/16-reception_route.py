@@ -1,4 +1,4 @@
-"""15-cdr-route
+"""16-cdr-route
 
 Create Date: 2024-05-21 15:56:00.444337
 """
@@ -17,7 +17,7 @@ from app.types.sqlalchemy import TZDateTime
 
 # revision identifiers, used by Alembic.
 revision: str = "5d05a19f14bc"
-down_revision: str | None = "7b078dd0e7e4"
+down_revision: str | None = "bb8fbaf26f5a"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
