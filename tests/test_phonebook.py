@@ -96,7 +96,7 @@ async def init_objects():
         role_tags=RoleTags.president.value,
         role_name="Prez",
         mandate_year=association1.mandate_year,
-        order=0,
+        member_order=0,
     )
 
     membership2 = models_phonebook.Membership(
@@ -106,7 +106,7 @@ async def init_objects():
         role_tags="",
         role_name="VP",
         mandate_year=association1.mandate_year,
-        order=1,
+        member_order=1,
     )
 
     membership3 = models_phonebook.Membership(
@@ -116,7 +116,7 @@ async def init_objects():
         role_tags="",
         role_name="VP",
         mandate_year=association1.mandate_year,
-        order=2,
+        member_order=2,
     )
 
     membership4 = models_phonebook.Membership(
@@ -126,7 +126,7 @@ async def init_objects():
         role_tags="",
         role_name="VP",
         mandate_year=association1.mandate_year,
-        order=3,
+        member_order=3,
     )
 
     membership5 = models_phonebook.Membership(
@@ -136,7 +136,7 @@ async def init_objects():
         role_tags="",
         role_name="VP",
         mandate_year=association2.mandate_year,
-        order=0,
+        member_order=0,
     )
 
     membership6 = models_phonebook.Membership(
@@ -146,7 +146,7 @@ async def init_objects():
         role_tags="",
         role_name="VP",
         mandate_year=association1.mandate_year - 1,
-        order=0,
+        member_order=0,
     )
 
     await add_object_to_db(association1)
@@ -275,7 +275,7 @@ def test_add_membership_simple():
             "mandate_year": 2023,
             "role_name": "VP Emprunts",
             "role_tags": "",
-            "order": 1,
+            "member_order": 1,
         },
         headers={"Authorization": f"Bearer {token_simple}"},
     )
@@ -298,7 +298,7 @@ def test_add_membership_admin():
             "mandate_year": 2023,
             "role_name": "VP Emprunts",
             "role_tags": "",
-            "order": 1,
+            "member_order": 1,
         },
         headers={"Authorization": f"Bearer {token_BDE}"},
     )
@@ -315,7 +315,7 @@ def test_add_membership_admin():
     assert response_membership["association_id"] == association2.id
     assert response_membership["role_name"] == "VP Emprunts"
     assert response_membership["role_tags"] == ""
-    assert response_membership["order"] == 1
+    assert response_membership["member_order"] == 1
 
     assert any(response_membership in member["memberships"] for member in members)
 
@@ -329,7 +329,7 @@ def test_add_membership_president_with_president_tag():
             "mandate_year": association3.mandate_year,
             "role_name": "Prez",
             "role_tags": RoleTags.president.value,
-            "order": 0,
+            "member_order": 0,
         },
         headers={"Authorization": f"Bearer {token_president}"},
     )
@@ -352,7 +352,7 @@ def test_add_membership_admin_with_president_tag():
             "mandate_year": association3.mandate_year,
             "role_name": "Prez",
             "role_tags": RoleTags.president.value,
-            "order": 0,
+            "member_order": 0,
         },
         headers={"Authorization": f"Bearer {token_BDE}"},
     )
@@ -375,7 +375,7 @@ def test_add_membership_admin_with_president_tag():
     assert user_simple3["memberships"][0]["association_id"] == association3.id
     assert user_simple3["memberships"][0]["role_name"] == "Prez"
     assert user_simple3["memberships"][0]["role_tags"] == RoleTags.president.value
-    assert user_simple3["memberships"][0]["order"] == 0
+    assert user_simple3["memberships"][0]["member_order"] == 0
 
 
 # ---------------------------------------------------------------------------- #
@@ -650,7 +650,7 @@ def test_update_membership_order():
     response = client.patch(
         f"/phonebook/associations/memberships/{membership1.id}",
         json={
-            "order": 2,
+            "member_order": 2,
         },
         headers={"Authorization": f"Bearer {token_BDE}"},
     )
@@ -695,7 +695,7 @@ def test_update_membership_order():
     )
 
     assert membership_president is not None
-    assert membership_president["order"] == 2
+    assert membership_president["member_order"] == 2
 
     membership_president2 = next(
         (
@@ -708,7 +708,7 @@ def test_update_membership_order():
     )
 
     assert membership_president2 is not None
-    assert membership_president2["order"] == 0
+    assert membership_president2["member_order"] == 0
 
     membership_BDE = next(
         (
@@ -720,7 +720,7 @@ def test_update_membership_order():
     )
 
     assert membership_BDE is not None
-    assert membership_BDE["order"] == 0
+    assert membership_BDE["member_order"] == 0
 
     membership_simple = next(
         (
@@ -732,7 +732,7 @@ def test_update_membership_order():
     )
 
     assert membership_simple is not None
-    assert membership_simple["order"] == 1
+    assert membership_simple["member_order"] == 1
 
     membership_simple2 = next(
         (
@@ -744,7 +744,7 @@ def test_update_membership_order():
     )
 
     assert membership_simple2 is not None
-    assert membership_simple2["order"] == 1
+    assert membership_simple2["member_order"] == 1
 
 
 # ---------------------------------------------------------------------------- #
@@ -826,7 +826,7 @@ def test_delete_membership_update_order():
     )
 
     assert membership is not None
-    assert membership["order"] == 0
+    assert membership["member_order"] == 0
 
 
 def test_delete_association_simple():
