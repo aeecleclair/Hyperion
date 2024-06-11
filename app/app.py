@@ -268,7 +268,7 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     )
 
     # TODO: we may want to log an error if the directory is empty
-    calypsso = get_calypsso_app(hyperion_url=settings.CLIENT_URL)
+    calypsso = get_calypsso_app()
     app.mount("/calypsso", calypsso)
 
     # Initialize database connection
