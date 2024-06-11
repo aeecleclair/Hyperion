@@ -1152,6 +1152,7 @@ async def oauth_configuration(
 ):
     return await oidc_configuration(settings)
 
+
 @router.get(
     "/.well-known/openid-configuration",
 )

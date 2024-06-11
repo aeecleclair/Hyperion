@@ -699,7 +699,10 @@ async def create_product_variant(
     try:
         cruds_cdr.create_product_variant(db, db_product_variant)
         await db.commit()
-        return await cruds_cdr.get_product_variant_by_id(db=db, variant_id=db_product_variant.id)
+        return await cruds_cdr.get_product_variant_by_id(
+            db=db,
+            variant_id=db_product_variant.id,
+        )
     except Exception as error:
         await db.rollback()
         raise HTTPException(status_code=400, detail=str(error))
