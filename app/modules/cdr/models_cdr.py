@@ -135,7 +135,7 @@ class ProductVariant(Base):
     allowed_curriculum: Mapped[list[Curriculum]] = relationship(
         "Curriculum",
         secondary="cdr_allowed_curriculum",
-        lazy="selectin"
+        lazy="selectin",
     )
 
 
