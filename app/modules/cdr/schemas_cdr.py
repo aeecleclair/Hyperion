@@ -23,6 +23,16 @@ class DocumentComplete(DocumentBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class CurriculumBase(BaseModel):
+    name: str
+
+
+class CurriculumComplete(CurriculumBase):
+    id: UUID
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class ProductVariantBase(BaseModel):
     name_fr: str
     name_en: str
@@ -36,6 +46,7 @@ class ProductVariantBase(BaseModel):
 class ProductVariantComplete(ProductVariantBase):
     id: UUID
     product_id: UUID
+    allowed_curriculum: list[CurriculumComplete] = []
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -129,16 +140,6 @@ class SignatureBase(BaseModel):
 class SignatureComplete(SignatureBase):
     user_id: str
     document_id: UUID
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class CurriculumBase(BaseModel):
-    name: str
-
-
-class CurriculumComplete(CurriculumBase):
-    id: UUID
 
     model_config = ConfigDict(from_attributes=True)
 
