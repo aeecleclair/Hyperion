@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 
 import httpx
 from fastapi import Depends, File, HTTPException, UploadFile
@@ -142,7 +142,7 @@ async def create_session(
     message = Message(
         # We use sunday date as context to avoid sending the recap twice
         context=f"cinema-recap-{sunday}",
-        is_visible=True,
+        is_visible=sunday > datetime.now(UTC),
         title="🎬 Cinéma - Programme de la semaine",
         content=message_content,
         delivery_datetime=sunday,
