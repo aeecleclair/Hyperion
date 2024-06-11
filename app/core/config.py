@@ -1,8 +1,9 @@
 from functools import cached_property
 from typing import Any
 
-from jose import jwk
-from jose.exceptions import JWKError
+import jwt
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from pydantic import computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -137,7 +138,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_SECRET_KEY: str
     # RSA_PRIVATE_PEM_STRING should be a string containing the PEM certificate of a private RSA key. It will be used to sign id_tokens for Openid connect authentication
     # In the pem certificates newlines can be replaced by `\n`
-    RSA_PRIVATE_PEM_STRING: str
+    RSA_PRIVATE_PEM_STRING: bytes
 
     # Host or url of the API, used for Openid connect discovery endpoint
     # NOTE: A trailing / is required
@@ -169,25 +170,33 @@ class Settings(BaseSettings):
 
     @computed_field  # type: ignore[misc] # Current issue with mypy, see https://docs.pydantic.dev/2.0/usage/computed_fields/ and https://github.com/python/mypy/issues/1362
     @cached_property
-    def RSA_PRIVATE_KEY(cls) -> Any:
-        return jwk.construct(cls.RSA_PRIVATE_PEM_STRING, algorithm="RS256")
+    def RSA_PRIVATE_KEY(cls) -> rsa.RSAPrivateKey:
+        # https://cryptography.io/en/latest/hazmat/primitives/asymmetric/serialization/#module-cryptography.hazmat.primitives.serialization
+        private_key = load_pem_private_key(cls.RSA_PRIVATE_PEM_STRING, password=None)
+        if not isinstance(private_key, rsa.RSAPrivateKey):
+            raise TypeError(
+                f"RSA_PRIVATE_PEM_STRING is not an RSA key but a {private_key.__class__.__name__}",
+            )
+        return private_key
 
     @computed_field  # type: ignore[misc]
     @cached_property
-    def RSA_PUBLIC_KEY(cls) -> Any:
+    def RSA_PUBLIC_KEY(cls) -> rsa.RSAPublicKey:
         return cls.RSA_PRIVATE_KEY.public_key()
 
     @computed_field  # type: ignore[misc]
     @cached_property
-    def RSA_PUBLIC_JWK(cls) -> dict[str, list[dict[str, str]]]:
-        JWK = cls.RSA_PUBLIC_KEY.to_dict()
-        JWK.update(
+    def RSA_PUBLIC_JWK(cls) -> dict[str, list[dict[str, Any]]]:
+        # See https://github.com/jpadilla/pyjwt/issues/880
+        algo = jwt.get_algorithm_by_name("RS256")
+        jwk = algo.to_jwk(cls.RSA_PUBLIC_KEY, as_dict=True)
+        jwk.update(
             {
                 "use": "sig",
                 "kid": "RSA-JWK-1",  # The kid allows to identify the key in the JWKS, it should match the kid in the token header
             },
         )
-        return {"keys": [JWK]}
+        return {"keys": [jwk]}
 
     # Tokens validity
     USER_ACTIVATION_TOKEN_EXPIRES_HOURS: int = 24
@@ -261,11 +270,6 @@ class Settings(BaseSettings):
             raise ValueError(
                 "RSA_PRIVATE_PEM_STRING should be configured in the dotenv",
             )
-
-        try:
-            jwk.construct(self.RSA_PRIVATE_PEM_STRING, algorithm="RS256")
-        except JWKError as error:
-            raise ValueError("RSA_PRIVATE_PEM_STRING is not a valid RSA key") from error
 
         return self
 

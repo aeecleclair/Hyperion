@@ -27,6 +27,7 @@ from app.core.security import (
     create_access_token,
     create_access_token_RS256,
     generate_token,
+    jws_algorithm,
 )
 from app.core.users import cruds_users
 from app.dependencies import (
@@ -1071,7 +1072,7 @@ async def oidc_configuration(
             "public",
         ],
         "id_token_signing_alg_values_supported": [
-            "RS256",
+            jws_algorithm,
         ],
         # We don't support encrypted JWT : JWE
         # "id_token_encryption_alg_values_supported": [],
