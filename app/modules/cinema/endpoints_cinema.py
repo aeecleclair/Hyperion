@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 
 import httpx
 from fastapi import Depends, File, HTTPException, UploadFile
@@ -131,29 +131,30 @@ async def create_session(
         raise HTTPException(status_code=422, detail=str(error))
     session_date = result.start
     sunday = get_previous_sunday(session_date)
-    next_week_sessions = await cruds_cinema.get_sessions_in_time_frame(
-        start_after=sunday,
-        start_before=sunday + timedelta(days=7),
-        db=db,
-    )
-    message_content = ""
-    for next_session in next_week_sessions:
-        message_content += f"{get_date_day(next_session.start)} {next_session.start.day} {get_date_month(next_session.start)} - {next_session.name}\n"
-    message = Message(
-        # We use sunday date as context to avoid sending the recap twice
-        context=f"cinema-recap-{sunday}",
-        is_visible=True,
-        title="🎬 Cinéma - Programme de la semaine",
-        content=message_content,
-        delivery_datetime=sunday,
-        # The notification will expire the next sunday
-        expire_on=sunday + timedelta(days=7),
-    )
+    if sunday > datetime.now(UTC):
+        next_week_sessions = await cruds_cinema.get_sessions_in_time_frame(
+            start_after=sunday,
+            start_before=sunday + timedelta(days=7),
+            db=db,
+        )
+        message_content = ""
+        for next_session in next_week_sessions:
+            message_content += f"{get_date_day(next_session.start)} {next_session.start.day} {get_date_month(next_session.start)} - {next_session.name}\n"
+        message = Message(
+            # We use sunday date as context to avoid sending the recap twice
+            context=f"cinema-recap-{sunday}",
+            is_visible=True,
+            title="🎬 Cinéma - Programme de la semaine",
+            content=message_content,
+            delivery_datetime=sunday,
+            # The notification will expire the next sunday
+            expire_on=sunday + timedelta(days=7),
+        )
 
-    await notification_tool.send_notification_to_topic(
-        custom_topic=CustomTopic(topic=Topic.cinema),
-        message=message,
-    )
+        await notification_tool.send_notification_to_topic(
+            custom_topic=CustomTopic(topic=Topic.cinema),
+            message=message,
+        )
     return result
 
 
