@@ -726,7 +726,7 @@ async def confirm_t_shirt_payment(
     """
     participant = await cruds_raid.get_participant_by_id(participant_id, db)
     if not participant or not participant.t_shirt_size:
-        raise HTTPException(status_code=403, detail="T shirt size not set.")
+        raise HTTPException(status_code=400, detail="T shirt size not set.")
     await cruds_raid.confirm_t_shirt_payment(participant_id, db)
     team = await cruds_raid.get_team_by_participant_id(participant_id, db)
     await post_update_actions(team, db)
