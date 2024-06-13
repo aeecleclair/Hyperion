@@ -705,7 +705,7 @@ async def confirm_payment(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.raid_admin)),
 ):
     """
-    Confirm payment
+    Confirm payment manually
     """
     await cruds_raid.confirm_payment(participant_id, db)
     team = await cruds_raid.get_team_by_participant_id(participant_id, db)
