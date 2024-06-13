@@ -434,7 +434,7 @@ async def update_team(
     if existing_team is None:
         raise HTTPException(status_code=404, detail="Team not found.")
     if existing_team.id != team_id:
-        raise HTTPException(status_code=403, detail="You are not in the team.")
+        raise HTTPException(status_code=403, detail="You can only edit your own team.")
     await cruds_raid.update_team(team_id, team, db)
     updated_team = await cruds_raid.get_team_by_id(team_id, db)
     await post_update_actions(updated_team, db)
