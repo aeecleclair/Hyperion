@@ -6,7 +6,7 @@ from googleapiclient.discovery import build
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
-from app.modules.raid import schemas_raid
+from app.modules.raid import coredata_raid, schemas_raid
 from app.utils.tools import get_core_data, set_core_data
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
@@ -14,7 +14,6 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 
 class DriveFileManager:
     def __init__(self, settings: Settings):
-
         oauth_credentials = google.oauth2.credentials.Credentials(
             token="",
             refresh_token=settings.RAID_DRIVE_REFRESH_TOKEN,
@@ -33,11 +32,11 @@ class DriveFileManager:
 
         self.REGISTERING_FOLDER_NAME = "Équipes"
         self.SECURITY_FOLDER_NAME = "Fiches sécurité"
-        self.drive_folders = None
+        self.drive_folders: coredata_raid.RaidDriveFolders | None = None
 
     async def init_folders(self, db: AsyncSession):
         if not self.drive_folders:
-            self.drive_folders = await get_core_data(schemas_raid.RaidDriveFolders, db)
+            self.drive_folders = await get_core_data(coredata_raid.RaidDriveFolders, db)
             if not self.drive_folders.parent_folder_id:
                 hyperion_error_logger.error("No parent folder id found in database")
                 return
