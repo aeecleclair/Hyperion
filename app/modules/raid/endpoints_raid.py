@@ -495,7 +495,7 @@ async def create_document(
     Create a document
     """
     if not await cruds_raid.are_user_in_the_same_team(participant_id, user.id, db):
-        raise HTTPException(status_code=403, detail="You are not the participant.")
+        raise HTTPException(status_code=403, detail="You can only create a document for a participant of your team.")
 
     saved_document = await cruds_raid.get_document_by_id(document.id, db)
     if not saved_document:
