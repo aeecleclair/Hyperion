@@ -551,7 +551,7 @@ async def upload_document(
     await save_file_as_data(
         upload_file=file,
         directory="raid",
-        filename=str(document_id),
+        filename=document_id,
         request_id=request_id,
         max_file_size=50 * 1024 * 1024,  # TODO : Change this value
         accepted_content_types=[
