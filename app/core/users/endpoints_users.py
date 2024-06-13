@@ -13,10 +13,9 @@ from fastapi import (
     File,
     HTTPException,
     Query,
-    Request,
     UploadFile,
 )
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 

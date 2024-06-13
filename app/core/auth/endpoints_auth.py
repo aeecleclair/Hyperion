@@ -12,7 +12,6 @@ from fastapi import (
     Form,
     Header,
     HTTPException,
-    Request,
     Response,
     status,
 )
@@ -300,8 +299,8 @@ async def authorize_validation(
         return RedirectResponse(
             settings.CLIENT_URL
             + calypsso.get_login_relative_url(
-                **authorizereq.model_dump(exclude=["email", "password"]),
-                credentials_error="Invalid user email or password",
+                **authorizereq.model_dump(exclude={"email", "password"}),
+                credentials_error=True,
             ),
             status_code=status.HTTP_302_FOUND,
         )
@@ -588,9 +587,6 @@ async def authorization_code_grant(
             hyperion_access_logger.warning(
                 f"Token authorization_code_grant: Invalid code_verifier ({request_id})",
             )
-            # jafzA6TbfGJVdeJxpBbPG4yM_URLSpoSv0ojh1e0n58
-            print("code virifier:", tokenreq.code_verifier)
-            print("code_challenge", code_challenge)
             return JSONResponse(
                 status_code=400,
                 content={
