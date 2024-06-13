@@ -805,6 +805,8 @@ async def join_team(
 
     user_team = await cruds_raid.get_team_by_participant_id(user.id, db)
 
+    # An user that is in a team without a second participant will quit its teams to joint the other
+    # If there are already two participants in the user's team, we want to raise an error
     if user_team:
         if user_team.second_id:
             raise HTTPException(status_code=403, detail="You are already in a team.")
