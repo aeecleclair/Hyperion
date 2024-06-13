@@ -456,6 +456,7 @@ async def delete_team(
     if not team:
         raise HTTPException(status_code=403, detail="This team does not exists")
     await cruds_raid.delete_team(team_id, db)
+    # We will try to delete PDF associated with the team from the Google Drive
     if team.file_id:
         drive_file_manager.delete_file(team.file_id)
         if team.captain.security_file.file_id:
