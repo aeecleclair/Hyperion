@@ -21,7 +21,7 @@ from app.dependencies import (
     is_user,
     is_user_a_member_of,
 )
-from app.modules.raid import cruds_raid, models_raid, schemas_raid
+from app.modules.raid import coredata_raid, cruds_raid, models_raid, schemas_raid
 from app.modules.raid.raid_type import DocumentType, DocumentValidation
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.modules.raid.utils.pdf.pdf_writer import HTMLPDFWriter, PDFWriter
@@ -56,7 +56,7 @@ async def validate_payment(
     if not participant_checkout:
         raise ValueError(f"RAID participant checkout {checkout_id} not found.")
     participant_id = participant_checkout.participant_id
-    prices = await get_core_data(schemas_raid.RaidPrice, db)
+    prices = await get_core_data(coredata_raid.RaidPrice, db)
     if prices.student_price and paid_amount == prices.student_price:
         await cruds_raid.confirm_payment(participant_id, db)
     elif prices.t_shirt_price and paid_amount == prices.t_shirt_price:
@@ -161,7 +161,7 @@ async def post_update_actions(team: models_raid.Team | None, db: AsyncSession) -
 
 async def save_security_file(
     participant: models_raid.Participant,
-    information: schemas_raid.RaidInformation,
+    information: coredata_raid.RaidInformation,
     team_number: int | None,
     db: AsyncSession,
 ) -> None:
@@ -246,7 +246,7 @@ async def create_participant(
     if await cruds_raid.is_user_a_participant(user.id, db):
         raise HTTPException(status_code=403, detail="You are already a participant.")
 
-    raid_information = await get_core_data(schemas_raid.RaidInformation, db)
+    raid_information = await get_core_data(coredata_raid.RaidInformation, db)
     raid_start_date = raid_information.raid_start_date or date(
         year=datetime.now(UTC).year + 1,
         month=1,
@@ -291,7 +291,7 @@ async def update_participant(
     if not await cruds_raid.are_user_in_the_same_team(user.id, participant_id, db):
         raise HTTPException(status_code=403, detail="You are not the participant.")
 
-    raid_information = await get_core_data(schemas_raid.RaidInformation, db)
+    raid_information = await get_core_data(coredata_raid.RaidInformation, db)
     raid_start_date = raid_information.raid_start_date or date(
         year=datetime.now(UTC).year + 1,
         month=1,
@@ -596,7 +596,7 @@ async def read_document(
     participant = await cruds_raid.get_user_by_document_id(document_id, db)
     if not participant:
         # The document can be a global document
-        information = await get_core_data(schemas_raid.RaidInformation, db)
+        information = await get_core_data(coredata_raid.RaidInformation, db)
         if (
             information.raid_rules_id == document_id
             or information.raid_information_id == document_id
@@ -673,7 +673,7 @@ async def set_security_file(
         participant = await get_participant(participant_id, db)
         team = await cruds_raid.get_team_by_participant_id(user.id, db)
         if team and participant:
-            information = await get_core_data(schemas_raid.RaidInformation, db)
+            information = await get_core_data(coredata_raid.RaidInformation, db)
             await save_security_file(participant, information, team.number, db)
         await post_update_actions(team, db)
         return await cruds_raid.get_security_file_by_security_id(
@@ -689,7 +689,7 @@ async def set_security_file(
     participant = await get_participant(participant_id, db)
     team = await cruds_raid.get_team_by_participant_id(user.id, db)
     if team and participant:
-        information = await get_core_data(schemas_raid.RaidInformation, db)
+        information = await get_core_data(coredata_raid.RaidInformation, db)
         await save_security_file(participant, information, team.number, db)
     await post_update_actions(team, db)
     return created_security_file
@@ -918,7 +918,7 @@ async def merge_teams(
 
 @module.router.get(
     "/raid/information",
-    response_model=schemas_raid.RaidInformation,
+    response_model=coredata_raid.RaidInformation,
     status_code=200,
 )
 async def get_raid_information(
@@ -928,7 +928,7 @@ async def get_raid_information(
     """
     Get raid information
     """
-    return await get_core_data(schemas_raid.RaidInformation, db)
+    return await get_core_data(coredata_raid.RaidInformation, db)
 
 
 @module.router.patch(
@@ -936,7 +936,7 @@ async def get_raid_information(
     status_code=204,
 )
 async def update_raid_information(
-    raid_information: schemas_raid.RaidInformation,
+    raid_information: coredata_raid.RaidInformation,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.raid_admin)),
 ):
@@ -944,7 +944,7 @@ async def update_raid_information(
     Update raid information
     """
     # Checking the last saved information is a temporary fix for core data not supporting exclude None on update
-    last_information = await get_core_data(schemas_raid.RaidInformation, db)
+    last_information = await get_core_data(coredata_raid.RaidInformation, db)
     await set_core_data(raid_information, db)
     if (
         raid_information.raid_start_date
@@ -966,25 +966,25 @@ async def update_raid_information(
     if (
         (
             raid_information.president
-            and raid_information.presidents != last_information.presidents
+            and raid_information.president != last_information.president
         )
         or (
             raid_information.rescue
-            and raid_information.rescues != last_information.rescues
+            and raid_information.rescue != last_information.rescue
         )
         or (
             raid_information.security_responsible
-            and raid_information.security_responsibles
-            != last_information.security_responsibles
+            and raid_information.security_responsible
+            != last_information.security_responsible
         )
         or (
             raid_information.volunteer_responsible
-            and raid_information.volunteer_responsibles
-            != last_information.volunteer_responsibles
+            and raid_information.volunteer_responsible
+            != last_information.volunteer_responsible
         )
     ):
         participants = await cruds_raid.get_all_participants(db)
-        information = await get_core_data(schemas_raid.RaidInformation, db)
+        information = await get_core_data(coredata_raid.RaidInformation, db)
         for participant in participants:
             team = await cruds_raid.get_team_by_participant_id(participant.id, db)
             if team:
@@ -1003,8 +1003,8 @@ async def update_drive_folders(
     """
     Update drive folders
     """
-    schemas_folders = await get_core_data(schemas_raid.RaidDriveFolders, db)
-    schemas_folders = schemas_raid.RaidDriveFolders(
+    schemas_folders = await get_core_data(coredata_raid.RaidDriveFolders, db)
+    schemas_folders = coredata_raid.RaidDriveFolders(
         parent_folder_id=drive_folders.parent_folder_id,
         registering_folder_id=None,
         security_folder_id=None,
@@ -1025,12 +1025,12 @@ async def get_drive_folders(
     """
     Get drive folders
     """
-    return await get_core_data(schemas_raid.RaidDriveFolders, db)
+    return await get_core_data(coredata_raid.RaidDriveFolders, db)
 
 
 @module.router.get(
     "/raid/price",
-    response_model=schemas_raid.RaidPrice,
+    response_model=coredata_raid.RaidPrice,
     status_code=200,
 )
 async def get_raid_price(
@@ -1040,7 +1040,7 @@ async def get_raid_price(
     """
     Get raid price
     """
-    return await get_core_data(schemas_raid.RaidPrice, db)
+    return await get_core_data(coredata_raid.RaidPrice, db)
 
 
 @module.router.patch(
@@ -1048,7 +1048,7 @@ async def get_raid_price(
     status_code=204,
 )
 async def update_raid_price(
-    raid_price: schemas_raid.RaidPrice,
+    raid_price: coredata_raid.RaidPrice,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.raid_admin)),
 ):
@@ -1071,7 +1071,7 @@ async def get_payment_url(
     """
     Get payment url
     """
-    raid_prices = await get_core_data(schemas_raid.RaidPrice, db)
+    raid_prices = await get_core_data(coredata_raid.RaidPrice, db)
     if not raid_prices.student_price or not raid_prices.t_shirt_price:
         raise HTTPException(status_code=404, detail="Prices not set.")
     price = 0
