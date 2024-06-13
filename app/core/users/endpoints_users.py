@@ -4,6 +4,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 
 import aiofiles
+import calypsso
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -323,8 +324,9 @@ async def create_user(
     # After adding the unconfirmed user to the database, we got an activation token that need to be send by email,
     # in order to make sure the email address is valid
 
-    calypsso_activate_url = (
-        f"{settings.CLIENT_URL}calypsso/activate/?activation_code={activation_token}"
+    calypsso_activate_url = settings.CLIENT_URL + calypsso.get_activate_relative_url(
+        activation_token=activation_token,
+        external=external,
     )
 
     if settings.SMTP_ACTIVE:
@@ -506,7 +508,8 @@ async def recover_user(
         )
 
         calypsso_reset_url = (
-            f"{settings.CLIENT_URL}calypsso/reset-password/?reset_token={reset_token}"
+            settings.CLIENT_URL
+            + calypsso.get_reset_password_relative_url(reset_token=reset_token)
         )
 
         if settings.SMTP_ACTIVE:
