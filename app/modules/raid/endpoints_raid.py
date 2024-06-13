@@ -305,10 +305,14 @@ async def update_participant(
         is_minor = will_participant_be_minor_on(participant, raid_start_date)
 
     saved_participant = await get_participant(participant_id, db)
-    participant_dict = participant.model_dump(exclude_none=True)
-    # We remove the value to control it the way we want
-    if participant_dict.get("t_shirt_size"):
-        del participant_dict["t_shirt_size"]
+
+    # We remove the t_shirt_size value, we will add it manually if the user want it,
+    # to be able to verify that the tshirt is not already paid
+    participant_dict = participant.model_dump(
+        exclude_none=True,
+        exclude={"t_shirt_size"},
+    )
+
     # If the t_shirt_payment is not set, we can change the t_shirt_size
     if not saved_participant.t_shirt_payment:
         participant_dict["t_shirt_size"] = (
