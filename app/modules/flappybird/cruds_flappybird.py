@@ -1,5 +1,3 @@
-import logging
-
 from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,20 +5,14 @@ from sqlalchemy.orm import selectinload
 
 from app.modules.flappybird import models_flappybird
 
-hyperion_logger = logging.getLogger("hyperion.error")
-
 
 async def get_flappybird_score_leaderboard(
     db: AsyncSession,
-    skip: int,
-    limit: int,
 ) -> list[models_flappybird.FlappyBirdBestScore]:
-    """Return the flappybird leaderboard scores from postion skip to skip+limit"""
+    """Return the flappybird leaderboard scores"""
     result = await db.execute(
         select(models_flappybird.FlappyBirdBestScore)
         .order_by(models_flappybird.FlappyBirdBestScore.value.desc())
-        .offset(skip)
-        .limit(limit)
         .options(selectinload(models_flappybird.FlappyBirdBestScore.user)),
     )
     return list(result.scalars().all())

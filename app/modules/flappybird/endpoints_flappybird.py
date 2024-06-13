@@ -26,17 +26,9 @@ module = Module(
     response_model=list[schemas_flappybird.FlappyBirdScoreInDB],
     status_code=200,
 )
-async def get_flappybird_score(
-    skip: int = 0,
-    limit: int = 10,
-    db: AsyncSession = Depends(get_db),
-):
-    """Return the leaderboard score of the skip...limit"""
-    leaderboard = await cruds_flappybird.get_flappybird_score_leaderboard(
-        db=db,
-        skip=skip,
-        limit=limit,
-    )
+async def get_flappybird_score(db: AsyncSession = Depends(get_db)):
+    """Return the leaderboard"""
+    leaderboard = await cruds_flappybird.get_flappybird_score_leaderboard(db=db)
     return leaderboard
 
 
