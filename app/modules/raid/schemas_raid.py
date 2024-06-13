@@ -9,7 +9,6 @@ from app.modules.raid.raid_type import (
     MeetingPlace,
     Size,
 )
-from app.types import core_data
 
 
 class DocumentBase(BaseModel):

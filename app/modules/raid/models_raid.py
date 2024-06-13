@@ -12,7 +12,7 @@ from app.modules.raid.raid_type import (
     MeetingPlace,
     Size,
 )
-from app.types.sqlalchemy import Base, PrimaryKey
+from app.types.sqlalchemy import Base
 
 
 class Document(Base):

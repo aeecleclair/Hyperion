@@ -11,7 +11,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from PIL import Image
 from pypdf import PdfReader, PdfWriter
 
-from app.modules.raid import coredata_raid, schemas_raid
+from app.modules.raid import coredata_raid
 from app.modules.raid.models_raid import Document, Participant, SecurityFile, Team
 from app.modules.raid.utils.pdf.conversion_utils import (
     date_to_string,
@@ -405,7 +405,6 @@ class HTMLPDFWriter:
             },
             "team_number": team_number,
         }
-        print(context.get("information").get("president"))
         html_content = results_template.render(context)
         csspath = pathlib.Path("assets/templates/style.css")
         css_content = csspath.read_bytes().decode()
