@@ -622,7 +622,7 @@ async def read_document(
     ) and not is_user_member_of_an_allowed_group(user, [GroupType.raid_admin]):
         raise HTTPException(
             status_code=403,
-            detail="You are not the owner of this document.",
+            detail="The owner of this document is not a member of your team.",
         )
 
     return get_file_from_data(
