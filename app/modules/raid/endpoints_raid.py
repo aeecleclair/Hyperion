@@ -169,7 +169,9 @@ async def save_security_file(
     try:
         pdf_writer = HTMLPDFWriter()
         file_path = pdf_writer.write_participant_security_file(
-            participant, information, team_number
+            participant,
+            information,
+            team_number,
         )
         file_name = f"{str(team_number) + '_' if team_number else ''}{participant.firstname}_{participant.name}_fiche_sécurité.pdf"
         if participant.security_file and participant.security_file.file_id:
@@ -248,7 +250,7 @@ async def create_participant(
         raise HTTPException(status_code=403, detail="You are already a participant.")
 
     raid_information = await get_core_data(coredata_raid.RaidInformation, db)
-    # If the start_date is not set, we will use January the first of next year to determine if participants 
+    # If the start_date is not set, we will use January the first of next year to determine if participants
     # are minors. We can safely assume that the RAID will occurre before Jan 1 of next year
     raid_start_date = raid_information.raid_start_date or date(
         year=datetime.now(UTC).year + 1,
