@@ -25,6 +25,7 @@ from app.modules.raid import coredata_raid, cruds_raid, models_raid, schemas_rai
 from app.modules.raid.raid_type import DocumentType, DocumentValidation
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.modules.raid.utils.pdf.pdf_writer import HTMLPDFWriter, PDFWriter
+from app.modules.raid.utils.utils_raid import will_participant_be_minor_on
 from app.types.content_type import ContentType
 from app.types.module import Module
 from app.utils.tools import (
@@ -301,14 +302,7 @@ async def update_participant(
     # We only want to change the is_minor value if the birthday is changed
     is_minor = None
     if participant.birthday:
-        is_minor = (
-            date(
-                participant.birthday.year + 18,
-                participant.birthday.month,
-                participant.birthday.day,
-            )
-            > raid_start_date
-        )
+        is_minor = will_participant_be_minor_on(participant, raid_start_date)
 
     saved_participant = await get_participant(participant_id, db)
     participant_dict = participant.model_dump(exclude_none=True)
@@ -495,7 +489,10 @@ async def create_document(
     Create a document
     """
     if not await cruds_raid.are_user_in_the_same_team(participant_id, user.id, db):
-        raise HTTPException(status_code=403, detail="You can only create a document for a participant of your team.")
+        raise HTTPException(
+            status_code=403,
+            detail="You can only create a document for a participant of your team.",
+        )
 
     saved_document = await cruds_raid.get_document_by_id(document.id, db)
     if not saved_document:
