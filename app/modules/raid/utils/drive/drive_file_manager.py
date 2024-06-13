@@ -6,7 +6,7 @@ from googleapiclient.discovery import build
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
-from app.modules.raid import coredata_raid, schemas_raid
+from app.modules.raid import coredata_raid
 from app.utils.tools import get_core_data, set_core_data
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
