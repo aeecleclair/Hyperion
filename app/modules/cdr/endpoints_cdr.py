@@ -694,10 +694,18 @@ async def create_product_variant(
     db_product_variant = models_cdr.ProductVariant(
         id=uuid4(),
         product_id=product_id,
-        **product_variant.model_dump(),
+        **product_variant.model_dump(exclude={"allowed_curriculum"}),
     )
     try:
         cruds_cdr.create_product_variant(db, db_product_variant)
+        for c in product_variant.allowed_curriculum:
+            cruds_cdr.create_allowed_curriculum(
+                db,
+                models_cdr.AllowedCurriculum(
+                    product_variant_id=db_product_variant.id,
+                    curriculum_id=c,
+                ),
+            )
         await db.commit()
         return await cruds_cdr.get_product_variant_by_id(
             db=db,
@@ -753,124 +761,16 @@ async def update_product_variant(
             product_variant=product_variant,
             db=db,
         )
-        await db.commit()
-    except Exception as error:
-        await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
-
-
-@module.router.post(
-    "/cdr/sellers/{seller_id}/products/{product_id}/variants/{variant_id}/curriculums/{curriculum_id}/",
-    response_model=schemas_cdr.ProductVariantComplete,
-    status_code=201,
-)
-async def create_allowed_curriculum(
-    seller_id: UUID,
-    product_id: UUID,
-    variant_id: UUID,
-    curriculum_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
-):
-    """
-    Add a curriculum in a product variant's allowed curriculums.
-
-    **User must be part of the seller's group to use this endpoint**
-    """
-    await is_user_in_a_seller_group(
-        seller_id,
-        user,
-        db=db,
-    )
-    await check_request_consistency(
-        db=db,
-        seller_id=seller_id,
-        product_id=product_id,
-        variant_id=variant_id,
-    )
-    db_curriculum = await cruds_cdr.get_curriculum_by_id(
-        curriculum_id=curriculum_id,
-        db=db,
-    )
-    if not db_curriculum:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid curriculum_id",
-        )
-
-    status = await get_core_data(schemas_cdr.Status, db)
-    if status.status == CdrStatus.closed:
-        raise HTTPException(
-            status_code=403,
-            detail="Cdr is closed.",
-        )
-    allowed_curriculum = models_cdr.AllowedCurriculum(
-        product_variant_id=variant_id,
-        curriculum_id=curriculum_id,
-    )
-    try:
-        cruds_cdr.create_allowed_curriculum(db, allowed_curriculum)
-        await db.commit()
-        return await cruds_cdr.get_product_variant_by_id(variant_id=variant_id, db=db)
-    except Exception as error:
-        await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
-
-
-@module.router.delete(
-    "/cdr/sellers/{seller_id}/products/{product_id}/variants/{variant_id}/curriculums/{curriculum_id}/",
-    status_code=204,
-)
-async def delete_allowed_curriculum(
-    seller_id: UUID,
-    product_id: UUID,
-    variant_id: UUID,
-    curriculum_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
-):
-    """
-    Remove a curriculum from a product variant's allowed curriculums.
-
-    **User must be part of the seller's group to use this endpoint**
-    """
-    await is_user_in_a_seller_group(
-        seller_id,
-        user,
-        db=db,
-    )
-    db_product = await check_request_consistency(
-        db=db,
-        seller_id=seller_id,
-        product_id=product_id,
-        variant_id=variant_id,
-    )
-    db_curriculum = await cruds_cdr.get_curriculum_by_id(
-        curriculum_id=curriculum_id,
-        db=db,
-    )
-    if not db_curriculum:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid curriculum_id",
-        )
-    status = await get_core_data(schemas_cdr.Status, db)
-    if status.status in [
-        CdrStatus.onsite,
-        CdrStatus.closed,
-    ] or (
-        db_product and status.status == CdrStatus.online and db_product.available_online
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="You can't delete a allowed curriculum once CDR has started.",
-        )
-    try:
-        await cruds_cdr.delete_allowed_curriculum(
-            variant_id=variant_id,
-            curriculum_id=curriculum_id,
-            db=db,
-        )
+        if product_variant.allowed_curriculum is not None:
+            await cruds_cdr.delete_allowed_curriculums(db=db, variant_id=variant_id)
+            for c in product_variant.allowed_curriculum:
+                cruds_cdr.create_allowed_curriculum(
+                    db,
+                    models_cdr.AllowedCurriculum(
+                        product_variant_id=variant_id,
+                        curriculum_id=c,
+                    ),
+                )
         await db.commit()
     except Exception as error:
         await db.rollback()
