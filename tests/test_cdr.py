@@ -911,6 +911,7 @@ def test_create_product_variant_seller():
             "enabled": True,
             "price": 5000,
             "unique": True,
+            "allowed_curriculum": [str(curriculum.id)],
         },
         headers={"Authorization": f"Bearer {token_bde}"},
     )
@@ -938,6 +939,7 @@ def test_create_product_variant_user():
             "enabled": True,
             "price": 5000,
             "unique": True,
+            "allowed_curriculum": [str(curriculum.id)],
         },
         headers={"Authorization": f"Bearer {token_user}"},
     )
@@ -961,6 +963,7 @@ def test_patch_product_variant_seller():
         f"/cdr/sellers/{seller.id!s}/products/{product.id!s}/variants/{variant.id}/",
         json={
             "name_fr": "Variante modifiée",
+            "allowed_curriculum": [],
         },
         headers={"Authorization": f"Bearer {token_bde}"},
     )
@@ -1071,118 +1074,6 @@ def test_delete_product_variant_seller():
     for x in response.json():
         if x["id"] == str(product.id):
             assert str(empty_variant.id) not in [y["id"] for y in x["variants"]]
-
-
-def test_create_allowed_curriculum_seller():
-    response = client.post(
-        f"/cdr/sellers/{seller.id!s}/products/{product.id!s}/variants/{variant.id!s}/curriculums/{curriculum.id!s}/",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 201
-
-    response = client.get(
-        f"/cdr/sellers/{seller.id!s}/products/",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 200
-    assert str(product.id) in [x["id"] for x in response.json()]
-    for x in response.json():
-        if x["id"] == str(product.id):
-            assert str(variant.id) in [y["id"] for y in x["variants"]]
-            for y in x["variants"]:
-                if y["id"] == variant.id:
-                    assert curriculum.id in [z["id"] for z in y["allowed_curriculums"]]
-
-
-def test_create_allowed_curriculum_again():
-    response = client.post(
-        f"/cdr/sellers/{seller.id!s}/products/{product.id!s}/variants/{variant.id!s}/curriculums/{curriculum.id!s}/",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 400
-
-
-def test_create_allowed_curriculum_user():
-    response = client.post(
-        f"/cdr/sellers/{seller.id!s}/products/{product.id!s}/variants/{variant.id!s}/curriculums/{curriculum.id!s}/",
-        headers={"Authorization": f"Bearer {token_user}"},
-    )
-    assert response.status_code == 403
-
-    response = client.get(
-        f"/cdr/sellers/{seller.id!s}/products/",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 200
-    assert str(product.id) in [x["id"] for x in response.json()]
-    for x in response.json():
-        if x["id"] == str(product.id):
-            assert str(variant.id) in [y["id"] for y in x["variants"]]
-            for y in x["variants"]:
-                if y["id"] == variant.id:
-                    assert curriculum.id not in [
-                        z["id"] for z in y["allowed_curriculums"]
-                    ]
-
-
-def test_create_allowed_curriculum_wrong_curriculum():
-    response = client.post(
-        f"/cdr/sellers/{seller.id!s}/products/{product.id!s}/variants/{variant.id!s}/curriculums/{uuid.uuid4()}/",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 404
-
-
-def test_delete_allowed_curriculum_seller():
-    response = client.delete(
-        f"/cdr/sellers/{seller.id!s}/products/{product.id!s}/variants/{variant.id!s}/curriculums/{curriculum.id!s}/",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 204
-
-    response = client.get(
-        f"/cdr/sellers/{seller.id!s}/products/",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 200
-    assert str(product.id) in [x["id"] for x in response.json()]
-    for x in response.json():
-        if x["id"] == str(product.id):
-            assert str(variant.id) in [y["id"] for y in x["variants"]]
-            for y in x["variants"]:
-                if y["id"] == variant.id:
-                    assert curriculum.id not in [
-                        z["id"] for z in y["allowed_curriculums"]
-                    ]
-
-
-def test_delete_allowed_curriculum_wrong_curriculum():
-    response = client.delete(
-        f"/cdr/sellers/{seller.id!s}/products/{product.id!s}/variants/{variant.id!s}/curriculums/{uuid.uuid4()}/",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 404
-
-
-def test_delete_allowed_curriculum_user():
-    response = client.delete(
-        f"/cdr/sellers/{seller.id!s}/products/{product.id!s}/variants/{variant.id!s}/curriculums/{curriculum.id!s}/",
-        headers={"Authorization": f"Bearer {token_user}"},
-    )
-    assert response.status_code == 403
-
-    response = client.get(
-        f"/cdr/sellers/{seller.id!s}/products/",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 200
-    assert str(product.id) in [x["id"] for x in response.json()]
-    for x in response.json():
-        if x["id"] == str(product.id):
-            assert str(variant.id) in [y["id"] for y in x["variants"]]
-            for y in x["variants"]:
-                if y["id"] == variant.id:
-                    assert curriculum.id in [z["id"] for z in y["allowed_curriculums"]]
 
 
 def test_get_documents_seller():
@@ -1493,14 +1384,6 @@ def test_patch_product_variant_cdr_started():
         json={
             "name_fr": "Variante modifiée",
         },
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 403
-
-
-def test_delete_allowed_curriculum_cdr_started():
-    response = client.delete(
-        f"/cdr/sellers/{seller.id!s}/products/{product.id!s}/variants/{variant.id!s}/curriculums/{curriculum.id}/",
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 403
@@ -2315,15 +2198,8 @@ def test_create_product_variant_closed():
             "enabled": True,
             "price": 5000,
             "unique": True,
+            "allowed_curriculum": [str(curriculum.id)],
         },
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 403
-
-
-def test_create_allowed_curriculum_closed():
-    response = client.post(
-        f"/cdr/sellers/{seller.id!s}/products/{product.id!s}/variants/{variant.id!s}/curriculums/{curriculum.id!s}/",
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 403
