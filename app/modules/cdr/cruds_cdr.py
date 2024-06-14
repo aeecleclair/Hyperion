@@ -237,7 +237,12 @@ async def update_product_variant(
     await db.execute(
         update(models_cdr.ProductVariant)
         .where(models_cdr.ProductVariant.id == variant_id)
-        .values(**product_variant.model_dump(exclude_none=True)),
+        .values(
+            **product_variant.model_dump(
+                exclude_none=True,
+                exclude={"allowed_curriculum"},
+            ),
+        ),
     )
 
 
@@ -248,15 +253,13 @@ def create_allowed_curriculum(
     db.add(allowed_curriculum)
 
 
-async def delete_allowed_curriculum(
+async def delete_allowed_curriculums(
     db: AsyncSession,
     variant_id: UUID,
-    curriculum_id: UUID,
 ):
     await db.execute(
         delete(models_cdr.AllowedCurriculum).where(
             models_cdr.AllowedCurriculum.product_variant_id == variant_id,
-            models_cdr.AllowedCurriculum.curriculum_id == curriculum_id,
         ),
     )
 

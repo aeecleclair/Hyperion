@@ -41,11 +41,19 @@ class ProductVariantBase(BaseModel):
     price: int
     enabled: bool
     unique: bool
+    allowed_curriculum: list[UUID]
 
 
-class ProductVariantComplete(ProductVariantBase):
+class ProductVariantComplete(BaseModel):
     id: UUID
     product_id: UUID
+    name_fr: str
+    name_en: str
+    description_fr: str | None = None
+    description_en: str | None = None
+    price: int
+    enabled: bool
+    unique: bool
     allowed_curriculum: list[CurriculumComplete] = []
 
     model_config = ConfigDict(from_attributes=True)
@@ -59,6 +67,7 @@ class ProductVariantEdit(BaseModel):
     price: int | None = None
     enabled: bool | None = None
     unique: bool | None = None
+    allowed_curriculum: list[UUID] | None = None
 
 
 class ProductBase(BaseModel):
