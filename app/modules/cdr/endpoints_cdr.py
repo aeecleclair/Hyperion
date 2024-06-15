@@ -183,6 +183,23 @@ async def get_online_sellers(
     return await cruds_cdr.get_online_sellers(db)
 
 
+@module.router.get(
+    "/cdr/online/products/",
+    response_model=list[schemas_cdr.ProductComplete],
+    status_code=200,
+)
+async def get_all_available_online_products(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Get a seller's online available products.
+
+    **User must be authenticated to use this endpoint**
+    """
+    return await cruds_cdr.get_online_products(db)
+
+
 @module.router.post(
     "/cdr/sellers/",
     response_model=schemas_cdr.SellerComplete,

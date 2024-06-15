@@ -32,6 +32,15 @@ async def get_online_sellers(
     return result.scalars().all()
 
 
+async def get_online_products(
+    db: AsyncSession,
+) -> Sequence[models_cdr.CdrProduct]:
+    result = await db.execute(
+        select(models_cdr.CdrProduct).where(models_cdr.CdrProduct.available_online),
+    )
+    return result.scalars().all()
+
+
 async def get_sellers_by_group_ids(
     db: AsyncSession,
     group_ids: list[str],
