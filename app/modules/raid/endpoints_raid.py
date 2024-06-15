@@ -358,7 +358,9 @@ async def create_team(
         captain_id=user.id,
         second_id=None,
     )
-    created_team = await cruds_raid.create_team(db_team, db)
+    await cruds_raid.create_team(db_team, db)
+    # We need to get the team from the db to have access to relationships
+    created_team = await cruds_raid.get_team_by_id(team_id=db_team.id, db=db)
     await post_update_actions(created_team, db)
     return created_team
 

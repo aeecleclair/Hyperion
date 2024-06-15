@@ -142,11 +142,10 @@ async def get_team_by_id(
 async def create_team(
     team: models_raid.Team,
     db: AsyncSession,
-) -> models_raid.Team:
+) -> None:
     db.add(team)
     try:
         await db.commit()
-        return team
     except IntegrityError:
         await db.rollback()
         raise ValueError("An error occurred while creating the team.")
