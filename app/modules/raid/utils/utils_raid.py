@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.payment import schemas_payment
 from app.modules.raid import coredata_raid, cruds_raid, models_raid, schemas_raid
-from app.modules.raid.schemas_raid import ParticipantUpdate
+from app.modules.raid.schemas_raid import ParticipantBase, ParticipantUpdate
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.modules.raid.utils.pdf.pdf_writer import HTMLPDFWriter, PDFWriter
 from app.utils.tools import (
@@ -20,12 +20,23 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 def will_participant_be_minor_on(
-    participant: ParticipantUpdate,
-    raid_start_date: date,
+    participant: ParticipantUpdate | models_raid.Participant | ParticipantBase,
+    raid_start_date: date | None,
 ) -> bool:
     """
     Determine if the participant will be minor at the RAID dates. If the date is not known, we will use January the first of next year.
     """
+
+    # If we don't know the participant birthday we may consider they may be minor
+    if participant.birthday is None:
+        return True
+
+    if raid_start_date is None:
+        raid_start_date = date(
+            year=datetime.now(UTC).year + 1,
+            month=1,
+            day=1,
+        )
 
     return (
         date(
