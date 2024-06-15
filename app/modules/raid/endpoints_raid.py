@@ -104,19 +104,9 @@ async def create_participant(
     raid_information = await get_core_data(coredata_raid.RaidInformation, db)
     # If the start_date is not set, we will use January the first of next year to determine if participants
     # are minors. We can safely assume that the RAID will occurre before Jan 1 of next year
-    raid_start_date = raid_information.raid_start_date or date(
-        year=datetime.now(UTC).year + 1,
-        month=1,
-        day=1,
-    )
 
-    is_minor = (
-        date(
-            participant.birthday.year + 18,
-            participant.birthday.month,
-            participant.birthday.day,
-        )
-        > raid_start_date
+    is_minor = will_participant_be_minor_on(
+        participant=participant, raid_start_date=raid_information.raid_start_date
     )
 
     db_participant = models_raid.Participant(
@@ -818,15 +808,9 @@ async def update_raid_information(
     ):
         participants = await cruds_raid.get_all_participants(db)
         for participant in participants:
-            is_minor = (
-                date(
-                    participant.birthday.year + 18,
-                    participant.birthday.month,
-                    participant.birthday.day,
-                )
-                > raid_information.raid_start_date
-                if participant.birthday
-                else False
+            is_minor = will_participant_be_minor_on(
+                participant=participant,
+                raid_start_date=raid_information.raid_start_date,
             )
             await cruds_raid.update_participant_minority(participant.id, is_minor, db)
     if (
