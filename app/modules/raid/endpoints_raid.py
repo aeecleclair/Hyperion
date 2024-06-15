@@ -1,10 +1,7 @@
 import logging
 import uuid
-from collections.abc import Sequence
 from datetime import UTC, date, datetime
-from pathlib import Path
 
-import aiofiles
 from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,7 +9,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import models_core
 from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
-from app.core.payment import schemas_payment
 from app.core.payment.payment_tool import PaymentTool
 from app.dependencies import (
     get_db,
@@ -24,8 +20,14 @@ from app.dependencies import (
 from app.modules.raid import coredata_raid, cruds_raid, models_raid, schemas_raid
 from app.modules.raid.raid_type import DocumentType, DocumentValidation
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
-from app.modules.raid.utils.pdf.pdf_writer import HTMLPDFWriter, PDFWriter
-from app.modules.raid.utils.utils_raid import will_participant_be_minor_on
+from app.modules.raid.utils.utils_raid import (
+    get_participant,
+    post_update_actions,
+    save_security_file,
+    save_team_info,
+    validate_payment,
+    will_participant_be_minor_on,
+)
 from app.types.content_type import ContentType
 from app.types.module import Module
 from app.utils.tools import (
@@ -42,39 +44,6 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 drive_file_manager = DriveFileManager(settings=get_settings())
 
 
-async def validate_payment(
-    checkout_payment: schemas_payment.CheckoutPayment,
-    db: AsyncSession,
-) -> None:
-    paid_amount = checkout_payment.paid_amount
-    checkout_id = checkout_payment.checkout_id
-    hyperion_error_logger.info(f"RAID: Callback Checkout id {checkout_id}")
-
-    participant_checkout = await cruds_raid.get_participant_checkout_by_checkout_id(
-        str(checkout_id),
-        db,
-    )
-    if not participant_checkout:
-        raise ValueError(f"RAID participant checkout {checkout_id} not found.")
-    participant_id = participant_checkout.participant_id
-    prices = await get_core_data(coredata_raid.RaidPrice, db)
-    if prices.student_price and paid_amount == prices.student_price:
-        await cruds_raid.confirm_payment(participant_id, db)
-    elif prices.t_shirt_price and paid_amount == prices.t_shirt_price:
-        await cruds_raid.confirm_t_shirt_payment(participant_id, db)
-    elif (
-        prices.student_price
-        and prices.t_shirt_price
-        and paid_amount == prices.student_price + prices.t_shirt_price
-    ):
-        await cruds_raid.confirm_payment(participant_id, db)
-        await cruds_raid.confirm_t_shirt_payment(participant_id, db)
-    else:
-        hyperion_error_logger.error("Invalid payment amount")
-    team = await cruds_raid.get_team_by_participant_id(participant_id, db)
-    await post_update_actions(team, db)
-
-
 module = Module(
     root="raid",
     tag="Raid",
@@ -83,127 +52,10 @@ module = Module(
 )
 
 
-async def write_teams_csv(teams: Sequence[models_raid.Team], db: AsyncSession) -> None:
-    file_name = "Équipes - " + datetime.now(UTC).strftime("%Y-%m-%d_%H_%M_%S") + ".csv"
-    file_path = "data/raid/" + file_name
-    data: list[list[str]] = [["Team name", "Captain", "Second", "Difficulty", "Number"]]
-    for team in teams:
-        data.append(
-            [
-                team.name.replace(",", " "),
-                f"{team.captain.firstname} {team.captain.name}".replace(",", " "),
-                f"{team.second.firstname} {team.second.name}".replace(",", " ")
-                if team.second
-                else "",
-                team.difficulty,
-                str(team.number or ""),
-            ],
-        )
-    async with aiofiles.open(
-        file_path,
-        mode="w",
-        newline="",
-        encoding="utf-8",
-    ) as file:
-        for line in data:
-            await file.write(",".join(line) + "\n")
-
-    await drive_file_manager.upload_raid_file(file_path, file_name, db)
-    Path(file_path).unlink()
-
-
-async def set_team_number(team: models_raid.Team, db: AsyncSession) -> None:
-    new_team_number = await cruds_raid.get_number_of_team_by_difficulty(
-        team.difficulty,
         db,
     )
-    updated_team: schemas_raid.TeamUpdate = schemas_raid.TeamUpdate(
-        number=new_team_number,
-    )
-    await cruds_raid.update_team(team.id, updated_team, db)
 
 
-async def save_team_info(team: models_raid.Team, db: AsyncSession) -> None:
-    try:
-        pdf_writer = PDFWriter()
-        file_path = pdf_writer.write_team(team)
-        file_name = file_path.split("/")[-1]
-        if team.file_id:
-            try:
-                file_id = drive_file_manager.replace_file(file_path, team.file_id)
-            except Exception:
-                file_id = await drive_file_manager.upload_team_file(
-                    file_path,
-                    file_name,
-                    db,
-                )
-        else:
-            file_id = await drive_file_manager.upload_team_file(
-                file_path,
-                file_name,
-                db,
-            )
-        await cruds_raid.update_team_file_id(team.id, file_id, db)
-        pdf_writer.clear_pdf()
-    except Exception as error:
-        hyperion_error_logger.error(f"Error while creating pdf, {error}")
-        return None
-
-
-async def post_update_actions(team: models_raid.Team | None, db: AsyncSession) -> None:
-    if team:
-        if team.validation_progress == 100:
-            await set_team_number(team, db)
-            all_teams = await cruds_raid.get_all_validated_teams(db)
-            if all_teams:
-                await write_teams_csv(all_teams, db)
-        await save_team_info(team, db)
-
-
-async def save_security_file(
-    participant: models_raid.Participant,
-    information: coredata_raid.RaidInformation,
-    team_number: int | None,
-    db: AsyncSession,
-) -> None:
-    try:
-        pdf_writer = HTMLPDFWriter()
-        file_path = pdf_writer.write_participant_security_file(
-            participant,
-            information,
-            team_number,
-        )
-        file_name = f"{str(team_number) + '_' if team_number else ''}{participant.firstname}_{participant.name}_fiche_sécurité.pdf"
-        if participant.security_file and participant.security_file.file_id:
-            file_id = drive_file_manager.replace_file(
-                file_path,
-                participant.security_file.file_id,
-            )
-        else:
-            file_id = await drive_file_manager.upload_participant_file(
-                file_path,
-                file_name,
-                db,
-            )
-        await cruds_raid.update_security_file_id(
-            participant.security_file.id,
-            file_id,
-            db,
-        )
-        Path(file_path).unlink()
-    except Exception as error:
-        hyperion_error_logger.error(f"Error while creating pdf, {error.__dict__}")
-        return None
-
-
-async def get_participant(
-    participant_id: str,
-    db: AsyncSession,
-) -> models_raid.Participant:
-    participant = await cruds_raid.get_participant_by_id(participant_id, db)
-    if not participant:
-        raise HTTPException(status_code=404, detail="Participant not found.")
-    return participant
 
 
 @module.router.get(
@@ -327,7 +179,7 @@ async def update_participant(
         participant_dict["t_shirt_size"] = participant.t_shirt_size.value
     await cruds_raid.update_participant(participant_id, participant_dict, is_minor, db)
     team = await cruds_raid.get_team_by_participant_id(participant_id, db)
-    await post_update_actions(team, db)
+    await post_update_actions(team, db, drive_file_manager)
 
 
 @module.router.post(
@@ -361,7 +213,7 @@ async def create_team(
     await cruds_raid.create_team(db_team, db)
     # We need to get the team from the db to have access to relationships
     created_team = await cruds_raid.get_team_by_id(team_id=db_team.id, db=db)
-    await post_update_actions(created_team, db)
+    await post_update_actions(created_team, db, drive_file_manager)
     return created_team
 
 
@@ -443,7 +295,7 @@ async def update_team(
         raise HTTPException(status_code=403, detail="You can only edit your own team.")
     await cruds_raid.update_team(team_id, team, db)
     updated_team = await cruds_raid.get_team_by_id(team_id, db)
-    await post_update_actions(updated_team, db)
+    await post_update_actions(updated_team, db, drive_file_manager)
 
 
 @module.router.delete(
@@ -534,7 +386,7 @@ async def create_document(
     )
 
     team = await cruds_raid.get_team_by_participant_id(participant_id, db)
-    await post_update_actions(team, db)
+    await post_update_actions(team, db, drive_file_manager)
     return await cruds_raid.get_document_by_id(document.id, db)
 
 
@@ -651,7 +503,7 @@ async def validate_document(
     """
     await cruds_raid.update_document_validation(document_id, validation, db)
     team = await cruds_raid.get_team_by_participant_id(user.id, db)
-    await post_update_actions(team, db)
+    await post_update_actions(team, db, drive_file_manager)
 
 
 @module.router.post(
@@ -682,8 +534,10 @@ async def set_security_file(
         team = await cruds_raid.get_team_by_participant_id(user.id, db)
         if team and participant:
             information = await get_core_data(coredata_raid.RaidInformation, db)
-            await save_security_file(participant, information, team.number, db)
-        await post_update_actions(team, db)
+            await save_security_file(
+                participant, information, team.number, db, drive_file_manager
+            )
+        await post_update_actions(team, db, drive_file_manager)
         return await cruds_raid.get_security_file_by_security_id(
             security_file.id,
             db,
@@ -698,8 +552,10 @@ async def set_security_file(
     team = await cruds_raid.get_team_by_participant_id(user.id, db)
     if team and participant:
         information = await get_core_data(coredata_raid.RaidInformation, db)
-        await save_security_file(participant, information, team.number, db)
-    await post_update_actions(team, db)
+        await save_security_file(
+            participant, information, team.number, db, drive_file_manager
+        )
+    await post_update_actions(team, db, drive_file_manager)
     return created_security_file
 
 
@@ -717,7 +573,7 @@ async def confirm_payment(
     """
     await cruds_raid.confirm_payment(participant_id, db)
     team = await cruds_raid.get_team_by_participant_id(participant_id, db)
-    await post_update_actions(team, db)
+    await post_update_actions(team, db, drive_file_manager)
 
 
 @module.router.post(
@@ -737,7 +593,7 @@ async def confirm_t_shirt_payment(
         raise HTTPException(status_code=400, detail="T shirt size not set.")
     await cruds_raid.confirm_t_shirt_payment(participant_id, db)
     team = await cruds_raid.get_team_by_participant_id(participant_id, db)
-    await post_update_actions(team, db)
+    await post_update_actions(team, db, drive_file_manager)
 
 
 @module.router.post(
@@ -756,7 +612,7 @@ async def validate_attestation_on_honour(
         raise HTTPException(status_code=403, detail="You are not the participant")
     await cruds_raid.validate_attestation_on_honour(participant_id, db)
     team = await cruds_raid.get_team_by_participant_id(participant_id, db)
-    await post_update_actions(team, db)
+    await post_update_actions(team, db, drive_file_manager)
 
 
 @module.router.post(
@@ -838,7 +694,7 @@ async def join_team(
         )
 
     await cruds_raid.update_team_second_id(team.id, user.id, db)
-    await post_update_actions(team, db)
+    await post_update_actions(team, db, drive_file_manager)
     await cruds_raid.delete_invite_token(invite_token.id, db)
 
 
@@ -873,7 +729,7 @@ async def kick_team_member(
     elif team.second_id != participant_id:
         raise HTTPException(status_code=404, detail="Participant not found.")
     await cruds_raid.update_team_second_id(team_id, None, db)
-    await post_update_actions(team, db)
+    await post_update_actions(team, db, drive_file_manager)
     return await cruds_raid.get_team_by_id(team_id, db)
 
 
@@ -922,7 +778,7 @@ async def merge_teams(
     await cruds_raid.delete_team(team2_id, db)
     if team2.file_id:
         drive_file_manager.delete_file(team2.file_id)
-    await post_update_actions(team1, db)
+    await post_update_actions(team1, db, drive_file_manager)
     return await cruds_raid.get_team_by_id(team1_id, db)
 
 
@@ -998,7 +854,9 @@ async def update_raid_information(
         for participant in participants:
             team = await cruds_raid.get_team_by_participant_id(participant.id, db)
             if team:
-                await save_security_file(participant, information, team.number, db)
+                await save_security_file(
+                    participant, information, team.number, db, drive_file_manager
+                )
 
 
 @module.router.patch(
