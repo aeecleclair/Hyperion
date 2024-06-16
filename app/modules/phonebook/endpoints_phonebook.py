@@ -9,6 +9,7 @@ from app.core.groups.groups_type import GroupType
 from app.core.users import cruds_users
 from app.dependencies import get_db, get_request_id, is_user_an_ecl_member
 from app.modules.phonebook import cruds_phonebook, models_phonebook, schemas_phonebook
+from app.modules.phonebook.types_phonebook import RoleTags
 from app.types.content_type import ContentType
 from app.types.module import Module
 from app.utils.tools import (
@@ -324,6 +325,18 @@ async def create_membership(
             detail=f"You are not allowed to create a new membership for association {membership.association_id}",
         )
 
+    if membership.role_tags is not None:
+        if RoleTags.president.value in membership.role_tags.split(
+            ";",
+        ) and not is_user_member_of_an_allowed_group(
+            user=user,
+            allowed_groups=[GroupType.CAA, GroupType.BDE],
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="You are not allowed to update a membership with the role of president",
+            )
+
     association = await cruds_phonebook.get_association_by_id(
         membership.association_id,
         db,
@@ -364,7 +377,7 @@ async def create_membership(
     status_code=204,
 )
 async def update_membership(
-    membership: schemas_phonebook.MembershipEdit,
+    updated_membership: schemas_phonebook.MembershipEdit,
     membership_id: str,
     user: models_core.CoreUser = Depends(is_user_an_ecl_member),
     db: AsyncSession = Depends(get_db),
@@ -375,11 +388,11 @@ async def update_membership(
     **This endpoint is only usable by CAA, BDE and association's president**
     """
 
-    membership_db = await cruds_phonebook.get_membership_by_id(
+    old_membership = await cruds_phonebook.get_membership_by_id(
         membership_id=membership_id,
         db=db,
     )
-    if not membership_db:
+    if not old_membership:
         raise HTTPException(
             status_code=400,
             detail=f"No membership to update for membership_id {membership_id}",
@@ -391,18 +404,39 @@ async def update_membership(
             allowed_groups=[GroupType.CAA, GroupType.BDE],
         )
         or await cruds_phonebook.is_user_president(
-            association_id=membership_db.association_id,
+            association_id=old_membership.association_id,
             user=user,
             db=db,
         )
     ):
         raise HTTPException(
             status_code=403,
-            detail=f"You are not allowed to update membership for association {membership_db.association_id}",
+            detail=f"You are not allowed to update membership for association {old_membership.association_id}",
         )
 
-    membership_edit = schemas_phonebook.MembershipEdit(**membership.model_dump())
-    await cruds_phonebook.update_membership(membership_edit, membership_id, db)
+    if updated_membership.role_tags is not None:
+        if RoleTags.president.value in updated_membership.role_tags.split(
+            ";",
+        ) and not is_user_member_of_an_allowed_group(
+            user=user,
+            allowed_groups=[GroupType.CAA, GroupType.BDE],
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="You are not allowed to update a membership with the role of president",
+            )
+
+    if updated_membership.member_order is not None:
+        await cruds_phonebook.update_order_of_memberships(
+            db,
+            old_membership.association_id,
+            old_membership.mandate_year,
+            old_membership.member_order,
+            updated_membership.member_order,
+        )
+
+    # We update the membership after updating the member_order to avoid conflicts
+    await cruds_phonebook.update_membership(updated_membership, membership_id, db)
 
 
 @module.router.delete(
@@ -442,6 +476,13 @@ async def delete_membership(
             status_code=403,
             detail=f"You are not allowed to delete membership for association {membership.association_id}",
         )
+
+    await cruds_phonebook.update_order_of_memberships(
+        db,
+        membership.association_id,
+        membership.mandate_year,
+        membership.member_order,
+    )
 
     await cruds_phonebook.delete_membership(membership_id, db)
 
