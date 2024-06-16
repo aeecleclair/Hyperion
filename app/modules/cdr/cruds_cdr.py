@@ -38,7 +38,7 @@ async def get_online_products(
     result = await db.execute(
         select(models_cdr.CdrProduct).where(models_cdr.CdrProduct.available_online),
     )
-    return result.scalars().all()
+    return result.unique().scalars().all()
 
 
 async def get_sellers_by_group_ids(
@@ -386,7 +386,7 @@ async def update_purchase(
     db: AsyncSession,
     user_id: str,
     product_variant_id: UUID,
-    purchase: schemas_cdr.PurchaseEdit,
+    purchase: schemas_cdr.PurchaseBase,
 ):
     await db.execute(
         update(models_cdr.Purchase)
