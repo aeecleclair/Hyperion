@@ -1263,7 +1263,7 @@ def test_create_purchase_cdr_not_started():
 
 
 def test_patch_purchase_cdr_not_started():
-    response = client.patch(
+    response = client.post(
         f"/cdr/users/{cdr_admin.id}/purchases/{variant.id}/",
         json={
             "quantity": 2,
@@ -1456,14 +1456,14 @@ def test_create_purchase_other_user():
 
 
 def test_patch_purchase_seller():
-    response = client.patch(
+    response = client.post(
         f"/cdr/users/{cdr_admin.id}/purchases/{variant.id}/",
         json={
             "quantity": 2,
         },
         headers={"Authorization": f"Bearer {token_bde}"},
     )
-    assert response.status_code == 204
+    assert response.status_code == 201
 
     response = client.get(
         f"/cdr/users/{cdr_admin.id}/purchases/",
@@ -1477,18 +1477,18 @@ def test_patch_purchase_seller():
 
 
 def test_patch_purchase_wrong_purchase():
-    response = client.patch(
+    response = client.post(
         f"/cdr/users/{cdr_admin.id}/purchases/{variant.id}/",
         json={
             "erstrdyfgu": 2,
         },
         headers={"Authorization": f"Bearer {token_bde}"},
     )
-    assert response.status_code == 400
+    assert response.status_code == 422
 
 
 def test_patch_purchase_wrong_purchase_id():
-    response = client.patch(
+    response = client.post(
         f"/cdr/users/{cdr_admin.id}/purchases/{empty_variant.id}/",
         json={
             "quantity": 2,
@@ -1499,7 +1499,7 @@ def test_patch_purchase_wrong_purchase_id():
 
 
 def test_patch_purchase_user():
-    response = client.patch(
+    response = client.post(
         f"/cdr/users/{cdr_admin.id}/purchases/{variant.id}/",
         json={
             "quantity": 2,
