@@ -1036,6 +1036,12 @@ async def create_purchase(
     if not (user_id == user.id and product.available_online):
         await is_user_in_a_seller_group(product.seller_id, user=user, db=db)
 
+    existing_db_purchase = await cruds_cdr.get_purchase_by_id(
+        db=db,
+        user_id=user_id,
+        product_variant_id=product_variant_id,
+    )
+
     db_purchase = models_cdr.Purchase(
         user_id=user_id,
         product_variant_id=product_variant_id,
@@ -1050,76 +1056,23 @@ async def create_purchase(
         action=str(db_purchase),
         timestamp=datetime.now(UTC),
     )
+    if existing_db_purchase:
+        try:
+            await cruds_cdr.update_purchase(
+                db=db,
+                user_id=user_id,
+                product_variant_id=product_variant_id,
+                purchase=purchase,
+            )
+            cruds_cdr.create_action(db, db_action)
+            await db.commit()
+            return db_purchase
+        except Exception as error:
+            await db.rollback()
+            raise HTTPException(status_code=400, detail=str(error))
     try:
         cruds_cdr.create_purchase(db, db_purchase)
         cruds_cdr.create_action(db, db_action)
-        await db.commit()
-        return db_purchase
-    except Exception as error:
-        await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
-
-
-@module.router.patch(
-    "/cdr/users/{user_id}/purchases/{product_variant_id}/",
-    status_code=204,
-)
-async def update_purchase(
-    user_id: str,
-    product_variant_id: UUID,
-    purchase: schemas_cdr.PurchaseEdit,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
-):
-    """
-    Edit a purchase.
-
-    **User must create a purchase for themself and for an online available product or be part of the seller's group to use this endpoint**
-    """
-    status = await get_core_data(schemas_cdr.Status, db)
-    if status.status == CdrStatus.pending:
-        raise HTTPException(
-            status_code=403,
-            detail="CDR hasn't started yet.",
-        )
-    db_purchase = await cruds_cdr.get_purchase_by_id(
-        db=db,
-        user_id=user_id,
-        product_variant_id=product_variant_id,
-    )
-    if not db_purchase:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid purchase.",
-        )
-    product_variant = await cruds_cdr.get_product_variant_by_id(
-        db=db,
-        variant_id=product_variant_id,
-    )
-    if not product_variant:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid product variant.",
-        )
-    product = await cruds_cdr.get_product_by_id(
-        db=db,
-        product_id=product_variant.product_id,
-    )
-    if not product:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid product.",
-        )
-    if not (user_id == user.id and product.available_online):
-        await is_user_in_a_seller_group(product.seller_id, user=user, db=db)
-
-    try:
-        await cruds_cdr.update_purchase(
-            db=db,
-            user_id=user_id,
-            product_variant_id=product_variant_id,
-            purchase=purchase,
-        )
         await db.commit()
         return db_purchase
     except Exception as error:
