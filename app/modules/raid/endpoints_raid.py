@@ -52,12 +52,6 @@ module = Module(
 )
 
 
-        db,
-    )
-
-
-
-
 @module.router.get(
     "/raid/participants/{participant_id}",
     response_model=schemas_raid.Participant,
@@ -375,8 +369,6 @@ async def create_document(
         db=db,
     )
 
-    team = await cruds_raid.get_team_by_participant_id(participant_id, db)
-    await post_update_actions(team, db, drive_file_manager)
     return await cruds_raid.get_document_by_id(document.id, db)
 
 
@@ -510,41 +502,36 @@ async def set_security_file(
     """
     Confirm security file
     """
-    if not await cruds_raid.are_user_in_the_same_team(user.id, participant_id, db):
+    team = await cruds_raid.get_team_if_users_in_the_same_team(
+        user.id,
+        participant_id,
+        db,
+    )
+    if team is None:
         raise HTTPException(status_code=403, detail="You are not the participant.")
-    existing_security_file = None
-    if security_file.id:
-        existing_security_file = await cruds_raid.get_security_file_by_security_id(
-            security_file.id,
-            db,
+
+    participant = await get_participant(participant_id, db)
+    if participant is None:
+        raise HTTPException(status_code=403, detail="The participant does not exist")
+
+    if participant.security_file_id:
+        # The participant already has a security file
+        # We want to delete it to replace it by the new one
+        await cruds_raid.delete_security_file(
+            security_file_id=participant.security_file_id, db=db
         )
-    if existing_security_file and security_file.id:
-        await cruds_raid.update_security_file(security_file, db)
-        participant = await get_participant(participant_id, db)
-        team = await cruds_raid.get_team_by_participant_id(user.id, db)
-        if team and participant:
-            information = await get_core_data(coredata_raid.RaidInformation, db)
-            await save_security_file(
-                participant, information, team.number, db, drive_file_manager
-            )
-        await post_update_actions(team, db, drive_file_manager)
-        return await cruds_raid.get_security_file_by_security_id(
-            security_file.id,
-            db,
-        )
+
     model_security_file = models_raid.SecurityFile(
         id=str(uuid.uuid4()),
         **security_file.model_dump(exclude_none=True),
     )
     created_security_file = await cruds_raid.add_security_file(model_security_file, db)
     await cruds_raid.assign_security_file(participant_id, created_security_file.id, db)
-    participant = await get_participant(participant_id, db)
-    team = await cruds_raid.get_team_by_participant_id(user.id, db)
-    if team and participant:
-        information = await get_core_data(coredata_raid.RaidInformation, db)
-        await save_security_file(
-            participant, information, team.number, db, drive_file_manager
-        )
+
+    information = await get_core_data(coredata_raid.RaidInformation, db)
+    await save_security_file(
+        participant, information, team.number, db, drive_file_manager
+    )
     await post_update_actions(team, db, drive_file_manager)
     return created_security_file
 
