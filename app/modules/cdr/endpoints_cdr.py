@@ -451,7 +451,7 @@ async def update_product(
                     db,
                     models_cdr.ProductConstraint(
                         product_id=product_id,
-                        document_id=d,
+                        product_constraint_id=d,
                     ),
                 )
         if product.document_constraints is not None:
