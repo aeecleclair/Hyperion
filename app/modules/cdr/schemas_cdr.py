@@ -76,9 +76,16 @@ class ProductBase(BaseModel):
     description_fr: str | None = None
     description_en: str | None = None
     available_online: bool
+    product_constraints: list[UUID]
+    document_constraints: list[UUID]
 
 
-class ProductCompleteNoConstraint(ProductBase):
+class ProductCompleteNoConstraint(BaseModel):
+    name_fr: str
+    name_en: str
+    description_fr: str | None = None
+    description_en: str | None = None
+    available_online: bool
     id: UUID
     seller_id: UUID
     variants: list[ProductVariantComplete] = []
@@ -87,10 +94,16 @@ class ProductCompleteNoConstraint(ProductBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class ProductComplete(ProductBase):
+class ProductComplete(BaseModel):
+    name_fr: str
+    name_en: str
+    description_fr: str | None = None
+    description_en: str | None = None
+    available_online: bool
     id: UUID
     seller_id: UUID
     variants: list[ProductVariantComplete] = []
+    related_membership: str | None = None
     product_constraints: list[ProductCompleteNoConstraint] = []
     document_constraints: list[DocumentComplete] = []
 
@@ -105,6 +118,8 @@ class ProductEdit(BaseModel):
     description: str | None = None
     available_online: bool | None = None
     related_membership: str | None = None
+    product_constraints: list[UUID] | None = None
+    document_constraints: list[UUID] | None = None
 
 
 class SellerBase(BaseModel):

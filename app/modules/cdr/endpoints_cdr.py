@@ -357,123 +357,28 @@ async def create_product(
     db_product = models_cdr.CdrProduct(
         id=uuid4(),
         seller_id=seller_id,
-        **product.model_dump(),
+        **product.model_dump(exclude={"product_constraints", "document_constraints"}),
     )
     try:
         cruds_cdr.create_product(db, db_product)
+        for p in product.product_constraints:
+            cruds_cdr.create_product_constraint(
+                db,
+                models_cdr.ProductConstraint(
+                    product_id=db_product.id,
+                    product_constraint_id=p,
+                ),
+            )
+        for d in product.document_constraints:
+            cruds_cdr.create_document_constraint(
+                db,
+                models_cdr.DocumentConstraint(
+                    product_id=db_product.id,
+                    document_id=d,
+                ),
+            )
         await db.commit()
         return await cruds_cdr.get_product_by_id(db, db_product.id)
-    except Exception as error:
-        await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
-
-
-@module.router.post(
-    "/cdr/sellers/{seller_id}/products/{product_id}/document_constraints/{document_id}/",
-    response_model=schemas_cdr.ProductComplete,
-    status_code=201,
-)
-async def create_document_constraint(
-    seller_id: UUID,
-    product_id: UUID,
-    document_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
-):
-    """
-    Add a document in a product's document constraints.
-
-    **User must be part of the seller's group to use this endpoint**
-    """
-    await is_user_in_a_seller_group(
-        seller_id,
-        user,
-        db=db,
-    )
-    await check_request_consistency(
-        db=db,
-        seller_id=seller_id,
-        product_id=product_id,
-        document_id=document_id,
-    )
-
-    status = await get_core_data(schemas_cdr.Status, db)
-    if status.status == CdrStatus.closed:
-        raise HTTPException(
-            status_code=403,
-            detail="CDR is closed. You cant add a new constraint.",
-        )
-    db_document_constraint = models_cdr.DocumentConstraint(
-        document_id=document_id,
-        product_id=product_id,
-    )
-    try:
-        cruds_cdr.create_document_constraint(db, db_document_constraint)
-        await db.commit()
-        return await cruds_cdr.get_product_by_id(product_id=product_id, db=db)
-    except Exception as error:
-        await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
-
-
-@module.router.post(
-    "/cdr/sellers/{seller_id}/products/{product_id}/product_constraints/{constraint_id}/",
-    response_model=schemas_cdr.ProductComplete,
-    status_code=201,
-)
-async def create_product_constraint(
-    seller_id: UUID,
-    product_id: UUID,
-    constraint_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
-):
-    """
-    Add a product in a product's product constraints.
-
-    **User must be part of the seller's group to use this endpoint**
-    """
-    await is_user_in_a_seller_group(
-        seller_id,
-        user,
-        db=db,
-    )
-    db_product = await check_request_consistency(
-        db=db,
-        seller_id=seller_id,
-        product_id=product_id,
-    )
-    db_constraint = await cruds_cdr.get_product_by_id(product_id=constraint_id, db=db)
-    if not db_constraint:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid constraint_id",
-        )
-    if product_id == constraint_id:
-        raise HTTPException(
-            status_code=403,
-            detail="You can't add a product as a constraint for itself.",
-        )
-
-    status = await get_core_data(schemas_cdr.Status, db)
-    if status.status in [
-        CdrStatus.onsite,
-        CdrStatus.closed,
-    ] or (
-        db_product and status.status == CdrStatus.online and db_product.available_online
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="This product can't be edited now. Please try creating a new product.",
-        )
-    db_product_constraint = models_cdr.ProductConstraint(
-        product_id=product_id,
-        product_constraint_id=constraint_id,
-    )
-    try:
-        cruds_cdr.create_product_constraint(db, db_product_constraint)
-        await db.commit()
-        return await cruds_cdr.get_product_by_id(product_id=product_id, db=db)
     except Exception as error:
         await db.rollback()
         raise HTTPException(status_code=400, detail=str(error))
@@ -522,6 +427,26 @@ async def update_product(
             product=product,
             db=db,
         )
+        if product.product_constraints is not None:
+            await cruds_cdr.delete_product_constraints(db=db, product_id=product_id)
+            for d in product.product_constraints:
+                cruds_cdr.create_product_constraint(
+                    db,
+                    models_cdr.ProductConstraint(
+                        product_id=product_id,
+                        document_id=d,
+                    ),
+                )
+        if product.document_constraints is not None:
+            await cruds_cdr.delete_document_constraints(db=db, product_id=product_id)
+            for d in product.document_constraints:
+                cruds_cdr.create_document_constraint(
+                    db,
+                    models_cdr.DocumentConstraint(
+                        product_id=product_id,
+                        document_id=d,
+                    ),
+                )
         await db.commit()
     except Exception as error:
         await db.rollback()
@@ -573,104 +498,6 @@ async def delete_product(
     try:
         await cruds_cdr.delete_product(
             product_id=product_id,
-            db=db,
-        )
-        await db.commit()
-    except Exception as error:
-        await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
-
-
-@module.router.delete(
-    "/cdr/sellers/{seller_id}/products/{product_id}/document_constraints/{document_id}/",
-    status_code=204,
-)
-async def delete_document_constraint(
-    seller_id: UUID,
-    product_id: UUID,
-    document_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
-):
-    """
-    Remove a document from a product's document constraints.
-
-    **User must be part of the seller's group to use this endpoint**
-    """
-    await is_user_in_a_seller_group(
-        seller_id,
-        user,
-        db=db,
-    )
-    db_product = await check_request_consistency(
-        db=db,
-        seller_id=seller_id,
-        product_id=product_id,
-    )
-    status = await get_core_data(schemas_cdr.Status, db)
-    if status.status in [
-        CdrStatus.onsite,
-        CdrStatus.closed,
-    ] or (
-        db_product and status.status == CdrStatus.online and db_product.available_online
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="You can't delete a constraint once CDR has started.",
-        )
-    try:
-        await cruds_cdr.delete_document_constraint(
-            product_id=product_id,
-            document_id=document_id,
-            db=db,
-        )
-        await db.commit()
-    except Exception as error:
-        await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
-
-
-@module.router.delete(
-    "/cdr/sellers/{seller_id}/products/{product_id}/product_constraints/{constraint_id}/",
-    status_code=204,
-)
-async def delete_product_constraint(
-    seller_id: UUID,
-    product_id: UUID,
-    constraint_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
-):
-    """
-    Remove a product from a product's document constraints.
-
-    **User must be part of the seller's group to use this endpoint**
-    """
-    await is_user_in_a_seller_group(
-        seller_id,
-        user,
-        db=db,
-    )
-    db_product = await check_request_consistency(
-        db=db,
-        seller_id=seller_id,
-        product_id=product_id,
-    )
-    status = await get_core_data(schemas_cdr.Status, db)
-    if status.status in [
-        CdrStatus.onsite,
-        CdrStatus.closed,
-    ] or (
-        db_product and status.status == CdrStatus.online and db_product.available_online
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="You can't delete a constraint once CDR has started.",
-        )
-    try:
-        await cruds_cdr.delete_product_constraint(
-            product_id=product_id,
-            product_constraint_id=constraint_id,
             db=db,
         )
         await db.commit()
@@ -1126,6 +953,10 @@ async def mark_purchase_as_validated(
             detail="Invalid product.",
         )
     if validated:
+        memberships = await cruds_cdr.get_actual_memberships_by_user_id(
+            db=db,
+            user_id=user_id,
+        )
         for product_constraint in product.product_constraints:
             has_constraint = False
             for variant in product_constraint.variants:
@@ -1138,10 +969,6 @@ async def mark_purchase_as_validated(
                     has_constraint = True
             if not has_constraint:
                 if product_constraint.related_membership:
-                    memberships = await cruds_cdr.get_actual_memberships_by_user_id(
-                        db=db,
-                        user_id=user_id,
-                    )
                     if product_constraint.related_membership not in [
                         m.membership for m in memberships
                     ]:
@@ -1156,13 +983,10 @@ async def mark_purchase_as_validated(
                 document_id=document_constraint.id,
             )
             if not signature:
-                if product_constraint.related_membership not in [
-                    m.membership for m in memberships
-                ]:
-                    raise HTTPException(
-                        status_code=403,
-                        detail=f"Document signature constraint {document_constraint} not satisfied.",
-                    )
+                raise HTTPException(
+                    status_code=403,
+                    detail=f"Document signature constraint {document_constraint} not satisfied.",
+                )
     try:
         await cruds_cdr.mark_purchase_as_validated(
             db=db,

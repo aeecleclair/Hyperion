@@ -52,6 +52,7 @@ unused_curriculum: models_cdr.Curriculum
 purchase: models_cdr.Purchase
 
 signature: models_cdr.Signature
+signature_admin: models_cdr.Signature
 
 payment: models_cdr.Payment
 
@@ -513,6 +514,8 @@ def test_create_product_seller():
             "name_fr": "Produit créé",
             "name_en": "Created product",
             "available_online": False,
+            "product_constraints": [],
+            "document_constraints": [],
         },
         headers={"Authorization": f"Bearer {token_bde}"},
     )
@@ -535,6 +538,8 @@ def test_create_product_user():
             "name_fr": "Produit créé",
             "name_en": "Created product",
             "available_online": False,
+            "product_constraints": [],
+            "document_constraints": [],
         },
         headers={"Authorization": f"Bearer {token_user}"},
     )
@@ -553,6 +558,7 @@ def test_patch_product_seller():
         f"/cdr/sellers/{seller.id!s}/products/{product.id}/",
         json={
             "name_fr": "Produit modifié",
+            "product_constraints": [],
         },
         headers={"Authorization": f"Bearer {token_bde}"},
     )
@@ -646,260 +652,12 @@ def test_delete_product_user():
     assert str(product.id) in [x["id"] for x in response.json()]
 
 
-def test_create_document_constraint_seller():
-    response = client.post(
-        f"/cdr/sellers/{seller.id!s}/products/{product.id!s}/document_constraints/{unused_document.id!s}/",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 201
-
-    response = client.get(
-        f"/cdr/sellers/{seller.id!s}/products/",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 200
-    assert str(product.id) in [x["id"] for x in response.json()]
-    for x in response.json():
-        if x["id"] == product.id:
-            assert str(unused_document.id) in [
-                y["id"] for y in x["document_constraints"]
-            ]
-
-
-def test_create_document_constraint_other_seller():
-    response = client.post(
-        f"/cdr/sellers/{seller.id!s}/products/{product.id!s}/document_constraints/{other_document.id!s}/",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 403
-
-
-def test_create_document_constraint_wrong_id():
-    response = client.post(
-        f"/cdr/sellers/{seller.id!s}/products/{product.id!s}/document_constraints/{uuid.uuid4()}/",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 404
-
-
-def test_create_document_constraint_again():
-    response = client.post(
-        f"/cdr/sellers/{seller.id!s}/products/{product.id!s}/document_constraints/{unused_document.id!s}/",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 400
-
-
-def test_create_document_constraint_user():
-    response = client.post(
-        f"/cdr/sellers/{seller.id!s}/products/{product.id!s}/document_constraints/{unused_document.id!s}/",
-        headers={"Authorization": f"Bearer {token_user}"},
-    )
-    assert response.status_code == 403
-
-    response = client.get(
-        f"/cdr/sellers/{seller.id!s}/products/",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 200
-    assert str(product.id) in [x["id"] for x in response.json()]
-    for x in response.json():
-        if x["id"] == product.id:
-            assert str(unused_document.id) not in [
-                y["id"] for y in x["document_constraints"]
-            ]
-
-
 def test_delete_document_used():
     response = client.delete(
         f"/cdr/sellers/{seller.id}/documents/{document.id}/",
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 403
-
-
-def test_delete_document_constraint_seller():
-    response = client.delete(
-        f"/cdr/sellers/{seller.id!s}/products/{product.id!s}/document_constraints/{unused_document.id!s}/",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 204
-
-    response = client.get(
-        f"/cdr/sellers/{seller.id!s}/products/",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 200
-    assert str(product.id) in [x["id"] for x in response.json()]
-    for x in response.json():
-        if x["id"] == product.id:
-            assert str(unused_document.id) not in [
-                y["id"] for y in x["document_constraints"]
-            ]
-
-
-def test_delete_document_constraint_user():
-    response = client.delete(
-        f"/cdr/sellers/{seller.id!s}/products/{product.id!s}/document_constraints/{document.id!s}/",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 204
-
-    response = client.get(
-        f"/cdr/sellers/{seller.id!s}/products/",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 200
-    assert str(product.id) in [x["id"] for x in response.json()]
-    for x in response.json():
-        if x["id"] == product.id:
-            assert str(document.id) in [y["id"] for y in x["document_constraints"]]
-
-
-def test_create_product_constraint_seller():
-    response = client.post(
-        f"/cdr/sellers/{seller.id!s}/products/{product.id!s}/product_constraints/{usable_product.id!s}/",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 201
-
-    response = client.get(
-        f"/cdr/sellers/{seller.id!s}/products/",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 200
-    assert str(product.id) in [x["id"] for x in response.json()]
-    for x in response.json():
-        if x["id"] == product.id:
-            assert str(empty_product.id) in [y["id"] for y in x["product_constraints"]]
-
-
-def test_create_product_constraint_again():
-    response = client.post(
-        f"/cdr/sellers/{seller.id!s}/products/{product.id!s}/product_constraints/{usable_product.id!s}/",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 400
-
-
-def test_create_product_constraint_wrong_product():
-    response = client.post(
-        f"/cdr/sellers/{seller.id!s}/products/{uuid.uuid4()}/product_constraints/{usable_product.id!s}/",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 404
-
-
-def test_create_product_constraint_wrong_constraint():
-    response = client.post(
-        f"/cdr/sellers/{seller.id!s}/products/{product.id!s}/product_constraints/{uuid.uuid4()}/",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 404
-
-
-def test_create_product_constraint_not_this_seller_product():
-    response = client.post(
-        f"/cdr/sellers/{seller.id!s}/products/{online_product.id!s}/product_constraints/{product.id!s}/",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 403
-    response = client.get(
-        f"/cdr/sellers/{seller.id!s}/products/",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 200
-    assert str(product.id) in [x["id"] for x in response.json()]
-    for x in response.json():
-        if x["id"] == product.id:
-            assert str(document.id) not in [y["id"] for y in x["product_constraints"]]
-
-
-def test_create_product_constraint_other_seller():
-    response = client.post(
-        f"/cdr/sellers/{online_seller.id!s}/products/{online_product.id!s}/product_constraints/{product.id!s}/",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 403
-    response = client.get(
-        f"/cdr/sellers/{seller.id!s}/products/",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 200
-    assert str(product.id) in [x["id"] for x in response.json()]
-    for x in response.json():
-        if x["id"] == product.id:
-            assert str(document.id) not in [y["id"] for y in x["product_constraints"]]
-
-
-def test_create_product_constraint_user():
-    response = client.post(
-        f"/cdr/sellers/{seller.id!s}/products/{product.id!s}/product_constraints/{online_product.id!s}/",
-        headers={"Authorization": f"Bearer {token_user}"},
-    )
-    assert response.status_code == 403
-    response = client.get(
-        f"/cdr/sellers/{seller.id!s}/products/",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 200
-    assert str(product.id) in [x["id"] for x in response.json()]
-    for x in response.json():
-        if x["id"] == product.id:
-            assert str(document.id) not in [y["id"] for y in x["product_constraints"]]
-
-
-def test_create_product_constraint_itself():
-    response = client.post(
-        f"/cdr/sellers/{seller.id!s}/products/{product.id!s}/product_constraints/{product.id!s}/",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 403
-    response = client.get(
-        f"/cdr/sellers/{seller.id!s}/products/",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 200
-    assert str(product.id) in [x["id"] for x in response.json()]
-    for x in response.json():
-        if x["id"] == product.id:
-            assert str(document.id) not in [y["id"] for y in x["product_constraints"]]
-
-
-def test_delete_product_constraint_seller():
-    response = client.delete(
-        f"/cdr/sellers/{seller.id!s}/products/{product.id!s}/product_constraints/{online_product.id!s}/",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 204
-
-    response = client.get(
-        f"/cdr/sellers/{seller.id!s}/products/",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 200
-    assert str(product.id) in [x["id"] for x in response.json()]
-    for x in response.json():
-        if x["id"] == product.id:
-            assert str(document.id) not in [y["id"] for y in x["product_constraints"]]
-
-
-def test_delete_product_constraint_user():
-    response = client.delete(
-        f"/cdr/sellers/{seller.id!s}/products/{product.id!s}/product_constraints/{online_product.id!s}/",
-        headers={"Authorization": f"Bearer {token_user}"},
-    )
-    assert response.status_code == 403
-
-    response = client.get(
-        f"/cdr/sellers/{seller.id!s}/products/",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 200
-    assert str(product.id) in [x["id"] for x in response.json()]
-    for x in response.json():
-        if x["id"] == product.id:
-            assert str(document.id) in [y["id"] for y in x["product_constraints"]]
 
 
 def test_create_product_variant_seller():
@@ -1370,14 +1128,6 @@ def test_delete_product_cdr_started():
     assert response.status_code == 403
 
 
-def test_delete_document_constraint_cdr_started():
-    response = client.delete(
-        f"/cdr/sellers/{seller.id!s}/products/{product.id!s}/document_constraints/{document.id!s}/",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 403
-
-
 def test_patch_product_variant_cdr_started():
     response = client.patch(
         f"/cdr/sellers/{seller.id!s}/products/{product.id!s}/variants/{variant.id}/",
@@ -1507,6 +1257,42 @@ def test_patch_purchase_user():
         headers={"Authorization": f"Bearer {token_user}"},
     )
     assert response.status_code == 403
+
+
+def test_create_signature_user():
+    response = client.post(
+        f"/cdr/users/{cdr_user.id}/signatures/{document.id}/",
+        json={
+            "signature_type": DocumentSignatureType.material,
+        },
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 403
+
+    response = client.get(
+        f"/cdr/users/{cdr_admin.id}/signatures/",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 200
+    assert str(document.id) not in [x["document_id"] for x in response.json()]
+
+
+def test_create_signature_seller():
+    response = client.post(
+        f"/cdr/users/{cdr_admin.id}/signatures/{document.id}/",
+        json={
+            "signature_type": DocumentSignatureType.material,
+        },
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 201
+
+    response = client.get(
+        f"/cdr/users/{cdr_admin.id}/signatures/",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 200
+    assert str(document.id) in [x["document_id"] for x in response.json()]
 
 
 def test_validate_purchase_seller():
@@ -1685,42 +1471,6 @@ def test_get_signatures_by_user_id_by_seller_id_other_user():
     )
     assert response.status_code == 200
     assert str(signature.document_id) not in [x["document_id"] for x in response.json()]
-
-
-def test_create_signature_user():
-    response = client.post(
-        f"/cdr/users/{cdr_user.id}/signatures/{document.id}/",
-        json={
-            "signature_type": DocumentSignatureType.material,
-        },
-        headers={"Authorization": f"Bearer {token_user}"},
-    )
-    assert response.status_code == 403
-
-    response = client.get(
-        f"/cdr/users/{cdr_admin.id}/signatures/",
-        headers={"Authorization": f"Bearer {token_admin}"},
-    )
-    assert response.status_code == 200
-    assert str(document.id) not in [x["document_id"] for x in response.json()]
-
-
-def test_create_signature_seller():
-    response = client.post(
-        f"/cdr/users/{cdr_admin.id}/signatures/{document.id}/",
-        json={
-            "signature_type": DocumentSignatureType.material,
-        },
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 201
-
-    response = client.get(
-        f"/cdr/users/{cdr_admin.id}/signatures/",
-        headers={"Authorization": f"Bearer {token_admin}"},
-    )
-    assert response.status_code == 200
-    assert str(document.id) in [x["document_id"] for x in response.json()]
 
 
 def test_create_signature_wrong_document():
@@ -2140,39 +1890,9 @@ def test_create_product_closed():
             "name_fr": "Produit créé",
             "name_en": "Created product",
             "available_online": False,
+            "product_constraints": [],
+            "document_constraints": [],
         },
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 403
-
-
-def test_create_document_constraint_closed():
-    response = client.post(
-        f"/cdr/sellers/{seller.id!s}/products/{product.id!s}/document_constraints/{document.id!s}/",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 403
-
-
-def test_create_product_constraint_closed():
-    response = client.post(
-        f"/cdr/sellers/{seller.id!s}/products/{product.id!s}/product_constraints/{usable_product.id!s}/",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 403
-
-
-def test_delete_document_constraint_closed():
-    response = client.delete(
-        f"/cdr/sellers/{seller.id!s}/products/{product.id!s}/document_constraints/{document.id!s}/",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 403
-
-
-def test_delete_product_constraint_closed():
-    response = client.delete(
-        f"/cdr/sellers/{seller.id!s}/products/{product.id!s}/product_constraints/{online_product.id!s}/",
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 403
