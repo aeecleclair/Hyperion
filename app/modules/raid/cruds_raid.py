@@ -230,6 +230,18 @@ async def add_security_file(
         raise ValueError("An error occurred while creating the participant.")
 
 
+async def delete_security_file(
+    security_file_id: str,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        delete(models_raid.SecurityFile).where(
+            models_raid.SecurityFile.id == security_file_id
+        ),
+    )
+    await db.commit()
+
+
 async def update_security_file(
     security_file: schemas_raid.SecurityFileBase,
     db: AsyncSession,
@@ -493,11 +505,28 @@ async def are_user_in_the_same_team(
     participant_id_2: str,
     db: AsyncSession,
 ) -> bool:
+    return (
+        await get_team_if_users_in_the_same_team(
+            participant_id_1=participant_id_1,
+            participant_id_2=participant_id_2,
+            db=db,
+        )
+        is not None
+    )
+
+
+async def get_team_if_users_in_the_same_team(
+    participant_id_1: str,
+    participant_id_2: str,
+    db: AsyncSession,
+) -> models_raid.Team | None:
     team_1 = await get_team_by_participant_id(participant_id_1, db)
     team_2 = await get_team_by_participant_id(participant_id_2, db)
     if team_1 is None or team_2 is None:
-        return False
-    return team_1.id == team_2.id
+        return None
+    if team_1.id != team_2.id:
+        return None
+    return team_1
 
 
 async def update_team_file_id(
@@ -547,15 +576,3 @@ async def get_participant_checkout_by_checkout_id(
         ),
     )
     return checkout.scalars().first()
-
-
-async def get_security_file_by_security_file_id(
-    security_file_id: str,
-    db: AsyncSession,
-) -> models_raid.SecurityFile | None:
-    security_file = await db.execute(
-        select(models_raid.SecurityFile).where(
-            models_raid.SecurityFile.id == security_file_id,
-        ),
-    )
-    return security_file.scalars().first()

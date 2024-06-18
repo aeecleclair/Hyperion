@@ -137,7 +137,10 @@ async def save_team_info(
         if team.file_id:
             try:
                 file_id = drive_file_manager.replace_file(file_path, team.file_id)
-            except Exception:
+            except Exception as error:
+                hyperion_error_logger.error(
+                    f"RAID: could not replace file with {error}",
+                )
                 file_id = await drive_file_manager.upload_team_file(
                     file_path,
                     file_name,
