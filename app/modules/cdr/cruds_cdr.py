@@ -41,6 +41,15 @@ async def get_online_products(
     return result.unique().scalars().all()
 
 
+async def get_products(
+    db: AsyncSession,
+) -> Sequence[models_cdr.CdrProduct]:
+    result = await db.execute(
+        select(models_cdr.CdrProduct),
+    )
+    return result.unique().scalars().all()
+
+
 async def get_sellers_by_group_ids(
     db: AsyncSession,
     group_ids: list[str],
