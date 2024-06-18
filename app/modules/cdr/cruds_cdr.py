@@ -139,7 +139,12 @@ async def update_product(
     await db.execute(
         update(models_cdr.CdrProduct)
         .where(models_cdr.CdrProduct.id == product_id)
-        .values(**product.model_dump(exclude_none=True)),
+        .values(
+            **product.model_dump(
+                exclude_none=True,
+                exclude={"product_constraints", "document_constraints"},
+            ),
+        ),
     )
 
 
@@ -181,28 +186,24 @@ def create_document_constraint(
     db.add(document_constraint)
 
 
-async def delete_product_constraint(
+async def delete_product_constraints(
     db: AsyncSession,
     product_id: UUID,
-    product_constraint_id: UUID,
 ):
     await db.execute(
         delete(models_cdr.ProductConstraint).where(
             models_cdr.ProductConstraint.product_id == product_id,
-            models_cdr.ProductConstraint.product_constraint_id == product_constraint_id,
         ),
     )
 
 
-async def delete_document_constraint(
+async def delete_document_constraints(
     db: AsyncSession,
     product_id: UUID,
-    document_id: UUID,
 ):
     await db.execute(
         delete(models_cdr.DocumentConstraint).where(
             models_cdr.DocumentConstraint.product_id == product_id,
-            models_cdr.DocumentConstraint.document_id == document_id,
         ),
     )
 
