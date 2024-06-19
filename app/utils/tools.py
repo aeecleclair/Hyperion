@@ -2,11 +2,9 @@ import logging
 import os
 import re
 import secrets
-from collections.abc import Callable, Sequence
-from copy import copy
-from functools import wraps
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import TypeVar
 
 import aiofiles
 import fitz
@@ -14,7 +12,6 @@ from fastapi import HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import ValidationError
 from rapidfuzz import process
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import cruds_core, models_core
@@ -440,23 +437,3 @@ async def set_core_data(
     await cruds_core.delete_core_data_crud(schema=schema_name, db=db)
     # And then add the new one
     await cruds_core.add_core_data_crud(core_data=core_data_model, db=db)
-
-
-def unitOfWork(
-    function,
-) -> Callable[..., Any]:
-    async def _commit(self):
-        pass
-
-    @wraps(function)
-    async def wrapper(db: AsyncSession, *args, **kwargs):
-        new_db = copy(db)
-        new_db.commit = _commit.__get__(db, AsyncSession)
-        await function(new_db, *args, **kwargs)
-        try:
-            await db.commit()
-        except IntegrityError as error:
-            await db.rollback()
-            raise ValueError(error)
-
-    return wrapper
