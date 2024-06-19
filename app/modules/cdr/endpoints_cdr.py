@@ -975,16 +975,14 @@ async def mark_purchase_as_validated(
             user_id=user_id,
         )
         for product_constraint in product.product_constraints:
-            has_constraint = False
-            for variant in product_constraint.variants:
-                purchase = await cruds_cdr.get_purchase_by_id(
-                    db=db,
-                    user_id=user_id,
-                    product_variant_id=variant.id,
-                )
-                if purchase:
-                    has_constraint = True
-            if not has_constraint:
+            purchases = await cruds_cdr.get_purchases_by_ids(
+                db=db,
+                user_id=user_id,
+                product_variant_id=[
+                    variant.id for variant in product_constraint.variants
+                ],
+            )
+            if not purchases:
                 if product_constraint.related_membership:
                     if product_constraint.related_membership not in [
                         m.membership for m in memberships
