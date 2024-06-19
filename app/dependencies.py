@@ -30,6 +30,7 @@ from app.core.config import Settings
 from app.core.groups.groups_type import GroupType, get_ecl_groups
 from app.core.users import cruds_users
 from app.types.scopes_type import ScopeType
+from app.types.transactional_async_session import TransactionalAsyncSession
 from app.utils.communication.notifications import NotificationManager, NotificationTool
 from app.utils.redis import connect
 from app.utils.tools import is_user_external, is_user_member_of_an_allowed_group
@@ -119,6 +120,34 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             yield db
         finally:
             await db.close()
+
+
+async def get_transactional_db() -> AsyncGenerator[TransactionalAsyncSession, None]:
+    """
+    Open a Session and a SessionTransaction. Return the database session
+
+    At the end, the session will be committed. If an error happen, the Session should rollback.
+    See https://docs.sqlalchemy.org/en/20/orm/session_basics.html#framing-out-a-begin-commit-rollback-block
+
+    With this TransactionalAsyncSession you should not commit inside the cruds, the operation will be done automatically.
+
+    If you really need to commit manually, you can call the `commit_manually` method.
+    The TransactionalAsyncSession is retro-compatible with the AsyncSession object, you can use it with non transactional cruds.
+
+    See TransactionalAsyncSession definition for more informations
+    """
+    global SessionLocal
+    if SessionLocal is None:
+        hyperion_error_logger.error("Database engine is not initialized")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Database engine is not initialized",
+        )
+    # We call db.begin() to enter a SessionTransaction
+    async with SessionLocal() as db, db.begin():
+        # We wrap our Session in a TransactionalAsyncSession object
+        # to prevent its commit method from doing anything
+        yield TransactionalAsyncSession(db)
 
 
 @lru_cache
