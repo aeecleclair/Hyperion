@@ -1,4 +1,3 @@
-import datetime
 import shutil
 import uuid
 from pathlib import Path
@@ -6,12 +5,9 @@ from pathlib import Path
 import pytest
 import pytest_asyncio
 from fastapi import HTTPException, UploadFile
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.datastructures import Headers
 
 from app.core import models_core
-from app.core.users import cruds_users
 from app.types.core_data import BaseCoreData
 from app.types.exceptions import CoreDataNotFoundException
 from app.utils.tools import (
@@ -23,7 +19,6 @@ from app.utils.tools import (
     save_file_as_data,
     save_pdf_first_page_as_image,
     set_core_data,
-    unitOfWork,
 )
 from tests.commons import (
     TestingSessionLocal,
@@ -285,35 +280,3 @@ async def test_replace_core_data():
         )
         assert new_core_data.name == "ECLAIR"
         assert new_core_data.age == 42
-
-
-@unitOfWork
-async def uow(
-    db: AsyncSession,
-    user: models_core.CoreUserUnconfirmed,
-) -> models_core.CoreUserUnconfirmed | None:
-    await cruds_users.create_unconfirmed_user(db, user)
-    user_unconfirmed_request = await db.execute(
-        select(models_core.CoreUserUnconfirmed).filter_by(id=user.id),
-    )
-    return user_unconfirmed_request.scalars().first()
-
-
-async def test_unit_of_work_decorator() -> None:
-    user_unconfirmed = models_core.CoreUserUnconfirmed(
-        id="test",
-        email="test@demo.fr",
-        account_type="test",
-        activation_token="test",
-        created_on=datetime.datetime.now(tz=datetime.UTC),
-        expire_on=datetime.datetime.now(tz=datetime.UTC),
-        external=False,
-    )
-    async with TestingSessionLocal() as db:
-        user = await uow(db, user_unconfirmed)
-        assert user is None
-        user_unconfirmed_request = await db.execute(
-            select(models_core.CoreUserUnconfirmed).filter_by(id=user_unconfirmed.id),
-        )
-        user = user_unconfirmed_request.scalars().first()
-        assert user is not None
