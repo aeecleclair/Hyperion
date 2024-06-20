@@ -102,6 +102,12 @@ class ParticipantUpdate(BaseModel):
     company: str | None = None
     diet: str | None = None
     attestation_on_honour: bool | None = None
+    id_card_id: str | None = None
+    medical_certificate_id: str | None = None
+    security_file_id: str | None = None
+    student_card_id: str | None = None
+    raid_rules_id: str | None = None
+    parent_authorization_id: str | None = None
 
 
 class TeamBase(BaseModel):

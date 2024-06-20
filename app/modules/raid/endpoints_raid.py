@@ -161,6 +161,59 @@ async def update_participant(
     # If the t_shirt_payment is set, we can only change the t_shirt_size, but can not make it null
     elif participant.t_shirt_size:
         participant_dict["t_shirt_size"] = participant.t_shirt_size.value
+
+    if participant.id_card_id:
+        id_card_document = await cruds_raid.get_document_by_id(participant.id_card_id)
+        if not id_card_document:
+            raise HTTPException(status_code=404, detail="Document id_card not found.")
+
+    if participant.medical_certificate_id:
+        medical_certificate_document = await cruds_raid.get_document_by_id(
+            participant.medical_certificate_id,
+        )
+        if not medical_certificate_document:
+            raise HTTPException(
+                status_code=404,
+                detail="Document medical_certificate not found.",
+            )
+    if participant.student_card_id:
+        student_card_document = await cruds_raid.get_document_by_id(
+            participant.student_card_id,
+        )
+        if not student_card_document:
+            raise HTTPException(
+                status_code=404,
+                detail="Document student_card not found.",
+            )
+    if participant.raid_rules_id:
+        raid_rules_document = await cruds_raid.get_document_by_id(
+            participant.raid_rules_id,
+        )
+        if not raid_rules_document:
+            raise HTTPException(
+                status_code=404,
+                detail="Document raid_rules not found.",
+            )
+    if participant.parent_authorization_id:
+        parent_authorization_document = await cruds_raid.get_document_by_id(
+            participant.parent_authorization_id,
+        )
+        if not parent_authorization_document:
+            raise HTTPException(
+                status_code=404,
+                detail="Document parent_authorization not found.",
+            )
+
+    if participant.security_file_id:
+        security_file = await cruds_raid.get_security_file_by_security_id(
+            participant.security_file_id,
+        )
+        if not security_file:
+            raise HTTPException(
+                status_code=404,
+                detail="Security_file not found.",
+            )
+
     await cruds_raid.update_participant(participant_id, participant_dict, is_minor, db)
     team = await cruds_raid.get_team_by_participant_id(participant_id, db)
     await post_update_actions(team, db, drive_file_manager)
@@ -319,57 +372,6 @@ async def delete_all_teams(
     Delete all teams
     """
     await cruds_raid.delete_all_teams(db)
-
-
-@module.router.post(
-    "/raid/participant/{participant_id}/document",
-    response_model=schemas_raid.Document,
-    status_code=201,
-)
-async def create_document(
-    participant_id: str,
-    document: schemas_raid.DocumentBase,
-    user: models_core.CoreUser = Depends(is_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """
-    Create a document
-    """
-    if not await cruds_raid.are_user_in_the_same_team(participant_id, user.id, db):
-        raise HTTPException(
-            status_code=403,
-            detail="You can only create a document for a participant of your team.",
-        )
-
-    saved_document = await cruds_raid.get_document_by_id(document.id, db)
-    if not saved_document:
-        raise HTTPException(status_code=404, detail="Document not found.")
-
-    document_update = schemas_raid.DocumentUpdate(
-        name=document.name,
-        type=document.type,
-    )
-    await cruds_raid.update_document(document.id, document_update, db)
-
-    document_type_id = "id_card_id"
-
-    if document.type == "medicalCertificate":
-        document_type_id = "medical_certificate_id"
-    elif document.type == "raidRules":
-        document_type_id = "raid_rules_id"
-    elif document.type == "studentCard":
-        document_type_id = "student_card_id"
-    elif document.type == "parentAuthorization":
-        document_type_id = "parent_authorization_id"
-
-    await cruds_raid.assign_document(
-        participant_id=participant_id,
-        document_id=document.id,
-        document_key=document_type_id,
-        db=db,
-    )
-
-    return await cruds_raid.get_document_by_id(document.id, db)
 
 
 @module.router.post(
