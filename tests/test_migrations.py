@@ -16,8 +16,7 @@ from pytest_alembic.tests.experimental import downgrade_leaves_no_trace  # noqa:
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Connection
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test_migration.db"
-
+from tests.commons import SQLALCHEMY_DATABASE_URL_SYNC
 
 pre_test_upgrade_dict: dict[
     str,
@@ -96,12 +95,9 @@ def alembic_connection() -> Generator[Connection, None, None]:
 
     Due to an issue with event loop, we can't run Alembic from asynchronous functions. The tests can't be async, so we need to use a synchronous connection.
     """
-    # We need to delete the test database before each test
-    Path("test_migration.db").unlink(missing_ok=True)
-
     # We use `echo=False` to disable SQLAlchemy logging for migrations
     # as errors are easier to see without all SQLAlchemy info
-    connectable = create_engine(SQLALCHEMY_DATABASE_URL, echo=False)
+    connectable = create_engine(SQLALCHEMY_DATABASE_URL_SYNC, echo=False)
 
     with connectable.begin() as connection:
         yield connection

@@ -2,13 +2,13 @@ import datetime
 import uuid
 
 import pytest_asyncio
+from fastapi.testclient import TestClient
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from app.modules.cinema import models_cinema
 from tests.commons import (
     add_object_to_db,
-    client,
     create_api_access_token,
     create_user_with_groups,
 )
@@ -47,7 +47,7 @@ async def init_objects() -> None:
     await add_object_to_db(session)
 
 
-def test_get_sessions() -> None:
+def test_get_sessions(client: TestClient) -> None:
     response = client.get(
         "/cinema/sessions",
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -55,7 +55,7 @@ def test_get_sessions() -> None:
     assert response.status_code == 200
 
 
-def test_post_session() -> None:
+def test_post_session(client: TestClient) -> None:
     response = client.post(
         "/cinema/sessions",
         json={
@@ -69,7 +69,7 @@ def test_post_session() -> None:
     assert response.status_code == 201
 
 
-def test_edit_session() -> None:
+def test_edit_session(client: TestClient) -> None:
     response = client.patch(
         f"/cinema/sessions/{session.id}",
         json={"name": "Titanoc"},
@@ -78,7 +78,7 @@ def test_edit_session() -> None:
     assert response.status_code == 200
 
 
-def test_delete_session() -> None:
+def test_delete_session(client: TestClient) -> None:
     response = client.delete(
         f"/cinema/sessions/{session.id}",
         headers={"Authorization": f"Bearer {token_cinema}"},

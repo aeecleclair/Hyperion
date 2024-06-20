@@ -2,7 +2,7 @@
 
 Revision ID: 17b92dc4b50d
 Revises:
-Create Date: 2024-04-12 18:19:12.439926
+Create Date: 2024-05-26 16:25:22.390935
 
 """
 
@@ -929,6 +929,74 @@ def downgrade() -> None:
     op.drop_table("amap_delivery")
     op.drop_index(op.f("ix_advert_advertisers_id"), table_name="advert_advertisers")
     op.drop_table("advert_advertisers")
+    sa.Enum(
+        "Autre",
+        "Adoma",
+        "Exte",
+        "T1",
+        "T2",
+        "T3",
+        "T4",
+        "T56",
+        "U1",
+        "U2",
+        "U3",
+        "U4",
+        "U56",
+        "V1",
+        "V2",
+        "V3",
+        "V45",
+        "V6",
+        "X1",
+        "X2",
+        "X3",
+        "X4",
+        "X5",
+        "X6",
+        name="floorstype",
+    ).drop(op.get_bind())
+    sa.Enum(
+        "cinema",
+        "advert",
+        "bookingadmin",
+        "amap",
+        "booking",
+        "event",
+        "loan",
+        "raffle",
+        "vote",
+        name="topic",
+    ).drop(op.get_bind())
+    sa.Enum(
+        "eventAE",
+        "eventUSE",
+        "independentAssociation",
+        "happyHour",
+        "direction",
+        "nightParty",
+        "other",
+        name="calendareventtype",
+    ).drop(op.get_bind())
+    sa.Enum(
+        "comity",
+        "section_ae",
+        "club_ae",
+        "section_use",
+        "club_use",
+        "association_independant",
+        name="kinds",
+    ).drop(op.get_bind())
+    sa.Enum(
+        "waiting",
+        "open",
+        "closed",
+        "counting",
+        "published",
+        name="statustype",
+    ).drop(op.get_bind())
+    sa.Enum("midi", "soir", name="amapslottype").drop(op.get_bind())
+    sa.Enum("creation", "open", "lock", name="rafflestatustype").drop(op.get_bind())
     # ### end Alembic commands ###
 
 

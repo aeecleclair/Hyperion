@@ -2,6 +2,7 @@ import uuid
 from datetime import UTC, datetime
 
 import pytest_asyncio
+from fastapi.testclient import TestClient
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
@@ -10,7 +11,6 @@ from app.modules.amap.types_amap import AmapSlotType, DeliveryStatusType
 from tests.commons import (
     add_object_to_db,
     change_redis_client_status,
-    client,
     create_api_access_token,
     create_user_with_groups,
 )
@@ -104,7 +104,7 @@ async def init_objects() -> None:
     await add_object_to_db(cash)
 
 
-def test_get_products() -> None:
+def test_get_products(client: TestClient) -> None:
     token = create_api_access_token(amap_user)
 
     response = client.get(
@@ -114,7 +114,7 @@ def test_get_products() -> None:
     assert response.status_code == 200
 
 
-def test_create_product() -> None:
+def test_create_product(client: TestClient) -> None:
     token = create_api_access_token(amap_user)
 
     response = client.post(
@@ -125,7 +125,7 @@ def test_create_product() -> None:
     assert response.status_code == 201
 
 
-def test_get_product_by_id() -> None:
+def test_get_product_by_id(client: TestClient) -> None:
     # The user doesn't need to be part of group amap to get a product
     student_token = create_api_access_token(student_user)
 
@@ -136,7 +136,7 @@ def test_get_product_by_id() -> None:
     assert response.status_code == 200
 
 
-def test_edit_product() -> None:
+def test_edit_product(client: TestClient) -> None:
     token = create_api_access_token(amap_user)
 
     response = client.patch(
@@ -147,7 +147,7 @@ def test_edit_product() -> None:
     assert response.status_code == 204
 
 
-def test_delete_product() -> None:
+def test_delete_product(client: TestClient) -> None:
     token = create_api_access_token(amap_user)
 
     response = client.delete(
@@ -157,7 +157,7 @@ def test_delete_product() -> None:
     assert response.status_code == 204
 
 
-def test_get_deliveries() -> None:
+def test_get_deliveries(client: TestClient) -> None:
     # The user don't need to be part of group amap to get a product
     student_token = create_api_access_token(student_user)
 
@@ -168,7 +168,7 @@ def test_get_deliveries() -> None:
     assert response.status_code == 200
 
 
-def test_create_delivery() -> None:
+def test_create_delivery(client: TestClient) -> None:
     token = create_api_access_token(amap_user)
 
     response = client.post(
@@ -183,7 +183,7 @@ def test_create_delivery() -> None:
     assert response.status_code == 201
 
 
-def test_delete_delivery() -> None:
+def test_delete_delivery(client: TestClient) -> None:
     token = create_api_access_token(amap_user)
 
     response = client.delete(
@@ -193,7 +193,7 @@ def test_delete_delivery() -> None:
     assert response.status_code == 204
 
 
-def test_edit_delivery() -> None:
+def test_edit_delivery(client: TestClient) -> None:
     token = create_api_access_token(amap_user)
 
     response = client.patch(
@@ -204,7 +204,7 @@ def test_edit_delivery() -> None:
     assert response.status_code == 204
 
 
-def test_add_product_to_delivery() -> None:
+def test_add_product_to_delivery(client: TestClient) -> None:
     token = create_api_access_token(amap_user)
 
     response = client.post(
@@ -215,7 +215,7 @@ def test_add_product_to_delivery() -> None:
     assert response.status_code == 201
 
 
-def test_remove_product_from_delivery() -> None:
+def test_remove_product_from_delivery(client: TestClient) -> None:
     token = create_api_access_token(amap_user)
     response = client.request(
         method="DELETE",
@@ -234,7 +234,7 @@ def test_remove_product_from_delivery() -> None:
     assert response.status_code == 201
 
 
-def test_get_orders_from_delivery() -> None:
+def test_get_orders_from_delivery(client: TestClient) -> None:
     token = create_api_access_token(amap_user)
 
     response = client.get(
@@ -244,7 +244,7 @@ def test_get_orders_from_delivery() -> None:
     assert response.status_code == 200
 
 
-def test_get_order_by_id() -> None:
+def test_get_order_by_id(client: TestClient) -> None:
     token = create_api_access_token(amap_user)
     response = client.get(
         f"/amap/orders/{order.order_id}",
@@ -253,7 +253,7 @@ def test_get_order_by_id() -> None:
     assert response.status_code == 200
 
 
-def test_make_delivery_orderable() -> None:
+def test_make_delivery_orderable(client: TestClient) -> None:
     token = create_api_access_token(amap_user)
     response = client.post(
         f"/amap/deliveries/{delivery.id}/openordering",
@@ -262,7 +262,7 @@ def test_make_delivery_orderable() -> None:
     assert response.status_code == 204
 
 
-def test_add_order_to_delivery() -> None:
+def test_add_order_to_delivery(client: TestClient) -> None:
     # Enable Redis client for locker
     change_redis_client_status(activated=True)
 
@@ -287,7 +287,7 @@ def test_add_order_to_delivery() -> None:
     assert response.status_code == 201
 
 
-def test_edit_order() -> None:
+def test_edit_order(client: TestClient) -> None:
     # Enable Redis client for locker
     change_redis_client_status(activated=True)
 
@@ -313,7 +313,7 @@ def test_edit_order() -> None:
     assert response.status_code == 204
 
 
-def test_remove_order() -> None:
+def test_remove_order(client: TestClient) -> None:
     # Enable Redis client for locker
     change_redis_client_status(activated=True)
 
@@ -330,7 +330,7 @@ def test_remove_order() -> None:
     assert response.status_code == 204
 
 
-def test_remove_order_by_admin() -> None:
+def test_remove_order_by_admin(client: TestClient) -> None:
     # Enable Redis client for locker
     change_redis_client_status(activated=True)
 
@@ -355,7 +355,7 @@ def test_remove_order_by_admin() -> None:
         change_redis_client_status(activated=False)
 
 
-def test_get_users_cash() -> None:
+def test_get_users_cash(client: TestClient) -> None:
     token = create_api_access_token(amap_user)
 
     response = client.get(
@@ -365,7 +365,7 @@ def test_get_users_cash() -> None:
     assert response.status_code == 200
 
 
-def test_get_cash_by_id() -> None:
+def test_get_cash_by_id(client: TestClient) -> None:
     amap_token = create_api_access_token(amap_user)
     student_token = create_api_access_token(student_user)
 
@@ -393,7 +393,7 @@ def test_get_cash_by_id() -> None:
     assert response.status_code == 200
 
 
-def test_create_cash_of_user() -> None:
+def test_create_cash_of_user(client: TestClient) -> None:
     token = create_api_access_token(amap_user)
 
     response = client.post(
@@ -404,7 +404,7 @@ def test_create_cash_of_user() -> None:
     assert response.status_code == 201
 
 
-def test_edit_cash_by_id() -> None:
+def test_edit_cash_by_id(client: TestClient) -> None:
     token = create_api_access_token(amap_user)
 
     response = client.post(
@@ -421,7 +421,7 @@ def test_edit_cash_by_id() -> None:
     assert response.status_code == 204
 
 
-def test_get_orders_of_user() -> None:
+def test_get_orders_of_user(client: TestClient) -> None:
     token = create_api_access_token(student_user)
 
     response = client.get(

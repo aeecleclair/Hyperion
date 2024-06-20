@@ -1,7 +1,9 @@
-from tests.commons import change_redis_client_status, client, settings
+from fastapi.testclient import TestClient
+
+from tests.commons import change_redis_client_status, settings
 
 
-def test_limiter() -> None:
+def test_limiter(client: TestClient) -> None:
     change_redis_client_status(activated=True)
     try:
         for _ in range(settings.REDIS_LIMIT - 1):

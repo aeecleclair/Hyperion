@@ -3,13 +3,13 @@ import uuid
 from pathlib import Path
 
 import pytest_asyncio
+from fastapi.testclient import TestClient
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from app.modules.ph import models_ph
 from tests.commons import (
     add_object_to_db,
-    client,
     create_api_access_token,
     create_user_with_groups,
 )
@@ -25,7 +25,7 @@ paper2: models_ph.Paper
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
-async def init_objects():
+async def init_objects() -> None:
     global ph_user_ph
     ph_user_ph = await create_user_with_groups([GroupType.ph])
 
@@ -55,7 +55,7 @@ async def init_objects():
     await add_object_to_db(paper2)
 
 
-def test_create_paper():
+def test_create_paper(client: TestClient) -> None:
     response = client.post(
         "/ph/",
         json={
@@ -68,7 +68,7 @@ def test_create_paper():
     assert response.status_code == 201
 
 
-def test_get_papers():
+def test_get_papers(client: TestClient) -> None:
     response = client.get(
         "/ph/",
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -81,7 +81,7 @@ def test_get_papers():
     ]
 
 
-def test_get_papers_admin():
+def test_get_papers_admin(client: TestClient) -> None:
     response = client.get(
         "/ph/admin",
         headers={"Authorization": f"Bearer {token_ph}"},
@@ -92,7 +92,7 @@ def test_get_papers_admin():
     assert str(paper2.id) in [response_paper["id"] for response_paper in response_json]
 
 
-def test_create_paper_pdf_and_cover():
+def test_create_paper_pdf_and_cover(client: TestClient) -> None:
     with Path("assets/pdf/default_ph.pdf").open("rb") as pdf:
         response = client.post(
             f"/ph/{paper.id}/pdf",
@@ -105,7 +105,7 @@ def test_create_paper_pdf_and_cover():
     assert Path(f"data/ph/cover/{paper.id}.jpg").is_file()
 
 
-def test_get_paper_pdf():
+def test_get_paper_pdf(client: TestClient) -> None:
     response = client.get(
         f"/ph/{paper.id}/pdf",
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -113,7 +113,7 @@ def test_get_paper_pdf():
     assert response.status_code == 200
 
 
-def test_get_cover():
+def test_get_cover(client: TestClient) -> None:
     response = client.get(
         f"/ph/{paper.id}/cover",
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -121,7 +121,7 @@ def test_get_cover():
     assert response.status_code == 200
 
 
-def test_update_paper():
+def test_update_paper(client: TestClient) -> None:
     response = client.patch(
         f"/ph/{paper.id}",
         json={
@@ -133,7 +133,7 @@ def test_update_paper():
     assert response.status_code == 204
 
 
-def test_delete_paper():
+def test_delete_paper(client: TestClient) -> None:
     with Path("assets/pdf/default_PDF.pdf").open("rb") as pdf:
         client.post(
             f"/ph/{paper.id}/pdf",

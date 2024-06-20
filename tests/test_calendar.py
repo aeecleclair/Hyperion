@@ -2,6 +2,7 @@ import datetime
 import uuid
 
 import pytest_asyncio
+from fastapi.testclient import TestClient
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
@@ -9,7 +10,6 @@ from app.modules.booking.types_booking import Decision
 from app.modules.calendar import models_calendar
 from tests.commons import (
     add_object_to_db,
-    client,
     create_api_access_token,
     create_user_with_groups,
 )
@@ -71,7 +71,7 @@ async def init_objects() -> None:
     await add_object_to_db(calendar_event_to_delete)
 
 
-def test_get_all_events() -> None:
+def test_get_all_events(client: TestClient) -> None:
     global token_bde
 
     response = client.get(
@@ -81,7 +81,7 @@ def test_get_all_events() -> None:
     assert response.status_code == 200
 
 
-def test_get_event() -> None:
+def test_get_event(client: TestClient) -> None:
     global token_bde
 
     response = client.get(
@@ -91,7 +91,7 @@ def test_get_event() -> None:
     assert response.status_code == 200
 
 
-def test_get_nonexistent_event() -> None:
+def test_get_nonexistent_event(client: TestClient) -> None:
     response = client.get(
         "/calendar/events/bad_id",
         headers={"Authorization": f"Bearer {token_bde}"},
@@ -99,7 +99,7 @@ def test_get_nonexistent_event() -> None:
     assert response.status_code == 404
 
 
-def test_add_event() -> None:
+def test_add_event(client: TestClient) -> None:
     global token_bde
 
     response = client.post(
@@ -119,7 +119,7 @@ def test_add_event() -> None:
     assert response.status_code == 201
 
 
-def test_add_event_missing_parameter() -> None:
+def test_add_event_missing_parameter(client: TestClient) -> None:
     """Test to add an event but a parameter is missing. `start` is missing"""
     global token_bde
 
@@ -138,7 +138,7 @@ def test_add_event_missing_parameter() -> None:
     assert response.status_code == 422
 
 
-def test_edit_event() -> None:
+def test_edit_event(client: TestClient) -> None:
     response = client.patch(
         f"/calendar/events/{calendar_event.id}",
         json={"description": "Apprendre à programmer"},
@@ -147,7 +147,7 @@ def test_edit_event() -> None:
     assert response.status_code == 204
 
 
-def test_delete_event() -> None:
+def test_delete_event(client: TestClient) -> None:
     """Test if an admin can delete an event."""
 
     global token_bde
@@ -159,7 +159,7 @@ def test_delete_event() -> None:
     assert response.status_code == 204
 
 
-def test_delete_event_unauthorized_user() -> None:
+def test_delete_event_unauthorized_user(client: TestClient) -> None:
     """Test if a simple user can't delete an event."""
 
     global token_simple
@@ -171,7 +171,7 @@ def test_delete_event_unauthorized_user() -> None:
     assert response.status_code == 403
 
 
-def test_decline_event() -> None:
+def test_decline_event(client: TestClient) -> None:
     response = client.patch(
         f"/calendar/events/{calendar_event.id}/reply/declined",
         headers={"Authorization": f"Bearer {token_bde}"},
@@ -179,7 +179,7 @@ def test_decline_event() -> None:
     assert response.status_code == 204
 
 
-def test_approve_event() -> None:
+def test_approve_event(client: TestClient) -> None:
     global token_bde
     response = client.patch(
         f"/calendar/events/{calendar_event.id}/reply/approved",

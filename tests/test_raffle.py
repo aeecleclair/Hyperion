@@ -2,6 +2,7 @@ import uuid
 from pathlib import Path
 
 import pytest_asyncio
+from fastapi.testclient import TestClient
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
@@ -10,7 +11,6 @@ from app.modules.raffle.types_raffle import RaffleStatusType
 from tests.commons import (
     add_object_to_db,
     change_redis_client_status,
-    client,
     create_api_access_token,
     create_user_with_groups,
 )
@@ -138,7 +138,7 @@ async def init_objects() -> None:
     await add_object_to_db(cash)
 
 
-def test_get_raffles() -> None:
+def test_get_raffles(client: TestClient) -> None:
     token = create_api_access_token(student_user)
 
     response = client.get(
@@ -148,7 +148,7 @@ def test_get_raffles() -> None:
     assert response.status_code == 200
 
 
-def test_create_raffle() -> None:
+def test_create_raffle(client: TestClient) -> None:
     token = create_api_access_token(admin_user)
 
     response = client.post(
@@ -163,7 +163,7 @@ def test_create_raffle() -> None:
     assert response.status_code == 201
 
 
-def test_edit_raffle() -> None:
+def test_edit_raffle(client: TestClient) -> None:
     token = create_api_access_token(BDE_user)
 
     response = client.patch(
@@ -185,7 +185,7 @@ def test_edit_raffle() -> None:
     assert modified_raffle["name"] == "testupdate"
 
 
-def test_create_raffle_logo() -> None:
+def test_create_raffle_logo(client: TestClient) -> None:
     token = create_api_access_token(BDE_user)
 
     with Path("assets/images/default_campaigns_logo.png").open("rb") as image:
@@ -198,7 +198,7 @@ def test_create_raffle_logo() -> None:
     assert response.status_code == 201
 
 
-def test_read_raffle_logo() -> None:
+def test_read_raffle_logo(client: TestClient) -> None:
     token = create_api_access_token(BDE_user)
 
     response = client.get(
@@ -209,7 +209,7 @@ def test_read_raffle_logo() -> None:
     assert response.status_code == 200
 
 
-def test_create_prize_picture() -> None:
+def test_create_prize_picture(client: TestClient) -> None:
     token = create_api_access_token(BDE_user)
 
     with Path("assets/images/default_campaigns_logo.png").open("rb") as image:
@@ -222,7 +222,7 @@ def test_create_prize_picture() -> None:
     assert response.status_code == 201
 
 
-def test_read_prize_picture() -> None:
+def test_read_prize_picture(client: TestClient) -> None:
     token = create_api_access_token(BDE_user)
 
     response = client.get(
@@ -233,7 +233,7 @@ def test_read_prize_picture() -> None:
     assert response.status_code == 200
 
 
-def test_open_raffle() -> None:
+def test_open_raffle(client: TestClient) -> None:
     token = create_api_access_token(BDE_user)
 
     response = client.patch(
@@ -251,7 +251,7 @@ def test_open_raffle() -> None:
     assert modified_raffle["status"] == RaffleStatusType.open
 
 
-def test_lock_raffle() -> None:
+def test_lock_raffle(client: TestClient) -> None:
     token = create_api_access_token(BDE_user)
 
     response = client.patch(
@@ -269,7 +269,7 @@ def test_lock_raffle() -> None:
     assert modified_raffle["status"] == RaffleStatusType.lock
 
 
-def test_get_raffle_stats() -> None:
+def test_get_raffle_stats(client: TestClient) -> None:
     token = create_api_access_token(student_user)
 
     response = client.get(
@@ -281,7 +281,7 @@ def test_get_raffle_stats() -> None:
 
 
 # # tickets
-def test_get_tickets() -> None:
+def test_get_tickets(client: TestClient) -> None:
     token = create_api_access_token(admin_user)
 
     response = client.get(
@@ -291,7 +291,7 @@ def test_get_tickets() -> None:
     assert response.status_code == 200
 
 
-def test_get_tickets_by_raffle_id() -> None:
+def test_get_tickets_by_raffle_id(client: TestClient) -> None:
     token = create_api_access_token(BDE_user)
 
     response = client.get(
@@ -301,7 +301,7 @@ def test_get_tickets_by_raffle_id() -> None:
     assert response.status_code == 200
 
 
-def test_get_tickets_by_user_id() -> None:
+def test_get_tickets_by_user_id(client: TestClient) -> None:
     token = create_api_access_token(student_user)
 
     response = client.get(
@@ -313,7 +313,7 @@ def test_get_tickets_by_user_id() -> None:
     assert len(response.json()) == 2
 
 
-def test_buy_tickets() -> None:
+def test_buy_tickets(client: TestClient) -> None:
     # Enable Redis client for locker
     change_redis_client_status(activated=True)
 
@@ -357,7 +357,7 @@ def test_buy_tickets() -> None:
 
 
 # # pack_tickets
-def test_get_packtickets() -> None:
+def test_get_packtickets(client: TestClient) -> None:
     token = create_api_access_token(BDE_user)
 
     response = client.get(
@@ -367,7 +367,7 @@ def test_get_packtickets() -> None:
     assert response.status_code == 200
 
 
-def test_get_packtickets_by_raffle_id() -> None:
+def test_get_packtickets_by_raffle_id(client: TestClient) -> None:
     token = create_api_access_token(BDE_user)
 
     response = client.get(
@@ -377,7 +377,7 @@ def test_get_packtickets_by_raffle_id() -> None:
     assert response.status_code == 200
 
 
-def test_create_packtickets() -> None:
+def test_create_packtickets(client: TestClient) -> None:
     token = create_api_access_token(BDE_user)
 
     response = client.post(
@@ -392,7 +392,7 @@ def test_create_packtickets() -> None:
     assert response.status_code == 201
 
 
-def test_edit_packtickets() -> None:
+def test_edit_packtickets(client: TestClient) -> None:
     token = create_api_access_token(BDE_user)
 
     response = client.patch(
@@ -407,7 +407,7 @@ def test_edit_packtickets() -> None:
     assert response.status_code == 204
 
 
-def test_delete_packtickets() -> None:
+def test_delete_packtickets(client: TestClient) -> None:
     token = create_api_access_token(BDE_user)
 
     response = client.delete(
@@ -418,7 +418,7 @@ def test_delete_packtickets() -> None:
 
 
 # # prizes
-def test_get_prizes() -> None:
+def test_get_prizes(client: TestClient) -> None:
     token = create_api_access_token(student_user)
 
     response = client.get(
@@ -428,7 +428,7 @@ def test_get_prizes() -> None:
     assert response.status_code == 200
 
 
-def test_get_prizes_by_raffle_id() -> None:
+def test_get_prizes_by_raffle_id(client: TestClient) -> None:
     token = create_api_access_token(student_user)
 
     response = client.get(
@@ -439,7 +439,7 @@ def test_get_prizes_by_raffle_id() -> None:
     assert response.json() != []
 
 
-def test_create_prizes() -> None:
+def test_create_prizes(client: TestClient) -> None:
     token = create_api_access_token(BDE_user)
 
     response = client.post(
@@ -455,7 +455,7 @@ def test_create_prizes() -> None:
     assert response.status_code == 201
 
 
-def test_edit_prizes() -> None:
+def test_edit_prizes(client: TestClient) -> None:
     token = create_api_access_token(BDE_user)
 
     response = client.patch(
@@ -471,7 +471,7 @@ def test_edit_prizes() -> None:
     assert response.status_code == 204
 
 
-def test_draw_prizes() -> None:
+def test_draw_prizes(client: TestClient) -> None:
     token = create_api_access_token(BDE_user)
 
     response = client.post(
@@ -483,7 +483,7 @@ def test_draw_prizes() -> None:
     assert tickets[0]["prize"] is not None
 
 
-def test_delete_prizes() -> None:
+def test_delete_prizes(client: TestClient) -> None:
     token = create_api_access_token(BDE_user)
 
     response = client.delete(
@@ -493,7 +493,7 @@ def test_delete_prizes() -> None:
     assert response.status_code == 204
 
 
-def test_delete_raffle() -> None:
+def test_delete_raffle(client: TestClient) -> None:
     token = create_api_access_token(BDE_user)
 
     response = client.delete(

@@ -6,6 +6,7 @@ Create Date: 2024-04-21 02:08:19.548067
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
+from uuid import UUID
 
 import sqlalchemy as sa
 from alembic import op
@@ -61,4 +62,10 @@ def test_upgrade(
         sa.text("SELECT id from recommendation"),
     ).fetchall()
 
-    assert ("66c363bc-c71f-4eae-8376-c37712a312f6",) in rows
+    assert len(rows) > 0
+
+    if isinstance(rows[0][0], UUID):
+        assert (UUID("66c363bc-c71f-4eae-8376-c37712a312f6"),) in rows
+    else:
+        # SQLite does not support UUID and will use strings
+        assert ("66c363bc-c71f-4eae-8376-c37712a312f6",) in rows
