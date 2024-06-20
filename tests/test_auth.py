@@ -41,7 +41,7 @@ async def init_objects() -> None:
     )
 
 
-def test_simple_token():
+def test_simple_token(client: TestClient):
     response = client.post(
         "/auth/simple_token",
         data={
@@ -329,7 +329,7 @@ def test_get_user_info_in_id_token(client: TestClient) -> None:
 
 
 # Invalid service configuration
-def test_authorization_code_flow_with_invalid_client_id() -> None:
+def test_authorization_code_flow_with_invalid_client_id(client: TestClient) -> None:
     data_with_invalid_client_id = {
         "client_id": "InvalidClientId",
         "client_secret": "secret",
@@ -351,7 +351,7 @@ def test_authorization_code_flow_with_invalid_client_id() -> None:
 
 
 # Invalid service configuration
-def test_authorization_code_flow_with_invalid_redirect_uri() -> None:
+def test_authorization_code_flow_with_invalid_redirect_uri(client: TestClient) -> None:
     data_with_invalid_client_id = {
         "client_id": "AppAuthClientWithClientSecret",
         "client_secret": "secret",
@@ -373,7 +373,7 @@ def test_authorization_code_flow_with_invalid_redirect_uri() -> None:
 
 
 # Invalid service configuration
-def test_authorization_code_flow_with_invalid_response_type() -> None:
+def test_authorization_code_flow_with_invalid_response_type(client: TestClient) -> None:
     data_with_invalid_client_id = {
         "client_id": "AppAuthClientWithClientSecret",
         "client_secret": "secret",
@@ -397,7 +397,9 @@ def test_authorization_code_flow_with_invalid_response_type() -> None:
 
 
 # Invalid user response
-def test_authorization_code_flow_with_invalid_user_credentials() -> None:
+def test_authorization_code_flow_with_invalid_user_credentials(
+    client: TestClient,
+) -> None:
     data_with_invalid_client_id = {
         "client_id": "AppAuthClientWithClientSecret",
         "client_secret": "secret",
@@ -417,9 +419,9 @@ def test_authorization_code_flow_with_invalid_user_credentials() -> None:
 
 
 # Valid user response
-def test_authorization_code_flow_with_auth_client_restricting_allowed_groups_and_user_member_of_an_allowed_group() -> (
-    None
-):
+def test_authorization_code_flow_with_auth_client_restricting_allowed_groups_and_user_member_of_an_allowed_group(
+    client: TestClient,
+) -> None:
     # For an user that is a member of a required group #
     data_with_invalid_client_id = {
         "client_id": "AcceptingOnlyECLUsersAuthClient",
@@ -444,9 +446,9 @@ def test_authorization_code_flow_with_auth_client_restricting_allowed_groups_and
     assert query["code"][0] != ""
 
 
-def test_authorization_code_flow_with_auth_client_restricting_allowed_groups_and_user_not_member_of_an_allowed_group() -> (
-    None
-):
+def test_authorization_code_flow_with_auth_client_restricting_allowed_groups_and_user_not_member_of_an_allowed_group(
+    client: TestClient,
+) -> None:
     # For an user that is not a member of a required group #
     data_with_invalid_client_id = {
         "client_id": "AcceptingOnlyECLUsersAuthClient",
@@ -470,9 +472,9 @@ def test_authorization_code_flow_with_auth_client_restricting_allowed_groups_and
     assert query["error"][0] == "consent_required"
 
 
-def test_authorization_code_flow_with_auth_client_restricting_external_users_and_user_external() -> (
-    None
-):
+def test_authorization_code_flow_with_auth_client_restricting_external_users_and_user_external(
+    client: TestClient,
+) -> None:
     # For an user that is not a member of a required group #
     data_with_invalid_client_id = {
         "client_id": "RalllyAuthClient",

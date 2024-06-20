@@ -75,7 +75,7 @@ def test_create_flappybird_score(client: TestClient) -> None:
     assert response.status_code == 201
 
 
-def test_update_flappybird_score():
+def test_update_flappybird_score(client: TestClient):
     response = client.post(
         "/flappybird/scores",
         json={
