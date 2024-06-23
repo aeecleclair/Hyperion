@@ -14,11 +14,6 @@ class PaymentType(str, Enum):
     archived = "archived"
 
 
-class AvailableMembership(str, Enum):
-    aeecl = "AEECL"
-    useecl = "USEECL"
-
-
 class CdrStatus(str, Enum):
     pending = "pending"
     online = "online"

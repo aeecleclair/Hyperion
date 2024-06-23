@@ -5,7 +5,17 @@ from uuid import UUID
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.models_core import CoreAssociationMembership
 from app.modules.cdr import models_cdr, schemas_cdr
+
+
+async def get_cdr_users_curriculum(
+    db: AsyncSession,
+) -> Sequence[models_cdr.CurriculumMembership]:
+    result = await db.execute(
+        select(models_cdr.CurriculumMembership),
+    )
+    return result.scalars().all()
 
 
 async def get_sellers(
@@ -617,9 +627,11 @@ async def delete_payment(
 async def get_memberships_by_user_id(
     db: AsyncSession,
     user_id: str,
-) -> Sequence[models_cdr.Membership]:
+) -> Sequence[CoreAssociationMembership]:
     result = await db.execute(
-        select(models_cdr.Membership).where(models_cdr.Membership.user_id == user_id),
+        select(CoreAssociationMembership).where(
+            CoreAssociationMembership.user_id == user_id,
+        ),
     )
     return result.scalars().all()
 
@@ -627,11 +639,11 @@ async def get_memberships_by_user_id(
 async def get_actual_memberships_by_user_id(
     db: AsyncSession,
     user_id: str,
-) -> Sequence[models_cdr.Membership]:
+) -> Sequence[CoreAssociationMembership]:
     result = await db.execute(
-        select(models_cdr.Membership).where(
-            models_cdr.Membership.user_id == user_id,
-            models_cdr.Membership.end_date > datetime.now(UTC).date(),
+        select(CoreAssociationMembership).where(
+            CoreAssociationMembership.user_id == user_id,
+            CoreAssociationMembership.end_date > datetime.now(UTC).date(),
         ),
     )
     return result.scalars().all()
@@ -640,16 +652,18 @@ async def get_actual_memberships_by_user_id(
 async def get_membership_by_id(
     db: AsyncSession,
     membership_id: UUID,
-) -> models_cdr.Membership | None:
+) -> CoreAssociationMembership | None:
     result = await db.execute(
-        select(models_cdr.Membership).where(models_cdr.Membership.id == membership_id),
+        select(CoreAssociationMembership).where(
+            CoreAssociationMembership.id == membership_id,
+        ),
     )
     return result.scalars().first()
 
 
 def create_membership(
     db: AsyncSession,
-    membership: models_cdr.Membership,
+    membership: CoreAssociationMembership,
 ):
     db.add(membership)
 
@@ -659,8 +673,8 @@ async def delete_membership(
     membership_id: UUID,
 ):
     await db.execute(
-        delete(models_cdr.Membership).where(
-            models_cdr.Membership.id == membership_id,
+        delete(CoreAssociationMembership).where(
+            CoreAssociationMembership.id == membership_id,
         ),
     )
 

@@ -6,7 +6,8 @@ from sqlalchemy import Boolean, Date, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.types.floors_type import FloorsType
-from app.types.sqlalchemy import Base, TZDateTime
+from app.types.membership import AvailableAssociationMembership
+from app.types.sqlalchemy import Base, PrimaryKey, TZDateTime
 
 
 class CoreMembership(Base):
@@ -111,6 +112,21 @@ class CoreGroup(Base):
         secondary="core_membership",
         back_populates="groups",
     )
+
+
+class CoreAssociationMembership(Base):
+    __tablename__ = "cdr_membership"
+
+    id: Mapped[PrimaryKey]
+    user_id = mapped_column(
+        ForeignKey("core_user.id"),
+        nullable=False,
+    )
+    membership: Mapped[AvailableAssociationMembership] = mapped_column(
+        index=True,
+    )
+    start_date: Mapped[date]
+    end_date: Mapped[date]
 
 
 class CoreData(Base):
