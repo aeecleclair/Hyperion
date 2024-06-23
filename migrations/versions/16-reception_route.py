@@ -22,7 +22,7 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
-class AvailableMembership(Enum):
+class AvailableAssociationMembership(Enum):
     aeecl = "AEECL"
     useecl = "USEECL"
 
@@ -72,12 +72,15 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("user_id", "curriculum_id"),
     )
     op.create_table(
-        "cdr_membership",
+        "core_association_membership",
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("user_id", sa.String(), nullable=False),
         sa.Column(
             "membership",
-            sa.Enum(AvailableMembership, name="availablemembership"),
+            sa.Enum(
+                AvailableAssociationMembership,
+                name="availableassociationmembership",
+            ),
             nullable=False,
         ),
         sa.Column("start_date", sa.Date(), nullable=False),
@@ -86,8 +89,8 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
-        op.f("ix_cdr_membership_membership"),
-        "cdr_membership",
+        op.f("ix_core_association_membership_membership"),
+        "core_association_membership",
         ["membership"],
         unique=False,
     )
@@ -155,7 +158,7 @@ def upgrade() -> None:
         sa.Column(
             "related_membership",
             sa.Enum(
-                AvailableMembership,
+                AvailableAssociationMembership,
                 name="availablemembership",
                 extend_existing=True,
             ),
@@ -259,16 +262,18 @@ def downgrade() -> None:
     )
     op.drop_table("cdr_payment")
     op.drop_index(
-        op.f("ix_cdr_membership_membership"),
-        table_name="cdr_membership",
+        op.f("ix_core_association_membership_membership"),
+        table_name="core_association_membership",
     )
-    op.drop_table("cdr_membership")
+    op.drop_table("core_association_membership")
     op.drop_table("cdr_curriculum_membership")
 
     op.drop_table("cdr_curriculum")
     op.drop_table("cdr_action")
 
-    sa.Enum(AvailableMembership, name="availablemembership").drop(op.get_bind())
+    sa.Enum(AvailableAssociationMembership, name="availableassociationmembership").drop(
+        op.get_bind(),
+    )
     sa.Enum(PaymentType, name="paymenttype").drop(op.get_bind())
     sa.Enum(DocumentSignatureType, name="documentsignaturetype").drop(op.get_bind())
     sa.Enum(CdrLogActionType, name="cdrlogactiontype").drop(op.get_bind())
