@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
+from app.core.users.cruds_users import get_users
 from app.dependencies import (
     get_db,
     get_request_id,
@@ -127,6 +128,40 @@ async def check_request_consistency(
                 detail="Document is not related to this seller.",
             )
     return db_product
+
+
+@module.router.get(
+    "/cdr/users/",
+    response_model=list[schemas_cdr.CdrUser],
+    status_code=200,
+)
+async def get_cdr_users(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Get all sellers.
+
+    **User must be part of a seller group to use this endpoint**
+    """
+    if not (
+        is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])
+        or await cruds_cdr.get_sellers_by_group_ids(
+            db=db,
+            group_ids=[g.id for g in user.groups],
+        )
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="You must be a seller to use this endpoint.",
+        )
+    users = {u.id: u.__dict__ | {"curriculum": []} for u in await get_users(db=db)}
+    curriculum = await cruds_cdr.get_cdr_users_curriculum(db)
+    curriculum_complete = {c.id: c for c in await cruds_cdr.get_curriculums(db=db)}
+    for c in curriculum:
+        users[c.user_id]["curriculum"].append(curriculum_complete[c.curriculum_id])
+
+    return list(users.values())
 
 
 @module.router.get(
@@ -545,7 +580,11 @@ async def create_product_variant(
         user,
         db=db,
     )
-    await check_request_consistency(db=db, seller_id=seller_id, product_id=product_id)
+    product = await check_request_consistency(
+        db=db,
+        seller_id=seller_id,
+        product_id=product_id,
+    )
     status = await get_core_data(schemas_cdr.Status, db)
     if status.status == CdrStatus.closed:
         raise HTTPException(
@@ -557,6 +596,24 @@ async def create_product_variant(
         product_id=product_id,
         **product_variant.model_dump(exclude={"allowed_curriculum"}),
     )
+    if (
+        product
+        and product.related_membership
+        and not db_product_variant.related_membership_added_duration
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="This product has a related membership. Please specify a memberhsip duration for this variant.",
+        )
+    if (
+        product
+        and not product.related_membership
+        and db_product_variant.related_membership_added_duration
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="This product has no related membership. You can't specify a membership duration.",
+        )
     try:
         cruds_cdr.create_product_variant(db, db_product_variant)
         for c in product_variant.allowed_curriculum:
@@ -615,6 +672,15 @@ async def update_product_variant(
         raise HTTPException(
             status_code=403,
             detail="This product can't be edited now. Please try creating a new product.",
+        )
+    if (
+        db_product
+        and not db_product.related_membership
+        and product_variant.related_membership_added_duration
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="This product has no related membership. You can't specify a membership duration.",
         )
     try:
         await cruds_cdr.update_product_variant(
@@ -807,7 +873,33 @@ async def get_purchases_by_user_id(
             status_code=403,
             detail="You're not allowed to see other users purchases.",
         )
-    return await cruds_cdr.get_purchases_by_user_id(db=db, user_id=user_id)
+    purchases = await cruds_cdr.get_purchases_by_user_id(db=db, user_id=user_id)
+    result = []
+    for purchase in purchases:
+        product_variant = await cruds_cdr.get_product_variant_by_id(
+            db=db,
+            variant_id=purchase.product_variant_id,
+        )
+        if product_variant:
+            product = await cruds_cdr.get_product_by_id(
+                db=db,
+                product_id=product_variant.product_id,
+            )
+            if product:
+                seller = await cruds_cdr.get_seller_by_id(
+                    db=db,
+                    seller_id=product.seller_id,
+                )
+                if seller:
+                    result.append(
+                        schemas_cdr.PurchaseReturn(
+                            **purchase.__dict__,
+                            price=product_variant.price,
+                            product=product,
+                            seller=seller,
+                        ),
+                    )
+    return result
 
 
 @module.router.get(
@@ -829,11 +921,37 @@ async def get_purchases_by_user_id_by_seller_id(
     if user_id != user.id:
         await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
 
-    return await cruds_cdr.get_purchases_by_user_id_by_seller_id(
+    purchases = await cruds_cdr.get_purchases_by_user_id_by_seller_id(
         db=db,
         user_id=user_id,
         seller_id=seller_id,
     )
+    result = []
+    for purchase in purchases:
+        product_variant = await cruds_cdr.get_product_variant_by_id(
+            db=db,
+            variant_id=purchase.product_variant_id,
+        )
+        if product_variant:
+            product = await cruds_cdr.get_product_by_id(
+                db=db,
+                product_id=product_variant.product_id,
+            )
+            if product:
+                seller = await cruds_cdr.get_seller_by_id(
+                    db=db,
+                    seller_id=product.seller_id,
+                )
+                if seller:
+                    result.append(
+                        schemas_cdr.PurchaseReturn(
+                            **purchase.__dict__,
+                            price=product_variant.price,
+                            product=product,
+                            seller=seller,
+                        ),
+                    )
+    return result
 
 
 @module.router.post(
@@ -1565,7 +1683,7 @@ async def create_membership(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
 ):
-    db_membership = models_cdr.Membership(
+    db_membership = models_core.CoreAssociationMembership(
         id=uuid4(),
         user_id=user_id,
         **membership.model_dump(),

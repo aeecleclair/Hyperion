@@ -1,15 +1,15 @@
 import uuid
-from datetime import date, datetime
+from datetime import datetime, timedelta
 
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.modules.cdr.types_cdr import (
-    AvailableMembership,
     CdrLogActionType,
     DocumentSignatureType,
     PaymentType,
 )
+from app.types.membership import AvailableAssociationMembership
 from app.types.sqlalchemy import Base, PrimaryKey, TZDateTime
 
 
@@ -60,8 +60,8 @@ class CdrProduct(Base):
     )
     name_fr: Mapped[str]
     name_en: Mapped[str]
-    description_fr: Mapped[str | None] = mapped_column(String, nullable=True)
-    description_en: Mapped[str | None] = mapped_column(String, nullable=True)
+    description_fr: Mapped[str | None]
+    description_en: Mapped[str | None]
     available_online: Mapped[bool]
     product_constraints: Mapped[list["CdrProduct"]] = relationship(
         "CdrProduct",
@@ -74,15 +74,13 @@ class CdrProduct(Base):
     document_constraints: Mapped[list["Document"]] = relationship(
         "Document",
         secondary="cdr_document_constraint",
-        lazy="selectin",
+        lazy="selectin",  # Constraints are always loaded in cruds so we set this to not have to put selectinload
     )
     variants: Mapped[list["ProductVariant"]] = relationship(
         "ProductVariant",
         lazy="selectin",
     )
-    related_membership: Mapped[AvailableMembership | None] = mapped_column(
-        nullable=True,
-    )
+    related_membership: Mapped[AvailableAssociationMembership | None]
 
 
 class Curriculum(Base):
@@ -127,8 +125,8 @@ class ProductVariant(Base):
     )
     name_fr: Mapped[str]
     name_en: Mapped[str]
-    description_fr: Mapped[str | None] = mapped_column(String, nullable=True)
-    description_en: Mapped[str | None] = mapped_column(String, nullable=True)
+    description_fr: Mapped[str | None]
+    description_en: Mapped[str | None]
     price: Mapped[int]
     enabled: Mapped[bool]
     unique: Mapped[bool]
@@ -137,6 +135,7 @@ class ProductVariant(Base):
         secondary="cdr_allowed_curriculum",
         lazy="selectin",
     )
+    related_membership_added_duration: Mapped[timedelta | None]
 
 
 class Document(Base):
@@ -193,21 +192,6 @@ class Payment(Base):
     payment_type: Mapped[PaymentType] = mapped_column(
         index=True,
     )
-
-
-class Membership(Base):
-    __tablename__ = "cdr_membership"
-
-    id: Mapped[PrimaryKey]
-    user_id = mapped_column(
-        ForeignKey("core_user.id"),
-        nullable=False,
-    )
-    membership: Mapped[AvailableMembership] = mapped_column(
-        index=True,
-    )
-    start_date: Mapped[date]
-    end_date: Mapped[date]
 
 
 class CdrAction(Base):

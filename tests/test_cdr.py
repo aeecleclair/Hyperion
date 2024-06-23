@@ -7,11 +7,11 @@ from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from app.modules.cdr import models_cdr
 from app.modules.cdr.types_cdr import (
-    AvailableMembership,
     CdrStatus,
     DocumentSignatureType,
     PaymentType,
 )
+from app.types.membership import AvailableAssociationMembership
 from tests.commons import (
     add_object_to_db,
     client,
@@ -56,7 +56,7 @@ signature_admin: models_cdr.Signature
 
 payment: models_cdr.Payment
 
-membership: models_cdr.Membership
+membership: models_core.CoreAssociationMembership
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
@@ -256,10 +256,10 @@ async def init_objects():
     await add_object_to_db(payment)
 
     global membership
-    membership = models_cdr.Membership(
+    membership = models_core.CoreAssociationMembership(
         id=uuid.uuid4(),
         user_id=cdr_user.id,
-        membership=AvailableMembership.aeecl,
+        membership=AvailableAssociationMembership.aeecl,
         start_date=date(2022, 9, 1),
         end_date=date(2026, 9, 1),
     )
@@ -1799,7 +1799,7 @@ def test_create_membership_user():
     response = client.post(
         f"/cdr/users/{cdr_user.id}/memberships/",
         json={
-            "membership": AvailableMembership.useecl,
+            "membership": AvailableAssociationMembership.useecl,
             "start_date": str(date(2024, 6, 1)),
             "end_date": str(date(2028, 6, 1)),
         },
@@ -1812,7 +1812,7 @@ def test_create_membership_admin():
     response = client.post(
         f"/cdr/users/{cdr_user.id}/memberships/",
         json={
-            "membership": AvailableMembership.useecl,
+            "membership": AvailableAssociationMembership.useecl,
             "start_date": str(date(2024, 6, 1)),
             "end_date": str(date(2028, 6, 1)),
         },
