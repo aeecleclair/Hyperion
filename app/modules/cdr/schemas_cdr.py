@@ -1,15 +1,16 @@
-from datetime import date
+from datetime import date, timedelta
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
+from app.core.schemas_core import CoreUserSimple
 from app.modules.cdr.types_cdr import (
-    AvailableMembership,
     CdrStatus,
     DocumentSignatureType,
     PaymentType,
 )
 from app.types.core_data import BaseCoreData
+from app.types.membership import AvailableAssociationMembership
 
 
 class DocumentBase(BaseModel):
@@ -33,6 +34,12 @@ class CurriculumComplete(CurriculumBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class CdrUser(CoreUserSimple):
+    curriculum: list[CurriculumComplete]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class ProductVariantBase(BaseModel):
     name_fr: str
     name_en: str
@@ -42,6 +49,7 @@ class ProductVariantBase(BaseModel):
     enabled: bool
     unique: bool
     allowed_curriculum: list[UUID]
+    related_membership_added_duration: timedelta | None = None
 
 
 class ProductVariantComplete(BaseModel):
@@ -55,6 +63,7 @@ class ProductVariantComplete(BaseModel):
     enabled: bool
     unique: bool
     allowed_curriculum: list[CurriculumComplete] = []
+    related_membership_added_duration: timedelta | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -68,6 +77,7 @@ class ProductVariantEdit(BaseModel):
     enabled: bool | None = None
     unique: bool | None = None
     allowed_curriculum: list[UUID] | None = None
+    related_membership_added_duration: timedelta | None = None
 
 
 class ProductBase(BaseModel):
@@ -76,6 +86,7 @@ class ProductBase(BaseModel):
     description_fr: str | None = None
     description_en: str | None = None
     available_online: bool
+    related_membership: str | None = None
     product_constraints: list[UUID]
     document_constraints: list[UUID]
 
@@ -152,6 +163,14 @@ class PurchaseComplete(PurchaseBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class PurchaseReturn(PurchaseComplete):
+    price: int
+    product: ProductCompleteNoConstraint
+    seller: SellerComplete
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class PurchaseEdit(BaseModel):
     quantity: int | None = None
 
@@ -181,7 +200,7 @@ class PaymentComplete(PaymentBase):
 
 
 class MembershipBase(BaseModel):
-    membership: AvailableMembership
+    membership: AvailableAssociationMembership
     start_date: date
     end_date: date
 
