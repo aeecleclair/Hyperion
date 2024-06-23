@@ -616,6 +616,7 @@ async def create_product_variant(
         )
     try:
         cruds_cdr.create_product_variant(db, db_product_variant)
+        await db.commit()
         for c in product_variant.allowed_curriculum:
             cruds_cdr.create_allowed_curriculum(
                 db,
