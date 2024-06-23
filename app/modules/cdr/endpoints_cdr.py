@@ -852,7 +852,7 @@ async def delete_document(
 
 @module.router.get(
     "/cdr/users/{user_id}/purchases/",
-    response_model=list[schemas_cdr.PurchaseComplete],
+    response_model=list[schemas_cdr.PurchaseReturn],
     status_code=200,
 )
 async def get_purchases_by_user_id(
@@ -904,7 +904,7 @@ async def get_purchases_by_user_id(
 
 @module.router.get(
     "/cdr/sellers/{seller_id}/users/{user_id}/purchases/",
-    response_model=list[schemas_cdr.PurchaseComplete],
+    response_model=list[schemas_cdr.PurchaseReturn],
     status_code=200,
 )
 async def get_purchases_by_user_id_by_seller_id(
