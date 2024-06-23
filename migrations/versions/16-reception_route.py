@@ -56,14 +56,6 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
-        "cdr_document",
-        sa.Column("id", sa.Uuid(), nullable=False),
-        sa.Column("seller_id", sa.Uuid(), nullable=False),
-        sa.Column("name", sa.String(), nullable=False),
-        sa.ForeignKeyConstraint(["seller_id"], ["cdr_seller.id"]),
-        sa.PrimaryKeyConstraint("id"),
-    )
-    op.create_table(
         "cdr_curriculum_membership",
         sa.Column("user_id", sa.String(), nullable=False),
         sa.Column("curriculum_id", sa.Uuid(), nullable=False),
@@ -124,6 +116,14 @@ def upgrade() -> None:
         sa.Column("group_id", sa.String(), nullable=False),
         sa.Column("order", sa.Integer(), nullable=False),
         sa.ForeignKeyConstraint(["group_id"], ["core_group.id"]),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_table(
+        "cdr_document",
+        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("seller_id", sa.Uuid(), nullable=False),
+        sa.Column("name", sa.String(), nullable=False),
+        sa.ForeignKeyConstraint(["seller_id"], ["cdr_seller.id"]),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
