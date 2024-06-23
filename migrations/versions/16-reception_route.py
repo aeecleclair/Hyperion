@@ -264,7 +264,7 @@ def downgrade() -> None:
     )
     op.drop_table("cdr_membership")
     op.drop_table("cdr_curriculum_membership")
-    
+
     op.drop_table("cdr_curriculum")
     op.drop_table("cdr_action")
 
