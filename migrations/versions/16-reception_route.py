@@ -251,6 +251,7 @@ def downgrade() -> None:
         table_name="cdr_signature",
     )
     op.drop_table("cdr_signature")
+    op.drop_table("cdr_document")
     op.drop_table("cdr_seller")
     op.drop_index(
         op.f("ix_cdr_payment_payment_type"),
@@ -263,7 +264,7 @@ def downgrade() -> None:
     )
     op.drop_table("cdr_membership")
     op.drop_table("cdr_curriculum_membership")
-    op.drop_table("cdr_document")
+    
     op.drop_table("cdr_curriculum")
     op.drop_table("cdr_action")
 
