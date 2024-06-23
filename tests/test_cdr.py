@@ -987,7 +987,9 @@ def test_get_purchases_by_user_id_by_seller_id_seller(client: TestClient):
     ]
 
 
-def test_get_purchases_by_user_id_by_seller_id_other_seller_purchase(client: TestClient):
+def test_get_purchases_by_user_id_by_seller_id_other_seller_purchase(
+    client: TestClient,
+):
     response = client.get(
         f"/cdr/sellers/{online_seller.id}/users/{cdr_user.id}/purchases/",
         headers={"Authorization": f"Bearer {token_user}"},
