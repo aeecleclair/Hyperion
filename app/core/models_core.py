@@ -115,7 +115,7 @@ class CoreGroup(Base):
 
 
 class CoreAssociationMembership(Base):
-    __tablename__ = "cdr_membership"
+    __tablename__ = "core_association_membership"
 
     id: Mapped[PrimaryKey]
     user_id = mapped_column(
