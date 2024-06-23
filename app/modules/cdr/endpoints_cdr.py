@@ -155,11 +155,11 @@ async def get_cdr_users(
             status_code=403,
             detail="You must be a seller to use this endpoint.",
         )
-    users = {u.id: u.__dict__ | {"curriculum": []} for u in await get_users(db=db)}
+    users = {u.id: u.__dict__ | {"curriculum": ""} for u in await get_users(db=db)}
     curriculum = await cruds_cdr.get_cdr_users_curriculum(db)
     curriculum_complete = {c.id: c for c in await cruds_cdr.get_curriculums(db=db)}
     for c in curriculum:
-        users[c.user_id]["curriculum"].append(curriculum_complete[c.curriculum_id])
+        users[c.user_id]["curriculum"] = curriculum_complete[c.curriculum_id]
 
     return list(users.values())
 
@@ -1472,6 +1472,13 @@ async def create_curriculum_membership(
             status_code=403,
             detail="You can't remove a curriculum to another user.",
         )
+    curriculum = await cruds_cdr.get_curriculum_by_user_id(db=db, user_id=user_id)
+    if curriculum:
+        raise HTTPException(
+            status_code=403,
+            detail="This user already has a curriculum.",
+        )
+
     curriculum_membership = models_cdr.CurriculumMembership(
         user_id=user_id,
         curriculum_id=curriculum_id,

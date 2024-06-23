@@ -566,6 +566,18 @@ async def delete_curriculum(
     )
 
 
+async def get_curriculum_by_user_id(
+    db: AsyncSession,
+    user_id: str,
+) -> models_cdr.CurriculumMembership | None:
+    result = await db.execute(
+        select(models_cdr.CurriculumMembership).where(
+            models_cdr.CurriculumMembership.user_id == user_id,
+        ),
+    )
+    return result.scalars().first()
+
+
 def create_curriculum_membership(
     db: AsyncSession,
     curriculum_membership: models_cdr.CurriculumMembership,
