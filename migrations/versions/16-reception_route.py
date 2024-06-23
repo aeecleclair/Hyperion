@@ -191,6 +191,7 @@ def upgrade() -> None:
         sa.Column("price", sa.Integer(), nullable=False),
         sa.Column("enabled", sa.Boolean(), nullable=False),
         sa.Column("unique", sa.Boolean(), nullable=False),
+        sa.Column("related_membership_added_duration", sa.Interval(), nullable=True),
         sa.ForeignKeyConstraint(["product_id"], ["cdr_product.id"]),
         sa.PrimaryKeyConstraint("id"),
     )
