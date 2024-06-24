@@ -18,6 +18,18 @@ async def get_cdr_users_curriculum(
     return result.scalars().all()
 
 
+async def get_cdr_user_curriculum(
+    db: AsyncSession,
+    user_id: str,
+) -> models_cdr.CurriculumMembership | None:
+    result = await db.execute(
+        select(models_cdr.CurriculumMembership).where(
+            models_cdr.CurriculumMembership.user_id == user_id
+        ),
+    )
+    return result.scalars().first()
+
+
 async def get_sellers(
     db: AsyncSession,
 ) -> Sequence[models_cdr.Seller]:
