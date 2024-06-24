@@ -35,7 +35,7 @@ class CurriculumComplete(CurriculumBase):
 
 
 class CdrUser(CoreUserSimple):
-    curriculum: CurriculumComplete
+    curriculum: CurriculumComplete | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
