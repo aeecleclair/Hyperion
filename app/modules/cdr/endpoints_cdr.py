@@ -155,7 +155,7 @@ async def get_cdr_users(
             status_code=403,
             detail="You must be a seller to use this endpoint.",
         )
-    users = {u.id: u.__dict__ | {"curriculum": ""} for u in await get_users(db=db)}
+    users = {u.id: u.__dict__ for u in await get_users(db=db)}
     curriculum = await cruds_cdr.get_cdr_users_curriculum(db)
     curriculum_complete = {c.id: c for c in await cruds_cdr.get_curriculums(db=db)}
     for c in curriculum:
