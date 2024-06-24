@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
-from app.core.users.cruds_users import get_users
+from app.core.users.cruds_users import get_user_by_id, get_users
 from app.dependencies import (
     get_db,
     get_request_id,
@@ -162,6 +162,39 @@ async def get_cdr_users(
         users[c.user_id]["curriculum"] = curriculum_complete[c.curriculum_id]
 
     return list(users.values())
+
+
+@module.router.get(
+    "/cdr/users/{user_id}/",
+    response_model=schemas_cdr.CdrUser,
+    status_code=200,
+)
+async def get_cdr_user(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Get a user.
+
+    **User must be part of a seller group to use this endpoint**
+    """
+    if not (
+        is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])
+        or await cruds_cdr.get_sellers_by_group_ids(
+            db=db,
+            group_ids=[g.id for g in user.groups],
+        )
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="You must be a seller to use this endpoint.",
+        )
+    user_dict = (await get_user_by_id(db, user_id)).__dict__
+    curriculum = await cruds_cdr.get_cdr_user_curriculum(db, user_id)
+    curriculum_complete = {c.id: c for c in await cruds_cdr.get_curriculums(db=db)}
+    user_dict["curriculum"] = curriculum_complete[curriculum.curriculum_id]
+    return schemas_cdr.CdrUser(**user_dict)
 
 
 @module.router.get(
