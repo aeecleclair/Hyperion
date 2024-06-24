@@ -192,8 +192,11 @@ async def get_cdr_user(
         )
     user_dict = (await get_user_by_id(db, user_id)).__dict__
     curriculum = await cruds_cdr.get_cdr_user_curriculum(db, user_id)
-    curriculum_complete = {c.id: c for c in await cruds_cdr.get_curriculums(db=db)}
-    user_dict["curriculum"] = curriculum_complete[curriculum.curriculum_id]
+    if curriculum:
+        user_dict["curriculum"] = await cruds_cdr.get_curriculum_by_id(
+            db=db,
+            curriculum_id=curriculum.curriculum_id,
+        )
     return schemas_cdr.CdrUser(**user_dict)
 
 
