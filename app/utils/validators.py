@@ -3,6 +3,8 @@ A collection of Pydantic validators
 See https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
 """
 
+import phonenumbers
+
 
 def password_validator(password: str) -> str:
     """
@@ -14,6 +16,20 @@ def password_validator(password: str) -> str:
     if len(password) < 6:
         raise ValueError("The password must be at least 6 characters long")
     return password.strip()
+
+
+def phone_formatter(phone: str) -> str:
+    """
+    Verify that a phone number is parsable.
+    This function is intended to be used as a Pydantic validator:
+    https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
+    """
+    parsed_phone = phonenumbers.parse(phone, None)
+    if not phonenumbers.is_possible_number(parsed_phone):
+        raise ValueError("The phone number is not possible")
+    if not phonenumbers.is_valid_number(parsed_phone):
+        raise ValueError("The phone number is not valid")
+    return phonenumbers.format_number(parsed_phone, phonenumbers.PhoneNumberFormat.E164)
 
 
 def email_normalizer(email: str) -> str:

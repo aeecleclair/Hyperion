@@ -8,6 +8,7 @@ firebase-admin==6.5.0               # Firebase is used for push notification
 HelloAssoAPIWrapper==1.0.0
 icalendar==5.0.13
 Jinja2==3.1.4                       # template engine for html files
+phonenumbers==8.13.39               # Used for phone number validation
 pydantic-settings==2.3.4
 pydantic==2.7.4
 pyjwt[crypto]==2.8.0                # generate and verify the JWT tokens, imported as `jwt`
