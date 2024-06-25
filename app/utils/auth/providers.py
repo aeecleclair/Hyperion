@@ -47,6 +47,10 @@ class BaseAuthClient:
     # Some clients may allow external users to authenticate
     allow_external_users: bool = False
 
+    # Some clients may require to enable token introspection to validate access tokens.
+    # We don't want to enable token introspection for all clients as it may be a security risk, allowing attackers to do token fishing.
+    allow_token_introspection: bool = False
+
     def get_userinfo(self, user: models_core.CoreUser) -> dict[str, Any]:
         """
         Return information about the user in a format understandable by the client.
@@ -210,6 +214,11 @@ class SynapseAuthClient(BaseAuthClient):
     # See app.types.scopes_type.ScopeType for possible values
     allowed_scopes: set[ScopeType | str] = {ScopeType.openid, ScopeType.profile}
 
+    # https://github.com/matrix-org/matrix-authentication-service/issues/2088
+    return_userinfo_in_id_token: bool = True
+
+    allow_token_introspection: bool = True
+
     @classmethod
     def get_userinfo(cls, user: models_core.CoreUser):
         # Accepted characters are [a-z] [0-9] `.` and `-`. Spaces are replaced by `-` and accents are removed.
@@ -222,7 +231,7 @@ class SynapseAuthClient(BaseAuthClient):
 
         return {
             "sub": user.id,
-            "picture": f"https://hyperion.myecl.fr/users/{user.id}/profile-picture",
+            # "picture": f"https://hyperion.myecl.fr/users/{user.id}/profile-picture",
             # Matrix does not support special characters in username
             "username": username,
             "displayname": get_display_name(

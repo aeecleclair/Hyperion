@@ -187,9 +187,50 @@ def get_notification_tool(
     )
 
 
+async def get_token_data(
+    settings: Settings = Depends(get_settings),
+    token: str = Depends(security.oauth2_scheme),
+    request_id: str = Depends(get_request_id),
+) -> schemas_auth.TokenData:
+    """
+    Dependency that returns the token payload data
+    """
+    try:
+        payload = jwt.decode(
+            token,
+            settings.ACCESS_TOKEN_SECRET_KEY,
+            algorithms=[security.jwt_algorithm],
+        )
+        token_data = schemas_auth.TokenData(**payload)
+        hyperion_access_logger.info(
+            f"Get_token_data: Decoded a token for user {token_data.sub} ({request_id})",
+        )
+    except (InvalidTokenError, ValidationError) as error:
+        hyperion_access_logger.warning(
+            f"Get_token_data: Failed to decode a token: {error} ({request_id})",
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Could not validate credentials",
+        )
+    except ExpiredSignatureError as error:
+        hyperion_access_logger.warning(
+            f"Get_token_data: Token has expired: {error} ({request_id})",
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Token has expired",
+        )
+
+    return token_data
+
+
 def get_user_from_token_with_scopes(
     scopes: list[list[ScopeType]],
-) -> Callable[[AsyncSession, Settings, str], Coroutine[Any, Any, models_core.CoreUser]]:
+) -> Callable[
+    [AsyncSession, Settings, schemas_auth.TokenData, str],
+    Coroutine[Any, Any, models_core.CoreUser],
+]:
     """
     Generate a dependency which will:
      * check the request header contain a valid JWT token
@@ -203,31 +244,13 @@ def get_user_from_token_with_scopes(
     async def get_current_user(
         db: AsyncSession = Depends(get_db),
         settings: Settings = Depends(get_settings),
-        token: str = Depends(security.oauth2_scheme),
+        token_data: schemas_auth.TokenData = Depends(get_token_data),
         request_id: str = Depends(get_request_id),
     ) -> models_core.CoreUser:
         """
         Dependency that makes sure the token is valid, contains the expected scopes and returns the corresponding user.
         The expected scopes are passed as list of list of scopes, each list of scopes is an "AND" condition, and the list of list of scopes is an "OR" condition.
         """
-        try:
-            payload = jwt.decode(
-                token,
-                settings.ACCESS_TOKEN_SECRET_KEY,
-                algorithms=[security.jwt_algorithm],
-            )
-            token_data = schemas_auth.TokenData(**payload)
-            hyperion_access_logger.info(
-                f"Get_current_user: Decoded a token for user {token_data.sub} ({request_id})",
-            )
-        except (InvalidTokenError, ValidationError) as error:
-            hyperion_access_logger.warning(
-                f"Get_current_user: Failed to decode a token: {error} ({request_id})",
-            )
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Could not validate credentials",
-            )
 
         access_granted = False
         if scopes == []:
@@ -371,41 +394,3 @@ def is_user_a_member_of(
         )
 
     return is_user_a_member_of
-
-
-async def get_token_data(
-    settings: Settings = Depends(get_settings),
-    token: str = Depends(security.oauth2_scheme),
-    request_id: str = Depends(get_request_id),
-) -> schemas_auth.TokenData:
-    """
-    Dependency that returns the token payload data
-    """
-    try:
-        payload = jwt.decode(
-            token,
-            settings.ACCESS_TOKEN_SECRET_KEY,
-            algorithms=[security.jwt_algorithm],
-        )
-        token_data = schemas_auth.TokenData(**payload)
-        hyperion_access_logger.info(
-            f"Get_token_data: Decoded a token for user {token_data.sub} ({request_id})",
-        )
-    except (InvalidTokenError, ValidationError) as error:
-        hyperion_access_logger.warning(
-            f"Get_token_data: Failed to decode a token: {error} ({request_id})",
-        )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Could not validate credentials",
-        )
-    except ExpiredSignatureError as error:
-        hyperion_access_logger.warning(
-            f"Get_token_data: Token has expired: {error} ({request_id})",
-        )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Token has expired",
-        )
-
-    return token_data

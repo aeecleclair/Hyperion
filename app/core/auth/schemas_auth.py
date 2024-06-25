@@ -150,3 +150,30 @@ class TokenResponse(BaseModel):
     scope: str = ""
     refresh_token: str
     id_token: str | None = None
+
+
+class IntrospectTokenReq(BaseModel):
+    # https://datatracker.ietf.org/doc/html/rfc7662
+    token: str
+    token_type_hint: str | None = None
+    client_id: str | None = None
+    client_secret: str | None = None
+
+    @classmethod
+    def as_form(
+        cls,
+        token: str = Form(...),
+        token_type_hint: str | None = Form(None),
+        client_id: str | None = Form(None),
+        client_secret: str | None = Form(None),
+    ):
+        return cls(
+            token=token,
+            token_type_hint=token_type_hint,
+            client_id=client_id,
+            client_secret=client_secret,
+        )
+
+
+class IntrospectTokenResponse(BaseModel):
+    active: bool
