@@ -1170,7 +1170,7 @@ async def oidc_configuration(
 ):
     # See https://ldapwiki.com/wiki/Openid-configuration
     return {
-        "issuer": settings.AUTH_ISSUER,
+        "issuer": settings.CLIENT_URL[:-1],  # We want to remove the trailing slash
         "authorization_endpoint": settings.CLIENT_URL + "auth/authorize",
         "token_endpoint": settings.DOCKER_URL + "auth/token",
         "userinfo_endpoint": settings.DOCKER_URL + "auth/userinfo",
