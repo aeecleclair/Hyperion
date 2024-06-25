@@ -1056,9 +1056,8 @@ async def introspect(
         # This should be an access JWT token
         return introspect_access_token(access_token=tokenreq.token, settings=settings)
 
-    else:
-        # This should be a an urlsafe refresh token generated using `generate_token`
-        return await introspect_refresh_token(refresh_token=tokenreq.token, db=db)
+    # This should be a an urlsafe refresh token generated using `generate_token`
+    return await introspect_refresh_token(refresh_token=tokenreq.token, db=db)
 
 
 def introspect_access_token(
@@ -1090,7 +1089,7 @@ async def introspect_refresh_token(
     if db_refresh_token is None:
         # The refresh token is invalid
         return schemas_auth.IntrospectTokenResponse(active=False)
-    elif db_refresh_token.revoked_on is not None:
+    if db_refresh_token.revoked_on is not None:
         # The refresh token was already revoked
         return schemas_auth.IntrospectTokenResponse(active=False)
     if db_refresh_token.expire_on < datetime.now(UTC):
