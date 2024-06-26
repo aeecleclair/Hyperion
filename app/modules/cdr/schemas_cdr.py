@@ -218,3 +218,7 @@ class MembershipEdit(BaseModel):
 
 class Status(BaseCoreData):
     status: CdrStatus = CdrStatus.pending
+
+
+class PaymentUrl(BaseModel):
+    url: str

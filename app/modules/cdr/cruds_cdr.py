@@ -24,7 +24,7 @@ async def get_cdr_user_curriculum(
 ) -> models_cdr.CurriculumMembership | None:
     result = await db.execute(
         select(models_cdr.CurriculumMembership).where(
-            models_cdr.CurriculumMembership.user_id == user_id
+            models_cdr.CurriculumMembership.user_id == user_id,
         ),
     )
     return result.scalars().first()
@@ -708,3 +708,22 @@ def create_action(
     action: models_cdr.CdrAction,
 ):
     db.add(action)
+
+
+def create_checkout(
+    db: AsyncSession,
+    checkout: models_cdr.Checkout,
+):
+    db.add(checkout)
+
+
+async def get_checkout_by_checkout_id(
+    checkout_id: UUID,
+    db: AsyncSession,
+) -> models_cdr.Checkout | None:
+    checkout = await db.execute(
+        select(models_cdr.Checkout).where(
+            models_cdr.Checkout.checkout_id == checkout_id,
+        ),
+    )
+    return checkout.scalars().first()

@@ -209,3 +209,13 @@ class CdrAction(Base):
     action_type: Mapped[CdrLogActionType]
     action: Mapped[str]
     timestamp: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
+
+
+class Checkout(Base):
+    __tablename__ = "cdr_checkout"
+    id: Mapped[PrimaryKey]
+    user_id = mapped_column(
+        ForeignKey("core_user.id"),
+        nullable=False,
+    )
+    checkout_id = mapped_column(ForeignKey("payment_checkout.id"))
