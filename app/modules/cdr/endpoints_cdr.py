@@ -192,11 +192,9 @@ async def get_cdr_user(
         )
     user_dict = (await get_user_by_id(db, user_id)).__dict__
     curriculum = await cruds_cdr.get_cdr_user_curriculum(db, user_id)
+    curriculum_complete = {c.id: c for c in await cruds_cdr.get_curriculums(db=db)}
     if curriculum:
-        user_dict["curriculum"] = await cruds_cdr.get_curriculum_by_id(
-            db=db,
-            curriculum_id=curriculum.curriculum_id,
-        )
+        user_dict["curriculum"] = curriculum_complete[curriculum.curriculum_id]
     return schemas_cdr.CdrUser(**user_dict)
 
 
@@ -1511,15 +1509,22 @@ async def create_curriculum_membership(
         )
     curriculum = await cruds_cdr.get_curriculum_by_user_id(db=db, user_id=user_id)
     if curriculum:
-        raise HTTPException(
-            status_code=403,
-            detail="This user already has a curriculum.",
-        )
-
+        purchases = await cruds_cdr.get_purchases_by_user_id(db=db, user_id=user_id)
+        if purchases:
+            raise HTTPException(
+                status_code=403,
+                detail="You can't edit this curriculum if user has purchases.",
+            )
+        try:
+            await cruds_cdr.delete_curriculum_membership(db=db, user_id=user_id, curriculum_id=curriculum.curriculum_id)
+            await db.commit()
+        except Exception as error:
+            await db.rollback()
+            raise HTTPException(status_code=400, detail=str(error))
     curriculum_membership = models_cdr.CurriculumMembership(
-        user_id=user_id,
-        curriculum_id=curriculum_id,
-    )
+            user_id=user_id,
+            curriculum_id=curriculum_id,
+        )
     try:
         cruds_cdr.create_curriculum_membership(
             db=db,
