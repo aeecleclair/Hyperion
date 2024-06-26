@@ -6,11 +6,15 @@ from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
+from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
+from app.core.payment import schemas_payment
+from app.core.payment.payment_tool import PaymentTool
 from app.core.users.cruds_users import get_user_by_id, get_users
 from app.dependencies import (
     get_db,
     get_request_id,
+    get_settings,
     hyperion_access_logger,
     is_user_a_member,
     is_user_a_member_of,
@@ -20,6 +24,7 @@ from app.modules.cdr.types_cdr import (
     CdrLogActionType,
     CdrStatus,
     DocumentSignatureType,
+    PaymentType,
 )
 from app.types.module import Module
 from app.utils.tools import (
@@ -28,9 +33,47 @@ from app.utils.tools import (
     set_core_data,
 )
 
+
+async def validate_payment(
+    checkout_payment: schemas_payment.CheckoutPayment,
+    db: AsyncSession,
+) -> None:
+    paid_amount = checkout_payment.paid_amount
+    checkout_id = checkout_payment.checkout_id
+    hyperion_error_logger.info(f"CDR: Callback Checkout id {checkout_id}")
+
+    checkout = await cruds_cdr.get_checkout_by_checkout_id(
+        db=db,
+        checkout_id=checkout_id,
+    )
+    if not checkout:
+        raise ValueError(f"CDR user checkout {checkout_id} not found.")
+
+    db_payment = models_cdr.Payment(
+        id=uuid4(),
+        user_id=checkout.user_id,
+        total=paid_amount,
+        payment_type=PaymentType.helloasso,
+    )
+    db_action = models_cdr.CdrAction(
+        id=uuid4(),
+        subject_id=checkout.id,
+        action_type=CdrLogActionType.payment_add,
+        action=str(checkout_payment.__dict__),
+    )
+    try:
+        cruds_cdr.create_payment(db=db, payment=db_payment)
+        cruds_cdr.create_action(db=db, action=db_action)
+        await db.commit()
+    except Exception as error:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=str(error))
+
+
 module = Module(
     root="cdr",
     tag="Cdr",
+    payment_callback=validate_payment,
     default_allowed_groups_ids=[GroupType.admin_cdr],
 )
 
@@ -1050,7 +1093,7 @@ async def create_purchase(
         user_id=user.id,
         subject_id=db_purchase.user_id,
         action_type=CdrLogActionType.purchase_add,
-        action=str(db_purchase),
+        action=str(db_purchase.__dict__),
         timestamp=datetime.now(UTC),
     )
     if existing_db_purchase:
@@ -1225,7 +1268,7 @@ async def delete_purchase(
         user_id=user.id,
         subject_id=db_purchase.user_id,
         action_type=CdrLogActionType.purchase_delete,
-        action=str(db_purchase),
+        action=str(db_purchase.__dict__),
         timestamp=datetime.now(UTC),
     )
     try:
@@ -1516,15 +1559,19 @@ async def create_curriculum_membership(
                 detail="You can't edit this curriculum if user has purchases.",
             )
         try:
-            await cruds_cdr.delete_curriculum_membership(db=db, user_id=user_id, curriculum_id=curriculum.curriculum_id)
+            await cruds_cdr.delete_curriculum_membership(
+                db=db,
+                user_id=user_id,
+                curriculum_id=curriculum.curriculum_id,
+            )
             await db.commit()
         except Exception as error:
             await db.rollback()
             raise HTTPException(status_code=400, detail=str(error))
     curriculum_membership = models_cdr.CurriculumMembership(
-            user_id=user_id,
-            curriculum_id=curriculum_id,
-        )
+        user_id=user_id,
+        curriculum_id=curriculum_id,
+    )
     try:
         cruds_cdr.create_curriculum_membership(
             db=db,
@@ -1638,7 +1685,7 @@ async def create_payment(
         user_id=user.id,
         subject_id=user_id,
         action_type=CdrLogActionType.payment_add,
-        action=str(db_payment),
+        action=str(db_payment.__dict__),
         timestamp=datetime.now(UTC),
     )
     try:
@@ -1685,7 +1732,7 @@ async def delete_payment(
         user_id=user.id,
         subject_id=user_id,
         action_type=CdrLogActionType.payment_delete,
-        action=str(db_payment),
+        action=str(db_payment.__dict__),
         timestamp=datetime.now(UTC),
     )
     try:
@@ -1698,6 +1745,49 @@ async def delete_payment(
     except Exception as error:
         await db.rollback()
         raise HTTPException(status_code=400, detail=str(error))
+
+
+@module.router.get(
+    "/cdr/pay/{amount}",
+    response_model=schemas_cdr.PaymentUrl,
+    status_code=201,
+)
+async def get_payment_url(
+    amount: int,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+    settings: Settings = Depends(get_settings),
+):
+    """
+    Get payment url
+    """
+    if amount < 100:
+        raise HTTPException(
+            status_code=403,
+            detail="Please give an amount in cents, greater than 1€.",
+        )
+    payment_tool = PaymentTool(settings=settings)
+    checkout = await payment_tool.init_checkout(
+        module=module.root,
+        helloasso_slug="AEECL",
+        checkout_amount=amount,
+        checkout_name="Chaine de rentrée",
+        redirection_uri=settings.CDR_PAYMENT_REDIRECTION_URL or "",
+        payer_user=user,
+        db=db,
+    )
+    hyperion_error_logger.info(f"CDR: Logging Checkout id {checkout.id}")
+    cruds_cdr.create_checkout(
+        db=db,
+        checkout=models_cdr.Checkout(
+            id=uuid4(),
+            user_id=user.id,
+            checkout_id=checkout.id,
+        ),
+    )
+    return schemas_cdr.PaymentUrl(
+        url=checkout.payment_url,
+    )
 
 
 @module.router.get(
