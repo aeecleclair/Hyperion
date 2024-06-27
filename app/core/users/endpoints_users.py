@@ -1,3 +1,4 @@
+import json
 import logging
 import re
 import uuid
@@ -34,6 +35,7 @@ from app.dependencies import (
 )
 from app.types.content_type import ContentType
 from app.types.exceptions import UserWithEmailAlreadyExistError
+from app.types.websocket import HyperionWebsocketsRoom, ws_manager
 from app.utils.mail.mailworker import send_email
 from app.utils.tools import (
     get_file_from_data,
@@ -423,6 +425,21 @@ async def activate_user(
         await cruds_users.delete_unconfirmed_user_by_email(
             db=db,
             email=unconfirmed_user.email,
+        )
+
+        await ws_manager.send_message_to_room(
+            json.dumps(
+                {
+                    "data_type": "NEW_USER",
+                    "data": schemas_core.CoreUserSimple(
+                        name=confirmed_user.name,
+                        firstname=confirmed_user.firstname,
+                        nickname=confirmed_user.nickname,
+                        id=confirmed_user.id,
+                    ),
+                },
+            ),
+            room_id=HyperionWebsocketsRoom.CDR,
         )
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error))
