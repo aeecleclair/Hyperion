@@ -23,7 +23,11 @@ class MessageToRoomModel(BaseModel):
 
 class ConnectionManager:
     settings = get_settings()
-    broadcaster = Broadcast(settings.REDIS_HOST)
+    broadcaster = (
+        Broadcast(settings.REDIS_HOST)
+        if settings.REDIS_HOST
+        else Broadcast("memory://")
+    )
 
     def __init__(self):
         self.connections: dict[
