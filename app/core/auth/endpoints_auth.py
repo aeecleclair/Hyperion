@@ -1173,7 +1173,7 @@ def get_oidc_provider_metadata(settings: Settings):
         "authorization_endpoint": settings.CLIENT_URL + "auth/authorize",
         "token_endpoint": overridden_client_url + "auth/token",
         "userinfo_endpoint": overridden_client_url + "auth/userinfo",
-        "introspection_endpoint": settings.DOCKER_URL + "auth/introspect",
+        "introspection_endpoint": overridden_client_url + "auth/introspect",
         "jwks_uri": overridden_client_url + "oidc/authorization-flow/jwks_uri",
         # RECOMMENDED The OAuth 2.0 / OpenID Connect URL of the OP's Dynamic Client Registration Endpoint OpenID.Registration.
         # TODO: is this relevant?
