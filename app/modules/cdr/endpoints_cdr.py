@@ -1616,14 +1616,11 @@ async def update_curriculum_membership(
             status_code=404,
             detail="Invalid curriculum_id",
         )
-    curriculum_membership = models_cdr.CurriculumMembership(
-        user_id=user_id,
-        curriculum_id=curriculum_id,
-    )
     try:
         await cruds_cdr.update_curriculum_membership(
             db=db,
-            curriculum_membership=curriculum_membership,
+            user_id=user_id,
+            curriculum_id=curriculum_id,
         )
         await db.commit()
     except Exception as error:
