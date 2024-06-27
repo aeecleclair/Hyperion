@@ -1584,6 +1584,53 @@ async def create_curriculum_membership(
         raise HTTPException(status_code=400, detail=str(error))
 
 
+@module.router.patch(
+    "/cdr/users/{user_id}/curriculums/{curriculum_id}/",
+    status_code=204,
+)
+async def update_curriculum_membership(
+    user_id: str,
+    curriculum_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Update a curriculum membership.
+
+    **User must add a curriculum to themself or be CDR Admin to use this endpoint**
+    """
+    if not (
+        user_id == user.id
+        or is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="You can't remove a curriculum to another user.",
+        )
+    curriculum = await cruds_cdr.get_curriculum_by_id(
+        db=db,
+        curriculum_id=curriculum_id,
+    )
+    if not curriculum:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid curriculum_id",
+        )
+    curriculum_membership = models_cdr.CurriculumMembership(
+        user_id=user_id,
+        curriculum_id=curriculum_id,
+    )
+    try:
+        await cruds_cdr.update_curriculum_membership(
+            db=db,
+            curriculum_membership=curriculum_membership,
+        )
+        await db.commit()
+    except Exception as error:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=str(error))
+
+
 @module.router.delete(
     "/cdr/users/{user_id}/curriculums/{curriculum_id}/",
     status_code=204,
