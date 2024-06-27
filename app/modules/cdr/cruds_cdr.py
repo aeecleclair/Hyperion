@@ -597,6 +597,21 @@ def create_curriculum_membership(
     db.add(curriculum_membership)
 
 
+def update_curriculum_membership(
+    db: AsyncSession,
+    curriculum_membership: models_cdr.CurriculumMembership,
+):
+    db.execute(
+        update(models_cdr.CurriculumMembership)
+        .where(
+            models_cdr.CurriculumMembership.user_id == curriculum_membership.user_id,
+            models_cdr.CurriculumMembership.curriculum_id
+            == curriculum_membership.curriculum_id,
+        )
+        .values(**curriculum_membership.model_dump(exclude_none=True)),
+    )
+
+
 async def delete_curriculum_membership(
     db: AsyncSession,
     user_id: str,
