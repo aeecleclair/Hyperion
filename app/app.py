@@ -29,6 +29,7 @@ from app.core.log import LogConfig
 from app.dependencies import get_db_engine, get_redis_client, get_settings
 from app.modules.module_list import module_list
 from app.types.sqlalchemy import Base
+from app.types.websocket import ws_manager
 from app.utils import initialization
 from app.utils.redis import limiter
 
@@ -247,8 +248,10 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     # https://fastapi.tiangolo.com/advanced/events/
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator:
+        await ws_manager.connect_broadcaster()
         yield
         hyperion_error_logger.info("Shutting down")
+        await ws_manager.disconnect_broadcaster()
 
     # Initialize app
     app = FastAPI(
