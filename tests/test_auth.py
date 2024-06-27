@@ -723,7 +723,9 @@ def test_token_introspection_with_revoked_refresh_token(
     assert json["active"] is False
 
 
-def test_get_jwks_uri() -> None:
+def test_get_jwks_uri(
+    client: TestClient,
+) -> None:
     response = client.get(
         "/oidc/authorization-flow/jwks_uri",
     )
@@ -732,7 +734,9 @@ def test_get_jwks_uri() -> None:
     assert len(json["keys"]) >= 1
 
 
-def test_get_oauth_configuration() -> None:
+def test_get_oauth_configuration(
+    client: TestClient,
+) -> None:
     response = client.get(
         "/.well-known/oauth-authorization-server",
     )
@@ -741,7 +745,9 @@ def test_get_oauth_configuration() -> None:
     assert json["issuer"] == "http://127.0.0.1:8000"
 
 
-def test_get_oidc_configuration() -> None:
+def test_get_oidc_configuration(
+    client: TestClient,
+) -> None:
     response = client.get(
         "/.well-known/openid-configuration",
     )
