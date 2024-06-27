@@ -267,7 +267,6 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         allow_headers=["*"],
     )
 
-    # TODO: we may want to log an error if the directory is empty
     calypsso = get_calypsso_app()
     app.mount("/calypsso", calypsso, "Calypsso")
 
