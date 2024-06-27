@@ -910,7 +910,7 @@ async def create_response_body(
         # exp is set by the token creation function
         # aud=client_id as it's the client verify the id_token
         id_token_data = schemas_auth.TokenData(
-            iss=settings.AUTH_ISSUER,
+            iss=settings.OIDC_ISSUER,
             sub=db_row.user_id,
             aud=client_id,
         )
@@ -1169,7 +1169,7 @@ def get_oidc_provider_metadata(settings: Settings):
         settings.OVERRIDDEN_CLIENT_URL_FOR_OIDC or settings.CLIENT_URL
     )
     return {
-        "issuer": settings.CLIENT_URL[:-1],  # We want to remove the trailing slash
+        "issuer": settings.OIDC_ISSUER,  # We want to remove the trailing slash
         "authorization_endpoint": settings.CLIENT_URL + "auth/authorize",
         "token_endpoint": overridden_client_url + "auth/token",
         "userinfo_endpoint": overridden_client_url + "auth/userinfo",
