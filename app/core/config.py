@@ -151,9 +151,6 @@ class Settings(BaseSettings):
     # NOTE: A trailing / is required
     OVERRIDDEN_CLIENT_URL_FOR_OIDC: str | None = None
 
-    # Openid connect issuer name
-    AUTH_ISSUER: str = "hyperion"
-
     # Add an AUTH_CLIENTS variable to the .env dotenv to configure auth clients
     # This variable should have the format: [["client id", "client secret", "redirect_uri", "app.utils.auth.providers class name"]]
     # Use an empty secret `null` or `""` to use PKCE instead of a client secret
@@ -235,6 +232,11 @@ class Settings(BaseSettings):
             )
 
         return clients
+
+    @computed_field  # type: ignore[misc]
+    @cached_property
+    def OIDC_ISSUER(cls) -> str:
+        return cls.CLIENT_URL[:-1]
 
     #######################################
     #          Fields validation          #
