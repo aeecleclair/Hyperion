@@ -12,7 +12,7 @@ pyjwt[crypto]==2.8.0                # generate and verify the JWT tokens, import
 PyMuPDF==1.24.5                     # PDF processing
 python-dotenv==1.0.1                # load environment variables from .env file
 python-multipart==0.0.9             # a form data parser, as oauth flow requires form-data parameters
-rapidfuzz==3.8.1                    # Fuzzy String Matching
+rapidfuzz==3.9.3                    # Fuzzy String Matching
 redis==5.0.5
 requests==2.32.3
 SQLAlchemy[asyncio]==2.0.30         # [asyncio] allows greenlet to be installed on Apple M1 devices.
