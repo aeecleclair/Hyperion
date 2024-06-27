@@ -385,9 +385,10 @@ def test_authorization_code_flow_with_invalid_client_id(client: TestClient) -> N
         data=data_with_invalid_client_id,
         follow_redirects=False,
     )
-    assert response.status_code == 422
-    json = response.json()
-    assert json["detail"] == "Invalid client_id"
+    assert response.status_code == 302
+    assert str(response.next_request.url).endswith(
+        "calypsso/error?message=Invalid+client_id",
+    )
 
 
 # Invalid service configuration
@@ -407,9 +408,11 @@ def test_authorization_code_flow_with_invalid_redirect_uri(client: TestClient) -
         data=data_with_invalid_client_id,
         follow_redirects=False,
     )
-    assert response.status_code == 422
-    json = response.json()
-    assert json["detail"] == "Mismatching redirect_uri"
+
+    assert response.status_code == 302
+    assert str(response.next_request.url).endswith(
+        "calypsso/error?message=Mismatching+redirect_uri",
+    )
 
 
 # Invalid service configuration
@@ -455,7 +458,10 @@ def test_authorization_code_flow_with_invalid_user_credentials(
         data=data_with_invalid_client_id,
         follow_redirects=False,
     )
-    assert response.status_code != 302
+    assert response.status_code == 302
+    assert str(response.next_request.url).endswith(
+        "calypsso/login/?client_id=AppAuthClientWithClientSecret&response_type=code&redirect_uri=http%3A%2F%2F127.0.0.1%3A8000%2Fdocs&scope=API+openid&state=azerty&credentials_error=True",
+    )
 
 
 # Valid user response
