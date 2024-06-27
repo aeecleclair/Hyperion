@@ -2,7 +2,7 @@ import logging
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, WebSocket
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
@@ -27,6 +27,7 @@ from app.modules.cdr.types_cdr import (
     PaymentType,
 )
 from app.types.module import Module
+from app.types.websocket import HyperionWebsocketsRoom, ws_manager
 from app.utils.tools import (
     get_core_data,
     is_user_member_of_an_allowed_group,
@@ -1914,3 +1915,14 @@ async def update_status(
                     detail="To set the status as closed, previous status must be onsite.",
                 )
     await set_core_data(status, db)
+
+
+@module.router.websocket("/ws/cdr/users/")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+
+    # Add the user to the connection stack
+    await ws_manager.add_connection_to_room(
+        room_id=HyperionWebsocketsRoom.CDR,
+        ws_connection=websocket,
+    )
