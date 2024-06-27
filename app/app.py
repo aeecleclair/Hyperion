@@ -269,7 +269,7 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
 
     # TODO: we may want to log an error if the directory is empty
     calypsso = get_calypsso_app()
-    app.mount("/calypsso", calypsso)
+    app.mount("/calypsso", calypsso, "Calypsso")
 
     # Initialize database connection
     app.dependency_overrides.get(get_db_engine, get_db_engine)(
