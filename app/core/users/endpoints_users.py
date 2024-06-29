@@ -4,6 +4,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 
 import aiofiles
+import calypsso
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -12,10 +13,9 @@ from fastapi import (
     File,
     HTTPException,
     Query,
-    Request,
     UploadFile,
 )
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -155,11 +155,17 @@ async def create_user_by_user(
     # Check the account type
 
     # For staff and student
-    # ^[\w\-.]*@((etu(-enise)?|enise).)?ec-lyon.fr$
+    # ^[\w\-.]*@((etu(-enise)?|enise)\.)?ec-lyon\.fr$
     # For staff
-    # ^[\w\-.]*@(enise.)?ec-lyon.fr$
+    # ^[\w\-.]*@(enise\.)?ec-lyon\.fr$
     # For student
-    # ^[\w\-.]*@etu(-enise)?.ec-lyon.fr$
+    # ^[\w\-.]*@etu(-enise)?\.ec-lyon\.fr$
+
+    # For former students
+    # ^[\w\-.]*@centraliens-lyon\.net$
+
+    # All accepted emails
+    # ^[\w\-.]*@(((etu(-enise)?|enise)\.)?ec-lyon\.fr|centraliens-lyon\.net)$
 
     if re.match(r"^[\w\-.]*@(enise\.)?ec-lyon\.fr$", user_create.email):
         # Its a staff email address
@@ -297,7 +303,7 @@ async def create_user(
         raise ValueError(f"An account with the email {email} already exist")
     # There might be an unconfirmed user in the database but its not an issue. We will generate a second activation token.
 
-    activation_token = security.generate_token(nbytes=8)
+    activation_token = security.generate_token(nbytes=16)
 
     # Add the unconfirmed user to the unconfirmed_user table
 
@@ -317,9 +323,14 @@ async def create_user(
     # After adding the unconfirmed user to the database, we got an activation token that need to be send by email,
     # in order to make sure the email address is valid
 
+    calypsso_activate_url = settings.CLIENT_URL + calypsso.get_activate_relative_url(
+        activation_token=activation_token,
+        external=external,
+    )
+
     if settings.SMTP_ACTIVE:
         activation_content = templates.get_template("activation_mail.html").render(
-            {"activation_token": activation_token},
+            {"calypsso_activate_url": calypsso_activate_url},
         )
         background_tasks.add_task(
             send_email,
@@ -333,56 +344,8 @@ async def create_user(
         )
     else:
         hyperion_security_logger.info(
-            f"Create_user: Creating an unconfirmed account for {email} with token {activation_token} ({request_id})",
+            f"Create_user: Creating an unconfirmed account for {email}: {calypsso_activate_url} ({request_id})",
         )
-
-
-@router.get(
-    "/users/activate",
-    response_class=HTMLResponse,
-    status_code=201,
-)
-async def get_user_activation_page(
-    # request need to be passed to Jinja2 to generate the HTML page
-    request: Request,
-    activation_token: str,
-    db: AsyncSession = Depends(get_db),
-):
-    """
-    Return a HTML page to activate an account. The activation token is passed as a query string.
-
-    **This endpoint is an UI endpoint which send and html page response.
-    """
-
-    unconfirmed_user = await cruds_users.get_unconfirmed_user_by_activation_token(
-        db=db,
-        activation_token=activation_token,
-    )
-    if unconfirmed_user is None:
-        return templates.TemplateResponse(
-            "error.html",
-            {
-                "request": request,
-                "message": "The activation token is invalid",
-            },
-        )
-    if unconfirmed_user.expire_on < datetime.now(UTC):
-        return templates.TemplateResponse(
-            "error.html",
-            {
-                "request": request,
-                "message": "The activation token has expired",
-            },
-        )
-
-    return templates.TemplateResponse(
-        "activation.html",
-        {
-            "request": request,
-            "activation_token": activation_token,
-            "user_email": unconfirmed_user.email,
-        },
-    )
 
 
 @router.post(
@@ -543,9 +506,16 @@ async def recover_user(
             recover_request=recover_request,
         )
 
+        calypsso_reset_url = (
+            settings.CLIENT_URL
+            + calypsso.get_reset_password_relative_url(reset_token=reset_token)
+        )
+
         if settings.SMTP_ACTIVE:
             reset_content = templates.get_template("reset_mail.html").render(
-                {"reset_token": reset_token},
+                {
+                    "calypsso_reset_url": calypsso_reset_url,
+                },
             )
             send_email(
                 recipient=db_user.email,
@@ -555,7 +525,7 @@ async def recover_user(
             )
         else:
             hyperion_security_logger.info(
-                f"Reset password for {email} with token {reset_token} ({request_id})",
+                f"Reset password for {email}: {calypsso_reset_url} ({request_id})",
             )
 
     return standard_responses.Result()

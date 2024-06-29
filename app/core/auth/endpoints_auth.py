@@ -4,6 +4,7 @@ import logging
 import urllib.parse
 from datetime import UTC, datetime, timedelta
 
+import calypsso
 import jwt
 from fastapi import (
     APIRouter,
@@ -11,7 +12,6 @@ from fastapi import (
     Form,
     Header,
     HTTPException,
-    Request,
     Response,
     status,
 )
@@ -107,10 +107,9 @@ async def login_for_access_token(
     response_class=HTMLResponse,
 )
 async def get_authorize_page(
-    # request need to be passed to Jinja2 to generate the HTML page
-    request: Request,
     # The parameters should be passed as query strings. We need to use Depends() for that as we want to put them in a schema
     authorizereq: schemas_auth.Authorize = Depends(),
+    settings: Settings = Depends(get_settings),
 ):
     """
     This endpoint is the one the user is redirected to when they begin the Oauth or Openid connect (*oidc*) *Authorization code* process.
@@ -126,19 +125,11 @@ async def get_authorize_page(
 
     **This endpoint is a UI endpoint which send and html page response. It will redirect to `/auth/authorization-flow/authorize-validation`**
     """
-    return templates.TemplateResponse(
-        request,
-        "connexion.html",
-        {
-            "response_type": authorizereq.response_type,
-            "redirect_uri": authorizereq.redirect_uri,
-            "client_id": authorizereq.client_id,
-            "scope": authorizereq.scope,
-            "state": authorizereq.state,
-            "nonce": authorizereq.nonce,
-            "code_challenge": authorizereq.code_challenge,
-            "code_challenge_method": authorizereq.code_challenge_method,
-        },
+
+    return RedirectResponse(
+        settings.CLIENT_URL
+        + calypsso.get_login_relative_url(**authorizereq.model_dump()),
+        status_code=status.HTTP_302_FOUND,
     )
 
 
@@ -147,8 +138,6 @@ async def get_authorize_page(
     response_class=HTMLResponse,
 )
 async def post_authorize_page(
-    # request need to be passed to Jinja2 to generate the HTML page
-    request: Request,
     response_type: str = Form(...),
     client_id: str = Form(...),
     redirect_uri: str = Form(...),
@@ -157,6 +146,7 @@ async def post_authorize_page(
     nonce: str | None = Form(None),
     code_challenge: str | None = Form(None),
     code_challenge_method: str | None = Form(None),
+    settings: Settings = Depends(get_settings),
 ):
     """
     This endpoint is the one the user is redirected to when they begin the OAuth or Openid connect (*oidc*) *Authorization code* process with or without PKCE.
@@ -173,19 +163,19 @@ async def post_authorize_page(
     **This endpoint is a UI endpoint which send and html page response. It will redirect to `/auth/authorization-flow/authorize-validation`**
     """
 
-    return templates.TemplateResponse(
-        request,
-        "connexion.html",
-        {
-            "response_type": response_type,
-            "redirect_uri": redirect_uri,
-            "client_id": client_id,
-            "scope": scope,
-            "state": state,
-            "nonce": nonce,
-            "code_challenge": code_challenge,
-            "code_challenge_method": code_challenge_method,
-        },
+    return RedirectResponse(
+        settings.CLIENT_URL
+        + calypsso.get_login_relative_url(
+            response_type=response_type,
+            redirect_uri=redirect_uri,
+            client_id=client_id,
+            scope=scope,
+            state=state,
+            nonce=nonce,
+            code_challenge=code_challenge,
+            code_challenge_method=code_challenge_method,
+        ),
+        status_code=status.HTTP_302_FOUND,
     )
 
 
@@ -194,8 +184,6 @@ async def post_authorize_page(
     response_class=RedirectResponse,
 )
 async def authorize_validation(
-    # request need to be passed to Jinja2 to generate the HTML page
-    request: Request,
     # User validation
     authorizereq: schemas_auth.AuthorizeValidation = Depends(
         schemas_auth.AuthorizeValidation.as_form,
@@ -258,9 +246,10 @@ async def authorize_validation(
         hyperion_access_logger.warning(
             f"Authorize-validation: Invalid client_id {authorizereq.client_id}. Is `AUTH_CLIENTS` variable correctly configured in the dotenv? ({request_id})",
         )
-        raise HTTPException(
-            status_code=422,
-            detail="Invalid client_id",
+        return RedirectResponse(
+            settings.CLIENT_URL
+            + calypsso.get_error_relative_url(message="Invalid client_id"),
+            status_code=status.HTTP_302_FOUND,
         )
 
     # The auth_client allows to override the redirect_uri and bypass related verifications
@@ -280,9 +269,10 @@ async def authorize_validation(
             hyperion_access_logger.warning(
                 f"Authorize-validation: Mismatching redirect_uri, received {authorizereq.redirect_uri} but expected one of {auth_client.redirect_uri} ({request_id})",
             )
-            raise HTTPException(
-                status_code=422,
-                detail="Mismatching redirect_uri",
+            return RedirectResponse(
+                settings.CLIENT_URL
+                + calypsso.get_error_relative_url(message="Mismatching redirect_uri"),
+                status_code=status.HTTP_302_FOUND,
             )
         else:
             redirect_uri = authorizereq.redirect_uri
@@ -306,20 +296,13 @@ async def authorize_validation(
         hyperion_access_logger.warning(
             f"Authorize-validation: Invalid user email or password for email {authorizereq.email} ({request_id})",
         )
-        return templates.TemplateResponse(
-            request,
-            "connexion.html",
-            {
-                "response_type": authorizereq.response_type,
-                "redirect_uri": redirect_uri,
-                "client_id": authorizereq.client_id,
-                "scope": authorizereq.scope,
-                "state": authorizereq.state,
-                "nonce": authorizereq.nonce,
-                "code_challenge": authorizereq.code_challenge,
-                "code_challenge_method": authorizereq.code_challenge_method,
-                "show_invalid_warning": True,
-            },
+        return RedirectResponse(
+            settings.CLIENT_URL
+            + calypsso.get_login_relative_url(
+                **authorizereq.model_dump(exclude={"email", "password"}),
+                credentials_error=True,
+            ),
+            status_code=status.HTTP_302_FOUND,
         )
 
     # The auth_client may restrict the usage of the client to specific Hyperion groups.
