@@ -18,9 +18,6 @@ class CoreInformation(BaseModel):
     version: str
     minimal_titan_version_code: int
 
-    # Depreciated, minimal_titan_version_code should be used
-    minimal_titan_version: str
-
 
 class CoreUserBase(BaseModel):
     """Base schema for user's model"""

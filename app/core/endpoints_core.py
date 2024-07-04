@@ -33,7 +33,6 @@ async def read_information(settings: Settings = Depends(get_settings)):
     return schemas_core.CoreInformation(
         ready=True,
         version=settings.HYPERION_VERSION,
-        minimal_titan_version=settings.MINIMAL_TITAN_VERSION,
         minimal_titan_version_code=settings.MINIMAL_TITAN_VERSION_CODE,
     )
 
