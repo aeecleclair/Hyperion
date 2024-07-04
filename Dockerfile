@@ -3,6 +3,8 @@ FROM tiangolo/uvicorn-gunicorn-fastapi:python3.11
 # Image running several instances of uvicorn in parallel with gunicorn, listens on port 80
 # See https://github.com/tiangolo/uvicorn-gunicorn-fastapi-docker
 
+COPY ./gunicorn.conf.py /app/gunicorn.conf.py
+
 COPY ./alembic.ini /app/alembic.ini
 COPY ./migrations /app/migrations
 

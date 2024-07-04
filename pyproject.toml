@@ -108,7 +108,9 @@ disallow_any_generics = false
 disallow_untyped_calls = false
 
 [[tool.mypy.overrides]]
-module = ["firebase_admin", "icalendar", "fitz"]
+# Tracking issues
+# Gunicorn : https://github.com/benoitc/gunicorn/issues/2833
+module = ["firebase_admin", "icalendar", "fitz", "gunicorn.arbiter"]
 ignore_missing_imports = true
 
 
