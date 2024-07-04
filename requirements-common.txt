@@ -7,7 +7,7 @@ fastapi==0.111.0
 firebase-admin==6.5.0               # Firebase is used for push notification
 icalendar==5.0.13
 Jinja2==3.1.4                       # template engine for html files
-pydantic-settings==2.2.1
+pydantic-settings==2.3.4
 pydantic==2.7.4
 pyjwt[crypto]==2.8.0                # generate and verify the JWT tokens, imported as `jwt`
 PyMuPDF==1.24.7                     # PDF processing
