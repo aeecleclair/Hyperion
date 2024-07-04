@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     1. An environment variable
     2. The dotenv .env file
 
-    See [Pydantic Settings documentation](https://pydantic-docs.helpmanual.io/usage/settings/#dotenv-env-support) for more information.
+    See [Pydantic Settings documentation](https://docs.pydantic.dev/latest/concepts/pydantic_settings/#dotenv-env-support) for more information.
     See [FastAPI settings](https://fastapi.tiangolo.com/advanced/settings/) article for best practices with settings.
 
     To access these settings, the `get_settings` dependency should be used.
@@ -118,11 +118,6 @@ class Settings(BaseSettings):
     # By default, only production's records are logged
     LOG_DEBUG_MESSAGES: bool | None
 
-    # Hyperion follows Semantic Versioning
-    # https://semver.org/
-    HYPERION_VERSION: str = "2.6.0"
-    MINIMAL_TITAN_VERSION_CODE: int = 113
-
     # Origins for the CORS middleware. `["http://localhost"]` can be used for development.
     # See https://fastapi.tiangolo.com/tutorial/cors/
     # It should begin with 'http://' or 'https:// and should never end with a '/'
@@ -167,6 +162,15 @@ class Settings(BaseSettings):
     # Ex: AUTH_CLIENTS=[["Nextcloudclient", "supersecret", "https://mynextcloud.instance/", "NextcloudAuthClient"], ["Piwigo", "secret2", "https://mypiwigo.instance/", "BaseAuthClient"], ["mobileapp", null, "https://titan/", "BaseAuthClient"]]
     # NOTE: AUTH_CLIENTS property should never be used in the code. To get an auth client, use `KNOWN_AUTH_CLIENTS`
     AUTH_CLIENTS: list[tuple[str, str | None, list[str], str]]
+
+    #################################
+    # Hardcoded Hyperion parameters #
+    #################################
+
+    # Hyperion follows Semantic Versioning
+    # https://semver.org/
+    HYPERION_VERSION: str = "2.6.0"
+    MINIMAL_TITAN_VERSION_CODE: int = 113
 
     ######################################
     # Automatically generated parameters #

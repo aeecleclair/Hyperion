@@ -104,7 +104,11 @@ def run_alembic_upgrade(connection: Connection) -> None:
     alembic_command.upgrade(alembic_cfg, "head")
 
 
-def update_db_tables(engine: Engine, drop_db: bool = False) -> None:
+def update_db_tables(
+    sync_engine: Engine,
+    hyperion_error_logger: logging.Logger,
+    drop_db: bool = False,
+) -> None:
     """
     If the database is not initialized, create the tables and stamp the database with the latest revision.
     Otherwise, run the alembic upgrade command to upgrade the database to the latest version (`head`).
@@ -114,11 +118,9 @@ def update_db_tables(engine: Engine, drop_db: bool = False) -> None:
     This method requires a synchronous engine
     """
 
-    hyperion_error_logger = logging.getLogger("hyperion.error")
-
     try:
         # We have an Engine, we want to acquire a Connection
-        with engine.begin() as conn:
+        with sync_engine.begin() as conn:
             if drop_db:
                 # All tables should be dropped, including the alembic_version table
                 # or Hyperion will think that the database is up to date and will not initialize it
@@ -162,13 +164,14 @@ def update_db_tables(engine: Engine, drop_db: bool = False) -> None:
         raise
 
 
-def initialize_groups(engine: Engine) -> None:
+def initialize_groups(
+    sync_engine: Engine,
+    hyperion_error_logger: logging.Logger,
+) -> None:
     """Add the necessary groups for account types"""
 
-    hyperion_error_logger = logging.getLogger("hyperion.error")
-
     hyperion_error_logger.info("Startup: Adding new groups to the database")
-    with Session(engine) as db:
+    with Session(sync_engine) as db:
         for group_type in GroupType:
             exists = initialization.get_group_by_id_sync(group_id=group_type, db=db)
             # We don't want to recreate the groups if they already exist
@@ -187,13 +190,14 @@ def initialize_groups(engine: Engine) -> None:
                     )
 
 
-def initialize_module_visibility(engine: Engine) -> None:
+def initialize_module_visibility(
+    sync_engine: Engine,
+    hyperion_error_logger: logging.Logger,
+) -> None:
     """Add the default module visibilities for Titan"""
 
-    hyperion_error_logger = logging.getLogger("hyperion.error")
-
-    with Session(engine) as db:
-        # Is run to create default module visibilies or when the table is empty
+    with Session(sync_engine) as db:
+        # Is run to create default module visibilities or when the table is empty
         haveBeenInitialized = (
             len(initialization.get_all_module_visibility_membership_sync(db)) > 0
         )
@@ -341,7 +345,6 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         port = request.client.port
         client_address = f"{ip_address}:{port}"
 
-        settings: Settings = app.dependency_overrides.get(get_settings, get_settings)()
         redis_client: redis.Redis | Literal[False] | None = (
             app.dependency_overrides.get(
                 get_redis_client,
