@@ -113,8 +113,6 @@ class Settings(BaseSettings):
     HYPERION_VERSION: str = "2.6.0"
     MINIMAL_TITAN_VERSION_CODE: int = 113
 
-    MINIMAL_TITAN_VERSION: str = "0.0.1"  # deprecated, use MINIMAL_TITAN_VERSION_CODE
-
     # Origins for the CORS middleware. `["http://localhost"]` can be used for development.
     # See https://fastapi.tiangolo.com/tutorial/cors/
     # It should begin with 'http://' or 'https:// and should never end with a '/'
