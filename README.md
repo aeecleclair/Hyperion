@@ -205,7 +205,7 @@ To enable the service:
 
 ## Running Hyperion with Gunicorn
 
-For production we encourage to run Hyperion with multiple Gunicorn workers. You can use our [docker image](./Dockerfile) and [docker-compose file](./docker-compose.yaml) files to run Hyperion with Gunicorn.
+For production we encourage to use Gunicorn to run and manage multiple Uvicorn workers. You can use our [docker image](./Dockerfile) and [docker-compose file](./docker-compose.yaml) files to run Hyperion with Gunicorn. See [Gunicorn with Uvicorn](https://fastapi.tiangolo.com/deployment/server-workers/#gunicorn-with-uvicorn-workers) FastAPI documentation.
 
 Do not use gunicorn `--preload` flag. It initialise a first Hyperion instance then fork it to create workers. This is not compatible with the way we handle loggers in their own thread.
 
