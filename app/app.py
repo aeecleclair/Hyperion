@@ -27,7 +27,7 @@ from app.core import models_core
 from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
 from app.core.log import LogConfig
-from app.dependencies import get_db_engine, get_redis_client, get_settings
+from app.dependencies import get_redis_client
 from app.modules.module_list import module_list
 from app.types.sqlalchemy import Base
 from app.utils import initialization
@@ -241,6 +241,37 @@ def use_route_path_as_operation_ids(app: FastAPI) -> None:
             route.operation_id = method.lower() + route.path.replace("/", "_")
 
 
+def init_db(
+    settings: Settings,
+    hyperion_error_logger: logging.Logger,
+    drop_db: bool = False,
+) -> None:
+    """
+    Init the database by creating the tables and adding the necessary groups
+
+    The method will use a synchronous engine to create the tables and add the groups
+    """
+    # Initialize the sync engine
+    sync_engine = initialization.get_sync_db_engine(settings=settings)
+
+    # Update database tables
+    update_db_tables(
+        sync_engine=sync_engine,
+        hyperion_error_logger=hyperion_error_logger,
+        drop_db=drop_db,
+    )
+
+    # Initialize database tables
+    initialize_groups(
+        sync_engine=sync_engine,
+        hyperion_error_logger=hyperion_error_logger,
+    )
+    initialize_module_visibility(
+        sync_engine=sync_engine,
+        hyperion_error_logger=hyperion_error_logger,
+    )
+
+
 # We wrap the application in a function to be able to pass the settings and drop_db parameters
 # The drop_db parameter is used to drop the database tables before creating them again
 def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
@@ -297,18 +328,14 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     calypsso = get_calypsso_app()
     app.mount("/calypsso", calypsso, "Calypsso")
 
-    # Initialize database connection
-    app.dependency_overrides.get(get_db_engine, get_db_engine)(
-        settings=settings,
-    )  # Initialize the async engine
-    sync_engine = initialization.get_sync_db_engine(settings=settings)
-
-    # Update database tables
-    update_db_tables(sync_engine, drop_db)
-
-    # Initialize database tables
-    initialize_groups(sync_engine)
-    initialize_module_visibility(sync_engine)
+    if settings.HYPERION_INIT_DB:
+        init_db(
+            settings=settings,
+            hyperion_error_logger=hyperion_error_logger,
+            drop_db=drop_db,
+        )
+    else:
+        hyperion_error_logger.info("Database initialization skipped")
 
     # Initialize Redis
     if not app.dependency_overrides.get(get_redis_client, get_redis_client)(

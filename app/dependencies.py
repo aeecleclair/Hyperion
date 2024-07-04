@@ -26,14 +26,17 @@ from sqlalchemy.ext.asyncio import (
 
 from app.core import models_core, security
 from app.core.auth import schemas_auth
-from app.core.config import Settings
+from app.core.config import Settings, construct_prod_settings
 from app.core.groups.groups_type import GroupType, get_ecl_groups
 from app.core.payment.payment_tool import PaymentTool
 from app.core.users import cruds_users
 from app.types.scopes_type import ScopeType
 from app.utils.communication.notifications import NotificationManager, NotificationTool
 from app.utils.redis import connect
-from app.utils.tools import is_user_external, is_user_member_of_an_allowed_group
+from app.utils.tools import (
+    is_user_external,
+    is_user_member_of_an_allowed_group,
+)
 
 # We could maybe use hyperion.security
 hyperion_access_logger = logging.getLogger("hyperion.access")
@@ -131,7 +134,7 @@ def get_settings() -> Settings:
     """
     # `lru_cache()` decorator is here to prevent the class to be instantiated multiple times.
     # See https://fastapi.tiangolo.com/advanced/settings/#lru_cache-technical-details
-    return Settings(_env_file=".env")
+    return construct_prod_settings()
 
 
 def get_redis_client(
