@@ -7,6 +7,7 @@ fastapi==0.111.0
 firebase-admin==6.5.0               # Firebase is used for push notification
 HelloAssoAPIWrapper==1.0.0
 icalendar==5.0.13
+jellyfish==1.0.4                    # String Matching
 Jinja2==3.1.4                       # template engine for html files
 pydantic-settings==2.3.4
 pydantic==2.7.4
@@ -14,7 +15,6 @@ pyjwt[crypto]==2.8.0                # generate and verify the JWT tokens, import
 PyMuPDF==1.24.9                     # PDF processing
 python-dotenv==1.0.1                # load environment variables from .env file
 python-multipart==0.0.9             # a form data parser, as oauth flow requires form-data parameters
-rapidfuzz==3.9.5                    # Fuzzy String Matching
 redis==5.0.8
 requests==2.32.3
 SQLAlchemy[asyncio]==2.0.32         # [asyncio] allows greenlet to be installed on Apple M1 devices.

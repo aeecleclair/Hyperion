@@ -10,8 +10,8 @@ import aiofiles
 import fitz
 from fastapi import HTTPException, UploadFile
 from fastapi.responses import FileResponse
+from jellyfish import jaro_winkler_similarity
 from pydantic import ValidationError
-from rapidfuzz import process
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import cruds_core, models_core
@@ -60,7 +60,7 @@ def is_user_external(
     return user.external is True
 
 
-def fuzzy_search_user(
+def sort_user(
     query: str,
     users: Sequence[models_core.CoreUser],
     limit: int = 10,
@@ -71,26 +71,20 @@ def fuzzy_search_user(
     `query` will be compared against `users` name, firstname and nickname.
     The size of the answer can be limited using `limit` parameter.
 
-    Use RapidFuzz library
+    Use Jellyfish library
     """
 
-    # We can give a dictionary of {object: string used for the comparison} to the extract function
-    # https://maxbachmann.github.io/RapidFuzz/Usage/process.html#extract
-
     # TODO: we may want to cache this object. Its generation may take some time if there is a big user base
-    choices = []
+    names = [f"{user.firstname} {user.name} {user.nickname}" for user in users]
 
-    for user in users:
-        choices.append(f"{user.firstname} {user.name} {user.nickname}")
+    scored = [
+        (user, jaro_winkler_similarity(query, choice))
+        for user, choice in zip(users, names, strict=True)
+    ]
 
-    results: list[tuple[str, int | float, int]] = process.extract(
-        query,
-        choices,
-        limit=limit,
-    )
+    scored.sort(key=lambda x: x[1], reverse=True)
 
-    # results has the format : (string used for the comparison, similarity score, index of the object in the choices collection)
-    return [users[res[2]] for res in results]
+    return [user for user, _ in scored[:limit]]
 
 
 async def is_group_id_valid(group_id: str, db: AsyncSession) -> bool:
