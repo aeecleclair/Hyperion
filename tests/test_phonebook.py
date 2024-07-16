@@ -1,4 +1,5 @@
 import pytest_asyncio
+from fastapi.testclient import TestClient
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
@@ -6,7 +7,6 @@ from app.modules.phonebook import models_phonebook
 from app.modules.phonebook.types_phonebook import Kinds, RoleTags
 from tests.commons import (
     add_object_to_db,
-    client,
     create_api_access_token,
     create_user_with_groups,
 )
@@ -33,7 +33,7 @@ token_simple: str = ""
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
-async def init_objects():
+async def init_objects(client: TestClient):
     global phonebook_user_BDE
     global token_BDE
     global phonebook_user_president
@@ -164,7 +164,7 @@ async def init_objects():
 # ---------------------------------------------------------------------------- #
 #                              Get tests                                       #
 # ---------------------------------------------------------------------------- #
-def test_get_all_associations():
+def test_get_all_associations(client: TestClient):
     response = client.get(
         "/phonebook/associations/",
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -173,7 +173,7 @@ def test_get_all_associations():
     assert len(response.json()) == 3
 
 
-def test_get_all_association_kinds_simple():
+def test_get_all_association_kinds_simple(client: TestClient):
     response = client.get(
         "/phonebook/associations/kinds",
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -181,7 +181,7 @@ def test_get_all_association_kinds_simple():
     assert response.json()["kinds"] == [kind.value for kind in Kinds]
 
 
-def test_get_all_roletags_simple():
+def test_get_all_roletags_simple(client: TestClient):
     response = client.get(
         "/phonebook/roletags/",
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -189,7 +189,7 @@ def test_get_all_roletags_simple():
     assert response.json()["tags"] == [tag.value for tag in RoleTags]
 
 
-def test_get_members_by_association_id_simple():
+def test_get_members_by_association_id_simple(client: TestClient):
     response = client.get(
         f"/phonebook/associations/{association1.id}/members/{association1.mandate_year}",
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -205,7 +205,7 @@ def test_get_members_by_association_id_simple():
     assert any(member["id"] == phonebook_user_simple2.id for member in response.json())
 
 
-def test_get_member_by_id_simple():
+def test_get_member_by_id_simple(client: TestClient):
     response = client.get(
         f"phonebook/member/{phonebook_user_simple.id}",
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -224,7 +224,7 @@ def test_get_member_by_id_simple():
 # ---------------------------------------------------------------------------- #
 
 
-def test_create_association_simple():
+def test_create_association_simple(client: TestClient):
     response = client.post(
         "/phonebook/associations/",
         json={
@@ -244,7 +244,7 @@ def test_create_association_simple():
     assert len(association) == 3
 
 
-def test_create_association_admin():
+def test_create_association_admin(client: TestClient):
     response = client.post(
         "/phonebook/associations/",
         json={
@@ -266,7 +266,7 @@ def test_create_association_admin():
     assert isinstance(association["id"], str)
 
 
-def test_add_membership_simple():
+def test_add_membership_simple(client: TestClient):
     response = client.post(
         "/phonebook/associations/memberships",
         json={
@@ -289,7 +289,7 @@ def test_add_membership_simple():
     assert len(members) == 1
 
 
-def test_add_membership_admin():
+def test_add_membership_admin(client: TestClient):
     response = client.post(
         "/phonebook/associations/memberships",
         json={
@@ -320,7 +320,7 @@ def test_add_membership_admin():
     assert any(response_membership in member["memberships"] for member in members)
 
 
-def test_add_membership_president_with_president_tag():
+def test_add_membership_president_with_president_tag(client: TestClient):
     response = client.post(
         "/phonebook/associations/memberships",
         json={
@@ -343,7 +343,7 @@ def test_add_membership_president_with_president_tag():
     assert len(members) == 0
 
 
-def test_add_membership_admin_with_president_tag():
+def test_add_membership_admin_with_president_tag(client: TestClient):
     response = client.post(
         "/phonebook/associations/memberships",
         json={
@@ -381,7 +381,7 @@ def test_add_membership_admin_with_president_tag():
 # ---------------------------------------------------------------------------- #
 #                              Update tests                                    #
 # ---------------------------------------------------------------------------- #
-def test_update_association_simple():
+def test_update_association_simple(client: TestClient):
     response = client.patch(
         f"/phonebook/associations/{association1.id}/",
         json={
@@ -409,7 +409,7 @@ def test_update_association_simple():
     assert association["mandate_year"] == 2023
 
 
-def test_update_association_admin():
+def test_update_association_admin(client: TestClient):
     response = client.patch(
         f"/phonebook/associations/{association2.id}",
         json={
@@ -438,7 +438,7 @@ def test_update_association_admin():
     assert association["description"] == "Bazar description"
 
 
-def test_update_association_president():
+def test_update_association_president(client: TestClient):
     response = client.patch(
         f"/phonebook/associations/{association1.id}",
         json={
@@ -467,7 +467,7 @@ def test_update_association_president():
     assert association["description"] == "en minuscule"
 
 
-def test_update_membership_simple():
+def test_update_membership_simple(client: TestClient):
     response = client.patch(
         f"/phonebook/associations/memberships/{membership1.id}",
         json={
@@ -503,7 +503,7 @@ def test_update_membership_simple():
     assert membership["role_name"] == "Prez"
 
 
-def test_update_membership_admin():
+def test_update_membership_admin(client: TestClient):
     response = client.patch(
         f"/phonebook/associations/memberships/{membership1.id}",
         json={
@@ -539,7 +539,7 @@ def test_update_membership_admin():
     assert membership["role_name"] == "Autre rôle"
 
 
-def test_update_membership_president():
+def test_update_membership_president(client: TestClient):
     response = client.patch(
         f"/phonebook/associations/memberships/{membership1.id}",
         json={
@@ -574,7 +574,7 @@ def test_update_membership_president():
     assert membership["role_name"] == "Un super rôle"
 
 
-def test_update_membership_president_with_president_tag():
+def test_update_membership_president_with_president_tag(client: TestClient):
     response = client.patch(
         f"/phonebook/associations/memberships/{membership2.id}",
         json={
@@ -610,7 +610,7 @@ def test_update_membership_president_with_president_tag():
     assert membership["role_tags"] == ""
 
 
-def test_update_membership_admin_with_president_tag():
+def test_update_membership_admin_with_president_tag(client: TestClient):
     response = client.patch(
         f"/phonebook/associations/memberships/{membership2.id}",
         json={
@@ -646,7 +646,7 @@ def test_update_membership_admin_with_president_tag():
     assert membership["role_tags"] == RoleTags.president.value
 
 
-def test_update_membership_order():
+def test_update_membership_order(client: TestClient):
     response = client.patch(
         f"/phonebook/associations/memberships/{membership1.id}",
         json={
@@ -752,7 +752,7 @@ def test_update_membership_order():
 # ---------------------------------------------------------------------------- #
 
 
-def test_delete_membership_simple():
+def test_delete_membership_simple(client: TestClient):
     response = client.delete(
         f"/phonebook/associations/memberships/{membership6.id}",
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -767,7 +767,7 @@ def test_delete_membership_simple():
     assert len(members) == 1
 
 
-def test_delete_membership_admin():
+def test_delete_membership_admin(client: TestClient):
     response = client.delete(
         f"/phonebook/associations/memberships/{membership4.id}",
         headers={"Authorization": f"Bearer {token_BDE}"},
@@ -782,7 +782,7 @@ def test_delete_membership_admin():
     assert len(members) == 3
 
 
-def test_delete_membership_president():
+def test_delete_membership_president(client: TestClient):
     response = client.delete(
         f"/phonebook/associations/memberships/{membership3.id}",
         headers={"Authorization": f"Bearer {token_president}"},
@@ -797,7 +797,7 @@ def test_delete_membership_president():
     assert len(members) == 2
 
 
-def test_delete_membership_update_order():
+def test_delete_membership_update_order(client: TestClient):
     response = client.delete(
         f"/phonebook/associations/memberships/{membership1.id}",
         headers={"Authorization": f"Bearer {token_BDE}"},
@@ -829,7 +829,7 @@ def test_delete_membership_update_order():
     assert membership["member_order"] == 0
 
 
-def test_delete_association_simple():
+def test_delete_association_simple(client: TestClient):
     response = client.delete(
         f"/phonebook/associations/{association1.id}/",
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -853,7 +853,7 @@ def test_delete_association_simple():
     assert association["description"] == "en minuscule"
 
 
-def test_delete_association_admin():
+def test_delete_association_admin(client: TestClient):
     response = client.delete(
         f"/phonebook/associations/{association2.id}/",
         headers={"Authorization": f"Bearer {token_BDE}"},
@@ -878,7 +878,7 @@ def test_delete_association_admin():
 # # ---------------------------------------------------------------------------- #
 # #                                  Logos tests                                 #
 # # ---------------------------------------------------------------------------- #
-# def test_create_association_picture_admin():
+# def test_create_association_picture_admin(client: TestClient):
 #     with Path.open("assets/images/default_association_picture.png", "rb") as image:
 #         response = client.post(
 #             f"/phonebook/associations/{association.id}/picture",
@@ -888,7 +888,7 @@ def test_delete_association_admin():
 #     assert response.status_code == 201
 
 
-# def test_create_association_picture_simple():
+# def test_create_association_picture_simple(client: TestClient):
 #     with Path.open("assets/images/default_association_picture.png", "rb") as image:
 #         response = client.post(
 #             f"/phonebook/associations/{association.id}/picture",
@@ -898,7 +898,7 @@ def test_delete_association_admin():
 #     assert response.status_code == 403
 
 
-# def test_get_association_picture_simple():
+# def test_get_association_picture_simple(client: TestClient):
 #     response = client.get(
 #         f"/phonebook/associations/{association.id}/picture",
 #         headers={"Authorization": f"Bearer {token_simple}"},
