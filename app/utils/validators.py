@@ -1,5 +1,7 @@
 import re
 
+import zxcvbn
+
 """
 A collection of Pydantic validators
 See https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
@@ -13,6 +15,11 @@ def password_validator(password: str) -> str:
     https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
     """
     password = password.strip()
+    result = zxcvbn.zxcvbn(password)
+    if not result["score"] == 4:
+        raise ValueError(
+            result["feedback"],
+        )
     if not re.fullmatch(
         r"(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$€%^&*\(\)_+\-.,.?\":\{\}|<>'/;\[\]]).{6,}",
         password,

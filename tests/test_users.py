@@ -162,7 +162,7 @@ def test_create_and_activate_user(mocker: MockerFixture, client: TestClient) -> 
         "/users/activate",
         json={
             "activation_token": UNIQUE_TOKEN,
-            "password": "Password1!",
+            "password": "eclair!AEECL69",
             "firstname": "firstname",
             "name": "name",
             "nickname": "nickname",
@@ -212,7 +212,7 @@ def test_recover_and_reset_password(mocker: MockerFixture, client: TestClient) -
 
     response = client.post(
         "/users/reset-password",
-        json={"reset_token": UNIQUE_TOKEN, "new_password": "New_password1"},
+        json={"reset_token": UNIQUE_TOKEN, "new_password": "eclar!AEECL69"},
     )
 
     assert response.status_code == 201
@@ -302,7 +302,7 @@ def test_change_password(client: TestClient) -> None:
         json={
             "email": student_user_email,
             "old_password": student_user_password,
-            "new_password": "The_new_password1",
+            "new_password": "pluseclair!AEECL69",
         },
         headers={"Authorization": f"Bearer {token_student_user}"},
     )

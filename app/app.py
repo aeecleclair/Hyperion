@@ -1,6 +1,8 @@
 """File defining the Metadata. And the basic functions creating the database tables and calling the router"""
 
+import json
 import logging
+import os
 import uuid
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
@@ -20,6 +22,7 @@ from fastapi.routing import APIRoute
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from zxcvbn.matching import add_frequency_lists
 
 from app import api
 from app.core import models_core
@@ -303,6 +306,13 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         settings=settings,
     ):
         hyperion_error_logger.info("Redis client not configured")
+
+    password_dict_files = os.listdir("assets/password_dict")
+    password_dicts: dict[str, list[str]] = {}
+    for password_dict_file in password_dict_files:
+        with Path.open(Path(f"assets/password_dict/{password_dict_file}")) as file:
+            password_dicts[password_dict_file] = json.load(file)
+    add_frequency_lists(password_dicts)
 
     @app.middleware("http")
     async def logging_middleware(
