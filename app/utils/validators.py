@@ -14,13 +14,13 @@ def password_validator(password: str) -> str:
     """
     password = password.strip()
     if not re.fullmatch(
-        r"""(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$€%^&*()_+\-.,.?":{}|<>'/;\[\]]){6,}""",
+        r"(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$€%^&*\(\)_+\-.,.?\":\{\}|<>'/;\[\]]).{6,}",
         password,
     ):
         raise ValueError(
             "The password must be at least 6 characters long and contain at least one number, one special character, one majuscule and one minuscule.",
         )
-    return password.strip()
+    return password
 
 
 def email_normalizer(email: str) -> str:
