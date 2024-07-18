@@ -1,11 +1,43 @@
 import logging
 import logging.config
 import queue
+from enum import Enum
 from logging.handlers import QueueHandler, QueueListener
 from pathlib import Path
 from typing import Any
 
+import uvicorn
+
 from app.core.config import Settings
+
+
+class ModifiedFormatter(uvicorn.logging.DefaultFormatter):
+    class console_color(Enum):
+        """Colors can be found here: https://talyian.github.io/ansicolors/"""
+
+        DEBUG = "\033[38;5;12m"
+        INFO = "\033[38;5;10m"
+        WARNING = "\033[38;5;11m"
+        CRITICAL = "\033[38;5;9m"
+        BOLD = "\033[1m"
+        END = "\033[0m"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(datefmt="%d-%b-%y %H:%M:%S")
+
+    def format(self, record: logging.LogRecord) -> str:
+        fmt = (
+            "%(asctime)s - %(name)s - "
+            + self.console_color.BOLD.value
+            + "%(levelname)s"
+            + self.console_color.END.value
+            + " - "
+            + self.console_color[record.levelname].value
+            + "%(message)s"
+            + self.console_color.END.value
+        )
+        formatter = logging.Formatter(fmt, self.datefmt)
+        return formatter.format(record)
 
 
 class LogConfig:
@@ -53,10 +85,7 @@ class LogConfig:
                     "format": self.LOG_FORMAT,
                     "datefmt": "%d-%b-%y %H:%M:%S",
                 },
-                "console_formatter": {
-                    "format": self.CONSOLE_LOG_FORMAT,
-                    "datefmt": "%d-%b-%y %H:%M:%S",
-                },
+                "console_formatter": {"()": "app.core.log.ModifiedFormatter"},
                 "matrix": {
                     "format": self.MATRIX_LOG_FORMAT,
                     "datefmt": "%d-%b-%y %H:%M:%S",
