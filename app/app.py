@@ -310,7 +310,7 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     # We add custom dictionnaries for password verification with zxcvb.
     # Dictionnaries come from https://github.com/zxcvbn-ts/zxcvbn/tree/master/packages/languages
     password_dicts: dict[str, list[str]] = {}
-    for password_dict_file in Path("assets/password_dict").glob("**/*"):
+    for password_dict_file in Path("assets/password_dict").glob("*/*"):
         with Path.open(password_dict_file) as file:
             password_dicts[
                 f"{password_dict_file.parts[-2]}_{password_dict_file.stem}"
