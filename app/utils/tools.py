@@ -82,9 +82,17 @@ def sort_user(
         for user, choice in zip(users, names, strict=True)
     ]
 
-    scored.sort(key=lambda x: x[1], reverse=True)
+    results = []
+    for _ in range(10):
+        results.append(
+            next(
+                result
+                for result in scored
+                if result[1] == max(scored, key=lambda r: r[1])[1]
+            ),
+        )
 
-    return [user for user, _ in scored[:limit]]
+    return [result[0] for result in results]
 
 
 async def is_group_id_valid(group_id: str, db: AsyncSession) -> bool:
