@@ -12,13 +12,14 @@ from app.core.config import Settings
 
 
 class ColoredConsoleFormatter(uvicorn.logging.DefaultFormatter):
-    class console_color(Enum):
+    class ConsoleColors(str, Enum):
         """Colors can be found here: https://talyian.github.io/ansicolors/"""
 
         DEBUG = "\033[38;5;12m"
         INFO = "\033[38;5;10m"
         WARNING = "\033[38;5;11m"
-        CRITICAL = "\033[38;5;9m"
+        ERROR = "\033[38;5;9m"
+        CRITICAL = "\033[38;5;1m"
         BOLD = "\033[1m"
         END = "\033[0m"
 
@@ -28,13 +29,13 @@ class ColoredConsoleFormatter(uvicorn.logging.DefaultFormatter):
     def format(self, record: logging.LogRecord) -> str:
         fmt = (
             "%(asctime)s - %(name)s - "
-            + self.console_color.BOLD.value
+            + self.ConsoleColors.BOLD
             + "%(levelname)s"
-            + self.console_color.END.value
+            + self.ConsoleColors.END
             + " - "
-            + self.console_color[record.levelname].value
+            + self.ConsoleColors[record.levelname].value
             + "%(message)s"
-            + self.console_color.END.value
+            + self.ConsoleColors.END
         )
         formatter = logging.Formatter(fmt, self.datefmt)
         return formatter.format(record)
@@ -57,16 +58,6 @@ class LogConfig:
         END = "\033[0m"
 
     LOG_FORMAT: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    CONSOLE_LOG_FORMAT: str = (
-        "%(asctime)s - %(name)s - "
-        + console_color.BOLD
-        + "%(levelname)s"
-        + console_color.END
-        + " - "
-        + console_color.GREEN
-        + "%(message)s"
-        + console_color.END
-    )
     MATRIX_LOG_FORMAT: str = "%(asctime)s - %(name)s - <code>%(levelname)s</code> - <font color ='green'>%(message)s</font>"
 
     # Logging config
@@ -85,7 +76,7 @@ class LogConfig:
                     "format": self.LOG_FORMAT,
                     "datefmt": "%d-%b-%y %H:%M:%S",
                 },
-                "console_formatter": {"()": "app.core.log.ModifiedFormatter"},
+                "console_formatter": {"()": "app.core.log.ColoredConsoleFormatter"},
                 "matrix": {
                     "format": self.MATRIX_LOG_FORMAT,
                     "datefmt": "%d-%b-%y %H:%M:%S",
