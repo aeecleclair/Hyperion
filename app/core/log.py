@@ -11,7 +11,7 @@ import uvicorn
 from app.core.config import Settings
 
 
-class ModifiedFormatter(uvicorn.logging.DefaultFormatter):
+class ColoredConsoleFormatter(uvicorn.logging.DefaultFormatter):
     class console_color(Enum):
         """Colors can be found here: https://talyian.github.io/ansicolors/"""
 
