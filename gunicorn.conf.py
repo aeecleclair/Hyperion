@@ -1,14 +1,19 @@
 import logging
 import os
 
-from gunicorn.arbiter import Arbiter
-
 from app.app import init_db
 from app.core.config import construct_prod_settings
 from app.core.log import LogConfig
 
 
-def on_starting(server: Arbiter):
+def on_starting(server) -> None:
+    """
+    The hook is called just before the master process is initialized. We use it to instantiate the database and run migrations
+
+    An gunicorn.arbiter.Arbiter instance is passed as an argument.
+
+    See https://docs.gunicorn.org/en/stable/settings.html#on-starting
+    """
     # We call `construct_prod_settings()` and not the dependency `get_settings()` because:
     # - we know we want to use the production settings
     # - we will edit environment variables to avoid initializing the database and `get_settings()` is a cached function
