@@ -307,11 +307,14 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     ):
         hyperion_error_logger.info("Redis client not configured")
 
-    password_dict_files = os.listdir("assets/password_dict")
+    # We add custom dictionnaries for password verification with zxcvb.
+    # Dictionnaries come from https://github.com/zxcvbn-ts/zxcvbn/tree/master/packages/languages
     password_dicts: dict[str, list[str]] = {}
-    for password_dict_file in password_dict_files:
-        with Path.open(Path(f"assets/password_dict/{password_dict_file}")) as file:
-            password_dicts[password_dict_file] = json.load(file)
+    for password_dict_file in Path("assets/password_dict").glob("**/*"):
+        with Path.open(password_dict_file) as file:
+            password_dicts[
+                f"{password_dict_file.parts[-2]}_{password_dict_file.stem}"
+            ] = json.load(file)
     add_frequency_lists(password_dicts)
 
     @app.middleware("http")
