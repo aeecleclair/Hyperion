@@ -440,7 +440,7 @@ async def activate_user(
                         firstname=confirmed_user.firstname,
                         nickname=confirmed_user.nickname,
                         id=confirmed_user.id,
-                    ),
+                    ).model_dump(),
                 },
             ),
             room_id=HyperionWebsocketsRoom.CDR,
