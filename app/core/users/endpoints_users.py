@@ -480,7 +480,6 @@ async def recover_user(
     email: str = Body(..., embed=True),
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
-    request_id: str = Depends(get_request_id),
 ):
     """
     Allow a user to start a password reset process.
@@ -514,7 +513,7 @@ async def recover_user(
             )
         else:
             hyperion_security_logger.info(
-                f"Reset password failed for {email}, user does not exist ({request_id})",
+                f"Reset password failed for {email}, user does not exist",
             )
 
     else:
@@ -554,7 +553,7 @@ async def recover_user(
             )
         else:
             hyperion_security_logger.info(
-                f"Reset password for {email}: {calypsso_reset_url} ({request_id})",
+                f"Reset password for {email}: {calypsso_reset_url}",
             )
 
     return standard_responses.Result()
