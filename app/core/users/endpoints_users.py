@@ -411,22 +411,26 @@ async def activate_user(
         external=unconfirmed_user.external,
     )
     # We add the new user to the database
+    await cruds_users.create_user(db=db, user=confirmed_user)
+    await cruds_groups.create_membership(
+        db=db,
+        membership=models_core.CoreMembership(
+            group_id=unconfirmed_user.account_type,
+            user_id=unconfirmed_user.id,
+        ),
+    )
+
+    # We remove all unconfirmed users with the same email address
+    await cruds_users.delete_unconfirmed_user_by_email(
+        db=db,
+        email=unconfirmed_user.email,
+    )
+
+    hyperion_security_logger.info(
+        f"Activate_user: Activated user {confirmed_user.id} (email: {confirmed_user.email}) ({request_id})",
+    )
+
     try:
-        await cruds_users.create_user(db=db, user=confirmed_user)
-        await cruds_groups.create_membership(
-            db=db,
-            membership=models_core.CoreMembership(
-                group_id=unconfirmed_user.account_type,
-                user_id=unconfirmed_user.id,
-            ),
-        )
-
-        # We remove all unconfirmed users with the same email address
-        await cruds_users.delete_unconfirmed_user_by_email(
-            db=db,
-            email=unconfirmed_user.email,
-        )
-
         await ws_manager.send_message_to_room(
             json.dumps(
                 {
@@ -441,12 +445,11 @@ async def activate_user(
             ),
             room_id=HyperionWebsocketsRoom.CDR,
         )
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+    except Exception as error:
+        hyperion_error_logger.error(
+            f"Error while sending a message to the room {HyperionWebsocketsRoom.CDR}: {error}",
+        )
 
-    hyperion_security_logger.info(
-        f"Activate_user: Activated user {confirmed_user.id} (email: {confirmed_user.email}) ({request_id})",
-    )
     return standard_responses.Result()
 
 
