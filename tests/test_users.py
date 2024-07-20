@@ -7,7 +7,6 @@ from pytest_mock import MockerFixture
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
-from app.core.users.endpoints_users import hyperion_security_logger
 from tests.commons import (
     create_api_access_token,
     create_user_with_groups,
@@ -223,7 +222,7 @@ def test_recover_with_non_existing_account(
     mocker: MockerFixture,
     client: TestClient,
 ) -> None:
-    mocker.patch(
+    mocked_hyperion_security_logger = mocker.patch(
         "app.core.users.endpoints_users.hyperion_security_logger.info",
     )
 
@@ -234,7 +233,7 @@ def test_recover_with_non_existing_account(
 
     assert response.status_code == 201
 
-    hyperion_security_logger.info.assert_called_once_with(
+    mocked_hyperion_security_logger.assert_called_once_with(
         "Reset password failed for non-existing@myecl.fr, user does not exist",
     )
 
