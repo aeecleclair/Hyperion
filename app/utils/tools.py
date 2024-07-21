@@ -84,13 +84,9 @@ def sort_user(
 
     results = []
     for _ in range(10):
-        results.append(
-            next(
-                result
-                for result in scored
-                if result[1] == max(scored, key=lambda r: r[1])[1]
-            ),
-        )
+        maximum = max(scored, key=lambda r: r[1])
+        results.append(maximum)
+        scored.remove(maximum)
 
     return [result[0] for result in results]
 
