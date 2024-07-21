@@ -6,10 +6,10 @@
   "configurations": [
     {
       "name": "Hyperion",
-      "type": "python",
+      "type": "debugpy",
       "request": "launch",
-      "module": "uvicorn",
-      "args": ["app.main:app", "--reload"],
+      "module": "fastapi_cli",
+      "args": ["dev", "app/main.py"],
       "jinja": true,
       "justMyCode": true
     }
