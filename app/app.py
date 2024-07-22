@@ -1,5 +1,6 @@
 """File defining the Metadata. And the basic functions creating the database tables and calling the router"""
 
+import json
 import logging
 import uuid
 from collections.abc import AsyncGenerator, Awaitable, Callable
@@ -20,6 +21,7 @@ from fastapi.routing import APIRoute
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from zxcvbn.matching import add_frequency_lists
 
 from app import api
 from app.core import models_core
@@ -303,6 +305,16 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         settings=settings,
     ):
         hyperion_error_logger.info("Redis client not configured")
+
+    # We add custom dictionnaries for password verification with zxcvb.
+    # Dictionnaries come from https://github.com/zxcvbn-ts/zxcvbn/tree/master/packages/languages
+    password_dicts: dict[str, list[str]] = {}
+    for password_dict_file in Path("assets/password_dict").glob("*/*"):
+        with Path.open(password_dict_file) as file:
+            password_dicts[
+                f"{password_dict_file.parts[-2]}_{password_dict_file.stem}"
+            ] = json.load(file)
+    add_frequency_lists(password_dicts)
 
     @app.middleware("http")
     async def logging_middleware(
