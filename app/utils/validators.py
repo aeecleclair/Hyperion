@@ -15,18 +15,19 @@ def password_validator(password: str) -> str:
     https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
     """
     password = password.strip()
+    if not re.fullmatch(
+        r"(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$€%^&*\(\)_+\-.,.?\":\{\}|<>'/;\[\]]).*",
+        password,
+    ):
+        raise ValueError(
+            "The password must contain at least one number, one special character, one majuscule and one minuscule.",
+        )
     result = zxcvbn.zxcvbn(password)
     if not result["score"] == 4:
         raise ValueError(
             result["feedback"],
         )
-    if not re.fullmatch(
-        r"(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$€%^&*\(\)_+\-.,.?\":\{\}|<>'/;\[\]]).{6,}",
-        password,
-    ):
-        raise ValueError(
-            "The password must be at least 6 characters long and contain at least one number, one special character, one majuscule and one minuscule.",
-        )
+
     return password
 
 
