@@ -25,10 +25,16 @@ class ColoredConsoleFormatter(uvicorn.logging.DefaultFormatter):
 
     def __init__(self, *args, **kwargs):
         super().__init__(datefmt="%d-%b-%y %H:%M:%S")
-        
+
         self.formatters = {}
-        
-        for level in [logging.DEBUG, logging.INFO, logging.WARNING, logging.ERROR, logging.CRITICAL]:
+
+        for level in [
+            logging.DEBUG,
+            logging.INFO,
+            logging.WARNING,
+            logging.ERROR,
+            logging.CRITICAL,
+        ]:
             fmt = (
                 "%(asctime)s - %(name)s - "
                 + self.ConsoleColors.BOLD
@@ -44,7 +50,7 @@ class ColoredConsoleFormatter(uvicorn.logging.DefaultFormatter):
 
     def format(self, record: logging.LogRecord) -> str:
         formatter: logging.Formatter = self.formatters.get(
-            record.levelno
+            record.levelno,
             self.formatters[logging.ERROR],
         )
         return formatter.format(record)
