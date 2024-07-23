@@ -3,6 +3,7 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.payment import models_payment
 
@@ -25,9 +26,11 @@ async def get_checkout_by_id(
     db: AsyncSession,
 ) -> models_payment.Checkout | None:
     result = await db.execute(
-        select(models_payment.Checkout).where(
+        select(models_payment.Checkout)
+        .where(
             models_payment.Checkout.id == checkout_id,
-        ),
+        )
+        .options(selectinload(models_payment.Checkout.payments)),
     )
     return result.scalars().first()
 
