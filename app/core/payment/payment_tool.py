@@ -1,13 +1,21 @@
+import logging
 import uuid
 
 from helloasso_api_wrapper import HelloAssoAPIWrapper
-from helloasso_api_wrapper.models.carts import CheckoutPayer, InitCheckoutBody
+from helloasso_api_wrapper.exceptions import ApiV5BadRequest
+from helloasso_api_wrapper.models.carts import (
+    CheckoutPayer,
+    InitCheckoutBody,
+    InitCheckoutResponse,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import security
 from app.core.config import Settings
 from app.core.models_core import CoreUser
 from app.core.payment import cruds_payment, models_payment, schemas_payment
+
+hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 class PaymentTool:
@@ -78,10 +86,27 @@ class PaymentTool:
             ).model_dump(),
         )
 
-        response = self.hello_asso.checkout_intents_management.init_a_checkout(
-            helloasso_slug,
-            init_checkout_body,
-        )
+        # TODO: if payment fail, we can retry
+        # then try without the payer infos
+        response: InitCheckoutResponse
+        try:
+            response = self.hello_asso.checkout_intents_management.init_a_checkout(
+                helloasso_slug,
+                init_checkout_body,
+            )
+        except ApiV5BadRequest as error:
+            # We know that HelloAsso may refuse some payer infos, like using the firstname "test"
+            # Even when prefilling the payer infos,the user will be able to edit them on the payment page,
+            # so we can safely retry without the payer infos
+            hyperion_error_logger.error(
+                f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name}, with error {error}. Retrying without payer infos",
+            )
+
+            init_checkout_body.payer = None
+            response = self.hello_asso.checkout_intents_management.init_a_checkout(
+                helloasso_slug,
+                init_checkout_body,
+            )
 
         checkout_model = models_payment.Checkout(
             id=checkout_model_id,
