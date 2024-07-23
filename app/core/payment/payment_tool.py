@@ -100,12 +100,12 @@ class PaymentTool:
             payment_url=response.redirectUrl,
         )
 
-    def get_checkout(
+    async def get_checkout(
         self,
         checkout_id: uuid.UUID,
         db: AsyncSession,
     ) -> schemas_payment.CheckoutComplete:
-        checkout_model = cruds_payment.get_checkout_by_id(
+        checkout_model = await cruds_payment.get_checkout_by_id(
             checkout_id=checkout_id,
             db=db,
         )
