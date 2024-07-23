@@ -24,7 +24,6 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
     status_code=204,
 )
 async def webhook(
-    # content: NotificationResultContent,
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
@@ -65,6 +64,9 @@ async def webhook(
             )
         )
         if existing_checkout_payment_model is not None:
+            hyperion_error_logger.debug(
+                f"Payment: ignoring webhook call for helloasso checkout payment id {content.data.id} as it already exists in the database",
+            )
             return
 
         # If no metadata are included, this should not be a checkout we initiated
@@ -79,7 +81,7 @@ async def webhook(
         # we should raise an error
         if not checkout:
             hyperion_error_logger.error(
-                f"Payment: could not find checkout {checkout_metadata.hyperion_checkout_id} in database",
+                f"Payment: could not find checkout (hyperion_checkout_id: {checkout_metadata.hyperion_checkout_id}) in database for payment HelloAsso payment_id: {content.data.id}",
             )
             raise HTTPException(
                 status_code=400,
@@ -88,7 +90,7 @@ async def webhook(
 
         if checkout.secret != checkout_metadata.secret:
             hyperion_error_logger.error(
-                f"Payment: secret mismatch for checkout {checkout.id}",
+                f"Payment: secret mismatch for checkout (hyperion_checkout_id: {checkout_metadata.hyperion_checkout_id}, HelloAsso checkout_id: {checkout.id})",
             )
             raise HTTPException(
                 status_code=400,
@@ -106,6 +108,10 @@ async def webhook(
             db=db,
         )
 
+        hyperion_error_logger.info(
+            f"Payment: checkout payment added to db for checkout (hyperion_checkout_id: {checkout_metadata.hyperion_checkout_id}, HelloAsso checkout_id: {checkout.id})",
+        )
+
         # If a callback is defined for the module, we want to call it
         try:
             for module in module_list:
@@ -117,8 +123,11 @@ async def webhook(
                             )
                         )
                         await module.payment_callback(checkout_payment_schema, db)
+                        hyperion_error_logger.info(
+                            f"Payment: call to module {checkout.module} payment callback for checkout (hyperion_checkout_id: {checkout_metadata.hyperion_checkout_id}, HelloAsso checkout_id: {checkout.id}) succeeded",
+                        )
                         return
         except Exception as error:
             hyperion_error_logger.error(
-                f"Payment: call to module {checkout.module} payment callback failed with an error {error}",
+                f"Payment: call to module {checkout.module} payment callback for checkout (hyperion_checkout_id: {checkout_metadata.hyperion_checkout_id}, HelloAsso checkout_id: {checkout.id}) failed with an error {error}",
             )
