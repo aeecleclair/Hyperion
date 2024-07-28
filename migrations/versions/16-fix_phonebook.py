@@ -118,6 +118,7 @@ def upgrade() -> None:
         sa.Column("role_name", sa.String()),
         sa.Column("role_tags", sa.String()),
         sa.Column("member_order", sa.Integer()),
+    )
     op.add_column(
         "phonebook_association",
         sa.Column("deactivated", sa.Boolean(), nullable=False, server_default="false"),
