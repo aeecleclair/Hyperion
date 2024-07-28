@@ -166,8 +166,7 @@ def pre_test_upgrade(
             "firstname": "firstname",
             "password_hash": "password",
             "name": "name",
-            "email": "email",
-            "phone": "phone",
+            "email": "email1",
         },
     )
     alembic_runner.insert_into(
@@ -177,8 +176,7 @@ def pre_test_upgrade(
             "firstname": "firstname",
             "password_hash": "password",
             "name": "name",
-            "email": "email",
-            "phone": "phone",
+            "email": "email2",
         },
     )
     alembic_runner.insert_into(
@@ -188,8 +186,7 @@ def pre_test_upgrade(
             "firstname": "firstname",
             "password_hash": "password",
             "name": "name",
-            "email": "email",
-            "phone": "phone",
+            "email": "email3",
         },
     )
     alembic_runner.insert_into(
@@ -199,8 +196,7 @@ def pre_test_upgrade(
             "firstname": "firstname",
             "password_hash": "password",
             "name": "name",
-            "email": "email",
-            "phone": "phone",
+            "email": "email4",
         },
     )
     alembic_runner.insert_into(
@@ -210,8 +206,7 @@ def pre_test_upgrade(
             "firstname": "firstname",
             "password_hash": "password",
             "name": "name",
-            "email": "email",
-            "phone": "phone",
+            "email": "email5",
         },
     )
 
