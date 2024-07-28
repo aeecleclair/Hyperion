@@ -161,6 +161,24 @@ def pre_test_upgrade(
     alembic_connection: sa.Connection,
 ) -> None:
     alembic_runner.insert_into(
+        "phonebook_association",
+        {
+            "id": "9",
+            "name": "name",
+            "kind": "comity",
+            "mandate_year": 2024,
+        },
+    )
+    alembic_runner.insert_into(
+        "phonebook_association",
+        {
+            "id": "10",
+            "name": "name",
+            "kind": "comity",
+            "mandate_year": 2024,
+        },
+    )
+    alembic_runner.insert_into(
         "phonebook_membership",
         {
             "id": "1",
@@ -237,24 +255,6 @@ def pre_test_upgrade(
             "role_tags": "",
         },
     )
-    alembic_runner.insert_into(
-        "phonebook_association",
-        {
-            "id": "9",
-            "name": "name",
-            "kind": "comity",
-            "mandate_year": 2024,
-        },
-    )
-    alembic_runner.insert_into(
-        "phonebook_association",
-        {
-            "id": "10",
-            "name": "name",
-            "kind": "comity",
-            "mandate_year": 2024,
-        },
-    )
 
 
 def test_upgrade(
@@ -279,5 +279,5 @@ def test_upgrade(
     # The following lines fails because migrations test are not working
     # The migration does work as expected, it was tested manually
 
-    # for solution in solutions:
-    #     assert solution in rows
+    for solution in solutions:
+        assert solution in rows
