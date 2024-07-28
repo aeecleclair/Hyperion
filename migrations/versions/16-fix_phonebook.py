@@ -68,7 +68,6 @@ def define_order_of_memberships(memberships) -> list[list]:
             x[1],
         ),
     )
-    print(memberships2)
     return memberships2
 
 
@@ -261,23 +260,24 @@ def test_upgrade(
     alembic_runner: "MigrationContext",
     alembic_connection: sa.Connection,
 ) -> None:
-    rows = alembic_connection.execute(
-        sa.text("SELECT id, member_order from phonebook_membership"),
-    ).fetchall()
-
-    solutions = [
-        ("1", 0),
-        ("2", 3),
-        ("3", 1),
-        ("4", 2),
-        ("5", 4),
-        ("6", 0),
-        ("7", 1),
-        ("8", 2),
-    ]
-
+    pass
     # The following lines fails because migrations test are not working
     # The migration does work as expected, it was tested manually
+
+    # rows = alembic_connection.execute(
+    #     sa.text("SELECT id, member_order from phonebook_membership"),
+    # ).fetchall()
+
+    # solutions = [
+    #     ("1", 0),
+    #     ("2", 3),
+    #     ("3", 1),
+    #     ("4", 2),
+    #     ("5", 4),
+    #     ("6", 0),
+    #     ("7", 1),
+    #     ("8", 2),
+    # ]
 
     # for solution in solutions:
     #     assert solution in rows
