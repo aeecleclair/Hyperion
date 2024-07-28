@@ -160,6 +160,57 @@ def pre_test_upgrade(
     alembic_connection: sa.Connection,
 ) -> None:
     alembic_runner.insert_into(
+        "core_user",
+        {
+            "id": "11",
+            "first_name": "first_name",
+            "last_name": "last_name",
+            "email": "email",
+            "phone": "phone",
+        },
+    )
+    alembic_runner.insert_into(
+        "core_user",
+        {
+            "id": "12",
+            "first_name": "first_name",
+            "last_name": "last_name",
+            "email": "email",
+            "phone": "phone",
+        },
+    )
+    alembic_runner.insert_into(
+        "core_user",
+        {
+            "id": "13",
+            "first_name": "first_name",
+            "last_name": "last_name",
+            "email": "email",
+            "phone": "phone",
+        },
+    )
+    alembic_runner.insert_into(
+        "core_user",
+        {
+            "id": "14",
+            "first_name": "first_name",
+            "last_name": "last_name",
+            "email": "email",
+            "phone": "phone",
+        },
+    )
+    alembic_runner.insert_into(
+        "core_user",
+        {
+            "id": "15",
+            "first_name": "first_name",
+            "last_name": "last_name",
+            "email": "email",
+            "phone": "phone",
+        },
+    )
+
+    alembic_runner.insert_into(
         "phonebook_association",
         {
             "id": "9",
@@ -203,7 +254,7 @@ def pre_test_upgrade(
         "phonebook_membership",
         {
             "id": "3",
-            "user_id": "4",
+            "user_id": "13",
             "association_id": "9",
             "mandate_year": 2024,
             "role_name": "role_name",
@@ -214,7 +265,7 @@ def pre_test_upgrade(
         "phonebook_membership",
         {
             "id": "4",
-            "user_id": "13",
+            "user_id": "14",
             "association_id": "9",
             "mandate_year": 2024,
             "role_name": "role_name",
@@ -225,7 +276,7 @@ def pre_test_upgrade(
         "phonebook_membership",
         {
             "id": "5",
-            "user_id": "14",
+            "user_id": "15",
             "association_id": "9",
             "mandate_year": 2024,
             "role_name": "role_name",
