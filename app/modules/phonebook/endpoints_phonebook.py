@@ -1,3 +1,4 @@
+import logging
 import uuid
 
 from fastapi import Depends, File, HTTPException, UploadFile
@@ -5,9 +6,15 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, standard_responses
+from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
 from app.core.users import cruds_users
-from app.dependencies import get_db, get_request_id, is_user_an_ecl_member
+from app.dependencies import (
+    get_db,
+    get_request_id,
+    is_user_a_member_of,
+    is_user_an_ecl_member,
+)
 from app.modules.phonebook import cruds_phonebook, models_phonebook, schemas_phonebook
 from app.modules.phonebook.types_phonebook import RoleTags
 from app.types.content_type import ContentType
@@ -23,6 +30,8 @@ module = Module(
     tag="Phonebook",
     default_allowed_groups_ids=[GroupType.student, GroupType.staff],
 )
+
+hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 # ---------------------------------------------------------------------------- #
@@ -40,7 +49,20 @@ async def get_all_associations(
     """
     Return all associations from database as a list of AssociationComplete schemas
     """
-    return await cruds_phonebook.get_all_associations(db)
+    associations = await cruds_phonebook.get_all_associations(db)
+    associations_complete = []
+    for association in associations:
+        association_dict = association.__dict__
+        association_dict["associated_groups"] = [
+            group.id for group in association.associated_groups
+        ]
+        associations_complete.append(
+            schemas_phonebook.AssociationComplete(
+                **association_dict,
+            ),
+        )
+        hyperion_error_logger.info(associations_complete[-1])
+    return associations_complete
 
 
 @module.router.get(
@@ -156,6 +178,56 @@ async def update_association(
         raise HTTPException(status_code=400, detail=str(error))
 
 
+@module.router.patch(
+    "/phonebook/associations/{association_id}/groups",
+    status_code=204,
+)
+async def update_association_groups(
+    association_id: str,
+    association_groups_edit: schemas_phonebook.AssociationGroupsEdit,
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Update the groups associated with an Association
+
+    **This endpoint is only usable by Admins (not BDE and CAA)**
+    """
+    try:
+        await cruds_phonebook.update_association_groups(
+            association_id=association_id,
+            association_groups_edit=association_groups_edit,
+            db=db,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+@module.router.patch(
+    "/phonebook/associations/{association_id}/deactivate",
+    status_code=204,
+)
+async def deactivate_association_groups(
+    association_id: str,
+    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Update the groups associated with an Association
+
+    **This endpoint is only usable by CAA and BDE**
+    """
+    if not is_user_member_of_an_allowed_group(
+        user=user,
+        allowed_groups=[GroupType.CAA, GroupType.BDE],
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail=f"You are not allowed to delete association {association_id}",
+        )
+    await cruds_phonebook.deactivate_association(association_id, db)
+
+
 @module.router.delete(
     "/phonebook/associations/{association_id}",
     status_code=204,
@@ -180,6 +252,14 @@ async def delete_association(
         raise HTTPException(
             status_code=403,
             detail=f"You are not allowed to delete association {association_id}",
+        )
+    association = await cruds_phonebook.get_association_by_id(association_id, db)
+    if association is None:
+        raise HTTPException(404, "Association does not exist.")
+    if not association.deactivated:
+        raise HTTPException(
+            400,
+            "Association was not deactivated before, this is a double check system.",
         )
     return await cruds_phonebook.delete_association(
         association_id=association_id,
@@ -368,6 +448,15 @@ async def create_membership(
     )
 
     await cruds_phonebook.create_membership(membership_model, db)
+
+    for associated_group in association.associated_groups:
+        await cruds_groups.create_membership(
+            models_core.CoreMembership(
+                user_id=membership.user_id,
+                group_id=associated_group.id,
+            ),
+            db,
+        )
 
     return schemas_phonebook.MembershipComplete(**membership_model.__dict__)
 

@@ -1,3 +1,5 @@
+import uuid
+
 from pydantic import BaseModel, ConfigDict
 
 from app.core import schemas_core
@@ -22,10 +24,12 @@ class AssociationBase(BaseModel):
     kind: Kinds
     mandate_year: int
     description: str | None = None
+    associated_groups: list[str] = []
+    deactivated: bool = False
 
 
 class AssociationComplete(AssociationBase):
-    id: str
+    id: uuid.UUID
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -35,6 +39,10 @@ class AssociationEdit(BaseModel):
     kind: Kinds | None = None
     description: str | None = None
     mandate_year: int | None = None
+
+
+class AssociationGroupsEdit(BaseModel):
+    associated_groups: list[str] = []
 
 
 class MembershipBase(BaseModel):
@@ -49,7 +57,7 @@ class MembershipBase(BaseModel):
 
 
 class MembershipComplete(MembershipBase):
-    id: str
+    id: uuid.UUID
 
     model_config = ConfigDict(from_attributes=True)
 

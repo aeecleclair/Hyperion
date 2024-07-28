@@ -1,3 +1,5 @@
+import uuid
+
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
@@ -27,6 +29,12 @@ phonebook_user_simple: models_core.CoreUser
 phonebook_user_simple2: models_core.CoreUser
 phonebook_user_simple3: models_core.CoreUser
 
+association1_group: models_core.CoreGroup
+association2_group: models_core.CoreGroup
+
+association2_group2: models_phonebook.AssociationAssociatedGroups
+
+token_admin: str = ""
 token_BDE: str = ""
 token_president: str = ""
 token_simple: str = ""
@@ -42,6 +50,7 @@ async def init_objects(client: TestClient):
     global phonebook_user_simple2
     global phonebook_user_simple3
     global token_simple
+    global token_admin
 
     global association1
     global association2
@@ -53,6 +62,11 @@ async def init_objects(client: TestClient):
     global membership4
     global membership5
     global membership6
+
+    global association1_group
+    global association2_group
+
+    global association2_group2
 
     phonebook_user_BDE = await create_user_with_groups(
         [GroupType.student, GroupType.BDE],
@@ -68,29 +82,52 @@ async def init_objects(client: TestClient):
     phonebook_user_simple2 = await create_user_with_groups([GroupType.student])
     phonebook_user_simple3 = await create_user_with_groups([GroupType.student])
 
-    association1 = models_phonebook.Association(
+    phonebook_user_admin = await create_user_with_groups([GroupType.admin])
+    token_admin = create_api_access_token(phonebook_user_admin)
+
+    association1_group = models_core.CoreGroup(
         id="1",
+        name="ECLAIR",
+        description="ECLAIR description",
+    )
+
+    association2_group = models_core.CoreGroup(
+        id="2",
+        name="Nom",
+        description="description",
+    )
+
+    association1 = models_phonebook.Association(
+        id=str(uuid.uuid4()),
         kind=Kinds.section_ae,
         name="ECLAIR",
         mandate_year=2023,
+        deactivated=False,
     )
 
     association2 = models_phonebook.Association(
-        id="2",
+        id=str(uuid.uuid4()),
         kind=Kinds.association_independant,
         name="Nom",
         mandate_year=2023,
+        deactivated=False,
     )
 
     association3 = models_phonebook.Association(
-        id="3",
+        id=str(uuid.uuid4()),
         kind=Kinds.club_ae,
         name="Test prez",
         mandate_year=2023,
+        deactivated=False,
+    )
+
+    association2_group2 = models_phonebook.AssociationAssociatedGroups(
+        association_id=association2.id,
+        group_id=association2_group.id,
     )
 
     membership1 = models_phonebook.Membership(
-        id="1",
+        id=str(uuid.uuid4()),
         user_id=phonebook_user_president.id,
         association_id=association1.id,
         role_tags=RoleTags.president.value,
@@ -100,7 +137,7 @@ async def init_objects(client: TestClient):
     )
 
     membership2 = models_phonebook.Membership(
-        id="2",
+        id=str(uuid.uuid4()),
         user_id=phonebook_user_BDE.id,
         association_id=association1.id,
         role_tags="",
@@ -110,7 +147,7 @@ async def init_objects(client: TestClient):
     )
 
     membership3 = models_phonebook.Membership(
-        id="3",
+        id=str(uuid.uuid4()),
         user_id=phonebook_user_simple.id,
         association_id=association1.id,
         role_tags="",
@@ -120,7 +157,7 @@ async def init_objects(client: TestClient):
     )
 
     membership4 = models_phonebook.Membership(
-        id="4",
+        id=str(uuid.uuid4()),
         user_id=phonebook_user_simple2.id,
         association_id=association1.id,
         role_tags="",
@@ -130,7 +167,7 @@ async def init_objects(client: TestClient):
     )
 
     membership5 = models_phonebook.Membership(
-        id="5",
+        id=str(uuid.uuid4()),
         user_id=phonebook_user_simple.id,
         association_id=association2.id,
         role_tags="",
@@ -140,7 +177,7 @@ async def init_objects(client: TestClient):
     )
 
     membership6 = models_phonebook.Membership(
-        id="6",
+        id=str(uuid.uuid4()),
         user_id=phonebook_user_president.id,
         association_id=association1.id,
         role_tags="",
@@ -148,6 +185,9 @@ async def init_objects(client: TestClient):
         mandate_year=association1.mandate_year - 1,
         member_order=0,
     )
+
+    await add_object_to_db(association1_group)
+    await add_object_to_db(association2_group)
 
     await add_object_to_db(association1)
     await add_object_to_db(association2)
@@ -159,6 +199,8 @@ async def init_objects(client: TestClient):
     await add_object_to_db(membership4)
     await add_object_to_db(membership5)
     await add_object_to_db(membership6)
+
+    await add_object_to_db(association2_group2)
 
 
 # ---------------------------------------------------------------------------- #
@@ -319,6 +361,15 @@ def test_add_membership_admin(client: TestClient):
 
     assert any(response_membership in member["memberships"] for member in members)
 
+    association2_group_users = client.get(
+        f"/groups/{association2_group.id}",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    ).json()
+
+    assert phonebook_user_simple2.id in [
+        r["id"] for r in association2_group_users["members"]
+    ]
+
 
 def test_add_membership_president_with_president_tag(client: TestClient):
     response = client.post(
@@ -376,6 +427,84 @@ def test_add_membership_admin_with_president_tag(client: TestClient):
     assert user_simple3["memberships"][0]["role_name"] == "Prez"
     assert user_simple3["memberships"][0]["role_tags"] == RoleTags.president.value
     assert user_simple3["memberships"][0]["member_order"] == 0
+
+
+def test_add_association_group_simple(client: TestClient):
+    response = client.patch(
+        f"/phonebook/associations/{association1.id}/groups",
+        json={
+            "associated_groups": [association1_group.id],
+        },
+        headers={"Authorization": f"Bearer {token_simple}"},
+    )
+    assert response.status_code == 403
+
+    associations = client.get(
+        "/phonebook/associations",
+        headers={"Authorization": f"Bearer {token_simple}"},
+    ).json()
+    association = next(
+        (
+            association
+            for association in associations
+            if association["id"] == association1.id
+        ),
+        None,
+    )
+    assert association is not None
+    assert association["associated_groups"] == []
+
+
+def test_add_association_group_BDE(client: TestClient):
+    response = client.patch(
+        f"/phonebook/associations/{association1.id}/groups",
+        json={
+            "associated_groups": [association1_group.id],
+        },
+        headers={"Authorization": f"Bearer {token_BDE}"},
+    )
+    assert response.status_code == 403
+
+    associations = client.get(
+        "/phonebook/associations",
+        headers={"Authorization": f"Bearer {token_simple}"},
+    ).json()
+    association = next(
+        (
+            association
+            for association in associations
+            if association["id"] == association1.id
+        ),
+        None,
+    )
+    assert association is not None
+    assert association["associated_groups"] == []
+
+
+def test_add_association_group_admin(client: TestClient):
+    response = client.patch(
+        f"/phonebook/associations/{association1.id}/groups",
+        json={
+            "associated_groups": [association1_group.id],
+        },
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 204
+
+    associations = client.get(
+        "/phonebook/associations",
+        headers={"Authorization": f"Bearer {token_simple}"},
+    ).json()
+    association = next(
+        (
+            association
+            for association in associations
+            if association["id"] == association1.id
+        ),
+        None,
+    )
+    assert association is not None
+    assert association["associated_groups"] == [association1_group.id]
 
 
 # ---------------------------------------------------------------------------- #
@@ -853,7 +982,50 @@ def test_delete_association_simple(client: TestClient):
     assert association["description"] == "en minuscule"
 
 
-def test_delete_association_admin(client: TestClient):
+def test_delete_association_admin_without_deactivation(client: TestClient):
+    response = client.delete(
+        f"/phonebook/associations/{association2.id}/",
+        headers={"Authorization": f"Bearer {token_BDE}"},
+    )
+    assert response.status_code == 400
+
+    associations = client.get(
+        "/phonebook/associations",
+        headers={"Authorization": f"Bearer {token_simple}"},
+    ).json()
+    association = next(
+        (
+            association
+            for association in associations
+            if association["id"] == association2.id
+        ),
+        None,
+    )
+    assert association is not None
+
+
+def test_delete_association_admin_with_deactivation(client: TestClient):
+    response = client.patch(
+        f"/phonebook/associations/{association2.id}/deactivate",
+        headers={"Authorization": f"Bearer {token_BDE}"},
+    )
+    assert response.status_code == 204
+
+    associations = client.get(
+        "/phonebook/associations",
+        headers={"Authorization": f"Bearer {token_simple}"},
+    ).json()
+    association = next(
+        (
+            association
+            for association in associations
+            if association["id"] == association2.id
+        ),
+        None,
+    )
+    assert association is not None
+    assert association["deactivated"] is True
+
     response = client.delete(
         f"/phonebook/associations/{association2.id}/",
         headers={"Authorization": f"Bearer {token_BDE}"},

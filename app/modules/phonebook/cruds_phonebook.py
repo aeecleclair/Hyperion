@@ -106,6 +106,48 @@ async def update_association(
         raise
 
 
+async def update_association_groups(
+    association_id: str,
+    association_groups_edit: schemas_phonebook.AssociationGroupsEdit,
+    db: AsyncSession,
+):
+    """Update the associated_groups of an Association in database"""
+
+    await db.execute(
+        delete(models_phonebook.AssociationAssociatedGroups).where(
+            models_phonebook.AssociationAssociatedGroups.association_id
+            == association_id,
+        ),
+    )
+    for group_id in association_groups_edit.associated_groups:
+        db.add(
+            models_phonebook.AssociationAssociatedGroups(
+                association_id=association_id,
+                group_id=group_id,
+            ),
+        )
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise
+
+
+async def deactivate_association(association_id: str, db: AsyncSession):
+    """Deactivate an Association in database"""
+
+    await db.execute(
+        update(models_phonebook.Association)
+        .where(models_phonebook.Association.id == association_id)
+        .values(deactivated=True),
+    )
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise
+
+
 async def delete_association(association_id: str, db: AsyncSession):
     """Delete an Association from database"""
 
@@ -138,6 +180,21 @@ async def get_association_by_id(
         ),
     )
     return result.scalars().first()
+
+
+async def get_associated_groups_by_association_id(
+    association_id: str,
+    db: AsyncSession,
+) -> Sequence[models_phonebook.AssociationAssociatedGroups]:
+    """Return all AssociatedGroups with association_id from database"""
+
+    result = await db.execute(
+        select(models_phonebook.AssociationAssociatedGroups).where(
+            models_phonebook.AssociationAssociatedGroups.association_id
+            == association_id,
+        ),
+    )
+    return result.scalars().all()
 
 
 # ---------------------------------------------------------------------------- #
