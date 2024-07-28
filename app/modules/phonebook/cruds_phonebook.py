@@ -156,6 +156,12 @@ async def delete_association(association_id: str, db: AsyncSession):
             models_phonebook.Membership.association_id == association_id,
         ),
     )
+    await db.execute(  # AssociatedGroups from the Association must be deleted first
+        delete(models_phonebook.AssociationAssociatedGroups).where(
+            models_phonebook.AssociationAssociatedGroups.association_id
+            == association_id,
+        ),
+    )
     await db.execute(
         delete(models_phonebook.Association).where(
             models_phonebook.Association.id == association_id,
