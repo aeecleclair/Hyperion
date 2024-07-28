@@ -13,7 +13,11 @@ if TYPE_CHECKING:
 class Membership(Base):
     __tablename__ = "phonebook_membership"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True)
+    id: Mapped[str] = mapped_column(
+        String,
+        primary_key=True,
+        index=True,
+    )
     user_id: Mapped[str] = mapped_column(
         String,
         ForeignKey("core_user.id"),
@@ -33,7 +37,7 @@ class Membership(Base):
 class Association(Base):
     __tablename__ = "phonebook_association"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True)
+    id: Mapped[str] = mapped_column(String, primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String, index=True)
     description: Mapped[str] = mapped_column(String, nullable=True)
     kind: Mapped[Kinds]
