@@ -16,15 +16,9 @@ from app.core.config import Settings
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
 from app.core.users import cruds_users
-from app.dependencies import (
-    get_db,
-    get_redis_client,
-    get_settings,
-    get_transactional_db,
-)
+from app.dependencies import get_db, get_redis_client, get_settings
 from app.types.floors_type import FloorsType
 from app.types.sqlalchemy import Base
-from app.types.transactional_async_session import TransactionalAsyncSession
 from app.utils.redis import connect, disconnect
 from app.utils.tools import get_random_string
 
@@ -66,16 +60,6 @@ async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
             await db.close()
 
 
-async def override_get_transactional_db() -> (
-    AsyncGenerator[TransactionalAsyncSession, None]
-):
-    # We call db.begin() to enter a SessionTransaction
-    async with TestingSessionLocal() as db, db.begin():
-        # We wrap our Session in a TransactionalAsyncSession object
-        # to prevent its commit method from doing anything
-        yield TransactionalAsyncSession(db)
-
-
 # By default the redis client is deactivated
 redis_client: redis.Redis | None | bool = False
 
@@ -108,7 +92,6 @@ def change_redis_client_status(activated: bool) -> None:
 
 
 test_app.dependency_overrides[get_db] = override_get_db
-test_app.dependency_overrides[get_transactional_db] = override_get_transactional_db
 test_app.dependency_overrides[get_settings] = override_get_settings
 test_app.dependency_overrides[get_redis_client] = override_get_redis_client
 

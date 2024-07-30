@@ -6,14 +6,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
-from app.dependencies import get_db, get_transactional_db, is_user_a_member
+from app.dependencies import get_db, is_user_a_member
 from app.modules.flappybird import (
     cruds_flappybird,
     models_flappybird,
     schemas_flappybird,
 )
 from app.types.module import Module
-from app.types.transactional_async_session import TransactionalAsyncSession
 
 module = Module(
     root="flappybird",
@@ -27,9 +26,17 @@ module = Module(
     response_model=list[schemas_flappybird.FlappyBirdScoreInDB],
     status_code=200,
 )
-async def get_flappybird_score(db: AsyncSession = Depends(get_db)):
-    """Return the leaderboard"""
-    leaderboard = await cruds_flappybird.get_flappybird_score_leaderboard(db=db)
+async def get_flappybird_score(
+    skip: int = 0,
+    limit: int = 10,
+    db: AsyncSession = Depends(get_db),
+):
+    """Return the leaderboard score of the skip...limit"""
+    leaderboard = await cruds_flappybird.get_flappybird_score_leaderboard(
+        db=db,
+        skip=skip,
+        limit=limit,
+    )
     return leaderboard
 
 
@@ -82,7 +89,7 @@ async def get_current_user_flappybird_personal_best(
 async def create_flappybird_score(
     flappybird_score: schemas_flappybird.FlappyBirdScoreBase,
     user: models_core.CoreUser = Depends(is_user_a_member),
-    db: TransactionalAsyncSession = Depends(get_transactional_db),
+    db: AsyncSession = Depends(get_db),
 ):
     # Currently, flappybird_score is a schema instance
     # To add it to the database, we need to create a model
@@ -97,31 +104,12 @@ async def create_flappybird_score(
         user_id=user.id,
         value=flappybird_score.value,
         creation_time=creation_time,
+        # We add all informations contained in the schema
     )
-    db_flappybird_best_score = models_flappybird.FlappyBirdBestScore(
-        id=score_id,
-        user_id=user.id,
-        value=flappybird_score.value,
-        creation_time=creation_time,
-    )
-    personal_best = await cruds_flappybird.get_flappybird_personal_best_by_user_id(
-        user_id=user.id,
-        db=db,
-    )
-    if not personal_best:
-        cruds_flappybird.create_flappybird_best_score(
-            flappybird_best_score=db_flappybird_best_score,
-            db=db,
-        )
-    else:
-        if personal_best.value < flappybird_score.value:
-            await cruds_flappybird.update_flappybird_best_score(
-                user_id=user.id,
-                best_score=flappybird_score.value,
-                db=db,
-            )
-        cruds_flappybird.create_flappybird_score(
+    try:
+        return await cruds_flappybird.create_flappybird_score(
             flappybird_score=db_flappybird_score,
             db=db,
         )
-    return db_flappybird_score
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))

@@ -82,6 +82,7 @@ class NotificationManager:
         Prefer using `self._send_firebase_trigger_notification_by_tokens` to send a trigger notification.
         """
         # See https://firebase.google.com/docs/cloud-messaging/send-message?hl=fr#send-messages-to-multiple-devices
+
         if not self.use_firebase:
             return
 
@@ -111,8 +112,8 @@ class NotificationManager:
                 android=androidconfig,
                 apns=apnsconfig,
             )
-            result = messaging.send_each_for_multicast(message)
-        except Exception as error:
+            result = messaging.send_multicast(message)
+        except messaging.FirebaseError as error:
             hyperion_error_logger.error(
                 f"Notification: Unable to send firebase notification to tokens: {error}",
             )

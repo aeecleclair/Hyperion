@@ -37,16 +37,6 @@ async def init_objects():
 
     await add_object_to_db(flappybird_score)
 
-    flappybird_best_score = models_flappybird.FlappyBirdBestScore(
-        id=uuid.uuid4(),
-        user_id=user.id,
-        user=user,
-        value=25,
-        creation_time=datetime.now(UTC),
-    )
-
-    await add_object_to_db(flappybird_best_score)
-
 
 def test_get_flappybird_score():
     response = client.get(
@@ -69,17 +59,6 @@ def test_create_flappybird_score():
         "/flappybird/scores",
         json={
             "value": "26",
-        },
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert response.status_code == 201
-
-
-def test_update_flappybird_score():
-    response = client.post(
-        "/flappybird/scores",
-        json={
-            "value": "24",
         },
         headers={"Authorization": f"Bearer {token}"},
     )

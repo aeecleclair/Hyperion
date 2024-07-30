@@ -80,13 +80,7 @@ async def get_user_by_email(
     """Return user with id from database as a dictionary"""
 
     result = await db.execute(
-        select(models_core.CoreUser)
-        .where(models_core.CoreUser.email == email)
-        .options(
-            # The group relationship need to be loaded to be able
-            # to check if the user is a member of a specific group
-            selectinload(models_core.CoreUser.groups),
-        ),
+        select(models_core.CoreUser).where(models_core.CoreUser.email == email),
     )
     return result.scalars().first()
 

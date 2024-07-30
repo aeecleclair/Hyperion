@@ -10,11 +10,13 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, standard_responses
+from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
 from app.core.users import cruds_users
 from app.dependencies import (
     get_db,
     get_request_id,
+    get_settings,
     is_user_a_member,
     is_user_a_member_of,
 )
@@ -441,6 +443,7 @@ async def delete_voters(
 async def open_vote(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
+    settings: Settings = Depends(get_settings),
 ):
     """
     If the status is 'waiting', change it to 'voting' and create the blank lists.
@@ -556,6 +559,7 @@ async def publish_vote(
 async def reset_vote(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.CAA)),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Reset the vote. Can only be used if the current status is counting ou published.

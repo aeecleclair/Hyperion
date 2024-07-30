@@ -821,7 +821,11 @@ async def read_user(
     status_code=204,
 )
 async def delete_user(
+    db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user),
+    settings: Settings = Depends(get_settings),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
+    request_id: str = Depends(get_request_id),
 ):
     """
     This endpoint will ask administrators to process to the user deletion.

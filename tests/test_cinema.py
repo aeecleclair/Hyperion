@@ -62,7 +62,6 @@ def test_post_session() -> None:
             "name": "Les Tuches",
             "start": "2022-10-23T14:00:00Z",
             "duration": 90,
-            "overview": "Synopsis...",
         },
         headers={"Authorization": f"Bearer {token_cinema}"},
     )

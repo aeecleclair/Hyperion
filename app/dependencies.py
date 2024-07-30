@@ -12,10 +12,10 @@ from collections.abc import AsyncGenerator, Callable, Coroutine
 from functools import lru_cache
 from typing import Any, cast
 
-import jwt
 import redis
 from fastapi import BackgroundTasks, Depends, HTTPException, Request, status
-from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
+from jose import jwt
+from jose.exceptions import JWTError
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -30,7 +30,6 @@ from app.core.config import Settings
 from app.core.groups.groups_type import GroupType, get_ecl_groups
 from app.core.users import cruds_users
 from app.types.scopes_type import ScopeType
-from app.types.transactional_async_session import TransactionalAsyncSession
 from app.utils.communication.notifications import NotificationManager, NotificationTool
 from app.utils.redis import connect
 from app.utils.tools import is_user_external, is_user_member_of_an_allowed_group
@@ -122,34 +121,6 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             await db.close()
 
 
-async def get_transactional_db() -> AsyncGenerator[TransactionalAsyncSession, None]:
-    """
-    Open a Session and a SessionTransaction. Return the database session
-
-    At the end, the session will be committed. If an error happen, the Session should rollback.
-    See https://docs.sqlalchemy.org/en/20/orm/session_basics.html#framing-out-a-begin-commit-rollback-block
-
-    With this TransactionalAsyncSession you should not commit inside the cruds, the operation will be done automatically.
-
-    If you really need to commit manually, you can call the `commit_manually` method.
-    The TransactionalAsyncSession is retro-compatible with the AsyncSession object, you can use it with non transactional cruds.
-
-    See TransactionalAsyncSession definition for more informations
-    """
-    global SessionLocal
-    if SessionLocal is None:
-        hyperion_error_logger.error("Database engine is not initialized")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Database engine is not initialized",
-        )
-    # We call db.begin() to enter a SessionTransaction
-    async with SessionLocal() as db, db.begin():
-        # We wrap our Session in a TransactionalAsyncSession object
-        # to prevent its commit method from doing anything
-        yield TransactionalAsyncSession(db)
-
-
 @lru_cache
 def get_settings() -> Settings:
     """
@@ -158,6 +129,9 @@ def get_settings() -> Settings:
     # `lru_cache()` decorator is here to prevent the class to be instantiated multiple times.
     # See https://fastapi.tiangolo.com/advanced/settings/#lru_cache-technical-details
     return Settings(_env_file=".env")
+
+
+# (issue ouverte sur github: https://github.com/pydantic/pydantic/issues/3072)
 
 
 def get_redis_client(
@@ -243,13 +217,13 @@ def get_user_from_token_with_scopes(
             payload = jwt.decode(
                 token,
                 settings.ACCESS_TOKEN_SECRET_KEY,
-                algorithms=[security.jwt_algorithm],
+                algorithms=[security.jwt_algorithme],
             )
             token_data = schemas_auth.TokenData(**payload)
             hyperion_access_logger.info(
                 f"Get_current_user: Decoded a token for user {token_data.sub} ({request_id})",
             )
-        except (InvalidTokenError, ValidationError) as error:
+        except (JWTError, ValidationError) as error:
             hyperion_access_logger.warning(
                 f"Get_current_user: Failed to decode a token: {error} ({request_id})",
             )
@@ -414,27 +388,19 @@ async def get_token_data(
         payload = jwt.decode(
             token,
             settings.ACCESS_TOKEN_SECRET_KEY,
-            algorithms=[security.jwt_algorithm],
+            algorithms=[security.jwt_algorithme],
         )
         token_data = schemas_auth.TokenData(**payload)
         hyperion_access_logger.info(
             f"Get_token_data: Decoded a token for user {token_data.sub} ({request_id})",
         )
-    except (InvalidTokenError, ValidationError) as error:
+    except (JWTError, ValidationError) as error:
         hyperion_access_logger.warning(
             f"Get_token_data: Failed to decode a token: {error} ({request_id})",
         )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Could not validate credentials",
-        )
-    except ExpiredSignatureError as error:
-        hyperion_access_logger.warning(
-            f"Get_token_data: Token has expired: {error} ({request_id})",
-        )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Token has expired",
         )
 
     return token_data

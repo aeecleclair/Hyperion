@@ -3,8 +3,8 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import bcrypt
-import jwt
 from fastapi.security import OAuth2AuthorizationCodeBearer
+from jose import jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
@@ -30,14 +30,9 @@ To generate JWT access tokens, we use a *FastAPI* OAuth2PasswordBearer object.
 See [FastAPI documentation](https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/) about JWT.
 """
 
-jwt_algorithm = "HS256"
+jwt_algorithme = "HS256"
 """
 The algorithme used to generate JWT access tokens
-"""
-
-jws_algorithm = "RS256"
-"""
-The algorithme used to generate JWT signed identity tokens
 """
 
 
@@ -114,7 +109,7 @@ def create_access_token(
     encoded_jwt = jwt.encode(
         to_encode,
         settings.ACCESS_TOKEN_SECRET_KEY,
-        algorithm=jwt_algorithm,
+        algorithm=jwt_algorithme,
     )
     return encoded_jwt
 
@@ -144,7 +139,7 @@ def create_access_token_RS256(
     encoded_jwt = jwt.encode(
         to_encode,
         settings.RSA_PRIVATE_KEY,
-        algorithm=jws_algorithm,
+        algorithm="RS256",
         headers={
             "kid": "RSA-JWK-1",
         },  # The kid allows to identify the key to use to decode the JWT, and should be the same as the kid in the JWK Set.

@@ -22,7 +22,7 @@ class FlappyBirdScoreInDB(FlappyBirdScore):
 
 class FlappyBirdScoreCompleteFeedBack(FlappyBirdScore):
     """
-    A score with its position in the best players leaderboard
+    A score, with it's position in the best players leaderboard
     """
 
     position: int

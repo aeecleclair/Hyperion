@@ -1,14 +1,12 @@
 import logging
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 
-import httpx
 from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, standard_responses
-from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
 from app.core.notification.notification_types import CustomTopic, Topic
 from app.core.notification.schemas_notification import Message
@@ -16,7 +14,6 @@ from app.dependencies import (
     get_db,
     get_notification_tool,
     get_request_id,
-    get_settings,
     is_user_a_member,
     is_user_a_member_of,
 )
@@ -38,63 +35,6 @@ module = Module(
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
-
-
-@module.router.get(
-    "/cinema/themoviedb/{themoviedb_id}",
-    response_model=schemas_cinema.TheMovieDB,
-)
-async def get_movie(
-    themoviedb_id: str,
-    settings: Settings = Depends(get_settings),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.cinema)),
-):
-    """
-    Makes a HTTP request to The Movie Database (TMDB)
-    using an API key and returns a TheMovieDB object
-    * https://developer.themoviedb.org/reference/movie-details
-    * https://developer.themoviedb.org/docs/errors
-    """
-    API_key = settings.THE_MOVIE_DB_API
-    if API_key is None:
-        hyperion_error_logger.error("No API key provided for module cinema")
-        raise HTTPException(status_code=501, detail="No API key provided")
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                url=f"https://api.themoviedb.org/3/movie/{themoviedb_id}",
-                params={
-                    "api_key": API_key,
-                    "language": "fr-FR",
-                },
-            )
-        match response.status_code:
-            case 200:
-                return schemas_cinema.TheMovieDB(**response.json())
-            case 401:
-                hyperion_error_logger.error(
-                    f"INVALID API KEY - Code 401 for TMDB request. JSON  response: {response.json()}",
-                )
-                raise HTTPException(
-                    status_code=501,
-                    detail="Invalid API key",
-                )
-            case 404:
-                raise HTTPException(
-                    status_code=404,
-                    detail=f"Movie not found for TMDB movie ID {themoviedb_id} (code {response.status_code})",
-                )
-            case _:
-                hyperion_error_logger.error(
-                    f"Code {response.status_code} for TMDB request with movie ID {themoviedb_id}. JSON response: {response.json()}",
-                )
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Unknown error (code {response.status_code})",
-                )
-    except httpx.RequestError as error:
-        hyperion_error_logger.error(error)
-        raise HTTPException(status_code=504, detail="Could not reach the TMDB server")
 
 
 @module.router.get(
@@ -131,30 +71,29 @@ async def create_session(
         raise HTTPException(status_code=422, detail=str(error))
     session_date = result.start
     sunday = get_previous_sunday(session_date)
-    if sunday > datetime.now(UTC):
-        next_week_sessions = await cruds_cinema.get_sessions_in_time_frame(
-            start_after=sunday,
-            start_before=sunday + timedelta(days=7),
-            db=db,
-        )
-        message_content = ""
-        for next_session in next_week_sessions:
-            message_content += f"{get_date_day(next_session.start)} {next_session.start.day} {get_date_month(next_session.start)} - {next_session.name}\n"
-        message = Message(
-            # We use sunday date as context to avoid sending the recap twice
-            context=f"cinema-recap-{sunday}",
-            is_visible=True,
-            title="🎬 Cinéma - Programme de la semaine",
-            content=message_content,
-            delivery_datetime=sunday,
-            # The notification will expire the next sunday
-            expire_on=sunday + timedelta(days=7),
-        )
+    next_week_sessions = await cruds_cinema.get_sessions_in_time_frame(
+        start_after=sunday,
+        start_before=sunday + timedelta(days=7),
+        db=db,
+    )
+    message_content = ""
+    for next_session in next_week_sessions:
+        message_content += f"{get_date_day(next_session.start)} {next_session.start.day} {get_date_month(next_session.start)} - {next_session.name}\n"
+    message = Message(
+        # We use sunday date as context to avoid sending the recap twice
+        context=f"cinema-recap-{sunday}",
+        is_visible=True,
+        title="🎬 Cinéma - Programme de la semaine",
+        content=message_content,
+        delivery_datetime=sunday + timedelta(days=7),
+        # The notification will expire the next sunday
+        expire_on=sunday + timedelta(days=14),
+    )
 
-        await notification_tool.send_notification_to_topic(
-            custom_topic=CustomTopic(topic=Topic.cinema),
-            message=message,
-        )
+    await notification_tool.send_notification_to_topic(
+        custom_topic=CustomTopic(topic=Topic.cinema),
+        message=message,
+    )
     return result
 
 

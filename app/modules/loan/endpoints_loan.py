@@ -7,11 +7,13 @@ from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
+from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
 from app.core.notification.schemas_notification import Message
 from app.dependencies import (
     get_db,
     get_notification_tool,
+    get_settings,
     is_user_a_member,
     is_user_a_member_of,
 )
@@ -498,6 +500,7 @@ async def create_loan(
     loan_creation: schemas_loan.LoanCreation,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
+    settings: Settings = Depends(get_settings),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
@@ -623,17 +626,15 @@ async def create_loan(
         message=message,
     )
 
-    delivery_time = time(11, 00, 00, tzinfo=UTC)
-    delivery_datetime = datetime.combine(loan.end, delivery_time, tzinfo=UTC)
-    expire_on_date = loan.end + timedelta(days=30)
-    expire_on_datetime = datetime.combine(expire_on_date, delivery_time, tzinfo=UTC)
+    delivery_time = time(11, 00, 00)
+    delivery_datetime = datetime.combine(loan.end, delivery_time)
     message = Message(
         context=f"loan-new-{loan.id}-end-notif",
         is_visible=True,
         title="📦 Prêt arrivé à échéance",
         content=f"N'oublie pas de rendre ton prêt à l'association {loan.loaner.name} !",
         delivery_datetime=delivery_datetime,
-        expire_on=expire_on_datetime,
+        expire_on=loan.end + timedelta(days=30),
     )
 
     await notification_tool.send_notification_to_user(

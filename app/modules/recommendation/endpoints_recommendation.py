@@ -6,10 +6,12 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, standard_responses
+from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
 from app.dependencies import (
     get_db,
     get_request_id,
+    get_settings,
     is_user_a_member,
     is_user_a_member_of,
 )
@@ -58,6 +60,7 @@ async def get_recommendation(
 async def create_recommendation(
     recommendation: schemas_recommendation.RecommendationBase,
     db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
 ):
     """
