@@ -297,8 +297,8 @@ async def send_future_notification(
     message = schemas_notification.Message(
         context="future-notification-test",
         is_visible=True,
-        title="Test notification",
-        content="Ceci est un test de notification",
+        title="Test notification future",
+        content="Ceci est un test de notification future",
         # The notification will expire in 3 days
         expire_on=datetime.now(UTC) + timedelta(days=3),
         delivery_datetime=datetime.now(UTC) + timedelta(minutes=3),

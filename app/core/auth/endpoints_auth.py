@@ -27,6 +27,7 @@ from app.core.security import (
     create_access_token,
     create_access_token_RS256,
     generate_token,
+    jws_algorithm,
 )
 from app.core.users import cruds_users
 from app.dependencies import (
@@ -64,7 +65,7 @@ async def login_for_access_token(
     settings: Settings = Depends(get_settings),
 ):
     """
-    Ask for a JWT acc   ess token using oauth password flow.
+    Ask for a JWT access token using oauth password flow.
 
     *username* and *password* must be provided
 
@@ -125,9 +126,9 @@ async def get_authorize_page(
     **This endpoint is a UI endpoint which send and html page response. It will redirect to `/auth/authorization-flow/authorize-validation`**
     """
     return templates.TemplateResponse(
+        request,
         "connexion.html",
         {
-            "request": request,
             "response_type": authorizereq.response_type,
             "redirect_uri": authorizereq.redirect_uri,
             "client_id": authorizereq.client_id,
@@ -172,9 +173,9 @@ async def post_authorize_page(
     """
 
     return templates.TemplateResponse(
+        request,
         "connexion.html",
         {
-            "request": request,
             "response_type": response_type,
             "redirect_uri": redirect_uri,
             "client_id": client_id,
@@ -305,9 +306,9 @@ async def authorize_validation(
             f"Authorize-validation: Invalid user email or password for email {authorizereq.email} ({request_id})",
         )
         return templates.TemplateResponse(
+            request,
             "connexion.html",
             {
-                "request": request,
                 "response_type": authorizereq.response_type,
                 "redirect_uri": redirect_uri,
                 "client_id": authorizereq.client_id,
@@ -335,7 +336,7 @@ async def authorize_validation(
             if authorizereq.state:
                 url += "&state=" + authorizereq.state
             return RedirectResponse(url, status_code=status.HTTP_302_FOUND)
-    if auth_client.allow_external_users:
+    if not auth_client.allow_external_users:
         if is_user_external(user):
             # TODO We should show an HTML page explaining the issue
             hyperion_access_logger.warning(
@@ -1071,7 +1072,7 @@ async def oidc_configuration(
             "public",
         ],
         "id_token_signing_alg_values_supported": [
-            "RS256",
+            jws_algorithm,
         ],
         # We don't support encrypted JWT : JWE
         # "id_token_encryption_alg_values_supported": [],

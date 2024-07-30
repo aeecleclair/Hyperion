@@ -10,7 +10,7 @@ class CineSessionTime(BaseModel):
 
 class CineSessionBase(CineSessionTime):
     name: str
-    overview: str | None = None
+    overview: str
     genre: str | None = None
     tagline: str | None = None
 
@@ -27,3 +27,12 @@ class CineSessionUpdate(BaseModel):
     overview: str | None = None
     genre: str | None = None
     tagline: str | None = None
+
+
+class TheMovieDB(BaseModel):
+    genres: list[dict[str, int | str]]
+    overview: str
+    poster_path: str
+    title: str
+    runtime: int
+    tagline: str

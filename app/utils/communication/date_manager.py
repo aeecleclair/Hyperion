@@ -29,7 +29,7 @@ def get_date_month(date_object: date | datetime):
         "novembre",
         "décembre",
     ]
-    return months[date_object.month]
+    return months[date_object.month - 1]
 
 
 def get_previous_sunday(date_object: datetime):
