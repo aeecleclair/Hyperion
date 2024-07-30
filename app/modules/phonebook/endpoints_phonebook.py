@@ -61,7 +61,6 @@ async def get_all_associations(
                 **association_dict,
             ),
         )
-        hyperion_error_logger.info(associations_complete[-1])
     return associations_complete
 
 
@@ -424,7 +423,7 @@ async def create_membership(
     if association is None:
         raise HTTPException(
             400,
-            "Error : No association in the scheme. Can't create the membership. Please add an association id in your membership scheme",
+            "Error : Association does not exist",
         )
 
     if (
@@ -449,15 +448,17 @@ async def create_membership(
 
     await cruds_phonebook.create_membership(membership_model, db)
 
-    for associated_group in association.associated_groups:
-        await cruds_groups.create_membership(
-            models_core.CoreMembership(
-                user_id=membership.user_id,
-                group_id=associated_group.id,
-            ),
-            db,
-        )
+    user_groups_id = [group.id for group in user.groups]
 
+    for associated_group in association.associated_groups:
+        if associated_group.id not in user_groups_id:
+            await cruds_groups.create_membership(
+                models_core.CoreMembership(
+                    user_id=membership.user_id,
+                    group_id=associated_group.id,
+                ),
+                db,
+            )
     return schemas_phonebook.MembershipComplete(**membership_model.__dict__)
 
 
