@@ -1,5 +1,3 @@
-import uuid
-
 from pydantic import BaseModel, ConfigDict
 
 from app.core import schemas_core
@@ -29,7 +27,7 @@ class AssociationBase(BaseModel):
 
 
 class AssociationComplete(AssociationBase):
-    id: uuid.UUID
+    id: str
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -57,7 +55,7 @@ class MembershipBase(BaseModel):
 
 
 class MembershipComplete(MembershipBase):
-    id: uuid.UUID
+    id: str
 
     model_config = ConfigDict(from_attributes=True)
 
