@@ -248,7 +248,8 @@ async def test_webhook_payment(
 
 
 async def callback(
-    checkout_payment: schemas_payment.CheckoutPayment, db: AsyncSession,
+    checkout_payment: schemas_payment.CheckoutPayment,
+    db: AsyncSession,
 ) -> None:
     pass
 
@@ -324,7 +325,7 @@ async def test_webhook_payment_callback_fail(
         json={
             "eventType": "Payment",
             "data": {
-                "id": 5,
+                "id": 6,
                 "amount": 40,
             },
             "metadata": {
