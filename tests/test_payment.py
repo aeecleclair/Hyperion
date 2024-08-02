@@ -17,6 +17,7 @@ from app.core import schemas_core
 from app.core.groups.groups_type import GroupType
 from app.core.payment import cruds_payment, models_payment, schemas_payment
 from app.core.payment.payment_tool import PaymentTool
+from app.dependencies import get_payment_tool
 from app.types.exceptions import PaymentToolCredentialsNotSetException
 from app.types.module import Module
 from tests.commons import (
@@ -574,3 +575,31 @@ async def test_payment_tool_init_checkout_fail(
             )
 
     mocked_hyperion_security_logger.assert_called_once()
+
+
+# Test dependency #
+
+
+async def test_get_payment_tool(
+    mocker: MockerFixture,
+    client: TestClient,
+) -> None:
+    # We want to reset the current payment_tool to None
+    mocker.patch(
+        "app.dependencies.payment_tool",
+        None,
+    )
+    # We mock the PaymentTool class to be able to check if it was called
+    mocked_PaymentTool = mocker.patch(
+        "app.dependencies.PaymentTool",
+    )
+
+    settings: Settings = override_get_settings()
+
+    # payment_tool should be initialized here
+    get_payment_tool(settings)
+    mocked_PaymentTool.assert_called_once()
+
+    # payment_tool should already be initialized here
+    get_payment_tool(settings)
+    mocked_PaymentTool.assert_called_once()
