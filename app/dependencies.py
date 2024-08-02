@@ -28,6 +28,7 @@ from app.core import models_core, security
 from app.core.auth import schemas_auth
 from app.core.config import Settings
 from app.core.groups.groups_type import GroupType, get_ecl_groups
+from app.core.payment.payment_tool import PaymentTool
 from app.core.users import cruds_users
 from app.types.scopes_type import ScopeType
 from app.utils.communication.notifications import NotificationManager, NotificationTool
@@ -52,6 +53,8 @@ SessionLocal: Callable[[], AsyncSession] | None = (
 
 
 notification_manager: NotificationManager | None = None
+
+payment_tool: PaymentTool | None = None
 
 
 async def get_request_id(request: Request) -> str:
@@ -185,6 +188,22 @@ def get_notification_tool(
         notification_manager=notification_manager,
         db=db,
     )
+
+
+def get_payment_tool(
+    settings: Settings = Depends(get_settings),
+) -> PaymentTool:
+    """
+    Dependency that returns the payment manager.
+
+    You should call `payment_tool.is_payment_available()` to know if payment credentials are set in settings.
+    """
+    global payment_tool
+
+    if payment_tool is None:
+        payment_tool = PaymentTool(settings=settings)
+
+    return payment_tool
 
 
 async def get_token_data(

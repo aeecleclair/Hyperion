@@ -42,7 +42,8 @@ class PaymentTool:
 
     def is_payment_available(self) -> bool:
         """
-        If the API credentials are not set, payment won't be available
+        If the API credentials are not set, payment won't be available. If credentials are set, this doesn't ensure that they are valid.
+
         You should always call this method before trying to init a checkout
         If payment is not available, you usually should raise an HTTP Exception explaining that payment is disabled because the API credentials are not configured in settings.
         """
