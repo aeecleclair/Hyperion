@@ -28,7 +28,6 @@ def upgrade() -> None:
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("amount", sa.Integer(), nullable=False),
         sa.Column("hello_asso_checkout_id", sa.Integer(), nullable=False),
-        sa.Column("hello_asso_order_id", sa.String(), nullable=True),
         sa.Column("secret", sa.String(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )

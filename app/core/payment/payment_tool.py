@@ -140,7 +140,6 @@ class PaymentTool:
                 name=checkout_name,
                 amount=checkout_amount,
                 hello_asso_checkout_id=response.id,
-                hello_asso_order_id=None,
                 secret=secret,
             )
 

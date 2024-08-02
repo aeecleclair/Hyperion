@@ -31,8 +31,6 @@ class Checkout(Base):
     amount: Mapped[int]
 
     hello_asso_checkout_id: Mapped[int]
-    # TODO: remove ?
-    hello_asso_order_id: Mapped[str | None]
 
     # A secret defined by Hyperion and included in the checkout metadata dict
     # to ensure the webhook call was made by HelloAsso

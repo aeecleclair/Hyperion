@@ -49,7 +49,6 @@ async def init_objects() -> None:
         name="Test Payment",
         amount=100,
         hello_asso_checkout_id=1,
-        hello_asso_order_id=1,
         secret="payment secret",
     )
     await add_object_to_db(checkout_with_existing_checkout_payment)
@@ -70,7 +69,6 @@ async def init_objects() -> None:
         name="Test Payment",
         amount=100,
         hello_asso_checkout_id=2,
-        hello_asso_order_id=2,
         secret="secret",
     )
     await add_object_to_db(checkout)
