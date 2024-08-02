@@ -531,3 +531,46 @@ async def test_payment_tool_init_checkout_with_one_failure(
             db=db,
         )
         assert created_checkout is not None
+
+
+async def test_payment_tool_init_checkout_fail(
+    mocker: MockerFixture,
+    client: TestClient,
+) -> None:
+    mocked_hyperion_security_logger = mocker.patch(
+        "app.core.payment.endpoints_payment.hyperion_error_logger.error",
+    )
+
+    # We create a mocked settings object with the required HelloAsso API credentials
+    settings: Settings = mocker.MagicMock()
+    settings.HELLOASSO_API_BASE = "https://example.com"
+    settings.HELLOASSO_CLIENT_ID = "clientid"
+    settings.HELLOASSO_CLIENT_SECRET = "secret"
+
+    # We mock the whole HelloAssoAPIWrapper to avoid making real API calls
+    # and prevent the class initialization from failing to authenticate
+    mocker.patch(
+        "app.core.payment.payment_tool.HelloAssoAPIWrapper",
+    )
+    payment_tool = PaymentTool(settings=settings)
+
+    # We mock the HelloAssoAPIWrapper `init_a_checkout` to raise an error
+    mocker.patch.object(
+        payment_tool.hello_asso.checkout_intents_management,  # type: ignore # we know that payment_tool.hello_asso is not null as we patched settings to enable payment
+        "init_a_checkout",
+        side_effect=ValueError("Mocked Exception"),
+    )
+
+    with pytest.raises(ValueError, match="Mocked Exception"):
+        async with TestingSessionLocal() as db:
+            await payment_tool.init_checkout(
+                module="testtool",
+                helloasso_slug="test",
+                checkout_amount=100,
+                checkout_name="test",
+                redirection_uri="redirect",
+                db=db,
+                payer_user=user_schema,
+            )
+
+    mocked_hyperion_security_logger.assert_called_once()

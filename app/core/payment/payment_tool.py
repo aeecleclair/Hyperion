@@ -73,77 +73,88 @@ class PaymentTool:
         Return:
             id: id of the Hyperion's Checkout, you should save it to be able to get information about the checkout
             payment_url: you need to redirect the user to this payment page
+
+        This method use HelloAsso API. It may raise exceptions if HA checkout initialization fails.
+        Exceptions can be imported from `helloasso_api_wrapper.exceptions`
         """
         if not self.hello_asso:
             raise PaymentToolCredentialsNotSetException(
                 "HelloAsso API credentials are not set",
             )
 
-        payer: CheckoutPayer | None = None
-        if payer_user:
-            payer = CheckoutPayer(
-                firstName=payer_user.firstname,
-                lastName=payer_user.name,
-                email=payer_user.email,
-                dateOfBirth=payer_user.birthday,
-            )
-
-        checkout_model_id = uuid.uuid4()
-        secret = security.generate_token(nbytes=12)
-
-        init_checkout_body = InitCheckoutBody(
-            totalAmount=checkout_amount,
-            initialAmount=checkout_amount,
-            itemName=checkout_name,
-            backUrl=redirection_uri,
-            errorUrl=redirection_uri,
-            returnUrl=redirection_uri,
-            containsDonation=False,
-            payer=payer,
-            metadata=schemas_payment.HelloAssoCheckoutMetadata(
-                secret=secret,
-                hyperion_checkout_id=str(checkout_model_id),
-            ).model_dump(),
-        )
-
-        # TODO: if payment fail, we can retry
-        # then try without the payer infos
-        response: InitCheckoutResponse
+        # We want to ensure that any error is logged, even if modules tries to try/except this method
+        # Thus we catch any exception and log it, then reraise it
         try:
-            response = self.hello_asso.checkout_intents_management.init_a_checkout(
-                helloasso_slug,
-                init_checkout_body,
+            payer: CheckoutPayer | None = None
+            if payer_user:
+                payer = CheckoutPayer(
+                    firstName=payer_user.firstname,
+                    lastName=payer_user.name,
+                    email=payer_user.email,
+                    dateOfBirth=payer_user.birthday,
+                )
+
+            checkout_model_id = uuid.uuid4()
+            secret = security.generate_token(nbytes=12)
+
+            init_checkout_body = InitCheckoutBody(
+                totalAmount=checkout_amount,
+                initialAmount=checkout_amount,
+                itemName=checkout_name,
+                backUrl=redirection_uri,
+                errorUrl=redirection_uri,
+                returnUrl=redirection_uri,
+                containsDonation=False,
+                payer=payer,
+                metadata=schemas_payment.HelloAssoCheckoutMetadata(
+                    secret=secret,
+                    hyperion_checkout_id=str(checkout_model_id),
+                ).model_dump(),
             )
-        except ApiV5BadRequest as error:
-            # We know that HelloAsso may refuse some payer infos, like using the firstname "test"
-            # Even when prefilling the payer infos,the user will be able to edit them on the payment page,
-            # so we can safely retry without the payer infos
+
+            # TODO: if payment fail, we can retry
+            # then try without the payer infos
+            response: InitCheckoutResponse
+            try:
+                response = self.hello_asso.checkout_intents_management.init_a_checkout(
+                    helloasso_slug,
+                    init_checkout_body,
+                )
+            except ApiV5BadRequest as error:
+                # We know that HelloAsso may refuse some payer infos, like using the firstname "test"
+                # Even when prefilling the payer infos,the user will be able to edit them on the payment page,
+                # so we can safely retry without the payer infos
+                hyperion_error_logger.error(
+                    f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name}, with error {error}. Retrying without payer infos",
+                )
+
+                init_checkout_body.payer = None
+                response = self.hello_asso.checkout_intents_management.init_a_checkout(
+                    helloasso_slug,
+                    init_checkout_body,
+                )
+
+            checkout_model = models_payment.Checkout(
+                id=checkout_model_id,
+                module=module,
+                name=checkout_name,
+                amount=checkout_amount,
+                hello_asso_checkout_id=response.id,
+                hello_asso_order_id=None,
+                secret=secret,
+            )
+
+            await cruds_payment.create_checkout(db=db, checkout=checkout_model)
+
+            return schemas_payment.Checkout(
+                id=checkout_model_id,
+                payment_url=response.redirectUrl,
+            )
+        except Exception as error:
             hyperion_error_logger.error(
-                f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name}, with error {error}. Retrying without payer infos",
+                f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name}, with error {error}",
             )
-
-            init_checkout_body.payer = None
-            response = self.hello_asso.checkout_intents_management.init_a_checkout(
-                helloasso_slug,
-                init_checkout_body,
-            )
-
-        checkout_model = models_payment.Checkout(
-            id=checkout_model_id,
-            module=module,
-            name=checkout_name,
-            amount=checkout_amount,
-            hello_asso_checkout_id=response.id,
-            hello_asso_order_id=None,
-            secret=secret,
-        )
-
-        await cruds_payment.create_checkout(db=db, checkout=checkout_model)
-
-        return schemas_payment.Checkout(
-            id=checkout_model_id,
-            payment_url=response.redirectUrl,
-        )
+            raise error
 
     async def get_checkout(
         self,
