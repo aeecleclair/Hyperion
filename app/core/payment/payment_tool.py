@@ -14,24 +14,39 @@ from app.core import security
 from app.core.config import Settings
 from app.core.models_core import CoreUser
 from app.core.payment import cruds_payment, models_payment, schemas_payment
+from app.types.exceptions import PaymentToolCredentialsNotSetException
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 class PaymentTool:
+    hello_asso: HelloAssoAPIWrapper | None
+
     def __init__(self, settings: Settings):
         if (
-            not settings.HELLOASSO_API_BASE
-            or not settings.HELLOASSO_CLIENT_ID
-            or not settings.HELLOASSO_CLIENT_SECRET
+            settings.HELLOASSO_API_BASE
+            and settings.HELLOASSO_CLIENT_ID
+            and settings.HELLOASSO_CLIENT_SECRET
         ):
-            raise ValueError("HelloAsso API credentials are not set")
-        self.hello_asso = HelloAssoAPIWrapper(
-            api_base=settings.HELLOASSO_API_BASE,
-            client_id=settings.HELLOASSO_CLIENT_ID,
-            client_secret=settings.HELLOASSO_CLIENT_SECRET,
-            timeout=60,
-        )
+            self.hello_asso = HelloAssoAPIWrapper(
+                api_base=settings.HELLOASSO_API_BASE,
+                client_id=settings.HELLOASSO_CLIENT_ID,
+                client_secret=settings.HELLOASSO_CLIENT_SECRET,
+                timeout=60,
+            )
+        else:
+            hyperion_error_logger.warning(
+                "HelloAsso API credentials are not set, payment won't be available",
+            )
+            self.hello_asso = None
+
+    def is_payment_available(self) -> bool:
+        """
+        If the API credentials are not set, payment won't be available
+        You should always call this method before trying to init a checkout
+        If payment is not available, you usually should raise an HTTP Exception explaining that payment is disabled because the API credentials are not configured in settings.
+        """
+        return self.hello_asso is not None
 
     async def init_checkout(
         self,
@@ -59,6 +74,11 @@ class PaymentTool:
             id: id of the Hyperion's Checkout, you should save it to be able to get information about the checkout
             payment_url: you need to redirect the user to this payment page
         """
+        if not self.hello_asso:
+            raise PaymentToolCredentialsNotSetException(
+                "HelloAsso API credentials are not set",
+            )
+
         payer: CheckoutPayer | None = None
         if payer_user:
             payer = CheckoutPayer(
