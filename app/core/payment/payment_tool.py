@@ -149,9 +149,17 @@ class PaymentTool:
         self,
         checkout_id: uuid.UUID,
         db: AsyncSession,
-    ) -> schemas_payment.CheckoutComplete:
+    ) -> schemas_payment.CheckoutComplete | None:
         checkout_model = await cruds_payment.get_checkout_by_id(
             checkout_id=checkout_id,
             db=db,
         )
-        return schemas_payment.CheckoutComplete.model_validate(checkout_model)
+        if checkout_model is None:
+            return None
+
+        checkout_dict = checkout_model.__dict__
+        checkout_dict["payments"] = [
+            schemas_payment.CheckoutPayment(**payment.__dict__)
+            for payment in checkout_dict["payments"]
+        ]
+        return schemas_payment.CheckoutComplete(**checkout_dict)
