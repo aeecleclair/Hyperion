@@ -1,11 +1,59 @@
 import logging
 import logging.config
 import queue
+from enum import Enum
 from logging.handlers import QueueHandler, QueueListener
 from pathlib import Path
 from typing import Any
 
+import uvicorn
+
 from app.core.config import Settings
+
+
+class ColoredConsoleFormatter(uvicorn.logging.DefaultFormatter):
+    class ConsoleColors(str, Enum):
+        """Colors can be found here: https://talyian.github.io/ansicolors/"""
+
+        DEBUG = "\033[38;5;12m"
+        INFO = "\033[38;5;10m"
+        WARNING = "\033[38;5;11m"
+        ERROR = "\033[38;5;9m"
+        CRITICAL = "\033[38;5;1m"
+        BOLD = "\033[1m"
+        END = "\033[0m"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(datefmt="%d-%b-%y %H:%M:%S")
+
+        self.formatters = {}
+
+        for level in [
+            logging.DEBUG,
+            logging.INFO,
+            logging.WARNING,
+            logging.ERROR,
+            logging.CRITICAL,
+        ]:
+            fmt = (
+                "%(asctime)s - %(name)s - "
+                + self.ConsoleColors.BOLD
+                + "%(levelname)s"
+                + self.ConsoleColors.END
+                + " - "
+                + self.ConsoleColors[logging.getLevelName(level)]
+                + "%(message)s"
+                + self.ConsoleColors.END
+            )
+            level_formatter = logging.Formatter(fmt, self.datefmt)
+            self.formatters[level] = level_formatter
+
+    def format(self, record: logging.LogRecord) -> str:
+        formatter: logging.Formatter = self.formatters.get(
+            record.levelno,
+            self.formatters[logging.ERROR],
+        )
+        return formatter.format(record)
 
 
 class LogConfig:
@@ -25,16 +73,6 @@ class LogConfig:
         END = "\033[0m"
 
     LOG_FORMAT: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    CONSOLE_LOG_FORMAT: str = (
-        "%(asctime)s - %(name)s - "
-        + console_color.BOLD
-        + "%(levelname)s"
-        + console_color.END
-        + " - "
-        + console_color.GREEN
-        + "%(message)s"
-        + console_color.END
-    )
     MATRIX_LOG_FORMAT: str = "%(asctime)s - %(name)s - <code>%(levelname)s</code> - <font color ='green'>%(message)s</font>"
 
     # Logging config
@@ -53,10 +91,7 @@ class LogConfig:
                     "format": self.LOG_FORMAT,
                     "datefmt": "%d-%b-%y %H:%M:%S",
                 },
-                "console_formatter": {
-                    "format": self.CONSOLE_LOG_FORMAT,
-                    "datefmt": "%d-%b-%y %H:%M:%S",
-                },
+                "console_formatter": {"()": "app.core.log.ColoredConsoleFormatter"},
                 "matrix": {
                     "format": self.MATRIX_LOG_FORMAT,
                     "datefmt": "%d-%b-%y %H:%M:%S",
