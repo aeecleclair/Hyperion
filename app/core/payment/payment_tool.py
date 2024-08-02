@@ -10,9 +10,8 @@ from helloasso_api_wrapper.models.carts import (
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import security
+from app.core import schemas_core, security
 from app.core.config import Settings
-from app.core.models_core import CoreUser
 from app.core.payment import cruds_payment, models_payment, schemas_payment
 from app.types.exceptions import PaymentToolCredentialsNotSetException
 
@@ -57,7 +56,7 @@ class PaymentTool:
         checkout_name: str,
         redirection_uri: str,
         db: AsyncSession,
-        payer_user: CoreUser | None = None,
+        payer_user: schemas_core.CoreUser | None = None,
     ) -> schemas_payment.Checkout:
         """
         Init an HelloAsso checkout
