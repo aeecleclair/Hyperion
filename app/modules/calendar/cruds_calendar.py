@@ -66,11 +66,11 @@ async def add_event(
     db.add(event)
     try:
         await db.commit()
-        return event
-
-    except IntegrityError as error:
+    except IntegrityError:
         await db.rollback()
-        raise ValueError(error)
+        raise
+    else:
+        return event
 
 
 async def edit_event(

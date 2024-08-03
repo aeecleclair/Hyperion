@@ -138,7 +138,7 @@ async def add_section(db: AsyncSession, section: models_campaign.Sections) -> No
         await db.commit()
     except IntegrityError:
         await db.rollback()
-        raise ValueError("This name is already used")
+        raise
 
 
 async def delete_section(db: AsyncSession, section_id: str) -> None:
@@ -223,7 +223,7 @@ async def add_list(
         await db.commit()
     except IntegrityError:
         await db.rollback()
-        raise ValueError("This list already exist.")
+        raise
 
 
 async def remove_members_from_list(

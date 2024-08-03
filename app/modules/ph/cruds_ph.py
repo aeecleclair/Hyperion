@@ -41,10 +41,11 @@ async def create_paper(
     db.add(paper)
     try:
         await db.commit()
-        return paper
     except IntegrityError as error:
         await db.rollback()
         raise ValueError(error)
+    else:
+        return paper
 
 
 async def update_paper(

@@ -31,10 +31,11 @@ async def create_authorization_token(
     db.add(db_authorization_code)
     try:
         await db.commit()
-        return db_authorization_code
     except IntegrityError:
         await db.rollback()
-        raise ValueError()
+        raise
+    else:
+        return db_authorization_code
 
 
 async def delete_authorization_token_by_token(
@@ -72,10 +73,11 @@ async def create_refresh_token(
     db.add(db_refresh_token)
     try:
         await db.commit()
-        return db_refresh_token
     except IntegrityError:
         await db.rollback()
-        raise ValueError()
+        raise
+    else:
+        return db_refresh_token
 
 
 async def revoke_refresh_token_by_token(

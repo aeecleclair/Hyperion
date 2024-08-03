@@ -55,10 +55,11 @@ async def create_flappybird_score(
     db.add(flappybird_score)
     try:
         await db.commit()
-        return flappybird_score
-    except IntegrityError as error:
+    except IntegrityError:
         await db.rollback()
-        raise ValueError(error)
+        raise
+    else:
+        return flappybird_score
 
 
 async def create_flappybird_best_score(
@@ -69,10 +70,11 @@ async def create_flappybird_best_score(
     db.add(flappybird_best_score)
     try:
         await db.commit()
-        return flappybird_best_score
-    except IntegrityError as error:
+    except IntegrityError:
         await db.rollback()
-        raise ValueError(error)
+        raise
+    else:
+        return flappybird_best_score
 
 
 async def update_flappybird_best_score(

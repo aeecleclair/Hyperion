@@ -31,10 +31,11 @@ async def create_product(
     db.add(product)
     try:
         await db.commit()
-        return product
     except IntegrityError:
         await db.rollback()
-        raise ValueError("This name is already used")
+        raise
+    else:
+        return product
 
 
 async def get_product_by_id(
@@ -143,7 +144,7 @@ async def create_delivery(
         await db.commit()
     except IntegrityError:
         await db.rollback()
-        raise ValueError("An error as occured server side while creating the delivery")
+        raise
 
     for product_id in delivery.products_ids:
         db.add(
@@ -155,10 +156,12 @@ async def create_delivery(
     try:
         await db.commit()
         return await get_delivery_by_id(db=db, delivery_id=delivery.id)
-    except IntegrityError as error:
+    except IntegrityError:
         await db.rollback()
-        hyperion_error_logger.exception(error)
-        raise ValueError("An error as occured server side while creating the delivery")
+        hyperion_error_logger.exception(
+            "An error as occurred while creating the delivery",
+        )
+        raise
 
 
 async def delete_delivery(db: AsyncSession, delivery_id: str):
@@ -192,7 +195,7 @@ async def add_product_to_delivery(
         await db.commit()
     except IntegrityError:
         await db.rollback()
-        raise ValueError("This product is already in this delivery")
+        raise
 
 
 async def remove_product_from_delivery(
@@ -372,10 +375,11 @@ async def create_cash_of_user(
     db.add(cash)
     try:
         await db.commit()
-        return cash
-    except IntegrityError as err:
+    except IntegrityError:
         await db.rollback()
-        raise ValueError(err)
+        raise
+    else:
+        return cash
 
 
 async def add_cash(db: AsyncSession, user_id: str, amount: float):
@@ -393,7 +397,7 @@ async def add_cash(db: AsyncSession, user_id: str, amount: float):
             await db.commit()
         except IntegrityError:
             await db.rollback()
-            raise ValueError("Error during cash edition")
+            raise
 
 
 async def remove_cash(db: AsyncSession, user_id: str, amount: float):
@@ -411,7 +415,7 @@ async def remove_cash(db: AsyncSession, user_id: str, amount: float):
             await db.commit()
         except IntegrityError:
             await db.rollback()
-            raise ValueError("Error during cash edition")
+            raise
 
 
 async def get_orders_of_user(
@@ -485,9 +489,9 @@ async def add_information(
     db.add(information)
     try:
         await db.commit()
-    except IntegrityError as err:
+    except IntegrityError:
         await db.rollback()
-        raise ValueError(f"Could not add information {err}")
+        raise
 
 
 async def edit_information(
