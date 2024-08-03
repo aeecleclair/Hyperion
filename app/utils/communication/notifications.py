@@ -147,14 +147,13 @@ class NotificationManager:
         tokens: list[str],
         db: AsyncSession,
     ) -> None:
-        message_models = []
-        for token in tokens:
-            message_models.append(
-                models_notification.Message(
-                    firebase_device_token=token,
-                    **message.model_dump(),
-                ),
+        message_models = [
+            models_notification.Message(
+                firebase_device_token=token,
+                **message.model_dump(),
             )
+            for token in tokens
+        ]
 
         # We need to remove old messages with the same context and token
         # as there can only be one message per context and token
