@@ -17,6 +17,7 @@ from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
 from app.core.users import cruds_users
 from app.dependencies import get_settings
+from app.types.exceptions import RedisConnectionError
 from app.types.floors_type import FloorsType
 from app.types.sqlalchemy import Base
 from app.utils.redis import connect, disconnect
@@ -89,7 +90,7 @@ def change_redis_client_status(activated: bool) -> None:
             try:
                 redis_client = connect(settings)
             except redis.exceptions.ConnectionError as err:
-                raise Exception("Connection to Redis failed") from err
+                raise RedisConnectionError() from err
     else:
         if isinstance(redis_client, redis.Redis):
             redis_client.flushdb()

@@ -7,6 +7,11 @@ from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from pydantic import computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.types.exceptions import (
+    InvalidAuthClientNameInDotenvError,
+    InvalidRSAKeyInDotenvError,
+    MissingVariableInDotenvError,
+)
 from app.utils.auth import providers
 
 
@@ -172,9 +177,7 @@ class Settings(BaseSettings):
         # https://cryptography.io/en/latest/hazmat/primitives/asymmetric/serialization/#module-cryptography.hazmat.primitives.serialization
         private_key = load_pem_private_key(cls.RSA_PRIVATE_PEM_STRING, password=None)
         if not isinstance(private_key, rsa.RSAPrivateKey):
-            raise TypeError(
-                f"RSA_PRIVATE_PEM_STRING is not an RSA key but a {private_key.__class__.__name__}",
-            )
+            raise InvalidRSAKeyInDotenvError(private_key.__class__.__name__)
         return private_key
 
     @computed_field  # type: ignore[misc]
@@ -213,9 +216,8 @@ class Settings(BaseSettings):
                     auth_client_name,
                 )
             except AttributeError as error:
-                # logger.error()
-                raise ValueError(
-                    f".env AUTH_CLIENTS is invalid: {auth_client_name} is not an auth_client from app.utils.auth.providers",
+                raise InvalidAuthClientNameInDotenvError(
+                    auth_client_name,
                 ) from error
             # If the secret is empty, this mean the client is expected to use PKCE
             # We need to pass a None value to the auth_client_class
@@ -251,8 +253,8 @@ class Settings(BaseSettings):
                 and self.POSTGRES_DB
             )
         ):
-            raise ValueError(
-                "Either SQLITE_DB or POSTGRES_HOST, POSTGRES_USER, POSTGRES_PASSWORD and POSTGRES_DB should be configured in the dotenv",
+            raise MissingVariableInDotenvError(  # noqa: TRY003
+                "Either SQLITE_DB or POSTGRES_HOST, POSTGRES_USER, POSTGRES_PASSWORD and POSTGRES_DB",
             )
 
         return self
@@ -260,13 +262,13 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def check_secrets(self) -> "Settings":
         if not self.ACCESS_TOKEN_SECRET_KEY:
-            raise ValueError(
-                "ACCESS_TOKEN_SECRET_KEY should be configured in the dotenv",
+            raise MissingVariableInDotenvError(
+                "ACCESS_TOKEN_SECRET_KEY",
             )
 
         if not self.RSA_PRIVATE_PEM_STRING:
-            raise ValueError(
-                "RSA_PRIVATE_PEM_STRING should be configured in the dotenv",
+            raise MissingVariableInDotenvError(
+                "RSA_PRIVATE_PEM_STRING",
             )
 
         return self
