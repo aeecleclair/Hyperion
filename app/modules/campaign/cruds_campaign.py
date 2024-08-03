@@ -47,9 +47,9 @@ async def add_voter(
     db.add(voter)
     try:
         await db.commit()
-    except IntegrityError as err:
+    except IntegrityError:
         await db.rollback()
-        raise err
+        raise
 
 
 async def delete_voter_by_group_id(
