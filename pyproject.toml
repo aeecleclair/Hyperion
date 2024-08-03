@@ -12,10 +12,8 @@ select = [
     "F",
     "E",
     "W",
-    "I",
-    "T201",
     "C90",
-    "DTZ",
+    "I",
     "UP",
     "ASYNC",
     "S",
@@ -23,6 +21,8 @@ select = [
     "A",
     "COM",
     "C4",
+    "DTZ",
+    "FA",
     "ISC",
     "ICN",
     "INP",
@@ -38,8 +38,12 @@ select = [
     "PTH",
     "PL",
     "TRY",
+    "FLY",
+    "PERF",
+    "FURB",
     "RUF",
 ] # "B", "N" to add later
+# We may want to enable "ERA" to found commented-out code
 ignore = [
     "E203",
     "E266",
