@@ -14,7 +14,7 @@ def password_validator(password: str) -> str:
     """
     # TODO
     if len(password) < 6:
-        raise ValueError("The password must be at least 6 characters long")
+        raise ValueError("The password must be at least 6 characters long")  # noqa: TRY003 # this line is intended to be replaced
     return password.strip()
 
 

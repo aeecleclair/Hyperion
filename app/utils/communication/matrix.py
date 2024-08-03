@@ -2,6 +2,8 @@ from typing import Any
 
 import requests
 
+from app.types.exceptions import MatrixRequestError, MatrixSendMessageError
+
 
 class Matrix:
     """
@@ -45,9 +47,7 @@ class Matrix:
         try:
             response.raise_for_status()
         except requests.exceptions.HTTPError as err:
-            raise ValueError(
-                "Could not send message to Matrix server, check the room_id in settings.",
-            ) from err
+            raise MatrixRequestError() from err
 
         return response.json()
 
@@ -72,4 +72,7 @@ class Matrix:
             "msgtype": "m.text",
         }
 
-        self.post(url, json=data, headers=None)
+        try:
+            self.post(url, json=data, headers=None)
+        except MatrixRequestError as error:
+            raise MatrixSendMessageError(room_id=room_id) from error
