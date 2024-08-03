@@ -9,7 +9,7 @@ from starlette.datastructures import Headers
 
 from app.core import models_core
 from app.types.core_data import BaseCoreData
-from app.types.exceptions import CoreDataNotFoundException
+from app.types.exceptions import CoreDataNotFoundError
 from app.utils.tools import (
     delete_file_from_data,
     get_core_data,
@@ -259,7 +259,7 @@ async def test_get_default_core_data() -> None:
 
 async def test_get_default_without_default_values_core_data():
     async with TestingSessionLocal() as db:
-        with pytest.raises(CoreDataNotFoundException):
+        with pytest.raises(CoreDataNotFoundError):
             await get_core_data(
                 core_data_class=ExempleDefaultWithoutDefaultValuesCoreData,
                 db=db,
