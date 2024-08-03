@@ -93,11 +93,9 @@ async def add_section(
         name=section.name,
         description=section.description,
     )
-    try:
-        await cruds_campaign.add_section(section=db_section, db=db)
-        return db_section
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+
+    await cruds_campaign.add_section(section=db_section, db=db)
+    return db_section
 
 
 @module.router.delete(

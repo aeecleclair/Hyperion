@@ -4,7 +4,6 @@ import uuid
 from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from redis import Redis
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, standard_responses
@@ -78,11 +77,8 @@ async def create_raffle(
     raffle.status = RaffleStatusType.creation
     db_raffle = models_raffle.Raffle(id=str(uuid.uuid4()), **raffle.model_dump())
 
-    try:
-        result = await cruds_raffle.create_raffle(raffle=db_raffle, db=db)
-        return result
-    except IntegrityError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+    result = await cruds_raffle.create_raffle(raffle=db_raffle, db=db)
+    return result
 
 
 @module.router.patch(
@@ -321,11 +317,8 @@ async def create_packticket(
         **packticket.model_dump(),
     )
 
-    try:
-        result = await cruds_raffle.create_packticket(packticket=db_packticket, db=db)
-        return result
-    except IntegrityError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+    result = await cruds_raffle.create_packticket(packticket=db_packticket, db=db)
+    return result
 
 
 @module.router.patch(
@@ -524,9 +517,6 @@ async def buy_ticket(
 
         return tickets
 
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
-
     finally:
         locker_set(redis_client=redis_client, key=redis_key, lock=False)
 
@@ -648,11 +638,8 @@ async def create_prize(
 
     db_prize = models_raffle.Prize(id=str(uuid.uuid4()), **prize.model_dump())
 
-    try:
-        result = await cruds_raffle.create_prize(prize=db_prize, db=db)
-        return result
-    except IntegrityError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+    result = await cruds_raffle.create_prize(prize=db_prize, db=db)
+    return result
 
 
 @module.router.patch(
