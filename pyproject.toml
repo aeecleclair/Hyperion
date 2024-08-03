@@ -36,6 +36,7 @@ select = [
     "SIM",
     "TCH",
     "PTH",
+    "TRY",
     "RUF",
 ] # "B", "N" to add later
 ignore = [
