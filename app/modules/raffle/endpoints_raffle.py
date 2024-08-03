@@ -497,7 +497,7 @@ async def buy_ticket(
     try:
         new_amount = balance.balance - pack_ticket.price
         if new_amount < 0:
-            raise ValueError("Not enough cash")
+            raise HTTPException(status_code=400, detail="Not enough cash")
 
         tickets = await cruds_raffle.create_ticket(tickets=db_ticket, db=db)
         await cruds_raffle.edit_cash(
