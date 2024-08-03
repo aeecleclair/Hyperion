@@ -73,7 +73,7 @@ unfixable = []
 "tests/*" = ["S101", "S105", "S106", "ASYNC230", "PLW0603"]
 # Allow endpoints, tools and dependencies to raise `HTTPException` after catching an excetion without reraising (`from err`)
 "**/endpoints_*" = ["B904"]
-"**/cruds_*" = ["B904"]          # TODO: find a better way to handle cruds errors
+"**/cruds_*" = ["B904"]         # TODO: find a better way to handle cruds errors
 "app/utils/tools.py" = ["B904"]
 # Ignore PLW0603 to be able to modify global variables in dependencies
 "app/dependencies.py" = ["B904", "PLW0603"]
