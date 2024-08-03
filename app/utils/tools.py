@@ -78,10 +78,7 @@ def fuzzy_search_user(
     # https://maxbachmann.github.io/RapidFuzz/Usage/process.html#extract
 
     # TODO: we may want to cache this object. Its generation may take some time if there is a big user base
-    choices = []
-
-    for user in users:
-        choices.append(f"{user.firstname} {user.name} {user.nickname}")
+    choices = [f"{user.firstname} {user.name} {user.nickname}" for user in users]
 
     results: list[tuple[str, int | float, int]] = process.extract(
         query,

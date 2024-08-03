@@ -202,14 +202,14 @@ async def get_loans_by_loaner(
                     status_code=404,
                     detail="Loan Contents not found",
                 )
-            items_qty_ret: list[schemas_loan.ItemQuantity] = []
-            for itemret in itemsret:
-                items_qty_ret.append(
-                    schemas_loan.ItemQuantity(
-                        itemSimple=schemas_loan.ItemSimple(**itemret.item.__dict__),
-                        quantity=itemret.quantity,
-                    ),
+            items_qty_ret: list[schemas_loan.ItemQuantity] = [
+                schemas_loan.ItemQuantity(
+                    itemSimple=schemas_loan.ItemSimple(**itemret.item.__dict__),
+                    quantity=itemret.quantity,
                 )
+                for itemret in itemsret
+            ]
+
             loans.append(schemas_loan.Loan(items_qty=items_qty_ret, **loan.__dict__))
 
     return loans
@@ -447,14 +447,14 @@ async def get_current_user_loans(
                 status_code=404,
                 detail="Loan contents not found",
             )
-        items_qty_ret: list[schemas_loan.ItemQuantity] = []
-        for itemret in itemsret:
-            items_qty_ret.append(
-                schemas_loan.ItemQuantity(
-                    itemSimple=schemas_loan.ItemSimple(**itemret.item.__dict__),
-                    quantity=itemret.quantity,
-                ),
+        items_qty_ret: list[schemas_loan.ItemQuantity] = [
+            schemas_loan.ItemQuantity(
+                itemSimple=schemas_loan.ItemSimple(**itemret.item.__dict__),
+                quantity=itemret.quantity,
             )
+            for itemret in itemsret
+        ]
+
         loansret.append(schemas_loan.Loan(items_qty=items_qty_ret, **loan.__dict__))
 
     return loansret
@@ -475,16 +475,16 @@ async def get_current_user_loaners(
     **The user must be authenticated to use this endpoint**
     """
 
-    user_loaners: list[models_loan.Loaner] = []
-
     existing_loaners: Sequence[models_loan.Loaner] = await cruds_loan.get_loaners(db=db)
 
-    for loaner in existing_loaners:
+    user_loaners: list[models_loan.Loaner] = [
+        loaner
+        for loaner in existing_loaners
         if is_user_member_of_an_allowed_group(
             allowed_groups=[loaner.group_manager_id],
             user=user,
-        ):
-            user_loaners.append(loaner)
+        )
+    ]
 
     return user_loaners
 
@@ -603,14 +603,14 @@ async def create_loan(
     itemsret = await cruds_loan.get_loan_contents_by_loan_id(loan_id=db_loan.id, db=db)
     if itemsret is None:
         raise HTTPException(status_code=404, detail="LoanContent not found")
-    items_qty_ret: list[schemas_loan.ItemQuantity] = []
-    for itemret in itemsret:
-        items_qty_ret.append(
-            schemas_loan.ItemQuantity(
-                itemSimple=schemas_loan.ItemSimple(**itemret.item.__dict__),
-                quantity=itemret.quantity,
-            ),
+    items_qty_ret: list[schemas_loan.ItemQuantity] = [
+        schemas_loan.ItemQuantity(
+            itemSimple=schemas_loan.ItemSimple(**itemret.item.__dict__),
+            quantity=itemret.quantity,
         )
+        for itemret in itemsret
+    ]
+
     message = Message(
         context=f"loan-new-{loan.id}-begin-notif",
         is_visible=True,
