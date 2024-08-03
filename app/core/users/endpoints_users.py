@@ -33,6 +33,7 @@ from app.dependencies import (
     is_user_an_ecl_member,
 )
 from app.types.content_type import ContentType
+from app.types.exceptions import UserWithEmailAlreadyExistError
 from app.utils.mail.mailworker import send_email
 from app.utils.tools import fuzzy_search_user, get_file_from_data, save_file_as_data
 
@@ -224,18 +225,15 @@ async def create_user_by_user(
 
     # There might be an unconfirmed user in the database but its not an issue. We will generate a second activation token.
 
-    try:
-        await create_user(
-            email=user_create.email,
-            account_type=account_type,
-            background_tasks=background_tasks,
-            db=db,
-            settings=settings,
-            request_id=request_id,
-            external=external,
-        )
-    except Exception as error:
-        raise HTTPException(status_code=400, detail=str(error))
+    await create_user(
+        email=user_create.email,
+        account_type=account_type,
+        background_tasks=background_tasks,
+        db=db,
+        settings=settings,
+        request_id=request_id,
+        external=external,
+    )
 
     return standard_responses.Result(success=True)
 
@@ -300,7 +298,7 @@ async def create_user(
     # If an account already exist, we can not create a new one
     db_user = await cruds_users.get_user_by_email(db=db, email=email)
     if db_user is not None:
-        raise ValueError(f"An account with the email {email} already exist")
+        raise UserWithEmailAlreadyExistError(email)
     # There might be an unconfirmed user in the database but its not an issue. We will generate a second activation token.
 
     activation_token = security.generate_token(nbytes=16)

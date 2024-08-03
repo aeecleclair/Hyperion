@@ -46,3 +46,10 @@ class InvalidRSAKeyInDotenvError(TypeError):
         super().__init__(
             f"RSA_PRIVATE_PEM_STRING in dotenv is not an RSA key but a {actual_key_type}",
         )
+
+
+class UserWithEmailAlreadyExistError(Exception):
+    def __init__(self, email: str):
+        super().__init__(
+            f"An account with the email {email} already exist",
+        )
