@@ -140,9 +140,9 @@ async def create_user_with_groups(
                     ),
                 )
 
-        except IntegrityError as e:
+        except IntegrityError:
             await db.rollback()
-            raise e
+            raise
         finally:
             await db.close()
 
@@ -175,8 +175,8 @@ async def add_object_to_db(db_object: Base) -> None:
         try:
             db.add(db_object)
             await db.commit()
-        except IntegrityError as e:
+        except IntegrityError:
             await db.rollback()
-            raise e
+            raise
         finally:
             await db.close()
