@@ -115,10 +115,11 @@ async def create_unconfirmed_user(
     db.add(user_unconfirmed)
     try:
         await db.commit()
-        return user_unconfirmed  # TODO Is this useful ?
-    except IntegrityError as error:
+    except IntegrityError:
         await db.rollback()
-        raise ValueError(error)
+        raise
+    else:
+        return user_unconfirmed  # TODO Is this useful ?
 
 
 async def get_unconfirmed_user_by_activation_token(
@@ -151,10 +152,11 @@ async def create_user(
     db.add(user)
     try:
         await db.commit()
-        return user
     except IntegrityError:
         await db.rollback()
         raise
+    else:
+        return user
 
 
 async def delete_user(db: AsyncSession, user_id: str):
@@ -173,10 +175,11 @@ async def create_user_recover_request(
     db.add(recover_request)
     try:
         await db.commit()
-        return recover_request
     except IntegrityError:
         await db.rollback()
         raise
+    else:
+        return recover_request
 
 
 async def get_recover_request_by_reset_token(
@@ -198,10 +201,11 @@ async def create_email_migration_code(
     db.add(migration_object)
     try:
         await db.commit()
-        return migration_object
     except IntegrityError:
         await db.rollback()
         raise
+    else:
+        return migration_object
 
 
 async def get_email_migration_code_by_token(

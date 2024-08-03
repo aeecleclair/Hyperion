@@ -56,10 +56,11 @@ async def create_group(
     db.add(group)
     try:
         await db.commit()
-        return group
     except IntegrityError:
         await db.rollback()
         raise
+    else:
+        return group
 
 
 async def delete_group(db: AsyncSession, group_id: str):
@@ -83,7 +84,7 @@ async def create_membership(
         return await get_group_by_id(db, membership.group_id)
     except IntegrityError:
         await db.rollback()
-        raise ValueError("This user is already in this group")
+        raise
 
 
 async def delete_membership_by_group_id(

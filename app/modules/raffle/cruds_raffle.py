@@ -33,10 +33,11 @@ async def create_raffle(
     db.add(raffle)
     try:
         await db.commit()
-        return raffle
     except IntegrityError:
         await db.rollback()
         raise
+    else:
+        return raffle
 
 
 async def get_raffles_by_groupid(
@@ -102,10 +103,11 @@ async def create_prize(
     db.add(prize)
     try:
         await db.commit()
-        return prize
     except IntegrityError:
         await db.rollback()
         raise
+    else:
+        return prize
 
 
 async def get_prizes_by_raffleid(
@@ -186,10 +188,11 @@ async def create_packticket(
     db.add(packticket)
     try:
         await db.commit()
-        return packticket
     except IntegrityError:
         await db.rollback()
         raise
+    else:
+        return packticket
 
 
 async def get_packtickets_by_raffleid(
@@ -272,10 +275,11 @@ async def create_ticket(
     db.add_all(tickets)
     try:
         await db.commit()
-        return tickets
     except IntegrityError:
         await db.rollback()
         raise
+    else:
+        return tickets
 
 
 async def get_tickets_by_raffleid(
@@ -377,10 +381,11 @@ async def create_cash_of_user(
     db.add(cash)
     try:
         await db.commit()
-        return cash
     except IntegrityError:
         await db.rollback()
         raise
+    else:
+        return cash
 
 
 async def edit_cash(db: AsyncSession, user_id: str, amount: float):

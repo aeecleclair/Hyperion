@@ -148,10 +148,11 @@ async def create_firebase_devices(
     db.add(firebase_device)
     try:
         await db.commit()
-        return firebase_device
-    except IntegrityError as error:
+    except IntegrityError:
         await db.rollback()
-        raise ValueError(error)
+        raise
+    else:
+        return firebase_device
 
 
 async def delete_firebase_devices(
@@ -202,10 +203,11 @@ async def create_topic_membership(
     db.add(topic_membership)
     try:
         await db.commit()
-        return topic_membership
-    except IntegrityError as error:
+    except IntegrityError:
         await db.rollback()
-        raise ValueError(error)
+        raise
+    else:
+        return topic_membership
 
 
 async def delete_topic_membership(

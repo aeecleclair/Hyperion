@@ -74,10 +74,11 @@ async def create_module_visibility(
     db.add(module_visibility)
     try:
         await db.commit()
-        return module_visibility
-    except IntegrityError as error:
+    except IntegrityError:
         await db.rollback()
-        raise ValueError(error)
+        raise
+    else:
+        return module_visibility
 
 
 async def delete_module_visibility(
@@ -123,10 +124,11 @@ async def add_core_data_crud(
     db.add(core_data)
     try:
         await db.commit()
-        return core_data
-    except IntegrityError as error:
+    except IntegrityError:
         await db.rollback()
-        raise ValueError(error)
+        raise
+    else:
+        return core_data
 
 
 async def delete_core_data_crud(

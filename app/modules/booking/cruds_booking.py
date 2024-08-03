@@ -24,10 +24,11 @@ async def create_manager(
     db.add(manager)
     try:
         await db.commit()
-        return manager
-    except IntegrityError as error:
+    except IntegrityError:
         await db.rollback()
-        raise ValueError(error)
+        raise
+    else:
+        return manager
 
 
 async def update_manager(
@@ -201,10 +202,11 @@ async def create_room(db: AsyncSession, room: models_booking.Room):
     db.add(room)
     try:
         await db.commit()
-        return room
-    except IntegrityError as error:
+    except IntegrityError:
         await db.rollback()
-        raise ValueError(error)
+        raise
+    else:
+        return room
 
 
 async def edit_room(db: AsyncSession, room_id: str, room: schemas_booking.RoomBase):
