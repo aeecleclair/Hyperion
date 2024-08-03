@@ -260,22 +260,21 @@ async def authorize_validation(
         )
         redirect_uri = auth_client.override_redirect_uri
     # If at least one redirect_uri is hardcoded in the auth_client we will use this one. If one was provided in the request, we want to make sure they match.
+    elif authorizereq.redirect_uri is None:
+        # We use the hardcoded value
+        redirect_uri = auth_client.redirect_uri[0]
+    # If a redirect_uri is provided, it should match one specified in the auth client
+    elif authorizereq.redirect_uri not in auth_client.redirect_uri:
+        hyperion_access_logger.warning(
+            f"Authorize-validation: Mismatching redirect_uri, received {authorizereq.redirect_uri} but expected one of {auth_client.redirect_uri} ({request_id})",
+        )
+        return RedirectResponse(
+            settings.CLIENT_URL
+            + calypsso.get_error_relative_url(message="Mismatching redirect_uri"),
+            status_code=status.HTTP_302_FOUND,
+        )
     else:
-        if authorizereq.redirect_uri is None:
-            # We use the hardcoded value
-            redirect_uri = auth_client.redirect_uri[0]
-        # If a redirect_uri is provided, it should match one specified in the auth client
-        elif authorizereq.redirect_uri not in auth_client.redirect_uri:
-            hyperion_access_logger.warning(
-                f"Authorize-validation: Mismatching redirect_uri, received {authorizereq.redirect_uri} but expected one of {auth_client.redirect_uri} ({request_id})",
-            )
-            return RedirectResponse(
-                settings.CLIENT_URL
-                + calypsso.get_error_relative_url(message="Mismatching redirect_uri"),
-                status_code=status.HTTP_302_FOUND,
-            )
-        else:
-            redirect_uri = authorizereq.redirect_uri
+        redirect_uri = authorizereq.redirect_uri
 
     # Special characters like `:` or `/` may be encoded as `%3A` and `%2F`, we need to decode them before returning the redirection object
     redirect_uri = urllib.parse.unquote(redirect_uri)
@@ -798,19 +797,17 @@ async def refresh_token_grant(
                     "error_description": "Invalid client id or secret",
                 },
             )
-    else:
-        # We use PKCE, a client secret should not have been provided
-        if tokenreq.client_secret is not None:
-            hyperion_access_logger.warning(
-                f"Token authorization_code_grant: With PKCE, a client secret should not have been provided ({request_id})",
-            )
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "error": "invalid_client",
-                    "error_description": "Invalid client id or secret",
-                },
-            )
+    elif tokenreq.client_secret is not None:
+        hyperion_access_logger.warning(
+            f"Token authorization_code_grant: With PKCE, a client secret should not have been provided ({request_id})",
+        )
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": "invalid_client",
+                "error_description": "Invalid client id or secret",
+            },
+        )
 
     # If everything is good we can finally create the new access/refresh tokens
     # We use new refresh tokens every time as we use some client that can't store secrets (see Refresh token rotation in https://www.pingidentity.com/en/resources/blog/post/refresh-token-rotation-spa.html)
