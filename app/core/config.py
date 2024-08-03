@@ -219,14 +219,13 @@ class Settings(BaseSettings):
                 raise InvalidAuthClientNameInDotenvError(
                     auth_client_name,
                 ) from error
-            # If the secret is empty, this mean the client is expected to use PKCE
-            # We need to pass a None value to the auth_client_class
-            if not secret:
-                secret = None
+
             # We can create a new instance of the auth_client_class with the client id and secret
             clients[client_id] = auth_client_class(
                 client_id=client_id,
-                secret=secret,
+                # If the secret is empty, this mean the client is expected to use PKCE
+                # We need to pass a None value to the auth_client_class instead of an other falsy value
+                secret=secret or None,
                 redirect_uri=redirect_uri,
             )
 
