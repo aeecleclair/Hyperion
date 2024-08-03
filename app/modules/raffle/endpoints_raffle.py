@@ -967,8 +967,8 @@ async def edit_cash_by_id(
             amount=cash.balance + balance.balance,
             db=db,
         )
-    except ValueError as e:
-        hyperion_error_logger.error(f"Error in tombola edit_cash_by_id: {e}")
+    except ValueError:
+        hyperion_error_logger.exception("Error in tombola edit_cash_by_id")
         raise HTTPException(status_code=400, detail="Error while editing cash.")
 
     finally:

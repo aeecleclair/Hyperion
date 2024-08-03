@@ -213,7 +213,7 @@ async def save_file_as_data(
                 await buffer.write(content)
 
     except Exception as error:
-        hyperion_error_logger.error(
+        hyperion_error_logger.exception(
             f"save_file_to_the_disk: could not save file to {filename}: {error} ({request_id})",
         )
         raise HTTPException(status_code=400, detail="Could not save file")
@@ -259,7 +259,7 @@ async def save_bytes_as_data(
             await buffer.write(file_bytes)
 
     except Exception as error:
-        hyperion_error_logger.error(
+        hyperion_error_logger.exception(
             f"save_file_to_the_disk: could not save file to {filename}: {error} ({request_id})",
         )
         raise HTTPException(status_code=400, detail="Could not save file")
