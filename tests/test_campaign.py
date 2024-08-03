@@ -19,7 +19,6 @@ AE_user: models_core.CoreUser
 
 section: models_campaign.Sections
 campaign_list: models_campaign.Lists
-voters: models_campaign.VoterGroups
 
 section2id: str
 list2id: str
@@ -34,7 +33,6 @@ async def init_objects() -> None:
 
     global section
     global campaign_list
-    global voters
     list_id = str(uuid.uuid4())
     section_id = str(uuid.uuid4())
 

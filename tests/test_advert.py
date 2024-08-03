@@ -53,7 +53,6 @@ async def init_objects() -> None:
     token_simple = create_api_access_token(user_simple)
 
     global advert
-    global tag
     advert = models_advert.Advert(
         id=str(uuid.uuid4()),
         advertiser_id=advertiser.id,
