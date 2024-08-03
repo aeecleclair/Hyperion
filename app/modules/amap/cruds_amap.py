@@ -157,7 +157,7 @@ async def create_delivery(
         return await get_delivery_by_id(db=db, delivery_id=delivery.id)
     except IntegrityError as error:
         await db.rollback()
-        hyperion_error_logger.error(error)
+        hyperion_error_logger.exception(error)
         raise ValueError("An error as occured server side while creating the delivery")
 
 

@@ -31,9 +31,9 @@ class NotificationManager:
         try:
             firebase_cred = credentials.Certificate("firebase.json")
             firebase_admin.initialize_app(firebase_cred)
-        except Exception as error:
-            hyperion_error_logger.error(
-                f"Firebase is not configured correctly, disabling the notification manager. Please check a valid firebase.json file exist at the root of the project. {error}.",
+        except Exception:
+            hyperion_error_logger.exception(
+                "Firebase is not configured correctly, disabling the notification manager. Please check a valid firebase.json file exist at the root of the project.",
             )
             self.use_firebase = False
 
@@ -112,9 +112,9 @@ class NotificationManager:
                 apns=apnsconfig,
             )
             result = messaging.send_each_for_multicast(message)
-        except Exception as error:
-            hyperion_error_logger.error(
-                f"Notification: Unable to send firebase notification to tokens: {error}",
+        except Exception:
+            hyperion_error_logger.exception(
+                "Notification: Unable to send firebase notification to tokens",
             )
             raise
 
