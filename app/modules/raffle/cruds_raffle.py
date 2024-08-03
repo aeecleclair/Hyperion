@@ -4,6 +4,7 @@ import logging
 import random
 from collections.abc import Sequence
 
+from fastapi import HTTPException
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -407,11 +408,8 @@ async def draw_winner_by_prize_raffle(
 ) -> Sequence[models_raffle.Ticket]:
     prize = await get_prize_by_id(prize_id=prize_id, db=db)
     if prize is None:
-        raise ValueError("Invalid prize")
+        raise HTTPException(status_code=400, detail="Prize does not exist in db")
     raffle_id = prize.raffle_id
-
-    if raffle_id is None:
-        raise ValueError("Invalid raffle_id")
 
     gettickets = await get_tickets_by_raffleid(raffle_id=raffle_id, db=db)
     tickets = [t for t in gettickets if t.winning_prize is None]
@@ -429,9 +427,9 @@ async def draw_winner_by_prize_raffle(
     )
     try:
         await db.commit()
-    except IntegrityError:
+    except IntegrityError as error:
         await db.rollback()
-        raise ValueError("Error during edition of the winning tickets")
+        raise ValueError("Error during edition of the winning tickets") from error  # noqa: TRY003
 
     await db.execute(
         update(models_raffle.Prize)
@@ -440,9 +438,9 @@ async def draw_winner_by_prize_raffle(
     )
     try:
         await db.commit()
-    except IntegrityError:
+    except IntegrityError as error:
         await db.rollback()
-        raise ValueError("Error during edition of the prize")
+        raise ValueError("Error during edition of the prize") from error  # noqa: TRY003
 
     return winners
 
