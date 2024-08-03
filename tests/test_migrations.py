@@ -115,7 +115,6 @@ def init_migration_scripts() -> None:  # noqa: PT004
     """
     We import all migration scripts in the migration/versions directory to extract the pre_test_upgrade and test_upgrade functions.
     """
-    global pre_test_upgrade_dict, test_upgrade_dict
 
     for migration_file_path in Path().glob("migrations/versions/*.py"):
         if migration_file_path.stem == "__init__":

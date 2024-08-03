@@ -314,7 +314,6 @@ def test_get_user_info(client: TestClient) -> None:
     assert response.status_code == 200
     json = response.json()
 
-    global user
     assert json["name"] == user.firstname
 
 
@@ -364,7 +363,6 @@ def test_get_user_info_in_id_token(client: TestClient) -> None:
     decoded_payload = base64.b64decode(payload.encode("utf-8") + b"==")
     json_payload = json.loads(decoded_payload)
 
-    global user
     assert json_payload["email"] == user.email
 
 

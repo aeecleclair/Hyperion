@@ -72,8 +72,6 @@ async def init_objects() -> None:
 
 
 def test_get_all_events(client: TestClient) -> None:
-    global token_bde
-
     response = client.get(
         "/calendar/events/",
         headers={"Authorization": f"Bearer {token_bde}"},
@@ -82,8 +80,6 @@ def test_get_all_events(client: TestClient) -> None:
 
 
 def test_get_event(client: TestClient) -> None:
-    global token_bde
-
     response = client.get(
         f"/calendar/events/{calendar_event.id}",
         headers={"Authorization": f"Bearer {token_bde}"},
@@ -100,8 +96,6 @@ def test_get_nonexistent_event(client: TestClient) -> None:
 
 
 def test_add_event(client: TestClient) -> None:
-    global token_bde
-
     response = client.post(
         "/calendar/events/",
         json={
@@ -121,8 +115,6 @@ def test_add_event(client: TestClient) -> None:
 
 def test_add_event_missing_parameter(client: TestClient) -> None:
     """Test to add an event but a parameter is missing. `start` is missing"""
-    global token_bde
-
     response = client.post(
         "/calendar/events/",
         json={
@@ -149,9 +141,6 @@ def test_edit_event(client: TestClient) -> None:
 
 def test_delete_event(client: TestClient) -> None:
     """Test if an admin can delete an event."""
-
-    global token_bde
-
     response = client.delete(
         f"/calendar/events/{calendar_event_to_delete.id}",
         headers={"Authorization": f"Bearer {token_bde}"},
@@ -161,9 +150,6 @@ def test_delete_event(client: TestClient) -> None:
 
 def test_delete_event_unauthorized_user(client: TestClient) -> None:
     """Test if a simple user can't delete an event."""
-
-    global token_simple
-
     response = client.delete(
         f"/calendar/events/{calendar_event.id}",
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -180,7 +166,6 @@ def test_decline_event(client: TestClient) -> None:
 
 
 def test_approve_event(client: TestClient) -> None:
-    global token_bde
     response = client.patch(
         f"/calendar/events/{calendar_event.id}/reply/approved",
         headers={"Authorization": f"Bearer {token_bde}"},
