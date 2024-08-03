@@ -28,7 +28,7 @@ revoked_refresh_token = "RevokedRefreshToken"
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
     global user
-    user = user = await create_user_with_groups(
+    user = await create_user_with_groups(
         groups=[],
         email="email@myecl.fr",
         password="azerty",

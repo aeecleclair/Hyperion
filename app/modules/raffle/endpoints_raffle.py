@@ -939,7 +939,7 @@ async def edit_cash_by_id(
             detail="The user don't have a cash.",
         )
 
-    redis_key = redis_key = "raffle_" + user_id
+    redis_key = "raffle_" + user_id
 
     if not isinstance(redis_client, Redis) or locker_get(
         redis_client=redis_client,
