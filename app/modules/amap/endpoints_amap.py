@@ -72,11 +72,8 @@ async def create_product(
     """
     db_product = models_amap.Product(id=str(uuid.uuid4()), **product.__dict__)
 
-    try:
-        result = await cruds_amap.create_product(product=db_product, db=db)
-        return result
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+    result = await cruds_amap.create_product(product=db_product, db=db)
+    return result
 
 
 @module.router.get(
