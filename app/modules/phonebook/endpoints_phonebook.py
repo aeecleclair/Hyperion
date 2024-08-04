@@ -192,27 +192,24 @@ async def update_association_groups(
 
     **This endpoint is only usable by Admins (not BDE and CAA)**
     """
-    try:
-        await cruds_phonebook.update_association_groups(
-            association_id=association_id,
-            association_groups_edit=association_groups_edit,
-            db=db,
-        )
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+    await cruds_phonebook.update_association_groups(
+        association_id=association_id,
+        association_groups_edit=association_groups_edit,
+        db=db,
+    )
 
 
 @module.router.patch(
     "/phonebook/associations/{association_id}/deactivate",
     status_code=204,
 )
-async def deactivate_association_groups(
+async def deactivate_association(
     association_id: str,
     user: models_core.CoreUser = Depends(is_user_an_ecl_member),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Update the groups associated with an Association
+    Deactivate an Association
 
     **This endpoint is only usable by CAA and BDE**
     """
@@ -258,7 +255,7 @@ async def delete_association(
     if not association.deactivated:
         raise HTTPException(
             400,
-            "Association was not deactivated before, this is a double check system.",
+            "Only deactivated associations can be deleted.",
         )
     return await cruds_phonebook.delete_association(
         association_id=association_id,
@@ -513,7 +510,7 @@ async def update_membership(
         ):
             raise HTTPException(
                 status_code=403,
-                detail="You are not allowed to update a membership with the role of president",
+                detail="Only CAA and BDE can update a membership with the role of president",
             )
 
     if updated_membership.member_order is not None:

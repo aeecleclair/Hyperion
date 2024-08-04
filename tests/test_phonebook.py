@@ -34,10 +34,10 @@ association2_group: models_core.CoreGroup
 
 association2_group2: models_phonebook.AssociationAssociatedGroups
 
-token_admin: str = ""
-token_BDE: str = ""
-token_president: str = ""
-token_simple: str = ""
+token_admin: str
+token_BDE: str
+token_president: str
+token_simple: str
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)

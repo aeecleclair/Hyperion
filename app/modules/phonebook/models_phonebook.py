@@ -39,7 +39,7 @@ class Association(Base):
 
     id: Mapped[str] = mapped_column(String, primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String, index=True)
-    description: Mapped[str] = mapped_column(String, nullable=True)
+    description: Mapped[str | None]
     kind: Mapped[Kinds]
     mandate_year: Mapped[int]
     deactivated: Mapped[bool]
