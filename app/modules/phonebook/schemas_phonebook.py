@@ -23,7 +23,7 @@ class AssociationBase(BaseModel):
     mandate_year: int
     description: str | None = None
     associated_groups: list[str] = []
-    deactivated: bool = False
+    deactivated: bool = False  # Deactivated associations won't be displayed in the phonebook unless looking at previous years and cannot be used for new memberships
 
 
 class AssociationComplete(AssociationBase):
