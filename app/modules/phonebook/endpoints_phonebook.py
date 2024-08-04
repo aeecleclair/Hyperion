@@ -422,6 +422,11 @@ async def create_membership(
             400,
             "Error : Association does not exist",
         )
+    if association.deactivated:
+        raise HTTPException(
+            400,
+            "Error : Association is deactivated",
+        )
 
     if (
         await cruds_phonebook.get_membership_by_association_id_user_id_and_mandate_year(
