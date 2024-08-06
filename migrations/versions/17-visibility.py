@@ -24,15 +24,29 @@ def upgrade() -> None:
         sa.Column("root", sa.String(), nullable=False),
         sa.PrimaryKeyConstraint("root"),
     )
-    # We want to drop existing module visibilities to create them again
-    # using module awareness objects
-    op.drop_table("module_visibility")
-    op.create_table(
+
+    conn = op.get_bind()
+    visibility_t = sa.Table(
         "module_visibility",
-        sa.Column("root", sa.String(), nullable=False),
-        sa.Column("allowed_group_id", sa.String(), nullable=False),
-        sa.PrimaryKeyConstraint("root", "allowed_group_id"),
+        sa.MetaData(),
+        sa.Column("root", sa.String),
+        sa.Column("allowed_group_id", sa.String),
+        autoload_with=conn,
     )
+    awareness_t = sa.Table(
+        "module_awareness",
+        sa.MetaData(),
+        sa.Column("root", sa.String),
+        autoload_with=conn,
+    )
+
+    visibilities = conn.execute(visibility_t.select()).fetchall()
+    for visibility in visibilities:
+        conn.execute(
+            awareness_t.insert().values(
+                root=visibility[0],
+            ),
+        )
 
 
 def downgrade() -> None:
