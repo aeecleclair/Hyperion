@@ -200,3 +200,13 @@ To enable the service:
    1. Go to [Google cloud, IAM and administration, Service account](https://console.cloud.google.com/iam-admin/serviceaccounts) and add a new Service Account with Messaging API capabilities.
    2. Choose _Manage keys_ and create a new JSON key.
    3. Rename the file `firebase.json` and add it at Hyperion root
+
+---
+
+## Running Hyperion with Gunicorn
+
+For production we encourage to use Gunicorn to run and manage multiple Uvicorn workers. You can use our [docker image](./Dockerfile) and [docker-compose file](./docker-compose.yaml) files to run Hyperion with Gunicorn. See [Gunicorn with Uvicorn](https://fastapi.tiangolo.com/deployment/server-workers/#gunicorn-with-uvicorn-workers) FastAPI documentation.
+
+Do not use gunicorn `--preload` flag. It initialise a first Hyperion instance then fork it to create workers. This is not compatible with the way we handle loggers in their own thread.
+
+You should use our [Gunicorn configuration file](./gunicorn_conf.py) to ensure that database initialization and migrations are only run once.

@@ -27,7 +27,7 @@ from app.core import models_core
 from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
 from app.core.log import LogConfig
-from app.dependencies import get_db_engine, get_redis_client, get_settings
+from app.dependencies import get_redis_client
 from app.modules.module_list import module_list
 from app.types.exceptions import ContentHTTPException
 from app.types.sqlalchemy import Base
@@ -105,7 +105,11 @@ def run_alembic_upgrade(connection: Connection) -> None:
     alembic_command.upgrade(alembic_cfg, "head")
 
 
-def update_db_tables(engine: Engine, drop_db: bool = False) -> None:
+def update_db_tables(
+    sync_engine: Engine,
+    hyperion_error_logger: logging.Logger,
+    drop_db: bool = False,
+) -> None:
     """
     If the database is not initialized, create the tables and stamp the database with the latest revision.
     Otherwise, run the alembic upgrade command to upgrade the database to the latest version (`head`).
@@ -115,11 +119,9 @@ def update_db_tables(engine: Engine, drop_db: bool = False) -> None:
     This method requires a synchronous engine
     """
 
-    hyperion_error_logger = logging.getLogger("hyperion.error")
-
     try:
         # We have an Engine, we want to acquire a Connection
-        with engine.begin() as conn:
+        with sync_engine.begin() as conn:
             if drop_db:
                 # All tables should be dropped, including the alembic_version table
                 # or Hyperion will think that the database is up to date and will not initialize it
@@ -163,13 +165,14 @@ def update_db_tables(engine: Engine, drop_db: bool = False) -> None:
         raise
 
 
-def initialize_groups(engine: Engine) -> None:
+def initialize_groups(
+    sync_engine: Engine,
+    hyperion_error_logger: logging.Logger,
+) -> None:
     """Add the necessary groups for account types"""
 
-    hyperion_error_logger = logging.getLogger("hyperion.error")
-
     hyperion_error_logger.info("Startup: Adding new groups to the database")
-    with Session(engine) as db:
+    with Session(sync_engine) as db:
         for group_type in GroupType:
             exists = initialization.get_group_by_id_sync(group_id=group_type, db=db)
             # We don't want to recreate the groups if they already exist
@@ -188,13 +191,14 @@ def initialize_groups(engine: Engine) -> None:
                     )
 
 
-def initialize_module_visibility(engine: Engine) -> None:
+def initialize_module_visibility(
+    sync_engine: Engine,
+    hyperion_error_logger: logging.Logger,
+) -> None:
     """Add the default module visibilities for Titan"""
 
-    hyperion_error_logger = logging.getLogger("hyperion.error")
-
-    with Session(engine) as db:
-        # Is run to create default module visibilies or when the table is empty
+    with Session(sync_engine) as db:
+        # Is run to create default module visibilities or when the table is empty
         haveBeenInitialized = (
             len(initialization.get_all_module_visibility_membership_sync(db)) > 0
         )
@@ -236,6 +240,37 @@ def use_route_path_as_operation_ids(app: FastAPI) -> None:
             # It is possible to set multiple methods for the same endpoint method but it's not considered a good practice.
             method = "_".join(route.methods)
             route.operation_id = method.lower() + route.path.replace("/", "_")
+
+
+def init_db(
+    settings: Settings,
+    hyperion_error_logger: logging.Logger,
+    drop_db: bool = False,
+) -> None:
+    """
+    Init the database by creating the tables and adding the necessary groups
+
+    The method will use a synchronous engine to create the tables and add the groups
+    """
+    # Initialize the sync engine
+    sync_engine = initialization.get_sync_db_engine(settings=settings)
+
+    # Update database tables
+    update_db_tables(
+        sync_engine=sync_engine,
+        hyperion_error_logger=hyperion_error_logger,
+        drop_db=drop_db,
+    )
+
+    # Initialize database tables
+    initialize_groups(
+        sync_engine=sync_engine,
+        hyperion_error_logger=hyperion_error_logger,
+    )
+    initialize_module_visibility(
+        sync_engine=sync_engine,
+        hyperion_error_logger=hyperion_error_logger,
+    )
 
 
 # We wrap the application in a function to be able to pass the settings and drop_db parameters
@@ -294,18 +329,14 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     calypsso = get_calypsso_app()
     app.mount("/calypsso", calypsso, "Calypsso")
 
-    # Initialize database connection
-    app.dependency_overrides.get(get_db_engine, get_db_engine)(
-        settings=settings,
-    )  # Initialize the async engine
-    sync_engine = initialization.get_sync_db_engine(settings=settings)
-
-    # Update database tables
-    update_db_tables(sync_engine, drop_db)
-
-    # Initialize database tables
-    initialize_groups(sync_engine)
-    initialize_module_visibility(sync_engine)
+    if settings.HYPERION_INIT_DB:
+        init_db(
+            settings=settings,
+            hyperion_error_logger=hyperion_error_logger,
+            drop_db=drop_db,
+        )
+    else:
+        hyperion_error_logger.info("Database initialization skipped")
 
     # Initialize Redis
     if not app.dependency_overrides.get(get_redis_client, get_redis_client)(
@@ -342,7 +373,6 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         port = request.client.port
         client_address = f"{ip_address}:{port}"
 
-        settings: Settings = app.dependency_overrides.get(get_settings, get_settings)()
         redis_client: redis.Redis | Literal[False] | None = (
             app.dependency_overrides.get(
                 get_redis_client,
