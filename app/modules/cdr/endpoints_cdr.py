@@ -1962,7 +1962,10 @@ async def update_status(
 
 
 @module.router.websocket("/ws/cdr/users/")
-async def websocket_endpoint(websocket: WebSocket):
+async def websocket_endpoint(
+    websocket: WebSocket, 
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
     await websocket.accept()
 
     # Add the user to the connection stack
