@@ -41,10 +41,10 @@ def upgrade() -> None:
     )
 
     visibilities = conn.execute(visibility_t.select()).fetchall()
-    for visibility in visibilities:
+    for (visibility,) in visibilities:
         conn.execute(
             awareness_t.insert().values(
-                root=visibility[0],
+                root=visibility,
             ),
         )
 
