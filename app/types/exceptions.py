@@ -55,5 +55,7 @@ class AuthHTTPException(ContentHTTPException):
         }
 
         super().__init__(status_code=status_code, content=content)
+
+
 class PaymentToolCredentialsNotSetException(Exception):
     pass
