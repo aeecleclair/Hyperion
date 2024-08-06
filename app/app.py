@@ -17,6 +17,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
+from sqlalchemy import MetaData
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -123,7 +124,14 @@ def update_db_tables(engine: Engine, drop_db: bool = False) -> None:
                 # or Hyperion will think that the database is up to date and will not initialize it
                 # when running tests a second time.
                 # To let SQLAlchemy drop the alembic_version table, we created a AlembicVersion model.
-                Base.metadata.drop_all(conn)
+
+                # `Base.metadata.drop_all(conn)` is only able to drop tables that are defined in models
+                # This means that if a model is deleted, its table will never be dropped by `Base.metadata.drop_all(conn)`
+
+                # Thus we construct a metadata object that reflects the database instead of only using models
+                my_metadata: MetaData = MetaData(schema=Base.metadata.schema)
+                my_metadata.reflect(bind=conn, resolve_fks=False)
+                my_metadata.drop_all(bind=conn)
 
             alembic_current_revision = get_alembic_current_revision(conn)
 
