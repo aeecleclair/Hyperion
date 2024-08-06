@@ -218,6 +218,26 @@ def test_recover_and_reset_password(mocker: MockerFixture, client: TestClient) -
     assert response.status_code == 201
 
 
+def test_recover_with_non_existing_account(
+    mocker: MockerFixture,
+    client: TestClient,
+) -> None:
+    mocked_hyperion_security_logger = mocker.patch(
+        "app.core.users.endpoints_users.hyperion_security_logger.info",
+    )
+
+    response = client.post(
+        "/users/recover",
+        json={"email": "non-existing@myecl.fr"},
+    )
+
+    assert response.status_code == 201
+
+    mocked_hyperion_security_logger.assert_called_once_with(
+        "Reset password failed for non-existing@myecl.fr, user does not exist",
+    )
+
+
 def test_update_user(client: TestClient) -> None:
     # A non admin user should not be allowed to use this endpoint
     token = create_api_access_token(student_user)
