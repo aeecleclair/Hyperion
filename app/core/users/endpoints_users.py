@@ -34,7 +34,11 @@ from app.dependencies import (
 )
 from app.types.content_type import ContentType
 from app.utils.mail.mailworker import send_email
-from app.utils.tools import fuzzy_search_user, get_file_from_data, save_file_as_data
+from app.utils.tools import (
+    get_file_from_data,
+    save_file_as_data,
+    sort_user,
+)
 
 router = APIRouter(tags=["Users"])
 
@@ -95,7 +99,7 @@ async def search_users(
     user: models_core.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
-    Search for a user using Fuzzy String Matching
+    Search for a user using Jaro_Winkler distance algorithm. The
 
     `query` will be compared against users name, firstname and nickname
 
@@ -108,7 +112,7 @@ async def search_users(
         excluded_groups=excludedGroups,
     )
 
-    return fuzzy_search_user(query, users)
+    return sort_user(query, users)
 
 
 @router.get(

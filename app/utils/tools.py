@@ -10,8 +10,8 @@ import aiofiles
 import fitz
 from fastapi import HTTPException, UploadFile
 from fastapi.responses import FileResponse
+from jellyfish import jaro_winkler_similarity
 from pydantic import ValidationError
-from rapidfuzz import process
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import cruds_core, models_core
@@ -60,7 +60,7 @@ def is_user_external(
     return user.external is True
 
 
-def fuzzy_search_user(
+def sort_user(
     query: str,
     users: Sequence[models_core.CoreUser],
     limit: int = 10,
@@ -71,26 +71,48 @@ def fuzzy_search_user(
     `query` will be compared against `users` name, firstname and nickname.
     The size of the answer can be limited using `limit` parameter.
 
-    Use RapidFuzz library
+    Use Jellyfish library
     """
 
-    # We can give a dictionary of {object: string used for the comparison} to the extract function
-    # https://maxbachmann.github.io/RapidFuzz/Usage/process.html#extract
-
     # TODO: we may want to cache this object. Its generation may take some time if there is a big user base
-    choices = []
+    names = [f"{user.firstname} {user.name}" for user in users]
+    nicknames = [user.nickname for user in users]
+    scored: list[
+        tuple[CoreUser, float, float, int]
+    ] = [  # (user, name_score, nickname_score, index)
+        (
+            user,
+            jaro_winkler_similarity(query, name),
+            jaro_winkler_similarity(query, nickname) if nickname else 0,
+            index,
+        )
+        for index, (user, name, nickname) in enumerate(
+            zip(users, names, nicknames, strict=True),
+        )
+    ]
 
-    for user in users:
-        choices.append(f"{user.firstname} {user.name} {user.nickname}")
+    results = []
+    for _ in range(min(limit, len(scored))):
+        maximum_name = max(scored, key=lambda r: r[1])
+        maximum_nickname = max(scored, key=lambda r: r[2])
+        if maximum_name[1] > maximum_nickname[1]:
+            results.append(maximum_name)
+            scored[maximum_name[3]] = (  # We don't want to use this user again
+                maximum_name[0],
+                -1,
+                -1,
+                maximum_name[3],
+            )
+        else:
+            results.append(maximum_nickname)
+            scored[maximum_nickname[3]] = (  # We don't want to use this user again
+                maximum_nickname[0],
+                -1,
+                -1,
+                maximum_nickname[3],
+            )
 
-    results: list[tuple[str, int | float, int]] = process.extract(
-        query,
-        choices,
-        limit=limit,
-    )
-
-    # results has the format : (string used for the comparison, similarity score, index of the object in the choices collection)
-    return [users[res[2]] for res in results]
+    return [result[0] for result in results]
 
 
 async def is_group_id_valid(group_id: str, db: AsyncSession) -> bool:
