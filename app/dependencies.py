@@ -301,7 +301,7 @@ def is_user(
 
 def is_user_a_member(
     user: models_core.CoreUser = Depends(
-        get_user_from_token_with_scopes([[ScopeType.API]]),
+        is_user,
     ),
     request_id: str = Depends(get_request_id),
 ) -> models_core.CoreUser:

@@ -219,6 +219,8 @@ class SynapseAuthClient(BaseAuthClient):
 
     allow_token_introspection: bool = True
 
+    disallowed_groups: list[GroupType] | None = [GroupType.external]
+
     @classmethod
     def get_userinfo(cls, user: models_core.CoreUser):
         # Accepted characters are [a-z] [0-9] `.` and `-`. Spaces are replaced by `-` and accents are removed.
@@ -315,3 +317,19 @@ class RalllyAuthClient(BaseAuthClient):
             ),
             "email": user.email,
         }
+
+
+class RAIDRegisteringAuthClient(BaseAuthClient):
+    """
+    An auth client for The Raid registering website
+    """
+
+    # Set of scopes the auth client is authorized to grant when issuing an access token.
+    # See app.utils.types.scopes_type.ScopeType for possible values
+    # WARNING: to be able to use openid connect, `ScopeType.openid` should always be allowed
+    allowed_scopes: set[ScopeType | str] = {ScopeType.API}
+    # Restrict the authentication to this client to specific Hyperion groups.
+    # When set to `None`, users from any group can use the auth client
+    allowed_groups: list[GroupType] | None = None
+    # Some clients may allow external users to authenticate
+    allow_external_users: bool = True
