@@ -910,7 +910,7 @@ async def create_response_body(
         # exp is set by the token creation function
         # aud=client_id as it's the client verify the id_token
         id_token_data = schemas_auth.TokenData(
-            iss=settings.AUTH_ISSUER,
+            iss=settings.OIDC_ISSUER,
             sub=db_row.user_id,
             aud=client_id,
         )
@@ -1145,31 +1145,42 @@ def jwks_uri(
 
 
 @router.get(
+    "/.well-known/oauth-authorization-server",
+)
+async def oauth_configuration(
+    settings: Settings = Depends(get_settings),
+):
+    # See https://datatracker.ietf.org/doc/html/rfc8414
+    return get_oidc_provider_metadata(settings)
+
+
+@router.get(
     "/.well-known/openid-configuration",
 )
 async def oidc_configuration(
     settings: Settings = Depends(get_settings),
 ):
-    # See https://ldapwiki.com/wiki/Openid-configuration
+    # See https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderMetadata
+    return get_oidc_provider_metadata(settings)
+
+
+def get_oidc_provider_metadata(settings: Settings):
+    overridden_client_url = (
+        settings.OVERRIDDEN_CLIENT_URL_FOR_OIDC or settings.CLIENT_URL
+    )
     return {
-        "issuer": settings.CLIENT_URL[:-1],  # We want to remove the trailing slash
+        "issuer": settings.OIDC_ISSUER,  # We want to remove the trailing slash
         "authorization_endpoint": settings.CLIENT_URL + "auth/authorize",
-        "token_endpoint": settings.DOCKER_URL + "auth/token",
-        "userinfo_endpoint": settings.DOCKER_URL + "auth/userinfo",
-        "introspection_endpoint": settings.DOCKER_URL + "auth/introspect",
-        "jwks_uri": settings.DOCKER_URL + "oidc/authorization-flow/jwks_uri",
+        "token_endpoint": overridden_client_url + "auth/token",
+        "userinfo_endpoint": overridden_client_url + "auth/userinfo",
+        "introspection_endpoint": overridden_client_url + "auth/introspect",
+        "jwks_uri": overridden_client_url + "oidc/authorization-flow/jwks_uri",
         # RECOMMENDED The OAuth 2.0 / OpenID Connect URL of the OP's Dynamic Client Registration Endpoint OpenID.Registration.
         # TODO: is this relevant?
+        # TODO: add for Calypsso
         # "registration_endpoint": "https://a/register",
         "request_parameter_supported": True,
-        # TODO: what do we put? All scopes can be used with custom auth_provider class.
-        # Do we put basic scopes that are always supported or do we concatenate all available scopes
-        "scopes_supported": [
-            "API",
-            "auth",
-            "profile",
-            "openid",
-        ],
+        "scopes_supported": [scope.value for scope in ScopeType],
         # REQUIRED Must be code as wa only support authorization code grant
         "response_types_supported": [
             "code",
@@ -1196,27 +1207,15 @@ async def oidc_configuration(
             "none",  # When using PKCE there may be no client secret provided
         ],
         "claim_types_supported": ["normal"],
-        # TODO: note: claims may depend/be extended using auth providers class
+        # NOTE: claims may depend/be extended using auth providers class
         "claims_supported": [
             "sub",
             "name",
-            "preferred_username",
-            "given_name",
-            "family_name",
-            "middle_name",
+            "firstname",
             "nickname",
             "profile",
             "picture",
-            "website",
-            "gender",
-            "zone_info",
-            "locale",
-            "updated_time",
-            "birthdate",
             "email",
-            "email_verified",
-            "phone_number",
-            "address",
         ],
         # TODO: do we want to expose a documentation?
         # "service_documentation": "https://d/about",
