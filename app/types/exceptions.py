@@ -7,6 +7,12 @@ class CoreDataNotFoundError(Exception):
     pass
 
 
+class GoogleAPIInvalidCredentialsError(Exception):
+    pass
+
+
+class GoogleAPIMissingConfigInDotenvError(Exception):
+    pass
 class ContentHTTPException(HTTPException):
     """
     A custom HTTPException allowing to return custom content.
