@@ -87,7 +87,7 @@ async def edit_event(
         await db.commit()
     except IntegrityError:
         await db.rollback()
-        raise ValueError()
+        raise
 
 
 async def delete_event(db: AsyncSession, event_id: str) -> None:
@@ -104,7 +104,7 @@ async def delete_event(db: AsyncSession, event_id: str) -> None:
             raise ValueError(error)
     except IntegrityError:
         await db.rollback()
-        raise ValueError()
+        raise
 
 
 async def confirm_event(db: AsyncSession, decision: Decision, event_id: str):

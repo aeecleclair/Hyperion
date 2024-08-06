@@ -86,15 +86,12 @@ async def create_group(
             detail="A group with the name {group.name} already exist",
         )
 
-    try:
-        db_group = models_core.CoreGroup(
-            id=str(uuid.uuid4()),
-            name=group.name,
-            description=group.description,
-        )
-        return await cruds_groups.create_group(group=db_group, db=db)
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+    db_group = models_core.CoreGroup(
+        id=str(uuid.uuid4()),
+        name=group.name,
+        description=group.description,
+    )
+    return await cruds_groups.create_group(group=db_group, db=db)
 
 
 @router.patch(
@@ -161,15 +158,12 @@ async def create_membership(
         f"Create_membership: Admin user {user.id} ({user.name}) added user {user_db.id} ({user_db.email}) to group {group_db.id} ({group_db.name}) ({request_id})",
     )
 
-    try:
-        membership_db = models_core.CoreMembership(
-            user_id=membership.user_id,
-            group_id=membership.group_id,
-            description=membership.description,
-        )
-        return await cruds_groups.create_membership(db=db, membership=membership_db)
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+    membership_db = models_core.CoreMembership(
+        user_id=membership.user_id,
+        group_id=membership.group_id,
+        description=membership.description,
+    )
+    return await cruds_groups.create_membership(db=db, membership=membership_db)
 
 
 @router.post(

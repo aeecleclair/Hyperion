@@ -45,7 +45,7 @@ async def create_advertiser(
         await db.commit()
     except IntegrityError:
         await db.rollback()
-        raise ValueError()
+        raise
     return db_advertiser
 
 
@@ -63,7 +63,7 @@ async def update_advertiser(
         await db.commit()
     except IntegrityError:
         await db.rollback()
-        raise ValueError()
+        raise
 
 
 async def delete_advertiser(advertiser_id: str, db: AsyncSession):
@@ -76,7 +76,7 @@ async def delete_advertiser(advertiser_id: str, db: AsyncSession):
         await db.commit()
     except IntegrityError:
         await db.rollback()
-        raise ValueError()
+        raise
 
 
 async def get_adverts(db: AsyncSession) -> Sequence[models_advert.Advert]:
@@ -122,7 +122,7 @@ async def create_advert(
         await db.commit()
     except IntegrityError:
         await db.rollback()
-        raise ValueError()
+        raise
     return db_advert
 
 
@@ -140,7 +140,7 @@ async def update_advert(
         await db.commit()
     except IntegrityError:
         await db.rollback()
-        raise ValueError()
+        raise
 
 
 async def delete_advert(advert_id: str, db: AsyncSession):
@@ -151,4 +151,4 @@ async def delete_advert(advert_id: str, db: AsyncSession):
         await db.commit()
     except IntegrityError:
         await db.rollback()
-        raise ValueError()
+        raise

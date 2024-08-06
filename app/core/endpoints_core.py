@@ -221,18 +221,16 @@ async def add_module_visibility(
             status_code=400,
             detail="Invalid id, group_id must be a valid group id",
         )
-    try:
-        module_visibility_db = models_core.ModuleVisibility(
-            root=module_visibility.root,
-            allowed_group_id=module_visibility.allowed_group_id,
-        )
 
-        return await cruds_core.create_module_visibility(
-            module_visibility=module_visibility_db,
-            db=db,
-        )
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+    module_visibility_db = models_core.ModuleVisibility(
+        root=module_visibility.root,
+        allowed_group_id=module_visibility.allowed_group_id,
+    )
+
+    return await cruds_core.create_module_visibility(
+        module_visibility=module_visibility_db,
+        db=db,
+    )
 
 
 @router.delete("/module-visibility/{root}/{group_id}", status_code=204)
