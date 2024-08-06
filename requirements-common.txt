@@ -9,6 +9,7 @@ HelloAssoAPIWrapper==1.0.0
 icalendar==5.0.13
 jellyfish==1.0.4                    # String Matching
 Jinja2==3.1.4                       # template engine for html files
+phonenumbers==8.13.39               # Used for phone number validation
 pydantic-settings==2.3.4
 pydantic==2.7.4
 pyjwt[crypto]==2.8.0                # generate and verify the JWT tokens, imported as `jwt`

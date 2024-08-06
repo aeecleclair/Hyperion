@@ -81,6 +81,9 @@ class CoreUserUpdate(BaseModel):
     _normalize_nickname = field_validator("nickname")(
         validators.trailing_spaces_remover,
     )
+    _format_phone = field_validator("phone")(
+        validators.phone_formatter,
+    )
     model_config = ConfigDict(json_schema_extra=examples_core.example_CoreUserUpdate)
 
 
@@ -100,6 +103,9 @@ class CoreUserUpdateAdmin(BaseModel):
     )
     _normalize_nickname = field_validator("nickname")(
         validators.trailing_spaces_remover,
+    )
+    _format_phone = field_validator("phone")(
+        validators.phone_formatter,
     )
     model_config = ConfigDict(json_schema_extra=examples_core.example_CoreUserUpdate)
 
@@ -156,6 +162,9 @@ class CoreUserActivateRequest(CoreUserBase):
     # Password validator
     # https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
     _normalize_password = field_validator("password")(validators.password_validator)
+    _format_phone = field_validator("phone")(
+        validators.phone_formatter,
+    )
     model_config = ConfigDict(
         from_attributes=True,
         json_schema_extra=examples_core.example_CoreUserActivateRequest,
