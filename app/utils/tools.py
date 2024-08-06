@@ -75,18 +75,42 @@ def sort_user(
     """
 
     # TODO: we may want to cache this object. Its generation may take some time if there is a big user base
-    names = [f"{user.firstname} {user.name} {user.nickname}" for user in users]
-
-    scored = [
-        (user, jaro_winkler_similarity(query, choice))
-        for user, choice in zip(users, names, strict=True)
+    names = [f"{user.firstname} {user.name}" for user in users]
+    nicknames = [user.nickname for user in users]
+    scored: list[
+        tuple[CoreUser, float, float, int]
+    ] = [  # (user, name_score, nickname_score, index)
+        (
+            user,
+            jaro_winkler_similarity(query, name),
+            jaro_winkler_similarity(query, nickname) if nickname else 0,
+            index,
+        )
+        for index, (user, name, nickname) in enumerate(
+            zip(users, names, nicknames, strict=True),
+        )
     ]
 
     results = []
-    for _ in range(10):
-        maximum = max(scored, key=lambda r: r[1])
-        results.append(maximum)
-        scored.remove(maximum)
+    for _ in range(min(limit, len(scored))):
+        maximum_name = max(scored, key=lambda r: r[1])
+        maximum_nickname = max(scored, key=lambda r: r[2])
+        if maximum_name[1] > maximum_nickname[1]:
+            results.append(maximum_name)
+            scored[maximum_name[3]] = (  # We don't want to use this user again
+                maximum_name[0],
+                -1,
+                -1,
+                maximum_name[3],
+            )
+        else:
+            results.append(maximum_nickname)
+            scored[maximum_nickname[3]] = (  # We don't want to use this user again
+                maximum_nickname[0],
+                -1,
+                -1,
+                maximum_nickname[3],
+            )
 
     return [result[0] for result in results]
 
