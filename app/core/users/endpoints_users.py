@@ -405,23 +405,21 @@ async def activate_user(
         external=unconfirmed_user.external,
     )
     # We add the new user to the database
-    try:
-        await cruds_users.create_user(db=db, user=confirmed_user)
-        await cruds_groups.create_membership(
-            db=db,
-            membership=models_core.CoreMembership(
-                group_id=unconfirmed_user.account_type,
-                user_id=unconfirmed_user.id,
-            ),
-        )
 
-        # We remove all unconfirmed users with the same email address
-        await cruds_users.delete_unconfirmed_user_by_email(
-            db=db,
-            email=unconfirmed_user.email,
-        )
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+    await cruds_users.create_user(db=db, user=confirmed_user)
+    await cruds_groups.create_membership(
+        db=db,
+        membership=models_core.CoreMembership(
+            group_id=unconfirmed_user.account_type,
+            user_id=unconfirmed_user.id,
+        ),
+    )
+
+    # We remove all unconfirmed users with the same email address
+    await cruds_users.delete_unconfirmed_user_by_email(
+        db=db,
+        email=unconfirmed_user.email,
+    )
 
     hyperion_security_logger.info(
         f"Activate_user: Activated user {confirmed_user.id} (email: {confirmed_user.email}) ({request_id})",

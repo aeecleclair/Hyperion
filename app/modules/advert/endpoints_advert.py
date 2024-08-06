@@ -78,16 +78,13 @@ async def create_advertiser(
             detail="Invalid id, group_manager_id must be a valid group id",
         )
 
-    try:
-        db_advertiser = models_advert.Advertiser(
-            id=str(uuid.uuid4()),
-            name=advertiser.name,
-            group_manager_id=advertiser.group_manager_id,
-        )
+    db_advertiser = models_advert.Advertiser(
+        id=str(uuid.uuid4()),
+        name=advertiser.name,
+        group_manager_id=advertiser.group_manager_id,
+    )
 
-        return await cruds_advert.create_advertiser(db_advertiser=db_advertiser, db=db)
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+    return await cruds_advert.create_advertiser(db_advertiser=db_advertiser, db=db)
 
 
 @module.router.delete(

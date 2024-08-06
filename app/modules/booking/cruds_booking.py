@@ -45,7 +45,7 @@ async def update_manager(
         await db.commit()
     except IntegrityError as error:
         await db.rollback()
-        raise ValueError(error)
+        raise
 
 
 async def delete_manager(
@@ -59,7 +59,7 @@ async def delete_manager(
         await db.commit()
     except IntegrityError as error:
         await db.rollback()
-        raise ValueError(error)
+        raise
 
 
 async def get_manager_by_id(
@@ -140,7 +140,7 @@ async def create_booking(db: AsyncSession, booking: schemas_booking.BookingCompl
         await db.commit()
     except IntegrityError as error:
         await db.rollback()
-        raise ValueError(error)
+        raise
 
 
 async def edit_booking(
@@ -157,7 +157,7 @@ async def edit_booking(
         await db.commit()
     except IntegrityError:
         await db.rollback()
-        raise ValueError()
+        raise
 
 
 async def confirm_booking(db: AsyncSession, decision: Decision, booking_id: str):
@@ -170,7 +170,7 @@ async def confirm_booking(db: AsyncSession, decision: Decision, booking_id: str)
         await db.commit()
     except IntegrityError:
         await db.rollback()
-        raise ValueError()
+        raise
 
 
 async def delete_booking(db: AsyncSession, booking_id: str):
@@ -181,7 +181,7 @@ async def delete_booking(db: AsyncSession, booking_id: str):
         await db.commit()
     except IntegrityError as error:
         await db.rollback()
-        raise ValueError(error)
+        raise
 
 
 async def get_room_by_id(db: AsyncSession, room_id: str) -> models_booking.Room:
@@ -219,7 +219,7 @@ async def edit_room(db: AsyncSession, room_id: str, room: schemas_booking.RoomBa
         await db.commit()
     except IntegrityError:
         await db.rollback()
-        raise ValueError()
+        raise
 
 
 async def delete_room(db: AsyncSession, room_id: str):
@@ -233,4 +233,4 @@ async def delete_room(db: AsyncSession, room_id: str):
         await db.commit()
     except IntegrityError as error:
         await db.rollback()
-        raise ValueError(error)
+        raise

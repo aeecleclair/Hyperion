@@ -288,7 +288,7 @@ async def add_order_to_delivery(
             await db.commit()
     except IntegrityError as err:
         await db.rollback()
-        raise ValueError(err)
+        raise
 
 
 async def edit_order_without_products(
@@ -305,7 +305,7 @@ async def edit_order_without_products(
         await db.commit()
     except IntegrityError as err:
         await db.rollback()
-        raise ValueError(err)
+        raise
 
 
 async def edit_order_with_products(db: AsyncSession, order: schemas_amap.OrderComplete):

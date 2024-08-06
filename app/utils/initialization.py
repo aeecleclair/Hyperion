@@ -44,7 +44,7 @@ def create_module_visibility_sync(
         db.commit()
     except IntegrityError as error:
         db.rollback()
-        raise ValueError(error) from error
+        raise
     else:
         return module_visibility
 
