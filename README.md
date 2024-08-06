@@ -115,7 +115,7 @@ POSTGRES_DB = "hyperion"
 ## Launch the API
 
 ```bash
-uvicorn app.main:app --reload
+fastapi dev app/main.py
 ```
 
 ## Use Alembic migrations
