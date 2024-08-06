@@ -65,14 +65,25 @@ class ConnectionManager:
 
     async def _consume_events(self, message: str, room_id: HyperionWebsocketsRoom):
         room_connections: set[WebSocket] = self.connections.get(room_id, set())
+        to_delete = []
         if len(room_connections) == 0:
             return
 
         for connection in room_connections:
-            await self._send_message_to_ws_connection(
-                message=f"Room {room_id} --> {message}",
+            if not await self._send_message_to_ws_connection(
+                message=message,
                 ws_connection=connection,
-            )
+            ):
+                to_delete.append(connection)
+
+        for connection in to_delete:
+            for k in self.connections:
+                if connection in self.connections[k]:
+                    self.connections[k].remove(connection)
+
+    async def remove_connection_from_room(self, connection: WebSocket, room_id: HyperionWebsocketsRoom):
+        if connection in self.connections[room_id]:
+            self.connections[room_id].remove(connection)
 
     async def _subscribe_and_listen_to_channel(self, room_id: str):
         async with self.broadcaster.subscribe(channel=room_id) as subscriber:
@@ -107,9 +118,6 @@ class ConnectionManager:
             await ws_connection.send_text(message)
             return True
         except RuntimeError:
-            for k in self.connections:
-                if ws_connection in self.connections[k]:
-                    self.connections[k].remove(ws_connection)
             return False
 
         except Exception as e:
