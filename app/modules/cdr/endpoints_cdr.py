@@ -2,7 +2,7 @@ import logging
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from fastapi import Depends, HTTPException, WebSocket
+from fastapi import Depends, HTTPException, WebSocket, WebSocketDisconnect, WebSocketException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
@@ -1970,3 +1970,19 @@ async def websocket_endpoint(websocket: WebSocket):
         room_id=HyperionWebsocketsRoom.CDR,
         ws_connection=websocket,
     )
+
+    try:
+        while True:
+            await websocket.receive_json()
+    except WebSocketDisconnect:
+        ws_manager.remove_connection_from_room(
+            room_id=HyperionWebsocketsRoom.CDR,
+            ws_connection=websocket,
+        )
+    except WebSocketException as e:
+        ws_manager.remove_connection_from_room(
+            room_id=HyperionWebsocketsRoom.CDR,
+            ws_connection=websocket,
+        )
+        raise e
+
