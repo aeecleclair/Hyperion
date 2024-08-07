@@ -120,13 +120,14 @@ class ConnectionManager:
     ) -> bool:
         try:
             await ws_connection.send_text(message)
-            return True
         except RuntimeError:
             return False
 
-        except Exception as e:
-            hyperion_error_logger.error(f"Error while sending websocket message : {e}")
+        except Exception:
+            hyperion_error_logger.exception("Error while sending websocket message")
             return False
+        else:
+            return True
 
 
 ws_manager = ConnectionManager()

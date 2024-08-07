@@ -48,14 +48,16 @@ async def validate_payment(
 ) -> None:
     paid_amount = checkout_payment.paid_amount
     checkout_id = checkout_payment.checkout_id
-    hyperion_error_logger.info(f"CDR: Callback Checkout id {checkout_id}")
 
     checkout = await cruds_cdr.get_checkout_by_checkout_id(
         db=db,
         checkout_id=checkout_id,
     )
     if not checkout:
-        raise ValueError(f"CDR user checkout {checkout_id} not found.")
+        hyperion_error_logger.error(
+            f"CDR payment callback: user checkout {checkout_id} not found.",
+        )
+        raise ValueError(f"User checkout {checkout_id} not found.")  # noqa: TRY003
 
     db_payment = models_cdr.Payment(
         id=uuid4(),
@@ -73,9 +75,9 @@ async def validate_payment(
         cruds_cdr.create_payment(db=db, payment=db_payment)
         cruds_cdr.create_action(db=db, action=db_action)
         await db.commit()
-    except Exception as error:
+    except Exception:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
+        raise
 
 
 module = Module(
@@ -894,10 +896,11 @@ async def create_document(
     try:
         cruds_cdr.create_document(db, db_document)
         await db.commit()
-        return db_document
     except Exception as error:
         await db.rollback()
         raise HTTPException(status_code=400, detail=str(error))
+    else:
+        return db_document
 
 
 @module.router.delete(
@@ -1114,18 +1117,21 @@ async def create_purchase(
             )
             cruds_cdr.create_action(db, db_action)
             await db.commit()
-            return db_purchase
         except Exception as error:
             await db.rollback()
             raise HTTPException(status_code=400, detail=str(error))
+        else:
+            return db_purchase
+
     try:
         cruds_cdr.create_purchase(db, db_purchase)
         cruds_cdr.create_action(db, db_action)
         await db.commit()
-        return db_purchase
     except Exception as error:
         await db.rollback()
         raise HTTPException(status_code=400, detail=str(error))
+    else:
+        return db_purchase
 
 
 @module.router.patch(
@@ -1214,10 +1220,11 @@ async def mark_purchase_as_validated(
             validated=validated,
         )
         await db.commit()
-        return db_purchase
     except Exception as error:
         await db.rollback()
         raise HTTPException(status_code=400, detail=str(error))
+    else:
+        return db_purchase
 
 
 @module.router.delete(
@@ -1407,10 +1414,11 @@ async def create_signature(
     try:
         cruds_cdr.create_signature(db, db_signature)
         await db.commit()
-        return db_signature
     except Exception as error:
         await db.rollback()
         raise HTTPException(status_code=400, detail=str(error))
+    else:
+        return db_signature
 
 
 @module.router.delete(
@@ -1495,10 +1503,11 @@ async def create_curriculum(
     try:
         cruds_cdr.create_curriculum(db, db_curriculum)
         await db.commit()
-        return db_curriculum
     except Exception as error:
         await db.rollback()
         raise HTTPException(status_code=400, detail=str(error))
+    else:
+        return db_curriculum
 
 
 @module.router.delete(
@@ -1744,10 +1753,11 @@ async def create_payment(
         cruds_cdr.create_payment(db, db_payment)
         cruds_cdr.create_action(db, db_action)
         await db.commit()
-        return db_payment
     except Exception as error:
         await db.rollback()
         raise HTTPException(status_code=400, detail=str(error))
+    else:
+        return db_payment
 
 
 @module.router.delete(
@@ -1883,10 +1893,11 @@ async def create_membership(
     try:
         cruds_cdr.create_membership(db, db_membership)
         await db.commit()
-        return db_membership
     except Exception as error:
         await db.rollback()
         raise HTTPException(status_code=400, detail=str(error))
+    else:
+        return db_membership
 
 
 @module.router.delete(
@@ -1990,9 +2001,9 @@ async def websocket_endpoint(
             room_id=HyperionWebsocketsRoom.CDR,
             connection=websocket,
         )
-    except WebSocketException as e:
+    except WebSocketException:
         await ws_manager.remove_connection_from_room(
             room_id=HyperionWebsocketsRoom.CDR,
             connection=websocket,
         )
-        raise e
+        raise
