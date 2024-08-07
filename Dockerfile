@@ -12,7 +12,9 @@ COPY ./migrations /app/migrations
 
 COPY ./assets /app/assets
 
-COPY ./requirements.txt /requirements.txt
+COPY ./requirements-common.txt /requirements-common.txt
+COPY ./requirements-prod.txt /requirements-prod.txt
+
 
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 RUN /root/.cargo/bin/uv pip install --system --upgrade -r /requirement-prod.txt
