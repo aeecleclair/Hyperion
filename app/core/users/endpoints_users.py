@@ -446,8 +446,8 @@ async def activate_user(
             room_id=HyperionWebsocketsRoom.CDR,
         )
     except Exception as error:
-        hyperion_error_logger.error(
-            f"Error while sending a message to the room {HyperionWebsocketsRoom.CDR}: {error}",
+        hyperion_error_logger.exception(
+            f"Error while sending a message to the room {HyperionWebsocketsRoom.CDR}",
         )
 
     return standard_responses.Result()
