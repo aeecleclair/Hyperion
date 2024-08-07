@@ -26,6 +26,7 @@ class GroupType(str, Enum):
     # Module related groups
     amap = "70db65ee-d533-4f6b-9ffa-a4d70a17b7ef"
     BDE = "53a669d6-84b1-4352-8d7c-421c1fbd9c6a"
+    BDS = "0a728640-50d3-43a9-b26c-67a758698c44"
     CAA = "6c6d7e88-fdb8-4e42-b2b5-3d3cfd12e7d6"
     cinema = "ce5f36e6-5377-489f-9696-de70e2477300"
     ph = "4ec5ae77-f955-4309-96a5-19cc3c8be71c"
