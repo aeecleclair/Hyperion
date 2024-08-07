@@ -3,7 +3,7 @@ from typing import Any
 from fastapi import HTTPException
 
 
-class CoreDataNotFoundException(Exception):
+class CoreDataNotFoundError(Exception):
     pass
 
 
@@ -58,7 +58,8 @@ class AuthHTTPException(ContentHTTPException):
 
 
 class PaymentToolCredentialsNotSetException(Exception):
-    pass
+    def __init__(self):
+        super().__init__("HelloAsso API credentials are not set")
 
 
 class FileNameIsNotAnUUIDError(Exception):
@@ -88,12 +89,16 @@ class MissingTZInfoInDatetimeError(TypeError):
         super().__init__("tzinfo info is required for datetime objects")
 
 
-class MissingVariableInDotenvError(Exception):
+class DotenvMissingVariableError(Exception):
     def __init__(self, variable_name: str):
         super().__init__(f"{variable_name} should be configured in the dotenv")
 
 
-class InvalidAuthClientNameInDotenvError(Exception):
+class DotenvInvalidVariableError(Exception):
+    pass
+
+
+class DotenvInvalidAuthClientNameInError(Exception):
     def __init__(self, auth_client_name: str):
         super().__init__(
             f"client name {auth_client_name} of AUTH_CLIENTS list from the dotenv is not a valid auth client. It should be an instance from app.utils.auth.providers",
@@ -112,3 +117,8 @@ class UserWithEmailAlreadyExistError(Exception):
         super().__init__(
             f"An account with the email {email} already exist",
         )
+
+
+class PhoneNumberValidationError(Exception):
+    def __init__(self):
+        super().__init__("The phone number is not valid")

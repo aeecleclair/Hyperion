@@ -8,9 +8,10 @@ from pydantic import computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.types.exceptions import (
-    InvalidAuthClientNameInDotenvError,
+    DotenvInvalidAuthClientNameInError,
+    DotenvInvalidVariableError,
+    DotenvMissingVariableError,
     InvalidRSAKeyInDotenvError,
-    MissingVariableInDotenvError,
 )
 from app.utils.auth import providers
 
@@ -238,7 +239,7 @@ class Settings(BaseSettings):
                     auth_client_name,
                 )
             except AttributeError as error:
-                raise InvalidAuthClientNameInDotenvError(
+                raise DotenvInvalidAuthClientNameInError(
                     auth_client_name,
                 ) from error
 
@@ -271,14 +272,14 @@ class Settings(BaseSettings):
         All fields are optional, but the dotenv should configure SQLITE_DB or a Postgres database
         """
         if not self.CLIENT_URL[-1] == "/":
-            raise ValueError(
+            raise DotenvInvalidVariableError(  # noqa: TRY003
                 "CLIENT_URL must contains a trailing slash",
             )
         if (
             self.OVERRIDDEN_CLIENT_URL_FOR_OIDC
             and not self.OVERRIDDEN_CLIENT_URL_FOR_OIDC[-1] == "/"
         ):
-            raise ValueError(
+            raise DotenvInvalidVariableError(  # noqa: TRY003
                 "OVERRIDDEN_CLIENT_URL_FOR_OIDC must contains a trailing slash",
             )
 
@@ -298,7 +299,7 @@ class Settings(BaseSettings):
                 and self.POSTGRES_DB
             )
         ):
-            raise MissingVariableInDotenvError(  # noqa: TRY003
+            raise DotenvMissingVariableError(  # noqa: TRY003
                 "Either SQLITE_DB or POSTGRES_HOST, POSTGRES_USER, POSTGRES_PASSWORD and POSTGRES_DB",
             )
 
@@ -307,12 +308,12 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def check_secrets(self) -> "Settings":
         if not self.ACCESS_TOKEN_SECRET_KEY:
-            raise MissingVariableInDotenvError(
+            raise DotenvMissingVariableError(
                 "ACCESS_TOKEN_SECRET_KEY",
             )
 
         if not self.RSA_PRIVATE_PEM_STRING:
-            raise MissingVariableInDotenvError(
+            raise DotenvMissingVariableError(
                 "RSA_PRIVATE_PEM_STRING",
             )
 
