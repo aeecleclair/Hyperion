@@ -15,6 +15,6 @@ COPY ./assets /app/assets
 COPY ./requirements.txt /requirements.txt
 
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-RUN uv pip install --upgrade -r /requirement-prod.txt
+RUN /root/.cargo/bin/uv pip install --system --upgrade -r /requirement-prod.txt
 
 COPY ./app/ /app/app/
