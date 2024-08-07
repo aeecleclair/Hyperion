@@ -1111,7 +1111,6 @@ async def oauth_configuration(
     return get_oidc_provider_metadata(settings)
 
 
-
 @router.get(
     "/.well-known/openid-configuration",
 )

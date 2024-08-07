@@ -81,7 +81,11 @@ class ConnectionManager:
                 if connection in self.connections[k]:
                     self.connections[k].remove(connection)
 
-    async def remove_connection_from_room(self, connection: WebSocket, room_id: HyperionWebsocketsRoom):
+    async def remove_connection_from_room(
+        self,
+        connection: WebSocket,
+        room_id: HyperionWebsocketsRoom,
+    ):
         if connection in self.connections[room_id]:
             self.connections[room_id].remove(connection)
 
