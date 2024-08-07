@@ -4,7 +4,6 @@ import uuid
 from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from redis import Redis
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, standard_responses
@@ -78,11 +77,8 @@ async def create_raffle(
     raffle.status = RaffleStatusType.creation
     db_raffle = models_raffle.Raffle(id=str(uuid.uuid4()), **raffle.model_dump())
 
-    try:
-        result = await cruds_raffle.create_raffle(raffle=db_raffle, db=db)
-        return result
-    except IntegrityError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+    result = await cruds_raffle.create_raffle(raffle=db_raffle, db=db)
+    return result
 
 
 @module.router.patch(
@@ -321,11 +317,8 @@ async def create_packticket(
         **packticket.model_dump(),
     )
 
-    try:
-        result = await cruds_raffle.create_packticket(packticket=db_packticket, db=db)
-        return result
-    except IntegrityError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+    result = await cruds_raffle.create_packticket(packticket=db_packticket, db=db)
+    return result
 
 
 @module.router.patch(
@@ -504,7 +497,7 @@ async def buy_ticket(
     try:
         new_amount = balance.balance - pack_ticket.price
         if new_amount < 0:
-            raise ValueError("Not enough cash")
+            raise HTTPException(status_code=400, detail="Not enough cash")
 
         tickets = await cruds_raffle.create_ticket(tickets=db_ticket, db=db)
         await cruds_raffle.edit_cash(
@@ -523,9 +516,6 @@ async def buy_ticket(
         )
 
         return tickets
-
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
 
     finally:
         locker_set(redis_client=redis_client, key=redis_key, lock=False)
@@ -648,11 +638,8 @@ async def create_prize(
 
     db_prize = models_raffle.Prize(id=str(uuid.uuid4()), **prize.model_dump())
 
-    try:
-        result = await cruds_raffle.create_prize(prize=db_prize, db=db)
-        return result
-    except IntegrityError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+    result = await cruds_raffle.create_prize(prize=db_prize, db=db)
+    return result
 
 
 @module.router.patch(
@@ -952,7 +939,7 @@ async def edit_cash_by_id(
             detail="The user don't have a cash.",
         )
 
-    redis_key = redis_key = "raffle_" + user_id
+    redis_key = "raffle_" + user_id
 
     if not isinstance(redis_client, Redis) or locker_get(
         redis_client=redis_client,
@@ -967,8 +954,8 @@ async def edit_cash_by_id(
             amount=cash.balance + balance.balance,
             db=db,
         )
-    except ValueError as e:
-        hyperion_error_logger.error(f"Error in tombola edit_cash_by_id: {e}")
+    except ValueError:
+        hyperion_error_logger.exception("Error in tombola edit_cash_by_id")
         raise HTTPException(status_code=400, detail="Error while editing cash.")
 
     finally:

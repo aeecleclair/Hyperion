@@ -92,8 +92,8 @@ async def get_movie(
                     status_code=500,
                     detail=f"Unknown error (code {response.status_code})",
                 )
-    except httpx.RequestError as error:
-        hyperion_error_logger.error(error)
+    except httpx.RequestError:
+        hyperion_error_logger.exception("Could not reach the TMDB server")
         raise HTTPException(status_code=504, detail="Could not reach the TMDB server")
 
 

@@ -42,10 +42,11 @@ def create_module_visibility_sync(
     db.add(module_visibility)
     try:
         db.commit()
-        return module_visibility
     except IntegrityError as error:
         db.rollback()
         raise ValueError(error) from error
+    else:
+        return module_visibility
 
 
 def get_group_by_id_sync(group_id: str, db: Session) -> models_core.CoreGroup | None:
@@ -72,7 +73,8 @@ def create_group_sync(
     db.add(group)
     try:
         db.commit()
-        return group
     except IntegrityError:
         db.rollback()
         raise
+    else:
+        return group

@@ -135,7 +135,7 @@ def run_migrations_online() -> None:
     elif isinstance(connection, Connection):
         do_run_migrations(connection)
     else:
-        raise TypeError(
+        raise TypeError(  # noqa: TRY003
             f"Unsupported connection object {connection}. A Connection or and AsyncConnection is required, got a {type(connection)}",
         )
 

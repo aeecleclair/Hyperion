@@ -21,7 +21,7 @@ from app.core.models_core import CoreUser
 from app.core.users import cruds_users
 from app.types import core_data
 from app.types.content_type import ContentType
-from app.types.exceptions import CoreDataNotFoundException
+from app.types.exceptions import CoreDataNotFoundError, FileNameIsNotAnUUIDError
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
@@ -174,7 +174,7 @@ async def save_file_as_data(
         hyperion_error_logger.error(
             f"save_file_as_data: security issue, the filename is not a valid UUID: {filename}.",
         )
-        raise ValueError("The filename is not a valid UUID")
+        raise FileNameIsNotAnUUIDError()
 
     if upload_file.content_type not in accepted_content_types:
         raise HTTPException(
@@ -212,9 +212,9 @@ async def save_file_as_data(
             while content := await upload_file.read(1024):
                 await buffer.write(content)
 
-    except Exception as error:
-        hyperion_error_logger.error(
-            f"save_file_to_the_disk: could not save file to {filename}: {error} ({request_id})",
+    except Exception:
+        hyperion_error_logger.exception(
+            f"save_file_to_the_disk: could not save file to {filename} ({request_id})",
         )
         raise HTTPException(status_code=400, detail="Could not save file")
 
@@ -243,7 +243,7 @@ async def save_bytes_as_data(
         hyperion_error_logger.error(
             f"save_file_as_data: security issue, the filename is not a valid UUID: {filename}.",
         )
-        raise ValueError("The filename is not a valid UUID")
+        raise FileNameIsNotAnUUIDError()
 
     # If the directory does not exist, we want to create it
     Path(f"data/{directory}/").mkdir(parents=True, exist_ok=True)
@@ -258,9 +258,9 @@ async def save_bytes_as_data(
         ) as buffer:
             await buffer.write(file_bytes)
 
-    except Exception as error:
-        hyperion_error_logger.error(
-            f"save_file_to_the_disk: could not save file to {filename}: {error} ({request_id})",
+    except Exception:
+        hyperion_error_logger.exception(
+            f"save_file_to_the_disk: could not save file to {filename} ({request_id})",
         )
         raise HTTPException(status_code=400, detail="Could not save file")
 
@@ -283,7 +283,7 @@ def get_file_path_from_data(
         hyperion_error_logger.error(
             f"get_file_from_data: security issue, the filename is not a valid UUID: {filename}. This mean that the user input was not properly checked.",
         )
-        raise ValueError("The filename is not a valid UUID")
+        raise FileNameIsNotAnUUIDError()
 
     for filePath in Path().glob(f"data/{directory}/{filename}.*"):
         return filePath
@@ -326,7 +326,7 @@ def delete_file_from_data(
         hyperion_error_logger.error(
             f"get_file_from_data: security issue, the filename is not a valid UUID: {filename}. This mean that the user input was not properly checked.",
         )
-        raise ValueError("The filename is not a valid UUID")
+        raise FileNameIsNotAnUUIDError()
 
     for filePath in Path().glob(f"data/{directory}/{filename}.*"):
         filePath.unlink()
@@ -398,7 +398,7 @@ async def get_core_data(
 ) -> CoreDataClass:
     """
     Access the core data stored in the database, using the name of the class `core_data_class`.
-    If the core data does not exist, it returns a new instance of `core_data_class`, including its default values, or raise a CoreDataNotFoundException.
+    If the core data does not exist, it returns a new instance of `core_data_class`, including its default values, or raise a CoreDataNotFoundError.
     `core_data_class` should be a class extending `BaseCoreData`.
 
     This method should be called using the class object, and not an instance of the class:
@@ -423,7 +423,7 @@ async def get_core_data(
         except ValidationError as error:
             # If creating a new instance of the class raises a ValidationError, it means that the class does not have default values
             # We should then raise an exception
-            raise CoreDataNotFoundException() from error
+            raise CoreDataNotFoundError() from error
 
     return core_data_class.model_validate_json(
         core_data_model.data,

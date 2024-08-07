@@ -78,9 +78,7 @@ class PaymentTool:
         Exceptions can be imported from `helloasso_api_wrapper.exceptions`
         """
         if not self.hello_asso:
-            raise PaymentToolCredentialsNotSetException(
-                "HelloAsso API credentials are not set",
-            )
+            raise PaymentToolCredentialsNotSetException
 
         # We want to ensure that any error is logged, even if modules tries to try/except this method
         # Thus we catch any exception and log it, then reraise it
@@ -120,12 +118,12 @@ class PaymentTool:
                     helloasso_slug,
                     init_checkout_body,
                 )
-            except ApiV5BadRequest as error:
+            except ApiV5BadRequest:
                 # We know that HelloAsso may refuse some payer infos, like using the firstname "test"
                 # Even when prefilling the payer infos,the user will be able to edit them on the payment page,
                 # so we can safely retry without the payer infos
-                hyperion_error_logger.error(
-                    f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name}, with error {error}. Retrying without payer infos",
+                hyperion_error_logger.exception(
+                    f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name}. Retrying without payer infos",
                 )
 
                 init_checkout_body.payer = None
@@ -149,11 +147,11 @@ class PaymentTool:
                 id=checkout_model_id,
                 payment_url=response.redirectUrl,
             )
-        except Exception as error:
-            hyperion_error_logger.error(
-                f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name}, with error {error}",
+        except Exception:
+            hyperion_error_logger.exception(
+                f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name}",
             )
-            raise error
+            raise
 
     async def get_checkout(
         self,

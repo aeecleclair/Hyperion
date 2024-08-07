@@ -93,11 +93,9 @@ async def add_section(
         name=section.name,
         description=section.description,
     )
-    try:
-        await cruds_campaign.add_section(section=db_section, db=db)
-        return db_section
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+
+    await cruds_campaign.add_section(section=db_section, db=db)
+    return db_section
 
 
 @module.router.delete(
@@ -124,10 +122,7 @@ async def delete_section(
             detail=f"You can't delete a section if the vote has already begun. The module status is {status} but should be 'waiting'",
         )
 
-    try:
-        await cruds_campaign.delete_section(section_id=section_id, db=db)
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+    await cruds_campaign.delete_section(section_id=section_id, db=db)
 
 
 @module.router.get(

@@ -99,7 +99,6 @@ def get_session_maker() -> Callable[[], AsyncSession]:
     """
     Return the session maker
     """
-    global SessionLocal
     if SessionLocal is None:
         hyperion_error_logger.error("Database engine is not initialized")
         raise HTTPException(
@@ -113,7 +112,6 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
     Return a database session
     """
-    global SessionLocal
     if SessionLocal is None:
         hyperion_error_logger.error("Database engine is not initialized")
         raise HTTPException(
@@ -152,7 +150,7 @@ def get_redis_client(
             try:
                 redis_client = connect(settings)
             except redis.exceptions.ConnectionError:
-                hyperion_error_logger.error(
+                hyperion_error_logger.exception(
                     "Redis connection error: Check the Redis configuration or the Redis server",
                 )
         else:

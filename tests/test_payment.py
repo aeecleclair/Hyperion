@@ -342,7 +342,7 @@ async def test_webhook_payment_callback_fail(
     )
 
     mocked_hyperion_security_logger = mocker.patch(
-        "app.core.payment.endpoints_payment.hyperion_error_logger.error",
+        "app.core.payment.endpoints_payment.hyperion_error_logger.exception",
     )
 
     response = client.post(
@@ -363,7 +363,7 @@ async def test_webhook_payment_callback_fail(
     assert response.status_code == 204
     mocked_callback.assert_called_once()
     mocked_hyperion_security_logger.assert_called_with(
-        f"Payment: call to module {TEST_MODULE_ROOT} payment callback for checkout (hyperion_checkout_id: {checkout.id}, HelloAsso checkout_id: {checkout.id}) failed with an error Test error",
+        f"Payment: call to module {TEST_MODULE_ROOT} payment callback for checkout (hyperion_checkout_id: {checkout.id}, HelloAsso checkout_id: {checkout.id}) failed",
     )
 
 

@@ -5,6 +5,8 @@ See https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
 
 import phonenumbers
 
+from app.types.exceptions import PhoneNumberValidationError
+
 
 def password_validator(password: str) -> str:
     """
@@ -14,7 +16,7 @@ def password_validator(password: str) -> str:
     """
     # TODO
     if len(password) < 6:
-        raise ValueError("The password must be at least 6 characters long")
+        raise ValueError("The password must be at least 6 characters long")  # noqa: TRY003 # this line is intended to be replaced
     return password.strip()
 
 
@@ -26,9 +28,9 @@ def phone_formatter(phone: str) -> str:
     """
     parsed_phone = phonenumbers.parse(phone, None)
     if not phonenumbers.is_possible_number(parsed_phone):
-        raise ValueError("The phone number is not possible")
+        raise PhoneNumberValidationError
     if not phonenumbers.is_valid_number(parsed_phone):
-        raise ValueError("The phone number is not valid")
+        raise PhoneNumberValidationError
     return phonenumbers.format_number(parsed_phone, phonenumbers.PhoneNumberFormat.E164)
 
 

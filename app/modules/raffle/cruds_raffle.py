@@ -4,6 +4,7 @@ import logging
 import random
 from collections.abc import Sequence
 
+from fastapi import HTTPException
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,10 +34,11 @@ async def create_raffle(
     db.add(raffle)
     try:
         await db.commit()
-        return raffle
-    except IntegrityError as err:
+    except IntegrityError:
         await db.rollback()
-        raise err
+        raise
+    else:
+        return raffle
 
 
 async def get_raffles_by_groupid(
@@ -102,10 +104,11 @@ async def create_prize(
     db.add(prize)
     try:
         await db.commit()
-        return prize
-    except IntegrityError as err:
+    except IntegrityError:
         await db.rollback()
-        raise err
+        raise
+    else:
+        return prize
 
 
 async def get_prizes_by_raffleid(
@@ -186,10 +189,11 @@ async def create_packticket(
     db.add(packticket)
     try:
         await db.commit()
-        return packticket
-    except IntegrityError as err:
+    except IntegrityError:
         await db.rollback()
-        raise err
+        raise
+    else:
+        return packticket
 
 
 async def get_packtickets_by_raffleid(
@@ -272,10 +276,11 @@ async def create_ticket(
     db.add_all(tickets)
     try:
         await db.commit()
-        return tickets
-    except IntegrityError as err:
+    except IntegrityError:
         await db.rollback()
-        raise err
+        raise
+    else:
+        return tickets
 
 
 async def get_tickets_by_raffleid(
@@ -377,10 +382,11 @@ async def create_cash_of_user(
     db.add(cash)
     try:
         await db.commit()
-        return cash
-    except IntegrityError as err:
+    except IntegrityError:
         await db.rollback()
-        raise err
+        raise
+    else:
+        return cash
 
 
 async def edit_cash(db: AsyncSession, user_id: str, amount: float):
@@ -402,11 +408,8 @@ async def draw_winner_by_prize_raffle(
 ) -> Sequence[models_raffle.Ticket]:
     prize = await get_prize_by_id(prize_id=prize_id, db=db)
     if prize is None:
-        raise ValueError("Invalid prize")
+        raise HTTPException(status_code=400, detail="Prize does not exist in db")
     raffle_id = prize.raffle_id
-
-    if raffle_id is None:
-        raise ValueError("Invalid raffle_id")
 
     gettickets = await get_tickets_by_raffleid(raffle_id=raffle_id, db=db)
     tickets = [t for t in gettickets if t.winning_prize is None]
@@ -424,9 +427,9 @@ async def draw_winner_by_prize_raffle(
     )
     try:
         await db.commit()
-    except IntegrityError:
+    except IntegrityError as error:
         await db.rollback()
-        raise ValueError("Error during edition of the winning tickets")
+        raise ValueError("Error during edition of the winning tickets") from error  # noqa: TRY003
 
     await db.execute(
         update(models_raffle.Prize)
@@ -435,9 +438,9 @@ async def draw_winner_by_prize_raffle(
     )
     try:
         await db.commit()
-    except IntegrityError:
+    except IntegrityError as error:
         await db.rollback()
-        raise ValueError("Error during edition of the prize")
+        raise ValueError("Error during edition of the prize") from error  # noqa: TRY003
 
     return winners
 

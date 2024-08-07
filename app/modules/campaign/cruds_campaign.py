@@ -1,6 +1,8 @@
+import logging
 import uuid
 from collections.abc import Sequence
 
+from fastapi import HTTPException
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,14 +11,20 @@ from sqlalchemy.orm import selectinload
 from app.modules.campaign import models_campaign, schemas_campaign
 from app.modules.campaign.types_campaign import ListType, StatusType
 
+hyperion_error_logger = logging.getLogger("hyperion.error")
+
 
 async def get_status(
     db: AsyncSession,
 ) -> StatusType:
+    # TODO: we may want to use a CoreData instead of a complete table
     result = await db.execute(select(models_campaign.Status))
     status = result.scalars().all()
     if len(status) > 1:
-        raise ValueError(
+        hyperion_error_logger.error(
+            "There is more than one status in the database, this should never happen",
+        )
+        raise ValueError(  # noqa: TRY003
             "There is more than one status in the database, this should never happen",
         )
     if len(status) == 0:
@@ -26,9 +34,9 @@ async def get_status(
         db.add(status_model)
         try:
             await db.commit()
-        except IntegrityError as err:
+        except IntegrityError:
             await db.rollback()
-            raise ValueError(err)
+            raise
         return StatusType.waiting
 
     # The status is contained in the only result returned by the database
@@ -47,9 +55,9 @@ async def add_voter(
     db.add(voter)
     try:
         await db.commit()
-    except IntegrityError as err:
+    except IntegrityError:
         await db.rollback()
-        raise err
+        raise
 
 
 async def delete_voter_by_group_id(
@@ -138,7 +146,7 @@ async def add_section(db: AsyncSession, section: models_campaign.Sections) -> No
         await db.commit()
     except IntegrityError:
         await db.rollback()
-        raise ValueError("This name is already used")
+        raise
 
 
 async def delete_section(db: AsyncSession, section_id: str) -> None:
@@ -165,9 +173,9 @@ async def delete_section(db: AsyncSession, section_id: str) -> None:
             )
             await db.commit()
         else:
-            raise ValueError("This section still has lists")
+            raise HTTPException(status_code=400, detail="This section still has lists")
     else:
-        raise ValueError("Section not found")
+        raise HTTPException(status_code=400, detail="Section not found")
 
 
 async def delete_lists_from_section(db: AsyncSession, section_id: str) -> None:
@@ -223,7 +231,7 @@ async def add_list(
         await db.commit()
     except IntegrityError:
         await db.rollback()
-        raise ValueError("This list already exist.")
+        raise
 
 
 async def remove_members_from_list(

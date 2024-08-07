@@ -30,19 +30,24 @@ test_upgrade_dict: dict[
 logger = logging.getLogger("hyperion_tests")
 
 
-class FailedToRunPreTestUpgrade(Exception):
+class BaseTestMigrationException(Exception):
+    def __init__(self, revision: str):
+        super().__init__(f"Revision {revision}")
+
+
+class FailedToRunPreTestUpgrade(BaseTestMigrationException):
     pass
 
 
-class FailedToRunUpgrade(Exception):
+class FailedToRunUpgrade(BaseTestMigrationException):
     pass
 
 
-class FailedToRunTestUpgrade(Exception):
+class FailedToRunTestUpgrade(BaseTestMigrationException):
     pass
 
 
-class MissingMigrationTestOrPretest(Exception):
+class MissingMigrationTestOrPretest(BaseTestMigrationException):
     pass
 
 
@@ -110,7 +115,6 @@ def init_migration_scripts() -> None:  # noqa: PT004
     """
     We import all migration scripts in the migration/versions directory to extract the pre_test_upgrade and test_upgrade functions.
     """
-    global pre_test_upgrade_dict, test_upgrade_dict
 
     for migration_file_path in Path().glob("migrations/versions/*.py"):
         if migration_file_path.stem == "__init__":
@@ -139,9 +143,7 @@ def test_all_migrations_have_tests(
         if revision in ["base", "heads"]:
             continue
         if not have_revision_pretest_and_test(revision):
-            raise MissingMigrationTestOrPretest(
-                f"Revision {revision} doesn't have a pretest or a test",
-            )
+            raise MissingMigrationTestOrPretest(revision)
 
 
 def test_migrations(
@@ -154,12 +156,12 @@ def test_migrations(
         try:
             run_pre_test_upgrade(revision, alembic_runner, alembic_connection)
         except Exception as error:
-            raise FailedToRunPreTestUpgrade(f"Revision {revision}") from error
+            raise FailedToRunPreTestUpgrade(revision) from error
         try:
             alembic_runner.managed_upgrade(revision)
         except Exception as error:
-            raise FailedToRunUpgrade(f"Revision {revision}") from error
+            raise FailedToRunUpgrade(revision) from error
         try:
             run_test_upgrade(revision, alembic_runner, alembic_connection)
         except Exception as error:
-            raise FailedToRunTestUpgrade(f"Revision {revision}") from error
+            raise FailedToRunTestUpgrade(revision) from error

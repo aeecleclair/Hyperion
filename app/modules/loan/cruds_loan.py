@@ -30,10 +30,11 @@ async def create_loaner(
     db.add(loaner)
     try:
         await db.commit()
-        return loaner
-    except IntegrityError as error:
+    except IntegrityError:
         await db.rollback()
-        raise ValueError(error)
+        raise
+    else:
+        return loaner
 
 
 async def update_loaner(
@@ -80,10 +81,11 @@ async def create_item(
     db.add(item)
     try:
         await db.commit()
-        return item
     except IntegrityError:
         await db.rollback()
         raise
+    else:
+        return item
 
 
 async def get_loaner_item_by_id(
@@ -170,10 +172,11 @@ async def create_loan(
     db.add(loan)
     try:
         await db.commit()
-        return loan
     except IntegrityError:
         await db.rollback()
         raise
+    else:
+        return loan
 
 
 async def update_loan(

@@ -44,9 +44,9 @@ async def webhook(
             )
         else:
             checkout_metadata = None
-    except ValidationError as error:
-        hyperion_error_logger.error(
-            f"Payment: could not validate the webhook body: {await request.json()}, failed with error {error}",
+    except ValidationError:
+        hyperion_error_logger.exception(
+            f"Payment: could not validate the webhook body: {await request.json()}, failed",
         )
         raise HTTPException(
             status_code=400,
@@ -127,7 +127,7 @@ async def webhook(
                             f"Payment: call to module {checkout.module} payment callback for checkout (hyperion_checkout_id: {checkout_metadata.hyperion_checkout_id}, HelloAsso checkout_id: {checkout.id}) succeeded",
                         )
                         return
-        except Exception as error:
-            hyperion_error_logger.error(
-                f"Payment: call to module {checkout.module} payment callback for checkout (hyperion_checkout_id: {checkout_metadata.hyperion_checkout_id}, HelloAsso checkout_id: {checkout.id}) failed with an error {error}",
+        except Exception:
+            hyperion_error_logger.exception(
+                f"Payment: call to module {checkout.module} payment callback for checkout (hyperion_checkout_id: {checkout_metadata.hyperion_checkout_id}, HelloAsso checkout_id: {checkout.id}) failed",
             )

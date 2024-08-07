@@ -38,7 +38,7 @@ class BaseCoreData(BaseModel):
     class DefaultValueCoreData(BaseCoreData):
         name: str = "Default name"
     ```
-    If you prefer a CoreDataNotFoundException to be raised when the data is not found in the database, just don't set default parameters.
+    If you prefer a CoreDataNotFoundError to be raised when the data is not found in the database, just don't set default parameters.
     ```python
     class DefaultValueCoreData(BaseCoreData):
         name: str

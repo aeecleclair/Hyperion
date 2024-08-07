@@ -28,7 +28,7 @@ revoked_refresh_token = "RevokedRefreshToken"
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
     global user
-    user = user = await create_user_with_groups(
+    user = await create_user_with_groups(
         groups=[],
         email="email@myecl.fr",
         password="azerty",
@@ -314,7 +314,6 @@ def test_get_user_info(client: TestClient) -> None:
     assert response.status_code == 200
     json = response.json()
 
-    global user
     assert json["name"] == user.firstname
 
 
@@ -364,7 +363,6 @@ def test_get_user_info_in_id_token(client: TestClient) -> None:
     decoded_payload = base64.b64decode(payload.encode("utf-8") + b"==")
     json_payload = json.loads(decoded_payload)
 
-    global user
     assert json_payload["email"] == user.email
 
 

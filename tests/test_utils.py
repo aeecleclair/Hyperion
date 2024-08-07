@@ -9,7 +9,7 @@ from starlette.datastructures import Headers
 
 from app.core import models_core
 from app.types.core_data import BaseCoreData
-from app.types.exceptions import CoreDataNotFoundException
+from app.types.exceptions import CoreDataNotFoundError, FileNameIsNotAnUUIDError
 from app.utils.tools import (
     delete_file_from_data,
     get_core_data,
@@ -100,7 +100,10 @@ async def test_save_file_with_invalid_content_type() -> None:
 async def test_save_file_raise_a_value_error_if_filename_isnt_an_uuid() -> None:
     not_a_uuid = "not_a_uuid"
     with (
-        pytest.raises(ValueError, match="The filename is not a valid UUID"),
+        pytest.raises(
+            FileNameIsNotAnUUIDError,
+            match="The filename is not a valid UUID",
+        ),
         Path("assets/images/default_profile_picture.png").open("rb") as file,
     ):
         await save_file_as_data(
@@ -126,7 +129,10 @@ async def test_save_bytes() -> None:
 async def test_save_bytes_raise_a_value_error_if_filename_isnt_an_uuid() -> None:
     not_a_uuid = "not_a_uuid"
     with (
-        pytest.raises(ValueError, match="The filename is not a valid UUID"),
+        pytest.raises(
+            FileNameIsNotAnUUIDError,
+            match="The filename is not a valid UUID",
+        ),
         Path("assets/images/default_profile_picture.png").open("rb") as file,
     ):
         await save_bytes_as_data(
@@ -166,7 +172,10 @@ def test_get_non_existing_file_path_with_valid_uuid_return_default_asset() -> No
 
 def test_get_file_path_raise_a_value_error_if_filename_isnt_an_uuid() -> None:
     not_a_uuid = "not_a_uuid"
-    with pytest.raises(ValueError, match="The filename is not a valid UUID"):
+    with pytest.raises(
+        FileNameIsNotAnUUIDError,
+        match="The filename is not a valid UUID",
+    ):
         get_file_path_from_data(
             directory="test",
             filename=not_a_uuid,
@@ -187,7 +196,10 @@ def test_get_file_with_valid_uuid() -> None:
 
 def test_get_file_raise_a_value_error_if_filename_isnt_an_uuid() -> None:
     not_a_uuid = "not_a_uuid"
-    with pytest.raises(ValueError, match="The filename is not a valid UUID"):
+    with pytest.raises(
+        FileNameIsNotAnUUIDError,
+        match="The filename is not a valid UUID",
+    ):
         get_file_from_data(
             directory="test",
             filename=not_a_uuid,
@@ -220,7 +232,10 @@ def test_delete_file_with_valid_uuid() -> None:
 
 def test_delete_file_raise_a_value_error_if_filename_isnt_an_uuid() -> None:
     not_a_uuid = "not_a_uuid"
-    with pytest.raises(ValueError, match="The filename is not a valid UUID"):
+    with pytest.raises(
+        FileNameIsNotAnUUIDError,
+        match="The filename is not a valid UUID",
+    ):
         delete_file_from_data(
             directory="test",
             filename=not_a_uuid,
@@ -259,7 +274,7 @@ async def test_get_default_core_data() -> None:
 
 async def test_get_default_without_default_values_core_data():
     async with TestingSessionLocal() as db:
-        with pytest.raises(CoreDataNotFoundException):
+        with pytest.raises(CoreDataNotFoundError):
             await get_core_data(
                 core_data_class=ExempleDefaultWithoutDefaultValuesCoreData,
                 db=db,

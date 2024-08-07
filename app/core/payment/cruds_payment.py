@@ -15,10 +15,12 @@ async def create_checkout(
     db.add(checkout)
     try:
         await db.commit()
-        return checkout
-    except IntegrityError as error:
+
+    except IntegrityError:
         await db.rollback()
-        raise ValueError(error)
+        raise
+    else:
+        return checkout
 
 
 async def get_checkout_by_id(
@@ -54,10 +56,11 @@ async def create_checkout_payment(
     db.add(checkout_payment)
     try:
         await db.commit()
-        return checkout_payment
-    except IntegrityError as error:
+    except IntegrityError:
         await db.rollback()
-        raise ValueError(error)
+        raise
+    else:
+        return checkout_payment
 
 
 async def get_checkout_payment_by_hello_asso_payment_id(

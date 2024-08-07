@@ -6,6 +6,8 @@ from sqlalchemy import DateTime, types
 from sqlalchemy.orm import DeclarativeBase, mapped_column
 from sqlalchemy.types import TypeDecorator
 
+from app.types.exceptions import MissingTZInfoInDatetimeError
+
 
 class TZDateTime(TypeDecorator):
     """
@@ -22,7 +24,7 @@ class TZDateTime(TypeDecorator):
     def process_bind_param(self, value, dialect):
         if value is not None:
             if not value.tzinfo or value.tzinfo.utcoffset(value) is None:
-                raise TypeError("tzinfo is required")
+                raise MissingTZInfoInDatetimeError()
             value = value.astimezone(datetime.UTC).replace(tzinfo=None)
         return value
 
