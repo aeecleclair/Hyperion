@@ -11,7 +11,7 @@ from fastapi import (
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core
+from app.core import models_core, schemas_core
 from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
 from app.core.payment import schemas_payment
@@ -19,6 +19,7 @@ from app.core.payment.payment_tool import PaymentTool
 from app.core.users.cruds_users import get_user_by_id, get_users
 from app.dependencies import (
     get_db,
+    get_payment_tool,
     get_request_id,
     get_settings,
     hyperion_access_logger,
@@ -1808,6 +1809,7 @@ async def get_payment_url(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
     settings: Settings = Depends(get_settings),
+    payment_tool: PaymentTool = Depends(get_payment_tool),
 ):
     """
     Get payment url
@@ -1817,14 +1819,14 @@ async def get_payment_url(
             status_code=403,
             detail="Please give an amount in cents, greater than 1€.",
         )
-    payment_tool = PaymentTool(settings=settings)
+    user_schema = schemas_core.CoreUser(**user.__dict__)
     checkout = await payment_tool.init_checkout(
         module=module.root,
         helloasso_slug="AEECL",
         checkout_amount=amount,
         checkout_name="Chaine de rentrée",
         redirection_uri=settings.CDR_PAYMENT_REDIRECTION_URL or "",
-        payer_user=user,
+        payer_user=user_schema,
         db=db,
     )
     hyperion_error_logger.info(f"CDR: Logging Checkout id {checkout.id}")

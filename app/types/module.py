@@ -6,13 +6,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.groups.groups_type import GroupType
 from app.core.payment import schemas_payment
 
-if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
-
-    from sqlalchemy.ext.asyncio import AsyncSession
-
-    from app.core.payment import schemas_payment
-
 
 class Module:
     def __init__(
