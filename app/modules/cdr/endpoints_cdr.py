@@ -22,6 +22,7 @@ from app.dependencies import (
     get_payment_tool,
     get_request_id,
     get_settings,
+    get_websocket_connection_manager,
     hyperion_access_logger,
     is_user_a_member,
     is_user_a_member_of,
@@ -34,7 +35,7 @@ from app.modules.cdr.types_cdr import (
     PaymentType,
 )
 from app.types.module import Module
-from app.types.websocket import HyperionWebsocketsRoom, ws_manager
+from app.types.websocket import HyperionWebsocketsRoom, WebsocketConnectionManager
 from app.utils.tools import (
     get_core_data,
     is_user_member_of_an_allowed_group,
@@ -1983,7 +1984,8 @@ async def update_status(
 @module.router.websocket("/ws/cdr/users/")
 async def websocket_endpoint(
     websocket: WebSocket,
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    ws_manager: WebsocketConnectionManager = Depends(get_websocket_connection_manager),
+    # user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     await websocket.accept()
 
@@ -1995,13 +1997,20 @@ async def websocket_endpoint(
 
     try:
         while True:
-            await websocket.receive_json()
-    except WebSocketDisconnect:
+            res = await websocket.receive_json()
+            print(res)
+    except WebSocketDisconnect as error:
         await ws_manager.remove_connection_from_room(
             room_id=HyperionWebsocketsRoom.CDR,
             connection=websocket,
         )
     except WebSocketException:
+        await ws_manager.remove_connection_from_room(
+            room_id=HyperionWebsocketsRoom.CDR,
+            connection=websocket,
+        )
+        raise
+    except Exception:
         await ws_manager.remove_connection_from_room(
             room_id=HyperionWebsocketsRoom.CDR,
             connection=websocket,
