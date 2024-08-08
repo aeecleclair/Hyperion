@@ -22,6 +22,8 @@ class AssociationBase(BaseModel):
     kind: Kinds
     mandate_year: int
     description: str | None = None
+    associated_groups: list[str] = []
+    deactivated: bool = False  # Deactivated associations won't be displayed in the phonebook unless looking at previous years and cannot be used for new memberships
 
 
 class AssociationComplete(AssociationBase):
@@ -37,12 +39,17 @@ class AssociationEdit(BaseModel):
     mandate_year: int | None = None
 
 
+class AssociationGroupsEdit(BaseModel):
+    associated_groups: list[str] = []
+
+
 class MembershipBase(BaseModel):
     user_id: str
     association_id: str
     mandate_year: int
     role_name: str
     role_tags: str | None = None  # "roletag1;roletag2;..."
+    member_order: int
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -56,6 +63,7 @@ class MembershipComplete(MembershipBase):
 class MembershipEdit(BaseModel):
     role_name: str | None = None
     role_tags: str | None = None
+    member_order: int | None = None
 
 
 class MemberBase(schemas_core.CoreUserSimple):

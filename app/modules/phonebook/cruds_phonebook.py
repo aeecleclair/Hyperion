@@ -106,12 +106,60 @@ async def update_association(
         raise
 
 
+async def update_association_groups(
+    association_id: str,
+    association_groups_edit: schemas_phonebook.AssociationGroupsEdit,
+    db: AsyncSession,
+):
+    """Update the associated_groups of an Association in database"""
+
+    await db.execute(
+        delete(models_phonebook.AssociationAssociatedGroups).where(
+            models_phonebook.AssociationAssociatedGroups.association_id
+            == association_id,
+        ),
+    )
+    for group_id in association_groups_edit.associated_groups:
+        db.add(
+            models_phonebook.AssociationAssociatedGroups(
+                association_id=association_id,
+                group_id=group_id,
+            ),
+        )
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise
+
+
+async def deactivate_association(association_id: str, db: AsyncSession):
+    """Deactivate an Association in database"""
+
+    await db.execute(
+        update(models_phonebook.Association)
+        .where(models_phonebook.Association.id == association_id)
+        .values(deactivated=True),
+    )
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise
+
+
 async def delete_association(association_id: str, db: AsyncSession):
     """Delete an Association from database"""
 
     await db.execute(  # Memberships from the Association must be deleted first
         delete(models_phonebook.Membership).where(
             models_phonebook.Membership.association_id == association_id,
+        ),
+    )
+    await db.execute(  # AssociatedGroups from the Association must be deleted first
+        delete(models_phonebook.AssociationAssociatedGroups).where(
+            models_phonebook.AssociationAssociatedGroups.association_id
+            == association_id,
         ),
     )
     await db.execute(
@@ -140,6 +188,21 @@ async def get_association_by_id(
     return result.scalars().first()
 
 
+async def get_associated_groups_by_association_id(
+    association_id: str,
+    db: AsyncSession,
+) -> Sequence[models_phonebook.AssociationAssociatedGroups]:
+    """Return all AssociatedGroups with association_id from database"""
+
+    result = await db.execute(
+        select(models_phonebook.AssociationAssociatedGroups).where(
+            models_phonebook.AssociationAssociatedGroups.association_id
+            == association_id,
+        ),
+    )
+    return result.scalars().all()
+
+
 # ---------------------------------------------------------------------------- #
 #                                  Membership                                  #
 # ---------------------------------------------------------------------------- #
@@ -165,6 +228,57 @@ async def update_membership(
         .where(models_phonebook.Membership.id == membership_id)
         .values(**membership_edit.model_dump(exclude_none=True)),
     )
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise
+
+
+async def update_order_of_memberships(
+    db: AsyncSession,
+    association_id: str,
+    mandate_year: int,
+    old_order: int,
+    new_order: int | None = None,
+):
+    """
+    Shift the member_order of Memberships between `old_order` and `new_order`. This crud should be used to keep orders coherent when inserting, moving or removing a membership.
+    The cruds won't update the membership that was at the `old_order`, you must call an other crud to update, or remove it to prevent member_order collisions. This cruds should be called first."""
+
+    if new_order is None:
+        await db.execute(
+            update(models_phonebook.Membership)
+            .where(
+                models_phonebook.Membership.association_id == association_id,
+                models_phonebook.Membership.mandate_year == mandate_year,
+                models_phonebook.Membership.member_order > old_order,
+            )
+            .values(member_order=models_phonebook.Membership.member_order - 1),
+        )
+
+    elif old_order > new_order:
+        await db.execute(
+            update(models_phonebook.Membership)
+            .where(
+                models_phonebook.Membership.association_id == association_id,
+                models_phonebook.Membership.mandate_year == mandate_year,
+                models_phonebook.Membership.member_order >= new_order,
+                models_phonebook.Membership.member_order < old_order,
+            )
+            .values(member_order=models_phonebook.Membership.member_order + 1),
+        )
+    else:
+        await db.execute(
+            update(models_phonebook.Membership)
+            .where(
+                models_phonebook.Membership.association_id == association_id,
+                models_phonebook.Membership.mandate_year == mandate_year,
+                models_phonebook.Membership.member_order > old_order,
+                models_phonebook.Membership.member_order <= new_order,
+            )
+            .values(member_order=models_phonebook.Membership.member_order - 1),
+        )
     try:
         await db.commit()
     except IntegrityError:
@@ -207,9 +321,11 @@ async def get_memberships_by_association_id(
     """Return all Memberships with association_id from database"""
 
     result = await db.execute(
-        select(models_phonebook.Membership).where(
+        select(models_phonebook.Membership)
+        .where(
             models_phonebook.Membership.association_id == association_id,
-        ),
+        )
+        .order_by(models_phonebook.Membership.member_order),
     )
     return result.scalars().all()
 
@@ -221,10 +337,12 @@ async def get_memberships_by_association_id_and_mandate_year(
 ) -> Sequence[models_phonebook.Membership]:
     """Return all Memberships with association_id and mandate_year from database"""
     result = await db.execute(
-        select(models_phonebook.Membership).where(
+        select(models_phonebook.Membership)
+        .where(
             models_phonebook.Membership.association_id == association_id,
             models_phonebook.Membership.mandate_year == mandate_year,
-        ),
+        )
+        .order_by(models_phonebook.Membership.member_order),
     )
     return result.scalars().all()
 
