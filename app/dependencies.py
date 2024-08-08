@@ -71,7 +71,7 @@ async def get_request_id(request: Request) -> str:
     return request_id
 
 
-def get_db_engine(settings: Settings) -> AsyncEngine:
+def init_and_get_db_engine(settings: Settings) -> AsyncEngine:
     """
     Return the (asynchronous) database engine, if the engine doesn't exit yet it will create one based on the settings
     """
@@ -93,19 +93,6 @@ def get_db_engine(settings: Settings) -> AsyncEngine:
             expire_on_commit=False,
         )
     return engine
-
-
-def get_session_maker() -> Callable[[], AsyncSession]:
-    """
-    Return the session maker
-    """
-    if SessionLocal is None:
-        hyperion_error_logger.error("Database engine is not initialized")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Database engine is not initialized",
-        )
-    return SessionLocal
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
