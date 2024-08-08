@@ -28,12 +28,12 @@ from app.core.groups.groups_type import GroupType
 from app.core.log import LogConfig
 from app.dependencies import (
     get_redis_client,
+    get_websocket_connection_manager,
     init_and_get_db_engine,
 )
 from app.modules.module_list import module_list
 from app.types.exceptions import ContentHTTPException
 from app.types.sqlalchemy import Base
-from app.types.websocket import ws_manager
 from app.utils import initialization
 from app.utils.redis import limiter
 
@@ -298,6 +298,11 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     # https://fastapi.tiangolo.com/advanced/events/
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator:
+        ws_manager = app.dependency_overrides.get(
+            get_websocket_connection_manager,
+            get_websocket_connection_manager,
+        )(settings=settings)
+
         await ws_manager.connect_broadcaster()
         yield
         hyperion_error_logger.info("Shutting down")

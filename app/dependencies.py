@@ -28,6 +28,7 @@ from app.core.groups.groups_type import GroupType, get_ecl_groups
 from app.core.payment.payment_tool import PaymentTool
 from app.types.scopes_type import ScopeType
 from app.utils.auth import auth_utils
+from app.types.websocket import WebsocketConnectionManager
 from app.utils.communication.notifications import NotificationManager, NotificationTool
 from app.utils.redis import connect
 from app.utils.tools import (
@@ -43,6 +44,8 @@ redis_client: redis.Redis | bool | None = (
     None  # Create a global variable for the redis client, so that it can be instancied in the startup event
 )
 # Is None if the redis client is not instantiated, is False if the redis client is instancied but not connected, is a redis.Redis object if the redis client is connected
+
+websocket_connection_manager: WebsocketConnectionManager | None = None
 
 engine: AsyncEngine | None = (
     None  # Create a global variable for the database engine, so that it can be instancied in the startup event
@@ -140,6 +143,17 @@ def get_redis_client(
         else:
             redis_client = False
     return redis_client
+
+
+def get_websocket_connection_manager(
+    settings: Settings = Depends(get_settings),
+):
+    global websocket_connection_manager
+
+    if websocket_connection_manager is None:
+        websocket_connection_manager = WebsocketConnectionManager(settings=settings)
+
+    return websocket_connection_manager
 
 
 def get_notification_manager(

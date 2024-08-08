@@ -29,13 +29,14 @@ from app.dependencies import (
     get_db,
     get_request_id,
     get_settings,
+    get_websocket_connection_manager,
     is_user,
     is_user_a_member_of,
     is_user_an_ecl_member,
 )
 from app.types.content_type import ContentType
 from app.types.exceptions import UserWithEmailAlreadyExistError
-from app.types.websocket import HyperionWebsocketsRoom, ws_manager
+from app.types.websocket import HyperionWebsocketsRoom, WebsocketConnectionManager
 from app.utils.mail.mailworker import send_email
 from app.utils.tools import (
     get_file_from_data,
@@ -361,6 +362,7 @@ async def activate_user(
     user: schemas_core.CoreUserActivateRequest,
     db: AsyncSession = Depends(get_db),
     request_id: str = Depends(get_request_id),
+    ws_manager: WebsocketConnectionManager = Depends(get_websocket_connection_manager),
 ):
     """
     Activate the previously created account.
@@ -445,7 +447,7 @@ async def activate_user(
             ),
             room_id=HyperionWebsocketsRoom.CDR,
         )
-    except Exception as error:
+    except Exception:
         hyperion_error_logger.exception(
             f"Error while sending a message to the room {HyperionWebsocketsRoom.CDR}",
         )
