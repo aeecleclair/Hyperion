@@ -6,7 +6,7 @@ from alembic import context
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import AsyncConnection
 
-from app.dependencies import get_db_engine, get_settings
+from app.dependencies import get_settings, init_and_get_db_engine
 from app.types.sqlalchemy import Base
 
 # this is the Alembic Config object, which provides
@@ -88,7 +88,7 @@ async def create_async_engine_and_run_async_migrations() -> None:
     # As we want to use the production database, we can call the `get_settings` function directly
     # instead of using it as a dependency (`app.dependency_overrides.get(get_settings, get_settings)()`)
     settings = get_settings()
-    connectable = get_db_engine(settings)
+    connectable = init_and_get_db_engine(settings)
 
     async with connectable.connect() as connection:
         await run_async_migrations(connection)

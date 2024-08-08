@@ -27,7 +27,10 @@ from app.core import models_core
 from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
 from app.core.log import LogConfig
-from app.dependencies import get_redis_client
+from app.dependencies import (
+    get_redis_client,
+    init_and_get_db_engine,
+)
 from app.modules.module_list import module_list
 from app.types.exceptions import ContentHTTPException
 from app.types.sqlalchemy import Base
@@ -343,6 +346,9 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         settings=settings,
     ):
         hyperion_error_logger.info("Redis client not configured")
+
+    # We need to init the database engine to be able to use it in dependencies
+    init_and_get_db_engine(settings)
 
     @app.middleware("http")
     async def logging_middleware(
