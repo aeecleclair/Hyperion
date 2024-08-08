@@ -14,6 +14,11 @@ COPY ./assets /app/assets
 
 COPY ./requirements-common.txt /requirements-common.txt
 COPY ./requirements-prod.txt /requirements-prod.txt
-RUN pip install --upgrade -r /requirements-prod.txt
+
+
+RUN curl -LsSf https://astral.sh/uv/0.2.33/install.sh | sh
+# We run uv without venv thanks to --system
+# https://docs.astral.sh/uv/pip/environments/#using-arbitrary-python-environments
+RUN /root/.cargo/bin/uv pip install --system --upgrade -r /requirement-prod.txt
 
 COPY ./app/ /app/app/
