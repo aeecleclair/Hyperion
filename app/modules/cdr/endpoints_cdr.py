@@ -1,4 +1,5 @@
 import logging
+import os
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
@@ -1981,12 +1982,16 @@ async def update_status(
     await set_core_data(status, db)
 
 
-@module.router.websocket("/ws/cdr/users/")
+@module.router.websocket("/cdr/users/ws")
 async def websocket_endpoint(
     websocket: WebSocket,
     ws_manager: WebsocketConnectionManager = Depends(get_websocket_connection_manager),
-    # user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
+    hyperion_error_logger.debug(
+        f"CDR: New websocket connection from {user.id} on worker {os.getpid()}"
+    )
+
     await websocket.accept()
 
     # Add the user to the connection stack
@@ -1997,19 +2002,13 @@ async def websocket_endpoint(
 
     try:
         while True:
+            # TODO: we could use received messages from the websocket
             res = await websocket.receive_json()
-            print(res)
-    except WebSocketDisconnect as error:
+    except WebSocketDisconnect:
         await ws_manager.remove_connection_from_room(
             room_id=HyperionWebsocketsRoom.CDR,
             connection=websocket,
         )
-    except WebSocketException:
-        await ws_manager.remove_connection_from_room(
-            room_id=HyperionWebsocketsRoom.CDR,
-            connection=websocket,
-        )
-        raise
     except Exception:
         await ws_manager.remove_connection_from_room(
             room_id=HyperionWebsocketsRoom.CDR,
