@@ -286,7 +286,7 @@ def downgrade() -> None:
 
     op.drop_table("cdr_curriculum")
     op.drop_table("cdr_action")
-    op.drop_table("cdr_ticker")
+    op.drop_table("cdr_ticket")
 
     sa.Enum(AvailableAssociationMembership, name="availableassociationmembership").drop(
         op.get_bind(),
