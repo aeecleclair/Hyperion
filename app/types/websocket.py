@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 from enum import Enum
 
 from broadcaster import Broadcast
@@ -54,6 +55,8 @@ class WebsocketConnectionManager:
             set[WebSocket],
         ] = {}
 
+        # We keep a reference to the listening tasks for each room
+        # to be able to stop listening to a room when there is no more connection
         self.listening_tasks: dict[HyperionWebsocketsRoom, asyncio.Task] = {}
 
     async def connect_broadcaster(self):
@@ -90,18 +93,37 @@ class WebsocketConnectionManager:
             # https://docs.python.org/3/library/asyncio-task.html#asyncio.create_task
 
             subscribe_n_listen_task.add_done_callback(
-                lambda task: self.listening_tasks.pop(room_id),
+                lambda task: self._remove_task_from_listening_tasks_callback(room_id),
             )
-
-            print(subscribe_n_listen_task)
 
         else:
             self.connections[room_id].add(ws_connection)
 
-    async def _consume_events(self, message: str, room_id: HyperionWebsocketsRoom):
+    def _remove_task_from_listening_tasks_callback(
+        self,
+        room_id: HyperionWebsocketsRoom,
+    ):
+        """
+        Asyncio task callback to remove the task from the listening_tasks dict
+        The method is called after the listening task is done or cancelled
+        """
+        self.listening_tasks.pop(room_id)
+        hyperion_error_logger.info(
+            f"Websocket: unsubscribed broadcaster from channel {room_id} for worker {os.getpid()}",
+        )
+
+    async def _consume_events_from_broadcaster(
+        self,
+        message: str,
+        room_id: HyperionWebsocketsRoom,
+    ):
+        """
+        Handle an incoming message from the broadcaster. Send the message to all connected websocket in the room.
+        """
         room_connections: set[WebSocket] = self.connections.get(room_id, set())
-        to_delete = []
         if len(room_connections) == 0:
+            # If we don't have any connection in the room, we don't need to keep listening to the room over the broadcaster
+            self._unsubscribe_channel(room_id)
             return
 
         for connection in room_connections:
@@ -109,37 +131,47 @@ class WebsocketConnectionManager:
                 message=message,
                 ws_connection=connection,
             ):
-                to_delete.append(connection)
-
-        for connection in to_delete:
-            for k in self.connections:
-                if connection in self.connections[k]:
-                    self.connections[k].remove(connection)
+                # If the message couldn't be sent to the connection, we disconnect the websocket connection
+                await connection.close(reason="Failed to send message to websocket")
 
     async def remove_connection_from_room(
         self,
         connection: WebSocket,
         room_id: HyperionWebsocketsRoom,
     ):
+        """
+        Remove a websocket connection from a room.
+        If there is no more connection in the room, we stop listening to the room over the broadcaster
+        """
         if connection in self.connections[room_id]:
             self.connections[room_id].remove(connection)
+
         # If there is no more connection in the room, we can stop listening to the room over the broadcaster
         if len(self.connections[room_id]) == 0:
-            del self.connections[room_id]
-            # TODO
+            self._unsubscribe_channel(room_id)
 
-    async def _subscribe_and_listen_to_channel(self, room_id: str):
+    async def _subscribe_and_listen_to_channel(self, room_id: HyperionWebsocketsRoom):
+        """
+        Subscribe to a channel and listen to incoming messages. Incoming messages are sent over open websocket connections.
+        """
         async with self.broadcaster.subscribe(channel=room_id) as subscriber:
-            async for event in subscriber:
-                message = MessageToRoomModel.model_validate_json(event.message)
+            hyperion_error_logger.info(
+                f"Websocket: subscribed broadcaster to channel {room_id} for worker {os.getpid()}",
+            )
 
-                await self._consume_events(
+            async for event in subscriber:  # type: ignore # Should be fixed by https://github.com/encode/broadcaster/issues/136
+                message = MessageToRoomModel.model_validate_json(event.message)  # type: ignore # Should be fixed by https://github.com/encode/broadcaster/issues/136
+
+                await self._consume_events_from_broadcaster(
                     message=message.message,
                     room_id=message.room_id,
                 )
 
+        hyperion_error_logger.info(
+            f"Websocket: Finished listening to channel {room_id} for worker {os.getpid()}",
+        )
 
-    def _unsubscribe_channel(self, room_id: str):
+    def _unsubscribe_channel(self, room_id: HyperionWebsocketsRoom):
         if room_id in self.listening_tasks:
             # By cancelling the task, asyncio will raise a CancelledError in the task
             # forcing the broadcaster to stop listening to the room
@@ -148,10 +180,8 @@ class WebsocketConnectionManager:
             # del self.listening_tasks # Should be done by the callback
 
     async def send_message_to_room(self, message: str, room_id: HyperionWebsocketsRoom):
-        room_connections: set[WebSocket] = self.connections.get(room_id, set())
-
-        if len(room_connections) == 0:
-            return
+        # We need to send the message over the broadcaster even if there is no connection in the room for this worker
+        # Because other workers may have open websocket connections for this room
 
         await self.broadcaster.publish(
             channel=room_id,
@@ -170,9 +200,7 @@ class WebsocketConnectionManager:
             await ws_connection.send_text(message)
         except RuntimeError:
             return False
-
         except Exception:
             hyperion_error_logger.exception("Error while sending websocket message")
             return False
-        else:
-            return True
+        return True
