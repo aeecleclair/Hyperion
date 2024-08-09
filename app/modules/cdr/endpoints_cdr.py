@@ -1,5 +1,6 @@
 import logging
 import os
+from collections.abc import Sequence
 from datetime import UTC, date, datetime
 from uuid import UUID, uuid4
 
@@ -1147,6 +1148,65 @@ async def create_purchase(
         return db_purchase
 
 
+async def remove_existing_membership(
+    existing_membership: models_core.CoreAssociationMembership,
+    product_variant: models_cdr.ProductVariant,
+    db: AsyncSession,
+):
+    if product_variant.related_membership_added_duration:
+        if (
+            existing_membership.end_date
+            - product_variant.related_membership_added_duration
+            <= existing_membership.start_date
+        ):
+            await cruds_cdr.delete_membership(
+                db=db,
+                membership_id=existing_membership.id,
+            )
+        else:
+            await cruds_cdr.update_membership(
+                db=db,
+                membership_id=existing_membership.id,
+                membership=schemas_cdr.MembershipEdit(
+                    end_date=existing_membership.end_date
+                    - product_variant.related_membership_added_duration,
+                ),
+            )
+
+
+async def add_membership(
+    memberships: Sequence[models_core.CoreAssociationMembership],
+    user_id: str,
+    product: models_cdr.CdrProduct,
+    product_variant: models_cdr.ProductVariant,
+    db: AsyncSession,
+):
+    if product_variant.related_membership_added_duration:
+        existing_membership = next(
+            (m for m in memberships if m.membership == product.related_membership),
+            None,
+        )
+        if existing_membership:
+            await cruds_cdr.update_membership(
+                db=db,
+                membership_id=existing_membership.id,
+                membership=schemas_cdr.MembershipEdit(
+                    end_date=existing_membership.end_date
+                    + product_variant.related_membership_added_duration,
+                ),
+            )
+        else:
+            added_membership = models_core.CoreAssociationMembership(
+                id=uuid4(),
+                user_id=user_id,
+                membership=product.related_membership,
+                start_date=date(datetime.now(tz=UTC).date().year, 9, 1),
+                end_date=date(datetime.now(tz=UTC).date().year, 9, 1)
+                + product_variant.related_membership_added_duration,
+            )
+            cruds_cdr.create_membership(db=db, membership=added_membership)
+
+
 @module.router.patch(
     "/cdr/users/{user_id}/purchases/{product_variant_id}/validated/",
     status_code=204,
@@ -1225,33 +1285,14 @@ async def mark_purchase_as_validated(
                     status_code=403,
                     detail=f"Document signature constraint {document_constraint} not satisfied.",
                 )
-        if (
-            product.related_membership
-            and product_variant.related_membership_added_duration
-        ):
-            existing_membership = next(
-                (m for m in memberships if m.membership == product.related_membership),
-                None,
+        if product.related_membership:
+            await add_membership(
+                memberships=memberships,
+                user_id=user_id,
+                product=product,
+                product_variant=product_variant,
+                db=db,
             )
-            if existing_membership:
-                await cruds_cdr.update_membership(
-                    db=db,
-                    membership_id=existing_membership.id,
-                    membership=schemas_cdr.MembershipEdit(
-                        end_date=existing_membership.end_date
-                        + product_variant.related_membership_added_duration,
-                    ),
-                )
-            else:
-                added_membership = models_core.CoreAssociationMembership(
-                    id=uuid4(),
-                    user_id=user_id,
-                    membership=product.related_membership,
-                    start_date=date(datetime.now(tz=UTC).date().year, 9, 1),
-                    end_date=date(datetime.now(tz=UTC).date().year, 9, 1)
-                    + product_variant.related_membership_added_duration,
-                )
-                cruds_cdr.create_membership(db=db, membership=added_membership)
         if product.generate_ticket and product.ticket_expiration:
             ticket = models_cdr.Ticket(
                 id=uuid4(),
@@ -1273,28 +1314,13 @@ async def mark_purchase_as_validated(
                 (m for m in memberships if m.membership == product.related_membership),
                 None,
             )
-            if (
-                existing_membership
-                and product_variant.related_membership_added_duration
-            ):
-                if (
-                    existing_membership.end_date
-                    - product_variant.related_membership_added_duration
-                    <= existing_membership.start_date
-                ):
-                    await cruds_cdr.delete_membership(
-                        db=db,
-                        membership_id=existing_membership.id,
-                    )
-                else:
-                    await cruds_cdr.update_membership(
-                        db=db,
-                        membership_id=existing_membership.id,
-                        membership=schemas_cdr.MembershipEdit(
-                            end_date=existing_membership.end_date
-                            - product_variant.related_membership_added_duration,
-                        ),
-                    )
+            if existing_membership:
+                await remove_existing_membership(
+                    existing_membership=existing_membership,
+                    product_variant=product_variant,
+                    db=db,
+                )
+
         if product.generate_ticket:
             await cruds_cdr.delete_ticket_of_user(
                 db=db,
