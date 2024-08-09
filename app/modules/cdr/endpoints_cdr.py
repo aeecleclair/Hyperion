@@ -2015,3 +2015,14 @@ async def websocket_endpoint(
             connection=websocket,
         )
         raise
+
+
+# TODO: remove this debug method
+@module.router.get(
+    "/cdr/ws/send/",
+    status_code=200,
+)
+async def send_ws_message(
+    ws_manager: WebsocketConnectionManager = Depends(get_websocket_connection_manager),
+):
+    await ws_manager.send_message_to_room("message", HyperionWebsocketsRoom.CDR)
