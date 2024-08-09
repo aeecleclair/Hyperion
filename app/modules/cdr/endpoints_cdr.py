@@ -993,6 +993,18 @@ async def get_purchases_by_user_id(
 
 
 @module.router.get(
+    "/cdr/me/purchases/",
+    response_model=list[schemas_cdr.PurchaseReturn],
+    status_code=200,
+)
+async def get_my_purchases(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    return await get_purchases_by_user_id(user.id, db, user)
+
+
+@module.router.get(
     "/cdr/sellers/{seller_id}/users/{user_id}/purchases/",
     response_model=list[schemas_cdr.PurchaseReturn],
     status_code=200,
@@ -1213,7 +1225,10 @@ async def mark_purchase_as_validated(
                     status_code=403,
                     detail=f"Document signature constraint {document_constraint} not satisfied.",
                 )
-        if product.related_membership and product_variant.related_membership_added_duration:
+        if (
+            product.related_membership
+            and product_variant.related_membership_added_duration
+        ):
             existing_membership = next(
                 (m for m in memberships if m.membership == product.related_membership),
                 None,
@@ -1258,7 +1273,10 @@ async def mark_purchase_as_validated(
                 (m for m in memberships if m.membership == product.related_membership),
                 None,
             )
-            if existing_membership and product_variant.related_membership_added_duration:
+            if (
+                existing_membership
+                and product_variant.related_membership_added_duration
+            ):
                 if (
                     existing_membership.end_date
                     - product_variant.related_membership_added_duration

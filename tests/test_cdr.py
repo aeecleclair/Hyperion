@@ -1900,7 +1900,7 @@ def test_create_product_closed(client: TestClient):
             "available_online": False,
             "product_constraints": [],
             "document_constraints": [],
-            "generate_ticket": False
+            "generate_ticket": False,
         },
         headers={"Authorization": f"Bearer {token_bde}"},
     )
