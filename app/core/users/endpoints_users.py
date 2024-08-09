@@ -1,3 +1,4 @@
+import json
 import logging
 import re
 import uuid
@@ -28,14 +29,19 @@ from app.dependencies import (
     get_db,
     get_request_id,
     get_settings,
+    get_websocket_connection_manager,
     is_user,
     is_user_a_member_of,
     is_user_an_ecl_member,
 )
+from app.modules.cdr import schemas_cdr
+from app.modules.cdr.types_cdr import CdrStatus
 from app.types.content_type import ContentType
 from app.types.exceptions import UserWithEmailAlreadyExistError
+from app.types.websocket import HyperionWebsocketsRoom, WebsocketConnectionManager
 from app.utils.mail.mailworker import send_email
 from app.utils.tools import (
+    get_core_data,
     get_file_from_data,
     save_file_as_data,
     sort_user,
@@ -359,6 +365,7 @@ async def activate_user(
     user: schemas_core.CoreUserActivateRequest,
     db: AsyncSession = Depends(get_db),
     request_id: str = Depends(get_request_id),
+    ws_manager: WebsocketConnectionManager = Depends(get_websocket_connection_manager),
 ):
     """
     Activate the previously created account.
@@ -409,27 +416,49 @@ async def activate_user(
         external=unconfirmed_user.external,
     )
     # We add the new user to the database
-    try:
-        await cruds_users.create_user(db=db, user=confirmed_user)
-        await cruds_groups.create_membership(
-            db=db,
-            membership=models_core.CoreMembership(
-                group_id=unconfirmed_user.account_type,
-                user_id=unconfirmed_user.id,
-            ),
-        )
+    await cruds_users.create_user(db=db, user=confirmed_user)
+    await cruds_groups.create_membership(
+        db=db,
+        membership=models_core.CoreMembership(
+            group_id=unconfirmed_user.account_type,
+            user_id=unconfirmed_user.id,
+        ),
+    )
 
-        # We remove all unconfirmed users with the same email address
-        await cruds_users.delete_unconfirmed_user_by_email(
-            db=db,
-            email=unconfirmed_user.email,
-        )
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+    # We remove all unconfirmed users with the same email address
+    await cruds_users.delete_unconfirmed_user_by_email(
+        db=db,
+        email=unconfirmed_user.email,
+    )
 
     hyperion_security_logger.info(
         f"Activate_user: Activated user {confirmed_user.id} (email: {confirmed_user.email}) ({request_id})",
     )
+
+    # TODO: we should send the websocket messages when the user confirm it's CDR cursus instead of sending a message for all new users
+    cdr_status = await get_core_data(schemas_cdr.Status, db)
+    # To prevent from leaking new users name, we only send a message over the websocket when the CDR is onsite
+    if cdr_status.status == CdrStatus.onsite:
+        try:
+            await ws_manager.send_message_to_room(
+                json.dumps(
+                    {
+                        "data_type": "NEW_USER",
+                        "data": schemas_core.CoreUserSimple(
+                            name=confirmed_user.name,
+                            firstname=confirmed_user.firstname,
+                            nickname=confirmed_user.nickname,
+                            id=confirmed_user.id,
+                        ).model_dump(),
+                    },
+                ),
+                room_id=HyperionWebsocketsRoom.CDR,
+            )
+        except Exception:
+            hyperion_error_logger.exception(
+                f"Error while sending a message to the room {HyperionWebsocketsRoom.CDR}",
+            )
+
     return standard_responses.Result()
 
 
