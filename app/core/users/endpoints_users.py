@@ -34,11 +34,14 @@ from app.dependencies import (
     is_user_a_member_of,
     is_user_an_ecl_member,
 )
+from app.modules.cdr import schemas_cdr
+from app.modules.cdr.types_cdr import CdrStatus
 from app.types.content_type import ContentType
 from app.types.exceptions import UserWithEmailAlreadyExistError
 from app.types.websocket import HyperionWebsocketsRoom, WebsocketConnectionManager
 from app.utils.mail.mailworker import send_email
 from app.utils.tools import (
+    get_core_data,
     get_file_from_data,
     save_file_as_data,
     sort_user,
@@ -432,25 +435,29 @@ async def activate_user(
         f"Activate_user: Activated user {confirmed_user.id} (email: {confirmed_user.email}) ({request_id})",
     )
 
-    try:
-        await ws_manager.send_message_to_room(
-            json.dumps(
-                {
-                    "data_type": "NEW_USER",
-                    "data": schemas_core.CoreUserSimple(
-                        name=confirmed_user.name,
-                        firstname=confirmed_user.firstname,
-                        nickname=confirmed_user.nickname,
-                        id=confirmed_user.id,
-                    ).model_dump(),
-                },
-            ),
-            room_id=HyperionWebsocketsRoom.CDR,
-        )
-    except Exception:
-        hyperion_error_logger.exception(
-            f"Error while sending a message to the room {HyperionWebsocketsRoom.CDR}",
-        )
+    # TODO: we should send the websocket messages when the user confirm it's CDR cursus instead of sending a message for all new users
+    cdr_status = await get_core_data(schemas_cdr.Status, db)
+    # To prevent from leaking new users name, we only send a message over the websocket when the CDR is onsite
+    if cdr_status.status == CdrStatus.onsite:
+        try:
+            await ws_manager.send_message_to_room(
+                json.dumps(
+                    {
+                        "data_type": "NEW_USER",
+                        "data": schemas_core.CoreUserSimple(
+                            name=confirmed_user.name,
+                            firstname=confirmed_user.firstname,
+                            nickname=confirmed_user.nickname,
+                            id=confirmed_user.id,
+                        ).model_dump(),
+                    },
+                ),
+                room_id=HyperionWebsocketsRoom.CDR,
+            )
+        except Exception:
+            hyperion_error_logger.exception(
+                f"Error while sending a message to the room {HyperionWebsocketsRoom.CDR}",
+            )
 
     return standard_responses.Result()
 
