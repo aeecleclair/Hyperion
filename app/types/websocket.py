@@ -43,7 +43,7 @@ class WebsocketConnectionManager:
         Without Redis, a memory broadcaster is used, which should not work with multiple workers.
         """
         self.broadcaster: Broadcast = (
-            Broadcast(settings.REDIS_HOST)
+            Broadcast(settings.REDIS_URL)
             if settings.REDIS_HOST
             else Broadcast("memory://")
         )

@@ -261,6 +261,11 @@ class Settings(BaseSettings):
     def OIDC_ISSUER(cls) -> str:
         return cls.CLIENT_URL[:-1]
 
+    @computed_field  # type: ignore[misc]
+    @cached_property
+    def REDIS_URL(cls) -> str:
+        return f"redis://{cls.REDIS_PASSWORD}@{cls.REDIS_HOST}:{cls.REDIS_PORT}"
+
     #######################################
     #          Fields validation          #
     #######################################
