@@ -87,6 +87,9 @@ class ProductBase(BaseModel):
     description_en: str | None = None
     available_online: bool
     related_membership: AvailableAssociationMembership | None = None
+    generate_ticket: bool
+    ticket_max_use: int | None = None
+    ticket_expiration: timedelta | None = None
     product_constraints: list[UUID]
     document_constraints: list[UUID]
 
@@ -101,6 +104,9 @@ class ProductCompleteNoConstraint(BaseModel):
     seller_id: UUID
     variants: list[ProductVariantComplete] = []
     related_membership: AvailableAssociationMembership | None = None
+    generate_ticket: bool
+    ticket_max_use: int | None = None
+    ticket_expiration: timedelta | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -115,6 +121,9 @@ class ProductComplete(BaseModel):
     seller_id: UUID
     variants: list[ProductVariantComplete] = []
     related_membership: AvailableAssociationMembership | None = None
+    generate_ticket: bool
+    ticket_max_use: int | None = None
+    ticket_expiration: timedelta | None = None
     product_constraints: list[ProductCompleteNoConstraint] = []
     document_constraints: list[DocumentComplete] = []
 
@@ -129,6 +138,9 @@ class ProductEdit(BaseModel):
     description: str | None = None
     available_online: bool | None = None
     related_membership: AvailableAssociationMembership | None = None
+    generate_ticket: bool | None = None
+    ticket_max_use: int | None = None
+    ticket_expiration: timedelta | None = None
     product_constraints: list[UUID] | None = None
     document_constraints: list[UUID] | None = None
 
@@ -222,3 +234,16 @@ class Status(BaseCoreData):
 
 class PaymentUrl(BaseModel):
     url: str
+
+
+class Ticket(BaseModel):
+    id: UUID
+    product_variant: ProductVariantComplete
+    user_id: str
+    scan: int
+    tags: str
+    expiration: date
+
+
+class TicketSecret(BaseModel):
+    secret: UUID

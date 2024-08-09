@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -81,6 +81,9 @@ class CdrProduct(Base):
         lazy="selectin",
     )
     related_membership: Mapped[AvailableAssociationMembership | None]
+    generate_ticket: Mapped[bool]
+    ticket_max_use: Mapped[int | None]
+    ticket_expiration: Mapped[timedelta | None]
 
 
 class Curriculum(Base):
@@ -219,3 +222,19 @@ class Checkout(Base):
         nullable=False,
     )
     checkout_id = mapped_column(ForeignKey("payment_checkout.id"))
+
+
+class Ticket(Base):
+    __tablename__ = "cdr_ticket"
+    id: Mapped[PrimaryKey]
+    secret: Mapped[uuid.UUID]
+    product_variant_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("cdr_product_variant.id"),
+    )
+    product_variant: Mapped["ProductVariant"] = relationship("ProductVariant")
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("core_user.id"),
+    )
+    scan: Mapped[int]
+    tags: Mapped[str]
+    expiration: Mapped[date]

@@ -117,6 +117,7 @@ async def init_objects():
         description_fr="Un Produit",
         description_en="A Product",
         available_online=False,
+        generate_ticket=False,
     )
     await add_object_to_db(product)
 
@@ -129,6 +130,7 @@ async def init_objects():
         description_fr="Un Produit disponible en ligne",
         description_en="An online available Product",
         available_online=True,
+        generate_ticket=False,
     )
     await add_object_to_db(online_product)
 
@@ -139,6 +141,7 @@ async def init_objects():
         name_fr="Produit sans variante",
         name_en="Unused product",
         available_online=False,
+        generate_ticket=False,
     )
     await add_object_to_db(empty_product)
 
@@ -149,6 +152,7 @@ async def init_objects():
         name_fr="Produit utilisable",
         name_en="Usable product",
         available_online=False,
+        generate_ticket=False,
     )
     await add_object_to_db(usable_product)
 
@@ -516,6 +520,7 @@ def test_create_product_seller(client: TestClient):
             "available_online": False,
             "product_constraints": [],
             "document_constraints": [],
+            "generate_ticket": False,
         },
         headers={"Authorization": f"Bearer {token_bde}"},
     )
@@ -540,6 +545,7 @@ def test_create_product_user(client: TestClient):
             "available_online": False,
             "product_constraints": [],
             "document_constraints": [],
+            "generate_ticket": False,
         },
         headers={"Authorization": f"Bearer {token_user}"},
     )
@@ -1894,6 +1900,7 @@ def test_create_product_closed(client: TestClient):
             "available_online": False,
             "product_constraints": [],
             "document_constraints": [],
+            "generate_ticket": False
         },
         headers={"Authorization": f"Bearer {token_bde}"},
     )

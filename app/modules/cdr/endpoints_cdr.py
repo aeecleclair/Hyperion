@@ -1,6 +1,6 @@
 import logging
 import os
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from uuid import UUID, uuid4
 
 from fastapi import (
@@ -8,7 +8,6 @@ from fastapi import (
     HTTPException,
     WebSocket,
     WebSocketDisconnect,
-    WebSocketException,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -1214,13 +1213,83 @@ async def mark_purchase_as_validated(
                     status_code=403,
                     detail=f"Document signature constraint {document_constraint} not satisfied.",
                 )
+        if product.related_membership and product_variant.related_membership_added_duration:
+            existing_membership = next(
+                (m for m in memberships if m.membership == product.related_membership),
+                None,
+            )
+            if existing_membership:
+                await cruds_cdr.update_membership(
+                    db=db,
+                    membership_id=existing_membership.id,
+                    membership=schemas_cdr.MembershipEdit(
+                        end_date=existing_membership.end_date
+                        + product_variant.related_membership_added_duration,
+                    ),
+                )
+            else:
+                added_membership = models_core.CoreAssociationMembership(
+                    id=uuid4(),
+                    user_id=user_id,
+                    membership=product.related_membership,
+                    start_date=date(datetime.now(tz=UTC).date().year, 9, 1),
+                    end_date=date(datetime.now(tz=UTC).date().year, 9, 1)
+                    + product_variant.related_membership_added_duration,
+                )
+                cruds_cdr.create_membership(db=db, membership=added_membership)
+        if product.generate_ticket and product.ticket_expiration:
+            ticket = models_cdr.Ticket(
+                id=uuid4(),
+                secret=uuid4(),
+                product_variant_id=product_variant.id,
+                user_id=user_id,
+                scan=0,
+                tags="",
+                expiration=datetime.now(tz=UTC).date() + product.ticket_expiration,
+            )
+            cruds_cdr.create_ticket(db=db, ticket=ticket)
+    else:
+        if product.related_membership:
+            memberships = await cruds_cdr.get_actual_memberships_by_user_id(
+                db=db,
+                user_id=user_id,
+            )
+            existing_membership = next(
+                (m for m in memberships if m.membership == product.related_membership),
+                None,
+            )
+            if existing_membership and product_variant.related_membership_added_duration:
+                if (
+                    existing_membership.end_date
+                    - product_variant.related_membership_added_duration
+                    <= existing_membership.start_date
+                ):
+                    await cruds_cdr.delete_membership(
+                        db=db,
+                        membership_id=existing_membership.id,
+                    )
+                else:
+                    await cruds_cdr.update_membership(
+                        db=db,
+                        membership_id=existing_membership.id,
+                        membership=schemas_cdr.MembershipEdit(
+                            end_date=existing_membership.end_date
+                            - product_variant.related_membership_added_duration,
+                        ),
+                    )
+        if product.generate_ticket:
+            await cruds_cdr.delete_ticket_of_user(
+                db=db,
+                user_id=user_id,
+                product_variant_id=product_variant_id,
+            )
+    await cruds_cdr.mark_purchase_as_validated(
+        db=db,
+        user_id=user_id,
+        product_variant_id=product_variant_id,
+        validated=validated,
+    )
     try:
-        await cruds_cdr.mark_purchase_as_validated(
-            db=db,
-            user_id=user_id,
-            product_variant_id=product_variant_id,
-            validated=validated,
-        )
         await db.commit()
     except Exception as error:
         await db.rollback()
@@ -1982,6 +2051,48 @@ async def update_status(
     await set_core_data(status, db)
 
 
+@module.router.get(
+    "/cdr/users/{user_id}/tickets/",
+    response_model=list[schemas_cdr.Ticket],
+    status_code=200,
+)
+async def get_tickets_of_user(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    if not (
+        is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])
+        or user_id == user.id
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="You can't get another user tickets.",
+        )
+    return await cruds_cdr.get_tickets_of_user(db=db, user_id=user_id)
+
+
+@module.router.get(
+    "/cdr/users/{user_id}/tickets/{ticket_id}",
+    response_model=schemas_cdr.TicketSecret,
+    status_code=200,
+)
+async def get_ticket_secret(
+    user_id: str,
+    ticket_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    if user_id != user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="You can't get another user ticket secret.",
+        )
+    ticket = await cruds_cdr.get_ticket(db=db, ticket_id=ticket_id)
+    if ticket:
+        return schemas_cdr.TicketSecret(secret=ticket.secret)
+
+
 @module.router.websocket("/cdr/users/ws")
 async def websocket_endpoint(
     websocket: WebSocket,
@@ -1989,7 +2100,7 @@ async def websocket_endpoint(
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     hyperion_error_logger.debug(
-        f"CDR: New websocket connection from {user.id} on worker {os.getpid()}"
+        f"CDR: New websocket connection from {user.id} on worker {os.getpid()}",
     )
 
     await websocket.accept()
@@ -2003,7 +2114,7 @@ async def websocket_endpoint(
     try:
         while True:
             # TODO: we could use received messages from the websocket
-            res = await websocket.receive_json()
+            await websocket.receive_json()
     except WebSocketDisconnect:
         await ws_manager.remove_connection_from_room(
             room_id=HyperionWebsocketsRoom.CDR,

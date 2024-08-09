@@ -717,6 +717,18 @@ async def delete_membership(
     )
 
 
+async def update_membership(
+    db: AsyncSession,
+    membership_id: UUID,
+    membership: schemas_cdr.MembershipEdit,
+):
+    await db.execute(
+        update(CoreAssociationMembership)
+        .where(CoreAssociationMembership.id == membership_id)
+        .values(**membership.model_dump(exclude_none=True)),
+    )
+
+
 def create_action(
     db: AsyncSession,
     action: models_cdr.CdrAction,
@@ -741,3 +753,43 @@ async def get_checkout_by_checkout_id(
         ),
     )
     return checkout.scalars().first()
+
+
+def create_ticket(
+    db: AsyncSession,
+    ticket: models_cdr.Ticket,
+):
+    db.add(ticket)
+
+
+async def delete_ticket_of_user(
+    db: AsyncSession,
+    user_id: str,
+    product_variant_id: UUID,
+):
+    await db.execute(
+        delete(models_cdr.Ticket).where(
+            models_cdr.Ticket.user_id == user_id,
+            models_cdr.Ticket.product_variant_id == product_variant_id,
+        ),
+    )
+
+
+async def get_tickets_of_user(
+    db: AsyncSession,
+    user_id: str,
+) -> Sequence[models_cdr.Ticket]:
+    result = await db.execute(
+        select(models_cdr.Ticket).where(models_cdr.Ticket.user_id == user_id),
+    )
+    return result.scalars().all()
+
+
+async def get_ticket(
+    db: AsyncSession,
+    ticket_id: UUID,
+) -> models_cdr.Ticket | None:
+    result = await db.execute(
+        select(models_cdr.Ticket).where(models_cdr.Ticket.id == ticket_id),
+    )
+    return result.scalars().first()

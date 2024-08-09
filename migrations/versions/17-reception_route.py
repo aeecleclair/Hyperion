@@ -164,6 +164,9 @@ def upgrade() -> None:
             ),
             nullable=True,
         ),
+        sa.Column("generate_ticket", sa.Boolean(), nullable=False),
+        sa.Column("ticket_max_use", sa.Integer(), nullable=True),
+        sa.Column("ticket_expiration", sa.Interval(), nullable=True),
         sa.ForeignKeyConstraint(["seller_id"], ["cdr_seller.id"]),
         sa.PrimaryKeyConstraint("id"),
     )
@@ -238,6 +241,19 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["subject_id"], ["core_user.id"]),
         sa.PrimaryKeyConstraint("id"),
     )
+    op.create_table(
+        "cdr_ticket",
+        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("secret", sa.Uuid(), nullable=False),
+        sa.Column("user_id", sa.String(), nullable=False),
+        sa.Column("product_variant_id", sa.Uuid(), nullable=False),
+        sa.Column("scan", sa.Integer(), nullable=False),
+        sa.Column("tags", sa.String(), nullable=False),
+        sa.Column("expiration", sa.Date(), nullable=False),
+        sa.ForeignKeyConstraint(["user_id"], ["core_user.id"]),
+        sa.ForeignKeyConstraint(["product_variant_id"], ["cdr_product_variant.id"]),
+        sa.PrimaryKeyConstraint("id"),
+    )
     # ### end Alembic commands ###
 
 
@@ -270,6 +286,7 @@ def downgrade() -> None:
 
     op.drop_table("cdr_curriculum")
     op.drop_table("cdr_action")
+    op.drop_table("cdr_ticker")
 
     sa.Enum(AvailableAssociationMembership, name="availableassociationmembership").drop(
         op.get_bind(),
