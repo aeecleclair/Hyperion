@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -171,6 +171,7 @@ class PurchaseComplete(PurchaseBase):
     user_id: str
     product_variant_id: UUID
     validated: bool
+    purchased_on: datetime
 
     model_config = ConfigDict(from_attributes=True)
 

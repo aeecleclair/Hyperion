@@ -1112,6 +1112,7 @@ async def create_purchase(
         product_variant_id=product_variant_id,
         validated=False,
         quantity=purchase.quantity,
+        purchased_on=datetime.now(UTC),
     )
     db_action = models_cdr.CdrAction(
         id=uuid4(),

@@ -167,6 +167,7 @@ class Purchase(Base):
     )
     quantity: Mapped[int]
     validated: Mapped[bool]
+    purchased_on: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
 
 
 class Signature(Base):
