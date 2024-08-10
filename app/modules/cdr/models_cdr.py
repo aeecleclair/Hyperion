@@ -1,9 +1,12 @@
 import uuid
 from datetime import date, datetime, timedelta
+from typing import TYPE_CHECKING
 
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+if TYPE_CHECKING:
+    from app.core.models_core import CoreUser
 from app.modules.cdr.types_cdr import (
     CdrLogActionType,
     DocumentSignatureType,
@@ -235,6 +238,7 @@ class Ticket(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("core_user.id"),
     )
+    user: Mapped["CoreUser"] = relationship("CoreUser")
     scan: Mapped[int]
     tags: Mapped[str]
     expiration: Mapped[date]

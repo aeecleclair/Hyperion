@@ -793,3 +793,23 @@ async def get_ticket(
         select(models_cdr.Ticket).where(models_cdr.Ticket.id == ticket_id),
     )
     return result.scalars().first()
+
+
+async def get_ticket_by_secret(
+    db: AsyncSession,
+    secret: UUID,
+) -> models_cdr.Ticket | None:
+    result = await db.execute(
+        select(models_cdr.Ticket).where(models_cdr.Ticket.secret == secret),
+    )
+    return result.scalars().first()
+
+
+async def scan_ticket(db: AsyncSession, ticket_id: UUID, scan: int, tags: str):
+    await db.execute(
+        update(models_cdr.Ticket)
+        .where(
+            models_cdr.Ticket.id == ticket_id,
+        )
+        .values(scan=scan, tags=tags),
+    )

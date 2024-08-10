@@ -239,11 +239,15 @@ class PaymentUrl(BaseModel):
 class Ticket(BaseModel):
     id: UUID
     product_variant: ProductVariantComplete
-    user_id: str
+    user: CoreUserSimple
     scan: int
     tags: str
     expiration: date
 
 
+class TicketScan(BaseModel):
+    tags: str
+
+
 class TicketSecret(BaseModel):
-    secret: UUID
+    qr_code_secret: UUID

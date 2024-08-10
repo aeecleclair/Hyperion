@@ -2117,24 +2117,129 @@ async def get_tickets_of_user(
 
 
 @module.router.get(
-    "/cdr/users/{user_id}/tickets/{ticket_id}",
+    "/cdr/users/me/tickets/{ticket_id}/secret/",
     response_model=schemas_cdr.TicketSecret,
     status_code=200,
 )
 async def get_ticket_secret(
-    user_id: str,
     ticket_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    if user_id != user.id:
+    ticket = await cruds_cdr.get_ticket(db=db, ticket_id=ticket_id)
+    if not ticket:
+        raise HTTPException(
+            status_code=404,
+            detail="Ticket not found.",
+        )
+    if ticket.user_id != user.id:
         raise HTTPException(
             status_code=403,
             detail="You can't get another user ticket secret.",
         )
-    ticket = await cruds_cdr.get_ticket(db=db, ticket_id=ticket_id)
-    if ticket:
-        return schemas_cdr.TicketSecret(secret=ticket.secret)
+    return schemas_cdr.TicketSecret(qr_code_secret=ticket.secret)
+
+
+@module.router.get(
+    "/cdr/tickets/{secret}/",
+    response_model=list[schemas_cdr.Ticket],
+    status_code=200,
+)
+async def get_ticket_by_secret(
+    secret: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    ticket = await cruds_cdr.get_ticket_by_secret(db=db, secret=secret)
+    if not ticket:
+        raise HTTPException(
+            status_code=404,
+            detail="Ticket not found.",
+        )
+    product = await cruds_cdr.get_product_by_id(
+        db=db,
+        product_id=ticket.product_variant.product_id,
+    )
+    if not product:
+        raise HTTPException(
+            status_code=404,
+            detail="Product not found.",
+        )
+    seller = await cruds_cdr.get_seller_by_id(db=db, seller_id=product.seller_id)
+    if not seller:
+        raise HTTPException(
+            status_code=404,
+            detail="Seller not found.",
+        )
+    if not (
+        is_user_member_of_an_allowed_group(user, [seller.group_id, GroupType.admin_cdr])
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="You can't scan this type of ticket.",
+        )
+    return ticket
+
+
+@module.router.patch(
+    "/cdr/tickets/{secret}/",
+    status_code=204,
+)
+async def scan_ticket(
+    secret: UUID,
+    ticket_data: schemas_cdr.TicketScan,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    ticket = await cruds_cdr.get_ticket_by_secret(db=db, secret=secret)
+    if not ticket:
+        raise HTTPException(
+            status_code=404,
+            detail="Ticket not found.",
+        )
+    product = await cruds_cdr.get_product_by_id(
+        db=db,
+        product_id=ticket.product_variant.product_id,
+    )
+    if not product:
+        raise HTTPException(
+            status_code=404,
+            detail="Product not found.",
+        )
+    seller = await cruds_cdr.get_seller_by_id(db=db, seller_id=product.seller_id)
+    if not seller:
+        raise HTTPException(
+            status_code=404,
+            detail="Seller not found.",
+        )
+    if not (
+        is_user_member_of_an_allowed_group(user, [seller.group_id, GroupType.admin_cdr])
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="You can't scan this type of ticket.",
+        )
+    if not product.ticket_max_use:
+        raise HTTPException(
+            status_code=422,
+            detail="Bad product.",
+        )
+    if ticket.scan >= product.ticket_max_use:
+        raise HTTPException(
+            status_code=403,
+            detail=f"This ticket has already been used {product.ticket_max_use} time(s).",
+        )
+    if ticket.expiration > datetime.now(tz=UTC).date():
+        raise HTTPException(
+            status_code=403,
+            detail="This ticket has expired.",
+        )
+    await cruds_cdr.scan_ticket(
+        db=db,
+        ticket_id=ticket.id,
+        scan=ticket.scan + 1,
+        tags=ticket.tags + "," + ticket_data.tags,
+    )
 
 
 @module.router.websocket("/cdr/users/ws")
