@@ -1300,7 +1300,7 @@ async def mark_purchase_as_validated(
                 secret=uuid4(),
                 product_variant_id=product_variant.id,
                 user_id=user_id,
-                scan=0,
+                scan_left=product.ticket_max_use,
                 tags="",
                 expiration=datetime.now(tz=UTC).date() + product.ticket_expiration,
             )
@@ -2220,15 +2220,10 @@ async def scan_ticket(
             status_code=403,
             detail="You can't scan this type of ticket.",
         )
-    if not product.ticket_max_use:
-        raise HTTPException(
-            status_code=422,
-            detail="Bad product.",
-        )
-    if ticket.scan >= product.ticket_max_use:
+    if ticket.scan_left <= 0:
         raise HTTPException(
             status_code=403,
-            detail=f"This ticket has already been used {product.ticket_max_use} time(s).",
+            detail="This ticket has already been used for the maximum amount.",
         )
     if ticket.expiration > datetime.now(tz=UTC).date():
         raise HTTPException(
@@ -2238,7 +2233,7 @@ async def scan_ticket(
     await cruds_cdr.scan_ticket(
         db=db,
         ticket_id=ticket.id,
-        scan=ticket.scan + 1,
+        scan_left=ticket.scan - 1,
         tags=ticket.tags + "," + ticket_data.tags,
     )
 

@@ -240,6 +240,6 @@ class Ticket(Base):
         ForeignKey("core_user.id"),
     )
     user: Mapped["CoreUser"] = relationship("CoreUser")
-    scan: Mapped[int]
+    scan_left: Mapped[int]
     tags: Mapped[str]
     expiration: Mapped[date]
