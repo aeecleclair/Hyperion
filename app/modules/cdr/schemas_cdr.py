@@ -10,6 +10,7 @@ from app.modules.cdr.types_cdr import (
     PaymentType,
 )
 from app.types.core_data import BaseCoreData
+from app.types.floors_type import FloorsType
 from app.types.membership import AvailableAssociationMembership
 
 
@@ -237,10 +238,16 @@ class PaymentUrl(BaseModel):
     url: str
 
 
+class UserTicket(CoreUserSimple):
+    promo: int | None = None
+    floor: FloorsType | None = None
+    created_on: datetime | None = None
+
+
 class Ticket(BaseModel):
     id: UUID
     product_variant: ProductVariantComplete
-    user: CoreUserSimple
+    user: UserTicket
     scan: int
     tags: str
     expiration: date
