@@ -1,5 +1,5 @@
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime
 
 import pytest_asyncio
 from fastapi.testclient import TestClient
@@ -238,6 +238,7 @@ async def init_objects():
         product_variant_id=variant.id,
         quantity=1,
         validated=False,
+        purchased_on=datetime.now(UTC)
     )
     await add_object_to_db(purchase)
 
