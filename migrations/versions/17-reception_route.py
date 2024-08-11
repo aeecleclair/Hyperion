@@ -218,6 +218,7 @@ def upgrade() -> None:
         sa.Column("product_variant_id", sa.Uuid(), nullable=False),
         sa.Column("quantity", sa.Integer(), nullable=False),
         sa.Column("validated", sa.Boolean(), nullable=False),
+        sa.Column("purchased_on", TZDateTime(), nullable=False),
         sa.ForeignKeyConstraint(
             ["product_variant_id"],
             ["cdr_product_variant.id"],
@@ -247,7 +248,7 @@ def upgrade() -> None:
         sa.Column("secret", sa.Uuid(), nullable=False),
         sa.Column("user_id", sa.String(), nullable=False),
         sa.Column("product_variant_id", sa.Uuid(), nullable=False),
-        sa.Column("scan", sa.Integer(), nullable=False),
+        sa.Column("scan_left", sa.Integer(), nullable=False),
         sa.Column("tags", sa.String(), nullable=False),
         sa.Column("expiration", sa.Date(), nullable=False),
         sa.ForeignKeyConstraint(["user_id"], ["core_user.id"]),
