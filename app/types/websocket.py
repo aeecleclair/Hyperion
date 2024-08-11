@@ -3,7 +3,7 @@ import logging
 import os
 from enum import Enum
 
-from broadcaster import Broadcast
+from broadcaster import Broadcast  # type: ignore
 from fastapi import WebSocket
 from pydantic import BaseModel
 
@@ -159,8 +159,8 @@ class WebsocketConnectionManager:
                 f"Websocket: subscribed broadcaster to channel {room_id} for worker {os.getpid()}",
             )
 
-            async for event in subscriber:  # type: ignore # Should be fixed by https://github.com/encode/broadcaster/issues/136
-                message = MessageToRoomModel.model_validate_json(event.message)  # type: ignore # Should be fixed by https://github.com/encode/broadcaster/issues/136
+            async for event in subscriber:
+                message = MessageToRoomModel.model_validate_json(event.message)
 
                 await self._consume_events_from_broadcaster(
                     message=message.message,

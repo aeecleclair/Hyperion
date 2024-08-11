@@ -811,5 +811,5 @@ async def scan_ticket(db: AsyncSession, ticket_id: UUID, scan: int, tags: str):
         .where(
             models_cdr.Ticket.id == ticket_id,
         )
-        .values(scan=scan, tags=tags),
+        .values(scan_left=scan, tags=tags),
     )

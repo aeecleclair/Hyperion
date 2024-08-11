@@ -2233,8 +2233,8 @@ async def scan_ticket(
     await cruds_cdr.scan_ticket(
         db=db,
         ticket_id=ticket.id,
-        scan_left=ticket.scan - 1,
-        tags=ticket.tags + "," + ticket_data.tags,
+        scan=ticket.scan_left - 1,
+        tags=ticket.tags + "," + ticket_data.tag.strip(),
     )
 
 

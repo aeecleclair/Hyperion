@@ -254,7 +254,7 @@ class Ticket(BaseModel):
 
 
 class TicketScan(BaseModel):
-    tags: str
+    tag: str
 
 
 class TicketSecret(BaseModel):
