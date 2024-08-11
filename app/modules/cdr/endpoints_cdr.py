@@ -2142,11 +2142,12 @@ async def get_ticket_secret(
 
 
 @module.router.get(
-    "/cdr/tickets/{secret}/",
+    "/cdr/products/{product_id}/tickets/{secret}/",
     response_model=list[schemas_cdr.Ticket],
     status_code=200,
 )
 async def get_ticket_by_secret(
+    product_id: UUID,
     secret: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
@@ -2157,9 +2158,14 @@ async def get_ticket_by_secret(
             status_code=404,
             detail="Ticket not found.",
         )
+    if ticket.product_variant.product_id != product_id:
+        raise HTTPException(
+            status_code=404,
+            detail="This Ticket is not related to this product.",
+        )
     product = await cruds_cdr.get_product_by_id(
         db=db,
-        product_id=ticket.product_variant.product_id,
+        product_id=product_id,
     )
     if not product:
         raise HTTPException(
@@ -2183,10 +2189,11 @@ async def get_ticket_by_secret(
 
 
 @module.router.patch(
-    "/cdr/tickets/{secret}/",
+    "/cdr/products/{product_id}/tickets/{secret}/",
     status_code=204,
 )
 async def scan_ticket(
+    product_id: UUID,
     secret: UUID,
     ticket_data: schemas_cdr.TicketScan,
     db: AsyncSession = Depends(get_db),
@@ -2198,9 +2205,14 @@ async def scan_ticket(
             status_code=404,
             detail="Ticket not found.",
         )
+    if ticket.product_variant.product_id != product_id:
+        raise HTTPException(
+            status_code=404,
+            detail="This Ticket is not related to this product.",
+        )
     product = await cruds_cdr.get_product_by_id(
         db=db,
-        product_id=ticket.product_variant.product_id,
+        product_id=product_id,
     )
     if not product:
         raise HTTPException(
