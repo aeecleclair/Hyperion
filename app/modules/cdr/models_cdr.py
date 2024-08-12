@@ -1,5 +1,5 @@
 import uuid
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
 from sqlalchemy import ForeignKey
@@ -86,7 +86,9 @@ class CdrProduct(Base):
     related_membership: Mapped[AvailableAssociationMembership | None]
     generate_ticket: Mapped[bool]
     ticket_max_use: Mapped[int | None]
-    ticket_expiration: Mapped[date | None]
+    ticket_expiration: Mapped[datetime | None] = mapped_column(
+        TZDateTime, nullable=True,
+    )
 
 
 class Curriculum(Base):
@@ -242,4 +244,4 @@ class Ticket(Base):
     user: Mapped["CoreUser"] = relationship("CoreUser")
     scan_left: Mapped[int]
     tags: Mapped[str]
-    expiration: Mapped[date]
+    expiration: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)

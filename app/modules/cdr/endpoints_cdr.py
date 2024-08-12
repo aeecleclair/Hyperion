@@ -1,5 +1,4 @@
 import logging
-import os
 from collections.abc import Sequence
 from datetime import UTC, date, datetime
 from uuid import UUID, uuid4
@@ -2237,7 +2236,7 @@ async def scan_ticket(
             status_code=403,
             detail="This ticket has already been used for the maximum amount.",
         )
-    if ticket.expiration > datetime.now(tz=UTC).date():
+    if ticket.expiration > datetime.now(tz=UTC):
         raise HTTPException(
             status_code=403,
             detail="This ticket has expired.",

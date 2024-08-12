@@ -97,7 +97,7 @@ class ProductBase(BaseModel):
     related_membership: AvailableAssociationMembership | None = None
     generate_ticket: bool
     ticket_max_use: int | None = None
-    ticket_expiration: date | None = None
+    ticket_expiration: datetime | None = None
     product_constraints: list[UUID]
     document_constraints: list[UUID]
 
@@ -114,7 +114,7 @@ class ProductCompleteNoConstraint(BaseModel):
     related_membership: AvailableAssociationMembership | None = None
     generate_ticket: bool
     ticket_max_use: int | None = None
-    ticket_expiration: date | None = None
+    ticket_expiration: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -131,7 +131,7 @@ class ProductComplete(BaseModel):
     related_membership: AvailableAssociationMembership | None = None
     generate_ticket: bool
     ticket_max_use: int | None = None
-    ticket_expiration: date | None = None
+    ticket_expiration: datetime | None = None
     product_constraints: list[ProductCompleteNoConstraint] = []
     document_constraints: list[DocumentComplete] = []
 
@@ -148,7 +148,7 @@ class ProductEdit(BaseModel):
     related_membership: AvailableAssociationMembership | None = None
     generate_ticket: bool | None = None
     ticket_max_use: int | None = None
-    ticket_expiration: date | None = None
+    ticket_expiration: datetime | None = None
     product_constraints: list[UUID] | None = None
     document_constraints: list[UUID] | None = None
 
@@ -257,7 +257,7 @@ class Ticket(BaseModel):
     user: UserTicket
     scan: int
     tags: str
-    expiration: date
+    expiration: datetime
 
 
 class TicketScan(BaseModel):
