@@ -2254,13 +2254,16 @@ async def scan_ticket(
 async def websocket_endpoint(
     websocket: WebSocket,
     ws_manager: WebsocketConnectionManager = Depends(get_websocket_connection_manager),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    # user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    hyperion_error_logger.debug(
-        f"CDR: New websocket connection from {user.id} on worker {os.getpid()}",
-    )
+    # hyperion_error_logger.debug(
+    #     f"CDR: New websocket connection from {user.id} on worker {os.getpid()}",
+    # )
 
     await websocket.accept()
+
+    token_message = await websocket.receive_json()
+    token = token_message.get("token", None)
 
     # Add the user to the connection stack
     await ws_manager.add_connection_to_room(
