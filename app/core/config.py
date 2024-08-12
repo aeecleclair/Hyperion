@@ -263,8 +263,13 @@ class Settings(BaseSettings):
 
     @computed_field  # type: ignore[misc]
     @cached_property
-    def REDIS_URL(cls) -> str:
-        return f"redis://{cls.REDIS_PASSWORD}@{cls.REDIS_HOST}:{cls.REDIS_PORT}"
+    def REDIS_URL(cls) -> str | None:
+        if cls.REDIS_HOST:
+            # We need to include `:` before the password
+            return (
+                f"redis://:{cls.REDIS_PASSWORD or ''}@{cls.REDIS_HOST}:{cls.REDIS_PORT}"
+            )
+        return None
 
     #######################################
     #          Fields validation          #

@@ -46,7 +46,7 @@ class WebsocketConnectionManager:
         """
         self.broadcaster: Broadcast = (
             Broadcast(settings.REDIS_URL)
-            if settings.REDIS_HOST
+            if settings.REDIS_URL
             else Broadcast("memory://")
         )
 
