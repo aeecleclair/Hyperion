@@ -1302,7 +1302,7 @@ async def mark_purchase_as_validated(
                 user_id=user_id,
                 scan_left=product.ticket_max_use,
                 tags="",
-                expiration=datetime.now(tz=UTC).date() + product.ticket_expiration,
+                expiration=product.ticket_expiration,
             )
             cruds_cdr.create_ticket(db=db, ticket=ticket)
     else:

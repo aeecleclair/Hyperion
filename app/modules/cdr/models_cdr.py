@@ -86,7 +86,7 @@ class CdrProduct(Base):
     related_membership: Mapped[AvailableAssociationMembership | None]
     generate_ticket: Mapped[bool]
     ticket_max_use: Mapped[int | None]
-    ticket_expiration: Mapped[timedelta | None]
+    ticket_expiration: Mapped[date | None]
 
 
 class Curriculum(Base):
