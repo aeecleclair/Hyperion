@@ -1,4 +1,5 @@
 from datetime import date, datetime, timedelta
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -12,6 +13,12 @@ from app.modules.cdr.types_cdr import (
 from app.types.core_data import BaseCoreData
 from app.types.floors_type import FloorsType
 from app.types.membership import AvailableAssociationMembership
+from app.types.websocket import WSMessageModel
+
+
+class NewUserWSMessageModel(WSMessageModel):
+    command: Literal["NEW_USER"] = "NEW_USER"
+    data: CoreUserSimple
 
 
 class DocumentBase(BaseModel):

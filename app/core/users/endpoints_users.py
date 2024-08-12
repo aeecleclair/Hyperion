@@ -441,16 +441,13 @@ async def activate_user(
     if cdr_status.status == CdrStatus.onsite:
         try:
             await ws_manager.send_message_to_room(
-                json.dumps(
-                    {
-                        "data_type": "NEW_USER",
-                        "data": schemas_core.CoreUserSimple(
-                            name=confirmed_user.name,
-                            firstname=confirmed_user.firstname,
-                            nickname=confirmed_user.nickname,
-                            id=confirmed_user.id,
-                        ).model_dump(),
-                    },
+                message=schemas_cdr.NewUserWSMessageModel(
+                    data=schemas_core.CoreUserSimple(
+                        name=confirmed_user.name,
+                        firstname=confirmed_user.firstname,
+                        nickname=confirmed_user.nickname,
+                        id=confirmed_user.id,
+                    ),
                 ),
                 room_id=HyperionWebsocketsRoom.CDR,
             )

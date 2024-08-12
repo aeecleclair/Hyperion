@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 from enum import Enum
+from typing import Any
 
 from broadcaster import Broadcast
 from fastapi import WebSocket
@@ -17,9 +18,9 @@ class HyperionWebsocketsRoom(str, Enum):
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
-class MessageToRoomModel(BaseModel):
-    message: str
-    room_id: HyperionWebsocketsRoom
+class WSMessageModel(BaseModel):
+    command: str
+    data: Any
 
 
 class WebsocketConnectionManager:
@@ -114,7 +115,7 @@ class WebsocketConnectionManager:
 
     async def _consume_events_from_broadcaster(
         self,
-        message: str,
+        message_str: str,
         room_id: HyperionWebsocketsRoom,
     ):
         """
@@ -128,7 +129,7 @@ class WebsocketConnectionManager:
 
         for connection in room_connections:
             if not await self._send_message_to_ws_connection(
-                message=message,
+                message_str=message_str,
                 ws_connection=connection,
             ):
                 # If the message couldn't be sent to the connection, we disconnect the websocket connection
@@ -160,11 +161,9 @@ class WebsocketConnectionManager:
             )
 
             async for event in subscriber:  # type: ignore # Should be fixed by https://github.com/encode/broadcaster/issues/136
-                message = MessageToRoomModel.model_validate_json(event.message)  # type: ignore # Should be fixed by https://github.com/encode/broadcaster/issues/136
-
                 await self._consume_events_from_broadcaster(
-                    message=message.message,
-                    room_id=message.room_id,
+                    message_str=event.message,  # type: ignore # Should be fixed by https://github.com/encode/broadcaster/issues/136
+                    room_id=room_id,
                 )
 
         hyperion_error_logger.info(
@@ -179,25 +178,26 @@ class WebsocketConnectionManager:
             self.listening_tasks[room_id].cancel()
             # del self.listening_tasks # Should be done by the callback
 
-    async def send_message_to_room(self, message: str, room_id: HyperionWebsocketsRoom):
+    async def send_message_to_room(
+        self,
+        message: WSMessageModel,
+        room_id: HyperionWebsocketsRoom,
+    ):
         # We need to send the message over the broadcaster even if there is no connection in the room for this worker
         # Because other workers may have open websocket connections for this room
 
         await self.broadcaster.publish(
             channel=room_id,
-            message=MessageToRoomModel(
-                message=message,
-                room_id=room_id,
-            ).model_dump_json(),
+            message=message.model_dump_json(),
         )
 
     async def _send_message_to_ws_connection(
         self,
-        message: str,
+        message_str: str,
         ws_connection: WebSocket,
     ) -> bool:
         try:
-            await ws_connection.send_text(message)
+            await ws_connection.send_text(message_str)
         except RuntimeError:
             return False
         except Exception:
