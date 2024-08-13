@@ -23,7 +23,7 @@ class WSMessageModel(BaseModel):
     data: Any
 
 
-class ConnectionWSMessageModelStatus(Enum, str):
+class ConnectionWSMessageModelStatus(str, Enum):
     connected = "connected"
     invalid = "invalid_token"
 
@@ -33,7 +33,7 @@ class ConnectionWSMessageModelData(BaseModel):
 
 
 class ConnectionWSMessageModel(BaseModel):
-    command: Literal["CONNECTION"] = "CONNECTION"
+    command: Literal["WSStatus"] = "WSStatus"
     data: ConnectionWSMessageModelData
 
 
