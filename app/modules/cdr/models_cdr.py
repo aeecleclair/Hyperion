@@ -87,7 +87,8 @@ class CdrProduct(Base):
     generate_ticket: Mapped[bool]
     ticket_max_use: Mapped[int | None]
     ticket_expiration: Mapped[datetime | None] = mapped_column(
-        TZDateTime, nullable=True,
+        TZDateTime,
+        nullable=True,
     )
 
 

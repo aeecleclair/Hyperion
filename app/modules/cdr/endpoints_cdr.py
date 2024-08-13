@@ -250,7 +250,13 @@ async def get_cdr_user(
             status_code=403,
             detail="You must be a seller to use this endpoint.",
         )
-    user_dict = (await get_user_by_id(db, user_id)).__dict__
+    user_db = await get_user_by_id(db, user_id)
+    if not user_db:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found.",
+        )
+    user_dict = user_db.__dict__
     curriculum = await cruds_cdr.get_cdr_user_curriculum(db, user_id)
     curriculum_complete = {c.id: c for c in await cruds_cdr.get_curriculums(db=db)}
     if curriculum:
