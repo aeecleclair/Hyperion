@@ -159,7 +159,7 @@ def upgrade() -> None:
             "related_membership",
             sa.Enum(
                 AvailableAssociationMembership,
-                name="availablemembership",
+                name="availableassociationmembership",
                 extend_existing=True,
             ),
             nullable=True,
