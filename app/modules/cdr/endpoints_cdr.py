@@ -367,6 +367,14 @@ async def create_seller(
 
     **User must be CDR Admin to use this endpoint**
     """
+    if await cruds_cdr.get_sellers_by_group_ids(
+        db=db,
+        group_ids=[seller.group_id],
+    ):
+        raise HTTPException(
+            status_code=404,
+            detail="There is already a seller for this group.",
+        )
     db_seller = models_cdr.Seller(
         id=uuid4(),
         **seller.model_dump(),
