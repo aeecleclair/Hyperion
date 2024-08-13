@@ -166,7 +166,7 @@ def upgrade() -> None:
         ),
         sa.Column("generate_ticket", sa.Boolean(), nullable=False),
         sa.Column("ticket_max_use", sa.Integer(), nullable=True),
-        sa.Column("ticket_expiration", sa.Date(), nullable=True),
+        sa.Column("ticket_expiration", TZDateTime(), nullable=True),
         sa.ForeignKeyConstraint(["seller_id"], ["cdr_seller.id"]),
         sa.PrimaryKeyConstraint("id"),
     )
