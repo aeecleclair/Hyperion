@@ -168,6 +168,7 @@ class Purchase(Base):
         ForeignKey("cdr_product_variant.id"),
         primary_key=True,
     )
+    product_variant: Mapped["ProductVariant"] = relationship("ProductVariant")
     quantity: Mapped[int]
     validated: Mapped[bool]
     purchased_on: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)

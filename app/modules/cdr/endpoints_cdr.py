@@ -1958,12 +1958,11 @@ async def delete_payment(
 
 
 @module.router.get(
-    "/cdr/pay/{amount}",
+    "/cdr/pay/",
     response_model=schemas_cdr.PaymentUrl,
     status_code=201,
 )
 async def get_payment_url(
-    amount: int,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
     settings: Settings = Depends(get_settings),
@@ -1972,6 +1971,14 @@ async def get_payment_url(
     """
     Get payment url
     """
+    purchases = await cruds_cdr.get_purchases_by_user_id(db=db, user_id=user.id)
+    payments = await cruds_cdr.get_payments_by_user_id(db=db, user_id=user.id)
+
+    purchases_total = sum(p.product_variant.price * p.quantity for p in purchases)
+    payments_total = sum(p.total for p in payments)
+
+    amount = purchases_total - payments_total
+
     if amount < 100:
         raise HTTPException(
             status_code=403,
