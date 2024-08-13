@@ -35,7 +35,13 @@ from app.modules.cdr.types_cdr import (
     PaymentType,
 )
 from app.types.module import Module
-from app.types.websocket import HyperionWebsocketsRoom, WebsocketConnectionManager
+from app.types.websocket import (
+    ConnectionWSMessageModel,
+    ConnectionWSMessageModelData,
+    ConnectionWSMessageModelStatus,
+    HyperionWebsocketsRoom,
+    WebsocketConnectionManager,
+)
 from app.utils.tools import (
     get_core_data,
     is_user_member_of_an_allowed_group,
@@ -2276,6 +2282,14 @@ async def websocket_endpoint(
 
     token_message = await websocket.receive_json()
     token = token_message.get("token", None)
+
+    await websocket.send_text(
+        ConnectionWSMessageModel(
+            data=ConnectionWSMessageModelData(
+                status=ConnectionWSMessageModelStatus.connected,
+            ),
+        ).model_dump_json(),
+    )
 
     # Add the user to the connection stack
     await ws_manager.add_connection_to_room(

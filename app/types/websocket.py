@@ -2,7 +2,7 @@ import asyncio
 import logging
 import os
 from enum import Enum
-from typing import Any
+from typing import Any, Literal
 
 from broadcaster import Broadcast
 from fastapi import WebSocket
@@ -21,6 +21,20 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 class WSMessageModel(BaseModel):
     command: str
     data: Any
+
+
+class ConnectionWSMessageModelStatus(Enum, str):
+    connected = "connected"
+    invalid = "invalid_token"
+
+
+class ConnectionWSMessageModelData(BaseModel):
+    status: ConnectionWSMessageModelStatus
+
+
+class ConnectionWSMessageModel(BaseModel):
+    command: Literal["CONNECTION"] = "CONNECTION"
+    data: ConnectionWSMessageModelData
 
 
 class WebsocketConnectionManager:
