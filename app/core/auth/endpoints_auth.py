@@ -525,14 +525,18 @@ async def authorization_code_grant(
             db_authorization_code.code_challenge is not None
             or tokenreq.code_verifier is not None
         ):
-            hyperion_access_logger.warning(
-                f"Token authorization_code_grant: PKCE related parameters should not be used when using a client secret ({request_id})",
-            )
-            raise AuthHTTPException(
-                status_code=400,
-                error="invalid_request",
-                error_description="PKCE related parameters should not be used",
-            )
+            # We allow some auth clients to bypass this verification
+            # because some auth providers may use PKCE with a client secret event if it's forbidden by the specifications
+            if not auth_client.allow_pkce_with_client_secret:
+                
+                hyperion_access_logger.warning(
+                    f"Token authorization_code_grant: PKCE related parameters should not be used when using a client secret ({request_id})",
+                )
+                raise AuthHTTPException(
+                    status_code=400,
+                    error="invalid_request",
+                    error_description="PKCE related parameters should not be used",
+                )
         # We need to check the correct client_secret was provided
         if auth_client.secret != tokenreq.client_secret:
             hyperion_access_logger.warning(
