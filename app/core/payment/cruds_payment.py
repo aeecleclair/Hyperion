@@ -49,18 +49,6 @@ async def get_checkout_by_hello_asso_checkout_id(
     return result.scalars().first()
 
 
-async def get_checkout_by_hello_asso_checkout_id(
-    hello_asso_checkout_id: int,
-    db: AsyncSession,
-) -> models_payment.Checkout | None:
-    result = await db.execute(
-        select(models_payment.Checkout).where(
-            models_payment.Checkout.hello_asso_checkout_id == hello_asso_checkout_id,
-        ),
-    )
-    return result.scalars().first()
-
-
 async def create_checkout_payment(
     db: AsyncSession,
     checkout_payment: models_payment.CheckoutPayment,

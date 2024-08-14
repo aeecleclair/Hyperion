@@ -18,10 +18,11 @@ async def create_participant(
     db.add(participant)
     try:
         await db.commit()
-        return participant
     except IntegrityError:
         await db.rollback()
-        raise ValueError("An error occurred while creating the participant.")
+        raise
+    else:
+        return participant
 
 
 async def get_all_participants(
@@ -148,7 +149,7 @@ async def create_team(
         await db.commit()
     except IntegrityError:
         await db.rollback()
-        raise ValueError("An error occurred while creating the team.")
+        raise
 
 
 async def update_team(
@@ -224,10 +225,12 @@ async def add_security_file(
     db.add(security_file)
     try:
         await db.commit()
-        return security_file
+
     except IntegrityError:
         await db.rollback()
-        raise ValueError("An error occurred while creating the participant.")
+        raise
+    else:
+        return security_file
 
 
 async def delete_security_file(
@@ -236,7 +239,7 @@ async def delete_security_file(
 ) -> None:
     await db.execute(
         delete(models_raid.SecurityFile).where(
-            models_raid.SecurityFile.id == security_file_id
+            models_raid.SecurityFile.id == security_file_id,
         ),
     )
     await db.commit()
@@ -287,10 +290,12 @@ async def create_document(
     db.add(document)
     try:
         await db.commit()
-        return document
+
     except IntegrityError:
         await db.rollback()
-        raise ValueError("An error occurred while creating the document.")
+        raise
+    else:
+        return document
 
 
 async def assign_document(
@@ -354,10 +359,11 @@ async def upload_document(
     db.add(document)
     try:
         await db.commit()
-        return document
     except IntegrityError:
         await db.rollback()
-        raise ValueError("An error occurred while uploading the document.")
+        raise
+    else:
+        return document
 
 
 async def update_document(
@@ -462,10 +468,11 @@ async def create_invite_token(
     db.add(invite)
     try:
         await db.commit()
-        return invite
     except IntegrityError:
         await db.rollback()
-        raise ValueError("An error occurred while creating the invite token.")
+        raise
+    else:
+        return invite
 
 
 async def get_invite_token_by_team_id(
@@ -559,10 +566,11 @@ async def create_participant_checkout(
     db.add(checkout)
     try:
         await db.commit()
-        return checkout
     except IntegrityError:
         await db.rollback()
-        raise ValueError("An error occurred while creating the participant checkout.")
+        raise
+    else:
+        return checkout
 
 
 async def get_participant_checkout_by_checkout_id(

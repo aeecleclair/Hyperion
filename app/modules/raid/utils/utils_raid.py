@@ -77,7 +77,7 @@ async def validate_payment(
         await cruds_raid.confirm_t_shirt_payment(participant_id, db)
     else:
         hyperion_error_logger.error("Invalid payment amount")
-    team = await cruds_raid.get_team_by_participant_id(participant_id, db)
+    # team = await cruds_raid.get_team_by_participant_id(participant_id, db)
     # await post_update_actions(team, db, drive_file_manager)
 
 
@@ -137,9 +137,9 @@ async def save_team_info(
         if team.file_id:
             try:
                 file_id = drive_file_manager.replace_file(file_path, team.file_id)
-            except Exception as error:
-                hyperion_error_logger.error(
-                    f"RAID: could not replace file with {error}",
+            except Exception:
+                hyperion_error_logger.exception(
+                    "RAID: could not replace file",
                 )
                 file_id = await drive_file_manager.upload_team_file(
                     file_path,
@@ -154,8 +154,8 @@ async def save_team_info(
             )
         await cruds_raid.update_team_file_id(team.id, file_id, db)
         pdf_writer.clear_pdf()
-    except Exception as error:
-        hyperion_error_logger.error(f"Error while creating pdf, {error}")
+    except Exception:
+        hyperion_error_logger.exception("Error while creating pdf")
         return None
 
 
@@ -205,8 +205,8 @@ async def save_security_file(
             db,
         )
         Path(file_path).unlink()
-    except Exception as error:
-        hyperion_error_logger.error(f"Error while creating pdf, {error.__dict__}")
+    except Exception:
+        hyperion_error_logger.exception("Error while creating pdf")
         return None
 
 

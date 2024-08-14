@@ -1,14 +1,9 @@
-import datetime
-import uuid
-
 import pytest_asyncio
+from fastapi.testclient import TestClient
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
-from app.modules.booking import models_booking
 from tests.commons import (
-    add_object_to_db,
-    client,
     create_api_access_token,
     create_user_with_groups,
 )
@@ -31,7 +26,7 @@ async def init_objects() -> None:
     token_simple = create_api_access_token(simple_user)
 
 
-def test_create_user_and_team() -> None:
+def test_create_user_and_team(client: TestClient) -> None:
     response = client.post(
         "/raid/participants",
         json={

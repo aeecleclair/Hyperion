@@ -24,7 +24,6 @@ from app.modules.raid.utils.utils_raid import (
     get_participant,
     post_update_actions,
     save_security_file,
-    save_team_info,
     validate_payment,
     will_participant_be_minor_on,
 )
@@ -100,7 +99,8 @@ async def create_participant(
     # are minors. We can safely assume that the RAID will occurre before Jan 1 of next year
 
     is_minor = will_participant_be_minor_on(
-        participant=participant, raid_start_date=raid_information.raid_start_date
+        participant=participant,
+        raid_start_date=raid_information.raid_start_date,
     )
 
     db_participant = models_raid.Participant(
@@ -163,13 +163,16 @@ async def update_participant(
         participant_dict["t_shirt_size"] = participant.t_shirt_size.value
 
     if participant.id_card_id:
-        id_card_document = await cruds_raid.get_document_by_id(participant.id_card_id)
+        id_card_document = await cruds_raid.get_document_by_id(
+            participant.id_card_id, db=db
+        )
         if not id_card_document:
             raise HTTPException(status_code=404, detail="Document id_card not found.")
 
     if participant.medical_certificate_id:
         medical_certificate_document = await cruds_raid.get_document_by_id(
             participant.medical_certificate_id,
+            db=db,
         )
         if not medical_certificate_document:
             raise HTTPException(
@@ -179,6 +182,7 @@ async def update_participant(
     if participant.student_card_id:
         student_card_document = await cruds_raid.get_document_by_id(
             participant.student_card_id,
+            db=db,
         )
         if not student_card_document:
             raise HTTPException(
@@ -188,6 +192,7 @@ async def update_participant(
     if participant.raid_rules_id:
         raid_rules_document = await cruds_raid.get_document_by_id(
             participant.raid_rules_id,
+            db=db,
         )
         if not raid_rules_document:
             raise HTTPException(
@@ -197,6 +202,7 @@ async def update_participant(
     if participant.parent_authorization_id:
         parent_authorization_document = await cruds_raid.get_document_by_id(
             participant.parent_authorization_id,
+            db=db,
         )
         if not parent_authorization_document:
             raise HTTPException(
@@ -207,6 +213,7 @@ async def update_participant(
     if participant.security_file_id:
         security_file = await cruds_raid.get_security_file_by_security_id(
             participant.security_file_id,
+            db=db,
         )
         if not security_file:
             raise HTTPException(
@@ -520,7 +527,8 @@ async def set_security_file(
         # The participant already has a security file
         # We want to delete it to replace it by the new one
         await cruds_raid.delete_security_file(
-            security_file_id=participant.security_file_id, db=db
+            security_file_id=participant.security_file_id,
+            db=db,
         )
 
     model_security_file = models_raid.SecurityFile(
@@ -532,7 +540,11 @@ async def set_security_file(
 
     information = await get_core_data(coredata_raid.RaidInformation, db)
     await save_security_file(
-        participant, information, team.number, db, drive_file_manager
+        participant,
+        information,
+        team.number,
+        db,
+        drive_file_manager,
     )
     await post_update_actions(team, db, drive_file_manager)
     return created_security_file
@@ -828,7 +840,11 @@ async def update_raid_information(
             team = await cruds_raid.get_team_by_participant_id(participant.id, db)
             if team:
                 await save_security_file(
-                    participant, information, team.number, db, drive_file_manager
+                    participant,
+                    information,
+                    team.number,
+                    db,
+                    drive_file_manager,
                 )
 
 

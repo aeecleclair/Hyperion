@@ -31,8 +31,6 @@ from app.dependencies import (
     get_websocket_connection_manager,
     init_and_get_db_engine,
 )
-from app.core.module import module_list
-from app.dependencies import get_db_engine, get_redis_client, get_settings
 from app.modules.module_list import module_list
 from app.types.exceptions import ContentHTTPException
 from app.types.sqlalchemy import Base
