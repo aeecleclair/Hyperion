@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import delete, select, update
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.models_core import CoreAssociationMembership
@@ -371,7 +372,7 @@ async def get_purchases_by_user_id(
     user_id: str,
 ) -> Sequence[models_cdr.Purchase]:
     result = await db.execute(
-        select(models_cdr.Purchase).where(models_cdr.Purchase.user_id == user_id),
+        select(models_cdr.Purchase).where(models_cdr.Purchase.user_id == user_id).options(selectinload(models_cdr.Purchase.product_variant)),
     )
     return result.scalars().all()
 

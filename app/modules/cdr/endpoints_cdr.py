@@ -509,13 +509,6 @@ async def create_product(
                 status_code=403,
                 detail="You must specify a ticket expiration date and a ticket max use when the product generate a ticket",
             )
-        date = product.ticket_expiration
-        product.ticket_expiration = datetime(
-            date.year,
-            date.month,
-            date.day,
-            tzinfo=UTC,
-        )
     await is_user_in_a_seller_group(
         seller_id,
         user=user,
