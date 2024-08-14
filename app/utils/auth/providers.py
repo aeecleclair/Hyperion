@@ -324,6 +324,31 @@ class RalllyAuthClient(BaseAuthClient):
         }
 
 
+class DocumensoAuthClient(BaseAuthClient):
+    allowed_scopes: set[ScopeType | str] = {ScopeType.openid}
+
+    allow_pkce_with_client_secret: bool = True
+
+    allowed_groups: list[GroupType] | None = [
+        GroupType.admin,
+        GroupType.BDE,
+        GroupType.eclair,
+    ]
+
+    return_userinfo_in_id_token: bool = True
+
+    @classmethod
+    def get_userinfo(cls, user: models_core.CoreUser):
+        return {
+            "sub": user.id,
+            "name": get_display_name(
+                firstname=user.firstname,
+                name=user.name,
+                nickname=user.nickname,
+            ),
+            "email": user.email,
+        }
+
 class RAIDRegisteringAuthClient(BaseAuthClient):
     """
     An auth client for The Raid registering website
