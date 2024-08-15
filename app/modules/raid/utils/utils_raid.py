@@ -106,7 +106,7 @@ async def write_teams_csv(
                 str(team.number or ""),
             ]
             for team in teams
-        ]
+        ],
     )
     async with aiofiles.open(
         file_path,
