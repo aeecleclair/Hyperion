@@ -265,9 +265,11 @@ async def google_api_callback(
             settings=settings,
             request=request,
         )
-        return "Ok"
+
     except Exception:
         hyperion_error_logger.exception(
             "Google API authentication callback error",
         )
         return "An error occurred during the Google API authentication callback"
+    else:
+        return "Ok"

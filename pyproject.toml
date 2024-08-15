@@ -121,7 +121,8 @@ disallow_any_generics = false
 disallow_untyped_calls = false
 
 [[tool.mypy.overrides]]
-module = ["firebase_admin", "icalendar", "fitz"]
+# google_auth_oauthlib : https://github.com/googleapis/google-auth-library-python-oauthlib/issues/288
+module = ["firebase_admin", "icalendar", "fitz", "google_auth_oauthlib.flow"]
 ignore_missing_imports = true
 
 

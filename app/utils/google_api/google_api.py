@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
 from app.types.exceptions import (
-    CoreDataNotFoundException,
+    CoreDataNotFoundError,
     GoogleAPIInvalidCredentialsError,
     GoogleAPIMissingConfigInDotenvError,
 )
@@ -34,9 +34,7 @@ class GoogleAPI:
             settings.GOOGLE_API_CLIENT_ID is None
             or settings.GOOGLE_API_CLIENT_SECRET is None
         ):
-            raise GoogleAPIMissingConfigInDotenvError(
-                "Google API is not configured in dotenv",
-            )
+            raise GoogleAPIMissingConfigInDotenvError
 
         client_config = {
             "web": {
@@ -52,7 +50,7 @@ class GoogleAPI:
         flow = Flow.from_client_config(
             client_config,
             GoogleAPI.SCOPES,
-            redirect_uri=settings.DOCKER_URL + "google-api/oauth2callback",
+            redirect_uri=settings.CLIENT_URL + "google-api/oauth2callback",
         )
 
         return flow
@@ -61,7 +59,7 @@ class GoogleAPI:
         self,
         db: AsyncSession,
         settings: Settings,
-    ) -> Credentials:
+    ) -> None:
         """
         Start an authentication oauth 2 flow with the Google API.
         This method should only be called if tokens are not available in the database.
@@ -99,16 +97,16 @@ class GoogleAPI:
         settings: Settings,
         request: Request,
     ):
-        core_data: GoogleAPIOAuthFlow = await get_core_data(
+        auth_flow_core_data: GoogleAPIOAuthFlow = await get_core_data(
             GoogleAPIOAuthFlow,
             db=db,
         )
 
         data = request.query_params
 
-        if data.get("state", None) != core_data.state:
+        if data.get("state", None) != auth_flow_core_data.state:
             hyperion_error_logger.error(
-                f"Mismatched state in Google API authentication, got {data.get('state', None)} but expected {core_data.state}",
+                f"Mismatched state in Google API authentication, got {data.get('state', None)} but expected {auth_flow_core_data.state}",
             )
             raise HTTPException(400, "Mismatched state in Google API authentication")
 
@@ -118,8 +116,10 @@ class GoogleAPI:
 
         creds = flow.credentials
 
-        core_data = GoogleAPICredentials.model_validate_json(creds.to_json())
-        await set_core_data(core_data=core_data, db=db)
+        credentials_core_data = GoogleAPICredentials.model_validate_json(
+            creds.to_json(),
+        )
+        await set_core_data(core_data=credentials_core_data, db=db)
 
     async def get_credentials(
         self,
@@ -156,12 +156,12 @@ class GoogleAPI:
                 expiry=core_data.expiry.replace(tzinfo=None),
             )
 
-        except CoreDataNotFoundException:
+        except CoreDataNotFoundError:
             # There are no credentials in the database.
             # This means that Hyperion was never launched with a Google API configuration.
             # We need to start the authentication flow.
             await self._start_authentication(db=db, settings=settings)
-            raise GoogleAPIInvalidCredentialsError(
+            raise GoogleAPIInvalidCredentialsError(  # noqa: TRY003
                 "Missing credentials in database. A new authentication flow was started",
             ) from None
 
@@ -175,7 +175,7 @@ class GoogleAPI:
                 await set_core_data(core_data=core_data, db=db)
             else:
                 await self._start_authentication(db=db, settings=settings)
-                raise GoogleAPIInvalidCredentialsError(
+                raise GoogleAPIInvalidCredentialsError(  # noqa: TRY003
                     "Credentials are not valid. A new authentication flow was started",
                 ) from None
 

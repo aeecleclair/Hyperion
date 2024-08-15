@@ -12,7 +12,10 @@ class GoogleAPIInvalidCredentialsError(Exception):
 
 
 class GoogleAPIMissingConfigInDotenvError(Exception):
-    pass
+    def __init__(self):
+        super().__init__("Google API is not configured in dotenv")
+
+
 class ContentHTTPException(HTTPException):
     """
     A custom HTTPException allowing to return custom content.
