@@ -245,18 +245,6 @@ async def delete_security_file(
     await db.commit()
 
 
-async def update_security_file(
-    security_file: schemas_raid.SecurityFileBase,
-    db: AsyncSession,
-) -> None:
-    await db.execute(
-        update(models_raid.SecurityFile)
-        .where(models_raid.SecurityFile.id == security_file.id)
-        .values(**security_file.model_dump(exclude_none=True)),
-    )
-    await db.commit()
-
-
 async def update_security_file_id(
     security_file_id: str,
     file_id: str,

@@ -224,7 +224,7 @@ class Participant(Base):
             self.attestation_on_honour,
             self.payment,
         ]
-        number_validated = sum([condition is not None for condition in conditions])
+        number_validated: float = sum([condition is not None for condition in conditions])
         if self.situation and self.situation.split(" : ")[0] in [
             "centrale",
             "otherschool",

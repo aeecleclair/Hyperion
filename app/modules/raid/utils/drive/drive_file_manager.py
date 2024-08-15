@@ -96,6 +96,9 @@ class DriveFileManager:
         db: AsyncSession,
     ) -> str:
         await self.init_folders(db)
+        if not self.drive_folders or not self.drive_folders.registering_folder_id:
+            hyperion_error_logger.error("No registering folder id found in database")
+            return ""
         return await self.upload_file(
             file_path,
             file_name,
@@ -109,6 +112,9 @@ class DriveFileManager:
         db: AsyncSession,
     ) -> str:
         await self.init_folders(db)
+        if not self.drive_folders or not self.drive_folders.security_folder_id:
+            hyperion_error_logger.error("No security folder id found in database")
+            return ""
         return await self.upload_file(
             file_path,
             file_name,
@@ -122,6 +128,9 @@ class DriveFileManager:
         db: AsyncSession,
     ) -> str:
         await self.init_folders(db)
+        if not self.drive_folders or not self.drive_folders.parent_folder_id:
+            hyperion_error_logger.error("No parent folder id found in database")
+            return ""
         return await self.upload_file(
             file_path,
             file_name,
