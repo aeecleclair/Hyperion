@@ -164,7 +164,8 @@ async def update_participant(
 
     if participant.id_card_id:
         id_card_document = await cruds_raid.get_document_by_id(
-            participant.id_card_id, db=db
+            participant.id_card_id,
+            db=db,
         )
         if not id_card_document:
             raise HTTPException(status_code=404, detail="Document id_card not found.")
@@ -448,10 +449,7 @@ async def read_document(
     if not participant:
         # The document can be a global document
         information = await get_core_data(coredata_raid.RaidInformation, db)
-        if (
-            information.raid_rules_id == document_id
-            or information.raid_information_id == document_id
-        ):
+        if document_id in {information.raid_rules_id, information.raid_information_id}:
             return get_file_from_data(
                 default_asset="assets/documents/raid_rules.pdf",
                 directory="raid",

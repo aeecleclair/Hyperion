@@ -1,17 +1,17 @@
+import datetime
+import uuid
+
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
 from app.core import models_core
-from app.modules.raid import models_raid
 from app.core.groups.groups_type import GroupType
+from app.modules.raid import models_raid
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
     create_user_with_groups,
 )
-
-import uuid
-import datetime
 
 participant: models_raid.Participant
 
@@ -40,7 +40,9 @@ async def init_objects() -> None:
 
     global simple_user_without_participant, token_simple_without_participant
     simple_user_without_participant = await create_user_with_groups([GroupType.student])
-    token_simple_without_participant = create_api_access_token(simple_user_without_participant)
+    token_simple_without_participant = create_api_access_token(
+        simple_user_without_participant,
+    )
 
     global simple_user_without_team, token_simple_without_team
     simple_user_without_team = await create_user_with_groups([GroupType.student])
@@ -66,7 +68,6 @@ async def init_objects() -> None:
     )
     await add_object_to_db(team)
 
-    
     no_team_participant = models_raid.Participant(
         id=simple_user_without_team.id,
         firstname="NoTeam",
@@ -86,13 +87,14 @@ def test_get_participant_by_id(client: TestClient):
     assert response.status_code == 200
     assert response.json()["id"] == simple_user.id
 
+
 def test_create_participant(client: TestClient):
     participant_data = {
         "firstname": "New",
         "name": "Participant",
         "birthday": "2000-01-01",
         "phone": "0123456789",
-        "email": "new@participant.com"
+        "email": "new@participant.com",
     }
     response = client.post(
         "/raid/participants",
@@ -102,6 +104,7 @@ def test_create_participant(client: TestClient):
     assert response.status_code == 201
     assert response.json()["firstname"] == "New"
 
+
 def test_update_participant(client: TestClient):
     update_data = {"firstname": "Updated"}
     response = client.patch(
@@ -110,6 +113,7 @@ def test_update_participant(client: TestClient):
         headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response.status_code == 204
+
 
 def test_create_team(client: TestClient):
     team_data = {"name": "New Team"}
@@ -121,6 +125,7 @@ def test_create_team(client: TestClient):
     assert response.status_code == 201
     assert response.json()["name"] == "New Team"
 
+
 def test_get_team_by_participant_id(client: TestClient):
     response = client.get(
         f"/raid/participants/{simple_user.id}/team",
@@ -128,6 +133,7 @@ def test_get_team_by_participant_id(client: TestClient):
     )
     assert response.status_code == 200
     assert "id" in response.json()
+
 
 def test_get_all_teams(client: TestClient):
     response = client.get(
@@ -137,6 +143,7 @@ def test_get_all_teams(client: TestClient):
     assert response.status_code == 200
     assert isinstance(response.json(), list)
 
+
 def test_get_team_by_id(client: TestClient):
     response = client.get(
         f"/raid/teams/{team.id}",
@@ -144,6 +151,7 @@ def test_get_team_by_id(client: TestClient):
     )
     assert response.status_code == 200
     assert response.json()["id"] == team.id
+
 
 def test_update_team(client: TestClient):
     update_data = {"name": "Updated Team"}
@@ -154,12 +162,14 @@ def test_update_team(client: TestClient):
     )
     assert response.status_code == 204
 
+
 def test_delete_team(client: TestClient):
     response = client.delete(
         f"/raid/teams/{team.id}",
         headers={"Authorization": f"Bearer {token_raid_admin}"},
     )
     assert response.status_code == 204
+
 
 def test_upload_document(client: TestClient):
     file_content = b"test document content"
@@ -171,6 +181,7 @@ def test_upload_document(client: TestClient):
     )
     assert response.status_code == 201
     assert "id" in response.json()
+
 
 ## Required google access
 # def test_read_document(client: TestClient):
@@ -216,12 +227,14 @@ def test_upload_document(client: TestClient):
 #     )
 #     assert response.status_code == 201
 
+
 def test_confirm_payment(client: TestClient):
     response = client.post(
         f"/raid/participant/{simple_user.id}/payment",
         headers={"Authorization": f"Bearer {token_raid_admin}"},
     )
     assert response.status_code == 204
+
 
 def test_confirm_t_shirt_payment(client: TestClient):
     response = client.post(
@@ -230,12 +243,14 @@ def test_confirm_t_shirt_payment(client: TestClient):
     )
     assert response.status_code == 204
 
+
 def test_validate_attestation_on_honour(client: TestClient):
     response = client.post(
         f"/raid/participant/{simple_user.id}/honour",
         headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response.status_code == 204
+
 
 def test_create_invite_token(client: TestClient):
     response = client.post(
@@ -244,6 +259,7 @@ def test_create_invite_token(client: TestClient):
     )
     assert response.status_code == 201
     assert "token" in response.json()
+
 
 def test_join_team(client: TestClient):
     # Create an invite token first
@@ -261,6 +277,7 @@ def test_join_team(client: TestClient):
     )
     assert response.status_code == 204
 
+
 ## Required a team with two members
 # def test_kick_team_member(client: TestClient):
 #     response = client.post(
@@ -269,7 +286,7 @@ def test_join_team(client: TestClient):
 #     )
 #     assert response.status_code == 201
 
-## 
+##
 # def test_merge_teams(client: TestClient):
 #     # Create two teams for testing
 #     team1_id = team.id
@@ -287,12 +304,14 @@ def test_join_team(client: TestClient):
 #     )
 #     assert response.status_code == 201
 
+
 def test_get_raid_information(client: TestClient):
     response = client.get(
         "/raid/information",
         headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response.status_code == 200
+
 
 def test_update_raid_information(client: TestClient):
     raid_info = {
@@ -304,6 +323,7 @@ def test_update_raid_information(client: TestClient):
         headers={"Authorization": f"Bearer {token_raid_admin}"},
     )
     assert response.status_code == 204
+
 
 # def test_update_drive_folders(client: TestClient):
 #     folder_data = {"parent_folder_id": "some_folder_id"}
@@ -322,12 +342,14 @@ def test_update_raid_information(client: TestClient):
 #     )
 #     assert response.status_code == 200
 
+
 def test_get_raid_price(client: TestClient):
     response = client.get(
         "/raid/price",
         headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response.status_code == 200
+
 
 def test_update_raid_price(client: TestClient):
     price_data = {"student_price": 50, "t_shirt_price": 15}
@@ -337,6 +359,7 @@ def test_update_raid_price(client: TestClient):
         headers={"Authorization": f"Bearer {token_raid_admin}"},
     )
     assert response.status_code == 204
+
 
 # def test_get_payment_url(client: TestClient):
 #     response = client.get(

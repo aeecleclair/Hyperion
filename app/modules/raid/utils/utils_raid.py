@@ -19,6 +19,11 @@ from app.utils.tools import (
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
+class RaidPayementError(ValueError):
+    def __init__(self, checkout_id):
+        super().__init__(f"RAID participant checkout {checkout_id} not found.")
+
+
 def will_participant_be_minor_on(
     participant: ParticipantUpdate | models_raid.Participant | ParticipantBase,
     raid_start_date: date | None,
@@ -61,7 +66,7 @@ async def validate_payment(
         db,
     )
     if not participant_checkout:
-        raise ValueError(f"RAID participant checkout {checkout_id} not found.")
+        raise RaidPayementError(checkout_id)
     participant_id = participant_checkout.participant_id
     prices = await get_core_data(coredata_raid.RaidPrice, db)
     if prices.student_price and paid_amount == prices.student_price:
@@ -89,8 +94,8 @@ async def write_teams_csv(
     file_name = "Équipes - " + datetime.now(UTC).strftime("%Y-%m-%d_%H_%M_%S") + ".csv"
     file_path = "data/raid/" + file_name
     data: list[list[str]] = [["Team name", "Captain", "Second", "Difficulty", "Number"]]
-    for team in teams:
-        data.append(
+    data.extend(
+        [
             [
                 team.name.replace(",", " "),
                 f"{team.captain.firstname} {team.captain.name}".replace(",", " "),
@@ -99,8 +104,10 @@ async def write_teams_csv(
                 else "",
                 team.difficulty,
                 str(team.number or ""),
-            ],
-        )
+            ]
+            for team in teams
+        ]
+    )
     async with aiofiles.open(
         file_path,
         mode="w",

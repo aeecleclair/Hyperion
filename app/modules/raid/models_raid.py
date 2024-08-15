@@ -215,16 +215,16 @@ class Participant(Base):
 
     @property
     def validation_progress(self) -> float:
-        number_validated: float = 0
         number_total = 10
-        if self.address:
-            number_validated += 1
-        if self.bike_size:
-            number_validated += 1
-        if self.t_shirt_size:
-            number_validated += 1
-        if self.situation:
-            number_validated += 1
+        conditions = [
+            self.address,
+            self.bike_size,
+            self.t_shirt_size,
+            self.situation,
+            self.attestation_on_honour,
+            self.payment,
+        ]
+        number_validated = sum([condition is not None for condition in conditions])
         if self.situation and self.situation.split(" : ")[0] in [
             "centrale",
             "otherschool",
@@ -260,10 +260,6 @@ class Participant(Base):
             self.raid_rules_id
             and self.raid_rules.validation == DocumentValidation.accepted
         ):
-            number_validated += 1
-        if self.attestation_on_honour:
-            number_validated += 1
-        if self.payment:
             number_validated += 1
         return (number_validated / number_total) * 100
 
