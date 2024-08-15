@@ -201,6 +201,15 @@ To enable the service:
    2. Choose _Manage keys_ and create a new JSON key.
    3. Rename the file `firebase.json` and add it at Hyperion root
 
+## Use websocket
+
+When using multiples workers, a Redis server must be configured to broadcast messages between workers.
+
+## Google API usage
+
+Hyperion can use Google API to run App Script and upload files to Google Drive.
+See [app/utils/google_api/README.md](./app/utils/google_api/README.md) for more information.
+
 ---
 
 ## Running Hyperion with Gunicorn
