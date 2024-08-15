@@ -28,12 +28,16 @@ from app.utils.tools import get_file_path_from_data
 templates = Jinja2Templates(directory="assets/templates")
 
 
-def maximize_image(image_path: Path, max_width: int, max_height: int) -> Image:
+def maximize_image(
+    image_path: Path,
+    max_width: float,
+    max_height: float,
+) -> Image.Image:
     image = Image.open(image_path)
     width, height = image.size
     if width > height:
         image = image.rotate(270, expand=True)
-    image.thumbnail((max_width, max_height), resample=Image.BILINEAR)
+    image.thumbnail((max_width, max_height), resample=Image.Resampling.BILINEAR)
     return image
 
 
@@ -370,7 +374,7 @@ class PDFWriter(FPDF):
         with self.table(
             borders_layout="NONE",
             cell_fill_mode=TableCellFillMode.NONE,
-            line_height=7.8,
+            line_height=8,
             text_align=("LEFT", "RIGHT"),
             v_align=VAlign.M,
             headings_style=headings_style,
