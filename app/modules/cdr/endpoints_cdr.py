@@ -1996,6 +1996,11 @@ async def get_payment_url(
             checkout_id=checkout.id,
         ),
     )
+    try:
+        await db.commit()
+    except Exception as error:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=str(error))
     return schemas_cdr.PaymentUrl(
         url=checkout.payment_url,
     )
