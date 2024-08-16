@@ -62,7 +62,7 @@ class CdrProduct(Base):
         ForeignKey("cdr_seller.id"),
     )
     name_fr: Mapped[str]
-    name_en: Mapped[str]
+    name_en: Mapped[str | None]
     description_fr: Mapped[str | None]
     description_en: Mapped[str | None]
     available_online: Mapped[bool]
@@ -133,7 +133,7 @@ class ProductVariant(Base):
         ForeignKey("cdr_product.id"),
     )
     name_fr: Mapped[str]
-    name_en: Mapped[str]
+    name_en: Mapped[str | None]
     description_fr: Mapped[str | None]
     description_en: Mapped[str | None]
     price: Mapped[int]

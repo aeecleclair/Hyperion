@@ -321,7 +321,7 @@ def test_create_seller_admin(client: TestClient):
         "/cdr/sellers/",
         json={
             "name": "Seller créé",
-            "group_id": str(GroupType.cinema.value),
+            "group_id": str(GroupType.ph.value),
             "order": 1,
         },
         headers={"Authorization": f"Bearer {token_admin}"},

@@ -20,7 +20,6 @@ from app.core.users.cruds_users import get_user_by_id, get_users
 from app.dependencies import (
     get_db,
     get_payment_tool,
-    get_request_id,
     get_settings,
     get_websocket_connection_manager,
     hyperion_access_logger,
@@ -101,7 +100,6 @@ async def is_user_in_a_seller_group(
     seller_id: UUID,
     user: models_core.CoreUser,
     db: AsyncSession,
-    request_id: str = Depends(get_request_id),
 ):
     """
     Check if the user is in the group related to a seller or CDR Admin.
@@ -121,7 +119,7 @@ async def is_user_in_a_seller_group(
         return user
 
     hyperion_access_logger.warning(
-        f"Is_user_a_member_of: Unauthorized, user is not a seller ({request_id})",
+        "Is_user_a_member_of: Unauthorized, user is not a seller",
     )
 
     raise HTTPException(
@@ -200,7 +198,7 @@ async def get_cdr_users(
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
-    Get all sellers.
+    Get all users.
 
     **User must be part of a seller group to use this endpoint**
     """
@@ -372,7 +370,7 @@ async def create_seller(
         group_ids=[seller.group_id],
     ):
         raise HTTPException(
-            status_code=404,
+            status_code=403,
             detail="There is already a seller for this group.",
         )
     db_seller = models_cdr.Seller(
@@ -527,20 +525,20 @@ async def create_product(
     )
     try:
         cruds_cdr.create_product(db, db_product)
-        for p in product.product_constraints:
+        for constraint_id in product.product_constraints:
             cruds_cdr.create_product_constraint(
                 db,
                 models_cdr.ProductConstraint(
                     product_id=db_product.id,
-                    product_constraint_id=p,
+                    product_constraint_id=constraint_id,
                 ),
             )
-        for d in product.document_constraints:
+        for constraint_id in product.document_constraints:
             cruds_cdr.create_document_constraint(
                 db,
                 models_cdr.DocumentConstraint(
                     product_id=db_product.id,
-                    document_id=d,
+                    document_id=constraint_id,
                 ),
             )
         await db.commit()
@@ -595,22 +593,22 @@ async def update_product(
         )
         if product.product_constraints is not None:
             await cruds_cdr.delete_product_constraints(db=db, product_id=product_id)
-            for d in product.product_constraints:
+            for constraint_id in product.product_constraints:
                 cruds_cdr.create_product_constraint(
                     db,
                     models_cdr.ProductConstraint(
                         product_id=product_id,
-                        product_constraint_id=d,
+                        product_constraint_id=constraint_id,
                     ),
                 )
         if product.document_constraints is not None:
             await cruds_cdr.delete_document_constraints(db=db, product_id=product_id)
-            for d in product.document_constraints:
+            for constraint_id in product.document_constraints:
                 cruds_cdr.create_document_constraint(
                     db,
                     models_cdr.DocumentConstraint(
                         product_id=product_id,
-                        document_id=d,
+                        document_id=constraint_id,
                     ),
                 )
         await db.commit()
@@ -1967,8 +1965,10 @@ async def get_payment_url(
     purchases = await cruds_cdr.get_purchases_by_user_id(db=db, user_id=user.id)
     payments = await cruds_cdr.get_payments_by_user_id(db=db, user_id=user.id)
 
-    purchases_total = sum(p.product_variant.price * p.quantity for p in purchases)
-    payments_total = sum(p.total for p in payments)
+    purchases_total = sum(
+        purchase.product_variant.price * purchase.quantity for purchase in purchases
+    )
+    payments_total = sum(payment.total for payment in payments)
 
     amount = purchases_total - payments_total
 
