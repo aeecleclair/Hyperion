@@ -237,6 +237,12 @@ class MembershipEdit(BaseModel):
     end_date: date | None = None
 
 
+class MembershipUserMappingEmail(BaseModel):
+    user_email: str
+    start_date: date
+    end_date: date
+
+
 class Status(BaseCoreData):
     status: CdrStatus = CdrStatus.pending
 

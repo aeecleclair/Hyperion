@@ -11,11 +11,12 @@ from fastapi import (
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core, schemas_core
+from app.core import cruds_core, models_core, schemas_core
 from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
 from app.core.payment import schemas_payment
 from app.core.payment.payment_tool import PaymentTool
+from app.core.users import cruds_users
 from app.core.users.cruds_users import get_user_by_id, get_users
 from app.dependencies import (
     get_db,
@@ -33,6 +34,7 @@ from app.modules.cdr.types_cdr import (
     DocumentSignatureType,
     PaymentType,
 )
+from app.types.membership import AvailableAssociationMembership
 from app.types.module import Module
 from app.types.websocket import (
     ConnectionWSMessageModel,
@@ -1365,6 +1367,46 @@ async def mark_purchase_as_validated(
         raise HTTPException(status_code=400, detail=str(error))
     else:
         return db_purchase
+
+
+@module.router.post(
+    "cdr/memberships/{membership_id}/add-batch/",
+    status_code=204,
+    response_model=list[schemas_cdr.MembershipUserMappingEmail],
+)
+async def add_batch_membership(
+    membership: AvailableAssociationMembership,
+    memberships: list[schemas_cdr.MembershipUserMappingEmail],
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
+):
+    """
+    Add a batch of memberships.
+
+    **User must be CDR Admin to use this endpoint**
+    """
+    unknown_users: list[schemas_cdr.MembershipUserMappingEmail] = []
+    for m in memberships:
+        m_user = await cruds_users.get_user_by_email(db=db, email=m.user_email)
+        if not m_user:
+            unknown_users.append(m)
+            continue
+        await cruds_cdr.create_membership(
+            db=db,
+            membership=models_core.CoreAssociationMembership(
+                id=uuid4(),
+                user_id=m_user.id,
+                membership=membership,
+                start_date=m.start_date,
+                end_date=m.end_date,
+            ),
+        )
+    try:
+        await db.commit()
+    except Exception as error:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=str(error))
+    return unknown_users
 
 
 @module.router.delete(
