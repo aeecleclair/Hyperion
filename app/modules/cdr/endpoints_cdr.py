@@ -1381,7 +1381,9 @@ async def add_batch_membership(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
 ):
     """
-    Add a batch of memberships.
+    Add a batch of user to a membership.
+
+    Return the list of unknown users whose email is not in the database.
 
     **User must be CDR Admin to use this endpoint**
     """
