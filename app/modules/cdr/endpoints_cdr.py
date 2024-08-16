@@ -73,9 +73,10 @@ async def validate_payment(
     )
     db_action = models_cdr.CdrAction(
         id=uuid4(),
-        subject_id=checkout.id,
+        subject_id=str(checkout.id),
         action_type=CdrLogActionType.payment_add,
         action=str(checkout_payment.__dict__),
+        timestamp = datetime.now(UTC)
     )
     try:
         cruds_cdr.create_payment(db=db, payment=db_payment)
