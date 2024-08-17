@@ -265,6 +265,81 @@ async def get_cdr_user(
     return schemas_cdr.CdrUser(**user_dict)
 
 
+@module.router.patch(
+    "/cdr/users/{user_id}/",
+    status_code=204,
+)
+async def update_cdr_user(
+    user_id: str,
+    user_update: schemas_cdr.CdrUserUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
+    ws_manager: WebsocketConnectionManager = Depends(get_websocket_connection_manager),
+):
+    """
+    Edit a user email, nickname and/or floor.
+
+    **User must be part of a seller group to use this endpoint**
+    """
+    user_db = await get_user_by_id(db, user_id)
+    if not user_db:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found.",
+        )
+
+    try:
+        if user_update.floor or user_update.nickname:
+            await cruds_users.update_user(
+                db=db,
+                user_id=user_id,
+                user_update=schemas_core.CoreUserUpdate(
+                    nickname=user_update.nickname,
+                    floor=user_update.floor,
+                ),
+            )
+        if user_update.email:
+            await cruds_users.update_user_email_by_id(
+                db=db,
+                user_id=user_id,
+                new_email=user_update.email,
+            )
+    except Exception as error:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=str(error))
+
+    user_db = await get_user_by_id(db, user_id)
+    if not user_db:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found.",
+        )
+
+    curriculum = await cruds_cdr.get_cdr_user_curriculum(db, user_id)
+
+    cdr_status = await get_core_data(schemas_cdr.Status, db)
+    if cdr_status.status == CdrStatus.onsite:
+        try:
+            await ws_manager.send_message_to_room(
+                message=schemas_cdr.NewUserWSMessageModel(
+                    data=schemas_cdr.CdrUser(
+                        curriculum=schemas_cdr.CurriculumComplete(
+                            **curriculum.__dict__,
+                        ),
+                        name=user_db.name,
+                        firstname=user_db.firstname,
+                        nickname=user_db.nickname,
+                        id=user_db.id,
+                    ),
+                ),
+                room_id=HyperionWebsocketsRoom.CDR,
+            )
+        except Exception:
+            hyperion_error_logger.exception(
+                f"Error while sending a message to the room {HyperionWebsocketsRoom.CDR}",
+            )
+
+
 @module.router.get(
     "/cdr/sellers/",
     response_model=list[schemas_cdr.SellerComplete],
@@ -1737,6 +1812,7 @@ async def create_curriculum_membership(
     curriculum_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
+    ws_manager: WebsocketConnectionManager = Depends(get_websocket_connection_manager),
 ):
     """
     Add a curriculum to a user.
@@ -1750,6 +1826,12 @@ async def create_curriculum_membership(
         raise HTTPException(
             status_code=403,
             detail="You can't remove a curriculum to another user.",
+        )
+    db_user = await get_user_by_id(db=db, user_id=user_id)
+    if not db_user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found.",
         )
     curriculum = await cruds_cdr.get_curriculum_by_user_id(db=db, user_id=user_id)
     if curriculum:
@@ -1783,6 +1865,28 @@ async def create_curriculum_membership(
         await db.rollback()
         raise HTTPException(status_code=400, detail=str(error))
 
+    cdr_status = await get_core_data(schemas_cdr.Status, db)
+    if cdr_status.status == CdrStatus.onsite:
+        try:
+            await ws_manager.send_message_to_room(
+                message=schemas_cdr.NewUserWSMessageModel(
+                    data=schemas_cdr.CdrUser(
+                        curriculum=schemas_cdr.CurriculumComplete(
+                            **curriculum.__dict__,
+                        ),
+                        name=db_user.name,
+                        firstname=db_user.firstname,
+                        nickname=db_user.nickname,
+                        id=db_user.id,
+                    ),
+                ),
+                room_id=HyperionWebsocketsRoom.CDR,
+            )
+        except Exception:
+            hyperion_error_logger.exception(
+                f"Error while sending a message to the room {HyperionWebsocketsRoom.CDR}",
+            )
+
 
 @module.router.patch(
     "/cdr/users/{user_id}/curriculums/{curriculum_id}/",
@@ -1793,6 +1897,7 @@ async def update_curriculum_membership(
     curriculum_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
+    ws_manager: WebsocketConnectionManager = Depends(get_websocket_connection_manager),
 ):
     """
     Update a curriculum membership.
@@ -1806,6 +1911,12 @@ async def update_curriculum_membership(
         raise HTTPException(
             status_code=403,
             detail="You can't remove a curriculum to another user.",
+        )
+    db_user = await get_user_by_id(db=db, user_id=user_id)
+    if not db_user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found.",
         )
     curriculum = await cruds_cdr.get_curriculum_by_id(
         db=db,
@@ -1827,6 +1938,28 @@ async def update_curriculum_membership(
         await db.rollback()
         raise HTTPException(status_code=400, detail=str(error))
 
+    cdr_status = await get_core_data(schemas_cdr.Status, db)
+    if cdr_status.status == CdrStatus.onsite:
+        try:
+            await ws_manager.send_message_to_room(
+                message=schemas_cdr.NewUserWSMessageModel(
+                    data=schemas_cdr.CdrUser(
+                        curriculum=schemas_cdr.CurriculumComplete(
+                            **curriculum.__dict__,
+                        ),
+                        name=db_user.name,
+                        firstname=db_user.firstname,
+                        nickname=db_user.nickname,
+                        id=db_user.id,
+                    ),
+                ),
+                room_id=HyperionWebsocketsRoom.CDR,
+            )
+        except Exception:
+            hyperion_error_logger.exception(
+                f"Error while sending a message to the room {HyperionWebsocketsRoom.CDR}",
+            )
+
 
 @module.router.delete(
     "/cdr/users/{user_id}/curriculums/{curriculum_id}/",
@@ -1837,6 +1970,7 @@ async def delete_curriculum_membership(
     curriculum_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
+    ws_manager: WebsocketConnectionManager = Depends(get_websocket_connection_manager),
 ):
     """
     Remove a curriculum from a user.
@@ -1860,6 +1994,12 @@ async def delete_curriculum_membership(
             status_code=403,
             detail="You can't remove a curriculum to another user.",
         )
+    db_user = await get_user_by_id(db=db, user_id=user_id)
+    if not db_user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found.",
+        )
     try:
         await cruds_cdr.delete_curriculum_membership(
             db=db,
@@ -1870,6 +2010,26 @@ async def delete_curriculum_membership(
     except Exception as error:
         await db.rollback()
         raise HTTPException(status_code=400, detail=str(error))
+
+    cdr_status = await get_core_data(schemas_cdr.Status, db)
+    if cdr_status.status == CdrStatus.onsite:
+        try:
+            await ws_manager.send_message_to_room(
+                message=schemas_cdr.NewUserWSMessageModel(
+                    data=schemas_cdr.CdrUser(
+                        curriculum=None,
+                        name=db_user.name,
+                        firstname=db_user.firstname,
+                        nickname=db_user.nickname,
+                        id=db_user.id,
+                    ),
+                ),
+                room_id=HyperionWebsocketsRoom.CDR,
+            )
+        except Exception:
+            hyperion_error_logger.exception(
+                f"Error while sending a message to the room {HyperionWebsocketsRoom.CDR}",
+            )
 
 
 @module.router.get(

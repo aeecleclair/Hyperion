@@ -48,6 +48,12 @@ class CdrUser(CoreUserSimple):
     model_config = ConfigDict(from_attributes=True)
 
 
+class CdrUserUpdate(BaseModel):
+    nickname: str | None = None
+    email: str | None = None
+    floor: FloorsType | None = None
+
+
 class ProductVariantBase(BaseModel):
     name_fr: str
     name_en: str
