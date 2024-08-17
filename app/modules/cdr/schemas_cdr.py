@@ -21,6 +21,11 @@ class NewUserWSMessageModel(WSMessageModel):
     data: CoreUserSimple
 
 
+class UpdateUserWSMessageModel(WSMessageModel):
+    command: Literal["UPDATE_USER"] = "UPDATE_USER"
+    data: CoreUserSimple
+
+
 class DocumentBase(BaseModel):
     name: str
 

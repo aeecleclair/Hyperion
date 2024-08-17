@@ -321,7 +321,7 @@ async def update_cdr_user(
     if cdr_status.status == CdrStatus.onsite:
         try:
             await ws_manager.send_message_to_room(
-                message=schemas_cdr.NewUserWSMessageModel(
+                message=schemas_cdr.UpdateUserWSMessageModel(
                     data=schemas_cdr.CdrUser(
                         curriculum=schemas_cdr.CurriculumComplete(
                             **curriculum.__dict__,
@@ -1942,7 +1942,7 @@ async def update_curriculum_membership(
     if cdr_status.status == CdrStatus.onsite:
         try:
             await ws_manager.send_message_to_room(
-                message=schemas_cdr.NewUserWSMessageModel(
+                message=schemas_cdr.UpdateUserWSMessageModel(
                     data=schemas_cdr.CdrUser(
                         curriculum=schemas_cdr.CurriculumComplete(
                             **curriculum.__dict__,
@@ -2015,7 +2015,7 @@ async def delete_curriculum_membership(
     if cdr_status.status == CdrStatus.onsite:
         try:
             await ws_manager.send_message_to_room(
-                message=schemas_cdr.NewUserWSMessageModel(
+                message=schemas_cdr.UpdateUserWSMessageModel(
                     data=schemas_cdr.CdrUser(
                         curriculum=None,
                         name=db_user.name,
