@@ -271,6 +271,41 @@ async def init_objects():
     await add_object_to_db(membership)
 
 
+def test_get_all_cdr_users_seller(client: TestClient):
+    response = client.get(
+        "/cdr/users/",
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 200
+    assert str(cdr_user.id) in [x["id"] for x in response.json()]
+
+
+def test_get_all_cdr_users_user(client: TestClient):
+    response = client.get(
+        "/cdr/users/",
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 403
+
+
+def test_get_cdr_user_seller(client: TestClient):
+    response = client.get(
+        f"/cdr/users/{cdr_user.id}",
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 200
+    assert str(cdr_user.id) == response.json()["id"]
+
+
+def test_get_cdr_user_user(client: TestClient):
+    response = client.get(
+        f"/cdr/users/{cdr_user.id}",
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 403
+
+
+
 def test_get_all_sellers_admin(client: TestClient):
     response = client.get(
         "/cdr/sellers/",
@@ -477,6 +512,16 @@ def test_delete_seller_not_admin(client: TestClient):
     assert str(seller.id) in [x["id"] for x in response.json()]
 
 
+def test_get_all_products(client: TestClient):
+    response = client.get(
+        "/cdr/products/",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 200
+    assert str(online_product.id) in [x["id"] for x in response.json()]
+    assert str(product.id) in [x["id"] for x in response.json()]
+
+
 def test_get_products_by_seller_id_seller(client: TestClient):
     response = client.get(
         f"/cdr/sellers/{seller.id}/products",
@@ -492,6 +537,16 @@ def test_get_products_by_seller_id_user(client: TestClient):
         headers={"Authorization": f"Bearer {token_user}"},
     )
     assert response.status_code == 403
+
+
+def test_get_all_online_products(client: TestClient):
+    response = client.get(
+        "/cdr/online/products/",
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 200
+    assert str(online_product.id) in [x["id"] for x in response.json()]
+    assert str(product.id) not in [x["id"] for x in response.json()]
 
 
 def test_get_available_online_products(client: TestClient):
