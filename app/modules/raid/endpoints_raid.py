@@ -20,6 +20,7 @@ from app.dependencies import (
 )
 from app.modules.raid import coredata_raid, cruds_raid, models_raid, schemas_raid
 from app.modules.raid.raid_type import DocumentType, DocumentValidation
+from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.modules.raid.utils.utils_raid import (
     get_participant,
     post_update_actions,
@@ -27,7 +28,6 @@ from app.modules.raid.utils.utils_raid import (
     validate_payment,
     will_participant_be_minor_on,
 )
-from app.moodules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.types.content_type import ContentType
 from app.types.module import Module
 from app.utils.tools import (
