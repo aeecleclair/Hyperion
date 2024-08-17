@@ -1869,7 +1869,7 @@ async def create_curriculum_membership(
     if cdr_status.status == CdrStatus.onsite:
         try:
             await ws_manager.send_message_to_room(
-                message=schemas_cdr.NewUserWSMessageModel(
+                message=schemas_cdr.UpdateUserWSMessageModel(
                     data=schemas_cdr.CdrUser(
                         curriculum=schemas_cdr.CurriculumComplete(
                             **curriculum.__dict__,
