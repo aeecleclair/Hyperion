@@ -11,7 +11,7 @@ from fastapi import (
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import cruds_core, models_core, schemas_core
+from app.core import models_core, schemas_core
 from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
 from app.core.payment import schemas_payment
@@ -1371,7 +1371,7 @@ async def mark_purchase_as_validated(
 
 @module.router.post(
     "cdr/memberships/{membership_id}/add-batch/",
-    status_code=204,
+    status_code=201,
     response_model=list[schemas_cdr.MembershipUserMappingEmail],
 )
 async def add_batch_membership(
@@ -1405,9 +1405,9 @@ async def add_batch_membership(
         )
     try:
         await db.commit()
-    except Exception as error:
+    except Exception:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
+        raise
     return unknown_users
 
 
