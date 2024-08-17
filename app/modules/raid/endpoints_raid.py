@@ -27,7 +27,7 @@ from app.modules.raid.utils.utils_raid import (
     validate_payment,
     will_participant_be_minor_on,
 )
-from app.moodules.raid.utils.drive import DriveFileManager
+from app.moodules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.types.content_type import ContentType
 from app.types.module import Module
 from app.utils.tools import (

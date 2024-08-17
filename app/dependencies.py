@@ -27,7 +27,7 @@ from app.core.config import Settings, construct_prod_settings
 from app.core.groups.groups_type import GroupType, get_ecl_groups
 from app.core.payment.payment_tool import PaymentTool
 from app.core.users import cruds_users
-from app.modules.raid.utils.drive import DriveFileManager
+from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.types.scopes_type import ScopeType
 from app.types.websocket import WebsocketConnectionManager
 from app.utils.auth import auth_utils
