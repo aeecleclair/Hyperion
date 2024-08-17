@@ -6,7 +6,7 @@ from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core
+from app.core import models_core, schemas_core
 from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
 from app.core.payment.payment_tool import PaymentTool
@@ -961,7 +961,7 @@ async def get_payment_url(
         checkout_amount=price,
         checkout_name=checkout_name,
         redirection_uri=settings.RAID_PAYMENT_REDIRECTION_URL or "",
-        payer_user=user,
+        payer_user=schemas_core.CoreUser(**user.__dict__),
         db=db,
     )
     hyperion_error_logger.info(f"RAID: Logging Checkout id {checkout.id}")
