@@ -28,6 +28,18 @@ def upgrade() -> None:
         "temporary",
         name="documentvalidation",
     )
+    document_type = sa.Enum(
+        "idCard",
+        "medicalCertificate",
+        "studentCard",
+        "raidRules",
+        "parentAuthorization",
+        name="documenttype",
+    )
+    size = sa.Enum("XS", "S", "M", "L", "XL", name="size")
+    difficulty = sa.Enum("discovery", "sports", "expert", name="difficulty")
+    meeting_place = sa.Enum("centrale", "bellecour", "anyway", name="meetingplace")
+
     op.create_table(
         "raid_document",
         sa.Column("id", sa.String(), nullable=False),
@@ -40,14 +52,7 @@ def upgrade() -> None:
         ),
         sa.Column(
             "type",
-            sa.Enum(
-                "idCard",
-                "medicalCertificate",
-                "studentCard",
-                "raidRules",
-                "parentAuthorization",
-                name="documenttype",
-            ),
+            document_type,
             nullable=False,
         ),
         sa.PrimaryKeyConstraint("id"),
@@ -89,12 +94,12 @@ def upgrade() -> None:
         sa.Column("email", sa.String(), nullable=False),
         sa.Column(
             "bike_size",
-            sa.Enum("XS", "S", "M", "L", "XL", name="size"),
+            size,
             nullable=True,
         ),
         sa.Column(
             "t_shirt_size",
-            sa.Enum("XS", "S", "M", "L", "XL", name="size"),
+            size,
             nullable=True,
         ),
         sa.Column("situation", sa.String(), nullable=True),
@@ -131,14 +136,14 @@ def upgrade() -> None:
         sa.Column("number", sa.Integer(), nullable=True),
         sa.Column(
             "difficulty",
-            sa.Enum("discovery", "sports", "expert", name="difficulty"),
+            difficulty,
             nullable=True,
         ),
         sa.Column("captain_id", sa.String(), nullable=False),
         sa.Column("second_id", sa.String(), nullable=True),
         sa.Column(
             "meeting_place",
-            sa.Enum("centrale", "bellecour", "anyway", name="meetingplace"),
+            meeting_place,
             nullable=True,
         ),
         sa.Column("file_id", sa.String(), nullable=True),
@@ -168,6 +173,18 @@ def downgrade() -> None:
         "temporary",
         name="documentvalidation",
     )
+    document_type = sa.Enum(
+        "idCard",
+        "medicalCertificate",
+        "studentCard",
+        "raidRules",
+        "parentAuthorization",
+        name="documenttype",
+    )
+    size = sa.Enum("XS", "S", "M", "L", "XL", name="size")
+    difficulty = sa.Enum("discovery", "sports", "expert", name="difficulty")
+    meeting_place = sa.Enum("centrale", "bellecour", "anyway", name="meetingplace")
+
     op.drop_index(op.f("ix_raid_invite_id"), table_name="raid_invite")
     op.drop_table("raid_invite")
     op.drop_index(op.f("ix_raid_team_id"), table_name="raid_team")
@@ -179,6 +196,10 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_raid_document_id"), table_name="raid_document")
     op.drop_table("raid_document")
     document_validation.drop(op.get_bind(), checkfirst=False)
+    document_type.drop(op.get_bind(), checkfirst=False)
+    size.drop(op.get_bind(), checkfirst=False)
+    difficulty.drop(op.get_bind(), checkfirst=False)
+    meeting_place.drop(op.get_bind(), checkfirst=False)
     # ### end Alembic commands ###
 
 
