@@ -13,7 +13,6 @@ from fastapi.responses import FileResponse
 from fastapi.templating import Jinja2Templates
 from jellyfish import jaro_winkler_similarity
 from pydantic import ValidationError
-from rapidfuzz import process
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import cruds_core, models_core, security

@@ -130,7 +130,6 @@ async def get_transactional_db() -> AsyncGenerator[TransactionalAsyncSession, No
 
     See TransactionalAsyncSession definition for more informations
     """
-    global SessionLocal
     if SessionLocal is None:
         hyperion_error_logger.error("Database engine is not initialized")
         raise HTTPException(
