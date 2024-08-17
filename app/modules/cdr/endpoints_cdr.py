@@ -1450,7 +1450,7 @@ async def mark_purchase_as_validated(
     response_model=list[schemas_cdr.MembershipUserMappingEmail],
 )
 async def add_batch_membership(
-    membership: AvailableAssociationMembership,
+    membership_id: AvailableAssociationMembership,
     memberships: list[schemas_cdr.MembershipUserMappingEmail],
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
@@ -1473,7 +1473,7 @@ async def add_batch_membership(
             membership=models_core.CoreAssociationMembership(
                 id=uuid4(),
                 user_id=m_user.id,
-                membership=membership,
+                membership=membership_id,
                 start_date=m.start_date,
                 end_date=m.end_date,
             ),
