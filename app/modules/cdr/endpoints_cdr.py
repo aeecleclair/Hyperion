@@ -1468,16 +1468,21 @@ async def add_batch_membership(
         if not m_user:
             unknown_users.append(m)
             continue
-        cruds_cdr.create_membership(
+        stored = await cruds_cdr.get_actual_memberships_by_user_id(
             db=db,
-            membership=models_core.CoreAssociationMembership(
-                id=uuid4(),
-                user_id=m_user.id,
-                membership=membership_id,
-                start_date=m.start_date,
-                end_date=m.end_date,
-            ),
+            user_id=m_user.id,
         )
+        if membership_id not in [m.membership for m in stored]:
+            cruds_cdr.create_membership(
+                db=db,
+                membership=models_core.CoreAssociationMembership(
+                    id=uuid4(),
+                    user_id=m_user.id,
+                    membership=membership_id,
+                    start_date=m.start_date,
+                    end_date=m.end_date,
+                ),
+            )
     try:
         await db.commit()
     except Exception:
