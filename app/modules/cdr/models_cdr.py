@@ -13,7 +13,7 @@ from app.modules.cdr.types_cdr import (
     PaymentType,
 )
 from app.types.membership import AvailableAssociationMembership
-from app.types.sqlalchemy import Base, PrimaryKey, TZDateTime
+from app.types.sqlalchemy import Base, PrimaryKey
 
 
 class Seller(Base):
@@ -21,7 +21,7 @@ class Seller(Base):
 
     id: Mapped[PrimaryKey]
     name: Mapped[str]
-    group_id = mapped_column(
+    group_id: Mapped[str] = mapped_column(
         ForeignKey("core_group.id"),
         nullable=False,
     )
@@ -99,11 +99,11 @@ class Curriculum(Base):
 class CurriculumMembership(Base):
     __tablename__ = "cdr_curriculum_membership"
 
-    user_id = mapped_column(
+    user_id: Mapped[str] = mapped_column(
         ForeignKey("core_user.id"),
         primary_key=True,
     )
-    curriculum_id = mapped_column(
+    curriculum_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("cdr_curriculum.id"),
         primary_key=True,
     )
@@ -157,7 +157,7 @@ class Document(Base):
 class Purchase(Base):
     __tablename__ = "cdr_purchase"
 
-    user_id = mapped_column(
+    user_id: Mapped[str] = mapped_column(
         ForeignKey("core_user.id"),
         primary_key=True,
     )
@@ -174,7 +174,7 @@ class Purchase(Base):
 class Signature(Base):
     __tablename__ = "cdr_signature"
 
-    user_id = mapped_column(
+    user_id: Mapped[str] = mapped_column(
         ForeignKey("core_user.id"),
         primary_key=True,
     )
@@ -192,7 +192,7 @@ class Payment(Base):
     __tablename__ = "cdr_payment"
 
     id: Mapped[PrimaryKey]
-    user_id = mapped_column(
+    user_id: Mapped[str] = mapped_column(
         ForeignKey("core_user.id"),
         nullable=False,
     )
@@ -206,11 +206,11 @@ class CdrAction(Base):
     __tablename__ = "cdr_action"
 
     id: Mapped[PrimaryKey]
-    user_id = mapped_column(
+    user_id: Mapped[str | None] = mapped_column(
         ForeignKey("core_user.id"),
         nullable=True,
     )  # Who made the request
-    subject_id = mapped_column(
+    subject_id: Mapped[str] = mapped_column(
         ForeignKey("core_user.id"),
         nullable=False,
     )  # For who the request was made
@@ -237,7 +237,7 @@ class Ticket(Base):
         ForeignKey("cdr_product_variant.id"),
     )
     product_variant: Mapped["ProductVariant"] = relationship("ProductVariant")
-    user_id: Mapped[uuid.UUID] = mapped_column(
+    user_id: Mapped[str] = mapped_column(
         ForeignKey("core_user.id"),
     )
     user: Mapped["CoreUser"] = relationship("CoreUser")
