@@ -44,6 +44,7 @@ def maximize_image(
 class PDFWriter(FPDF):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
+        self.pdf_pages: list[int] = []
 
     def header(self):
         if self.page_no() - 1 not in self.pdf_pages:
@@ -110,7 +111,7 @@ class PDFWriter(FPDF):
 
     def write_empty_participant(self):
         self.set_font("times", "B", 12)
-        self.ln(4)
+        self.set_y(self.get_y() + 4)
         self.cell(0, 12, "Coéquipier", 0, 1, "L")
         self.set_font("times", "", 12)
         self.cell(0, 10, "Non renseigné", 0, 1, "C")
@@ -141,7 +142,7 @@ class PDFWriter(FPDF):
 
     def write_document_header(self, document: Document, participant: Participant):
         self.add_page()
-        self.ln(6)
+        self.set_y(self.get_y() + 6)
         self.set_font("times", "B", 12)
         self.cell(
             0,
@@ -159,7 +160,7 @@ class PDFWriter(FPDF):
                 get_document_validation_label(document.validation),
             ],
         ]
-        self.ln(6)
+        self.set_y(self.get_y() + 6)
 
         self.set_draw_color(255, 255, 255)
         self.set_line_width(0)
@@ -181,7 +182,7 @@ class PDFWriter(FPDF):
         participant: Participant,
     ):
         self.add_page()
-        self.ln(6)
+        self.set_y(self.get_y() + 6)
         self.set_font("times", "B", 12)
         self.cell(
             0,
@@ -251,7 +252,7 @@ class PDFWriter(FPDF):
             if data_row:
                 self.write_key_label(data_row[0], data_row[1])
 
-        self.ln(6)
+        self.set_y(self.get_y() + 6)
         self.set_font("times", "B", 12)
         self.cell(
             0,
@@ -288,7 +289,7 @@ class PDFWriter(FPDF):
 
     def write_document(self, document: Document, participant: Participant):
         self.write_document_header(document, participant)
-        self.ln(6)
+        self.set_y(self.get_y() + 6)
         file = get_file_path_from_data("raid", document.id, "documents")
         image = maximize_image(file, self.epw * 2.85, (self.eph - 45) * 2.85)
         image_width, _ = image.size
@@ -306,7 +307,7 @@ class PDFWriter(FPDF):
                 str(int(team.validation_progress)) + " %",
             ],
         ]
-        self.ln(6)
+        self.set_y(self.get_y() + 6)
 
         self.set_draw_color(255, 255, 255)
         self.set_line_width(0)
@@ -328,7 +329,7 @@ class PDFWriter(FPDF):
         is_second: bool = False,
     ):
         self.set_font("times", "B", 12)
-        self.ln(4)
+        self.set_y(self.get_y() + 4)
         self.cell(0, 12, is_second and "Coéquipier" or "Capitaine", 0, 1, "L")
         self.set_font("times", "", 12)
         data: list[list[str] | None] = [

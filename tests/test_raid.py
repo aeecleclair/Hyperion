@@ -1,13 +1,22 @@
 import datetime
 import uuid
+from unittest.mock import Mock, patch
 
+import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
+from PIL import Image
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from app.modules.raid import models_raid
+from app.modules.raid.models_raid import Document, Participant, SecurityFile, Team
 from app.modules.raid.raid_type import DocumentType, DocumentValidation
+from app.modules.raid.utils.pdf.pdf_writer import (
+    HTMLPDFWriter,
+    PDFWriter,
+    maximize_image,
+)
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
@@ -384,3 +393,113 @@ def test_delete_team(client: TestClient):
         headers={"Authorization": f"Bearer {token_raid_admin}"},
     )
     assert response.status_code == 204
+
+
+## Test for pdf writer
+
+
+@pytest.fixture()
+def mock_team():
+    return Mock(
+        spec=Team,
+        name="Test Team",
+        number=1,
+        captain=Mock(spec=Participant, name="John", firstname="Doe"),
+    )
+
+
+@pytest.fixture()
+def mock_security_file():
+    return Mock(spec=SecurityFile, allergy="None", asthma=False)
+
+
+@pytest.fixture()
+def mock_participant():
+    return Mock(
+        spec=Participant,
+        name="John",
+        firstname="Doe",
+        birthday=datetime.datetime(1990, 1, 1, tzinfo=datetime.UTC),
+        security_file=Mock(spec=SecurityFile, allergy="None", asthma=False),
+    )
+
+
+@pytest.fixture()
+def mock_document():
+    return Mock(
+        spec=Document,
+        id="doc123",
+        type="id_card",
+        uploaded_at=datetime.now(tz=datetime.UTC),
+    )
+
+
+def test_maximize_image(tmp_path):
+    # Create a test image
+    test_image = Image.new("RGB", (200, 100), color="red")
+    image_path = tmp_path / "test_image.png"
+    test_image.save(image_path)
+
+    # Test image maximization
+    max_width, max_height = 150, 150
+    maximized_image = maximize_image(image_path, max_width, max_height)
+
+    assert maximized_image.width <= max_width
+    assert maximized_image.height <= max_height
+
+
+def test_pdf_writer_init():
+    pdf_writer = PDFWriter()
+    assert isinstance(pdf_writer, PDFWriter)
+
+
+# @patch("app.modules.raid.utils.pdf.pdf_writer.PDFWriter")
+# @patch("app.modules.raid.utils.pdf.pdf_writer.PdfWriter")
+# def test_pdf_writer_add_pdf(mock_pdf_writer, mock_pdf_reader, mock_team):
+#     pdf_writer = PDFWriter()
+#     pdf_writer.team = mock_team
+#     pdf_writer.pdf_paths = ["test_path"]
+#     pdf_writer.pdf_indexes = [0]
+#     pdf_writer.file_name = "test.pdf"
+
+#     mock_pdf_reader.return_value.pages = [Mock()]
+#     mock_pdf_writer.return_value.write.return_value = None
+
+#     result = pdf_writer.add_pdf()
+#     assert result == "data/raid/test.pdf"
+
+
+# def test_pdf_writer_write_team(mock_team):
+#     pdf_writer = PDFWriter()
+#     with patch.object(pdf_writer, "add_pdf", return_value="data/raid/test.pdf"):
+#         result = pdf_writer.write_team(mock_team)
+#     assert result == "data/raid/test.pdf"
+
+
+# def test_pdf_writer_write_participant_document(mock_participant, mock_team):
+#     pdf_writer = PDFWriter()
+#     pdf_writer.team = mock_team
+#     with patch.object(pdf_writer, "write_document"):
+#         pdf_writer.write_participant_document(mock_participant)
+
+
+# def test_pdf_writer_write_security_file(mock_security_file, mock_participant, mock_team):
+#     pdf_writer = PDFWriter()
+#     pdf_writer.team = mock_team
+#     with patch.object(pdf_writer, "write_key_label"):
+#         pdf_writer.write_security_file(mock_security_file, mock_participant)
+
+
+def test_html_pdf_writer_init():
+    html_pdf_writer = HTMLPDFWriter()
+    assert isinstance(html_pdf_writer, HTMLPDFWriter)
+
+
+# @patch("app.modules.raid.utils.pdf.pdf_writer.fitz")
+# def test_html_pdf_writer_write_participant_security_file(mock_fitz, mock_participant):
+#     html_pdf_writer = HTMLPDFWriter()
+#     mock_information = Mock()
+#     result = html_pdf_writer.write_participant_security_file(
+#         mock_participant, mock_information, 1
+#     )
+#     assert result == f"data/raid/{mock_participant.id}.pdf"
