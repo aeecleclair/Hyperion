@@ -1468,7 +1468,7 @@ async def add_batch_membership(
         if not m_user:
             unknown_users.append(m)
             continue
-        await cruds_cdr.create_membership(
+        cruds_cdr.create_membership(
             db=db,
             membership=models_core.CoreAssociationMembership(
                 id=uuid4(),
