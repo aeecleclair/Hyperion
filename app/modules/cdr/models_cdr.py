@@ -86,10 +86,7 @@ class CdrProduct(Base):
     related_membership: Mapped[AvailableAssociationMembership | None]
     generate_ticket: Mapped[bool]
     ticket_max_use: Mapped[int | None]
-    ticket_expiration: Mapped[datetime | None] = mapped_column(
-        TZDateTime,
-        nullable=True,
-    )
+    ticket_expiration: Mapped[datetime | None]
 
 
 class Curriculum(Base):
@@ -171,7 +168,7 @@ class Purchase(Base):
     product_variant: Mapped["ProductVariant"] = relationship("ProductVariant")
     quantity: Mapped[int]
     validated: Mapped[bool]
-    purchased_on: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
+    purchased_on: Mapped[datetime]
 
 
 class Signature(Base):
@@ -219,7 +216,7 @@ class CdrAction(Base):
     )  # For who the request was made
     action_type: Mapped[CdrLogActionType]
     action: Mapped[str]
-    timestamp: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
+    timestamp: Mapped[datetime]
 
 
 class Checkout(Base):
@@ -246,4 +243,4 @@ class Ticket(Base):
     user: Mapped["CoreUser"] = relationship("CoreUser")
     scan_left: Mapped[int]
     tags: Mapped[str]
-    expiration: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
+    expiration: Mapped[datetime]
