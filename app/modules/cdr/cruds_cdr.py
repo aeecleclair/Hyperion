@@ -43,11 +43,9 @@ async def get_sellers(
 async def get_online_sellers(
     db: AsyncSession,
 ) -> Sequence[models_cdr.Seller]:
-    online_products = await db.execute(
-        select(models_cdr.CdrProduct).where(models_cdr.CdrProduct.available_online),
-    )
+    online_products = await get_online_products(db=db)
     seller_ids = set(
-        product.seller_id for product in online_products.unique().scalars().all()
+        product.seller_id for product in online_products
     )
     result = await db.execute(
         select(models_cdr.Seller).where(models_cdr.Seller.id.in_(seller_ids)),
