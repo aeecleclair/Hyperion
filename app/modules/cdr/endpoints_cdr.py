@@ -1445,7 +1445,7 @@ async def mark_purchase_as_validated(
 
 
 @module.router.post(
-    "cdr/memberships/{membership_id}/add-batch/",
+    "/cdr/memberships/{membership_id}/add-batch/",
     status_code=201,
     response_model=list[schemas_cdr.MembershipUserMappingEmail],
 )
