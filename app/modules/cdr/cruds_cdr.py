@@ -182,6 +182,9 @@ async def delete_product(
     db: AsyncSession,
     product_id: UUID,
 ):
+    """
+    Delete a product and its associated `ProductConstraint` and `DocumentConstraint`
+    """
     await db.execute(
         delete(models_cdr.ProductConstraint).where(
             models_cdr.ProductConstraint.product_constraint_id == product_id,
