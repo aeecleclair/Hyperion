@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
-from app.modules.raid import coredata_raid, models_raid
+from app.modules.raid import models_raid
 from app.modules.raid.raid_type import DocumentType, DocumentValidation
 from tests.commons import (
     add_object_to_db,
