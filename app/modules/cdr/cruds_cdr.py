@@ -1,5 +1,5 @@
 from collections.abc import Sequence
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from uuid import UUID
 
 from sqlalchemy import delete, select, update
@@ -44,9 +44,7 @@ async def get_online_sellers(
     db: AsyncSession,
 ) -> Sequence[models_cdr.Seller]:
     online_products = await get_online_products(db=db)
-    seller_ids = set(
-        product.seller_id for product in online_products
-    )
+    seller_ids = set(product.seller_id for product in online_products)
     result = await db.execute(
         select(models_cdr.Seller).where(models_cdr.Seller.id.in_(seller_ids)),
     )
@@ -685,7 +683,7 @@ async def get_actual_memberships_by_user_id(
     result = await db.execute(
         select(CoreAssociationMembership).where(
             CoreAssociationMembership.user_id == user_id,
-            CoreAssociationMembership.end_date > datetime.now(UTC).date(),
+            CoreAssociationMembership.end_date > date(datetime.now(UTC).year, 9, 5),
         ),
     )
     return result.scalars().all()
