@@ -26,6 +26,8 @@ from app.core.auth import schemas_auth
 from app.core.config import Settings, construct_prod_settings
 from app.core.groups.groups_type import GroupType, get_ecl_groups
 from app.core.payment.payment_tool import PaymentTool
+from app.core.users import cruds_users
+from app.modules.raid.utils import DriveFileManager
 from app.types.scopes_type import ScopeType
 from app.types.websocket import WebsocketConnectionManager
 from app.utils.auth import auth_utils
@@ -56,6 +58,8 @@ SessionLocal: Callable[[], AsyncSession] | None = (
 
 
 notification_manager: NotificationManager | None = None
+
+drive_file_manage: DriveFileManager | None = None
 
 payment_tool: PaymentTool | None = None
 
@@ -187,6 +191,20 @@ def get_notification_tool(
         notification_manager=notification_manager,
         db=db,
     )
+
+
+def get_drive_file_manager(
+    settings: Settings = Depends(get_settings),
+) -> DriveFileManager:
+    """
+    Dependency that returns the drive file manager.
+    """
+    global drive_file_manage
+
+    if drive_file_manage is None:
+        drive_file_manage = DriveFileManager(settings=settings)
+
+    return drive_file_manage
 
 
 def get_payment_tool(

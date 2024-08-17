@@ -12,6 +12,7 @@ from app.core.groups.groups_type import GroupType
 from app.core.payment.payment_tool import PaymentTool
 from app.dependencies import (
     get_db,
+    get_drive_file_manager,
     get_request_id,
     get_settings,
     is_user,
@@ -19,7 +20,6 @@ from app.dependencies import (
 )
 from app.modules.raid import coredata_raid, cruds_raid, models_raid, schemas_raid
 from app.modules.raid.raid_type import DocumentType, DocumentValidation
-from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.modules.raid.utils.utils_raid import (
     get_participant,
     post_update_actions,
@@ -27,6 +27,7 @@ from app.modules.raid.utils.utils_raid import (
     validate_payment,
     will_participant_be_minor_on,
 )
+from app.moodules.raid.utils.drive import DriveFileManager
 from app.types.content_type import ContentType
 from app.types.module import Module
 from app.utils.tools import (
@@ -39,8 +40,6 @@ from app.utils.tools import (
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
-
-drive_file_manager = DriveFileManager(settings=get_settings())
 
 
 module = Module(
@@ -120,6 +119,7 @@ async def update_participant(
     participant: schemas_raid.ParticipantUpdate,
     user: models_core.CoreUser = Depends(is_user),
     db: AsyncSession = Depends(get_db),
+    drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
 ):
     """
     Update a participant
@@ -236,6 +236,7 @@ async def create_team(
     team: schemas_raid.TeamBase,
     user: models_core.CoreUser = Depends(is_user),
     db: AsyncSession = Depends(get_db),
+    drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
 ):
     """
     Create a team
@@ -329,6 +330,7 @@ async def update_team(
     team: schemas_raid.TeamUpdate,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user),
+    drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
 ):
     """
     Update a team
@@ -351,6 +353,7 @@ async def delete_team(
     team_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.raid_admin)),
+    drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
 ):
     """
     Delete a team
@@ -486,6 +489,7 @@ async def validate_document(
     validation: DocumentValidation,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.raid_admin)),
+    drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
 ):
     """
     Validate a document
@@ -505,6 +509,7 @@ async def set_security_file(
     participant_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user),
+    drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
 ):
     """
     Confirm security file
@@ -556,6 +561,7 @@ async def confirm_payment(
     participant_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.raid_admin)),
+    drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
 ):
     """
     Confirm payment manually
@@ -573,6 +579,7 @@ async def confirm_t_shirt_payment(
     participant_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.raid_admin)),
+    drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
 ):
     """
     Confirm T shirt payment
@@ -593,6 +600,7 @@ async def validate_attestation_on_honour(
     participant_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user),
+    drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
 ):
     """
     Validate attestation on honour
@@ -647,6 +655,7 @@ async def join_team(
     token: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user),
+    drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
 ):
     """
     Join a team
@@ -697,6 +706,7 @@ async def kick_team_member(
     participant_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.raid_admin)),
+    drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
 ):
     """
     Leave a team
@@ -732,6 +742,7 @@ async def merge_teams(
     team2_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.raid_admin)),
+    drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
 ):
     """
     Merge two teams
@@ -794,6 +805,7 @@ async def update_raid_information(
     raid_information: coredata_raid.RaidInformation,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.raid_admin)),
+    drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
 ):
     """
     Update raid information
@@ -854,6 +866,7 @@ async def update_drive_folders(
     drive_folders: schemas_raid.RaidDriveFoldersCreation,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.raid_admin)),
+    drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
 ):
     """
     Update drive folders
