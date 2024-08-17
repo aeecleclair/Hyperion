@@ -229,7 +229,7 @@ async def update_participant(
 
 @module.router.post(
     "/raid/teams",
-    response_model=schemas_raid.TeamBase,
+    response_model=schemas_raid.Team,
     status_code=201,
 )
 async def create_team(

@@ -6,7 +6,8 @@ from fastapi.testclient import TestClient
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
-from app.modules.raid import models_raid
+from app.modules.raid import coredata_raid, models_raid
+from app.modules.raid.raid_type import DocumentType, DocumentValidation
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
@@ -48,6 +49,16 @@ async def init_objects() -> None:
     simple_user_without_team = await create_user_with_groups([GroupType.student])
     token_simple_without_team = create_api_access_token(simple_user_without_team)
 
+    document = models_raid.Document(
+        id="some_document_id",
+        name="test.pdf",
+        uploaded_at=datetime.datetime.now(tz=datetime.UTC),
+        validation=DocumentValidation.pending,
+        type=DocumentType.idCard,
+    )
+
+    await add_object_to_db(document)
+
     global participant
     participant = models_raid.Participant(
         id=simple_user.id,
@@ -57,6 +68,7 @@ async def init_objects() -> None:
         phone="0606060606",
         email="test@email.fr",
         t_shirt_size="M",
+        id_card_id=document.id,
     )
     await add_object_to_db(participant)
 
@@ -103,6 +115,23 @@ def test_create_participant(client: TestClient):
     )
     assert response.status_code == 201
     assert response.json()["firstname"] == "New"
+
+
+def test_confirm_payment(client: TestClient):
+    response = client.post(
+        f"/raid/participant/{simple_user.id}/payment",
+        headers={"Authorization": f"Bearer {token_raid_admin}"},
+    )
+    assert response.status_code == 204
+
+
+# Failing in batch, passing alone
+def test_confirm_t_shirt_payment(client: TestClient):
+    response = client.post(
+        f"/raid/participant/{simple_user.id}/t_shirt_payment",
+        headers={"Authorization": f"Bearer {token_raid_admin}"},
+    )
+    assert response.status_code == 204
 
 
 def test_update_participant(client: TestClient):
@@ -163,14 +192,6 @@ def test_update_team(client: TestClient):
     assert response.status_code == 204
 
 
-def test_delete_team(client: TestClient):
-    response = client.delete(
-        f"/raid/teams/{team.id}",
-        headers={"Authorization": f"Bearer {token_raid_admin}"},
-    )
-    assert response.status_code == 204
-
-
 def test_upload_document(client: TestClient):
     file_content = b"test document content"
     files = {"file": ("test.pdf", file_content, "application/pdf")}
@@ -202,16 +223,16 @@ def test_upload_document(client: TestClient):
 #     )
 #     assert response.status_code == 200
 
-## requires a document to be added
-# def test_validate_document(client: TestClient):
-#     document_id = "id_card_id"
-#     validation_data = {"validation": "validated"}
-#     response = client.post(
-#         f"/raid/document/{document_id}/validate",
-#         json=validation_data,
-#         headers={"Authorization": f"Bearer {token_raid_admin}"},
-#     )
-#     assert response.status_code == 204
+
+# requires a document to be added
+def test_validate_document(client: TestClient):
+    document_id = "some_document_id"
+    response = client.post(
+        f"/raid/document/{document_id}/validate?validation=accepted",
+        headers={"Authorization": f"Bearer {token_raid_admin}"},
+    )
+    assert response.status_code == 204
+
 
 ## Requires information to be set
 # def test_set_security_file(client: TestClient):
@@ -228,22 +249,6 @@ def test_upload_document(client: TestClient):
 #     assert response.status_code == 201
 
 
-def test_confirm_payment(client: TestClient):
-    response = client.post(
-        f"/raid/participant/{simple_user.id}/payment",
-        headers={"Authorization": f"Bearer {token_raid_admin}"},
-    )
-    assert response.status_code == 204
-
-## Failing in batch, passing alone
-# def test_confirm_t_shirt_payment(client: TestClient):
-#     response = client.post(
-#         f"/raid/participant/{simple_user.id}/t_shirt_payment",
-#         headers={"Authorization": f"Bearer {token_raid_admin}"},
-#     )
-#     assert response.status_code == 204
-
-
 def test_validate_attestation_on_honour(client: TestClient):
     response = client.post(
         f"/raid/participant/{simple_user.id}/honour",
@@ -252,59 +257,59 @@ def test_validate_attestation_on_honour(client: TestClient):
     assert response.status_code == 204
 
 
-## Failing in batch, passing alone
-# def test_create_invite_token(client: TestClient):
-#     response = client.post(
-#         f"/raid/teams/{team.id}/invite",
-#         headers={"Authorization": f"Bearer {token_simple}"},
-#     )
-#     assert response.status_code == 201
-#     assert "token" in response.json()
+# Failing in batch, passing alone
+def test_join_team(client: TestClient):
+    # Create an invite token first
+    create_token_response = client.post(
+        f"/raid/teams/{team.id}/invite",
+        headers={"Authorization": f"Bearer {token_simple}"},
+    )
+    assert create_token_response.status_code == 201
+    token = create_token_response.json()["token"]
+
+    # Now use the created token to join the team
+    response = client.post(
+        f"/raid/teams/join/{token}",
+        headers={"Authorization": f"Bearer {token_simple_without_team}"},
+    )
+    assert response.status_code == 204
 
 
-## Failing in batch, passing alone
-# def test_join_team(client: TestClient):
-#     # Create an invite token first
-#     create_token_response = client.post(
-#         f"/raid/teams/{team.id}/invite",
-#         headers={"Authorization": f"Bearer {token_simple}"},
-#     )
-#     assert create_token_response.status_code == 201
-#     token = create_token_response.json()["token"]
-
-#     # Now use the created token to join the team
-#     response = client.post(
-#         f"/raid/teams/join/{token}",
-#         headers={"Authorization": f"Bearer {token_simple_without_team}"},
-#     )
-#     assert response.status_code == 204
+def test_kick_team_member(client: TestClient):
+    response = client.post(
+        f"/raid/teams/{team.id}/kick/{simple_user_without_team.id}",
+        headers={"Authorization": f"Bearer {token_raid_admin}"},
+    )
+    assert response.status_code == 201
 
 
-## Required a team with two members
-# def test_kick_team_member(client: TestClient):
-#     response = client.post(
-#         f"/raid/teams/{team.id}/kick/{simple_user.id}",
-#         headers={"Authorization": f"Bearer {token_raid_admin}"},
-#     )
-#     assert response.status_code == 201
+# Failing in batch, passing alone
+def test_create_invite_token(client: TestClient):
+    response = client.post(
+        f"/raid/teams/{team.id}/invite",
+        headers={"Authorization": f"Bearer {token_simple}"},
+    )
+    assert response.status_code == 201
+    assert "token" in response.json()
 
-##
-# def test_merge_teams(client: TestClient):
-#     # Create two teams for testing
-#     team1_id = team.id
 
-#     team2_response = client.post(
-#         "/raid/teams",
-#         json={"name": "Team 2"},
-#         headers={"Authorization": f"Bearer {token_simple_without_team}"},
-#     )
-#     assert team2_response.status_code == 201
-#     team2_id = team2_response.json()["id"]
-#     response = client.post(
-#         f"/raid/teams/merge?team1_id={team1_id}&team2_id={team2_id}",
-#         headers={"Authorization": f"Bearer {token_raid_admin}"},
-#     )
-#     assert response.status_code == 201
+# Fail due to pdf writing error
+def test_merge_teams(client: TestClient):
+    # Create two teams for testing
+    team1_id = team.id
+
+    team2_response = client.post(
+        "/raid/teams",
+        json={"name": "Team 2"},
+        headers={"Authorization": f"Bearer {token_simple_without_participant}"},
+    )
+    assert team2_response.status_code == 201
+    team2_id = team2_response.json()["id"]
+    response = client.post(
+        f"/raid/teams/merge?team1_id={team1_id}&team2_id={team2_id}",
+        headers={"Authorization": f"Bearer {token_raid_admin}"},
+    )
+    assert response.status_code == 201
 
 
 def test_get_raid_information(client: TestClient):
@@ -336,7 +341,8 @@ def test_update_raid_information(client: TestClient):
 #     )
 #     assert response.status_code == 204
 
-## Requires to initalize the driver manager
+
+# Requires to initalize the driver manager
 # def test_get_drive_folders(client: TestClient):
 #     response = client.get(
 #         "/raid/drive",
@@ -370,3 +376,11 @@ def test_update_raid_price(client: TestClient):
 #     )
 #     assert response.status_code == 201
 #     assert "url" in response.json()
+
+
+def test_delete_team(client: TestClient):
+    response = client.delete(
+        f"/raid/teams/{team.id}",
+        headers={"Authorization": f"Bearer {token_raid_admin}"},
+    )
+    assert response.status_code == 204
