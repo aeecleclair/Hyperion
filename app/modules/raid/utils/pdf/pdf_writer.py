@@ -4,7 +4,7 @@ from pathlib import Path
 
 import fitz
 from fastapi.templating import Jinja2Templates
-from fpdf import FPDF
+from fpdf import FPDF, XPos, YPos
 from fpdf.enums import TableCellFillMode, VAlign
 from fpdf.fonts import FontFace
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -50,12 +50,12 @@ class PDFWriter(FPDF):
         if self.page_no() - 1 not in self.pdf_pages:
             self.set_font("times", "B", 20)
             self.cell(
-                0,
-                10,
-                f"Dossier d'inscription de l'équipe {self.team.name}",
-                0,
-                1,
-                "C",
+                w=0,
+                h=10,
+                text=f"Dossier d'inscription de l'équipe {self.team.name}",
+                align="C",
+                new_x=XPos.LMARGIN,
+                new_y=YPos.NEXT,
             )
 
     def add_pdf(self) -> str:
@@ -79,7 +79,14 @@ class PDFWriter(FPDF):
         if self.page_no() - 1 not in self.pdf_pages:
             self.set_y(-15)
             self.set_font("times", "I", 8)
-            self.cell(0, 10, f"Page {self.page_no()} - Raid Centrale Lyon", 0, 0, "C")
+            self.cell(
+                w=0,
+                h=10,
+                text=f"Page {self.page_no()} - Raid Centrale Lyon",
+                align="C",
+                new_x=XPos.LMARGIN,
+                new_y=YPos.BMARGIN,
+            )
 
     def write_team(self, team: Team) -> str:
         self.pdf_indexes: list[int] = []
@@ -112,9 +119,23 @@ class PDFWriter(FPDF):
     def write_empty_participant(self):
         self.set_font("times", "B", 12)
         self.set_y(self.get_y() + 4)
-        self.cell(0, 12, "Coéquipier", 0, 1, "L")
+        self.cell(
+            w=0,
+            h=12,
+            text="Coéquipier",
+            align="C",
+            new_x=XPos.LMARGIN,
+            new_y=YPos.NEXT,
+        )
         self.set_font("times", "", 12)
-        self.cell(0, 10, "Non renseigné", 0, 1, "C")
+        self.cell(
+            w=0,
+            h=10,
+            text="Non renseigné",
+            align="C",
+            new_x=XPos.LMARGIN,
+            new_y=YPos.NEXT,
+        )
 
     def write_participant_document(self, participant: Participant):
         for document in [
@@ -145,12 +166,12 @@ class PDFWriter(FPDF):
         self.set_y(self.get_y() + 6)
         self.set_font("times", "B", 12)
         self.cell(
-            0,
-            4,
-            f"{get_document_label(document.type)} de {participant.firstname} {participant.name}",
-            0,
-            1,
-            "C",
+            w=0,
+            h=4,
+            text=f"{get_document_label(document.type)} de {participant.firstname} {participant.name}",
+            align="C",
+            new_x=XPos.LMARGIN,
+            new_y=YPos.NEXT,
         )
         self.set_font("times", "", 12)
         data = [
@@ -185,12 +206,12 @@ class PDFWriter(FPDF):
         self.set_y(self.get_y() + 6)
         self.set_font("times", "B", 12)
         self.cell(
-            0,
-            4,
-            f"Fiche Sécurité de {participant.firstname} {participant.name}",
-            0,
-            1,
-            "C",
+            w=0,
+            h=4,
+            text=f"Fiche Sécurité de {participant.firstname} {participant.name}",
+            align="C",
+            new_x=XPos.LMARGIN,
+            new_y=YPos.NEXT,
         )
         self.set_font("times", "", 12)
         data: list[list[str] | None] = [
@@ -255,12 +276,12 @@ class PDFWriter(FPDF):
         self.set_y(self.get_y() + 6)
         self.set_font("times", "B", 12)
         self.cell(
-            0,
-            4,
-            "Personne à contacter en cas d'urgence",
-            0,
-            1,
-            "C",
+            w=0,
+            h=4,
+            text="Personne à contacter en cas d'urgence",
+            align="C",
+            new_x=XPos.LMARGIN,
+            new_y=YPos.NEXT,
         )
         self.set_font("times", "", 12)
         data = [
@@ -330,7 +351,14 @@ class PDFWriter(FPDF):
     ):
         self.set_font("times", "B", 12)
         self.set_y(self.get_y() + 4)
-        self.cell(0, 12, is_second and "Coéquipier" or "Capitaine", 0, 1, "L")
+        self.cell(
+            w=0,
+            h=12,
+            text=is_second and "Coéquipier" or "Capitaine",
+            align="C",
+            new_x=XPos.LMARGIN,
+            new_y=YPos.NEXT,
+        )
         self.set_font("times", "", 12)
         data: list[list[str] | None] = [
             ["Nom", participant.name],

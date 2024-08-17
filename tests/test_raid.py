@@ -404,7 +404,36 @@ def mock_team():
         spec=Team,
         name="Test Team",
         number=1,
-        captain=Mock(spec=Participant, name="John", firstname="Doe"),
+        captain=Mock(
+            spec=Participant,
+            name="Doe",
+            firstname="John",
+            birthday=datetime.datetime(1990, 1, 1, tzinfo=datetime.UTC),
+            phone="0606060606",
+            email="test@email.fr",
+            id="ssdgfhqrhdgfnfgndgfnxfg",
+            bike_size=None,
+            t_shirt_size=None,
+            situation=None,
+            validation_progress=0.1,
+            payment=False,
+            t_shirt_payment=False,
+            number_of_document=1,
+            number_of_validated_document=0,
+            address=None,
+            other_school=None,
+            company=None,
+            diet=None,
+            id_card=None,
+            medical_certificate=None,
+            security_file=None,
+            student_card=None,
+            raid_rules=None,
+            parent_authorization=None,
+            attestation_on_honour=False,
+            is_minor=False,
+        ),
+        validation_progress=10,
     )
 
 
@@ -417,9 +446,31 @@ def mock_security_file():
 def mock_participant():
     return Mock(
         spec=Participant,
-        name="John",
-        firstname="Doe",
+        name="Doe",
+        firstname="John",
         birthday=datetime.datetime(1990, 1, 1, tzinfo=datetime.UTC),
+        phone="0606060606",
+        email="test@email.fr",
+        id="ssdgfhqrhdgfnfgndgfnxfg",
+        bike_size=None,
+        t_shirt_size=None,
+        situation=None,
+        validation_progress=0.1,
+        payment=False,
+        t_shirt_payment=False,
+        number_of_document=1,
+        number_of_validated_document=0,
+        address=None,
+        other_school=None,
+        company=None,
+        diet=None,
+        id_card=None,
+        medical_certificate=None,
+        student_card=None,
+        raid_rules=None,
+        parent_authorization=None,
+        attestation_on_honour=False,
+        is_minor=False,
         security_file=Mock(spec=SecurityFile, allergy="None", asthma=False),
     )
 
@@ -476,18 +527,22 @@ def test_pdf_writer_init():
 #     assert result == "data/raid/test.pdf"
 
 
-# def test_pdf_writer_write_participant_document(mock_participant, mock_team):
-#     pdf_writer = PDFWriter()
-#     pdf_writer.team = mock_team
-#     with patch.object(pdf_writer, "write_document"):
-#         pdf_writer.write_participant_document(mock_participant)
+def test_pdf_writer_write_participant_document(mock_participant, mock_team):
+    pdf_writer = PDFWriter()
+    pdf_writer.team = mock_team
+    with patch.object(pdf_writer, "write_document"):
+        pdf_writer.write_participant_document(mock_participant)
 
 
-# def test_pdf_writer_write_security_file(mock_security_file, mock_participant, mock_team):
-#     pdf_writer = PDFWriter()
-#     pdf_writer.team = mock_team
-#     with patch.object(pdf_writer, "write_key_label"):
-#         pdf_writer.write_security_file(mock_security_file, mock_participant)
+def test_pdf_writer_write_security_file(
+    mock_security_file,
+    mock_participant,
+    mock_team,
+):
+    pdf_writer = PDFWriter()
+    pdf_writer.team = mock_team
+    with patch.object(pdf_writer, "write_key_label"):
+        pdf_writer.write_security_file(mock_security_file, mock_participant)
 
 
 def test_html_pdf_writer_init():
@@ -500,6 +555,8 @@ def test_html_pdf_writer_init():
 #     html_pdf_writer = HTMLPDFWriter()
 #     mock_information = Mock()
 #     result = html_pdf_writer.write_participant_security_file(
-#         mock_participant, mock_information, 1
+#         mock_participant,
+#         mock_information,
+#         1,
 #     )
 #     assert result == f"data/raid/{mock_participant.id}.pdf"
