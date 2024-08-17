@@ -16,16 +16,6 @@ from app.types.membership import AvailableAssociationMembership
 from app.types.websocket import WSMessageModel
 
 
-class NewUserWSMessageModel(WSMessageModel):
-    command: Literal["NEW_USER"] = "NEW_USER"
-    data: CoreUserSimple
-
-
-class UpdateUserWSMessageModel(WSMessageModel):
-    command: Literal["UPDATE_USER"] = "UPDATE_USER"
-    data: CoreUserSimple
-
-
 class DocumentBase(BaseModel):
     name: str
 
@@ -283,3 +273,13 @@ class TicketScan(BaseModel):
 
 class TicketSecret(BaseModel):
     qr_code_secret: UUID
+
+
+class NewUserWSMessageModel(WSMessageModel):
+    command: Literal["NEW_USER"] = "NEW_USER"
+    data: CdrUser
+
+
+class UpdateUserWSMessageModel(WSMessageModel):
+    command: Literal["UPDATE_USER"] = "UPDATE_USER"
+    data: CdrUser
