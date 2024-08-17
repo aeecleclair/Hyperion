@@ -90,8 +90,8 @@ class Settings(BaseSettings):
     # Google API #
     ##############
     # Google API is used to upload files to Google Drive and to use Google Apps Script to generate PDF from Google Sheets
-    GOOGLE_API_CLIENT_ID: str | None
-    GOOGLE_API_CLIENT_SECRET: str | None
+    GOOGLE_API_CLIENT_ID: str | None = None
+    GOOGLE_API_CLIENT_SECRET: str | None = None
 
     ##########################
     # Firebase Configuration #
