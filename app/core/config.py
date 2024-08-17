@@ -103,7 +103,7 @@ class Settings(BaseSettings):
     HELLOASSO_CLIENT_ID: str | None = None
     HELLOASSO_CLIENT_SECRET: str | None = None
 
-    CDR_PAYMENT_REDIRECTION_URL: str
+    CDR_PAYMENT_REDIRECTION_URL: str | None = None
 
     ############################
     # PostgreSQL configuration #
