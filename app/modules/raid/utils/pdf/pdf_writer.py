@@ -1,10 +1,11 @@
 import io
 import pathlib
 from pathlib import Path
+from typing import cast
 
 import fitz
 from fastapi.templating import Jinja2Templates
-from fpdf import FPDF, XPos, YPos
+from fpdf import FPDF, Align, XPos, YPos
 from fpdf.enums import TableCellFillMode, VAlign
 from fpdf.fonts import FontFace
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -33,7 +34,7 @@ def maximize_image(
     max_width: float,
     max_height: float,
 ) -> Image.Image:
-    image = Image.open(image_path)
+    image = cast(Image.Image, Image.open(image_path))
     width, height = image.size
     if width > height:
         image = image.rotate(270, expand=True)
@@ -190,7 +191,7 @@ class PDFWriter(FPDF):
             cell_fill_mode=TableCellFillMode.NONE,
             line_height=6,
             text_align="CENTER",
-            v_align=VAlign.M,
+            v_align=VAlign.M,  # type: ignore
         ) as table:
             for data_row in data:
                 row = table.row()
@@ -337,7 +338,7 @@ class PDFWriter(FPDF):
             cell_fill_mode=TableCellFillMode.NONE,
             line_height=6,
             text_align="CENTER",
-            v_align=VAlign.M,
+            v_align=VAlign.M,  # type: ignore
         ) as table:
             for data_row in data:
                 row = table.row()
@@ -404,8 +405,8 @@ class PDFWriter(FPDF):
             borders_layout="NONE",
             cell_fill_mode=TableCellFillMode.NONE,
             line_height=8,
-            text_align=("LEFT", "RIGHT"),
-            v_align=VAlign.M,
+            text_align=Align.J,
+            v_align=VAlign.M,  # type: ignore
             headings_style=headings_style,
         ) as table:
             row = table.row()
