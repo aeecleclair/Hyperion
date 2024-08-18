@@ -13,6 +13,7 @@ from app.core.payment.payment_tool import PaymentTool
 from app.dependencies import (
     get_db,
     get_drive_file_manager,
+    get_payment_tool,
     get_request_id,
     get_settings,
     is_user,
@@ -936,6 +937,7 @@ async def get_payment_url(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user),
     settings: Settings = Depends(get_settings),
+    payment_tool: PaymentTool = Depends(get_payment_tool),
 ):
     """
     Get payment url
@@ -955,7 +957,6 @@ async def get_payment_url(
             if not participant.payment:
                 checkout_name += " + "
             checkout_name += "T Shirt taille" + participant.t_shirt_size.value
-    payment_tool = PaymentTool(settings=settings)
     checkout = await payment_tool.init_checkout(
         module=module.root,
         helloasso_slug="AEECL",

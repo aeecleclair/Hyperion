@@ -253,7 +253,7 @@ class Participant(Base):
                 number_validated += 1
             elif self.medical_certificate.validation == DocumentValidation.temporary:
                 number_validated += 0.5
-        if self.security_file_id:
+        if self.security_file_id and self.security_file:
             if self.security_file.validation == DocumentValidation.accepted:
                 number_validated += 1
             elif self.security_file.validation == DocumentValidation.temporary:
