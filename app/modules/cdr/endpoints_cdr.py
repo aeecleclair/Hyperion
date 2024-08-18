@@ -1376,6 +1376,11 @@ async def mark_purchase_as_validated(
                             status_code=403,
                             detail=f"Product constraint {product_constraint} not satisfied.",
                         )
+                else:
+                    raise HTTPException(
+                        status_code=403,
+                        detail=f"Product constraint {product_constraint} not satisfied.",
+                    )
         for document_constraint in product.document_constraints:
             signature = await cruds_cdr.get_signature_by_id(
                 db=db,
@@ -2234,7 +2239,7 @@ async def get_memberships_by_user_id(
             status_code=403,
             detail="You're not allowed to see other users memberships.",
         )
-    return await cruds_cdr.get_memberships_by_user_id(db=db, user_id=user_id)
+    return await cruds_cdr.get_actual_memberships_by_user_id(db=db, user_id=user_id)
 
 
 @module.router.post(

@@ -305,7 +305,6 @@ def test_get_cdr_user_user(client: TestClient):
     assert response.status_code == 403
 
 
-
 def test_get_all_sellers_admin(client: TestClient):
     response = client.get(
         "/cdr/sellers/",
