@@ -1547,6 +1547,44 @@ async def delete_purchase(
             status_code=403,
             detail="You can't remove a validated purchase",
         )
+
+    # Check if a validated purchase depends on this purchase
+    user_purchases = await cruds_cdr.get_purchases_by_user_id(db=db, user_id=user_id)
+    for purchase in user_purchases:
+        if purchase.validated:
+            purchased_product = await cruds_cdr.get_product_by_id(
+                db=db,
+                product_id=purchase.product_variant.product_id,
+            )
+            if purchased_product:
+                if product in purchased_product.product_constraints:
+                    memberships = await cruds_cdr.get_actual_memberships_by_user_id(
+                        db=db,
+                        user_id=user_id,
+                    )
+                    all_possible_purchases = await cruds_cdr.get_purchases_by_ids(
+                        db=db,
+                        user_id=user_id,
+                        product_variant_id=[variant.id for variant in product.variants],
+                    )
+                    if all_possible_purchases:
+                        all_possible_purchases = list(all_possible_purchases)
+                        all_possible_purchases.remove(db_purchase)
+                        if not all_possible_purchases:
+                            if product.related_membership:
+                                if product.related_membership not in [
+                                    m.membership for m in memberships
+                                ]:
+                                    raise HTTPException(
+                                        status_code=403,
+                                        detail="You can't delete this purchase as a validated purchase depends on it.",
+                                    )
+                            else:
+                                raise HTTPException(
+                                    status_code=403,
+                                    detail="You can't delete this purchase as a validated purchase depends on it.",
+                                )
+
     db_action = models_cdr.CdrAction(
         id=uuid4(),
         user_id=user.id,
