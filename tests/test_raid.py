@@ -548,7 +548,7 @@ async def test_get_payment_url_no_participant(client: TestClient, mocker):
     )
     mocker.patch(
         "app.core.payment.payment_tool.PaymentTool.init_checkout",
-        return_value=Mock(id="mock_id", payment_url="http://mock-url.com"),
+        return_value=Mock(id=str(uuid.uuid4()), payment_url="http://mock-url.com"),
     )
     mocker.patch("app.modules.raid.cruds_raid.create_participant_checkout")
 
@@ -579,7 +579,7 @@ async def test_get_payment_url_participant_no_payment(client: TestClient, mocker
     )
     mocker.patch(
         "app.core.payment.payment_tool.PaymentTool.init_checkout",
-        return_value=Mock(id="mock_id", payment_url="http://mock-url.com"),
+        return_value=Mock(id=str(uuid.uuid4()), payment_url="http://mock-url.com"),
     )
     mocker.patch("app.modules.raid.cruds_raid.create_participant_checkout")
 
@@ -610,7 +610,7 @@ async def test_get_payment_url_participant_with_tshirt(client: TestClient, mocke
     )
     mocker.patch(
         "app.core.payment.payment_tool.PaymentTool.init_checkout",
-        return_value=Mock(id="mock_id", payment_url="http://mock-url.com"),
+        return_value=Mock(id=str(uuid.uuid4()), payment_url="http://mock-url.com"),
     )
     mocker.patch("app.modules.raid.cruds_raid.create_participant_checkout")
 
@@ -632,7 +632,7 @@ async def test_get_payment_url_prices_not_set(client: TestClient, mocker):
     )
     mocker.patch(
         "app.core.payment.payment_tool.PaymentTool.init_checkout",
-        return_value=Mock(id="mock_id", payment_url="http://mock-url.com"),
+        return_value=Mock(id=str(uuid.uuid4()), payment_url="http://mock-url.com"),
     )
 
     response = client.get(
