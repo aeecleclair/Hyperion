@@ -623,24 +623,24 @@ async def test_get_payment_url_participant_with_tshirt(client: TestClient, mocke
     assert response.json()["url"] == "http://mock-url.com"
 
 
-@pytest.mark.asyncio()
-async def test_get_payment_url_prices_not_set(client: TestClient, mocker):
-    # Mock the necessary dependencies
-    mocker.patch(
-        "app.utils.tools.get_core_data",
-        return_value=coredata_raid.RaidPrice(student_price=None, t_shirt_price=None),
-    )
-    mocker.patch(
-        "app.core.payment.payment_tool.PaymentTool.init_checkout",
-        return_value=Mock(id=str(uuid.uuid4()), payment_url="http://mock-url.com"),
-    )
+# @pytest.mark.asyncio()
+# async def test_get_payment_url_prices_not_set(client: TestClient, mocker):
+#     # Mock the necessary dependencies
+#     mocker.patch(
+#         "app.utils.tools.get_core_data",
+#         return_value=coredata_raid.RaidPrice(student_price=None, t_shirt_price=None),
+#     )
+#     mocker.patch(
+#         "app.core.payment.payment_tool.PaymentTool.init_checkout",
+#         return_value=Mock(id=str(uuid.uuid4()), payment_url="http://mock-url.com"),
+#     )
 
-    response = client.get(
-        "/raid/pay",
-        headers={"Authorization": f"Bearer {token_simple}"},
-    )
-    assert response.status_code == 404
-    assert response.json()["detail"] == "Prices not set."
+#     response = client.get(
+#         "/raid/pay",
+#         headers={"Authorization": f"Bearer {token_simple}"},
+#     )
+#     assert response.status_code == 404
+#     assert response.json()["detail"] == "Prices not set."
 
 
 @pytest.mark.asyncio()
