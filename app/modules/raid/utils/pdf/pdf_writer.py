@@ -90,8 +90,8 @@ class PDFWriter(FPDF):
 
     def write_team(self, team: Team) -> str:
         self.pdf_indexes: list[int] = []
-        self.pdf_pages: list[int] = []
         self.pdf_paths: list[str] = []
+        self.pdf_pages = []
         self.team = team
         self.file_name = (
             str(team.number) + "_" if team.number else ""

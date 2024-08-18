@@ -760,7 +760,7 @@ def mock_document():
         spec=Document,
         id="doc123",
         type="id_card",
-        uploaded_at=datetime.now(tz=datetime.UTC),
+        uploaded_at=datetime.datetime.now(tz=datetime.UTC),
     )
 
 
