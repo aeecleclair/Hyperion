@@ -187,7 +187,7 @@ class PurchaseComplete(PurchaseBase):
 
 class PurchaseReturn(PurchaseComplete):
     price: int
-    product: ProductCompleteNoConstraint
+    product: ProductComplete
     seller: SellerComplete
 
     model_config = ConfigDict(from_attributes=True)

@@ -373,7 +373,7 @@ async def get_purchases_by_user_id(
     result = await db.execute(
         select(models_cdr.Purchase)
         .where(models_cdr.Purchase.user_id == user_id)
-        .options(selectinload(models_cdr.Purchase.product_variant)),
+        .options(selectinload("*")),
     )
     return result.scalars().all()
 
