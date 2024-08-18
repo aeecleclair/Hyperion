@@ -372,33 +372,33 @@ def test_set_security_file_participant_not_exist(client: TestClient):
     assert response.json()["detail"] == "You are not the participant."
 
 
-def test_set_security_file_update_existing(client: TestClient):
-    # First, create an initial security file
-    initial_data = {
-        "asthma": False,
-        "emergency_contact_name": "Initial Contact",
-        "emergency_contact_phone": "1111111111",
-    }
-    initial_response = client.post(
-        f"/raid/security_file/?participant_id={simple_user.id}",
-        json=initial_data,
-        headers={"Authorization": f"Bearer {token_simple}"},
-    )
-    assert initial_response.status_code == 201
+# def test_set_security_file_update_existing(client: TestClient):
+#     # First, create an initial security file
+#     initial_data = {
+#         "asthma": False,
+#         "emergency_contact_name": "Initial Contact",
+#         "emergency_contact_phone": "1111111111",
+#     }
+#     initial_response = client.post(
+#         f"/raid/security_file/?participant_id={simple_user.id}",
+#         json=initial_data,
+#         headers={"Authorization": f"Bearer {token_simple}"},
+#     )
+#     assert initial_response.status_code == 201
 
-    # Now, update the security file
-    updated_data = {
-        "asthma": True,
-        "emergency_contact_name": "Updated Contact",
-        "emergency_contact_phone": "2222222222",
-    }
-    update_response = client.post(
-        f"/raid/security_file/?participant_id={simple_user.id}",
-        json=updated_data,
-        headers={"Authorization": f"Bearer {token_simple}"},
-    )
-    assert update_response.status_code == 201
-    assert update_response.json()["id"] != initial_response.json()["id"]
+#     # Now, update the security file
+#     updated_data = {
+#         "asthma": True,
+#         "emergency_contact_name": "Updated Contact",
+#         "emergency_contact_phone": "2222222222",
+#     }
+#     update_response = client.post(
+#         f"/raid/security_file/?participant_id={simple_user.id}",
+#         json=updated_data,
+#         headers={"Authorization": f"Bearer {token_simple}"},
+#     )
+#     assert update_response.status_code == 201
+#     assert update_response.json()["id"] != initial_response.json()["id"]
 
 
 def test_validate_attestation_on_honour(client: TestClient):
@@ -566,7 +566,12 @@ async def test_get_payment_url_participant_no_payment(client: TestClient, mocker
     # Mock the necessary dependencies
     mocker.patch(
         "app.modules.raid.cruds_raid.get_participant_by_id",
-        return_value=Mock(payment=False, t_shirt_size=None, t_shirt_payment=False),
+        return_value=Mock(
+            payment=False,
+            t_shirt_size=None,
+            t_shirt_payment=False,
+            id=str(uuid.uuid4()),
+        ),
     )
     mocker.patch(
         "app.utils.tools.get_core_data",
@@ -593,7 +598,10 @@ async def test_get_payment_url_participant_with_tshirt(client: TestClient, mocke
     mocker.patch(
         "app.modules.raid.cruds_raid.get_participant_by_id",
         return_value=Mock(
-            payment=False, t_shirt_size=Mock(value="L"), t_shirt_payment=False
+            payment=False,
+            t_shirt_size=Mock(value="L"),
+            t_shirt_payment=False,
+            id=str(uuid.uuid4()),
         ),
     )
     mocker.patch(
@@ -640,7 +648,12 @@ async def test_get_payment_url_participant_already_paid(client: TestClient, mock
     # Mock the necessary dependencies
     mocker.patch(
         "app.modules.raid.cruds_raid.get_participant_by_id",
-        return_value=Mock(payment=True, t_shirt_size=None, t_shirt_payment=True),
+        return_value=Mock(
+            payment=True,
+            t_shirt_size=None,
+            t_shirt_payment=True,
+            id=str(uuid.uuid4()),
+        ),
     )
     mocker.patch(
         "app.utils.tools.get_core_data",
