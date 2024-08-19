@@ -1,4 +1,5 @@
 import logging
+import os
 from collections.abc import Sequence
 from datetime import UTC, date, datetime
 from uuid import UUID, uuid4
@@ -21,6 +22,7 @@ from app.core.users.cruds_users import get_user_by_id, get_users
 from app.dependencies import (
     get_db,
     get_payment_tool,
+    get_request_id,
     get_settings,
     get_websocket_connection_manager,
     hyperion_access_logger,
@@ -36,6 +38,7 @@ from app.modules.cdr.types_cdr import (
 )
 from app.types.membership import AvailableAssociationMembership
 from app.types.module import Module
+from app.types.scopes_type import ScopeType
 from app.types.websocket import (
     ConnectionWSMessageModel,
     ConnectionWSMessageModelData,
@@ -43,6 +46,7 @@ from app.types.websocket import (
     HyperionWebsocketsRoom,
     WebsocketConnectionManager,
 )
+from app.utils.auth import auth_utils
 from app.utils.tools import (
     get_core_data,
     is_user_member_of_an_allowed_group,
@@ -2550,16 +2554,30 @@ async def scan_ticket(
 async def websocket_endpoint(
     websocket: WebSocket,
     ws_manager: WebsocketConnectionManager = Depends(get_websocket_connection_manager),
-    # user: models_core.CoreUser = Depends(is_user_a_member),
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+    request_id: str = Depends(get_request_id),
 ):
-    # hyperion_error_logger.debug(
-    #     f"CDR: New websocket connection from {user.id} on worker {os.getpid()}",
-    # )
-
     await websocket.accept()
 
     token_message = await websocket.receive_json()
     token = token_message.get("token", None)
+
+    token_data = auth_utils.get_token_data(
+        settings=settings,
+        token=token,
+        request_id=request_id,
+    )
+
+    user = await auth_utils.get_user_from_token_with_scopes(
+        scopes=[[ScopeType.API]],
+        db=db,
+        token_data=token_data,
+    )
+
+    hyperion_error_logger.debug(
+        f"CDR: New websocket connection from {user.id} on worker {os.getpid()}",
+    )
 
     await websocket.send_text(
         ConnectionWSMessageModel(
