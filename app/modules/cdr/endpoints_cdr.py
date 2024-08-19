@@ -2556,24 +2556,34 @@ async def websocket_endpoint(
     ws_manager: WebsocketConnectionManager = Depends(get_websocket_connection_manager),
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
-    request_id: str = Depends(get_request_id),
 ):
     await websocket.accept()
 
-    token_message = await websocket.receive_json()
-    token = token_message.get("token", None)
+    try:
+        token_message = await websocket.receive_json()
+        token = token_message.get("token", None)
 
-    token_data = auth_utils.get_token_data(
-        settings=settings,
-        token=token,
-        request_id=request_id,
-    )
+        token_data = auth_utils.get_token_data(
+            settings=settings,
+            token=token,
+            request_id="websocket",
+        )
 
-    user = await auth_utils.get_user_from_token_with_scopes(
-        scopes=[[ScopeType.API]],
-        db=db,
-        token_data=token_data,
-    )
+        user = await auth_utils.get_user_from_token_with_scopes(
+            scopes=[[ScopeType.API]],
+            db=db,
+            token_data=token_data,
+        )
+    except Exception:
+        await websocket.send_text(
+            ConnectionWSMessageModel(
+                data=ConnectionWSMessageModelData(
+                    status=ConnectionWSMessageModelStatus.invalid,
+                ),
+            ).model_dump_json(),
+        )
+        await websocket.close()
+        return
 
     hyperion_error_logger.debug(
         f"CDR: New websocket connection from {user.id} on worker {os.getpid()}",
