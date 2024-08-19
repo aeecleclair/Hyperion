@@ -245,15 +245,6 @@ async def init_objects():
     )
     await add_object_to_db(purchase)
 
-    purchase_bde = models_cdr.Purchase(
-        user_id=cdr_bde.id,
-        product_variant_id=variant.id,
-        quantity=5,
-        validated=False,
-        purchased_on=datetime.now(UTC),
-    )
-    await add_object_to_db(purchase_bde)
-
     global signature
     signature = models_cdr.Signature(
         user_id=cdr_user.id,
@@ -2133,6 +2124,24 @@ def test_change_status_admin_closed_not_onsite(client: TestClient):
 
 
 async def test_pay(mocker: MockerFixture, client: TestClient):
+    variant_new = models_cdr.ProductVariant(
+        id=uuid.uuid4(),
+        product_id=product.id,
+        name_fr="Variante",
+        name_en="Variant",
+        price=100,
+        unique=False,
+        enabled=True,
+    )
+    await add_object_to_db(variant_new)
+    purchase_bde = models_cdr.Purchase(
+        user_id=cdr_bde.id,
+        product_variant_id=variant_new.id,
+        quantity=5,
+        validated=False,
+        purchased_on=datetime.now(UTC),
+    )
+    await add_object_to_db(purchase_bde)
     checkout_id = uuid.uuid4()
     checkout_model = models_payment.Checkout(
         id=checkout_id,
