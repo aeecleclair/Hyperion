@@ -288,6 +288,42 @@ def test_get_all_cdr_users_user(client: TestClient):
     assert response.status_code == 403
 
 
+def test_update_cdr_user_seller_nickname(client: TestClient):
+    response = client.patch(
+        f"/cdr/users/{cdr_user.id}",
+        json={"nickname": "surnom"},
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 204
+
+
+def test_update_cdr_user_seller_email(client: TestClient):
+    response = client.patch(
+        f"/cdr/users/{cdr_user.id}",
+        json={"email": "some.email@etu.ec-lyon.fr"},
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 204
+
+
+def test_update_cdr_user_seller_wrong_user(client: TestClient):
+    response = client.patch(
+        f"/cdr/users/{uuid.uuid4()!s}",
+        json={"nickname": "surnom"},
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 404
+
+
+def test_update_cdr_user_user(client: TestClient):
+    response = client.patch(
+        f"/cdr/users/{cdr_user.id}",
+        json={"nickname": "surnom"},
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 403
+
+
 def test_get_cdr_user_seller(client: TestClient):
     response = client.get(
         f"/cdr/users/{cdr_user.id}",
@@ -1165,6 +1201,15 @@ def test_change_status_admin_onsite(client: TestClient):
     )
     assert response.status_code == 200
     assert response.json()["status"] == CdrStatus.onsite
+
+
+def test_update_cdr_user_seller_onsite(client: TestClient):
+    response = client.patch(
+        f"/cdr/users/{cdr_user.id}",
+        json={"nickname": "surnom_onsite"},
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 204
 
 
 def test_change_status_admin_pending_not_closed(client: TestClient):
