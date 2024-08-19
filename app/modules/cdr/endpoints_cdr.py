@@ -367,10 +367,16 @@ async def get_sellers_by_user_id(
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
-    Get sellers user is part of the group.
+    Get sellers user is part of the group. If user is adminCDR, returns all sellers.
 
     **User must be authenticated to use this endpoint**
     """
+
+    if is_user_member_of_an_allowed_group(
+        user=user,
+        allowed_groups=[GroupType.admin_cdr],
+    ):
+        return await cruds_cdr.get_sellers(db)
     return await cruds_cdr.get_sellers_by_group_ids(
         db,
         [x.id for x in user.groups],
