@@ -1,11 +1,14 @@
 import uuid
+from asyncio import Future
 from datetime import UTC, date, datetime
 
 import pytest_asyncio
 from fastapi.testclient import TestClient
+from pytest_mock import MockerFixture
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
+from app.core.payment import models_payment
 from app.modules.cdr import models_cdr
 from app.modules.cdr.types_cdr import (
     CdrStatus,
@@ -241,6 +244,15 @@ async def init_objects():
         purchased_on=datetime.now(UTC),
     )
     await add_object_to_db(purchase)
+
+    purchase_bde = models_cdr.Purchase(
+        user_id=cdr_bde.id,
+        product_variant_id=variant.id,
+        quantity=5,
+        validated=False,
+        purchased_on=datetime.now(UTC),
+    )
+    await add_object_to_db(purchase_bde)
 
     global signature
     signature = models_cdr.Signature(
@@ -2118,3 +2130,50 @@ def test_change_status_admin_closed_not_onsite(client: TestClient):
     )
     assert response.status_code == 200
     assert response.json()["status"] == CdrStatus.pending
+
+
+async def test_pay(mocker: MockerFixture, client: TestClient):
+    checkout_id = uuid.uuid4()
+    checkout_model = models_payment.Checkout(
+        id=checkout_id,
+        module="cdr",
+        name="Chaine de Rentrée",
+        amount=500,
+        hello_asso_checkout_id=123,
+        secret="checkoutsecret",
+    )
+    await add_object_to_db(checkout_model)
+
+    class FakeCheckout:
+        def __init__(self, checkout_id: uuid.UUID, payment_url: str):
+            self.id = checkout_id
+            self.payment_url = payment_url
+
+    init_checkout: Future = Future()
+    init_checkout.set_result(
+        FakeCheckout(
+            checkout_id=checkout_id,
+            payment_url="https://some.url.fr/checkout",
+        ),
+    )
+    payment_tool = mocker.patch("app.dependencies.PaymentTool")
+    payment_tool.return_value.init_checkout.return_value = init_checkout
+    response = client.post(
+        "/cdr/pay/",
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 200
+    assert response.json()["url"] == "https://some.url.fr/checkout"
+
+    response = client.post(
+        "/payment/helloasso/webhook",
+        json={
+            "eventType": "Payment",
+            "data": {"amount": 500, "id": 123},
+            "metadata": {
+                "hyperion_checkout_id": str(checkout_id),
+                "secret": "checkoutsecret",
+            },
+        },
+    )
+    assert response.status_code == 204

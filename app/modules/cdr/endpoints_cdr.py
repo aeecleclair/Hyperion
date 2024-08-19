@@ -2207,10 +2207,10 @@ async def delete_payment(
         raise HTTPException(status_code=400, detail=str(error))
 
 
-@module.router.get(
+@module.router.post(
     "/cdr/pay/",
     response_model=schemas_cdr.PaymentUrl,
-    status_code=201,
+    status_code=200,
 )
 async def get_payment_url(
     db: AsyncSession = Depends(get_db),
