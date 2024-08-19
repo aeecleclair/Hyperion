@@ -22,7 +22,6 @@ from app.core.users.cruds_users import get_user_by_id, get_users
 from app.dependencies import (
     get_db,
     get_payment_tool,
-    get_request_id,
     get_settings,
     get_websocket_connection_manager,
     hyperion_access_logger,
