@@ -29,6 +29,7 @@ from app.core.payment.payment_tool import PaymentTool
 from app.types.scopes_type import ScopeType
 from app.utils.auth import auth_utils
 from app.types.websocket import WebsocketConnectionManager
+from app.utils.auth import auth_utils
 from app.utils.communication.notifications import NotificationManager, NotificationTool
 from app.utils.redis import connect
 from app.utils.tools import (
