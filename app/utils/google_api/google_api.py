@@ -1,9 +1,12 @@
 import logging
+from types import TracebackType
 
 from fastapi import HTTPException, Request
 from google.auth.transport import requests
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
+from googleapiclient.discovery import Resource, build
+from googleapiclient.http import MediaFileUpload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
@@ -19,6 +22,8 @@ from app.utils.google_api.coredata_google_api import (
 from app.utils.tools import get_core_data, set_core_data
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
+
+GoogleId = str
 
 
 class GoogleAPI:
@@ -180,3 +185,99 @@ class GoogleAPI:
                 ) from None
 
         return creds
+
+
+class DriveGoogleAPI:
+    """
+    DriveGoogleAPI async context manager.
+
+    Example usage:
+    ```python
+    async with DriveGoogleAPI(db, settings) as google_api:
+        google_api.create_folder("folder_name", "parent_folder_id")
+    ```
+    """
+
+    def __init__(self, db: AsyncSession, settings: Settings):
+        self._db = db
+        self._settings = settings
+
+    async def __aenter__(self) -> "DriveGoogleAPI":
+        google_api = GoogleAPI()
+        creds = await google_api.get_credentials(self._db, self._settings)
+        self._drive: Resource = build("drive", "v3", credentials=creds)
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> bool | None:
+        # https://github.com/googleapis/google-api-python-client/blob/main/docs/start.md#build-the-service-object
+        self._drive.close()
+
+        # We return False to let the exception propagate if there is one.
+        return False
+
+    def create_folder(self, folder_name: str, parent_folder_id: GoogleId) -> GoogleId:
+        """
+        Create a folder in Google Drive, and return its id.
+        """
+
+        file_metadata = {
+            "name": folder_name,
+            "mimeType": "application/vnd.google-apps.folder",
+            "parents": [parent_folder_id],
+        }
+        response = self._drive.files().create(body=file_metadata).execute()
+        folder_id: GoogleId = response.get("id")
+        return folder_id
+
+    async def upload_file(
+        self,
+        file_path: str,
+        file_name: str,
+        parent_folder_id: GoogleId,
+        mimetype: str = "application/pdf",
+    ) -> GoogleId:
+        """
+        Upload a file to Google Drive, and return its id.
+        """
+        file_metadata = {
+            "name": file_name,
+            "mimeType": mimetype,
+            "parents": [parent_folder_id],
+        }
+        media = MediaFileUpload(
+            file_path,
+            mimetype=mimetype,
+        )
+        response = (
+            self._drive.files().create(body=file_metadata, media_body=media).execute()
+        )
+        uploaded_file_id: GoogleId = response.get("id")
+        return uploaded_file_id
+
+    def replace_file(
+        self,
+        file_path: str,
+        file_id: GoogleId,
+    ) -> GoogleId:
+        file_metadata = {
+            "mimeType": "application/pdf",
+        }
+        media = MediaFileUpload(
+            file_path,
+            mimetype="application/pdf",
+        )
+        response = (
+            self._drive.files()
+            .update(fileId=file_id, body=file_metadata, media_body=media)
+            .execute()
+        )
+        result: GoogleId = response.get("id")
+        return result
+
+    def delete_file(self, file_id: GoogleId) -> None:
+        self._drive.files().delete(fileId=file_id).execute()
