@@ -2,7 +2,7 @@ aiofiles==24.1.0                    # Asynchronous file manipulation
 alembic==1.13.2                     # database migrations
 asyncpg==0.29.0                     # PostgreSQL adapter for asynchronous operations
 bcrypt==4.1.3                       # password hashing
-calypsso==1.1.0
+calypsso==1.1.1
 fastapi==0.111.0
 firebase-admin==6.5.0               # Firebase is used for push notification
 HelloAssoAPIWrapper==1.0.0
