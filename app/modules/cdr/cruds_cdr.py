@@ -860,10 +860,12 @@ async def get_customdata(
     user_id: str,
 ) -> models_cdr.CustomData | None:
     result = await db.execute(
-        select(models_cdr.CustomData).where(
+        select(models_cdr.CustomData)
+        .where(
             models_cdr.CustomData.field_id == field_id,
             models_cdr.CustomData.user_id == user_id,
-        ),
+        )
+        .options(selectinload(models_cdr.CustomData.field)),
     )
     return result.scalars().first()
 

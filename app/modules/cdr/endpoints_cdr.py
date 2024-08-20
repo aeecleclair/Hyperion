@@ -2593,7 +2593,7 @@ async def delete_customdata_field(
     seller_id: UUID,
     field_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     await is_user_in_a_seller_group(
         seller_id,
@@ -2622,14 +2622,41 @@ async def delete_customdata_field(
         raise HTTPException(status_code=400, detail=str(error))
 
 
+@module.router.get(
+    "/cdr/sellers/{seller_id}/users/{user_id}/data/{field_id}/",
+    response_model=schemas_cdr.CustomDataComplete,
+    status_code=200,
+)
+async def get_customdata(
+    seller_id: UUID,
+    user_id: str,
+    field_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    await is_user_in_a_seller_group(
+        seller_id,
+        user,
+        db=db,
+    )
+    db_data = await cruds_cdr.get_customdata(db=db, field_id=field_id, user_id=user_id)
+    if not db_data:
+        raise HTTPException(
+            status_code=404,
+            detail="Field Data not found.",
+        )
+
+    return db_data
+
+
 @module.router.post(
     "/cdr/sellers/{seller_id}/users/{user_id}/data/{field_id}/",
-    response_model=schemas_cdr.CustomDataFieldComplete,
+    response_model=schemas_cdr.CustomDataComplete,
     status_code=201,
 )
 async def create_custom_data(
     seller_id: UUID,
-    user_id: UUID,
+    user_id: str,
     field_id: UUID,
     custom_data: schemas_cdr.CustomDataBase,
     db: AsyncSession = Depends(get_db),
@@ -2654,7 +2681,7 @@ async def create_custom_data(
     db_data = models_cdr.CustomData(
         user_id=user_id,
         field_id=field_id,
-        name=custom_data.value,
+        value=custom_data.value,
     )
     try:
         cruds_cdr.create_customdata(db, db_data)
@@ -2663,7 +2690,7 @@ async def create_custom_data(
         await db.rollback()
         raise HTTPException(status_code=400, detail=str(error))
     else:
-        return db_data
+        return await cruds_cdr.get_customdata(db=db, field_id=field_id, user_id=user_id)
 
 
 @module.router.patch(
@@ -2716,7 +2743,7 @@ async def delete_customdata(
     user_id: str,
     field_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     await is_user_in_a_seller_group(
         seller_id,
