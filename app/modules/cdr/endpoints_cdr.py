@@ -1185,10 +1185,10 @@ async def create_purchase(
     **User must create a purchase for themself and for an online available product or be part of the seller's group to use this endpoint**
     """
     status = await get_core_data(schemas_cdr.Status, db)
-    if status.status == CdrStatus.pending:
+    if status.status in [CdrStatus.pending, CdrStatus.closed]:
         raise HTTPException(
             status_code=403,
-            detail="CDR hasn't started yet.",
+            detail="CDR is closed.",
         )
     product_variant = await cruds_cdr.get_product_variant_by_id(
         db=db,
@@ -1383,12 +1383,12 @@ async def mark_purchase_as_validated(
                     ]:
                         raise HTTPException(
                             status_code=403,
-                            detail=f"Product constraint {product_constraint} not satisfied.",
+                            detail=f"Product constraint {product_constraint.name_fr} not satisfied.",
                         )
                 else:
                     raise HTTPException(
                         status_code=403,
-                        detail=f"Product constraint {product_constraint} not satisfied.",
+                        detail=f"Product constraint {product_constraint.name_fr} not satisfied.",
                     )
         for document_constraint in product.document_constraints:
             signature = await cruds_cdr.get_signature_by_id(
@@ -1399,7 +1399,7 @@ async def mark_purchase_as_validated(
             if not signature:
                 raise HTTPException(
                     status_code=403,
-                    detail=f"Document signature constraint {document_constraint} not satisfied.",
+                    detail=f"Document signature constraint {document_constraint.name} not satisfied.",
                 )
         if product.related_membership:
             await add_membership(

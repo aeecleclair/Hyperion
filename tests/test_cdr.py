@@ -2386,3 +2386,76 @@ async def test_scan_ticket_expired(client: TestClient):
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 403
+
+
+async def test_validate_purchase(client: TestClient):
+    product_membership = models_cdr.CdrProduct(
+        id=uuid.uuid4(),
+        seller_id=seller.id,
+        name_fr="Produit à adhésion",
+        name_en="Product",
+        available_online=False,
+        generate_ticket=False,
+        related_membership=AvailableAssociationMembership.useecl,
+    )
+    await add_object_to_db(product_membership)
+    product_membership_to_purchase = models_cdr.CdrProduct(
+        id=uuid.uuid4(),
+        seller_id=seller.id,
+        name_fr="Produit à adhésion",
+        name_en="Product",
+        available_online=False,
+        generate_ticket=False,
+        related_membership=AvailableAssociationMembership.aeecl,
+    )
+    await add_object_to_db(product_membership_to_purchase)
+    variant_to_validate = models_cdr.ProductVariant(
+        id=uuid.uuid4(),
+        product_id=product_membership_to_purchase.id,
+        name_fr="Variante",
+        name_en="Variant",
+        price=100,
+        unique=False,
+        enabled=True,
+    )
+    await add_object_to_db(variant_to_validate)
+    variant_purchased = models_cdr.ProductVariant(
+        id=uuid.uuid4(),
+        product_id=online_product.id,
+        name_fr="Variante purchased",
+        name_en="Variant",
+        price=100,
+        unique=False,
+        enabled=True,
+    )
+    await add_object_to_db(variant_purchased)
+    purchase = models_cdr.Purchase(
+        user_id=cdr_user.id,
+        product_variant_id=variant_purchased.id,
+        quantity=2,
+        validated=False,
+        purchased_on=datetime.now(UTC),
+    )
+    await add_object_to_db(purchase)
+    purchase_to_validate = models_cdr.Purchase(
+        user_id=cdr_user.id,
+        product_variant_id=variant_to_validate.id,
+        quantity=2,
+        validated=False,
+        purchased_on=datetime.now(UTC),
+    )
+    await add_object_to_db(purchase_to_validate)
+    membership = models_core.CoreAssociationMembership(
+        id=uuid.uuid4(),
+        user_id=cdr_user.id,
+        membership=AvailableAssociationMembership.useecl,
+        start_date=date(2022, 9, 1),
+        end_date=datetime.now(UTC).date() + timedelta(days=100),
+    )
+    await add_object_to_db(membership)
+
+    response = client.patch(
+        f"/cdr/users/{cdr_user.id}/purchases/{variant_to_validate.id}/validated/?validated=True",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 204
