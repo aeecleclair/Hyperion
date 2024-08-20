@@ -2815,23 +2815,3 @@ async def websocket_endpoint(
         )
         raise
 
-
-# TODO: remove this debug method
-@module.router.get(
-    "/cdr/ws/send/",
-    status_code=200,
-)
-async def send_ws_message(
-    ws_manager: WebsocketConnectionManager = Depends(get_websocket_connection_manager),
-):
-    await ws_manager.send_message_to_room(
-        message=schemas_cdr.NewUserWSMessageModel(
-            data=schemas_core.CoreUserSimple(
-                name="Name",
-                firstname="Firstname",
-                nickname="Nickname",
-                id="User.id",
-            ),
-        ),
-        room_id=HyperionWebsocketsRoom.CDR,
-    )
