@@ -2814,4 +2814,3 @@ async def websocket_endpoint(
             connection=websocket,
         )
         raise
-

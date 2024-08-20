@@ -279,7 +279,7 @@ def upgrade() -> None:
         sa.Column("value", sa.String(), nullable=False),
         sa.ForeignKeyConstraint(["user_id"], ["core_user.id"]),
         sa.ForeignKeyConstraint(["field_id"], ["cdr_customdata_field.id"]),
-        sa.PrimaryKeyConstraint("id"),
+        sa.PrimaryKeyConstraint("field_id", "user_id"),
     )
 
     # ### end Alembic commands ###
