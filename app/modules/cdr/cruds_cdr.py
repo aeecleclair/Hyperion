@@ -6,7 +6,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.models_core import CoreAssociationMembership
+from app.core.models_core import CoreAssociationMembership, CoreUser
 from app.modules.cdr import models_cdr, schemas_cdr
 
 
@@ -888,3 +888,12 @@ async def delete_customdata(db: AsyncSession, field_id: UUID, user_id: str):
             models_cdr.CustomData.user_id == user_id,
         ),
     )
+
+
+async def get_pending_validation_users(db: AsyncSession) -> Sequence[CoreUser]:
+    result = await db.execute(
+        select(models_cdr.Purchase).where(models_cdr.Purchase.validated.is_(False)),
+    )
+    user_ids = set(purchase.user_id for purchase in result.scalars().all())
+    result_users = await db.execute(select(CoreUser).where(CoreUser.id.in_(user_ids)))
+    return result_users.scalars().all()

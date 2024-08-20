@@ -332,6 +332,22 @@ def test_get_all_cdr_users_user(client: TestClient):
     assert response.status_code == 403
 
 
+def test_get_all_cdr_pending_users_seller(client: TestClient):
+    response = client.get(
+        "/cdr/users/pending",
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 200
+
+
+def test_get_all_cdr_pending_users_user(client: TestClient):
+    response = client.get(
+        "/cdr/users/pending",
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 403
+
+
 def test_update_cdr_user_seller_nickname(client: TestClient):
     response = client.patch(
         f"/cdr/users/{cdr_user.id}",
