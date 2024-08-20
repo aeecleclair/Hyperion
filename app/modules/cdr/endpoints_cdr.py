@@ -2442,7 +2442,7 @@ async def get_ticket_secret(
 
 @module.router.get(
     "/cdr/products/{product_id}/tickets/{secret}/",
-    response_model=list[schemas_cdr.Ticket],
+    response_model=schemas_cdr.Ticket,
     status_code=200,
 )
 async def get_ticket_by_secret(
@@ -2536,17 +2536,214 @@ async def scan_ticket(
             status_code=403,
             detail="This ticket has already been used for the maximum amount.",
         )
-    if ticket.expiration > datetime.now(tz=UTC):
+    if ticket.expiration < datetime.now(tz=UTC):
         raise HTTPException(
             status_code=403,
             detail="This ticket has expired.",
         )
-    await cruds_cdr.scan_ticket(
+    try:
+        await cruds_cdr.scan_ticket(
+            db=db,
+            ticket_id=ticket.id,
+            scan=ticket.scan_left - 1,
+            tags=ticket.tags + "," + ticket_data.tag.strip(),
+        )
+        await db.commit()
+    except Exception as error:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+@module.router.post(
+    "/cdr/sellers/{seller_id}/data/",
+    response_model=schemas_cdr.CustomDataFieldComplete,
+    status_code=201,
+)
+async def create_custom_data_field(
+    seller_id: UUID,
+    custom_data_field: schemas_cdr.CustomDataFieldBase,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    await is_user_in_a_seller_group(
+        seller_id,
+        user,
         db=db,
-        ticket_id=ticket.id,
-        scan=ticket.scan_left - 1,
-        tags=ticket.tags + "," + ticket_data.tag.strip(),
     )
+    db_data = models_cdr.CustomDataField(
+        id=uuid4(),
+        seller_id=seller_id,
+        name=custom_data_field.name,
+    )
+    try:
+        cruds_cdr.create_customdata_field(db, db_data)
+        await db.commit()
+    except Exception as error:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=str(error))
+    else:
+        return db_data
+
+
+@module.router.delete(
+    "/cdr/sellers/{seller_id}/data/{field_id}/",
+    status_code=204,
+)
+async def delete_customdata_field(
+    seller_id: UUID,
+    field_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
+):
+    await is_user_in_a_seller_group(
+        seller_id,
+        user,
+        db=db,
+    )
+    db_field = await cruds_cdr.get_customdata_field(db=db, field_id=field_id)
+    if not db_field:
+        raise HTTPException(
+            status_code=404,
+            detail="Field not found.",
+        )
+    if db_field.seller_id != seller_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Field does not belong to this seller.",
+        )
+    try:
+        await cruds_cdr.delete_customdata_field(
+            field_id=field_id,
+            db=db,
+        )
+        await db.commit()
+    except Exception as error:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+@module.router.post(
+    "/cdr/sellers/{seller_id}/users/{user_id}/data/{field_id}/",
+    response_model=schemas_cdr.CustomDataFieldComplete,
+    status_code=201,
+)
+async def create_custom_data(
+    seller_id: UUID,
+    user_id: UUID,
+    field_id: UUID,
+    custom_data: schemas_cdr.CustomDataBase,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    await is_user_in_a_seller_group(
+        seller_id,
+        user,
+        db=db,
+    )
+    db_field = await cruds_cdr.get_customdata_field(db=db, field_id=field_id)
+    if not db_field:
+        raise HTTPException(
+            status_code=404,
+            detail="Field not found.",
+        )
+    if db_field.seller_id != seller_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Field does not belong to this seller.",
+        )
+    db_data = models_cdr.CustomData(
+        user_id=user_id,
+        field_id=field_id,
+        name=custom_data.value,
+    )
+    try:
+        cruds_cdr.create_customdata(db, db_data)
+        await db.commit()
+    except Exception as error:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=str(error))
+    else:
+        return db_data
+
+
+@module.router.patch(
+    "/cdr/sellers/{seller_id}/users/{user_id}/data/{field_id}/",
+    status_code=204,
+)
+async def update_custom_data(
+    seller_id: UUID,
+    user_id: str,
+    field_id: UUID,
+    custom_data: schemas_cdr.CustomDataBase,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    await is_user_in_a_seller_group(
+        seller_id,
+        user,
+        db=db,
+    )
+    db_data = await cruds_cdr.get_customdata(db=db, field_id=field_id, user_id=user_id)
+    if not db_data:
+        raise HTTPException(
+            status_code=404,
+            detail="Field Data not found.",
+        )
+    if db_data.field.seller_id != seller_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Field does not belong to this seller.",
+        )
+    try:
+        await cruds_cdr.update_customdata(
+            db,
+            field_id=field_id,
+            user_id=user_id,
+            value=custom_data.value,
+        )
+        await db.commit()
+    except Exception as error:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+@module.router.delete(
+    "/cdr/sellers/{seller_id}/users/{user_id}/data/{field_id}/",
+    status_code=204,
+)
+async def delete_customdata(
+    seller_id: UUID,
+    user_id: str,
+    field_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
+):
+    await is_user_in_a_seller_group(
+        seller_id,
+        user,
+        db=db,
+    )
+    db_data = await cruds_cdr.get_customdata(db=db, field_id=field_id, user_id=user_id)
+    if not db_data:
+        raise HTTPException(
+            status_code=404,
+            detail="Field Data not found.",
+        )
+    if db_data.field.seller_id != seller_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Field does not belong to this seller.",
+        )
+    try:
+        await cruds_cdr.delete_customdata(
+            field_id=field_id,
+            user_id=user_id,
+            db=db,
+        )
+        await db.commit()
+    except Exception as error:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @module.router.websocket("/cdr/users/ws")

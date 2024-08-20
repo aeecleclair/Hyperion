@@ -262,7 +262,7 @@ class Ticket(BaseModel):
     id: UUID
     product_variant: ProductVariantComplete
     user: UserTicket
-    scan: int
+    scan_left: int
     tags: str
     expiration: datetime
 
@@ -283,3 +283,26 @@ class NewUserWSMessageModel(WSMessageModel):
 class UpdateUserWSMessageModel(WSMessageModel):
     command: Literal["UPDATE_USER"] = "UPDATE_USER"
     data: CdrUser
+
+
+class CustomDataFieldBase(BaseModel):
+    name: str
+
+
+class CustomDataFieldComplete(CustomDataFieldBase):
+    id: UUID
+    seller_id: UUID
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CustomDataBase(BaseModel):
+    value: str
+
+
+class CustomDataComplete(CustomDataBase):
+    field_id: UUID
+    user_id: UUID
+    field: CustomDataFieldComplete
+
+    model_config = ConfigDict(from_attributes=True)

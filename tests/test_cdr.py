@@ -1,6 +1,6 @@
 import uuid
 from asyncio import Future
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 
 import pytest_asyncio
 from fastapi.testclient import TestClient
@@ -38,6 +38,7 @@ product: models_cdr.CdrProduct
 online_product: models_cdr.CdrProduct
 empty_product: models_cdr.CdrProduct
 usable_product: models_cdr.CdrProduct
+ticket_product: models_cdr.CdrProduct
 
 document: models_cdr.Document
 unused_document: models_cdr.Document
@@ -48,6 +49,7 @@ product_constraint: models_cdr.ProductConstraint
 
 variant: models_cdr.ProductVariant
 empty_variant: models_cdr.ProductVariant
+ticket_variant: models_cdr.ProductVariant
 
 curriculum: models_cdr.Curriculum
 unused_curriculum: models_cdr.Curriculum
@@ -60,6 +62,8 @@ signature_admin: models_cdr.Signature
 payment: models_cdr.Payment
 
 membership: models_core.CoreAssociationMembership
+
+ticket: models_cdr.Ticket
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
@@ -272,6 +276,43 @@ async def init_objects():
         end_date=date(2026, 9, 1),
     )
     await add_object_to_db(membership)
+
+    global ticket_product
+    ticket_product = models_cdr.CdrProduct(
+        id=uuid.uuid4(),
+        seller_id=seller.id,
+        name_fr="Produit a ticket",
+        name_en="Usable product",
+        available_online=False,
+        generate_ticket=True,
+        ticket_max_use=1,
+        ticket_expiration=datetime.now(UTC) + timedelta(days=1),
+    )
+    await add_object_to_db(ticket_product)
+
+    global ticket_variant
+    ticket_variant = models_cdr.ProductVariant(
+        id=uuid.uuid4(),
+        product_id=ticket_product.id,
+        name_fr="variante a ticket",
+        name_en="Empty variant",
+        price=100,
+        unique=False,
+        enabled=True,
+    )
+    await add_object_to_db(ticket_variant)
+
+    global ticket
+    ticket = models_cdr.Ticket(
+        id=uuid.uuid4(),
+        secret=uuid.uuid4(),
+        product_variant_id=ticket_variant.id,
+        user_id=cdr_user.id,
+        scan_left=1,
+        tags="",
+        expiration=datetime.now(UTC) + timedelta(days=1),
+    )
+    await add_object_to_db(ticket)
 
 
 def test_get_all_cdr_users_seller(client: TestClient):
@@ -2186,3 +2227,162 @@ async def test_pay(mocker: MockerFixture, client: TestClient):
         },
     )
     assert response.status_code == 204
+
+
+def test_get_user_tickets(client: TestClient):
+    response = client.get(
+        f"/cdr/users/{cdr_user.id}/tickets/",
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 200
+    assert str(ticket.id) in [x["id"] for x in response.json()]
+    assert True not in ["secret" in x for x in response.json()]
+
+
+def test_get_user_tickets_other_user(client: TestClient):
+    response = client.get(
+        f"/cdr/users/{cdr_user.id}/tickets/",
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 403
+
+
+def test_get_ticket_secret(client: TestClient):
+    response = client.get(
+        f"/cdr/users/me/tickets/{ticket.id}/secret/",
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 200
+    assert response.json()["qr_code_secret"] == str(ticket.secret)
+
+
+def test_get_ticket_secret_other_user(client: TestClient):
+    response = client.get(
+        f"/cdr/users/me/tickets/{ticket.id}/secret/",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 403
+
+
+def test_get_ticket_secret_wrong_id(client: TestClient):
+    response = client.get(
+        f"/cdr/users/me/tickets/{uuid.uuid4()}/secret/",
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 404
+
+
+def test_get_ticket_by_secret(client: TestClient):
+    response = client.get(
+        f"/cdr/products/{ticket_product.id}/tickets/{ticket.secret}",
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 200
+    assert response.json()["id"] == str(ticket.id)
+
+
+def test_get_ticket_by_secret_user(client: TestClient):
+    response = client.get(
+        f"/cdr/products/{ticket_product.id}/tickets/{ticket.secret}",
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 403
+
+
+def test_get_ticket_by_secret_wrong_id(client: TestClient):
+    response = client.get(
+        f"/cdr/products/{ticket_product.id}/tickets/{uuid.uuid4()}",
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 404
+
+
+def test_get_ticket_by_secret_wrong_product(client: TestClient):
+    response = client.get(
+        f"/cdr/products/{product.id}/tickets/{ticket.secret}",
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 404
+
+
+def test_scan_ticket(client: TestClient):
+    response = client.patch(
+        f"/cdr/products/{ticket_product.id}/tickets/{ticket.secret}",
+        json={"tag": "Bus 2"},
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 204
+
+    response = client.get(
+        f"/cdr/products/{ticket_product.id}/tickets/{ticket.secret}",
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 200
+    assert response.json()["scan_left"] == 0
+
+
+def test_scan_ticket_user(client: TestClient):
+    response = client.patch(
+        f"/cdr/products/{ticket_product.id}/tickets/{ticket.secret}",
+        json={"tag": "Bus 2"},
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 403
+
+
+def test_scan_ticket_wrong_id(client: TestClient):
+    response = client.patch(
+        f"/cdr/products/{ticket_product.id}/tickets/{uuid.uuid4()}",
+        json={"tag": "Bus 2"},
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 404
+
+
+def test_scan_ticket_wrong_product(client: TestClient):
+    response = client.patch(
+        f"/cdr/products/{product.id}/tickets/{ticket.secret}",
+        json={"tag": "Bus 2"},
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 404
+
+
+async def test_scan_ticket_no_scan_left(client: TestClient):
+    no_scan_ticket = models_cdr.Ticket(
+        id=uuid.uuid4(),
+        secret=uuid.uuid4(),
+        product_variant_id=ticket_variant.id,
+        user_id=cdr_user.id,
+        scan_left=0,
+        tags="",
+        expiration=datetime.now(UTC) + timedelta(days=1),
+    )
+    await add_object_to_db(no_scan_ticket)
+
+    response = client.patch(
+        f"/cdr/products/{ticket_product.id}/tickets/{no_scan_ticket.secret}",
+        json={"tag": "Bus 2"},
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 403
+
+
+async def test_scan_ticket_expired(client: TestClient):
+    expired_ticket = models_cdr.Ticket(
+        id=uuid.uuid4(),
+        secret=uuid.uuid4(),
+        product_variant_id=ticket_variant.id,
+        user_id=cdr_user.id,
+        scan_left=1,
+        tags="",
+        expiration=datetime.now(UTC) - timedelta(days=1),
+    )
+    await add_object_to_db(expired_ticket)
+
+    response = client.patch(
+        f"/cdr/products/{ticket_product.id}/tickets/{expired_ticket.secret}",
+        json={"tag": "Bus 2"},
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 403

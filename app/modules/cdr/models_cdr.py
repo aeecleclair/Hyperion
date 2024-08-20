@@ -244,3 +244,23 @@ class Ticket(Base):
     scan_left: Mapped[int]
     tags: Mapped[str]
     expiration: Mapped[datetime]
+
+
+class CustomDataField(Base):
+    __tablename__ = "cdr_customdata_field"
+    id: Mapped[PrimaryKey]
+    seller_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("cdr_seller.id"),
+    )
+    name: Mapped[str]
+
+
+class CustomData(Base):
+    __tablename__ = "cdr_customdata"
+    field_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("cdr_customdata_field.id"),
+        primary_key=True,
+    )
+    field = relationship("CustomDataField")
+    user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), primary_key=True)
+    value: Mapped[str]

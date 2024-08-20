@@ -782,7 +782,9 @@ async def get_tickets_of_user(
     user_id: str,
 ) -> Sequence[models_cdr.Ticket]:
     result = await db.execute(
-        select(models_cdr.Ticket).where(models_cdr.Ticket.user_id == user_id),
+        select(models_cdr.Ticket)
+        .where(models_cdr.Ticket.user_id == user_id)
+        .options(selectinload(models_cdr.Ticket.product_variant)),
     )
     return result.scalars().all()
 
@@ -792,7 +794,9 @@ async def get_ticket(
     ticket_id: UUID,
 ) -> models_cdr.Ticket | None:
     result = await db.execute(
-        select(models_cdr.Ticket).where(models_cdr.Ticket.id == ticket_id),
+        select(models_cdr.Ticket)
+        .where(models_cdr.Ticket.id == ticket_id)
+        .options(selectinload(models_cdr.Ticket.product_variant)),
     )
     return result.scalars().first()
 
@@ -802,7 +806,12 @@ async def get_ticket_by_secret(
     secret: UUID,
 ) -> models_cdr.Ticket | None:
     result = await db.execute(
-        select(models_cdr.Ticket).where(models_cdr.Ticket.secret == secret),
+        select(models_cdr.Ticket)
+        .where(models_cdr.Ticket.secret == secret)
+        .options(
+            selectinload(models_cdr.Ticket.product_variant),
+            selectinload(models_cdr.Ticket.user),
+        ),
     )
     return result.scalars().first()
 
@@ -814,4 +823,66 @@ async def scan_ticket(db: AsyncSession, ticket_id: UUID, scan: int, tags: str):
             models_cdr.Ticket.id == ticket_id,
         )
         .values(scan_left=scan, tags=tags),
+    )
+
+
+def create_customdata_field(db: AsyncSession, datafield: models_cdr.CustomDataField):
+    db.add(datafield)
+
+
+async def get_customdata_field(
+    db: AsyncSession,
+    field_id: UUID,
+) -> models_cdr.CustomDataField | None:
+    result = await db.execute(
+        select(models_cdr.CustomDataField).where(
+            models_cdr.CustomDataField.id == field_id,
+        ),
+    )
+    return result.scalars().first()
+
+
+async def delete_customdata_field(db: AsyncSession, field_id: UUID):
+    await db.execute(
+        delete(models_cdr.CustomDataField).where(
+            models_cdr.CustomDataField.id == field_id,
+        ),
+    )
+
+
+def create_customdata(db: AsyncSession, data: models_cdr.CustomData):
+    db.add(data)
+
+
+async def get_customdata(
+    db: AsyncSession,
+    field_id: UUID,
+    user_id: str,
+) -> models_cdr.CustomData | None:
+    result = await db.execute(
+        select(models_cdr.CustomData).where(
+            models_cdr.CustomData.field_id == field_id,
+            models_cdr.CustomData.user_id == user_id,
+        ),
+    )
+    return result.scalars().first()
+
+
+async def update_customdata(db: AsyncSession, field_id: UUID, user_id: str, value: str):
+    await db.execute(
+        update(models_cdr.CustomData)
+        .where(
+            models_cdr.CustomData.field_id == field_id,
+            models_cdr.CustomData.user_id == user_id,
+        )
+        .values(value=value),
+    )
+
+
+async def delete_customdata(db: AsyncSession, field_id: UUID, user_id: str):
+    await db.execute(
+        delete(models_cdr.CustomData).where(
+            models_cdr.CustomData.field_id == field_id,
+            models_cdr.CustomData.user_id == user_id,
+        ),
     )
