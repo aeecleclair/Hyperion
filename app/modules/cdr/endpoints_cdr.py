@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 from collections.abc import Sequence
 from datetime import UTC, date, datetime
 from uuid import UUID, uuid4
@@ -47,6 +48,7 @@ from app.types.websocket import (
 )
 from app.utils.auth import auth_utils
 from app.utils.tools import (
+    create_and_send_email_migration,
     get_core_data,
     is_user_member_of_an_allowed_group,
     set_core_data,
@@ -312,11 +314,16 @@ async def update_cdr_user(
     user_id: str,
     user_update: schemas_cdr.CdrUserUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
+    seller_user: models_core.CoreUser = Depends(
+        is_user_a_member_of(GroupType.admin_cdr),
+    ),
     ws_manager: WebsocketConnectionManager = Depends(get_websocket_connection_manager),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Edit a user email, nickname and/or floor.
+
+    An email will be send to the user, to confirm its new address.
 
     **User must be part of a seller group to use this endpoint**
     """
@@ -325,6 +332,36 @@ async def update_cdr_user(
         raise HTTPException(
             status_code=404,
             detail="User not found.",
+        )
+
+    if user_update.email:
+        if not re.match(
+            r"^[\w\-.]*@((etu(-enise)?|enise)\.)?ec-lyon\.fr$",
+            user_update.email,
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid ECL email address.",
+            )
+
+        existing_user = await cruds_users.get_user_by_email(
+            db=db,
+            email=user_update.email,
+        )
+        if existing_user is not None:
+            raise HTTPException(
+                status_code=400,
+                detail="A user already exist with this email address",
+            )
+
+        await create_and_send_email_migration(
+            user_id=user_db.id,
+            new_email=user_update.email,
+            old_email=user_db.email,
+            # We make the user non external with this migration
+            make_user_external=False,
+            db=db,
+            settings=settings,
         )
 
     try:
@@ -337,15 +374,9 @@ async def update_cdr_user(
                     floor=user_update.floor,
                 ),
             )
-        if user_update.email:
-            await cruds_users.update_user_email_by_id(
-                db=db,
-                user_id=user_id,
-                new_email=user_update.email,
-            )
-    except Exception as error:
+    except Exception:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
+        raise
 
     user_db = await get_user_by_id(db, user_id)
     if not user_db:
