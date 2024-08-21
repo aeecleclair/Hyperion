@@ -27,7 +27,6 @@ from app.core.config import Settings, construct_prod_settings
 from app.core.groups.groups_type import GroupType, get_ecl_groups
 from app.core.payment.payment_tool import PaymentTool
 from app.types.scopes_type import ScopeType
-from app.utils.auth import auth_utils
 from app.types.websocket import WebsocketConnectionManager
 from app.utils.auth import auth_utils
 from app.utils.communication.notifications import NotificationManager, NotificationTool
