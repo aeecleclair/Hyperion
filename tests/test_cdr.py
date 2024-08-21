@@ -737,7 +737,7 @@ def test_get_available_online_products_no_product(client: TestClient):
     assert response.json() == []
 
 
-def test_create_product_seller(client: TestClient):
+def test_create_product_seller_without_ticket_expiration(client: TestClient):
     response = client.post(
         f"/cdr/sellers/{seller.id!s}/products/",
         json={
@@ -746,6 +746,26 @@ def test_create_product_seller(client: TestClient):
             "available_online": False,
             "product_constraints": [],
             "document_constraints": [],
+            "generate_ticket": True,
+            "ticket_expiration": None,
+        },
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 403
+    assert response.json() == {
+        "detail": "You must specify a ticket expiration date and a ticket max use when the product generate a ticket"
+    }
+
+
+def test_create_product_seller(client: TestClient):
+    response = client.post(
+        f"/cdr/sellers/{seller.id!s}/products/",
+        json={
+            "name_fr": "Produit créé",
+            "name_en": "Created product",
+            "available_online": False,
+            "product_constraints": [str(product.id)],
+            "document_constraints": [str(document.id)],
             "generate_ticket": False,
         },
         headers={"Authorization": f"Bearer {token_bde}"},
