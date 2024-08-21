@@ -991,6 +991,32 @@ def test_delete_product_variant_seller(client: TestClient):
             assert str(empty_variant.id) not in [y["id"] for y in x["variants"]]
 
 
+def test_get_all_documents_admin(client: TestClient):
+    response = client.get(
+        "/cdr/documents/",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 200
+    assert str(document.id) in [x["id"] for x in response.json()]
+
+
+def test_get_all_documents_seller(client: TestClient):
+    response = client.get(
+        "/cdr/documents/",
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 200
+    assert str(document.id) in [x["id"] for x in response.json()]
+
+
+def test_get_all_documents_user(client: TestClient):
+    response = client.get(
+        "/cdr/documents/",
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 403
+
+
 def test_get_documents_seller(client: TestClient):
     response = client.get(
         f"/cdr/sellers/{seller.id}/documents/",

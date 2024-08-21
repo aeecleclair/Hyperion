@@ -316,6 +316,11 @@ async def delete_product_variant(
     )
 
 
+async def get_all_documents(db: AsyncSession) -> Sequence[models_cdr.Document]:
+    result = await db.execute(select(models_cdr.Document))
+    return result.scalars().all()
+
+
 async def get_documents_by_seller_id(
     db: AsyncSession,
     seller_id: UUID,

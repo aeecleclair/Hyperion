@@ -494,13 +494,22 @@ async def get_all_available_online_products(
 )
 async def get_all_products(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Get a seller's online available products.
 
-    **User must be authenticated to use this endpoint**
+    **User must be part of a seller group to use this endpoint**
     """
+    sellers = await cruds_cdr.get_sellers_by_group_ids(
+        db,
+        [x.id for x in user.groups],
+    )
+    if not (sellers or is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])):
+        raise HTTPException(
+            status_code=403,
+            detail="You must be a seller to get all documents.",
+        )
     return await cruds_cdr.get_products(db)
 
 
@@ -1025,7 +1034,7 @@ async def delete_product_variant(
     response_model=list[schemas_cdr.DocumentComplete],
     status_code=200,
 )
-async def get_documents(
+async def get_seller_documents(
     seller_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
@@ -1041,6 +1050,33 @@ async def get_documents(
         db=db,
     )
     return await cruds_cdr.get_documents_by_seller_id(db, seller_id=seller_id)
+
+
+@module.router.get(
+    "/cdr/documents/",
+    response_model=list[schemas_cdr.DocumentComplete],
+    status_code=200,
+)
+async def get_all_sellers_documents(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    """
+    Get a seller's documents.
+
+    **User must be part of a seller's group to use this endpoint**
+    """
+    sellers = await cruds_cdr.get_sellers_by_group_ids(
+        db,
+        [x.id for x in user.groups],
+    )
+    if not (sellers or is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])):
+        raise HTTPException(
+            status_code=403,
+            detail="You must be a seller to get all documents.",
+        )
+
+    return await cruds_cdr.get_all_documents(db)
 
 
 @module.router.post(
