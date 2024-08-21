@@ -810,7 +810,8 @@ def test_patch_product_seller(client: TestClient):
         f"/cdr/sellers/{seller.id!s}/products/{product.id}/",
         json={
             "name_fr": "Produit modifié",
-            "product_constraints": [],
+            "product_constraints": [str(product.id)],
+            "document_constraints": [str(document.id)],
         },
         headers={"Authorization": f"Bearer {token_bde}"},
     )
@@ -976,7 +977,7 @@ def test_patch_product_variant_seller(client: TestClient):
         f"/cdr/sellers/{seller.id!s}/products/{product.id!s}/variants/{variant.id}/",
         json={
             "name_fr": "Variante modifiée",
-            "allowed_curriculum": [],
+            "allowed_curriculum": [str(curriculum.id)],
         },
         headers={"Authorization": f"Bearer {token_bde}"},
     )
@@ -994,6 +995,7 @@ def test_patch_product_variant_seller(client: TestClient):
             for y in x["variants"]:
                 if y["id"] == variant.id:
                     assert y["name_fr"] == "Variante modifiée"
+                    assert y["allowed_curriculum"] == [str(curriculum.id)]
 
 
 def test_patch_product_variant_wrong_product(client: TestClient):
