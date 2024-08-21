@@ -125,15 +125,25 @@ async def get_cdr_users_pending_validation(
             status_code=403,
             detail="You must be a seller to use this endpoint.",
         )
-    users = {
-        u.id: u.__dict__ for u in await cruds_cdr.get_pending_validation_users(db=db)
-    }
-    curriculum = await cruds_cdr.get_cdr_users_curriculum(db)
-    curriculum_complete = {c.id: c for c in await cruds_cdr.get_curriculums(db=db)}
-    for c in curriculum:
-        users[c.user_id]["curriculum"] = curriculum_complete[c.curriculum_id]
+    core_users = await cruds_cdr.get_pending_validation_users(db=db)
 
-    return list(users.values())
+    # We construct a dict of {curriculum_id: curriculum}
+    curriculum_mapping = {c.id: c for c in await cruds_cdr.get_curriculums(db=db)}
+
+    # We construct a dict of {user_id: curriculum}
+    curriculum_memberships = await cruds_cdr.get_cdr_users_curriculum(db)
+    curriculum_memberships_mapping = {
+        membership.user_id: curriculum_mapping[membership.curriculum_id]
+        for membership in curriculum_memberships
+    }
+
+    return [
+        schemas_cdr.CdrUser(
+            curriculum=curriculum_memberships_mapping.get(user.id, None),
+            **user.__dict__,
+        )
+        for user in core_users
+    ]
 
 
 @module.router.get(

@@ -54,6 +54,8 @@ ticket_variant: models_cdr.ProductVariant
 curriculum: models_cdr.Curriculum
 unused_curriculum: models_cdr.Curriculum
 
+cdr_user_with_curriculum_with_non_validated_purchase: models_core.CoreUser
+
 purchase: models_cdr.Purchase
 
 signature: models_cdr.Signature
@@ -240,6 +242,41 @@ async def init_objects():
     )
     await add_object_to_db(unused_curriculum)
 
+    cdr_user_with_curriculum_without_purchase = await create_user_with_groups(
+        [GroupType.student],
+    )
+    curriculum_membership = models_cdr.CurriculumMembership(
+        user_id=cdr_user_with_curriculum_without_purchase.id,
+        curriculum_id=curriculum.id,
+    )
+    await add_object_to_db(curriculum_membership)
+
+    global cdr_user_with_curriculum_with_non_validated_purchase
+    cdr_user_with_curriculum_with_non_validated_purchase = (
+        await create_user_with_groups(
+            [GroupType.student],
+        )
+    )
+    curriculum_membership_for_user_with_curriculum_with_non_validated_purchase = (
+        models_cdr.CurriculumMembership(
+            user_id=cdr_user_with_curriculum_with_non_validated_purchase.id,
+            curriculum_id=curriculum.id,
+        )
+    )
+    await add_object_to_db(
+        curriculum_membership_for_user_with_curriculum_with_non_validated_purchase,
+    )
+    purchase_for_user_with_curriculum_with_non_validated_purchase = models_cdr.Purchase(
+        user_id=cdr_user_with_curriculum_with_non_validated_purchase.id,
+        product_variant_id=variant.id,
+        quantity=1,
+        validated=False,
+        purchased_on=datetime.now(UTC),
+    )
+    await add_object_to_db(
+        purchase_for_user_with_curriculum_with_non_validated_purchase,
+    )
+
     global purchase
     purchase = models_cdr.Purchase(
         user_id=cdr_user.id,
@@ -339,6 +376,10 @@ def test_get_all_cdr_pending_users_seller(client: TestClient):
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
+    body = response.json()
+    assert str(cdr_user_with_curriculum_with_non_validated_purchase.id) in [
+        x["id"] for x in body
+    ]
 
 
 def test_get_all_cdr_pending_users_user(client: TestClient):
