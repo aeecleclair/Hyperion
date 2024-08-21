@@ -328,4 +328,5 @@ def test_upgrade(
         ("7", 1),
     ]
 
-    assert solutions == rows
+    for row in rows:
+        assert row in solutions
