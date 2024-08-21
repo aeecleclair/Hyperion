@@ -669,18 +669,6 @@ async def delete_payment(
     )
 
 
-async def get_memberships_by_user_id(
-    db: AsyncSession,
-    user_id: str,
-) -> Sequence[CoreAssociationMembership]:
-    result = await db.execute(
-        select(CoreAssociationMembership).where(
-            CoreAssociationMembership.user_id == user_id,
-        ),
-    )
-    return result.scalars().all()
-
-
 async def get_actual_memberships_by_user_id(
     db: AsyncSession,
     user_id: str,
