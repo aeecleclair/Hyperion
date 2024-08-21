@@ -447,6 +447,13 @@ async def update_seller(
     **User must be CDR Admin to use this endpoint**
     """
     await check_request_consistency(db=db, seller_id=seller_id)
+
+    if not any(seller.model_dump().values()):
+        raise HTTPException(
+            status_code=400,
+            detail="You must specify at least one field to update",
+        )
+
     try:
         await cruds_cdr.update_seller(
             seller_id=seller_id,
@@ -609,6 +616,15 @@ async def update_product(
 
     **User must be part of the seller's group to use this endpoint**
     """
+
+    if not any(product.model_dump().values()):
+        # We verify that some fields are to be changed
+        # These fields may be `product_constraints` or `document_constraints` that are updated manually
+        raise HTTPException(
+            status_code=400,
+            detail="You must specify at least one field to update",
+        )
+
     await is_user_in_a_seller_group(
         seller_id,
         user,

@@ -101,6 +101,9 @@ async def update_seller(
     seller_id: UUID,
     seller: schemas_cdr.SellerEdit,
 ):
+    if not any(seller.model_dump().values()):
+        return
+
     await db.execute(
         update(models_cdr.Seller)
         .where(models_cdr.Seller.id == seller_id)
@@ -164,6 +167,15 @@ async def update_product(
     product_id: UUID,
     product: schemas_cdr.ProductEdit,
 ):
+    if not any(
+        product.model_dump(
+            exclude_none=True,
+            exclude={"product_constraints", "document_constraints"},
+        ),
+    ):
+        # If there isn't any field to update, we do nothing
+        return
+
     await db.execute(
         update(models_cdr.CdrProduct)
         .where(models_cdr.CdrProduct.id == product_id)
