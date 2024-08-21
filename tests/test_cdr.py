@@ -1007,6 +1007,9 @@ def test_patch_product_variant_wrong_product(client: TestClient):
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 400
+    assert response.json() == {
+        "detail": "You must specify at least one field to update",
+    }
 
 
 def test_patch_product_variant_wrong_id(client: TestClient):

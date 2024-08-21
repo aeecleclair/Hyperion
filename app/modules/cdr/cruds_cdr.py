@@ -287,6 +287,14 @@ async def update_product_variant(
     variant_id: UUID,
     product_variant: schemas_cdr.ProductVariantEdit,
 ):
+    if not any(
+        product_variant.model_dump(
+            exclude_none=True,
+            exclude={"allowed_curriculum"},
+        ).values(),
+    ):
+        return
+
     await db.execute(
         update(models_cdr.ProductVariant)
         .where(models_cdr.ProductVariant.id == variant_id)

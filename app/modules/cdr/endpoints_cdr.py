@@ -825,6 +825,14 @@ async def update_product_variant(
 
     **User must be part of the seller's group to use this endpoint**
     """
+    if not any(
+        product_variant.model_dump().values(),
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="You must specify at least one field to update",
+        )
+
     await is_user_in_a_seller_group(
         seller_id,
         user,
