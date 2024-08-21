@@ -46,7 +46,7 @@ class Association(Base):
     associated_groups: Mapped[list["CoreGroup"]] = relationship(
         "CoreGroup",
         secondary="phonebook_association_associated_groups",
-        lazy="joined",
+        lazy="selectin",
     )
 
 
