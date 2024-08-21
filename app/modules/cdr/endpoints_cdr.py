@@ -335,34 +335,36 @@ async def update_cdr_user(
         )
 
     if user_update.email:
-        if not re.match(
-            r"^[\w\-.]*@((etu(-enise)?|enise)\.)?ec-lyon\.fr$",
-            user_update.email,
-        ):
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid ECL email address.",
-            )
+        if user_db.email != user_update.email:
+            # We won't migrate the email if the email provided is the same as the current one
+            if not re.match(
+                r"^[\w\-.]*@((etu(-enise)?|enise)\.)?ec-lyon\.fr$",
+                user_update.email,
+            ):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invalid ECL email address.",
+                )
 
-        existing_user = await cruds_users.get_user_by_email(
-            db=db,
-            email=user_update.email,
-        )
-        if existing_user is not None:
-            raise HTTPException(
-                status_code=400,
-                detail="A user already exist with this email address",
+            existing_user = await cruds_users.get_user_by_email(
+                db=db,
+                email=user_update.email,
             )
+            if existing_user is not None:
+                raise HTTPException(
+                    status_code=400,
+                    detail="A user already exist with this email address",
+                )
 
-        await create_and_send_email_migration(
-            user_id=user_db.id,
-            new_email=user_update.email,
-            old_email=user_db.email,
-            # We make the user non external with this migration
-            make_user_external=False,
-            db=db,
-            settings=settings,
-        )
+            await create_and_send_email_migration(
+                user_id=user_db.id,
+                new_email=user_update.email,
+                old_email=user_db.email,
+                # We make the user non external with this migration
+                make_user_external=False,
+                db=db,
+                settings=settings,
+            )
 
     try:
         if user_update.floor or user_update.nickname:

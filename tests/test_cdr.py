@@ -71,6 +71,7 @@ async def init_objects():
     global cdr_admin
     cdr_admin = await create_user_with_groups(
         [GroupType.student, GroupType.admin_cdr],
+        email="cdr_admin@etu.ec-lyon.fr",
     )
 
     global token_admin
@@ -355,6 +356,26 @@ def test_update_cdr_user_seller_nickname(client: TestClient):
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 204
+
+
+def test_update_cdr_user_seller_with_non_ecl_email(client: TestClient):
+    response = client.patch(
+        f"/cdr/users/{cdr_user.id}",
+        json={"email": "some.email@test.fr"},
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Invalid ECL email address."}
+
+
+def test_update_cdr_user_seller_with_already_existing_email(client: TestClient):
+    response = client.patch(
+        f"/cdr/users/{cdr_user.id}",
+        json={"email": "cdr_admin@etu.ec-lyon.fr"},
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 400
+    assert response.json() == {"detail": "A user already exist with this email address"}
 
 
 def test_update_cdr_user_seller_email(client: TestClient):
