@@ -385,6 +385,13 @@ async def create_membership(
     **This endpoint is only usable by CAA, BDE and association's president**
     """
 
+    user_added = await cruds_users.get_user_by_id(db, membership.user_id)
+    if user_added is None:
+        raise HTTPException(
+            400,
+            "Error : User does not exist",
+        )
+
     if not (
         is_user_member_of_an_allowed_group(
             user=user,
@@ -450,9 +457,7 @@ async def create_membership(
 
     await cruds_phonebook.create_membership(membership_model, db)
 
-    user_groups_id = [group.id for group in user.groups]
-    hyperion_error_logger.debug(f"User groups: {user_groups_id}")
-    hyperion_error_logger.debug(f"Association groups: {association.associated_groups}")
+    user_groups_id = [group.id for group in user_added.groups]
     for associated_group in association.associated_groups:
         if associated_group.id not in user_groups_id:
             await cruds_groups.create_membership(
