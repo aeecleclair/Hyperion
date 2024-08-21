@@ -602,7 +602,7 @@ def test_patch_seller_wrong_seller(client: TestClient):
     )
     assert response.status_code == 400
     assert response.json() == {
-        "detail": "You must specify at least one field to update"
+        "detail": "You must specify at least one field to update",
     }
 
     response = client.get(
@@ -753,7 +753,7 @@ def test_create_product_seller_without_ticket_expiration(client: TestClient):
     )
     assert response.status_code == 403
     assert response.json() == {
-        "detail": "You must specify a ticket expiration date and a ticket max use when the product generate a ticket"
+        "detail": "You must specify a ticket expiration date and a ticket max use when the product generate a ticket",
     }
 
 
@@ -838,7 +838,7 @@ def test_patch_product_wrong_product(client: TestClient):
     )
     assert response.status_code == 400
     assert response.json() == {
-        "detail": "You must specify at least one field to update"
+        "detail": "You must specify at least one field to update",
     }
 
 
