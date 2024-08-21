@@ -498,6 +498,16 @@ def test_get_my_sellers_user(client: TestClient):
     assert response.json() == []
 
 
+def test_get_my_sellers_admin_cdr(client: TestClient):
+    response = client.get(
+        "/cdr/users/me/sellers/",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 200
+    # An admin cdr should have access to all sellers
+    assert len(response.json()) == 3
+
+
 def test_get_online_sellers(client: TestClient):
     response = client.get(
         "/cdr/online/sellers/",
