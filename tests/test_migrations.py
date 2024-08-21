@@ -16,6 +16,7 @@ from pytest_alembic.tests.experimental import downgrade_leaves_no_trace  # noqa:
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Connection
 
+from app.utils.initialization import drop_db_sync
 from tests.commons import SQLALCHEMY_DATABASE_URL_SYNC
 
 pre_test_upgrade_dict: dict[
@@ -105,6 +106,11 @@ def alembic_connection() -> Generator[Connection, None, None]:
     connectable = create_engine(SQLALCHEMY_DATABASE_URL_SYNC, echo=False)
 
     with connectable.begin() as connection:
+        # For other tests we use a test app client that will drop the database during its startup
+        # but for migrations tests we use the database Connection directly
+        # We drop the database to ensure that the database is empty
+        drop_db_sync(connection)
+
         yield connection
 
     connectable.dispose()

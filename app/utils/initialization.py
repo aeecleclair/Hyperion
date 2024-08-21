@@ -1,10 +1,11 @@
-from sqlalchemy import select
+from sqlalchemy import Connection, MetaData, select
 from sqlalchemy.engine import Engine, create_engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from app.core import models_core
 from app.core.config import Settings
+from app.types.sqlalchemy import Base
 
 # These utils are used at startup to run database initializations & migrations
 
@@ -78,3 +79,21 @@ def create_group_sync(
         raise
     else:
         return group
+
+
+def drop_db_sync(conn: Connection):
+    """
+    Drop all tables in the database
+    """
+    # All tables should be dropped, including the alembic_version table
+    # or Hyperion will think that the database is up to date and will not initialize it
+    # when running tests a second time.
+    # To let SQLAlchemy drop the alembic_version table, we created a AlembicVersion model.
+
+    # `Base.metadata.drop_all(conn)` is only able to drop tables that are defined in models
+    # This means that if a model is deleted, its table will never be dropped by `Base.metadata.drop_all(conn)`
+
+    # Thus we construct a metadata object that reflects the database instead of only using models
+    my_metadata: MetaData = MetaData(schema=Base.metadata.schema)
+    my_metadata.reflect(bind=conn, resolve_fks=False)
+    my_metadata.drop_all(bind=conn)
