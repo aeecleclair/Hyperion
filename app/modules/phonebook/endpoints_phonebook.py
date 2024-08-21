@@ -451,7 +451,8 @@ async def create_membership(
     await cruds_phonebook.create_membership(membership_model, db)
 
     user_groups_id = [group.id for group in user.groups]
-
+    hyperion_error_logger.debug(f"User groups: {user_groups_id}")
+    hyperion_error_logger.debug(f"Association groups: {association.associated_groups}")
     for associated_group in association.associated_groups:
         if associated_group.id not in user_groups_id:
             await cruds_groups.create_membership(
