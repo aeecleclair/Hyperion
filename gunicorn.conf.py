@@ -90,3 +90,8 @@ def on_starting(server) -> None:
         hyperion_error_logger=hyperion_error_logger,
         drop_db=False,
     )
+
+    if not settings.REDIS_HOST:
+        hyperion_error_logger.warning(
+            "Redis configuration is missing. When using multiple workers without Redis, broadcasting messages over websocket will not work correctly.",
+        )

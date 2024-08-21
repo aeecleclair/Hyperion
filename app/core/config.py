@@ -103,6 +103,8 @@ class Settings(BaseSettings):
     HELLOASSO_CLIENT_ID: str | None = None
     HELLOASSO_CLIENT_SECRET: str | None = None
 
+    CDR_PAYMENT_REDIRECTION_URL: str | None = None
+
     ############################
     # PostgreSQL configuration #
     ############################
@@ -258,6 +260,16 @@ class Settings(BaseSettings):
     @cached_property
     def OIDC_ISSUER(cls) -> str:
         return cls.CLIENT_URL[:-1]
+
+    @computed_field  # type: ignore[misc]
+    @cached_property
+    def REDIS_URL(cls) -> str | None:
+        if cls.REDIS_HOST:
+            # We need to include `:` before the password
+            return (
+                f"redis://:{cls.REDIS_PASSWORD or ''}@{cls.REDIS_HOST}:{cls.REDIS_PORT}"
+            )
+        return None
 
     #######################################
     #          Fields validation          #

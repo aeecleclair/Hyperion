@@ -6,7 +6,8 @@ from sqlalchemy import Boolean, Date, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.types.floors_type import FloorsType
-from app.types.sqlalchemy import Base, TZDateTime
+from app.types.membership import AvailableAssociationMembership
+from app.types.sqlalchemy import Base, PrimaryKey, TZDateTime
 
 
 class CoreMembership(Base):
@@ -92,6 +93,10 @@ class CoreUserEmailMigrationCode(Base):
     user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), primary_key=True)
     new_email: Mapped[str] = mapped_column(String, nullable=False)
     old_email: Mapped[str] = mapped_column(String, nullable=False)
+
+    # If the user should become an external or a member user after the email change
+    make_user_external: Mapped[bool] = mapped_column(default=False)
+
     confirmation_token: Mapped[str] = mapped_column(
         String,
         nullable=False,
@@ -111,6 +116,21 @@ class CoreGroup(Base):
         secondary="core_membership",
         back_populates="groups",
     )
+
+
+class CoreAssociationMembership(Base):
+    __tablename__ = "core_association_membership"
+
+    id: Mapped[PrimaryKey]
+    user_id = mapped_column(
+        ForeignKey("core_user.id"),
+        nullable=False,
+    )
+    membership: Mapped[AvailableAssociationMembership] = mapped_column(
+        index=True,
+    )
+    start_date: Mapped[date]
+    end_date: Mapped[date]
 
 
 class CoreData(Base):

@@ -36,6 +36,7 @@ from app.types.content_type import ContentType
 from app.types.exceptions import UserWithEmailAlreadyExistError
 from app.utils.mail.mailworker import send_email
 from app.utils.tools import (
+    create_and_send_email_migration,
     get_file_from_data,
     save_file_as_data,
     sort_user,
@@ -409,27 +410,25 @@ async def activate_user(
         external=unconfirmed_user.external,
     )
     # We add the new user to the database
-    try:
-        await cruds_users.create_user(db=db, user=confirmed_user)
-        await cruds_groups.create_membership(
-            db=db,
-            membership=models_core.CoreMembership(
-                group_id=unconfirmed_user.account_type,
-                user_id=unconfirmed_user.id,
-            ),
-        )
+    await cruds_users.create_user(db=db, user=confirmed_user)
+    await cruds_groups.create_membership(
+        db=db,
+        membership=models_core.CoreMembership(
+            group_id=unconfirmed_user.account_type,
+            user_id=unconfirmed_user.id,
+        ),
+    )
 
-        # We remove all unconfirmed users with the same email address
-        await cruds_users.delete_unconfirmed_user_by_email(
-            db=db,
-            email=unconfirmed_user.email,
-        )
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+    # We remove all unconfirmed users with the same email address
+    await cruds_users.delete_unconfirmed_user_by_email(
+        db=db,
+        email=unconfirmed_user.email,
+    )
 
     hyperion_security_logger.info(
         f"Activate_user: Activated user {confirmed_user.id} (email: {confirmed_user.email}) ({request_id})",
     )
+
     return standard_responses.Result()
 
 
@@ -622,36 +621,14 @@ async def migrate_mail(
             )
         return
 
-    confirmation_token = security.generate_token()
-
-    migration_object = models_core.CoreUserEmailMigrationCode(
+    await create_and_send_email_migration(
         user_id=user.id,
         new_email=mail_migration.new_email,
         old_email=user.email,
-        confirmation_token=confirmation_token,
-    )
-
-    await cruds_users.create_email_migration_code(
-        migration_object=migration_object,
         db=db,
+        settings=settings,
+        make_user_external=user.external,
     )
-
-    if settings.SMTP_ACTIVE:
-        migration_content = templates.get_template("migration_mail.html").render(
-            {
-                "migration_link": f"{settings.CLIENT_URL}users/migrate-mail-confirm?token={confirmation_token}",
-            },
-        )
-        send_email(
-            recipient=mail_migration.new_email,
-            subject="MyECL - Confirm your new email address",
-            content=migration_content,
-            settings=settings,
-        )
-    else:
-        hyperion_security_logger.info(
-            f"You can confirm your new email address by clicking the following link: {settings.CLIENT_URL}users/migrate-mail-confirm?token={confirmation_token}",
-        )
 
 
 @router.get(
@@ -696,6 +673,7 @@ async def migrate_mail_confirm(
             db=db,
             user_id=migration_object.user_id,
             new_email=migration_object.new_email,
+            make_user_external=migration_object.make_user_external,
         )
     except Exception as error:
         raise HTTPException(status_code=400, detail=str(error))

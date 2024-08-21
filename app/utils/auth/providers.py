@@ -315,3 +315,9 @@ class RalllyAuthClient(BaseAuthClient):
             ),
             "email": user.email,
         }
+
+
+class SiarnaqAuthClient(BaseAuthClient):
+    allowed_scopes: set[ScopeType | str] = {ScopeType.API}
+
+    allow_external_users: bool = True

@@ -4,17 +4,18 @@ import re
 import secrets
 from collections.abc import Sequence
 from pathlib import Path
-from typing import TypeVar
+from typing import TYPE_CHECKING, TypeVar
 
 import aiofiles
 import fitz
 from fastapi import HTTPException, UploadFile
 from fastapi.responses import FileResponse
+from fastapi.templating import Jinja2Templates
 from jellyfish import jaro_winkler_similarity
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import cruds_core, models_core
+from app.core import cruds_core, models_core, security
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
 from app.core.models_core import CoreUser
@@ -22,8 +23,18 @@ from app.core.users import cruds_users
 from app.types import core_data
 from app.types.content_type import ContentType
 from app.types.exceptions import CoreDataNotFoundError, FileNameIsNotAnUUIDError
+from app.utils.mail.mailworker import send_email
+
+if TYPE_CHECKING:
+    from app.core.config import Settings
+
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
+hyperion_security_logger = logging.getLogger("hyperion.security")
+
+
+templates = Jinja2Templates(directory="assets/templates")
+
 
 uuid_regex = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
@@ -459,3 +470,52 @@ async def set_core_data(
     await cruds_core.delete_core_data_crud(schema=schema_name, db=db)
     # And then add the new one
     await cruds_core.add_core_data_crud(core_data=core_data_model, db=db)
+
+
+async def create_and_send_email_migration(
+    user_id: str,
+    new_email: str,
+    old_email: str,
+    make_user_external: bool,
+    db: AsyncSession,
+    settings: "Settings",
+) -> None:
+    """
+    Create an email migration token, add it to the database and send an email to the user.
+
+    You should always verify the email address before using this method:
+     - you should verify that the email address is not already in use
+     - you should check the email address format
+     - you can choose if the user should become an external or a member user after the email change
+    """
+    confirmation_token = security.generate_token()
+
+    migration_object = models_core.CoreUserEmailMigrationCode(
+        user_id=user_id,
+        new_email=new_email,
+        old_email=old_email,
+        confirmation_token=confirmation_token,
+        make_user_external=make_user_external,
+    )
+
+    await cruds_users.create_email_migration_code(
+        migration_object=migration_object,
+        db=db,
+    )
+
+    if settings.SMTP_ACTIVE:
+        migration_content = templates.get_template("migration_mail.html").render(
+            {
+                "migration_link": f"{settings.CLIENT_URL}users/migrate-mail-confirm?token={confirmation_token}",
+            },
+        )
+        send_email(
+            recipient=new_email,
+            subject="MyECL - Confirm your new email address",
+            content=migration_content,
+            settings=settings,
+        )
+    else:
+        hyperion_security_logger.info(
+            f"You can confirm your new email address by clicking the following link: {settings.CLIENT_URL}users/migrate-mail-confirm?token={confirmation_token}",
+        )

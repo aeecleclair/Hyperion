@@ -238,12 +238,13 @@ async def update_user_email_by_id(
     user_id: str,
     new_email: str,
     db: AsyncSession,
+    make_user_external: bool = False,
 ):
     try:
         await db.execute(
             update(models_core.CoreUser)
             .where(models_core.CoreUser.id == user_id)
-            .values(email=new_email),
+            .values(email=new_email, external=make_user_external),
         )
         await db.commit()
     except IntegrityError:
