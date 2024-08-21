@@ -426,9 +426,9 @@ async def create_seller(
         cruds_cdr.create_seller(db, db_seller)
         await db.commit()
         return await cruds_cdr.get_seller_by_id(db=db, seller_id=db_seller.id)
-    except Exception as error:
+    except Exception:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
+        raise
 
 
 @module.router.patch(
@@ -461,9 +461,9 @@ async def update_seller(
             db=db,
         )
         await db.commit()
-    except Exception as error:
+    except Exception:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
+        raise
 
 
 @module.router.delete(
@@ -495,9 +495,9 @@ async def delete_seller(
             db=db,
         )
         await db.commit()
-    except Exception as error:
+    except Exception:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
+        raise
 
 
 @module.router.get(
@@ -595,9 +595,9 @@ async def create_product(
             )
         await db.commit()
         return await cruds_cdr.get_product_by_id(db, db_product.id)
-    except Exception as error:
+    except Exception:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
+        raise
 
 
 @module.router.patch(
@@ -673,9 +673,9 @@ async def update_product(
                     ),
                 )
         await db.commit()
-    except Exception as error:
+    except Exception:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
+        raise
 
 
 @module.router.delete(
@@ -726,9 +726,9 @@ async def delete_product(
             db=db,
         )
         await db.commit()
-    except Exception as error:
+    except Exception:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
+        raise
 
 
 @module.router.post(
@@ -803,9 +803,9 @@ async def create_product_variant(
             db=db,
             variant_id=db_product_variant.id,
         )
-    except Exception as error:
+    except Exception:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
+        raise
 
 
 @module.router.patch(
@@ -873,9 +873,9 @@ async def update_product_variant(
                     ),
                 )
         await db.commit()
-    except Exception as error:
+    except Exception:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
+        raise
 
 
 @module.router.delete(
@@ -922,9 +922,9 @@ async def delete_product_variant(
             db=db,
         )
         await db.commit()
-    except Exception as error:
+    except Exception:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
+        raise
 
 
 @module.router.get(
@@ -1009,9 +1009,9 @@ async def create_document(
     try:
         cruds_cdr.create_document(db, db_document)
         await db.commit()
-    except Exception as error:
+    except Exception:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
+        raise
     else:
         return db_document
 
@@ -1047,9 +1047,9 @@ async def delete_document(
             db=db,
         )
         await db.commit()
-    except Exception as error:
+    except Exception:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
+        raise
 
 
 @module.router.get(
@@ -1243,9 +1243,9 @@ async def create_purchase(
             )
             cruds_cdr.create_action(db, db_action)
             await db.commit()
-        except Exception as error:
+        except Exception:
             await db.rollback()
-            raise HTTPException(status_code=400, detail=str(error))
+            raise
         else:
             return db_purchase
 
@@ -1253,9 +1253,9 @@ async def create_purchase(
         cruds_cdr.create_purchase(db, db_purchase)
         cruds_cdr.create_action(db, db_action)
         await db.commit()
-    except Exception as error:
+    except Exception:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
+        raise
     else:
         return db_purchase
 
@@ -1452,9 +1452,9 @@ async def mark_purchase_as_validated(
     )
     try:
         await db.commit()
-    except Exception as error:
+    except Exception:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
+        raise
     else:
         return db_purchase
 
@@ -1611,9 +1611,9 @@ async def delete_purchase(
         )
         cruds_cdr.create_action(db, db_action)
         await db.commit()
-    except Exception as error:
+    except Exception:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
+        raise
 
 
 @module.router.get(
@@ -1731,9 +1731,9 @@ async def create_signature(
     try:
         cruds_cdr.create_signature(db, db_signature)
         await db.commit()
-    except Exception as error:
+    except Exception:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
+        raise
     else:
         return db_signature
 
@@ -1770,9 +1770,9 @@ async def delete_signature(
             db=db,
         )
         await db.commit()
-    except Exception as error:
+    except Exception:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
+        raise
 
 
 @module.router.get(
@@ -1820,9 +1820,9 @@ async def create_curriculum(
     try:
         cruds_cdr.create_curriculum(db, db_curriculum)
         await db.commit()
-    except Exception as error:
+    except Exception:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
+        raise
     else:
         return db_curriculum
 
@@ -1856,9 +1856,9 @@ async def delete_curriculum(
             db=db,
         )
         await db.commit()
-    except Exception as error:
+    except Exception:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
+        raise
 
 
 @module.router.post(
@@ -1906,9 +1906,9 @@ async def create_curriculum_membership(
                 curriculum_id=curriculum.curriculum_id,
             )
             await db.commit()
-        except Exception as error:
+        except Exception:
             await db.rollback()
-            raise HTTPException(status_code=400, detail=str(error))
+            raise
     curriculum_membership = models_cdr.CurriculumMembership(
         user_id=user_id,
         curriculum_id=curriculum_id,
@@ -1919,9 +1919,9 @@ async def create_curriculum_membership(
             curriculum_membership=curriculum_membership,
         )
         await db.commit()
-    except Exception as error:
+    except Exception:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
+        raise
 
     cdr_status = await get_core_data(schemas_cdr.Status, db)
     if cdr_status.status == CdrStatus.onsite:
@@ -1992,9 +1992,9 @@ async def update_curriculum_membership(
             curriculum_id=curriculum_id,
         )
         await db.commit()
-    except Exception as error:
+    except Exception:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
+        raise
 
     cdr_status = await get_core_data(schemas_cdr.Status, db)
     if cdr_status.status == CdrStatus.onsite:
@@ -2065,9 +2065,9 @@ async def delete_curriculum_membership(
             curriculum_id=curriculum_id,
         )
         await db.commit()
-    except Exception as error:
+    except Exception:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
+        raise
 
     cdr_status = await get_core_data(schemas_cdr.Status, db)
     if cdr_status.status == CdrStatus.onsite:
@@ -2155,9 +2155,9 @@ async def create_payment(
         cruds_cdr.create_payment(db, db_payment)
         cruds_cdr.create_action(db, db_action)
         await db.commit()
-    except Exception as error:
+    except Exception:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
+        raise
     else:
         return db_payment
 
@@ -2206,9 +2206,9 @@ async def delete_payment(
         )
         cruds_cdr.create_action(db, db_action)
         await db.commit()
-    except Exception as error:
+    except Exception:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
+        raise
 
 
 @module.router.post(
@@ -2261,9 +2261,9 @@ async def get_payment_url(
     )
     try:
         await db.commit()
-    except Exception as error:
+    except Exception:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
+        raise
     return schemas_cdr.PaymentUrl(
         url=checkout.payment_url,
     )
@@ -2309,9 +2309,9 @@ async def create_membership(
     try:
         cruds_cdr.create_membership(db, db_membership)
         await db.commit()
-    except Exception as error:
+    except Exception:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
+        raise
     else:
         return db_membership
 
@@ -2341,9 +2341,9 @@ async def delete_membership(
             db=db,
         )
         await db.commit()
-    except Exception as error:
+    except Exception:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
+        raise
 
 
 @module.router.get(
@@ -2550,9 +2550,9 @@ async def scan_ticket(
             tags=ticket.tags + "," + ticket_data.tag.strip(),
         )
         await db.commit()
-    except Exception as error:
+    except Exception:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
+        raise
 
 
 @module.router.post(
@@ -2579,9 +2579,9 @@ async def create_custom_data_field(
     try:
         cruds_cdr.create_customdata_field(db, db_data)
         await db.commit()
-    except Exception as error:
+    except Exception:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
+        raise
     else:
         return db_data
 
@@ -2618,9 +2618,9 @@ async def delete_customdata_field(
             db=db,
         )
         await db.commit()
-    except Exception as error:
+    except Exception:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
+        raise
 
 
 @module.router.get(
@@ -2687,9 +2687,9 @@ async def create_custom_data(
     try:
         cruds_cdr.create_customdata(db, db_data)
         await db.commit()
-    except Exception as error:
+    except Exception:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
+        raise
     else:
         return await cruds_cdr.get_customdata(db=db, field_id=field_id, user_id=user_id)
 
@@ -2730,9 +2730,9 @@ async def update_custom_data(
             value=custom_data.value,
         )
         await db.commit()
-    except Exception as error:
+    except Exception:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
+        raise
 
 
 @module.router.delete(
@@ -2769,9 +2769,9 @@ async def delete_customdata(
             db=db,
         )
         await db.commit()
-    except Exception as error:
+    except Exception:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
+        raise
 
 
 @module.router.websocket("/cdr/users/ws")
