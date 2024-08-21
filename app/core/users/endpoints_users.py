@@ -38,6 +38,7 @@ from app.types.exceptions import UserWithEmailAlreadyExistError
 from app.types.websocket import WebsocketConnectionManager
 from app.utils.mail.mailworker import send_email
 from app.utils.tools import (
+    create_and_send_email_migration,
     get_file_from_data,
     save_file_as_data,
     sort_user,
@@ -623,36 +624,14 @@ async def migrate_mail(
             )
         return
 
-    confirmation_token = security.generate_token()
-
-    migration_object = models_core.CoreUserEmailMigrationCode(
+    await create_and_send_email_migration(
         user_id=user.id,
         new_email=mail_migration.new_email,
         old_email=user.email,
-        confirmation_token=confirmation_token,
-    )
-
-    await cruds_users.create_email_migration_code(
-        migration_object=migration_object,
         db=db,
+        settings=settings,
+        make_user_external=user.external,
     )
-
-    if settings.SMTP_ACTIVE:
-        migration_content = templates.get_template("migration_mail.html").render(
-            {
-                "migration_link": f"{settings.CLIENT_URL}users/migrate-mail-confirm?token={confirmation_token}",
-            },
-        )
-        send_email(
-            recipient=mail_migration.new_email,
-            subject="MyECL - Confirm your new email address",
-            content=migration_content,
-            settings=settings,
-        )
-    else:
-        hyperion_security_logger.info(
-            f"You can confirm your new email address by clicking the following link: {settings.CLIENT_URL}users/migrate-mail-confirm?token={confirmation_token}",
-        )
 
 
 @router.get(
@@ -697,6 +676,7 @@ async def migrate_mail_confirm(
             db=db,
             user_id=migration_object.user_id,
             new_email=migration_object.new_email,
+            make_user_external=migration_object.make_user_external,
         )
     except Exception as error:
         raise HTTPException(status_code=400, detail=str(error))

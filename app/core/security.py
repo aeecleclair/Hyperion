@@ -1,6 +1,6 @@
 import secrets
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import bcrypt
 import jwt
@@ -9,8 +9,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
 from app.core.auth import schemas_auth
-from app.core.config import Settings
 from app.core.users import cruds_users
+
+if TYPE_CHECKING:
+    from app.core.config import Settings
+
 
 """
 In order to salt and hash password, we the bcrypt hashing function (see https://en.wikipedia.org/wiki/Bcrypt).
@@ -97,7 +100,7 @@ async def authenticate_user(
 
 
 def create_access_token(
-    settings: Settings,
+    settings: "Settings",
     data: schemas_auth.TokenData,
     expires_delta: timedelta | None = None,
 ) -> str:
@@ -120,7 +123,7 @@ def create_access_token(
 
 
 def create_access_token_RS256(
-    settings: Settings,
+    settings: "Settings",
     data: schemas_auth.TokenData,
     additional_data: dict[str, Any] | None = None,
     expires_delta: timedelta | None = None,

@@ -1,11 +1,13 @@
 import smtplib
 import ssl
 from email.message import EmailMessage
+from typing import TYPE_CHECKING
 
-from app.core.config import Settings
+if TYPE_CHECKING:
+    from app.core.config import Settings
 
 
-def send_email(recipient: str, subject: str, content: str, settings: Settings):
+def send_email(recipient: str, subject: str, content: str, settings: "Settings"):
     """
     Send a html email using **starttls**.
     Use the SMTP settings defined in environments variables or the dotenv file.

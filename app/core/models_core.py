@@ -93,6 +93,10 @@ class CoreUserEmailMigrationCode(Base):
     user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), primary_key=True)
     new_email: Mapped[str] = mapped_column(String, nullable=False)
     old_email: Mapped[str] = mapped_column(String, nullable=False)
+
+    # If the user should become an external or a member user after the email change
+    make_user_external: Mapped[bool] = mapped_column(default=False)
+
     confirmation_token: Mapped[str] = mapped_column(
         String,
         nullable=False,
