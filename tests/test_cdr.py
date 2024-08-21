@@ -1240,6 +1240,17 @@ def test_get_purchases_by_user_id_other_user_purchase(client: TestClient):
     ]
 
 
+def test_get_my_purchases(client: TestClient):
+    response = client.get(
+        "/cdr/me/purchases/",
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 200
+    assert str(purchase.product_variant_id) in [
+        x["product_variant_id"] for x in response.json()
+    ]
+
+
 def test_get_purchases_by_user_id_by_seller_id_user(client: TestClient):
     response = client.get(
         f"/cdr/sellers/{seller.id}/users/{cdr_user.id}/purchases/",
