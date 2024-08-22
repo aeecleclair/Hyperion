@@ -448,7 +448,7 @@ async def update_seller(
     """
     await check_request_consistency(db=db, seller_id=seller_id)
 
-    if not any(seller.model_dump().values()):
+    if not bool(seller.model_fields_set):
         raise HTTPException(
             status_code=400,
             detail="You must specify at least one field to update",
@@ -617,7 +617,7 @@ async def update_product(
     **User must be part of the seller's group to use this endpoint**
     """
 
-    if not any(product.model_dump().values()):
+    if not bool(product.model_fields_set):
         # We verify that some fields are to be changed
         # These fields may be `product_constraints` or `document_constraints` that are updated manually
         raise HTTPException(
@@ -825,9 +825,8 @@ async def update_product_variant(
 
     **User must be part of the seller's group to use this endpoint**
     """
-    if not any(
-        product_variant.model_dump().values(),
-    ):
+
+    if not bool(product_variant.model_fields_set):
         raise HTTPException(
             status_code=400,
             detail="You must specify at least one field to update",

@@ -28,7 +28,7 @@ async def update_recommendation(
     recommendation: schemas_recommendation.RecommendationEdit,
     db: AsyncSession,
 ):
-    if not any(recommendation.model_dump().values()):
+    if not bool(recommendation.model_fields_set):
         return
 
     result = await db.execute(
