@@ -48,7 +48,7 @@ def test_read_group(client: TestClient) -> None:
     )
     assert response.status_code == 200
     data = response.json()
-    assert data["name"] == "eclair"
+    assert data["name"] == "test_eclair"
 
 
 def test_create_group(client: TestClient) -> None:

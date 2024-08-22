@@ -514,9 +514,10 @@ def test_authorization_code_flow_with_auth_client_restricting_allowed_groups_and
     )
     assert response.status_code == 302
 
-    url = urlparse(response.headers["Location"])
-    query = parse_qs(url.query)
-    assert query["error"][0] == "consent_required"
+    assert response.next_request is not None
+    assert str(response.next_request.url).endswith(
+        "calypsso/error?message=User+is+not+member+of+an+allowed+group"
+    )
 
 
 def test_authorization_code_flow_with_auth_client_restricting_external_users_and_user_external(
@@ -540,9 +541,10 @@ def test_authorization_code_flow_with_auth_client_restricting_external_users_and
     )
     assert response.status_code == 302
 
-    url = urlparse(response.headers["Location"])
-    query = parse_qs(url.query)
-    assert query["error"][0] == "consent_required"
+    assert response.next_request is not None
+    assert str(response.next_request.url).endswith(
+        "calypsso/error?message=External+users+are+not+allowed",
+    )
 
 
 def test_token_introspection_unauthorized_for_auth_client_disallowing_introspection(
