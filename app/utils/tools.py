@@ -106,7 +106,7 @@ def sort_user(
     for _ in range(min(limit, len(scored))):
         maximum_name = max(scored, key=lambda r: r[1])
         maximum_nickname = max(scored, key=lambda r: r[2])
-        if maximum_name[1] > maximum_nickname[1]:
+        if maximum_name[1] > maximum_nickname[2]:
             results.append(maximum_name)
             scored[maximum_name[3]] = (  # We don't want to use this user again
                 maximum_name[0],
