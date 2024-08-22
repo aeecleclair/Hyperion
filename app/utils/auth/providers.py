@@ -346,6 +346,8 @@ class DocumensoAuthClient(BaseAuthClient):
             ),
             "email": user.email,
         }
+
+
 class SiarnaqAuthClient(BaseAuthClient):
     allowed_scopes: set[ScopeType | str] = {ScopeType.API}
 
