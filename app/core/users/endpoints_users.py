@@ -479,7 +479,6 @@ async def recover_user(
     email: str = Body(..., embed=True),
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
-    request_id: str = Depends(get_request_id),
 ):
     """
     Allow a user to start a password reset process.
@@ -489,7 +488,34 @@ async def recover_user(
     """
 
     db_user = await cruds_users.get_user_by_email(db=db, email=email)
-    if db_user is not None:
+    if db_user is None:
+        if settings.SMTP_ACTIVE:
+            calypsso_register_url = (
+                settings.CLIENT_URL
+                + calypsso.get_register_relative_url(
+                    external=True,
+                )
+            )
+
+            reset_content = templates.get_template(
+                "reset_mail_does_not_exist.html",
+            ).render(
+                {
+                    "calypsso_register_url": calypsso_register_url,
+                },
+            )
+            send_email(
+                recipient=email,
+                subject="MyECL - reset your password",
+                content=reset_content,
+                settings=settings,
+            )
+        else:
+            hyperion_security_logger.info(
+                f"Reset password failed for {email}, user does not exist",
+            )
+
+    else:
         # The user exists, we can send a password reset invitation
         reset_token = security.generate_token()
 
@@ -526,7 +552,7 @@ async def recover_user(
             )
         else:
             hyperion_security_logger.info(
-                f"Reset password for {email}: {calypsso_reset_url} ({request_id})",
+                f"Reset password for {email}: {calypsso_reset_url}",
             )
 
     return standard_responses.Result()
