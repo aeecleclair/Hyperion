@@ -1,5 +1,4 @@
 import uuid
-from asyncio import Future
 from datetime import UTC, date, datetime, timedelta
 
 import pytest_asyncio
@@ -8,7 +7,6 @@ from pytest_mock import MockerFixture
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
-from app.core.payment import models_payment
 from app.modules.cdr import models_cdr
 from app.modules.cdr.types_cdr import (
     CdrStatus,
