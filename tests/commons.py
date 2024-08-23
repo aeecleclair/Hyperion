@@ -204,18 +204,18 @@ class MockedPaymentTool:
         payer_user: schemas_core.CoreUser | None = None,
     ) -> schemas_payment.Checkout:
         checkout_id = "81c9ad91-f415-494a-96ad-87bf647df82c"
-        checkout_model = models_payment.Checkout(
-            id=checkout_id,
-            module="cdr",
-            name=checkout_name,
-            amount=500,
-            hello_asso_checkout_id=123,
-            secret="checkoutsecret",
-        )
-        try:
+
+        exist = await cruds_payment.get_checkout_by_id(checkout_id, db)
+        if exist is None:
+            checkout_model = models_payment.Checkout(
+                id=checkout_id,
+                module="cdr",
+                name=checkout_name,
+                amount=500,
+                hello_asso_checkout_id=123,
+                secret="checkoutsecret",
+            )
             await cruds_payment.create_checkout(db, checkout_model)
-        except Exception:  # noqa: S110
-            pass
 
         return schemas_payment.Checkout(
             id=checkout_id,
