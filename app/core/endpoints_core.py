@@ -1,7 +1,8 @@
+import logging
 from os import path
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,9 +16,12 @@ from app.dependencies import (
     is_user_a_member_of,
 )
 from app.modules.module_list import module_list
+from app.utils.google_api.google_api import GoogleAPI
 from app.utils.tools import is_group_id_valid
 
 router = APIRouter(tags=["Core"])
+
+hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 @router.get(
@@ -247,3 +251,25 @@ async def delete_session(
         allowed_group_id=group_id,
         db=db,
     )
+
+
+@router.get("/google-api/oauth2callback", status_code=200)
+async def google_api_callback(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+):
+    try:
+        await GoogleAPI().authentication_callback(
+            db=db,
+            settings=settings,
+            request=request,
+        )
+
+    except Exception:
+        hyperion_error_logger.exception(
+            "Google API authentication callback error",
+        )
+        return "An error occurred during the Google API authentication callback"
+    else:
+        return "Ok"
