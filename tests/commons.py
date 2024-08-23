@@ -10,11 +10,13 @@ from sqlalchemy import NullPool
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.core import models_core, security
+from app.core import models_core, schemas_core, security
 from app.core.auth import schemas_auth
 from app.core.config import Settings
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
+from app.core.payment import schemas_payment
+from app.core.payment.payment_tool import PaymentTool
 from app.core.users import cruds_users
 from app.dependencies import get_settings
 from app.types.exceptions import RedisConnectionError
@@ -180,3 +182,41 @@ async def add_object_to_db(db_object: Base) -> None:
             raise
         finally:
             await db.close()
+
+
+class MockedPaymentTool:
+    original_payment_tool: PaymentTool
+
+    def __init__(self, settings: Settings):
+        self.original_payment_tool = PaymentTool(settings)
+
+    def is_payment_available(self) -> bool:
+        return True
+
+    async def init_checkout(
+        self,
+        module: str,
+        helloasso_slug: str,
+        checkout_amount: int,
+        checkout_name: str,
+        redirection_uri: str,
+        db: AsyncSession,
+        payer_user: schemas_core.CoreUser | None = None,
+    ) -> schemas_payment.Checkout:
+        return schemas_payment.Checkout(
+            id=uuid.uuid4(),
+            payment_url="https://some.url.fr/checkout",
+        )
+
+    async def get_checkout(
+        self,
+        checkout_id: uuid.UUID,
+        db: AsyncSession,
+    ) -> schemas_payment.CheckoutComplete | None:
+        return self.original_payment_tool.get_checkout(checkout_id, db)
+
+
+def override_get_payment_tool(
+    settings: Settings = Depends(get_settings),
+) -> PaymentTool:
+    return MockedPaymentTool(settings=settings)

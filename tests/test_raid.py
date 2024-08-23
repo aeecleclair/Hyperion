@@ -546,10 +546,7 @@ async def test_get_payment_url_no_participant(client: TestClient, mocker):
         "app.utils.tools.get_core_data",
         return_value=coredata_raid.RaidPrice(student_price=50, t_shirt_price=15),
     )
-    mocker.patch(
-        "app.core.payment.payment_tool.PaymentTool.init_checkout",
-        return_value=Mock(id=str(uuid.uuid4()), payment_url="http://mock-url.com"),
-    )
+
     mocker.patch("app.modules.raid.cruds_raid.create_participant_checkout")
 
     response = client.get(
@@ -558,7 +555,7 @@ async def test_get_payment_url_no_participant(client: TestClient, mocker):
     )
     assert response.status_code == 201
     assert "url" in response.json()
-    assert response.json()["url"] == "http://mock-url.com"
+    assert response.json()["url"] == "https://some.url.fr/checkout"
 
 
 @pytest.mark.asyncio()
@@ -577,10 +574,7 @@ async def test_get_payment_url_participant_no_payment(client: TestClient, mocker
         "app.utils.tools.get_core_data",
         return_value=coredata_raid.RaidPrice(student_price=50, t_shirt_price=15),
     )
-    mocker.patch(
-        "app.core.payment.payment_tool.PaymentTool.init_checkout",
-        return_value=Mock(id=str(uuid.uuid4()), payment_url="http://mock-url.com"),
-    )
+
     mocker.patch("app.modules.raid.cruds_raid.create_participant_checkout")
 
     response = client.get(
@@ -589,7 +583,7 @@ async def test_get_payment_url_participant_no_payment(client: TestClient, mocker
     )
     assert response.status_code == 201
     assert "url" in response.json()
-    assert response.json()["url"] == "http://mock-url.com"
+    assert response.json()["url"] == "https://some.url.fr/checkout"
 
 
 @pytest.mark.asyncio()
@@ -610,7 +604,10 @@ async def test_get_payment_url_participant_with_tshirt(client: TestClient, mocke
     )
     mocker.patch(
         "app.core.payment.payment_tool.PaymentTool.init_checkout",
-        return_value=Mock(id=str(uuid.uuid4()), payment_url="http://mock-url.com"),
+        return_value=Mock(
+            id=str(uuid.uuid4()),
+            payment_url="https://some.url.fr/checkout",
+        ),
     )
     mocker.patch("app.modules.raid.cruds_raid.create_participant_checkout")
 
@@ -620,7 +617,7 @@ async def test_get_payment_url_participant_with_tshirt(client: TestClient, mocke
     )
     assert response.status_code == 201
     assert "url" in response.json()
-    assert response.json()["url"] == "http://mock-url.com"
+    assert response.json()["url"] == "https://some.url.fr/checkout"
 
 
 # @pytest.mark.asyncio()
@@ -659,10 +656,7 @@ async def test_get_payment_url_participant_already_paid(client: TestClient, mock
         "app.utils.tools.get_core_data",
         return_value=coredata_raid.RaidPrice(student_price=50, t_shirt_price=15),
     )
-    mocker.patch(
-        "app.core.payment.payment_tool.PaymentTool.init_checkout",
-        return_value=Mock(id="mock_id", payment_url="http://mock-url.com"),
-    )
+
     mocker.patch("app.modules.raid.cruds_raid.create_participant_checkout")
 
     response = client.get(
@@ -671,7 +665,7 @@ async def test_get_payment_url_participant_already_paid(client: TestClient, mock
     )
     assert response.status_code == 201
     assert "url" in response.json()
-    assert response.json()["url"] == "http://mock-url.com"
+    assert response.json()["url"] == "https://some.url.fr/checkout"
 
 
 ## Test for pdf writer
