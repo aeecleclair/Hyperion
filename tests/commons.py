@@ -15,7 +15,7 @@ from app.core.auth import schemas_auth
 from app.core.config import Settings
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
-from app.core.payment import schemas_payment
+from app.core.payment import cruds_payment, models_payment, schemas_payment
 from app.core.payment.payment_tool import PaymentTool
 from app.core.users import cruds_users
 from app.dependencies import get_settings
@@ -203,8 +203,19 @@ class MockedPaymentTool:
         db: AsyncSession,
         payer_user: schemas_core.CoreUser | None = None,
     ) -> schemas_payment.Checkout:
+        checkout_id = "81c9ad91-f415-494a-96ad-87bf647df82c"
+        checkout_model = models_payment.Checkout(
+            id=checkout_id,
+            module="cdr",
+            name=checkout_name,
+            amount=500,
+            hello_asso_checkout_id=123,
+            secret="checkoutsecret",
+        )
+        await cruds_payment.create_checkout(db, checkout_model)
+
         return schemas_payment.Checkout(
-            id=uuid.uuid4(),
+            id=checkout_id,
             payment_url="https://some.url.fr/checkout",
         )
 
