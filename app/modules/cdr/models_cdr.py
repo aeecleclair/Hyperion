@@ -75,7 +75,7 @@ class CdrProduct(Base):
         join_depth=1,
     )
     document_constraints: Mapped[list["Document"]] = relationship(
-        "Document",
+        "app.modules.cdr.models_cdr.Document",
         secondary="cdr_document_constraint",
         lazy="selectin",  # Constraints are always loaded in cruds so we set this to not have to put selectinload
     )

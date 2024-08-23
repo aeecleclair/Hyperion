@@ -115,14 +115,17 @@ class Participant(Base):
         nullable=True,
         default=None,
     )
-    id_card: Mapped[Document] = relationship("Document", foreign_keys=[id_card_id])
+    id_card: Mapped[Document] = relationship(
+        "app.modules.raid.models_raid.Document",
+        foreign_keys=[id_card_id],
+    )
     medical_certificate_id: Mapped[str | None] = mapped_column(
         ForeignKey("raid_document.id"),
         nullable=True,
         default=None,
     )
     medical_certificate: Mapped[Document] = relationship(
-        "Document",
+        "app.modules.raid.models_raid.Document",
         foreign_keys=[medical_certificate_id],
     )
     security_file_id: Mapped[str | None] = mapped_column(
@@ -137,7 +140,7 @@ class Participant(Base):
         default=None,
     )
     student_card: Mapped[Document] = relationship(
-        "Document",
+        "app.modules.raid.models_raid.Document",
         foreign_keys=[student_card_id],
     )
     raid_rules_id: Mapped[str | None] = mapped_column(
@@ -146,7 +149,7 @@ class Participant(Base):
         default=None,
     )
     raid_rules: Mapped[Document] = relationship(
-        "Document",
+        "app.modules.raid.models_raid.Document",
         foreign_keys=[raid_rules_id],
     )
     parent_authorization_id: Mapped[str | None] = mapped_column(
@@ -155,7 +158,7 @@ class Participant(Base):
         default=None,
     )
     parent_authorization: Mapped[Document] = relationship(
-        "Document",
+        "app.modules.raid.models_raid.Document",
         foreign_keys=[parent_authorization_id],
     )
     attestation_on_honour: Mapped[bool] = mapped_column(
