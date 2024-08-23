@@ -14,7 +14,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "9d7d834743d1"
-down_revision: str | None = "bcb330b5cbec"
+down_revision: str | None = "5d05a19f14bc"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -115,6 +115,12 @@ def upgrade() -> None:
         sa.Column("attestation_on_honour", sa.Boolean(), nullable=False),
         sa.Column("payment", sa.Boolean(), nullable=False),
         sa.Column("is_minor", sa.Boolean(), nullable=False),
+        sa.Column(
+            "t_shirt_payment",
+            sa.Boolean(),
+            nullable=False,
+            server_default=sa.false(),
+        ),
         sa.ForeignKeyConstraint(["id_card_id"], ["raid_document.id"]),
         sa.ForeignKeyConstraint(["medical_certificate_id"], ["raid_document.id"]),
         sa.ForeignKeyConstraint(["parent_authorization_id"], ["raid_document.id"]),
@@ -161,6 +167,21 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(op.f("ix_raid_invite_id"), "raid_invite", ["id"], unique=False)
+    op.create_table(
+        "raid_participant_checkout",
+        sa.Column("id", sa.String(), nullable=False),
+        sa.Column("participant_id", sa.String(), nullable=False),
+        sa.Column("checkout_id", sa.Uuid(), nullable=False),
+        sa.ForeignKeyConstraint(["checkout_id"], ["payment_checkout.id"]),
+        sa.ForeignKeyConstraint(["participant_id"], ["raid_participant.id"]),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_raid_participant_checkout_id"),
+        "raid_participant_checkout",
+        ["id"],
+        unique=False,
+    )
     # ### end Alembic commands ###
 
 
@@ -200,6 +221,11 @@ def downgrade() -> None:
     size.drop(op.get_bind(), checkfirst=False)
     difficulty.drop(op.get_bind(), checkfirst=False)
     meeting_place.drop(op.get_bind(), checkfirst=False)
+    op.drop_index(
+        op.f("ix_raid_participant_checkout_id"),
+        table_name="raid_participant_checkout",
+    )
+    op.drop_table("raid_participant_checkout")
     # ### end Alembic commands ###
 
 
