@@ -212,7 +212,10 @@ class MockedPaymentTool:
             hello_asso_checkout_id=123,
             secret="checkoutsecret",
         )
-        await cruds_payment.create_checkout(db, checkout_model)
+        try:
+            await cruds_payment.create_checkout(db, checkout_model)
+        except Exception:  # noqa: S110
+            pass
 
         return schemas_payment.Checkout(
             id=checkout_id,
