@@ -14,6 +14,7 @@ from typing import Any, cast
 
 import redis
 from fastapi import BackgroundTasks, Depends, HTTPException, Request, status
+from sqlalchemy import NullPool
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -28,9 +29,9 @@ from app.core.groups.groups_type import GroupType, get_ecl_groups
 from app.core.payment.payment_tool import PaymentTool
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.types.scopes_type import ScopeType
+from app.types.transactional_async_session import TransactionalAsyncSession
 from app.types.websocket import WebsocketConnectionManager
 from app.utils.auth import auth_utils
-from app.types.transactional_async_session import TransactionalAsyncSession
 from app.utils.communication.notifications import NotificationManager, NotificationTool
 from app.utils.redis import connect
 from app.utils.tools import (
@@ -90,6 +91,7 @@ def init_and_get_db_engine(settings: Settings) -> AsyncEngine:
         engine = create_async_engine(
             SQLALCHEMY_DATABASE_URL,
             echo=settings.DATABASE_DEBUG,
+            poolclass=NullPool,
         )
         SessionLocal = async_sessionmaker(
             engine,
