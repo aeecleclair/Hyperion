@@ -88,6 +88,8 @@ def init_and_get_db_engine(settings: Settings) -> AsyncEngine:
         SQLALCHEMY_DATABASE_URL = f"postgresql+asyncpg://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}/{settings.POSTGRES_DB}"
 
     if engine is None:
+        # The use of transactional database requires the use of NullPool as it implies the use of a db in multiple run loops
+        # https://docs.sqlalchemy.org/en/14/orm/extensions/asyncio.html#using-multiple-asyncio-event-loops
         engine = create_async_engine(
             SQLALCHEMY_DATABASE_URL,
             echo=settings.DATABASE_DEBUG,
