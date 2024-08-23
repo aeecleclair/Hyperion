@@ -205,7 +205,7 @@ class MockedPaymentTool:
     ) -> schemas_payment.Checkout:
         checkout_id = "81c9ad91-f415-494a-96ad-87bf647df82c"
 
-        exist = await cruds_payment.get_checkout_by_id(checkout_id, db)
+        exist = await cruds_payment.get_checkout_by_id(uuid.UUID(checkout_id), db)
         if exist is None:
             checkout_model = models_payment.Checkout(
                 id=checkout_id,
