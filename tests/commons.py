@@ -10,11 +10,13 @@ from sqlalchemy import NullPool
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.core import models_core, security
+from app.core import models_core, schemas_core, security
 from app.core.auth import schemas_auth
 from app.core.config import Settings
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
+from app.core.payment import cruds_payment, models_payment, schemas_payment
+from app.core.payment.payment_tool import PaymentTool
 from app.core.users import cruds_users
 from app.dependencies import get_settings
 from app.types.exceptions import RedisConnectionError
@@ -180,3 +182,55 @@ async def add_object_to_db(db_object: Base) -> None:
             raise
         finally:
             await db.close()
+
+
+class MockedPaymentTool:
+    original_payment_tool: PaymentTool
+
+    def __init__(self, settings: Settings):
+        self.original_payment_tool = PaymentTool(settings)
+
+    def is_payment_available(self) -> bool:
+        return True
+
+    async def init_checkout(
+        self,
+        module: str,
+        helloasso_slug: str,
+        checkout_amount: int,
+        checkout_name: str,
+        redirection_uri: str,
+        db: AsyncSession,
+        payer_user: schemas_core.CoreUser | None = None,
+    ) -> schemas_payment.Checkout:
+        checkout_id = "81c9ad91-f415-494a-96ad-87bf647df82c"
+
+        exist = await cruds_payment.get_checkout_by_id(uuid.UUID(checkout_id), db)
+        if exist is None:
+            checkout_model = models_payment.Checkout(
+                id=checkout_id,
+                module="cdr",
+                name=checkout_name,
+                amount=500,
+                hello_asso_checkout_id=123,
+                secret="checkoutsecret",
+            )
+            await cruds_payment.create_checkout(db, checkout_model)
+
+        return schemas_payment.Checkout(
+            id=checkout_id,
+            payment_url="https://some.url.fr/checkout",
+        )
+
+    async def get_checkout(
+        self,
+        checkout_id: uuid.UUID,
+        db: AsyncSession,
+    ) -> schemas_payment.CheckoutComplete | None:
+        return await self.original_payment_tool.get_checkout(checkout_id, db)
+
+
+def override_get_payment_tool(
+    settings: Settings = Depends(get_settings),
+) -> MockedPaymentTool:
+    return MockedPaymentTool(settings=settings)

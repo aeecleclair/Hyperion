@@ -71,6 +71,9 @@ async def webhook(
 
         # If no metadata are included, this should not be a checkout we initiated
         if not checkout_metadata:
+            hyperion_error_logger.info(
+                "Payment: missing checkout_metadata",
+            )
             return
 
         checkout = await cruds_payment.get_checkout_by_id(
@@ -117,6 +120,9 @@ async def webhook(
             for module in module_list:
                 if module.root == checkout.module:
                     if module.payment_callback is not None:
+                        hyperion_error_logger.info(
+                            f"Payment: calling module {checkout.module} payment callback",
+                        )
                         checkout_payment_schema = (
                             schemas_payment.CheckoutPayment.model_validate(
                                 checkout_payment_model.__dict__,

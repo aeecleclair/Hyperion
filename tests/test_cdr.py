@@ -1,5 +1,4 @@
 import uuid
-from asyncio import Future
 from datetime import UTC, date, datetime, timedelta
 
 import pytest_asyncio
@@ -8,7 +7,6 @@ from pytest_mock import MockerFixture
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
-from app.core.payment import models_payment
 from app.modules.cdr import models_cdr
 from app.modules.cdr.types_cdr import (
     CdrStatus,
@@ -2339,31 +2337,7 @@ async def test_pay(mocker: MockerFixture, client: TestClient):
         purchased_on=datetime.now(UTC),
     )
     await add_object_to_db(purchase_bde)
-    checkout_id = uuid.uuid4()
-    checkout_model = models_payment.Checkout(
-        id=checkout_id,
-        module="cdr",
-        name="Chaine de Rentrée",
-        amount=500,
-        hello_asso_checkout_id=123,
-        secret="checkoutsecret",
-    )
-    await add_object_to_db(checkout_model)
 
-    class FakeCheckout:
-        def __init__(self, checkout_id: uuid.UUID, payment_url: str):
-            self.id = checkout_id
-            self.payment_url = payment_url
-
-    init_checkout: Future = Future()
-    init_checkout.set_result(
-        FakeCheckout(
-            checkout_id=checkout_id,
-            payment_url="https://some.url.fr/checkout",
-        ),
-    )
-    payment_tool = mocker.patch("app.dependencies.PaymentTool")
-    payment_tool.return_value.init_checkout.return_value = init_checkout
     response = client.post(
         "/cdr/pay/",
         headers={"Authorization": f"Bearer {token_bde}"},
@@ -2377,7 +2351,7 @@ async def test_pay(mocker: MockerFixture, client: TestClient):
             "eventType": "Payment",
             "data": {"amount": 500, "id": 123},
             "metadata": {
-                "hyperion_checkout_id": str(checkout_id),
+                "hyperion_checkout_id": "81c9ad91-f415-494a-96ad-87bf647df82c",
                 "secret": "checkoutsecret",
             },
         },
