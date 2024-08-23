@@ -211,7 +211,6 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_raid_team_id"), table_name="raid_team")
     op.drop_table("raid_team")
     op.drop_index(op.f("ix_raid_participant_id"), table_name="raid_participant")
-    op.drop_table("raid_participant")
     op.drop_index(op.f("ix_raid_security_file_id"), table_name="raid_security_file")
     op.drop_table("raid_security_file")
     op.drop_index(op.f("ix_raid_document_id"), table_name="raid_document")
@@ -226,6 +225,8 @@ def downgrade() -> None:
         table_name="raid_participant_checkout",
     )
     op.drop_table("raid_participant_checkout")
+    op.drop_table("raid_participant")
+
     # ### end Alembic commands ###
 
 
