@@ -219,8 +219,6 @@ class SynapseAuthClient(BaseAuthClient):
 
     allow_token_introspection: bool = True
 
-    disallowed_groups: list[GroupType] | None = [GroupType.external]
-
     @classmethod
     def get_userinfo(cls, user: models_core.CoreUser):
         # Accepted characters are [a-z] [0-9] `.` and `-`. Spaces are replaced by `-` and accents are removed.

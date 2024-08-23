@@ -213,12 +213,7 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_raid_participant_id"), table_name="raid_participant")
     op.drop_index(op.f("ix_raid_security_file_id"), table_name="raid_security_file")
     op.drop_index(op.f("ix_raid_document_id"), table_name="raid_document")
-    op.drop_table("raid_document")
-    document_validation.drop(op.get_bind(), checkfirst=False)
-    document_type.drop(op.get_bind(), checkfirst=False)
-    size.drop(op.get_bind(), checkfirst=False)
-    difficulty.drop(op.get_bind(), checkfirst=False)
-    meeting_place.drop(op.get_bind(), checkfirst=False)
+
     op.drop_index(
         op.f("ix_raid_participant_checkout_id"),
         table_name="raid_participant_checkout",
@@ -227,6 +222,13 @@ def downgrade() -> None:
     op.drop_table("raid_participant")
     op.drop_table("raid_security_file")
 
+    op.drop_table("raid_document")
+
+    document_validation.drop(op.get_bind(), checkfirst=False)
+    document_type.drop(op.get_bind(), checkfirst=False)
+    size.drop(op.get_bind(), checkfirst=False)
+    difficulty.drop(op.get_bind(), checkfirst=False)
+    meeting_place.drop(op.get_bind(), checkfirst=False)
     # ### end Alembic commands ###
 
 
