@@ -213,10 +213,10 @@ class MockedPaymentTool:
         checkout_id: uuid.UUID,
         db: AsyncSession,
     ) -> schemas_payment.CheckoutComplete | None:
-        return self.original_payment_tool.get_checkout(checkout_id, db)
+        return await self.original_payment_tool.get_checkout(checkout_id, db)
 
 
 def override_get_payment_tool(
     settings: Settings = Depends(get_settings),
-) -> PaymentTool:
+) -> MockedPaymentTool:
     return MockedPaymentTool(settings=settings)
