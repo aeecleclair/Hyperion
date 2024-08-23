@@ -291,7 +291,7 @@ class CustomDataFieldBase(BaseModel):
 
 class CustomDataFieldComplete(CustomDataFieldBase):
     id: UUID
-    seller_id: UUID
+    product_id: UUID
 
     model_config = ConfigDict(from_attributes=True)
 

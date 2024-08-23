@@ -2625,7 +2625,7 @@ async def test_validate_purchase(client: TestClient):
 
 def test_create_customdata_field(client: TestClient):
     response = client.post(
-        f"/cdr/sellers/{seller.id}/data/",
+        f"/cdr/products/{product.id}/data/",
         json={"name": "Chambre"},
         headers={"Authorization": f"Bearer {token_bde}"},
     )
@@ -2634,7 +2634,7 @@ def test_create_customdata_field(client: TestClient):
 
 def test_create_customdata_field_user(client: TestClient):
     response = client.post(
-        f"/cdr/sellers/{seller.id}/data/",
+        f"/cdr/products/{product.id}/data/",
         json={"name": "Chambre"},
         headers={"Authorization": f"Bearer {token_user}"},
     )
@@ -2644,19 +2644,19 @@ def test_create_customdata_field_user(client: TestClient):
 async def test_delete_customdata_field(client: TestClient):
     field = models_cdr.CustomDataField(
         id=uuid.uuid4(),
-        seller_id=seller.id,
+        product_id=product.id,
         name="Supprime",
     )
     await add_object_to_db(field)
 
     response = client.delete(
-        f"/cdr/sellers/{seller.id}/data/{field.id}/",
+        f"/cdr/products/{product.id}/data/{field.id}/",
         headers={"Authorization": f"Bearer {token_user}"},
     )
     assert response.status_code == 403
 
     response = client.delete(
-        f"/cdr/sellers/{seller.id}/data/{field.id}/",
+        f"/cdr/products/{product.id}/data/{field.id}/",
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 204
@@ -2665,12 +2665,12 @@ async def test_delete_customdata_field(client: TestClient):
 async def test_create_customdata(client: TestClient):
     customdata_field = models_cdr.CustomDataField(
         id=uuid.uuid4(),
-        seller_id=seller.id,
+        product_id=product.id,
         name="Field",
     )
     await add_object_to_db(customdata_field)
     response = client.post(
-        f"/cdr/sellers/{seller.id}/users/{cdr_user.id}/data/{customdata_field.id}/",
+        f"/cdr/products/{product.id}/users/{cdr_user.id}/data/{customdata_field.id}/",
         json={"value": "ABCD"},
         headers={"Authorization": f"Bearer {token_bde}"},
     )
@@ -2680,12 +2680,12 @@ async def test_create_customdata(client: TestClient):
 async def test_create_customdata_user(client: TestClient):
     customdata_field = models_cdr.CustomDataField(
         id=uuid.uuid4(),
-        seller_id=seller.id,
+        product_id=product.id,
         name="Field",
     )
     await add_object_to_db(customdata_field)
     response = client.post(
-        f"/cdr/sellers/{seller.id}/users/{cdr_user.id}/data/{customdata_field.id}/",
+        f"/cdr/products/{product.id}/users/{cdr_user.id}/data/{customdata_field.id}/",
         json={"value": "ABCD"},
         headers={"Authorization": f"Bearer {token_user}"},
     )
@@ -2695,7 +2695,7 @@ async def test_create_customdata_user(client: TestClient):
 async def test_update_customdata(client: TestClient):
     field = models_cdr.CustomDataField(
         id=uuid.uuid4(),
-        seller_id=seller.id,
+        product_id=product.id,
         name="Edit",
     )
     await add_object_to_db(field)
@@ -2707,14 +2707,14 @@ async def test_update_customdata(client: TestClient):
     await add_object_to_db(customdata)
 
     response = client.patch(
-        f"/cdr/sellers/{seller.id}/users/{cdr_user.id}/data/{field.id}/",
+        f"/cdr/products/{product.id}/users/{cdr_user.id}/data/{field.id}/",
         json={"value": "ABCD"},
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 204
 
     response = client.get(
-        f"/cdr/sellers/{seller.id}/users/{cdr_user.id}/data/{field.id}/",
+        f"/cdr/products/{product.id}/users/{cdr_user.id}/data/{field.id}/",
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
@@ -2724,7 +2724,7 @@ async def test_update_customdata(client: TestClient):
 async def test_update_customdata_user(client: TestClient):
     field = models_cdr.CustomDataField(
         id=uuid.uuid4(),
-        seller_id=seller.id,
+        product_id=product.id,
         name="Edit",
     )
     await add_object_to_db(field)
@@ -2736,7 +2736,7 @@ async def test_update_customdata_user(client: TestClient):
     await add_object_to_db(customdata)
 
     response = client.patch(
-        f"/cdr/sellers/{seller.id}/users/{cdr_user.id}/data/{field.id}/",
+        f"/cdr/products/{product.id}/users/{cdr_user.id}/data/{field.id}/",
         json={"value": "ABCD"},
         headers={"Authorization": f"Bearer {token_user}"},
     )
@@ -2746,7 +2746,7 @@ async def test_update_customdata_user(client: TestClient):
 async def test_delete_customdata(client: TestClient):
     field = models_cdr.CustomDataField(
         id=uuid.uuid4(),
-        seller_id=seller.id,
+        product_id=product.id,
         name="Supprime",
     )
     await add_object_to_db(field)
@@ -2758,13 +2758,13 @@ async def test_delete_customdata(client: TestClient):
     await add_object_to_db(customdata)
 
     response = client.delete(
-        f"/cdr/sellers/{seller.id}/users/{cdr_user.id}/data/{field.id}/",
+        f"/cdr/products/{product.id}/users/{cdr_user.id}/data/{field.id}/",
         headers={"Authorization": f"Bearer {token_user}"},
     )
     assert response.status_code == 403
 
     response = client.delete(
-        f"/cdr/sellers/{seller.id}/users/{cdr_user.id}/data/{field.id}/",
+        f"/cdr/products/{product.id}/users/{cdr_user.id}/data/{field.id}/",
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 204
