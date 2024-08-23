@@ -1,4 +1,5 @@
 from sqlalchemy import func, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -47,20 +48,30 @@ async def get_flappybird_score_position(
     return result.scalar()
 
 
-def create_flappybird_score(
+async def create_flappybird_score(
     db: TransactionalAsyncSession,
     flappybird_score: models_flappybird.FlappyBirdScore,
 ) -> None:
     """Add a FlappyBirdScore in database"""
     db.add(flappybird_score)
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise
 
 
-def create_flappybird_best_score(
+async def create_flappybird_best_score(
     db: TransactionalAsyncSession,
     flappybird_best_score: models_flappybird.FlappyBirdBestScore,
 ) -> None:
     """Add a FlappyBirdBestScore in database"""
     db.add(flappybird_best_score)
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise
 
 
 async def update_flappybird_best_score(

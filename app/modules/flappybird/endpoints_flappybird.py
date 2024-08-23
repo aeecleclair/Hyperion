@@ -109,7 +109,7 @@ async def create_flappybird_score(
         db=db,
     )
     if not personal_best:
-        cruds_flappybird.create_flappybird_best_score(
+        await cruds_flappybird.create_flappybird_best_score(
             flappybird_best_score=db_flappybird_best_score,
             db=db,
         )
@@ -120,7 +120,7 @@ async def create_flappybird_score(
                 best_score=flappybird_score.value,
                 db=db,
             )
-        cruds_flappybird.create_flappybird_score(
+        await cruds_flappybird.create_flappybird_score(
             flappybird_score=db_flappybird_score,
             db=db,
         )

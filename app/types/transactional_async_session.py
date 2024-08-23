@@ -1,3 +1,4 @@
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -35,7 +36,12 @@ class TransactionalAsyncSession(AsyncSession):
         pass
 
     async def commit_manually(self) -> None:
-        await self._db.commit()
+        try:
+            await self._db.commit()
+        except IntegrityError:
+            # Rollback the transaction
+            await self.rollback()
+            raise
 
     def __getattr__(self, name: str):
         """
