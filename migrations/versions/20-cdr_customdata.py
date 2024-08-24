@@ -39,15 +39,9 @@ def upgrade() -> None:
         sa.Column("field_id", sa.Uuid(), nullable=False),
         sa.Column("user_id", sa.String(), nullable=False),
         sa.Column("value", sa.String(), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["field_id"],
-            ["cdr_customdata_field.id"],
-        ),
-        sa.ForeignKeyConstraint(
-            ["user_id"],
-            ["core_user.id"],
-        ),
-        sa.PrimaryKeyConstraint("id"),
+        sa.ForeignKeyConstraint(["user_id"], ["core_user.id"]),
+        sa.ForeignKeyConstraint(["field_id"], ["cdr_customdata_field.id"]),
+        sa.PrimaryKeyConstraint("field_id", "user_id"),
     )
     # ### end Alembic commands ###
 
@@ -72,15 +66,9 @@ def downgrade() -> None:
         sa.Column("field_id", sa.Uuid(), nullable=False),
         sa.Column("user_id", sa.String(), nullable=False),
         sa.Column("value", sa.String(), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["field_id"],
-            ["cdr_customdata_field.id"],
-        ),
-        sa.ForeignKeyConstraint(
-            ["user_id"],
-            ["core_user.id"],
-        ),
-        sa.PrimaryKeyConstraint("id"),
+        sa.ForeignKeyConstraint(["user_id"], ["core_user.id"]),
+        sa.ForeignKeyConstraint(["field_id"], ["cdr_customdata_field.id"]),
+        sa.PrimaryKeyConstraint("field_id", "user_id"),
     )
     # ### end Alembic commands ###
 
