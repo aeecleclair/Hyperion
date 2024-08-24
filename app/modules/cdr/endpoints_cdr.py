@@ -846,15 +846,18 @@ async def update_product_variant(
         product_id=product_id,
         variant_id=variant_id,
     )
-    if status.status in [
-        CdrStatus.onsite,
-        CdrStatus.closed,
-    ] or (
-        db_product and status.status == CdrStatus.online and db_product.available_online
-    ):
-        if product_variant.model_fields_set != {
-            "enabled",
-        }:  # We allow to update the enabled field even if CDR is onsite or closed
+    if product_variant.model_fields_set != {
+        "enabled",
+    }:
+        if status.status in [
+            CdrStatus.onsite,
+            CdrStatus.closed,
+        ] or (
+            db_product
+            and status.status == CdrStatus.online
+            and db_product.available_online
+        ):
+            # We allow to update the enabled field even if CDR is onsite or closed
             raise HTTPException(
                 status_code=403,
                 detail="This product can't be edited now. Please try creating a new product.",
