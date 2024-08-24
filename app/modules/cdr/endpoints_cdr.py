@@ -155,24 +155,25 @@ async def get_cdr_users_pending_validation(
 async def get_cdr_user(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_core.CoreUser = Depends(is_user),
 ):
     """
     Get a user.
 
-    **User must be part of a seller group to use this endpoint**
+    **User must be part of a seller group or trying to get itself to use this endpoint**
     """
-    if not (
-        is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])
-        or await cruds_cdr.get_sellers_by_group_ids(
-            db=db,
-            group_ids=[g.id for g in user.groups],
-        )
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="You must be a seller to use this endpoint.",
-        )
+    if user.id != user_id:
+        if not (
+            is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])
+            or await cruds_cdr.get_sellers_by_group_ids(
+                db=db,
+                group_ids=[g.id for g in user.groups],
+            )
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="You must be a seller to use this endpoint.",
+            )
     user_db = await get_user_by_id(db, user_id)
     if not user_db:
         raise HTTPException(
@@ -851,10 +852,13 @@ async def update_product_variant(
     ] or (
         db_product and status.status == CdrStatus.online and db_product.available_online
     ):
-        raise HTTPException(
-            status_code=403,
-            detail="This product can't be edited now. Please try creating a new product.",
-        )
+        if product_variant.model_fields_set != {
+            "enabled",
+        }:  # We allow to update the enabled field even if CDR is onsite or closed
+            raise HTTPException(
+                status_code=403,
+                detail="This product can't be edited now. Please try creating a new product.",
+            )
     if (
         db_product
         and not db_product.related_membership
