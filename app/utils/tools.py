@@ -82,48 +82,30 @@ def sort_user(
     `query` will be compared against `users` name, firstname and nickname.
     The size of the answer can be limited using `limit` parameter.
 
-    Use Jellyfish library
+    Use Jaro-Winkler algorithm from Jellyfish library
     """
 
-    # TODO: we may want to cache this object. Its generation may take some time if there is a big user base
-    names = [f"{user.firstname} {user.name}" for user in users]
-    nicknames = [user.nickname for user in users]
-    scored: list[
-        tuple[CoreUser, float, float, int]
-    ] = [  # (user, name_score, nickname_score, index)
+    scored: list[tuple[CoreUser, float]] = [
         (
             user,
-            jaro_winkler_similarity(query, name),
-            jaro_winkler_similarity(query, nickname) if nickname else 0,
-            index,
+            max(
+                jaro_winkler_similarity(query, user.firstname),
+                jaro_winkler_similarity(query, user.name),
+                jaro_winkler_similarity(query, f"{user.firstname} {user.name}"),
+                jaro_winkler_similarity(query, f"{user.name} {user.firstname}"),
+                jaro_winkler_similarity(query, user.nickname) if user.nickname else 0,
+            ),
         )
-        for index, (user, name, nickname) in enumerate(
-            zip(users, names, nicknames, strict=True),
-        )
+        for user in users
     ]
 
     results = []
     for _ in range(min(limit, len(scored))):
-        maximum_name = max(scored, key=lambda r: r[1])
-        maximum_nickname = max(scored, key=lambda r: r[2])
-        if maximum_name[1] > maximum_nickname[2]:
-            results.append(maximum_name)
-            scored[maximum_name[3]] = (  # We don't want to use this user again
-                maximum_name[0],
-                -1,
-                -1,
-                maximum_name[3],
-            )
-        else:
-            results.append(maximum_nickname)
-            scored[maximum_nickname[3]] = (  # We don't want to use this user again
-                maximum_nickname[0],
-                -1,
-                -1,
-                maximum_nickname[3],
-            )
+        best_user = max(scored, key=lambda r: r[1])
+        scored.pop(scored.index(best_user))
+        results.append(best_user[0])
 
-    return [result[0] for result in results]
+    return results
 
 
 async def is_group_id_valid(group_id: str, db: AsyncSession) -> bool:
