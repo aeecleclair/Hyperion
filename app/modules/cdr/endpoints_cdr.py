@@ -2570,13 +2570,34 @@ async def scan_ticket(
         raise
 
 
+@module.router.get(
+    "/cdr/sellers/{seller_id}/products/{product_id}/data/",
+    response_model=list[schemas_cdr.CustomDataFieldComplete],
+    status_code=200,
+)
+async def get_custom_data_fields(
+    seller_id: UUID,
+    product_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    await is_user_in_a_seller_group(
+        seller_id,
+        user,
+        db=db,
+    )
+    await check_request_consistency(db=db, seller_id=seller_id, product_id=product_id)
+    return await cruds_cdr.get_product_customdata_fields(db=db, product_id=product_id)
+
+
 @module.router.post(
-    "/cdr/sellers/{seller_id}/data/",
+    "/cdr/sellers/{seller_id}/products/{product_id}/data/",
     response_model=schemas_cdr.CustomDataFieldComplete,
     status_code=201,
 )
 async def create_custom_data_field(
     seller_id: UUID,
+    product_id: UUID,
     custom_data_field: schemas_cdr.CustomDataFieldBase,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
@@ -2586,9 +2607,10 @@ async def create_custom_data_field(
         user,
         db=db,
     )
+    await check_request_consistency(db=db, seller_id=seller_id, product_id=product_id)
     db_data = models_cdr.CustomDataField(
         id=uuid4(),
-        seller_id=seller_id,
+        product_id=product_id,
         name=custom_data_field.name,
     )
     try:
@@ -2602,11 +2624,12 @@ async def create_custom_data_field(
 
 
 @module.router.delete(
-    "/cdr/sellers/{seller_id}/data/{field_id}/",
+    "/cdr/sellers/{seller_id}/products/{product_id}/data/{field_id}/",
     status_code=204,
 )
 async def delete_customdata_field(
     seller_id: UUID,
+    product_id: UUID,
     field_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
@@ -2616,16 +2639,17 @@ async def delete_customdata_field(
         user,
         db=db,
     )
+    await check_request_consistency(db=db, seller_id=seller_id, product_id=product_id)
     db_field = await cruds_cdr.get_customdata_field(db=db, field_id=field_id)
-    if not db_field:
+    if db_field is None:
         raise HTTPException(
             status_code=404,
             detail="Field not found.",
         )
-    if db_field.seller_id != seller_id:
+    if db_field.product_id != product_id:
         raise HTTPException(
             status_code=403,
-            detail="Field does not belong to this seller.",
+            detail="Field does not belong to this product.",
         )
     try:
         await cruds_cdr.delete_customdata_field(
@@ -2639,12 +2663,13 @@ async def delete_customdata_field(
 
 
 @module.router.get(
-    "/cdr/sellers/{seller_id}/users/{user_id}/data/{field_id}/",
+    "/cdr/sellers/{seller_id}/products/{product_id}/users/{user_id}/data/{field_id}/",
     response_model=schemas_cdr.CustomDataComplete,
     status_code=200,
 )
 async def get_customdata(
     seller_id: UUID,
+    product_id: UUID,
     user_id: str,
     field_id: UUID,
     db: AsyncSession = Depends(get_db),
@@ -2655,8 +2680,9 @@ async def get_customdata(
         user,
         db=db,
     )
+    await check_request_consistency(db=db, seller_id=seller_id, product_id=product_id)
     db_data = await cruds_cdr.get_customdata(db=db, field_id=field_id, user_id=user_id)
-    if not db_data:
+    if db_data is None:
         raise HTTPException(
             status_code=404,
             detail="Field Data not found.",
@@ -2666,12 +2692,13 @@ async def get_customdata(
 
 
 @module.router.post(
-    "/cdr/sellers/{seller_id}/users/{user_id}/data/{field_id}/",
+    "/cdr/sellers/{seller_id}/products/{product_id}/users/{user_id}/data/{field_id}/",
     response_model=schemas_cdr.CustomDataComplete,
     status_code=201,
 )
 async def create_custom_data(
     seller_id: UUID,
+    product_id: UUID,
     user_id: str,
     field_id: UUID,
     custom_data: schemas_cdr.CustomDataBase,
@@ -2683,16 +2710,17 @@ async def create_custom_data(
         user,
         db=db,
     )
+    await check_request_consistency(db=db, seller_id=seller_id, product_id=product_id)
     db_field = await cruds_cdr.get_customdata_field(db=db, field_id=field_id)
-    if not db_field:
+    if db_field is None:
         raise HTTPException(
             status_code=404,
             detail="Field not found.",
         )
-    if db_field.seller_id != seller_id:
+    if db_field.product_id != product_id:
         raise HTTPException(
             status_code=403,
-            detail="Field does not belong to this seller.",
+            detail="Field does not belong to this product.",
         )
     db_data = models_cdr.CustomData(
         user_id=user_id,
@@ -2710,11 +2738,12 @@ async def create_custom_data(
 
 
 @module.router.patch(
-    "/cdr/sellers/{seller_id}/users/{user_id}/data/{field_id}/",
+    "/cdr/sellers/{seller_id}/products/{product_id}/users/{user_id}/data/{field_id}/",
     status_code=204,
 )
 async def update_custom_data(
     seller_id: UUID,
+    product_id: UUID,
     user_id: str,
     field_id: UUID,
     custom_data: schemas_cdr.CustomDataBase,
@@ -2726,16 +2755,17 @@ async def update_custom_data(
         user,
         db=db,
     )
+    await check_request_consistency(db=db, seller_id=seller_id, product_id=product_id)
     db_data = await cruds_cdr.get_customdata(db=db, field_id=field_id, user_id=user_id)
-    if not db_data:
+    if db_data is None:
         raise HTTPException(
             status_code=404,
             detail="Field Data not found.",
         )
-    if db_data.field.seller_id != seller_id:
+    if db_data.field.product_id != product_id:
         raise HTTPException(
             status_code=403,
-            detail="Field does not belong to this seller.",
+            detail="Field does not belong to this product.",
         )
     try:
         await cruds_cdr.update_customdata(
@@ -2751,11 +2781,12 @@ async def update_custom_data(
 
 
 @module.router.delete(
-    "/cdr/sellers/{seller_id}/users/{user_id}/data/{field_id}/",
+    "/cdr/sellers/{seller_id}/products/{product_id}/users/{user_id}/data/{field_id}/",
     status_code=204,
 )
 async def delete_customdata(
     seller_id: UUID,
+    product_id: UUID,
     user_id: str,
     field_id: UUID,
     db: AsyncSession = Depends(get_db),
@@ -2766,16 +2797,17 @@ async def delete_customdata(
         user,
         db=db,
     )
+    await check_request_consistency(db=db, seller_id=seller_id, product_id=product_id)
     db_data = await cruds_cdr.get_customdata(db=db, field_id=field_id, user_id=user_id)
-    if not db_data:
+    if db_data is None:
         raise HTTPException(
             status_code=404,
             detail="Field Data not found.",
         )
-    if db_data.field.seller_id != seller_id:
+    if db_data.field.product_id != product_id:
         raise HTTPException(
             status_code=403,
-            detail="Field does not belong to this seller.",
+            detail="Field does not belong to this product.",
         )
     try:
         await cruds_cdr.delete_customdata(

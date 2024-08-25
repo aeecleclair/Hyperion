@@ -877,6 +877,18 @@ async def get_customdata(
     return result.scalars().first()
 
 
+async def get_product_customdata_fields(
+    db: AsyncSession,
+    product_id: UUID,
+) -> Sequence[models_cdr.CustomDataField]:
+    result = await db.execute(
+        select(models_cdr.CustomDataField).where(
+            models_cdr.CustomDataField.product_id == product_id,
+        ),
+    )
+    return result.scalars().all()
+
+
 async def update_customdata(db: AsyncSession, field_id: UUID, user_id: str, value: str):
     await db.execute(
         update(models_cdr.CustomData)

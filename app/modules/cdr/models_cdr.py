@@ -249,8 +249,8 @@ class Ticket(Base):
 class CustomDataField(Base):
     __tablename__ = "cdr_customdata_field"
     id: Mapped[PrimaryKey]
-    seller_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("cdr_seller.id"),
+    product_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("cdr_product.id"),
     )
     name: Mapped[str]
 
@@ -261,6 +261,6 @@ class CustomData(Base):
         ForeignKey("cdr_customdata_field.id"),
         primary_key=True,
     )
-    field = relationship("CustomDataField")
+    field: Mapped["CustomDataField"] = relationship("CustomDataField")
     user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), primary_key=True)
     value: Mapped[str]
