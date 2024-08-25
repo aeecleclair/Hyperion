@@ -444,21 +444,13 @@ def test_update_cdr_user_user(client: TestClient):
     assert response.status_code == 403
 
 
-def test_get_cdr_user_seller(client: TestClient):
-    response = client.get(
-        f"/cdr/users/{cdr_user.id}",
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 200
-    assert str(cdr_user.id) == response.json()["id"]
-
-
-def test_get_cdr_user_user(client: TestClient):
+def test_get_cdr_user(client: TestClient):
     response = client.get(
         f"/cdr/users/{cdr_user.id}",
         headers={"Authorization": f"Bearer {token_user}"},
     )
-    assert response.status_code == 403
+    assert response.status_code == 200
+    assert str(cdr_user.id) == response.json()["id"]
 
 
 def test_get_all_sellers_admin(client: TestClient):
