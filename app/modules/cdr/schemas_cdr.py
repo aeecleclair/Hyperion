@@ -51,7 +51,7 @@ class CdrUserUpdate(BaseModel):
 
 class ProductVariantBase(BaseModel):
     name_fr: str
-    name_en: str
+    name_en: str | None = None
     description_fr: str | None = None
     description_en: str | None = None
     price: int
@@ -65,7 +65,7 @@ class ProductVariantComplete(BaseModel):
     id: UUID
     product_id: UUID
     name_fr: str
-    name_en: str
+    name_en: str | None = None
     description_fr: str | None = None
     description_en: str | None = None
     price: int
@@ -91,7 +91,7 @@ class ProductVariantEdit(BaseModel):
 
 class ProductBase(BaseModel):
     name_fr: str
-    name_en: str
+    name_en: str | None = None
     description_fr: str | None = None
     description_en: str | None = None
     available_online: bool
@@ -105,7 +105,7 @@ class ProductBase(BaseModel):
 
 class ProductCompleteNoConstraint(BaseModel):
     name_fr: str
-    name_en: str
+    name_en: str | None = None
     description_fr: str | None = None
     description_en: str | None = None
     available_online: bool
@@ -122,7 +122,7 @@ class ProductCompleteNoConstraint(BaseModel):
 
 class ProductComplete(BaseModel):
     name_fr: str
-    name_en: str
+    name_en: str | None = None
     description_fr: str | None = None
     description_en: str | None = None
     available_online: bool
