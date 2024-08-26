@@ -210,6 +210,11 @@ async def delete_product(
             models_cdr.DocumentConstraint.product_id == product_id,
         ),
     )
+    await db.execute(
+        delete(models_cdr.ProductTicket).where(
+            models_cdr.ProductTicket.product_id == product_id,
+        ),
+    )
 
 
 def create_product_constraint(
@@ -916,3 +921,50 @@ async def get_pending_validation_users(db: AsyncSession) -> Sequence[CoreUser]:
     user_ids = set(purchase.user_id for purchase in result.scalars().all())
     result_users = await db.execute(select(CoreUser).where(CoreUser.id.in_(user_ids)))
     return result_users.scalars().all()
+
+
+def create_product_ticket(db: AsyncSession, ticket: models_cdr.ProductTicket):
+    db.add(ticket)
+
+
+async def get_product_validated_purchases(
+    db: AsyncSession,
+    product_id: UUID,
+) -> Sequence[models_cdr.Purchase]:
+    result = await db.execute(
+        select(models_cdr.Purchase)
+        .options(selectinload(models_cdr.Purchase.product_variant))
+        .where(
+            models_cdr.Purchase.validated.is_(True),
+            models_cdr.Purchase.product_variant.product_id == product_id,
+        ),
+    )
+    return result.scalars().all()
+
+
+async def get_product_ticket(
+    db: AsyncSession,
+    product_ticket_id: UUID,
+) -> models_cdr.ProductTicket | None:
+    result = await db.execute(
+        select(models_cdr.ProductTicket).where(
+            models_cdr.ProductTicket.id == product_ticket_id,
+        ),
+    )
+    return result.scalars().first()
+
+
+async def delete_product_ticket(db: AsyncSession, product_ticket_id: UUID):
+    await db.execute(
+        delete(models_cdr.ProductTicket).where(
+            models_cdr.ProductTicket.id == product_ticket_id,
+        ),
+    )
+
+
+async def delete_product_generated_tickets(db: AsyncSession, product_ticket_id: UUID):
+    await db.execute(
+        delete(models_cdr.Ticket).where(
+            models_cdr.Ticket.generator_id == product_ticket_id,
+        ),
+    )
