@@ -54,6 +54,18 @@ class ProductConstraint(Base):
     )
 
 
+class ProductTicket(Base):
+    __tablename__ = "cdr_product_ticket"
+
+    id: Mapped[PrimaryKey]
+    product_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("cdr_product.id"),
+    )
+    name: Mapped[str]
+    max_use: Mapped[int]
+    expiration: Mapped[datetime]
+
+
 class CdrProduct(Base):
     __tablename__ = "cdr_product"
 
@@ -84,9 +96,10 @@ class CdrProduct(Base):
         lazy="selectin",
     )
     related_membership: Mapped[AvailableAssociationMembership | None]
-    generate_ticket: Mapped[bool]
-    ticket_max_use: Mapped[int | None]
-    ticket_expiration: Mapped[datetime | None]
+    tickets: Mapped[list["ProductTicket"]] = relationship(
+        "ProductTicket",
+        lazy="selectin",
+    )
 
 
 class Curriculum(Base):
@@ -232,7 +245,11 @@ class Checkout(Base):
 class Ticket(Base):
     __tablename__ = "cdr_ticket"
     id: Mapped[PrimaryKey]
-    secret: Mapped[uuid.UUID]
+    secret: Mapped[uuid.UUID] = mapped_column(unique=True)
+    generator_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("cdr_product_ticket.id"),
+        nullable=True,
+    )
     product_variant_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("cdr_product_variant.id"),
     )
@@ -240,6 +257,7 @@ class Ticket(Base):
     user_id: Mapped[str] = mapped_column(
         ForeignKey("core_user.id"),
     )
+    name: Mapped[str]
     user: Mapped["CoreUser"] = relationship("CoreUser")
     scan_left: Mapped[int]
     tags: Mapped[str]
