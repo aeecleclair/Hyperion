@@ -388,10 +388,16 @@ def test_get_all_cdr_pending_users_user(client: TestClient):
     assert response.status_code == 403
 
 
-def test_update_cdr_user_seller_nickname(client: TestClient):
+def test_update_cdr_user_seller(client: TestClient):
     response = client.patch(
         f"/cdr/users/{cdr_user.id}",
-        json={"nickname": "surnom"},
+        json={
+            "nickname": "surnom",
+            "promo": 2023,
+            "floor": "Autre",
+            "phone": "+330606060606",
+            "birthday": "1999-01-01",
+        },
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 204

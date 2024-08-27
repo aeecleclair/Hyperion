@@ -2,7 +2,7 @@ from datetime import date, datetime, timedelta
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from app.core.schemas_core import CoreUserSimple
 from app.modules.cdr.types_cdr import (
@@ -14,6 +14,7 @@ from app.types.core_data import BaseCoreData
 from app.types.floors_type import FloorsType
 from app.types.membership import AvailableAssociationMembership
 from app.types.websocket import WSMessageModel
+from app.utils import validators
 
 
 class DocumentBase(BaseModel):
@@ -44,9 +45,19 @@ class CdrUser(CoreUserSimple):
 
 
 class CdrUserUpdate(BaseModel):
+    promo: int | None = None
     nickname: str | None = None
     email: str | None = None
+    birthday: date | None = None
+    phone: str | None = None
     floor: FloorsType | None = None
+
+    _normalize_nickname = field_validator("nickname")(
+        validators.trailing_spaces_remover,
+    )
+    _format_phone = field_validator("phone")(
+        validators.phone_formatter,
+    )
 
 
 class ProductVariantBase(BaseModel):
