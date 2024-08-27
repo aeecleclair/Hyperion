@@ -38,8 +38,11 @@ class CurriculumComplete(CurriculumBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class CdrUser(CoreUserSimple):
+class CdrUserPreview(CoreUserSimple):
     curriculum: CurriculumComplete | None = None
+
+
+class CdrUser(CdrUserPreview):
     promo: int | None = None
     email: str
     birthday: date | None = None

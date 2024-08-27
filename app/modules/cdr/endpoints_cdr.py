@@ -149,7 +149,7 @@ async def get_cdr_users_pending_validation(
 
 @module.router.get(
     "/cdr/users/{user_id}/",
-    response_model=schemas_cdr.CdrUser,
+    response_model=schemas_cdr.CdrUserPreview,
     status_code=200,
 )
 async def get_cdr_user(
@@ -283,6 +283,7 @@ async def update_cdr_user(
                         name=user_db.name,
                         firstname=user_db.firstname,
                         nickname=user_db.nickname,
+                        email=user_db.email,
                         id=user_db.id,
                     ),
                 ),
@@ -1950,6 +1951,7 @@ async def create_curriculum_membership(
                         name=db_user.name,
                         firstname=db_user.firstname,
                         nickname=db_user.nickname,
+                        email=db_user.email,
                         id=db_user.id,
                     ),
                 ),
@@ -2023,6 +2025,7 @@ async def update_curriculum_membership(
                         name=db_user.name,
                         firstname=db_user.firstname,
                         nickname=db_user.nickname,
+                        email=db_user.email,
                         id=db_user.id,
                     ),
                 ),
@@ -2094,6 +2097,7 @@ async def delete_curriculum_membership(
                         name=db_user.name,
                         firstname=db_user.firstname,
                         nickname=db_user.nickname,
+                        email=db_user.email,
                         id=db_user.id,
                     ),
                 ),
