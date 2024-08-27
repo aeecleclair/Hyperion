@@ -40,6 +40,11 @@ class CurriculumComplete(CurriculumBase):
 
 class CdrUser(CoreUserSimple):
     curriculum: CurriculumComplete | None = None
+    promo: int | None = None
+    email: str 
+    birthday: date | None = None
+    phone: str | None = None
+    floor: FloorsType | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
