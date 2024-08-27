@@ -69,7 +69,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 
 @module.router.get(
     "/cdr/users/",
-    response_model=list[schemas_cdr.CdrUser],
+    response_model=list[schemas_cdr.CdrUserPreview],
     status_code=200,
 )
 async def get_cdr_users(
@@ -103,7 +103,7 @@ async def get_cdr_users(
 
 @module.router.get(
     "/cdr/users/pending",
-    response_model=list[schemas_cdr.CdrUser],
+    response_model=list[schemas_cdr.CdrUserPreview],
     status_code=200,
 )
 async def get_cdr_users_pending_validation(
@@ -149,7 +149,7 @@ async def get_cdr_users_pending_validation(
 
 @module.router.get(
     "/cdr/users/{user_id}/",
-    response_model=schemas_cdr.CdrUserPreview,
+    response_model=schemas_cdr.CdrUser,
     status_code=200,
 )
 async def get_cdr_user(
