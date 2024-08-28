@@ -54,8 +54,8 @@ class ProductConstraint(Base):
     )
 
 
-class ProductTicket(Base):
-    __tablename__ = "cdr_product_ticket"
+class TicketGenerator(Base):
+    __tablename__ = "cdr_ticket_generator"
 
     id: Mapped[PrimaryKey]
     product_id: Mapped[uuid.UUID] = mapped_column(
@@ -96,8 +96,8 @@ class CdrProduct(Base):
         lazy="selectin",
     )
     related_membership: Mapped[AvailableAssociationMembership | None]
-    tickets: Mapped[list["ProductTicket"]] = relationship(
-        "ProductTicket",
+    tickets: Mapped[list["TicketGenerator"]] = relationship(
+        "TicketGenerator",
         lazy="selectin",
     )
 
@@ -246,9 +246,8 @@ class Ticket(Base):
     __tablename__ = "cdr_ticket"
     id: Mapped[PrimaryKey]
     secret: Mapped[uuid.UUID] = mapped_column(unique=True)
-    generator_id: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("cdr_product_ticket.id"),
-        nullable=True,
+    generator_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("cdr_ticket_generator.id"),
     )
     product_variant_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("cdr_product_variant.id"),
