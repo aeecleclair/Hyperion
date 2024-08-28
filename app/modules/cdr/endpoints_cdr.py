@@ -589,9 +589,9 @@ async def create_product(
                 ),
             )
         for ticket in product.tickets:
-            cruds_cdr.create_product_ticket(
+            cruds_cdr.create_ticket_generator(
                 db,
-                models_cdr.ProductTicket(id=uuid4(), **ticket.model_dump()),
+                models_cdr.TicketGenerator(id=uuid4(), **ticket.model_dump()),
             )
         await db.commit()
         return await cruds_cdr.get_product_by_id(db, db_product.id)
@@ -2455,13 +2455,14 @@ async def get_ticket_secret(
 
 
 @module.router.get(
-    "/cdr/sellers/{seller_id}/products/{product_id}/tickets/{secret}/",
+    "/cdr/sellers/{seller_id}/products/{product_id}/tickets/{generator_id}/{secret}/",
     response_model=schemas_cdr.Ticket,
     status_code=200,
 )
 async def get_ticket_by_secret(
     seller_id: UUID,
     product_id: UUID,
+    generator_id: UUID,
     secret: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
@@ -2477,13 +2478,27 @@ async def get_ticket_by_secret(
             detail="Product not found.",
         )
     await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
+    ticket_generator = await cruds_cdr.get_ticket_generator(
+        db=db,
+        ticket_generator_id=generator_id,
+    )
+    if not ticket_generator:
+        raise HTTPException(
+            status_code=404,
+            detail="Ticket generator not found.",
+        )
+    if ticket_generator.product_id != product_id:
+        raise HTTPException(
+            status_code=404,
+            detail="This Ticket generator is not related to this product.",
+        )
     ticket = await cruds_cdr.get_ticket_by_secret(db=db, secret=secret)
     if not ticket:
         raise HTTPException(
             status_code=404,
             detail="Ticket not found.",
         )
-    if ticket.product_variant.product_id != product_id:
+    if ticket.generator_id != generator_id:
         raise HTTPException(
             status_code=404,
             detail="This Ticket is not related to this product.",
@@ -2492,12 +2507,13 @@ async def get_ticket_by_secret(
 
 
 @module.router.patch(
-    "/cdr/sellers/{seller_id}/products/{product_id}/tickets/{secret}/",
+    "/cdr/sellers/{seller_id}/products/{product_id}/tickets/{generator_id}/{secret}/",
     status_code=204,
 )
 async def scan_ticket(
     seller_id: UUID,
     product_id: UUID,
+    generator_id: UUID,
     secret: UUID,
     ticket_data: schemas_cdr.TicketScan,
     db: AsyncSession = Depends(get_db),
@@ -2514,13 +2530,27 @@ async def scan_ticket(
             detail="Product not found.",
         )
     await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
+    ticket_generator = await cruds_cdr.get_ticket_generator(
+        db=db,
+        ticket_generator_id=generator_id,
+    )
+    if not ticket_generator:
+        raise HTTPException(
+            status_code=404,
+            detail="Ticket generator not found.",
+        )
+    if ticket_generator.product_id != product_id:
+        raise HTTPException(
+            status_code=404,
+            detail="This Ticket generator is not related to this product.",
+        )
     ticket = await cruds_cdr.get_ticket_by_secret(db=db, secret=secret)
     if not ticket:
         raise HTTPException(
             status_code=404,
             detail="Ticket not found.",
         )
-    if ticket.product_variant.product_id != product_id:
+    if ticket.generator_id != generator_id:
         raise HTTPException(
             status_code=404,
             detail="This Ticket is not related to this product.",
@@ -2571,8 +2601,8 @@ async def generate_ticket_for_product(
             status_code=404,
             detail="Product not found.",
         )
-    ticketgen = models_cdr.ProductTicket(id=uuid4(), **ticket_data.model_dump())
-    cruds_cdr.create_product_ticket(db=db, ticket=ticketgen)
+    ticketgen = models_cdr.TicketGenerator(id=uuid4(), **ticket_data.model_dump())
+    cruds_cdr.create_ticket_generator(db=db, ticket=ticketgen)
 
     validated_purchases = await cruds_cdr.get_product_validated_purchases(
         db=db,
@@ -2600,13 +2630,13 @@ async def generate_ticket_for_product(
 
 
 @module.router.delete(
-    "/cdr/sellers/{seller_id}/products/{product_id}/tickets/{product_ticket_id}",
+    "/cdr/sellers/{seller_id}/products/{product_id}/tickets/{ticket_generator_id}",
     status_code=204,
 )
 async def delete_ticket_generator_for_product(
     seller_id: UUID,
     product_id: UUID,
-    product_ticket_id: UUID,
+    ticket_generator_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
@@ -2621,19 +2651,22 @@ async def delete_ticket_generator_for_product(
             status_code=404,
             detail="Product not found.",
         )
-    ticketgen = await cruds_cdr.get_product_ticket(
+    ticketgen = await cruds_cdr.get_ticket_generator(
         db=db,
-        product_ticket_id=product_ticket_id,
+        ticket_generator_id=ticket_generator_id,
     )
     if not ticketgen:
         raise HTTPException(
             status_code=404,
             detail="Product Ticket not found.",
         )
-    await cruds_cdr.delete_product_ticket(db=db, product_ticket_id=product_ticket_id)
+    await cruds_cdr.delete_ticket_generator(
+        db=db,
+        ticket_generator_id=ticket_generator_id,
+    )
     await cruds_cdr.delete_product_generated_tickets(
         db=db,
-        product_ticket_id=product_ticket_id,
+        ticket_generator_id=ticket_generator_id,
     )
     try:
         await db.commit()

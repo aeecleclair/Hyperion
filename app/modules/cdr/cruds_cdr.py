@@ -211,8 +211,8 @@ async def delete_product(
         ),
     )
     await db.execute(
-        delete(models_cdr.ProductTicket).where(
-            models_cdr.ProductTicket.product_id == product_id,
+        delete(models_cdr.TicketGenerator).where(
+            models_cdr.TicketGenerator.product_id == product_id,
         ),
     )
 
@@ -923,7 +923,7 @@ async def get_pending_validation_users(db: AsyncSession) -> Sequence[CoreUser]:
     return result_users.scalars().all()
 
 
-def create_product_ticket(db: AsyncSession, ticket: models_cdr.ProductTicket):
+def create_ticket_generator(db: AsyncSession, ticket: models_cdr.TicketGenerator):
     db.add(ticket)
 
 
@@ -942,29 +942,29 @@ async def get_product_validated_purchases(
     return result.scalars().all()
 
 
-async def get_product_ticket(
+async def get_ticket_generator(
     db: AsyncSession,
-    product_ticket_id: UUID,
-) -> models_cdr.ProductTicket | None:
+    ticket_generator_id: UUID,
+) -> models_cdr.TicketGenerator | None:
     result = await db.execute(
-        select(models_cdr.ProductTicket).where(
-            models_cdr.ProductTicket.id == product_ticket_id,
+        select(models_cdr.TicketGenerator).where(
+            models_cdr.TicketGenerator.id == ticket_generator_id,
         ),
     )
     return result.scalars().first()
 
 
-async def delete_product_ticket(db: AsyncSession, product_ticket_id: UUID):
+async def delete_ticket_generator(db: AsyncSession, ticket_generator_id: UUID):
     await db.execute(
-        delete(models_cdr.ProductTicket).where(
-            models_cdr.ProductTicket.id == product_ticket_id,
+        delete(models_cdr.TicketGenerator).where(
+            models_cdr.TicketGenerator.id == ticket_generator_id,
         ),
     )
 
 
-async def delete_product_generated_tickets(db: AsyncSession, product_ticket_id: UUID):
+async def delete_product_generated_tickets(db: AsyncSession, ticket_generator_id: UUID):
     await db.execute(
         delete(models_cdr.Ticket).where(
-            models_cdr.Ticket.generator_id == product_ticket_id,
+            models_cdr.Ticket.generator_id == ticket_generator_id,
         ),
     )
