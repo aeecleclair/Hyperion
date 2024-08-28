@@ -122,7 +122,8 @@ class WebsocketConnectionManager:
         Asyncio task callback to remove the task from the listening_tasks dict
         The method is called after the listening task is done or cancelled
         """
-        self.listening_tasks.pop(room_id)
+        self.listening_tasks.pop(room_id, None)
+        self.connections.pop(room_id, None)
         hyperion_error_logger.info(
             f"Websocket: unsubscribed broadcaster from channel {room_id} for worker {os.getpid()}",
         )

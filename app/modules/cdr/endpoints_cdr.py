@@ -1897,6 +1897,16 @@ async def create_curriculum_membership(
             status_code=403,
             detail="You can't remove a curriculum to another user.",
         )
+
+    wanted_curriculum = await cruds_cdr.get_curriculum_by_id(
+        db=db,
+        curriculum_id=curriculum_id,
+    )
+    if not wanted_curriculum:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid curriculum_id",
+        )
     db_user = await get_user_by_id(db=db, user_id=user_id)
     if not db_user:
         raise HTTPException(
@@ -1942,7 +1952,7 @@ async def create_curriculum_membership(
                 message=schemas_cdr.NewUserWSMessageModel(
                     data=schemas_cdr.CdrUser(
                         curriculum=schemas_cdr.CurriculumComplete(
-                            **curriculum.__dict__,
+                            **wanted_curriculum.__dict__,
                         ),
                         **db_user.__dict__,
                     ),
