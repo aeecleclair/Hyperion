@@ -192,7 +192,7 @@ class Settings(BaseSettings):
 
     # Hyperion follows Semantic Versioning
     # https://semver.org/
-    HYPERION_VERSION: str = "2.9.2"
+    HYPERION_VERSION: str = "2.9.3"
     MINIMAL_TITAN_VERSION_CODE: int = 113
 
     ######################################
