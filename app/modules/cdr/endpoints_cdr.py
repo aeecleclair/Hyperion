@@ -280,11 +280,7 @@ async def update_cdr_user(
                         curriculum=schemas_cdr.CurriculumComplete(
                             **curriculum.__dict__,
                         ),
-                        name=user_db.name,
-                        firstname=user_db.firstname,
-                        nickname=user_db.nickname,
-                        email=user_db.email,
-                        id=user_db.id,
+                        **user_db.__dict__,
                     ),
                 ),
                 room_id=HyperionWebsocketsRoom.CDR,
@@ -1948,11 +1944,7 @@ async def create_curriculum_membership(
                         curriculum=schemas_cdr.CurriculumComplete(
                             **curriculum.__dict__,
                         ),
-                        name=db_user.name,
-                        firstname=db_user.firstname,
-                        nickname=db_user.nickname,
-                        email=db_user.email,
-                        id=db_user.id,
+                        **db_user.__dict__,
                     ),
                 ),
                 room_id=HyperionWebsocketsRoom.CDR,
@@ -2022,11 +2014,7 @@ async def update_curriculum_membership(
                         curriculum=schemas_cdr.CurriculumComplete(
                             **curriculum.__dict__,
                         ),
-                        name=db_user.name,
-                        firstname=db_user.firstname,
-                        nickname=db_user.nickname,
-                        email=db_user.email,
-                        id=db_user.id,
+                        **db_user.__dict__,
                     ),
                 ),
                 room_id=HyperionWebsocketsRoom.CDR,
@@ -2092,14 +2080,7 @@ async def delete_curriculum_membership(
         try:
             await ws_manager.send_message_to_room(
                 message=schemas_cdr.UpdateUserWSMessageModel(
-                    data=schemas_cdr.CdrUser(
-                        curriculum=None,
-                        name=db_user.name,
-                        firstname=db_user.firstname,
-                        nickname=db_user.nickname,
-                        email=db_user.email,
-                        id=db_user.id,
-                    ),
+                    data=schemas_cdr.CdrUser(curriculum=None, **db_user.__dict__),
                 ),
                 room_id=HyperionWebsocketsRoom.CDR,
             )
