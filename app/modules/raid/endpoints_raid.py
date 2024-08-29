@@ -376,7 +376,7 @@ async def delete_all_teams(
 
 
 @module.router.post(
-    "/raid/document/{document_type}/",
+    "/raid/document/{document_type}",
     response_model=schemas_raid.DocumentCreation,
     status_code=201,
 )
