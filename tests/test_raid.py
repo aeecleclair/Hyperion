@@ -276,7 +276,7 @@ def test_upload_document(client: TestClient):
     file_content = b"test document content"
     files = {"file": ("test.pdf", file_content, "application/pdf")}
     response = client.post(
-        "/raid/document",
+        "/raid/document/idCard",
         files=files,
         headers={"Authorization": f"Bearer {token_simple}"},
     )
@@ -299,7 +299,7 @@ def test_read_document_participant_not_found(client: TestClient):
     test_file_content = b"orphan document content"
     files = {"file": ("orphan.pdf", test_file_content, "application/pdf")}
     upload_response = client.post(
-        "/raid/document",
+        "/raid/document/idCard",
         files=files,
         headers={"Authorization": f"Bearer {token_raid_admin}"},
     )
