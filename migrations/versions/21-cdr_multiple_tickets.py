@@ -39,7 +39,8 @@ def upgrade() -> None:
     op.drop_column("cdr_product", "ticket_expiration")
     op.drop_column("cdr_product", "generate_ticket")
     op.drop_column("cdr_product", "ticket_max_use")
-    op.add_column("cdr_ticket", sa.Column("generator_id", sa.Uuid(), nullable=True))
+    op.add_column("cdr_ticket", sa.Column("generator_id", sa.Uuid(), nullable=False))
+    op.add_column("cdr_ticket", sa.Column("name", sa.String(), nullable=False))
     with op.batch_alter_table("cdr_ticket") as batch_op:
         batch_op.create_unique_constraint(
             "ticket_secret_unique",
