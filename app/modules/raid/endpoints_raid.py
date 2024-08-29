@@ -388,11 +388,12 @@ async def delete_all_teams(
 
 
 @module.router.post(
-    "/raid/document",
+    "/raid/document/{document_type}/",
     response_model=schemas_raid.DocumentCreation,
     status_code=201,
 )
 async def upload_document(
+    document_type: DocumentType,
     file: UploadFile = File(...),
     request_id: str = Depends(get_request_id),
     user: models_core.CoreUser = Depends(is_user),
@@ -421,12 +422,24 @@ async def upload_document(
         uploaded_at=datetime.now(UTC).date(),
         validation=DocumentValidation.pending,
         id=document_id,
-        # Default values, updated with the document assignation
         name=file.filename,
-        type=DocumentType.idCard,
+        type=document_type,
     )
 
     await cruds_raid.create_document(model_document, db)
+    document_key = ""
+    match document_type:
+        case DocumentType.idCard:
+            document_key = "id_card_id"
+        case DocumentType.medicalCertificate:
+            document_key = "medical_certificate_id"
+        case DocumentType.studentCard:
+            document_key = "student_card_id"
+        case DocumentType.raidRules:
+            document_key = "raid_rules_id"
+        case DocumentType.parentAuthorization:
+            document_key = "parent_authorization_id"
+    await cruds_raid.assign_document(user.id, document_id, document_key, db)
 
     return schemas_raid.DocumentCreation(id=document_id)
 
