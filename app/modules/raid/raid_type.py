@@ -17,6 +17,7 @@ class Size(str, Enum):  # for the T-shirt and the bike
     M = "M"
     L = "L"
     XL = "XL"
+    None_ = "None"
 
 
 class MeetingPlace(str, Enum):  # place of meeting for the raid

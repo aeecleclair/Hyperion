@@ -171,13 +171,17 @@ async def post_update_actions(
     db: AsyncSession,
     drive_file_manager: DriveFileManager,
 ) -> None:
-    if team:
-        if team.validation_progress == 100:
-            await set_team_number(team, db)
-            all_teams = await cruds_raid.get_all_validated_teams(db)
-            if all_teams:
-                await write_teams_csv(all_teams, db, drive_file_manager)
-        await save_team_info(team, db, drive_file_manager)
+    try:
+        if team:
+            if team.validation_progress == 100:
+                await set_team_number(team, db)
+                all_teams = await cruds_raid.get_all_validated_teams(db)
+                if all_teams:
+                    await write_teams_csv(all_teams, db, drive_file_manager)
+            await save_team_info(team, db, drive_file_manager)
+    except Exception:
+        hyperion_error_logger.exception("Error while creating pdf")
+        return None
 
 
 async def save_security_file(
