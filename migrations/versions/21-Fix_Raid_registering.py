@@ -24,7 +24,7 @@ def upgrade() -> None:
     with op.batch_alter_table("raid_participant") as batch_op:
         batch_op.alter_column(
             "bike_size",
-            existing_type=sa.Enum("XS", "S", "M", "L", "XL", name="size"),
+            existing_type=sa.Enum("XS", "S", "M", "L", "XL", "None_", name="size"),
             type_=sa.VARCHAR(length=2),
             existing_nullable=True,
         )
