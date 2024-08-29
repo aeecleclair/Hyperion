@@ -326,9 +326,8 @@ class RAIDRegisteringAuthClient(BaseAuthClient):
     # See app.utils.types.scopes_type.ScopeType for possible values
     # WARNING: to be able to use openid connect, `ScopeType.openid` should always be allowed
     allowed_scopes: set[ScopeType | str] = {ScopeType.API}
-    # Restrict the authentication to this client to specific Hyperion groups.
-    # When set to `None`, users from any group can use the auth client
-    allowed_groups: list[GroupType] | None = None
+
+    allow_external_users: bool = True
 
 
 class SiarnaqAuthClient(BaseAuthClient):
