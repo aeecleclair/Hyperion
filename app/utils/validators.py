@@ -5,8 +5,6 @@ See https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
 
 import phonenumbers
 
-from app.types.exceptions import PhoneNumberValidationError
-
 
 def password_validator(password: str) -> str:
     """
