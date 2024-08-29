@@ -544,8 +544,9 @@ async def set_security_file(
     if participant.security_file_id:
         # The participant already has a security file
         # We want to delete it to replace it by the new one
-        await cruds_raid.delete_security_file(
+        await cruds_raid.update_security_file(
             security_file_id=participant.security_file_id,
+            security_file=security_file,
             db=db,
         )
 
