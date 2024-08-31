@@ -2410,6 +2410,18 @@ async def update_status(
 
 
 @module.router.get(
+    "/cdr/users/me/tickets/",
+    response_model=list[schemas_cdr.Ticket],
+    status_code=200,
+)
+async def get_my_tickets(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user),
+):
+    return await cruds_cdr.get_tickets_of_user(db=db, user_id=user.id)
+
+
+@module.router.get(
     "/cdr/users/{user_id}/tickets/",
     response_model=list[schemas_cdr.Ticket],
     status_code=200,
@@ -2428,19 +2440,6 @@ async def get_tickets_of_user(
             detail="You can't get another user tickets.",
         )
     return await cruds_cdr.get_tickets_of_user(db=db, user_id=user_id)
-
-
-@module.router.get(
-    "/cdr/users/me/tickets/",
-    response_model=list[schemas_cdr.Ticket],
-    status_code=200,
-)
-async def get_my_tickets(
-    user_id: str,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
-):
-    return await cruds_cdr.get_tickets_of_user(db=db, user_id=user.id)
 
 
 @module.router.get(
