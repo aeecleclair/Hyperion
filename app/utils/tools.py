@@ -1,7 +1,9 @@
+import bisect
 import logging
 import os
 import re
 import secrets
+import unicodedata
 from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, TypeVar
@@ -80,32 +82,33 @@ def sort_user(
     Search for users using Fuzzy String Matching
 
     `query` will be compared against `users` name, firstname and nickname.
+    Accents will be ignored.
     The size of the answer can be limited using `limit` parameter.
 
-    Use Jaro-Winkler algorithm from Jellyfish library
+    Use Jaro-Winkler algorithm from Jellyfish library.
     """
 
-    scored: list[tuple[CoreUser, float]] = [
-        (
-            user,
-            max(
-                jaro_winkler_similarity(query, user.firstname),
-                jaro_winkler_similarity(query, user.name),
-                jaro_winkler_similarity(query, f"{user.firstname} {user.name}"),
-                jaro_winkler_similarity(query, f"{user.name} {user.firstname}"),
-                jaro_winkler_similarity(query, user.nickname) if user.nickname else 0,
-            ),
+    def unaccent(s: str) -> str:
+        return unicodedata.normalize("NFKD", s).encode("ASCII", "ignore").decode("utf8")
+
+    query = unaccent(query)
+    scored: list[tuple[CoreUser, float]] = []
+    for user in users:
+        firstname = unaccent(user.firstname)
+        name = unaccent(user.name)
+        nickname = unaccent(user.nickname) if user.nickname else None
+        score = max(
+            jaro_winkler_similarity(query, firstname),
+            jaro_winkler_similarity(query, name),
+            jaro_winkler_similarity(query, f"{firstname} {name}"),
+            jaro_winkler_similarity(query, f"{name} {firstname}"),
+            jaro_winkler_similarity(query, nickname) if nickname else 0,
         )
-        for user in users
-    ]
+        bisect.insort(scored, (user, score), key=(lambda s: s[1]))
+        if len(scored) > limit:
+            scored.pop(0)
 
-    results = []
-    for _ in range(min(limit, len(scored))):
-        best_user = max(scored, key=lambda r: r[1])
-        scored.pop(scored.index(best_user))
-        results.append(best_user[0])
-
-    return results
+    return [user for user, _ in reversed(scored)]
 
 
 async def is_group_id_valid(group_id: str, db: AsyncSession) -> bool:
