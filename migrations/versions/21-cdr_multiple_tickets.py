@@ -67,7 +67,7 @@ def upgrade() -> None:
     product_t = sa.Table(
         "cdr_product",
         sa.MetaData(),
-        sa.Column("id", sa.String(), nullable=False),
+        sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("name_fr", sa.String(), nullable=False),
         sa.Column("ticket_max_use", sa.Integer(), nullable=True),
         sa.Column("ticket_expiration", TZDateTime(), nullable=True),
