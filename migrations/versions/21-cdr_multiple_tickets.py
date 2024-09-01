@@ -93,7 +93,7 @@ def upgrade() -> None:
         if product.generate_ticket:
             conn.execute(
                 generator_t.insert().values(
-                    id=str(uuid.uuid4()),
+                    id=uuid.uuid4(),
                     product_id=product.id,
                     name=product.name_fr,
                     max_use=product.ticket_max_use,
