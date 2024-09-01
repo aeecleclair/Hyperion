@@ -31,6 +31,7 @@ from app.modules.raid.utils.utils_raid import (
 )
 from app.types.content_type import ContentType
 from app.types.module import Module
+from app.utils.google_api.google_api import DriveGoogleAPI
 from app.utils.tools import (
     get_core_data,
     get_file_from_data,
@@ -121,6 +122,7 @@ async def update_participant(
     user: models_core.CoreUser = Depends(is_user),
     db: AsyncSession = Depends(get_db),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Update a participant
@@ -213,7 +215,12 @@ async def update_participant(
 
     await cruds_raid.update_participant(participant_id, participant, is_minor, db)
     team = await cruds_raid.get_team_by_participant_id(participant_id, db)
-    await post_update_actions(team, db, drive_file_manager)
+    await post_update_actions(
+        team,
+        db,
+        drive_file_manager,
+        settings=settings,
+    )
 
 
 @module.router.post(
@@ -226,6 +233,7 @@ async def create_team(
     user: models_core.CoreUser = Depends(is_user),
     db: AsyncSession = Depends(get_db),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Create a team
@@ -248,7 +256,12 @@ async def create_team(
     await cruds_raid.create_team(db_team, db)
     # We need to get the team from the db to have access to relationships
     created_team = await cruds_raid.get_team_by_id(team_id=db_team.id, db=db)
-    await post_update_actions(created_team, db, drive_file_manager)
+    await post_update_actions(
+        created_team,
+        db,
+        drive_file_manager,
+        settings=settings,
+    )
     return created_team
 
 
@@ -320,6 +333,7 @@ async def update_team(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Update a team
@@ -331,7 +345,12 @@ async def update_team(
         raise HTTPException(status_code=403, detail="You can only edit your own team.")
     await cruds_raid.update_team(team_id, team, db)
     updated_team = await cruds_raid.get_team_by_id(team_id, db)
-    await post_update_actions(updated_team, db, drive_file_manager)
+    await post_update_actions(
+        updated_team,
+        db,
+        drive_file_manager,
+        settings=settings,
+    )
 
 
 @module.router.delete(
@@ -342,7 +361,7 @@ async def delete_team(
     team_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.raid_admin)),
-    drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Delete a team
@@ -354,11 +373,12 @@ async def delete_team(
     await cruds_raid.delete_team(team_id, db)
     # We will try to delete PDF associated with the team from the Google Drive
     if team.file_id:
-        drive_file_manager.delete_file(team.file_id)
-        if team.captain.security_file.file_id:
-            drive_file_manager.delete_file(team.captain.security_file.file_id)
-        if team.second and team.second.security_file.file_id:
-            drive_file_manager.delete_file(team.second.security_file.file_id)
+        async with DriveGoogleAPI(db, settings) as google_api:
+            google_api.delete_file(team.file_id)
+            if team.captain.security_file.file_id:
+                google_api.delete_file(team.captain.security_file.file_id)
+            if team.second and team.second.security_file.file_id:
+                google_api.delete_file(team.second.security_file.file_id)
 
 
 @module.router.delete(
@@ -493,13 +513,19 @@ async def validate_document(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.raid_admin)),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Validate a document
     """
     await cruds_raid.update_document_validation(document_id, validation, db)
     team = await cruds_raid.get_team_by_participant_id(user.id, db)
-    await post_update_actions(team, db, drive_file_manager)
+    await post_update_actions(
+        team,
+        db,
+        drive_file_manager,
+        settings=settings,
+    )
 
 
 @module.router.post(
@@ -513,6 +539,7 @@ async def set_security_file(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Confirm security file
@@ -552,8 +579,14 @@ async def set_security_file(
         team.number,
         db,
         drive_file_manager,
+        settings,
     )
-    await post_update_actions(team, db, drive_file_manager)
+    await post_update_actions(
+        team,
+        db,
+        drive_file_manager,
+        settings=settings,
+    )
     return created_security_file
 
 
@@ -566,13 +599,22 @@ async def confirm_payment(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.raid_admin)),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Confirm payment manually
     """
     await cruds_raid.confirm_payment(participant_id, db)
-    team = await cruds_raid.get_team_by_participant_id(participant_id, db)
-    await post_update_actions(team, db, drive_file_manager)
+    team = await cruds_raid.get_team_by_participant_id(
+        participant_id,
+        db,
+    )
+    await post_update_actions(
+        team,
+        db,
+        drive_file_manager,
+        settings=settings,
+    )
 
 
 @module.router.post(
@@ -584,6 +626,7 @@ async def confirm_t_shirt_payment(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.raid_admin)),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Confirm T shirt payment
@@ -597,7 +640,12 @@ async def confirm_t_shirt_payment(
         raise HTTPException(status_code=400, detail="T shirt size not set.")
     await cruds_raid.confirm_t_shirt_payment(participant_id, db)
     team = await cruds_raid.get_team_by_participant_id(participant_id, db)
-    await post_update_actions(team, db, drive_file_manager)
+    await post_update_actions(
+        team,
+        db,
+        drive_file_manager,
+        settings=settings,
+    )
 
 
 @module.router.post(
@@ -609,6 +657,7 @@ async def validate_attestation_on_honour(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Validate attestation on honour
@@ -617,7 +666,12 @@ async def validate_attestation_on_honour(
         raise HTTPException(status_code=403, detail="You are not the participant")
     await cruds_raid.validate_attestation_on_honour(participant_id, db)
     team = await cruds_raid.get_team_by_participant_id(participant_id, db)
-    await post_update_actions(team, db, drive_file_manager)
+    await post_update_actions(
+        team,
+        db,
+        drive_file_manager,
+        settings=settings,
+    )
 
 
 @module.router.post(
@@ -664,6 +718,7 @@ async def join_team(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Join a team
@@ -682,7 +737,8 @@ async def join_team(
             raise HTTPException(status_code=403, detail="You are already in a team.")
 
         if user_team.file_id:
-            drive_file_manager.delete_file(user_team.file_id)
+            async with DriveGoogleAPI(db, settings) as google_api:
+                google_api.delete_file(user_team.file_id)
         await cruds_raid.delete_team(user_team.id, db)
 
     team = await cruds_raid.get_team_by_id(invite_token.team_id, db)
@@ -700,7 +756,12 @@ async def join_team(
         )
 
     await cruds_raid.update_team_second_id(team.id, user.id, db)
-    await post_update_actions(team, db, drive_file_manager)
+    await post_update_actions(
+        team,
+        db,
+        drive_file_manager,
+        settings=settings,
+    )
     await cruds_raid.delete_invite_token(invite_token.id, db)
 
 
@@ -715,6 +776,7 @@ async def kick_team_member(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.raid_admin)),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Leave a team
@@ -736,7 +798,12 @@ async def kick_team_member(
     elif team.second_id != participant_id:
         raise HTTPException(status_code=404, detail="Participant not found.")
     await cruds_raid.update_team_second_id(team_id, None, db)
-    await post_update_actions(team, db, drive_file_manager)
+    await post_update_actions(
+        team,
+        db,
+        drive_file_manager,
+        settings=settings,
+    )
     return await cruds_raid.get_team_by_id(team_id, db)
 
 
@@ -751,6 +818,7 @@ async def merge_teams(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.raid_admin)),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Merge two teams
@@ -785,8 +853,14 @@ async def merge_teams(
     await cruds_raid.update_team_second_id(team1_id, team2.captain_id, db)
     await cruds_raid.delete_team(team2_id, db)
     if team2.file_id:
-        drive_file_manager.delete_file(team2.file_id)
-    await post_update_actions(team1, db, drive_file_manager)
+        async with DriveGoogleAPI(db, settings) as google_api:
+            google_api.delete_file(team2.file_id)
+    await post_update_actions(
+        team1,
+        db,
+        drive_file_manager,
+        settings=settings,
+    )
     return await cruds_raid.get_team_by_id(team1_id, db)
 
 
@@ -814,6 +888,7 @@ async def update_raid_information(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.raid_admin)),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Update raid information
@@ -863,6 +938,7 @@ async def update_raid_information(
                     team.number,
                     db,
                     drive_file_manager,
+                    settings,
                 )
 
 
@@ -875,6 +951,7 @@ async def update_drive_folders(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.raid_admin)),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Update drive folders
@@ -886,7 +963,7 @@ async def update_drive_folders(
         security_folder_id=None,
     )
     await set_core_data(schemas_folders, db)
-    await drive_file_manager.init_folders(db=db)
+    await drive_file_manager.init_folders(db=db, settings=settings)
 
 
 @module.router.get(

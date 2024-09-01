@@ -192,16 +192,14 @@ def get_notification_tool(
     )
 
 
-def get_drive_file_manager(
-    settings: Settings = Depends(get_settings),
-) -> DriveFileManager:
+def get_drive_file_manager() -> DriveFileManager:
     """
     Dependency that returns the drive file manager.
     """
     global drive_file_manage
 
     if drive_file_manage is None:
-        drive_file_manage = DriveFileManager(settings=settings)
+        drive_file_manage = DriveFileManager()
 
     return drive_file_manage
 
