@@ -3,7 +3,9 @@
 Create Date: 2024-08-26 21:33:44.790403
 """
 
+import uuid
 from collections.abc import Sequence
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -33,14 +35,98 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["product_id"], ["cdr_product.id"]),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.execute(
-        "INSERT INTO cdr_ticket_generator (product_id, name, max_use, expiration) SELECT id, name_fr, ticket_max_use, ticket_expiration FROM cdr_product WHERE generate_ticket==True",
+
+    op.add_column(
+        "cdr_ticket",
+        sa.Column(
+            "generator_id",
+            sa.Uuid(),
+            nullable=False,
+            server_default="00000000-0000-0000-0000-000000000000",
+        ),
     )
+    op.add_column(
+        "cdr_ticket",
+        sa.Column(
+            "name",
+            sa.String(),
+            nullable=False,
+            server_default="",
+        ),
+    )
+
+    generator_t = sa.Table(
+        "cdr_ticket_generator",
+        sa.MetaData(),
+        sa.Column("id", sa.String(), nullable=False),
+        sa.Column("product_id", sa.String(), nullable=False),
+        sa.Column("name", sa.String(), nullable=False),
+        sa.Column("max_use", sa.Integer(), nullable=False),
+        sa.Column("expiration", TZDateTime(), nullable=False),
+    )
+    product_t = sa.Table(
+        "cdr_product",
+        sa.MetaData(),
+        sa.Column("id", sa.String(), nullable=False),
+        sa.Column("name_fr", sa.String(), nullable=False),
+        sa.Column("ticket_max_use", sa.Integer(), nullable=True),
+        sa.Column("ticket_expiration", TZDateTime(), nullable=True),
+        sa.Column("generate_ticket", sa.Boolean(), nullable=False),
+    )
+    ticket_t = sa.Table(
+        "cdr_ticket",
+        sa.MetaData(),
+        sa.Column("id", sa.String(), nullable=False),
+        sa.Column("generator_id", sa.String(), nullable=False),
+        sa.Column("product_variant_id", sa.String(), nullable=False),
+        sa.Column("name", sa.String(), nullable=False),
+    )
+    product_variant_t = sa.Table(
+        "cdr_product_variant",
+        sa.MetaData(),
+        sa.Column("id", sa.String(), nullable=False),
+        sa.Column("product_id", sa.String(), nullable=False),
+    )
+
+    conn = op.get_bind()
+    for product in conn.execute(product_t.select()):
+        if product.generate_ticket:
+            conn.execute(
+                generator_t.insert().values(
+                    id=str(uuid.uuid4()),
+                    product_id=product.id,
+                    name=product.name_fr,
+                    max_use=product.ticket_max_use,
+                    expiration=product.ticket_expiration,
+                ),
+            )
+    product_variants = conn.execute(product_variant_t.select()).fetchall()
+    generators = conn.execute(generator_t.select()).fetchall()
+    for ticket in conn.execute(ticket_t.select()):
+        product_variant = next(
+            variant if variant.id == ticket.product_variant_id else None
+            for variant in product_variants
+        )
+        if product_variant is None:
+            continue
+        generator = next(
+            generator if generator.product_id == product_variant.product_id else None
+            for generator in generators
+        )
+        if generator is None:
+            continue
+        conn.execute(
+            ticket_t.update()
+            .where(ticket_t.columns.id == ticket.id)
+            .values(
+                generator_id=generator.id,
+                name=generator.name,
+            ),
+        )
+
     op.drop_column("cdr_product", "ticket_expiration")
     op.drop_column("cdr_product", "generate_ticket")
     op.drop_column("cdr_product", "ticket_max_use")
-    op.add_column("cdr_ticket", sa.Column("generator_id", sa.Uuid(), nullable=False))
-    op.add_column("cdr_ticket", sa.Column("name", sa.String(), nullable=False))
     with op.batch_alter_table("cdr_ticket") as batch_op:
         batch_op.create_unique_constraint(
             "ticket_secret_unique",
@@ -82,11 +168,111 @@ def pre_test_upgrade(
     alembic_runner: "MigrationContext",
     alembic_connection: sa.Connection,
 ) -> None:
-    pass
+    id_user = "63bc3d6b-9fff-4da1-80ad-795896ad3513"
+    id_product = "63bc3d6b-9fff-4da1-80ad-795896ad3514"
+    id_product_variant = "63bc3d6b-9fff-4da1-80ad-795896ad3515"
+    id_ticket = "63bc3d6b-9fff-4da1-80ad-795896ad3516"
+    id_seller = "63bc3d6b-9fff-4da1-80ad-795896ad3518"
+    id_curriculum = "63bc3d6b-9fff-4da1-80ad-795896ad3519"
+    alembic_runner.insert_into(
+        "core_user",
+        {
+            "id": id_user,
+            "email": "demo@test.fr",
+            "password_hash": "password_hash",
+            "name": "name",
+            "firstname": "firstname",
+            "nickname": "nickname",
+            "birthday": None,
+            "promo": 21,
+            "phone": "phone",
+            "floor": "Autre",
+            "created_on": None,
+            "external": False,
+        },
+    )
+    alembic_runner.insert_into(
+        "cdr_curriculum",
+        {
+            "id": id_curriculum,
+            "name": "name",
+        },
+    )
+    alembic_runner.insert_into(
+        "cdr_seller",
+        {
+            "id": id_seller,
+            "name": "name",
+            "group_id": "53a669d6-84b1-4352-8d7c-421c1fbd9c6a",
+            "order": 1,
+        },
+    )
+    alembic_runner.insert_into(
+        "cdr_product",
+        {
+            "id": id_product,
+            "seller_id": id_seller,
+            "name_fr": "name_fr",
+            "name_en": None,
+            "available_online": True,
+            "generate_ticket": True,
+            "ticket_max_use": 1,
+            "ticket_expiration": datetime(2024, 9, 25, 21, 33, tzinfo=UTC),
+        },
+    )
+    alembic_runner.insert_into(
+        "cdr_product_variant",
+        {
+            "id": id_product_variant,
+            "product_id": id_product,
+            "name_fr": "name_fr",
+            "price": 0,
+            "enabled": True,
+            "unique": False,
+        },
+    )
+    alembic_runner.insert_into(
+        "cdr_purchase",
+        {
+            "user_id": id_user,
+            "product_variant_id": id_product_variant,
+            "quantity": 1,
+            "validated": True,
+            "purchased_on": datetime(2024, 8, 26, 21, 33, tzinfo=UTC),
+        },
+    )
+    alembic_runner.insert_into(
+        "cdr_ticket",
+        {
+            "id": id_ticket,
+            "secret": "secret",
+            "product_variant_id": id_product_variant,
+            "user_id": id_user,
+            "scan_left": 1,
+            "tags": "",
+            "expiration": datetime(2024, 9, 25, 21, 33, tzinfo=UTC),
+        },
+    )
 
 
 def test_upgrade(
     alembic_runner: "MigrationContext",
     alembic_connection: sa.Connection,
 ) -> None:
-    pass
+    generator = alembic_connection.execute(
+        sa.text("SELECT * FROM cdr_ticket_generator"),
+    ).fetchall()
+    tickets = alembic_connection.execute(
+        sa.text("SELECT * FROM cdr_ticket"),
+    ).fetchall()
+    assert len(generator) == 1
+    assert len(tickets) == 1
+    assert generator[0].name == "name_fr"
+    assert tickets[0].name == "name_fr"
+    assert tickets[0].generator_id == generator[0].id
+    assert tickets[0].scan_left == 1
+    assert tickets[0].secret == "secret"  # noqa: S105
+    assert tickets[0].tags == ""
+    assert tickets[0].expiration == "2024-09-25 21:33:00.000000"
+    assert generator[0].max_use == 1
+    assert generator[0].expiration == "2024-09-25 21:33:00.000000"
