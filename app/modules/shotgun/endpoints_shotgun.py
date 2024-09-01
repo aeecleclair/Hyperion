@@ -8,10 +8,14 @@ from fastapi import (
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core
+from app.core import models_core, schemas_core
+from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
+from app.core.payment.payment_tool import PaymentTool
 from app.dependencies import (
     get_db,
+    get_payment_tool,
+    get_settings,
     is_user_a_member_of,
 )
 from app.modules.shotgun import cruds_shotgun, models_shotgun, schemas_shotgun
@@ -179,7 +183,7 @@ async def get_sessions_by_id(
 @module.router.post(
     "/shotgun/organizers/{organizer_id}/sessions/",
     response_model=list[schemas_shotgun.SessionComplete],
-    status_code=204,
+    status_code=201,
 )
 async def create_session(
     organizer_id: UUID,
@@ -312,7 +316,7 @@ async def get_session_generators(
 @module.router.post(
     "/shotgun/organizers/{organizer_id}/sessions/{session_id}/generators/",
     response_model=list[schemas_shotgun.GeneratorComplete],
-    status_code=200,
+    status_code=201,
 )
 async def create_generator(
     organizer_id: UUID,
@@ -422,6 +426,111 @@ async def delete_generator(
             detail="No such generator or generator is unrelated to this session.",
         )
     await cruds_shotgun.delete_generator(db=db, generator_id=generator_id)
+
+    try:
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+
+
+@module.router.get(
+    "/shotgun/organizers/{organizer_id}/sessions/{session_id}/purchases/",
+    status_code=200,
+    response_model=list[schemas_shotgun.PurchaseComplete],
+)
+async def get_session_purchases(
+    organizer_id: UUID,
+    session_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.AE)),
+):
+    organizer = await cruds_shotgun.get_organizer_by_id(
+        db=db,
+        organizer_id=organizer_id,
+    )
+    if not organizer:
+        raise HTTPException(
+            status_code=404,
+            detail="Organizer not found.",
+        )
+    if not (
+        organizer.group_id in [group.id for group in user.groups]
+        or is_user_member_of_an_allowed_group(user, [GroupType.admin])
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="User must be part of the organizer group.",
+        )
+    session = await cruds_shotgun.get_session_by_id(db=db, session_id=session_id)
+    if not session or organizer_id != session.id:
+        raise HTTPException(
+            status_code=404,
+            detail="No such session or session is unrelated to this organizer.",
+        )
+    return await cruds_shotgun.get_paid_session_purchases(db=db, session_id=session_id)
+
+
+@module.router.post(
+    "/shotgun/organizers/{organizer_id}/sessions/{session_id}/purchases/",
+    response_model=list[schemas_shotgun.PurchaseComplete],
+    status_code=200,
+)
+async def create_purchase(
+    organizer_id: UUID,
+    session_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+    payment_tool: PaymentTool = Depends(get_payment_tool),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.AE)),
+):
+    organizer = await cruds_shotgun.get_organizer_by_id(
+        db=db,
+        organizer_id=organizer_id,
+    )
+    if not organizer:
+        raise HTTPException(
+            status_code=404,
+            detail="Organizer not found.",
+        )
+    session = await cruds_shotgun.get_session_by_id_for_purchase(
+        db=db,
+        session_id=session_id,
+    )
+    if not session or organizer_id != session.id:
+        raise HTTPException(
+            status_code=404,
+            detail="No such session or session is unrelated to this organizer.",
+        )
+    if session.quantity <= 0:
+        raise HTTPException(
+            status_code=403,
+            detail="All tickets have been sold.",
+        )
+
+    await cruds_shotgun.remove_one_place_from_session(db=db, session_id=session_id)
+
+    user_schema = schemas_core.CoreUser(**user.__dict__)
+    checkout = await payment_tool.init_checkout(
+        module=module.root,
+        helloasso_slug="AEECL",
+        checkout_amount=session.price,
+        checkout_name="SHOTGUN - " + session.name,
+        redirection_uri=settings.SHOTGUN_PAYMENT_REDIRECTION_URL or "",
+        payer_user=user_schema,
+        db=db,
+    )
+    hyperion_error_logger.info(f"CDR: Logging Checkout id {checkout.id}")
+
+    db_purchase = models_shotgun.ShotgunPurchase(
+        id=uuid4(),
+        session_id=session_id,
+        user_id=user.id,
+        checkout_id=checkout.id,
+        purchased_on=datetime.now(UTC),
+        paid=False,
+    )
+    cruds_shotgun.create_purchase(db=db, purchase=db_purchase)
 
     try:
         await db.commit()

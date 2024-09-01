@@ -111,6 +111,7 @@ class Settings(BaseSettings):
     HELLOASSO_CLIENT_SECRET: str | None = None
 
     CDR_PAYMENT_REDIRECTION_URL: str | None = None
+    SHOTGUN_PAYMENT_REDIRECTION_URL: str | None = None
 
     # Drive configuration for the raid registering app
     RAID_DRIVE_REFRESH_TOKEN: str | None = None
