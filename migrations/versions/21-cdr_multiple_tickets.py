@@ -58,8 +58,8 @@ def upgrade() -> None:
     generator_t = sa.Table(
         "cdr_ticket_generator",
         sa.MetaData(),
-        sa.Column("id", sa.String(), nullable=False),
-        sa.Column("product_id", sa.String(), nullable=False),
+        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("product_id", sa.Uuid(), nullable=False),
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("max_use", sa.Integer(), nullable=False),
         sa.Column("expiration", TZDateTime(), nullable=False),
@@ -100,6 +100,15 @@ def upgrade() -> None:
                     expiration=product.ticket_expiration,
                 ),
             )
+    generator_t = sa.Table(
+        "cdr_ticket_generator",
+        sa.MetaData(),
+        sa.Column("id", sa.String(), nullable=False),
+        sa.Column("product_id", sa.String(), nullable=False),
+        sa.Column("name", sa.String(), nullable=False),
+        sa.Column("max_use", sa.Integer(), nullable=False),
+        sa.Column("expiration", TZDateTime(), nullable=False),
+    )
     product_variants = conn.execute(product_variant_t.select()).fetchall()
     generators = conn.execute(generator_t.select()).fetchall()
     for ticket in conn.execute(ticket_t.select()):
