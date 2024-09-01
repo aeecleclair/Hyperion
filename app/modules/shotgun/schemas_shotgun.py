@@ -7,12 +7,11 @@ from app.core.schemas_core import CoreGroupBase
 
 
 class OrganizerBase(BaseModel):
-    group_id: UUID
+    group_id: str
 
 
-class OrganizerComplete(BaseModel):
+class OrganizerComplete(OrganizerBase):
     id: UUID
-    group_id: UUID
     group: CoreGroupBase
 
     model_config = ConfigDict(from_attributes=True)
@@ -43,3 +42,12 @@ class GeneratorBase(BaseModel):
 class GeneratorComplete(GeneratorBase):
     id: UUID
     session_id: UUID
+
+
+class PurchaseComplete(BaseModel):
+    id: UUID
+    session_id: UUID
+    user_id: str
+    checkout_id: UUID
+    purchased_on: datetime
+    paid: bool

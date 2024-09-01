@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import delete, select, update
@@ -93,6 +94,30 @@ async def get_session_by_id(
     db: AsyncSession,
     session_id: UUID,
 ) -> models_shotgun.ShotgunSession | None:
+    await db.execute(
+        select(models_shotgun.ShotgunSession)
+        .where(
+            models_shotgun.ShotgunSession.id == session_id,
+        )
+        .with_for_update(),
+    )
+    result_outdated_purchases = await db.execute(
+        delete(models_shotgun.ShotgunPurchase).where(
+            models_shotgun.ShotgunPurchase.session_id == session_id,
+            models_shotgun.ShotgunPurchase.paid.is_(False),
+            models_shotgun.ShotgunPurchase.purchased_on + timedelta(minutes=16)
+            > datetime.now(UTC),
+        ),
+    )
+    await db.execute(
+        update(models_shotgun.ShotgunSession)
+        .where(models_shotgun.ShotgunSession.id == session_id)
+        .values(
+            quantity=models_shotgun.ShotgunSession.quantity
+            + result_outdated_purchases.rowcount,
+        ),
+    )
+    await db.commit()
     result = await db.execute(
         select(models_shotgun.ShotgunSession).where(
             models_shotgun.ShotgunSession.id == session_id,
@@ -188,6 +213,59 @@ async def delete_generator(db: AsyncSession, generator_id: UUID):
             models_shotgun.ShotgunTicketGenerator.id == generator_id,
         ),
     )
+
+
+async def get_session_by_id_for_purchase(
+    db: AsyncSession,
+    session_id: UUID,
+) -> models_shotgun.ShotgunSession | None:
+    await db.execute(
+        select(models_shotgun.ShotgunSession)
+        .where(
+            models_shotgun.ShotgunSession.id == session_id,
+        )
+        .with_for_update(),
+    )
+    result_outdated_purchases = await db.execute(
+        delete(models_shotgun.ShotgunPurchase).where(
+            models_shotgun.ShotgunPurchase.session_id == session_id,
+            models_shotgun.ShotgunPurchase.paid.is_(False),
+            models_shotgun.ShotgunPurchase.purchased_on + timedelta(minutes=16)
+            > datetime.now(UTC),
+        ),
+    )
+    await db.execute(
+        update(models_shotgun.ShotgunSession)
+        .where(models_shotgun.ShotgunSession.id == session_id)
+        .values(
+            quantity=models_shotgun.ShotgunSession.quantity
+            + result_outdated_purchases.rowcount,
+        ),
+    )
+    await db.commit()
+    result = await db.execute(
+        select(models_shotgun.ShotgunSession)
+        .where(
+            models_shotgun.ShotgunSession.id == session_id,
+        )
+        .with_for_update(),
+    )
+    return result.scalars().first()
+
+
+async def remove_one_place_from_session(
+    db: AsyncSession,
+    session_id: UUID,
+):
+    await db.execute(
+        update(models_shotgun.ShotgunSession)
+        .where(models_shotgun.ShotgunSession.id == session_id)
+        .values(quantity=models_shotgun.ShotgunSession.quantity - 1),
+    )
+
+
+def create_purchase(db: AsyncSession, purchase: models_shotgun.ShotgunPurchase):
+    db.add(purchase)
 
 
 def create_ticket(db: AsyncSession, ticket: models_shotgun.ShotgunTicket):
