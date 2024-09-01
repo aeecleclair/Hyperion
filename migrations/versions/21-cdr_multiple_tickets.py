@@ -168,12 +168,21 @@ def pre_test_upgrade(
     alembic_runner: "MigrationContext",
     alembic_connection: sa.Connection,
 ) -> None:
+    id_group = "53a669d6-84b1-4352-8d7c-421c1fbd9c6a"
     id_user = "63bc3d6b-9fff-4da1-80ad-795896ad3513"
     id_product = "63bc3d6b-9fff-4da1-80ad-795896ad3514"
     id_product_variant = "63bc3d6b-9fff-4da1-80ad-795896ad3515"
     id_ticket = "63bc3d6b-9fff-4da1-80ad-795896ad3516"
     id_seller = "63bc3d6b-9fff-4da1-80ad-795896ad3518"
     id_curriculum = "63bc3d6b-9fff-4da1-80ad-795896ad3519"
+    alembic_runner.insert_into(
+        "core_group",
+        {
+            "id": id_group,
+            "name": "name",
+        },
+    )
+
     alembic_runner.insert_into(
         "core_user",
         {
