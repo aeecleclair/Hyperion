@@ -281,7 +281,7 @@ def test_upgrade(
     assert tickets[0].name == "name_fr"
     assert tickets[0].generator_id == generator[0].id
     assert tickets[0].scan_left == 1
-    assert tickets[0].secret == "secret"  # noqa: S105
+    assert tickets[0].secret == "63bc3d6b-9fff-4da1-80ad-795896ad3520"  # noqa: S105
     assert tickets[0].tags == ""
     assert tickets[0].expiration == "2024-09-25 21:33:00.000000"
     assert generator[0].max_use == 1
