@@ -34,11 +34,14 @@ class GoogleAPI:
         "https://www.googleapis.com/auth/drive.readonly",
     ]
 
+    def is_google_api_configured(self, settings: Settings) -> bool:
+        return (
+            settings.GOOGLE_API_CLIENT_ID is not None
+            and settings.GOOGLE_API_CLIENT_SECRET is not None
+        )
+
     def _get_flow(self, settings: Settings) -> Flow:
-        if (
-            settings.GOOGLE_API_CLIENT_ID is None
-            or settings.GOOGLE_API_CLIENT_SECRET is None
-        ):
+        if not self.is_google_api_configured(settings):
             raise GoogleAPIMissingConfigInDotenvError
 
         client_config = {

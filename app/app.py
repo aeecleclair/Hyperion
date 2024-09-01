@@ -27,14 +27,16 @@ from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
 from app.core.log import LogConfig
 from app.dependencies import (
+    get_db,
     get_redis_client,
     get_websocket_connection_manager,
     init_and_get_db_engine,
 )
 from app.modules.module_list import module_list
-from app.types.exceptions import ContentHTTPException
+from app.types.exceptions import ContentHTTPException, GoogleAPIInvalidCredentialsError
 from app.types.sqlalchemy import Base
 from app.utils import initialization
+from app.utils.google_api.google_api import GoogleAPI
 from app.utils.redis import limiter
 
 if TYPE_CHECKING:
@@ -298,6 +300,18 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     # https://fastapi.tiangolo.com/advanced/events/
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator:
+        # Init Google API credentials
+        async for db in app.dependency_overrides.get(
+            get_db,
+            get_db,
+        )():
+            google_api = GoogleAPI()
+            try:
+                await google_api.get_credentials(db, settings)
+            except GoogleAPIInvalidCredentialsError:
+                # We expect this error to be raised if the credentials were never set before
+                pass
+
         ws_manager = app.dependency_overrides.get(
             get_websocket_connection_manager,
             get_websocket_connection_manager,
