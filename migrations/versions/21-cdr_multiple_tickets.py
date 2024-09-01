@@ -175,6 +175,7 @@ def pre_test_upgrade(
     id_ticket = "63bc3d6b-9fff-4da1-80ad-795896ad3516"
     id_seller = "63bc3d6b-9fff-4da1-80ad-795896ad3518"
     id_curriculum = "63bc3d6b-9fff-4da1-80ad-795896ad3519"
+    id_secret = "63bc3d6b-9fff-4da1-80ad-795896ad3520"  # noqa: S105
     alembic_runner.insert_into(
         "core_group",
         {
@@ -254,7 +255,7 @@ def pre_test_upgrade(
         "cdr_ticket",
         {
             "id": id_ticket,
-            "secret": "secret",
+            "secret": id_secret,
             "product_variant_id": id_product_variant,
             "user_id": id_user,
             "scan_left": 1,
