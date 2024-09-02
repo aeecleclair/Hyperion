@@ -20,7 +20,7 @@ from app.dependencies import (
     is_user_a_member_of,
 )
 from app.modules.raid import coredata_raid, cruds_raid, models_raid, schemas_raid
-from app.modules.raid.raid_type import DocumentType, DocumentValidation
+from app.modules.raid.raid_type import DocumentType, DocumentValidation, Size
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.modules.raid.utils.utils_raid import (
     get_participant,
@@ -147,21 +147,9 @@ async def update_participant(
 
     saved_participant = await get_participant(participant_id, db)
 
-    # We remove the t_shirt_size value, we will add it manually if the user want it,
-    # to be able to verify that the tshirt is not already paid
-    participant_dict = participant.model_dump(
-        exclude_none=True,
-        exclude={"t_shirt_size"},
-    )
-
-    # If the t_shirt_payment is not set, we can change the t_shirt_size
-    if not saved_participant.t_shirt_payment:
-        participant_dict["t_shirt_size"] = (
-            participant.t_shirt_size.value if participant.t_shirt_size else None
-        )
-    # If the t_shirt_payment is set, we can only change the t_shirt_size, but can not make it null
-    elif participant.t_shirt_size:
-        participant_dict["t_shirt_size"] = participant.t_shirt_size.value
+    # If the t_shirt_payment is set, we cannot remove the t_shirt_size
+    if saved_participant.t_shirt_payment and participant.t_shirt_size == Size.None_:
+        participant.t_shirt_size = saved_participant.t_shirt_size
 
     if participant.id_card_id:
         id_card_document = await cruds_raid.get_document_by_id(
@@ -223,7 +211,7 @@ async def update_participant(
                 detail="Security_file not found.",
             )
 
-    await cruds_raid.update_participant(participant_id, participant_dict, is_minor, db)
+    await cruds_raid.update_participant(participant_id, participant, is_minor, db)
     team = await cruds_raid.get_team_by_participant_id(participant_id, db)
     await post_update_actions(team, db, drive_file_manager)
 
@@ -388,11 +376,12 @@ async def delete_all_teams(
 
 
 @module.router.post(
-    "/raid/document",
+    "/raid/document/{document_type}",
     response_model=schemas_raid.DocumentCreation,
     status_code=201,
 )
 async def upload_document(
+    document_type: DocumentType,
     file: UploadFile = File(...),
     request_id: str = Depends(get_request_id),
     user: models_core.CoreUser = Depends(is_user),
@@ -421,12 +410,24 @@ async def upload_document(
         uploaded_at=datetime.now(UTC).date(),
         validation=DocumentValidation.pending,
         id=document_id,
-        # Default values, updated with the document assignation
         name=file.filename,
-        type=DocumentType.idCard,
+        type=document_type,
     )
 
     await cruds_raid.create_document(model_document, db)
+    document_key = ""
+    match document_type:
+        case DocumentType.idCard:
+            document_key = "id_card_id"
+        case DocumentType.medicalCertificate:
+            document_key = "medical_certificate_id"
+        case DocumentType.studentCard:
+            document_key = "student_card_id"
+        case DocumentType.raidRules:
+            document_key = "raid_rules_id"
+        case DocumentType.parentAuthorization:
+            document_key = "parent_authorization_id"
+    await cruds_raid.assign_document(user.id, document_id, document_key, db)
 
     return schemas_raid.DocumentCreation(id=document_id)
 
@@ -531,8 +532,9 @@ async def set_security_file(
     if participant.security_file_id:
         # The participant already has a security file
         # We want to delete it to replace it by the new one
-        await cruds_raid.delete_security_file(
+        await cruds_raid.update_security_file(
             security_file_id=participant.security_file_id,
+            security_file=security_file,
             db=db,
         )
 
@@ -587,7 +589,11 @@ async def confirm_t_shirt_payment(
     Confirm T shirt payment
     """
     participant = await cruds_raid.get_participant_by_id(participant_id, db)
-    if not participant or not participant.t_shirt_size:
+    if (
+        not participant
+        or not participant.t_shirt_size
+        or participant.t_shirt_size == Size.None_
+    ):
         raise HTTPException(status_code=400, detail="T shirt size not set.")
     await cruds_raid.confirm_t_shirt_payment(participant_id, db)
     team = await cruds_raid.get_team_by_participant_id(participant_id, db)
@@ -952,7 +958,11 @@ async def get_payment_url(
         if not participant.payment:
             price += raid_prices.student_price
             checkout_name += "Inscription Raid"
-        if participant.t_shirt_size and not participant.t_shirt_payment:
+        if (
+            participant.t_shirt_size
+            and participant.t_shirt_size != Size.None_
+            and not participant.t_shirt_payment
+        ):
             price += raid_prices.t_shirt_price
             if not participant.payment:
                 checkout_name += " + "
