@@ -390,6 +390,11 @@ async def delete_document(
     )
 
 
+async def get_all_purchases(db: AsyncSession) -> Sequence[models_cdr.Purchase]:
+    result = await db.execute(select(models_cdr.Purchase))
+    return result.scalars().all()
+
+
 async def get_purchases_by_user_id(
     db: AsyncSession,
     user_id: str,
@@ -699,6 +704,20 @@ async def get_actual_memberships_by_user_id(
         ),
     )
     return result.scalars().all()
+
+
+async def get_membership_by_user_id_and_membership_name(
+    db: AsyncSession,
+    user_id: str,
+    membership: schemas_cdr.AvailableAssociationMembership,
+) -> CoreAssociationMembership | None:
+    result = await db.execute(
+        select(CoreAssociationMembership).where(
+            CoreAssociationMembership.user_id == user_id
+            and CoreAssociationMembership.membership == membership,
+        ),
+    )
+    return result.scalars().first()
 
 
 async def get_membership_by_id(
