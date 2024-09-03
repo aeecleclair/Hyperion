@@ -2471,7 +2471,7 @@ async def create_membership(
 )
 async def update_membership(
     user_id: str,
-    membership: schemas_cdr.AvailableAssociationMembership,
+    membership: AvailableAssociationMembership,
     membership_edit: schemas_cdr.MembershipEdit,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),

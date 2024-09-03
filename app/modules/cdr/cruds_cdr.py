@@ -7,7 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.models_core import CoreAssociationMembership, CoreUser
-from app.modules.cdr import models_cdr, schemas_cdr
+from app.modules.cdr import models_cdr, schemas_cdr, types_cdr
+from app.types.membership import AvailableAssociationMembership
 
 
 async def get_cdr_users_curriculum(
@@ -709,7 +710,7 @@ async def get_actual_memberships_by_user_id(
 async def get_membership_by_user_id_and_membership_name(
     db: AsyncSession,
     user_id: str,
-    membership: schemas_cdr.AvailableAssociationMembership,
+    membership: AvailableAssociationMembership,
 ) -> CoreAssociationMembership | None:
     result = await db.execute(
         select(CoreAssociationMembership).where(
