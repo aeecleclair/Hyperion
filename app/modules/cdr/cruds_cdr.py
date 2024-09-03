@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.models_core import CoreAssociationMembership, CoreUser
-from app.modules.cdr import models_cdr, schemas_cdr, types_cdr
+from app.modules.cdr import models_cdr, schemas_cdr
 from app.types.membership import AvailableAssociationMembership
 
 
