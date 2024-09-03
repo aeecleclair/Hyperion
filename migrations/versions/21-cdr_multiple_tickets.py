@@ -77,7 +77,7 @@ def upgrade() -> None:
         "cdr_ticket",
         sa.MetaData(),
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("generator_id", sa.String(), nullable=False),
+        sa.Column("generator_id", sa.Uuid(), nullable=False),
         sa.Column("product_variant_id", sa.String(), nullable=False),
         sa.Column("name", sa.String(), nullable=False),
     )
@@ -100,17 +100,17 @@ def upgrade() -> None:
                     expiration=product.ticket_expiration,
                 ),
             )
-    generator_t = sa.Table(
+    generator_t_read = sa.Table(
         "cdr_ticket_generator",
         sa.MetaData(),
-        sa.Column("id", sa.String(), nullable=False),
+        sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("product_id", sa.String(), nullable=False),
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("max_use", sa.Integer(), nullable=False),
         sa.Column("expiration", TZDateTime(), nullable=False),
     )
     product_variants = conn.execute(product_variant_t.select()).fetchall()
-    generators = conn.execute(generator_t.select()).fetchall()
+    generators = conn.execute(generator_t_read.select()).fetchall()
     for ticket in conn.execute(ticket_t.select()):
         product_variant = next(
             variant if variant.id == ticket.product_variant_id else None
@@ -284,6 +284,8 @@ def test_upgrade(
     tickets = alembic_connection.execute(
         sa.text("SELECT * FROM cdr_ticket"),
     ).fetchall()
+    print(generator)
+    print(tickets)
     assert len(generator) == 1
     assert len(tickets) == 1
     assert generator[0].name == "name_fr"
