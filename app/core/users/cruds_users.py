@@ -303,9 +303,7 @@ async def fusion_users(
             kept_user_data = (
                 (
                     await db.execute(
-                        select(fk.parent.table)
-                        .where(fk.parent.column == user_kept_id)
-                        .with_for_update(),
+                        select(fk.parent.table).where(fk.parent.column == user_kept_id),
                     )
                 )
                 .scalars()
@@ -319,9 +317,9 @@ async def fusion_users(
             deleted_user_data = (
                 (
                     await db.execute(
-                        select(fk.parent.table)
-                        .where(fk.parent.column == user_deleted_id)
-                        .with_for_update(),
+                        select(fk.parent.table).where(
+                            fk.parent.column == user_deleted_id,
+                        ),
                     )
                 )
                 .scalars()
