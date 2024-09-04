@@ -358,9 +358,11 @@ async def get_online_sellers(
 
 def construct_dataframe_from_users_purchases(
     users_purchases: dict[str, list[models_cdr.Purchase]],
+    users_answers: dict[str, list[models_cdr.CustomData]],
     users: list[models_core.CoreUser],
     products: list[models_cdr.CdrProduct],
     variants: list[models_cdr.ProductVariant],
+    data_fields: dict[UUID, list[models_cdr.CustomDataField]],
 ) -> pd.DataFrame:
     """
     Construct a pandas DataFrame from a dict of users purchases.
@@ -371,17 +373,37 @@ def construct_dataframe_from_users_purchases(
     Returns:
         pd.DataFrame: A pandas DataFrame.
     """
-    columns = ["Nom", "Prénom", "Email"]
-    columns.extend(
-        [
-            f"{next(product for product in products if product.id==variant.product_id).name_fr} : {variant.name_fr}"
-            for variant in variants
-        ],
-    )
-    variant_to_column = {
-        variant.id: f"{next(product for product in products if product.id==variant.product_id).name_fr} : {variant.name_fr}"
-        for variant in variants
-    }
+    columns = ["Nom", "Prénom", "Surnom", "Email"]
+    data = ["", "", "", "Prix"]
+    field_to_column = {}
+    variant_to_column = {}
+    for product in products:
+        product_variants = [
+            variant for variant in variants if variant.product_id == product.id
+        ]
+        columns.extend(
+            [f"{product.name_fr} : {variant.name_fr}" for variant in product_variants],
+        )
+        fields = data_fields.get(product.id, [])
+        columns.extend(
+            [f"{product.name_fr} : {field.name}" for field in fields],
+        )
+        data.extend([str(variant.price) for variant in product_variants])
+
+        data.extend([" " for _ in fields])
+        field_to_column.update(
+            {field.id: f"{product.name_fr} : {field.name}" for field in fields},
+        )
+        variant_to_column.update(
+            {
+                variant.id: f"{product.name_fr} : {variant.name_fr}"
+                for variant in product_variants
+            },
+        )
+    columns.append("Panier payé")
+    data.append(" ")
+    columns.append("Commentaire")
+    data.append(" ")
     df = pd.DataFrame(
         columns=columns,
     )
@@ -389,7 +411,7 @@ def construct_dataframe_from_users_purchases(
         [
             df,
             pd.DataFrame(
-                data=["", "", ""] + [variant.price for variant in variants],
+                data=[data],
                 columns=columns,
             ),
         ],
@@ -400,6 +422,35 @@ def construct_dataframe_from_users_purchases(
                 user_id,
                 variant_to_column[purchase.product_variant_id],
             ] = purchase.quantity
+
+    for user_id, answers in users_answers.items():
+        for answer in answers:
+            column = field_to_column.get(answer.field_id)
+            if column:
+                df.loc[
+                    user_id,
+                    field_to_column[answer.field_id],
+                ] = answer.value
+
+    for user_id in df.index:
+        user = next((u for u in users if u.id == user_id), None)
+        if user is None:
+            continue
+        df.loc[user_id, "Nom"] = user.name
+        df.loc[user_id, "Prénom"] = user.firstname
+        df.loc[user_id, "Surnom"] = user.nickname
+        df.loc[user_id, "Email"] = user.email
+        if all(purchase.validated for purchase in users_purchases[user_id]):
+            df.loc[user_id, "Panier payé"] = True
+        else:
+            df.loc[user_id, "Panier payé"] = False
+            df.loc[user_id, "Commentaire"] = "Manquant : " + ", ".join(
+                variant_to_column[purchase.product_variant_id]
+                for purchase in users_purchases[user_id]
+                if not purchase.validated
+            )
+    for column in df.columns:
+        df[column] = df[column].apply(lambda x: x if pd.notna(x) else "")
     return df
 
 
@@ -407,7 +458,7 @@ def construct_dataframe_from_users_purchases(
     "/cdr/sellers/{seller_id}/results/",
     status_code=200,
 )
-async def get_seller_results(
+async def send_seller_results(
     seller_id: UUID,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
@@ -432,25 +483,31 @@ async def get_seller_results(
         )
 
     seller_members = seller_group.members
-    if seller_members == []:
+    if len(seller_members) == 0:
         raise HTTPException(
             status_code=400,
             detail="There is no user in this group",
         )
     products = await cruds_cdr.get_products_by_seller_id(db, seller_id)
-    if products == []:
+    if len(products) == 0:
         raise HTTPException(
             status_code=400,
             detail="There is no products for this seller so there is no results to send.",
         )
     variants: list[models_cdr.ProductVariant] = []
+    product_fields: dict[UUID, list[models_cdr.CustomDataField]] = {}
     for product in products:
         product_variants = await cruds_cdr.get_product_variants(db, product.id)
-        if product_variants != []:
-            variants.extend(product_variants)
+        variants.extend(product_variants)
+        product_fields[product.id] = list(
+            await cruds_cdr.get_product_customdata_fields(
+                db,
+                product.id,
+            ),
+        )
     variant_ids = [v.id for v in product_variants]
     purchases = await cruds_cdr.get_all_purchases(db)
-    if purchases == []:
+    if len(purchases) == 0:
         raise HTTPException(
             status_code=400,
             detail="There is no purchases in the database so there is no results to send.",
@@ -462,11 +519,21 @@ async def get_seller_results(
             if purchase.user_id not in purchases_by_users:
                 purchases_by_users[purchase.user_id] = []
             purchases_by_users[purchase.user_id].append(purchase)
+    users_answers = {}
+    for each_user in users:
+        users_answers[user.id] = list(
+            await cruds_cdr.get_customdata_by_user_id(
+                db,
+                each_user.id,
+            ),
+        )
     df = construct_dataframe_from_users_purchases(
         users_purchases=purchases_by_users,
         users=list(users),
         products=list(products),
         variants=variants,
+        data_fields=product_fields,
+        users_answers=users_answers,
     )
     file_path = f"/tmp/CdR {datetime.now(tz=UTC).year} ventes {seller.name}.xlsx"  # noqa: S108
     df.to_excel(
