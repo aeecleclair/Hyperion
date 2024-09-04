@@ -938,13 +938,15 @@ async def fusion_users(
     Fusion two users into one. The first user will be deleted and its data will be transferred to the second user.
     """
     user_kept = await cruds_users.get_user_by_email(
-        db=db, email=user_fusion.user_kept_email
+        db=db,
+        email=user_fusion.user_kept_email,
     )
     if user_kept is None:
         raise HTTPException(status_code=404, detail="User kept not found")
 
     user_deleted = await cruds_users.get_user_by_email(
-        db=db, email=user_fusion.user_deleted_email
+        db=db,
+        email=user_fusion.user_deleted_email,
     )
     if user_deleted is None:
         raise HTTPException(status_code=404, detail="User deleted not found")
