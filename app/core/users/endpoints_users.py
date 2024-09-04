@@ -923,3 +923,34 @@ async def read_user_profile_picture(
         filename=str(user_id),
         default_asset="assets/images/default_profile_picture.png",
     )
+
+
+@router.patch(
+    "/users/fusion",
+    status_code=204,
+)
+async def fusion_users(
+    user_fusion: schemas_core.CoreUserFusionRequest,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Fusion two users into one. The first user will be deleted and its data will be transferred to the second user.
+    """
+    user_kept = await cruds_users.get_user_by_email(
+        db=db, email=user_fusion.user_kept_email
+    )
+    if user_kept is None:
+        raise HTTPException(status_code=404, detail="User kept not found")
+
+    user_deleted = await cruds_users.get_user_by_email(
+        db=db, email=user_fusion.user_deleted_email
+    )
+    if user_deleted is None:
+        raise HTTPException(status_code=404, detail="User deleted not found")
+
+    await cruds_users.fusion_users(
+        db=db,
+        user_kept_id=user_kept.id,
+        user_deleted_id=user_deleted.id,
+    )

@@ -87,6 +87,13 @@ class CoreUserUpdate(BaseModel):
     model_config = ConfigDict(json_schema_extra=examples_core.example_CoreUserUpdate)
 
 
+class CoreUserFusionRequest(BaseModel):
+    """Schema for user fusion"""
+
+    user_kept_email: str
+    user_deleted_email: str
+
+
 class CoreUserUpdateAdmin(BaseModel):
     name: str | None = None
     firstname: str | None = None

@@ -2,10 +2,11 @@
 
 from collections.abc import Sequence
 
-from sqlalchemy import and_, delete, not_, select, update
+from sqlalchemy import ForeignKey, and_, delete, not_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from sqlalchemy_utils import get_referencing_foreign_keys  # type: ignore
 
 from app.core import models_core, schemas_core
 
@@ -274,3 +275,32 @@ async def update_user_password_by_id(
         .values(password_hash=new_password_hash),
     )
     await db.commit()
+
+
+async def fusion_users(
+    db: AsyncSession,
+    user_kept_id: str,
+    user_deleted_id: str,
+):
+    """Fusion two users together"""
+    foreign_keys: set[ForeignKey] = get_referencing_foreign_keys(
+        models_core.CoreUser.__table__,
+    )
+    user_id_fks = [
+        fk for fk in foreign_keys if fk.column == models_core.CoreUser.__table__.c.id
+    ]
+    # Update the user_id of the user_deleted in the table core_association_membership
+    for fk in user_id_fks:
+        await db.execute(
+            update(fk.parent.table)
+            .where(fk.parent.column == user_deleted_id)
+            .values(**{fk.column.name: user_kept_id}),
+        )
+    await db.execute(
+        update(models_core.CoreAssociationMembership)
+        .where(models_core.CoreAssociationMembership.user_id == user_deleted_id)
+        .values(user_id=user_kept_id),
+    )
+
+    # Delete the user_deleted
+    await delete_user(db, user_deleted_id)
