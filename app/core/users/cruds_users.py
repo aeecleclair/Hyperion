@@ -291,11 +291,87 @@ async def fusion_users(
     ]
     # Update the user_id of the user_deleted in the table core_association_membership
     for fk in user_id_fks:
-        await db.execute(
-            update(fk.parent.table)
-            .where(fk.parent.column == user_deleted_id)
-            .values(**{fk.column.name: user_kept_id}),
-        )
+        if fk.parent not in fk.parent.table.primary_key.columns:
+            await db.execute(
+                update(fk.parent.table)
+                .where(fk.parent.column == user_deleted_id)
+                .values(**{fk.column.name: user_kept_id}),
+            )
+        else:
+            primary_key_columns = list(fk.parent.table.primary_key.columns)
+            user_id_fk_index = primary_key_columns.index(fk.parent.column)
+            kept_user_data = (
+                (
+                    await db.execute(
+                        select(fk.parent.table)
+                        .where(fk.parent.column == user_kept_id)
+                        .with_for_update(),
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            kept_user_primaries_data = [
+                getattr(data, col.name)
+                for col in primary_key_columns
+                for data in kept_user_data
+            ]
+            deleted_user_data = (
+                (
+                    await db.execute(
+                        select(fk.parent.table)
+                        .where(fk.parent.column == user_deleted_id)
+                        .with_for_update(),
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            deleted_user_primaries_data = [
+                getattr(data, col.name)
+                for col in primary_key_columns
+                for data in deleted_user_data
+            ]
+            for i in range(len(deleted_user_primaries_data)):
+                deleted_user_primaries_data[i][user_id_fk_index] = (
+                    kept_user_primaries_data[i]
+                )
+            for i in range(len(deleted_user_primaries_data)):
+                if deleted_user_primaries_data[i] not in kept_user_primaries_data:
+                    deleted_user_primaries_data[i][user_id_fk_index] = user_deleted_id
+                    await db.execute(
+                        update(fk.parent.table)
+                        .where(
+                            and_(
+                                *[
+                                    col == val
+                                    for col, val in zip(
+                                        primary_key_columns,
+                                        deleted_user_primaries_data[i],
+                                        strict=True,
+                                    )
+                                ],
+                            ),
+                        )
+                        .values(**{fk.column.name: user_kept_id}),
+                    )
+                else:
+                    deleted_user_primaries_data[i][user_id_fk_index] = user_deleted_id
+                    await db.execute(
+                        delete(fk.parent.table).where(
+                            and_(
+                                *[
+                                    col == val
+                                    for col, val in zip(
+                                        primary_key_columns,
+                                        deleted_user_primaries_data[i],
+                                        strict=True,
+                                    )
+                                ],
+                            ),
+                        ),
+                    )
+
     await db.execute(
         update(models_core.CoreAssociationMembership)
         .where(models_core.CoreAssociationMembership.user_id == user_deleted_id)
