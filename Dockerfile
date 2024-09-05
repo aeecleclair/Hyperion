@@ -2,7 +2,8 @@ FROM ghcr.io/astral-sh/uv:0.4.5-python3.11-bookworm as uv-builder
 
 COPY ./requirements-common.txt /requirements-common.txt
 COPY ./requirements-prod.txt /requirements-prod.txt
-
+ENV VIRTUAL_ENV=/opt/venv \
+    PATH="/opt/venv/bin:$PATH"
 # RUN /root/.cargo/bin/uv pip install --system --upgrade -r /requirement-prod.txt
 RUN uv venv /opt/venv && \
     uv pip install --no-cache -r requirements-prod.txt
