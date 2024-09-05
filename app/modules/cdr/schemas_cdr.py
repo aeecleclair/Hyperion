@@ -332,3 +332,7 @@ class CustomDataComplete(CustomDataBase):
     field: CustomDataFieldComplete
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ResultRequest(CustomDataBase):
+    email: str

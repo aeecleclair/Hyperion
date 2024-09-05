@@ -8,7 +8,6 @@ from uuid import UUID, uuid4
 
 import pandas as pd
 from fastapi import (
-    BackgroundTasks,
     Depends,
     HTTPException,
     WebSocket,
@@ -460,7 +459,7 @@ def construct_dataframe_from_users_purchases(
 )
 async def send_seller_results(
     seller_id: UUID,
-    background_tasks: BackgroundTasks,
+    email: schemas_cdr.ResultRequest,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
 ):
@@ -480,13 +479,6 @@ async def send_seller_results(
         raise HTTPException(
             status_code=404,
             detail="Seller group not found.",
-        )
-
-    seller_members = seller_group.members
-    if len(seller_members) == 0:
-        raise HTTPException(
-            status_code=400,
-            detail="There is no user in this group",
         )
     products = await cruds_cdr.get_products_by_seller_id(db, seller_id)
     if len(products) == 0:
@@ -543,7 +535,7 @@ async def send_seller_results(
         engine="xlsxwriter",
     )
     send_email(
-        recipient=[member.email for member in seller_members],
+        recipient=email.email,
         subject=f"Résultats de ventes pour {seller.name}",
         content=f"Bonjour,\n\nVous trouverez en pièce jointe le fichier Excel contenant les résultats de ventes pour la CdR pour l'association {seller.name}.",
         settings=get_settings(),
