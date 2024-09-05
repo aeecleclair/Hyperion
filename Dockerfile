@@ -5,7 +5,7 @@ COPY ./requirements-prod.txt /requirements-prod.txt
 
 # RUN /root/.cargo/bin/uv pip install --system --upgrade -r /requirement-prod.txt
 
-RUN uv pip install --system --upgrade -r /requirement-prod.txt
+RUN uv pip install --system --upgrade -r /requirements-prod.txt
 
 # PROD
 FROM tiangolo/uvicorn-gunicorn-fastapi:python3.11
