@@ -102,7 +102,6 @@ async def init_objects():
         description_fr="Un Produit",
         description_en="A Product",
         available_online=False,
-        generate_ticket=False,
     )
 
     global product2
