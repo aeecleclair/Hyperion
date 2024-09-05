@@ -8,7 +8,7 @@ Create Date: 2024-04-11 00:44:52.049956
 
 from collections.abc import Sequence
 from enum import Enum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from pytest_alembic import MigrationContext
@@ -18,7 +18,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "6df7fb89081d"
-down_revision: str | None = "5d05a19f14bc"
+down_revision: str | None = "7336e674441f"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -40,13 +40,13 @@ class RoleTags(Enum):
     resp_part = "Respo Partenariats"
 
 
-def define_order_of_memberships(memberships) -> list[list]:
+def define_order_of_memberships(memberships: list[sa.Row[Any]]) -> list[list]:
     """
     Use tag systeme to introduce a coherent member_order to older membership
     """
     member_order = [tag.value for tag in RoleTags]
     member_order.append("Default")
-    memberships2 = []
+    memberships2: list[list[Any]] = []
     for membership in memberships:
         if membership[2]:
             tags = membership[2].split(";")
