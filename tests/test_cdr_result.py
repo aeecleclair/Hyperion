@@ -340,7 +340,7 @@ def test_construct_dataframe_from_users_purchases():
     ]
     for user_id in [user.id for user in users]:
         assert user_id in df.index
-    assert list(df.loc[cdr_user1.id]) == [  # type:ignore
+    assert list(df.loc[cdr_user1.id]) == [
         cdr_user1.name,
         cdr_user1.firstname,
         "",
@@ -354,7 +354,7 @@ def test_construct_dataframe_from_users_purchases():
         False,
         "Manquant : Produit2 : Variante",
     ]
-    assert list(df.loc[cdr_user2.id]) == [  # type:ignore
+    assert list(df.loc[cdr_user2.id]) == [
         cdr_user2.name,
         cdr_user2.firstname,
         "",
@@ -368,7 +368,7 @@ def test_construct_dataframe_from_users_purchases():
         False,
         "Manquant : Produit : Variante2, Produit2 : Variante",
     ]
-    assert list(df.loc[cdr_user3.id]) == [  # type:ignore
+    assert list(df.loc[cdr_user3.id]) == [
         cdr_user3.name,
         cdr_user3.firstname,
         "",
