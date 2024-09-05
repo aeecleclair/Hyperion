@@ -3,8 +3,10 @@ import os
 import re
 from collections.abc import Sequence
 from datetime import UTC, date, datetime
+from pathlib import Path
 from uuid import UUID, uuid4
 
+import pandas as pd
 from fastapi import (
     Depends,
     HTTPException,
@@ -15,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, schemas_core
 from app.core.config import Settings
+from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
 from app.core.payment.payment_tool import PaymentTool
 from app.core.users import cruds_users
@@ -50,6 +53,7 @@ from app.types.websocket import (
     WebsocketConnectionManager,
 )
 from app.utils.auth import auth_utils
+from app.utils.mail.mailworker import send_email
 from app.utils.tools import (
     create_and_send_email_migration,
     get_core_data,
@@ -349,6 +353,197 @@ async def get_online_sellers(
     **User must be authenticated to use this endpoint**
     """
     return await cruds_cdr.get_online_sellers(db)
+
+
+def construct_dataframe_from_users_purchases(
+    users_purchases: dict[str, list[models_cdr.Purchase]],
+    users_answers: dict[str, list[models_cdr.CustomData]],
+    users: list[models_core.CoreUser],
+    products: list[models_cdr.CdrProduct],
+    variants: list[models_cdr.ProductVariant],
+    data_fields: dict[UUID, list[models_cdr.CustomDataField]],
+) -> pd.DataFrame:
+    """
+    Construct a pandas DataFrame from a dict of users purchases.
+
+    Args:
+        users_purchases (dict[str, list[models_cdr.Purchase]]): A dict of users purchases.
+
+    Returns:
+        pd.DataFrame: A pandas DataFrame.
+    """
+    columns = ["Nom", "Prénom", "Surnom", "Email"]
+    data = ["", "", "", "Prix"]
+    field_to_column = {}
+    variant_to_column = {}
+    for product in products:
+        product_variants = [
+            variant for variant in variants if variant.product_id == product.id
+        ]
+        columns.extend(
+            [f"{product.name_fr} : {variant.name_fr}" for variant in product_variants],
+        )
+        fields = data_fields.get(product.id, [])
+        columns.extend(
+            [f"{product.name_fr} : {field.name}" for field in fields],
+        )
+        data.extend([str(variant.price) for variant in product_variants])
+
+        data.extend([" " for _ in fields])
+        field_to_column.update(
+            {field.id: f"{product.name_fr} : {field.name}" for field in fields},
+        )
+        variant_to_column.update(
+            {
+                variant.id: f"{product.name_fr} : {variant.name_fr}"
+                for variant in product_variants
+            },
+        )
+    columns.append("Panier payé")
+    data.append(" ")
+    columns.append("Commentaire")
+    data.append(" ")
+    df = pd.DataFrame(
+        columns=columns,
+    )
+    df = pd.concat(
+        [
+            df,
+            pd.DataFrame(
+                data=[data],
+                columns=columns,
+            ),
+        ],
+    )
+    for user_id, purchases in users_purchases.items():
+        for purchase in purchases:
+            df.loc[
+                user_id,
+                variant_to_column[purchase.product_variant_id],
+            ] = purchase.quantity
+
+    for user_id, answers in users_answers.items():
+        for answer in answers:
+            column = field_to_column.get(answer.field_id)
+            if column:
+                df.loc[
+                    user_id,
+                    field_to_column[answer.field_id],
+                ] = answer.value
+
+    for user_id in df.index:
+        user = next((u for u in users if u.id == user_id), None)
+        if user is None:
+            continue
+        df.loc[user_id, "Nom"] = user.name
+        df.loc[user_id, "Prénom"] = user.firstname
+        df.loc[user_id, "Surnom"] = user.nickname
+        df.loc[user_id, "Email"] = user.email
+        if all(purchase.validated for purchase in users_purchases[user_id]):
+            df.loc[user_id, "Panier payé"] = True
+        else:
+            df.loc[user_id, "Panier payé"] = False
+            df.loc[user_id, "Commentaire"] = "Manquant : " + ", ".join(
+                variant_to_column[purchase.product_variant_id]
+                for purchase in users_purchases[user_id]
+                if not purchase.validated
+            )
+    for column in df.columns:
+        df[column] = df[column].apply(lambda x: x if pd.notna(x) else "")
+    return df
+
+
+@module.router.post(
+    "/cdr/sellers/{seller_id}/results/",
+    status_code=200,
+)
+async def send_seller_results(
+    seller_id: UUID,
+    email: schemas_cdr.ResultRequest,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
+):
+    """
+    Get a seller's results.
+
+    **User must be CDR Admin to use this endpoint**
+    """
+    seller = await cruds_cdr.get_seller_by_id(db, seller_id)
+    if not seller:
+        raise HTTPException(
+            status_code=404,
+            detail="Seller not found.",
+        )
+    seller_group = await cruds_groups.get_group_by_id(db, seller.group_id)
+    if seller_group is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Seller group not found.",
+        )
+    products = await cruds_cdr.get_products_by_seller_id(db, seller_id)
+    if len(products) == 0:
+        raise HTTPException(
+            status_code=400,
+            detail="There is no products for this seller so there is no results to send.",
+        )
+    variants: list[models_cdr.ProductVariant] = []
+    product_fields: dict[UUID, list[models_cdr.CustomDataField]] = {}
+    for product in products:
+        product_variants = await cruds_cdr.get_product_variants(db, product.id)
+        variants.extend(product_variants)
+        product_fields[product.id] = list(
+            await cruds_cdr.get_product_customdata_fields(
+                db,
+                product.id,
+            ),
+        )
+    variant_ids = [v.id for v in product_variants]
+    purchases = await cruds_cdr.get_all_purchases(db)
+    if len(purchases) == 0:
+        raise HTTPException(
+            status_code=400,
+            detail="There is no purchases in the database so there is no results to send.",
+        )
+    purchases_by_users: dict[str, list[models_cdr.Purchase]] = {}
+    users = await get_users(db)
+    for purchase in purchases:
+        if purchase.product_variant_id in variant_ids:
+            if purchase.user_id not in purchases_by_users:
+                purchases_by_users[purchase.user_id] = []
+            purchases_by_users[purchase.user_id].append(purchase)
+    users_answers = {}
+    for each_user in users:
+        users_answers[user.id] = list(
+            await cruds_cdr.get_customdata_by_user_id(
+                db,
+                each_user.id,
+            ),
+        )
+    df = construct_dataframe_from_users_purchases(
+        users_purchases=purchases_by_users,
+        users=list(users),
+        products=list(products),
+        variants=variants,
+        data_fields=product_fields,
+        users_answers=users_answers,
+    )
+    file_path = f"/tmp/CdR {datetime.now(tz=UTC).year} ventes {seller.name}.xlsx"  # noqa: S108
+    df.to_excel(
+        file_path,
+        index=False,
+        freeze_panes=(2, 3),
+        engine="xlsxwriter",
+    )
+    send_email(
+        recipient=email.email,
+        subject=f"Résultats de ventes pour {seller.name}",
+        content=f"Bonjour,\n\nVous trouverez en pièce jointe le fichier Excel contenant les résultats de ventes pour la CdR pour l'association {seller.name}.",
+        settings=get_settings(),
+        file_path=file_path,
+        main_type="text",
+        sub_type="xlsx",
+    )
+    Path.unlink(Path(file_path))
 
 
 @module.router.get(
@@ -2327,6 +2522,39 @@ async def create_membership(
         raise
     else:
         return db_membership
+
+
+@module.router.patch(
+    "/cdr/users/{user_id}/memberships/{membership}/",
+    status_code=204,
+)
+async def update_membership(
+    user_id: str,
+    membership: AvailableAssociationMembership,
+    membership_edit: schemas_cdr.MembershipEdit,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
+):
+    db_membership = await cruds_cdr.get_membership_by_user_id_and_membership_name(
+        user_id=user_id,
+        membership=membership,
+        db=db,
+    )
+    if db_membership is None:
+        raise HTTPException(
+            status_code=404,
+            detail="This user doesn't have this membership",
+        )
+    try:
+        await cruds_cdr.update_membership(
+            membership_id=db_membership.id,
+            membership=membership_edit,
+            db=db,
+        )
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
 
 
 @module.router.delete(

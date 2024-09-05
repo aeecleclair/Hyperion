@@ -1,13 +1,22 @@
 import smtplib
 import ssl
 from email.message import EmailMessage
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from app.core.config import Settings
 
 
-def send_email(recipient: str, subject: str, content: str, settings: "Settings"):
+def send_email(
+    recipient: str | list[str],
+    subject: str,
+    content: str,
+    settings: "Settings",
+    file_path: str | None = None,
+    main_type: str | None = None,
+    sub_type: str | None = None,
+):
     """
     Send a html email using **starttls**.
     Use the SMTP settings defined in environments variables or the dotenv file.
@@ -18,15 +27,27 @@ def send_email(recipient: str, subject: str, content: str, settings: "Settings")
     # Prevent send email from going to spam
     # https://errorsfixing.com/why-do-some-python-smtplib-messages-deliver-to-gmail-spam-folder/
 
+    if isinstance(recipient, str):
+        recipient = [recipient]
+
     context = ssl.create_default_context()
 
     msg = EmailMessage()
     msg.set_content(content, subtype="html", charset="utf-8")
     msg["From"] = settings.SMTP_EMAIL
-    msg["To"] = recipient
+    msg["To"] = ";".join(recipient)
     msg["Subject"] = subject
+
+    if file_path:
+        with Path.open(Path(file_path), "rb") as f:
+            msg.add_attachment(
+                f.read(),
+                main_type=main_type,
+                sub_type=sub_type,
+                filename=file_path.split("/")[-1],
+            )
 
     with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT) as server:
         server.starttls(context=context)
         server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
-        server.send_message(msg)
+        server.send_message(msg, settings.SMTP_EMAIL, recipient)

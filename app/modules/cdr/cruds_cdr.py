@@ -8,6 +8,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.models_core import CoreAssociationMembership, CoreUser
 from app.modules.cdr import models_cdr, schemas_cdr
+from app.types.membership import AvailableAssociationMembership
 
 
 async def get_cdr_users_curriculum(
@@ -390,6 +391,11 @@ async def delete_document(
     )
 
 
+async def get_all_purchases(db: AsyncSession) -> Sequence[models_cdr.Purchase]:
+    result = await db.execute(select(models_cdr.Purchase))
+    return result.scalars().all()
+
+
 async def get_purchases_by_user_id(
     db: AsyncSession,
     user_id: str,
@@ -701,6 +707,20 @@ async def get_actual_memberships_by_user_id(
     return result.scalars().all()
 
 
+async def get_membership_by_user_id_and_membership_name(
+    db: AsyncSession,
+    user_id: str,
+    membership: AvailableAssociationMembership,
+) -> CoreAssociationMembership | None:
+    result = await db.execute(
+        select(CoreAssociationMembership).where(
+            CoreAssociationMembership.user_id == user_id
+            and CoreAssociationMembership.membership == membership,
+        ),
+    )
+    return result.scalars().first()
+
+
 async def get_membership_by_id(
     db: AsyncSession,
     membership_id: UUID,
@@ -903,6 +923,16 @@ async def update_customdata(db: AsyncSession, field_id: UUID, user_id: str, valu
         )
         .values(value=value),
     )
+
+
+async def get_customdata_by_user_id(
+    db: AsyncSession,
+    user_id: str,
+) -> Sequence[models_cdr.CustomData]:
+    result = await db.execute(
+        select(models_cdr.CustomData).where(models_cdr.CustomData.user_id == user_id),
+    )
+    return result.scalars().all()
 
 
 async def delete_customdata(db: AsyncSession, field_id: UUID, user_id: str):
