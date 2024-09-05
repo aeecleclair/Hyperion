@@ -114,7 +114,6 @@ async def init_objects():
         description_fr="Un Produit2",
         description_en="A Product2",
         available_online=False,
-        generate_ticket=False,
     )
 
     global product3
@@ -126,7 +125,6 @@ async def init_objects():
         description_fr="Un Produit3",
         description_en="A Product3",
         available_online=False,
-        generate_ticket=False,
     )
 
     global customdata_field1
