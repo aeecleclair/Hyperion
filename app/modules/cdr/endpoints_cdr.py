@@ -2841,7 +2841,11 @@ async def generate_ticket_for_product(
             status_code=404,
             detail="Product not found.",
         )
-    ticketgen = models_cdr.TicketGenerator(id=uuid4(), **ticket_data.model_dump())
+    ticketgen = models_cdr.TicketGenerator(
+        id=uuid4(),
+        product_id=product_id,
+        **ticket_data.model_dump(),
+    )
     cruds_cdr.create_ticket_generator(db=db, ticket=ticketgen)
 
     validated_purchases = await cruds_cdr.get_product_validated_purchases(
