@@ -69,6 +69,7 @@ class CdrUserUpdate(BaseModel):
 
 
 class GenerateTicketBase(BaseModel):
+    name: str
     max_use: int
     expiration: datetime
 
