@@ -292,6 +292,7 @@ class Ticket(BaseModel):
     scan_left: int
     tags: str
     expiration: datetime
+    name: str
 
 
 class TicketScan(BaseModel):
