@@ -2639,7 +2639,7 @@ async def update_status(
 
 @module.router.get(
     "/cdr/users/me/tickets/",
-    response_model=list[schemas_cdr.Ticket],
+    response_model=list[models_cdr.Ticket],
     status_code=200,
 )
 async def get_my_tickets(
