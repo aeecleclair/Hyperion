@@ -961,12 +961,12 @@ async def get_product_validated_purchases(
     db: AsyncSession,
     product_id: UUID,
 ) -> Sequence[models_cdr.Purchase]:
+    variant = await get_product_variants(db=db, product_id=product_id)
+    variant_ids = [v.id for v in variant]
     result = await db.execute(
-        select(models_cdr.Purchase)
-        .options(selectinload(models_cdr.Purchase.product_variant))
-        .where(
+        select(models_cdr.Purchase).where(
             models_cdr.Purchase.validated.is_(True),
-            models_cdr.Purchase.product_variant.product_id == product_id,
+            models_cdr.Purchase.product_variant_id.in_(variant_ids),
         ),
     )
     return result.scalars().all()
