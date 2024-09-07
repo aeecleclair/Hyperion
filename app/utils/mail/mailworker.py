@@ -1,3 +1,4 @@
+import logging
 import smtplib
 import ssl
 from email.message import EmailMessage
@@ -8,6 +9,8 @@ import aiofiles
 
 if TYPE_CHECKING:
     from app.core.config import Settings
+
+hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 async def send_email(
@@ -30,6 +33,8 @@ async def send_email(
     # Prevent send email from going to spam
     # https://errorsfixing.com/why-do-some-python-smtplib-messages-deliver-to-gmail-spam-folder/
 
+    hyperion_error_logger.debug(f"Sending email to {recipient}")
+
     if isinstance(recipient, str):
         recipient = [recipient]
 
@@ -42,6 +47,9 @@ async def send_email(
     msg["Subject"] = subject
 
     if file_directory and file_name:
+        hyperion_error_logger.debug(
+            f"Adding attachment {Path(file_directory, file_name)}",
+        )
         async with aiofiles.open(Path(file_directory, file_name), "rb") as f:
             msg.add_attachment(
                 f.read(),
@@ -50,7 +58,10 @@ async def send_email(
                 filename=file_name.split("/")[-1],
             )
 
+    hyperion_error_logger.debug(f"Sending email to {recipient}")
     with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT) as server:
         server.starttls(context=context)
         server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
         server.send_message(msg, settings.SMTP_EMAIL, recipient)
+
+    hyperion_error_logger.debug(f"Email sent to {recipient}")

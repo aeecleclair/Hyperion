@@ -436,6 +436,9 @@ async def generate_and_send_results(
         freeze_panes=(2, 3),
         engine="xlsxwriter",
     )
+    hyperion_error_logger.debug(
+        f"Excel file for seller {seller.name} generated. Sending the email.",
+    )
     await send_email(
         recipient=emails.emails,
         subject=f"Résultats de ventes pour {seller.name}",
