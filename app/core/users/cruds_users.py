@@ -297,8 +297,6 @@ async def fusion_users(
                 is_in = True
                 break
         if not is_in:
-            print(fk.parent.table)
-            print(fk.parent)
             await db.execute(
                 update(fk.parent.table)
                 .where(fk.parent == user_deleted_id)
@@ -312,13 +310,11 @@ async def fusion_users(
                     select(fk.parent.table).where(fk.parent == user_kept_id),
                 )
             ).all()
-            print(fk.parent)
-            print(fk.parent.table)
-            print(kept_user_data)
             kept_user_primaries_data = [
                 [getattr(data, col.name) for col in primary_key_columns]
                 for data in kept_user_data
             ]
+
             deleted_user_data = (
                 await db.execute(
                     select(fk.parent.table).where(
@@ -330,7 +326,7 @@ async def fusion_users(
                 [getattr(data, col.name) for col in primary_key_columns]
                 for data in deleted_user_data
             ]
-            print(deleted_user_primaries_data)
+
             for i in range(len(deleted_user_primaries_data)):
                 user_id_fk_index = deleted_user_primaries_data[i].index(user_deleted_id)
                 deleted_user_primaries_data[i][user_id_fk_index] = user_kept_id
