@@ -6,7 +6,7 @@ import pytest_asyncio
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from app.modules.cdr import models_cdr
-from app.modules.cdr.endpoints_cdr import construct_dataframe_from_users_purchases
+from app.modules.cdr.utils_cdr import construct_dataframe_from_users_purchases
 from tests.commons import (
     create_api_access_token,
     create_user_with_groups,
