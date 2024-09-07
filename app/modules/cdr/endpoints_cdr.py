@@ -413,6 +413,9 @@ async def generate_and_send_results(
                 each_user.id,
             ),
         )
+    hyperion_error_logger.info(
+        f"Data for seller {seller.name} fetched. Starting to construct the dataframe.",
+    )
     df = construct_dataframe_from_users_purchases(
         users_purchases=purchases_by_users,
         users=list(users),
@@ -421,6 +424,10 @@ async def generate_and_send_results(
         data_fields=product_fields,
         users_answers=users_answers,
     )
+    hyperion_error_logger.info(
+        f"Dataframe for seller {seller.name} constructed. Generating the Excel file.",
+    )
+
     file_directory = "/data/cdr"
     file_name = f"CdR {datetime.now(tz=UTC).year} ventes {seller.name}.xlsx"
     df.to_excel(
