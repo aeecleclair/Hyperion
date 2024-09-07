@@ -48,9 +48,9 @@ def send_email(
 
     if file_directory and file_name:
         hyperion_error_logger.debug(
-            f"Adding attachment {Path(file_directory, file_uuid)}",
+            f"Adding attachment {Path(file_directory, str(file_uuid))}",
         )
-        file_path = Path(file_directory, file_uuid)
+        file_path = Path(file_directory, str(file_uuid))
         hyperion_error_logger.debug(f"Reading file '{file_path}'")
         with Path.open(file_path, "rb") as file:
             hyperion_error_logger.debug(f"Reading file {file_uuid}")

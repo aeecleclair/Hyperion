@@ -434,7 +434,7 @@ async def generate_and_send_results(
 
     Path.mkdir(Path(file_directory), parents=True, exist_ok=True)
     df.to_excel(
-        Path(file_directory, file_uuid),
+        Path(file_directory, str(file_uuid)),
         index=False,
         freeze_panes=(2, 3),
         engine="xlsxwriter",
@@ -448,6 +448,7 @@ async def generate_and_send_results(
         content=f"Bonjour,\n\nVous trouverez en pièce jointe le fichier Excel contenant les résultats de ventes pour la CdR pour l'association {seller.name}.",
         settings=settings,
         file_directory=file_directory,
+        file_uuid=file_uuid,
         file_name=file_name,
         main_type="text",
         sub_type="xlsx",
