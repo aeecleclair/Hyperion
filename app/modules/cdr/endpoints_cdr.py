@@ -54,7 +54,8 @@ from app.types.websocket import (
     WebsocketConnectionManager,
 )
 from app.utils.auth import auth_utils
-from app.utils.mail.mailworker import send_email
+
+# from app.utils.mail.mailworker import send_email
 from app.utils.tools import (
     create_and_send_email_migration,
     get_core_data,
@@ -358,9 +359,9 @@ async def get_online_sellers(
 
 async def generate_and_send_results(
     seller_id: UUID,
-    emails: schemas_cdr.ResultRequest,
+    # emails: schemas_cdr.ResultRequest,
     db: AsyncSession,
-    settings: Settings,
+    # settings: Settings,
 ):
     seller = await cruds_cdr.get_seller_by_id(db, seller_id)
     if not seller:
@@ -428,9 +429,9 @@ async def generate_and_send_results(
         f"Dataframe for seller {seller.name} constructed. Generating the Excel file.",
     )
 
-    file_directory = "/data/cdr"
+    file_directory = "/app/data/cdr"
     file_uuid = uuid4()
-    file_name = f"CdR {datetime.now(tz=UTC).year} ventes {seller.name}.xlsx"
+    # file_name = f"CdR {datetime.now(tz=UTC).year} ventes {seller.name}.xlsx"
 
     Path.mkdir(Path(file_directory), parents=True, exist_ok=True)
     df.to_excel(
@@ -439,24 +440,26 @@ async def generate_and_send_results(
         freeze_panes=(2, 3),
         engine="xlsxwriter",
     )
-    hyperion_error_logger.debug(
-        f"Excel file for seller {seller.name} generated. Sending the email.",
-    )
-    send_email(
-        recipient=emails.emails,
-        subject=f"Résultats de ventes pour {seller.name}",
-        content=f"Bonjour,\n\nVous trouverez en pièce jointe le fichier Excel contenant les résultats de ventes pour la CdR pour l'association {seller.name}.",
-        settings=settings,
-        file_directory=file_directory,
-        file_uuid=file_uuid,
-        file_name=file_name,
-        main_type="text",
-        sub_type="xlsx",
-    )
-    hyperion_error_logger.info(
-        f"Results for seller {seller.name} sent to {emails.emails}",
-    )
-    Path.unlink(Path(file_directory, file_name))
+
+    # Not working, we have to keep the file in the server
+    # hyperion_error_logger.debug(
+    #     f"Excel file for seller {seller.name} generated. Sending the email.",
+    # )
+    # send_email(
+    #     recipient=emails.emails,
+    #     subject=f"Résultats de ventes pour {seller.name}",
+    #     content=f"Bonjour,\n\nVous trouverez en pièce jointe le fichier Excel contenant les résultats de ventes pour la CdR pour l'association {seller.name}.",
+    #     settings=settings,
+    #     file_directory=file_directory,
+    #     file_uuid=file_uuid,
+    #     file_name=file_name,
+    #     main_type="text",
+    #     sub_type="xlsx",
+    # )
+    # hyperion_error_logger.info(
+    #     f"Results for seller {seller.name} sent to {emails.emails}",
+    # )
+    # Path.unlink(Path(file_directory, file_name))
 
 
 @module.router.post(
@@ -465,11 +468,11 @@ async def generate_and_send_results(
 )
 async def send_seller_results(
     seller_id: UUID,
-    emails: schemas_cdr.ResultRequest,
+    # emails: schemas_cdr.ResultRequest,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
-    settings: Settings = Depends(get_settings),
+    # settings: Settings = Depends(get_settings),
 ):
     """
     Get a seller's results.
@@ -479,9 +482,9 @@ async def send_seller_results(
     background_tasks.add_task(
         generate_and_send_results,
         seller_id=seller_id,
-        emails=emails,
+        # emails=emails,
         db=db,
-        settings=settings,
+        # settings=settings,
     )
 
 

@@ -1,9 +1,7 @@
 import logging
-import os
 import smtplib
 import ssl
 from email.message import EmailMessage
-from pathlib import Path
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -34,38 +32,29 @@ def send_email(
     # Prevent send email from going to spam
     # https://errorsfixing.com/why-do-some-python-smtplib-messages-deliver-to-gmail-spam-folder/
 
-    hyperion_error_logger.debug(f"Sending email to {recipient}")
-
     if isinstance(recipient, str):
         recipient = [recipient]
 
     context = ssl.create_default_context()
 
     msg = EmailMessage()
-    msg.set_content(content)  # , subtype="html", charset="utf-8"
+    msg.set_content(content, subtype="html", charset="utf-8")
     msg["From"] = settings.SMTP_EMAIL
     msg["To"] = ";".join(recipient)
     msg["Subject"] = subject
 
-    if file_directory and file_name:
-        hyperion_error_logger.debug(
-            f"Adding attachment {Path(file_directory, str(file_uuid))}",
-        )
-        file_path = Path(file_directory, str(file_uuid))
-        hyperion_error_logger.debug(f"Reading file '{file_path}'")
-        with open(file_path, "rb") as file:
-            hyperion_error_logger.debug(f"Reading file {file_uuid}")
-            msg.add_attachment(
-                file.read(),
-                main_type=main_type,
-                sub_type=sub_type,
-                filename=file_name,
-            )
+    # Not working
+    # if file_directory and file_name:
+    #     file_path = Path(file_directory, str(file_uuid))
+    #     with Path.open(file_path, "rb") as file:
+    #         msg.add_attachment(
+    #             file.read(),
+    #             main_type=main_type,
+    #             sub_type=sub_type,
+    #             filename=file_name,
+    #         )
 
-    hyperion_error_logger.debug(f"Sending email to {recipient}")
     with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT) as server:
         server.starttls(context=context)
         server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
         server.send_message(msg, settings.SMTP_EMAIL, recipient)
-
-    hyperion_error_logger.debug(f"Email sent to {recipient}")
