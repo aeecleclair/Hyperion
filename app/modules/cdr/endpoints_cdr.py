@@ -6,6 +6,7 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 from uuid import UUID, uuid4
 
+import aiofiles
 from fastapi import (
     BackgroundTasks,
     Depends,
@@ -430,12 +431,15 @@ async def generate_and_send_results(
 
     file_directory = "/data/cdr"
     file_name = f"CdR {datetime.now(tz=UTC).year} ventes {seller.name}.xlsx"
-    df.to_excel(
-        Path(file_directory, file_name),
-        index=False,
-        freeze_panes=(2, 3),
-        engine="xlsxwriter",
-    )
+
+    Path.mkdir(Path(file_directory), parents=True, exist_ok=True)
+    async with aiofiles.open(Path(file_directory, file_name), "wb") as f:
+        df.to_excel(
+            f,
+            index=False,
+            freeze_panes=(2, 3),
+            engine="xlsxwriter",
+        )
     hyperion_error_logger.debug(
         f"Excel file for seller {seller.name} generated. Sending the email.",
     )
