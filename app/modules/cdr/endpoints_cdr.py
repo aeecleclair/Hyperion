@@ -439,6 +439,9 @@ async def generate_and_send_results(
         main_type="text",
         sub_type="xlsx",
     )
+    hyperion_error_logger.info(
+        f"Results for seller {seller.name} sent to {emails.emails}",
+    )
     Path.unlink(Path(file_directory, file_name))
 
 
