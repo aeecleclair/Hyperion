@@ -442,7 +442,7 @@ async def generate_and_send_results(
     hyperion_error_logger.debug(
         f"Excel file for seller {seller.name} generated. Sending the email.",
     )
-    await send_email(
+    send_email(
         recipient=emails.emails,
         subject=f"Résultats de ventes pour {seller.name}",
         content=f"Bonjour,\n\nVous trouverez en pièce jointe le fichier Excel contenant les résultats de ventes pour la CdR pour l'association {seller.name}.",

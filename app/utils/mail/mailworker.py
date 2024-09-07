@@ -5,15 +5,13 @@ from email.message import EmailMessage
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import aiofiles
-
 if TYPE_CHECKING:
     from app.core.config import Settings
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
-async def send_email(
+def send_email(
     recipient: str | list[str],
     subject: str,
     content: str,
@@ -50,7 +48,7 @@ async def send_email(
         hyperion_error_logger.debug(
             f"Adding attachment {Path(file_directory, file_name)}",
         )
-        async with aiofiles.open(Path(file_directory, file_name), "rb") as f:
+        with Path.open(Path(file_directory, file_name), "rb") as f:
             msg.add_attachment(
                 f.read(),
                 main_type=main_type,

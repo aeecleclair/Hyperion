@@ -504,7 +504,7 @@ async def recover_user(
                     "calypsso_register_url": calypsso_register_url,
                 },
             )
-            await send_email(
+            send_email(
                 recipient=email,
                 subject="MyECL - reset your password",
                 content=reset_content,
@@ -544,7 +544,7 @@ async def recover_user(
                     "calypsso_reset_url": calypsso_reset_url,
                 },
             )
-            await send_email(
+            send_email(
                 recipient=db_user.email,
                 subject="MyECL - reset your password",
                 content=reset_content,
@@ -639,7 +639,7 @@ async def migrate_mail(
             migration_content = templates.get_template(
                 "migration_mail_already_used.html",
             ).render({})
-            await send_email(
+            send_email(
                 recipient=mail_migration.new_email,
                 subject="MyECL - Confirm your new email adresse",
                 content=migration_content,
