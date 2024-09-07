@@ -49,8 +49,11 @@ def send_email(
             f"Adding attachment {Path(file_directory, file_name)}",
         )
         with Path.open(Path(file_directory, file_name), "rb") as f:
+            hyperion_error_logger.debug(f"Reading file {file_name}")
+            file = f.read()
+            hyperion_error_logger.debug(f"File read {file_name}")
             msg.add_attachment(
-                f.read(),
+                file,
                 main_type=main_type,
                 sub_type=sub_type,
                 filename=file_name.split("/")[-1],

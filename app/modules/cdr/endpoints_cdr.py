@@ -6,7 +6,6 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 from uuid import UUID, uuid4
 
-import aiofiles
 from fastapi import (
     BackgroundTasks,
     Depends,
