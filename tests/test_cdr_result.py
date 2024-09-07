@@ -349,7 +349,7 @@ def test_construct_dataframe_from_users_purchases():
         1,
         "",
         False,
-        "Manquant : Produit2 : Variante",
+        "'Manquant : \n-Produit2 : Variante'",
     ]
     assert list(df.loc[cdr_user2.id]) == [
         cdr_user2.name,
@@ -363,7 +363,7 @@ def test_construct_dataframe_from_users_purchases():
         1,
         "",
         False,
-        "Manquant : Produit : Variante2, Produit2 : Variante",
+        "Manquant : \n-Produit : Variante2,\n-Produit2 : Variante",
     ]
     assert list(df.loc[cdr_user3.id]) == [
         cdr_user3.name,
