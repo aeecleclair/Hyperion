@@ -286,55 +286,54 @@ async def fusion_users(
     foreign_keys: set[ForeignKey] = get_referencing_foreign_keys(
         models_core.CoreUser.__table__,
     )
-    user_id_fks = [
+    user_id_fks: list[ForeignKey] = [
         fk for fk in foreign_keys if fk.column == models_core.CoreUser.__table__.c.id
     ]
     # Update the user_id of the user_deleted in the table core_association_membership
     for fk in user_id_fks:
-        if fk.parent not in fk.parent.table.primary_key.columns:
+        is_in = False
+        for pk in fk.parent.table.primary_key.columns:
+            if fk.parent == pk:
+                is_in = True
+                break
+        if not is_in:
+            print(fk.parent.table)
+            print(fk.parent)
             await db.execute(
                 update(fk.parent.table)
-                .where(fk.parent.column == user_deleted_id)
-                .values(**{fk.column.name: user_kept_id}),
+                .where(fk.parent == user_deleted_id)
+                .values(**{fk.parent.name: user_kept_id}),
             )
         else:
             primary_key_columns = list(fk.parent.table.primary_key.columns)
-            user_id_fk_index = primary_key_columns.index(fk.parent.column)
+
             kept_user_data = (
-                (
-                    await db.execute(
-                        select(fk.parent.table).where(fk.parent.column == user_kept_id),
-                    )
+                await db.execute(
+                    select(fk.parent.table).where(fk.parent == user_kept_id),
                 )
-                .scalars()
-                .all()
-            )
+            ).all()
+            print(fk.parent)
+            print(fk.parent.table)
+            print(kept_user_data)
             kept_user_primaries_data = [
-                getattr(data, col.name)
-                for col in primary_key_columns
+                [getattr(data, col.name) for col in primary_key_columns]
                 for data in kept_user_data
             ]
             deleted_user_data = (
-                (
-                    await db.execute(
-                        select(fk.parent.table).where(
-                            fk.parent.column == user_deleted_id,
-                        ),
-                    )
+                await db.execute(
+                    select(fk.parent.table).where(
+                        fk.parent == user_deleted_id,
+                    ),
                 )
-                .scalars()
-                .all()
-            )
+            ).all()
             deleted_user_primaries_data = [
-                getattr(data, col.name)
-                for col in primary_key_columns
+                [getattr(data, col.name) for col in primary_key_columns]
                 for data in deleted_user_data
             ]
+            print(deleted_user_primaries_data)
             for i in range(len(deleted_user_primaries_data)):
-                deleted_user_primaries_data[i][user_id_fk_index] = (
-                    kept_user_primaries_data[i]
-                )
-            for i in range(len(deleted_user_primaries_data)):
+                user_id_fk_index = deleted_user_primaries_data[i].index(user_deleted_id)
+                deleted_user_primaries_data[i][user_id_fk_index] = user_kept_id
                 if deleted_user_primaries_data[i] not in kept_user_primaries_data:
                     deleted_user_primaries_data[i][user_id_fk_index] = user_deleted_id
                     await db.execute(
@@ -351,7 +350,7 @@ async def fusion_users(
                                 ],
                             ),
                         )
-                        .values(**{fk.column.name: user_kept_id}),
+                        .values(**{fk.parent.name: user_kept_id}),
                     )
                 else:
                     deleted_user_primaries_data[i][user_id_fk_index] = user_deleted_id

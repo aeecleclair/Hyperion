@@ -75,10 +75,10 @@ def test_fusion_users(client: TestClient) -> None:
     assert response.status_code == 200
 
     response = client.get(
-        f"/groups/{GroupType.CAA}",
+        f"/groups/{GroupType.CAA.value}",
         headers={"Authorization": f"Bearer {token_admin_user}"},
     )
     assert response.status_code == 200
-    users = response.json()["users"]
+    users = response.json()["members"]
     users_ids = [user["id"] for user in users]
     assert student_user_to_keep.id in users_ids
