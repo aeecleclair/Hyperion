@@ -336,5 +336,5 @@ class CustomDataComplete(CustomDataBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class ResultRequest(CustomDataBase):
+class ResultRequest(BaseModel):
     emails: list[str]
