@@ -245,7 +245,7 @@ def construct_dataframe_from_users_purchases(
             df.loc[user_id, "Panier payé"] = True
         else:
             df.loc[user_id, "Panier payé"] = False
-            df.loc[user_id, "Commentaire"] = "Manquant : " + ", ".join(
+            df.loc[user_id, "Commentaire"] = "Manquant : \n-" + "\n-".join(
                 variant_to_column[purchase.product_variant_id]
                 for purchase in users_purchases[user_id]
                 if not purchase.validated
