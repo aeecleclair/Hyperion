@@ -358,7 +358,7 @@ async def get_online_sellers(
 
 async def generate_and_send_results(
     seller_id: UUID,
-    email: schemas_cdr.ResultRequest,
+    emails: schemas_cdr.ResultRequest,
     db: AsyncSession,
     settings: Settings,
 ):
@@ -430,7 +430,7 @@ async def generate_and_send_results(
         engine="xlsxwriter",
     )
     await send_email(
-        recipient=email.email,
+        recipient=emails.emails,
         subject=f"Résultats de ventes pour {seller.name}",
         content=f"Bonjour,\n\nVous trouverez en pièce jointe le fichier Excel contenant les résultats de ventes pour la CdR pour l'association {seller.name}.",
         settings=settings,
@@ -448,7 +448,7 @@ async def generate_and_send_results(
 )
 async def send_seller_results(
     seller_id: UUID,
-    email: schemas_cdr.ResultRequest,
+    emails: schemas_cdr.ResultRequest,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
@@ -462,7 +462,7 @@ async def send_seller_results(
     background_tasks.add_task(
         generate_and_send_results,
         seller_id=seller_id,
-        email=email,
+        emails=emails,
         db=db,
         settings=settings,
     )

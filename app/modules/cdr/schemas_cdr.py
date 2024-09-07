@@ -337,4 +337,4 @@ class CustomDataComplete(CustomDataBase):
 
 
 class ResultRequest(CustomDataBase):
-    email: str
+    emails: list[str]
