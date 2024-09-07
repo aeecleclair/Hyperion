@@ -1,4 +1,5 @@
 import logging
+import os
 import smtplib
 import ssl
 from email.message import EmailMessage
@@ -52,7 +53,7 @@ def send_email(
         )
         file_path = Path(file_directory, str(file_uuid))
         hyperion_error_logger.debug(f"Reading file '{file_path}'")
-        with Path.open(file_path, "rb") as file:
+        with open(file_path, "rb") as file:
             hyperion_error_logger.debug(f"Reading file {file_uuid}")
             msg.add_attachment(
                 file.read(),
