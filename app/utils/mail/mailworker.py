@@ -56,7 +56,7 @@ def send_email(
                 file.read(),
                 main_type=main_type,
                 sub_type=sub_type,
-                filename=file_name.split("/")[-1],
+                filename=file_name,
             )
 
     hyperion_error_logger.debug(f"Sending email to {recipient}")
