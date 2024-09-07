@@ -13,6 +13,7 @@ from fastapi import (
     WebSocket,
     WebSocketDisconnect,
 )
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, schemas_core
@@ -362,7 +363,7 @@ async def generate_and_send_results(
     # emails: schemas_cdr.ResultRequest,
     db: AsyncSession,
     # settings: Settings,
-):
+) -> Path:
     seller = await cruds_cdr.get_seller_by_id(db, seller_id)
     if not seller:
         raise HTTPException(
@@ -440,6 +441,7 @@ async def generate_and_send_results(
         freeze_panes=(2, 3),
         engine="xlsxwriter",
     )
+    return Path(file_directory, str(file_uuid))
 
     # Not working, we have to keep the file in the server
     # hyperion_error_logger.debug(
@@ -462,9 +464,10 @@ async def generate_and_send_results(
     # Path.unlink(Path(file_directory, file_name))
 
 
-@module.router.post(
+@module.router.get(
     "/cdr/sellers/{seller_id}/results/",
     status_code=200,
+    response_class=FileResponse,
 )
 async def send_seller_results(
     seller_id: UUID,
@@ -479,13 +482,17 @@ async def send_seller_results(
 
     **User must be CDR Admin to use this endpoint**
     """
-    background_tasks.add_task(
-        generate_and_send_results,
-        seller_id=seller_id,
-        # emails=emails,
-        db=db,
-        # settings=settings,
-    )
+    # We don't use the emails parameter for now
+    # background_tasks.add_task(
+    #     generate_and_send_results,
+    #     seller_id=seller_id,
+    #     # emails=emails,
+    #     db=db,
+    #     # settings=settings,
+    # )
+
+    path = await generate_and_send_results(seller_id=seller_id, db=db)
+    return FileResponse(path)
 
 
 @module.router.get(
