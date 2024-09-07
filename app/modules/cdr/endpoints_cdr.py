@@ -429,11 +429,12 @@ async def generate_and_send_results(
     )
 
     file_directory = "/data/cdr"
+    file_uuid = uuid4()
     file_name = f"CdR {datetime.now(tz=UTC).year} ventes {seller.name}.xlsx"
 
     Path.mkdir(Path(file_directory), parents=True, exist_ok=True)
     df.to_excel(
-        Path(file_directory, file_name),
+        Path(file_directory, file_uuid),
         index=False,
         freeze_panes=(2, 3),
         engine="xlsxwriter",

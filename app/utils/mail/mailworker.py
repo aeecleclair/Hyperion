@@ -4,6 +4,7 @@ import ssl
 from email.message import EmailMessage
 from pathlib import Path
 from typing import TYPE_CHECKING
+from uuid import UUID
 
 if TYPE_CHECKING:
     from app.core.config import Settings
@@ -17,6 +18,7 @@ def send_email(
     content: str,
     settings: "Settings",
     file_directory: str | None = None,
+    file_uuid: UUID | None = None,
     file_name: str | None = None,
     main_type: str | None = None,
     sub_type: str | None = None,
@@ -46,12 +48,12 @@ def send_email(
 
     if file_directory and file_name:
         hyperion_error_logger.debug(
-            f"Adding attachment {Path(file_directory, file_name)}",
+            f"Adding attachment {Path(file_directory, file_uuid)}",
         )
-        file_path = Path(file_directory, file_name)
+        file_path = Path(file_directory, file_uuid)
         hyperion_error_logger.debug(f"Reading file '{file_path}'")
         with Path.open(file_path, "rb") as file:
-            hyperion_error_logger.debug(f"Reading file {file_name}")
+            hyperion_error_logger.debug(f"Reading file {file_uuid}")
             msg.add_attachment(
                 file.read(),
                 main_type=main_type,
