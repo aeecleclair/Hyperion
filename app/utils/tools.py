@@ -509,7 +509,7 @@ async def create_and_send_email_migration(
                 "migration_link": f"{settings.CLIENT_URL}users/migrate-mail-confirm?token={confirmation_token}",
             },
         )
-        send_email(
+        await send_email(
             recipient=new_email,
             subject="MyECL - Confirm your new email address",
             content=migration_content,

@@ -4,16 +4,19 @@ from email.message import EmailMessage
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import aiofiles
+
 if TYPE_CHECKING:
     from app.core.config import Settings
 
 
-def send_email(
+async def send_email(
     recipient: str | list[str],
     subject: str,
     content: str,
     settings: "Settings",
-    file_path: str | None = None,
+    file_directory: str | None = None,
+    file_name: str | None = None,
     main_type: str | None = None,
     sub_type: str | None = None,
 ):
@@ -38,13 +41,13 @@ def send_email(
     msg["To"] = ";".join(recipient)
     msg["Subject"] = subject
 
-    if file_path:
-        with Path.open(Path(file_path), "rb") as f:
+    if file_directory and file_name:
+        async with aiofiles.open(Path(file_directory, file_name), "rb") as f:
             msg.add_attachment(
                 f.read(),
                 main_type=main_type,
                 sub_type=sub_type,
-                filename=file_path.split("/")[-1],
+                filename=file_name.split("/")[-1],
             )
 
     with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT) as server:
