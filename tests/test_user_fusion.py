@@ -1,9 +1,14 @@
+from datetime import UTC, datetime, timedelta
+from uuid import uuid4
+
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
+from app.types.membership import AvailableAssociationMembership
 from tests.commons import (
+    add_object_to_db,
     create_api_access_token,
     create_user_with_groups,
 )
@@ -15,6 +20,8 @@ student_user_to_keep: models_core.CoreUser
 token_admin_user: str
 token_student_user: str
 
+core_association_membership_user_del: models_core.CoreAssociationMembership
+core_association_membership_user_kept: models_core.CoreAssociationMembership
 
 FABRISTPP_EMAIL_1 = "fabristpp.eclair1@etu.ec-lyon.fr"
 FABRISTPP_EMAIL_2 = "fabristpp.eclair3@ecl21.ec-lyon.fr"
@@ -25,7 +32,7 @@ async def init_objects() -> None:
     global admin_user, student_user_to_delete, student_user_to_keep
 
     admin_user = await create_user_with_groups(
-        [GroupType.admin],
+        [GroupType.admin, GroupType.admin_cdr],
     )
     student_user_to_keep = await create_user_with_groups(
         [GroupType.student, GroupType.BDE],
@@ -36,14 +43,32 @@ async def init_objects() -> None:
         email=FABRISTPP_EMAIL_2,
     )
 
+    global core_association_membership_user_del, core_association_membership_user_kept
+    core_association_membership_user_del = models_core.CoreAssociationMembership(
+        id=uuid4(),
+        user_id=student_user_to_delete.id,
+        membership=AvailableAssociationMembership.aeecl,
+        start_date=datetime.now(tz=UTC).date() - timedelta(days=365),
+        end_date=datetime.now(tz=UTC).date() + timedelta(days=365),
+    )
+    await add_object_to_db(core_association_membership_user_del)
+    core_association_membership_user_kept = models_core.CoreAssociationMembership(
+        id=uuid4(),
+        user_id=student_user_to_keep.id,
+        membership=AvailableAssociationMembership.aeecl,
+        start_date=datetime.now(tz=UTC).date() - timedelta(days=565),
+        end_date=datetime.now(tz=UTC).date() + timedelta(days=165),
+    )
+    await add_object_to_db(core_association_membership_user_kept)
+
     global token_admin_user, token_student_user
     token_admin_user = create_api_access_token(admin_user)
     token_student_user = create_api_access_token(student_user_to_keep)
 
 
 def test_fusion_users(client: TestClient) -> None:
-    response = client.patch(
-        "/users/fusion",
+    response = client.post(
+        "/users/merge",
         headers={"Authorization": f"Bearer {token_student_user}"},
         json={
             "user_kept_email": student_user_to_keep.email,
@@ -52,8 +77,8 @@ def test_fusion_users(client: TestClient) -> None:
     )
     assert response.status_code == 403
 
-    response = client.patch(
-        "/users/fusion",
+    response = client.post(
+        "/users/merge",
         headers={"Authorization": f"Bearer {token_admin_user}"},
         json={
             "user_kept_email": student_user_to_keep.email,
@@ -82,3 +107,27 @@ def test_fusion_users(client: TestClient) -> None:
     users = response.json()["members"]
     users_ids = [user["id"] for user in users]
     assert student_user_to_keep.id in users_ids
+
+    response = client.get(
+        f"/cdr/users/{student_user_to_keep.id}/memberships/",
+        headers={"Authorization": f"Bearer {token_admin_user}"},
+    )
+    assert response.status_code == 200
+    memberships = response.json()
+    assert len(memberships) == 2
+    user_kept_membership_aeecl_json = {
+        "id": str(core_association_membership_user_kept.id),
+        "user_id": str(student_user_to_keep.id),
+        "membership": AvailableAssociationMembership.aeecl.value,
+        "start_date": core_association_membership_user_kept.start_date.isoformat(),
+        "end_date": core_association_membership_user_kept.end_date.isoformat(),
+    }
+    user_del_membership_aeecl_json = {
+        "id": str(core_association_membership_user_del.id),
+        "user_id": str(student_user_to_keep.id),
+        "membership": AvailableAssociationMembership.aeecl.value,
+        "start_date": core_association_membership_user_del.start_date.isoformat(),
+        "end_date": core_association_membership_user_del.end_date.isoformat(),
+    }
+    assert user_kept_membership_aeecl_json in memberships
+    assert user_del_membership_aeecl_json in memberships
