@@ -2,10 +2,11 @@
 
 from collections.abc import Sequence
 
-from sqlalchemy import and_, delete, not_, select, update
+from sqlalchemy import ForeignKey, and_, delete, not_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from sqlalchemy_utils import get_referencing_foreign_keys  # type: ignore
 
 from app.core import models_core, schemas_core
 
@@ -274,3 +275,124 @@ async def update_user_password_by_id(
         .values(password_hash=new_password_hash),
     )
     await db.commit()
+
+
+async def fusion_users(
+    db: AsyncSession,
+    user_kept_id: str,
+    user_deleted_id: str,
+):
+    """Fusion two users together
+    We use the user_kept_id as the user that will keep all the data
+    and the user_deleted_id as the user that will be deleted
+
+    The function will update all the foreign keys that reference the user_deleted_id
+    to reference the user_kept_id instead
+
+    If the user_deleted_id is referenced in a table where the user_kept_id is also referenced,
+    and the change would create a duplicate that violates a unique constraint, the row will be deleted
+
+    There are thre cases to consider:
+    1. The foreign key is not a primary key of the table:
+        In this case, we can update the row
+    2. The foreign key is one of the primary keys of the table:
+        In this case, we can't update the row without verifying that the new row doesn't already exist
+        So we collect all the primary keys of the table where the user_deleted_id is referenced and
+        all the primary keys of the table where the user_kept_id is referenced
+        We then update the row and check if the new row already exists:
+            a. If it doesn't, we update the row
+            b. If it does, we delete the row
+    """
+    foreign_keys: set[ForeignKey] = get_referencing_foreign_keys(
+        models_core.CoreUser.__table__,
+    )
+    # We keep only the foreign keys that reference the user_id
+    user_id_fks: list[ForeignKey] = [
+        fk for fk in foreign_keys if fk.column == models_core.CoreUser.__table__.c.id
+    ]
+    for fk in user_id_fks:
+        is_in = False
+        # We can not use `if fk.parent in fk.parent.table.primary_key.columns` because `in` doesn't work with columns
+        for pk in fk.parent.table.primary_key.columns:
+            if fk.parent == pk:
+                is_in = True
+                break
+        if not is_in:  # Case 1
+            await db.execute(
+                update(fk.parent.table)
+                .where(fk.parent == user_deleted_id)
+                .values(**{fk.parent.name: user_kept_id}),
+            )
+        else:  # Case 2
+            primary_key_columns = list(fk.parent.table.primary_key.columns)
+
+            kept_user_data = (  # We get all the data where the user_kept_id is referenced
+                await db.execute(
+                    select(fk.parent.table).where(fk.parent == user_kept_id),
+                )
+            ).all()
+            kept_user_primaries_data = [  # We keep only the primary keys
+                [getattr(data, col.name) for col in primary_key_columns]
+                for data in kept_user_data
+            ]
+
+            deleted_user_data = (  # We get all the data where the user_deleted_id is referenced
+                await db.execute(
+                    select(fk.parent.table).where(
+                        fk.parent == user_deleted_id,
+                    ),
+                )
+            ).all()
+            deleted_user_primaries_data = [  # We keep only the primary keys
+                [getattr(data, col.name) for col in primary_key_columns]
+                for data in deleted_user_data
+            ]
+
+            for i in range(len(deleted_user_primaries_data)):
+                user_id_fk_index = deleted_user_primaries_data[i].index(user_deleted_id)
+                deleted_user_primaries_data[i][user_id_fk_index] = (
+                    user_kept_id  # We replace the user_deleted_id by the user_kept_id in the deleted_user_primaries_data
+                )
+                if (
+                    deleted_user_primaries_data[i] not in kept_user_primaries_data
+                ):  # Case 2a
+                    deleted_user_primaries_data[i][user_id_fk_index] = (
+                        user_deleted_id  # We put back the user_deleted_id in the deleted_user_primaries_data to update the row
+                    )
+                    await db.execute(
+                        update(fk.parent.table)
+                        .where(
+                            and_(
+                                *[
+                                    col == val
+                                    for col, val in zip(
+                                        primary_key_columns,
+                                        deleted_user_primaries_data[i],
+                                        strict=True,
+                                    )
+                                ],
+                            ),
+                        )
+                        .values(**{fk.parent.name: user_kept_id}),
+                    )
+                else:  # Case 2b
+                    deleted_user_primaries_data[i][user_id_fk_index] = (
+                        user_deleted_id  # We put back the user_deleted_id in the deleted_user_primaries_data to delete the row
+                    )
+                    await db.execute(
+                        delete(fk.parent.table).where(
+                            and_(
+                                *[
+                                    col == val
+                                    for col, val in zip(
+                                        primary_key_columns,
+                                        deleted_user_primaries_data[i],
+                                        strict=True,
+                                    )
+                                ],
+                            ),
+                        ),
+                    )
+
+    # Delete the user_deleted
+    await delete_user(db, user_deleted_id)

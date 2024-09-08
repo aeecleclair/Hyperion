@@ -3,18 +3,22 @@ import os
 import re
 from collections.abc import Sequence
 from datetime import UTC, date, datetime
+from pathlib import Path
 from uuid import UUID, uuid4
 
 from fastapi import (
+    BackgroundTasks,
     Depends,
     HTTPException,
     WebSocket,
     WebSocketDisconnect,
 )
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, schemas_core
 from app.core.config import Settings
+from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
 from app.core.payment.payment_tool import PaymentTool
 from app.core.users import cruds_users
@@ -36,6 +40,7 @@ from app.modules.cdr.types_cdr import (
 )
 from app.modules.cdr.utils_cdr import (
     check_request_consistency,
+    construct_dataframe_from_users_purchases,
     is_user_in_a_seller_group,
     validate_payment,
 )
@@ -50,6 +55,8 @@ from app.types.websocket import (
     WebsocketConnectionManager,
 )
 from app.utils.auth import auth_utils
+
+# from app.utils.mail.mailworker import send_email
 from app.utils.tools import (
     create_and_send_email_migration,
     get_core_data,
@@ -102,7 +109,7 @@ async def get_cdr_users(
 
 
 @module.router.get(
-    "/cdr/users/pending",
+    "/cdr/users/pending/",
     response_model=list[schemas_cdr.CdrUserPreview],
     status_code=200,
 )
@@ -351,6 +358,143 @@ async def get_online_sellers(
     return await cruds_cdr.get_online_sellers(db)
 
 
+async def generate_and_send_results(
+    seller_id: UUID,
+    # emails: schemas_cdr.ResultRequest,
+    db: AsyncSession,
+    # settings: Settings,
+) -> Path:
+    seller = await cruds_cdr.get_seller_by_id(db, seller_id)
+    if not seller:
+        raise HTTPException(
+            status_code=404,
+            detail="Seller not found.",
+        )
+    seller_group = await cruds_groups.get_group_by_id(db, seller.group_id)
+    if seller_group is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Seller group not found.",
+        )
+    products = await cruds_cdr.get_products_by_seller_id(db, seller_id)
+    if len(products) == 0:
+        raise HTTPException(
+            status_code=400,
+            detail="There is no products for this seller so there is no results to send.",
+        )
+    variants: list[models_cdr.ProductVariant] = []
+    product_fields: dict[UUID, list[models_cdr.CustomDataField]] = {}
+    for product in products:
+        product_variants = await cruds_cdr.get_product_variants(db, product.id)
+        variants.extend(product_variants)
+        product_fields[product.id] = list(
+            await cruds_cdr.get_product_customdata_fields(
+                db,
+                product.id,
+            ),
+        )
+    variant_ids = [v.id for v in product_variants]
+    purchases = await cruds_cdr.get_all_purchases(db)
+    if len(purchases) == 0:
+        raise HTTPException(
+            status_code=400,
+            detail="There is no purchases in the database so there is no results to send.",
+        )
+    purchases_by_users: dict[str, list[models_cdr.Purchase]] = {}
+    users = await get_users(db)
+    for purchase in purchases:
+        if purchase.product_variant_id in variant_ids:
+            if purchase.user_id not in purchases_by_users:
+                purchases_by_users[purchase.user_id] = []
+            purchases_by_users[purchase.user_id].append(purchase)
+    users_answers = {}
+    for each_user in users:
+        users_answers[each_user.id] = list(
+            await cruds_cdr.get_customdata_by_user_id(
+                db,
+                each_user.id,
+            ),
+        )
+    hyperion_error_logger.info(
+        f"Data for seller {seller.name} fetched. Starting to construct the dataframe.",
+    )
+    df = construct_dataframe_from_users_purchases(
+        users_purchases=purchases_by_users,
+        users=list(users),
+        products=list(products),
+        variants=variants,
+        data_fields=product_fields,
+        users_answers=users_answers,
+    )
+    hyperion_error_logger.info(
+        f"Dataframe for seller {seller.name} constructed. Generating the Excel file.",
+    )
+
+    file_directory = "/app/data/cdr"
+    file_uuid = uuid4()
+    # file_name = f"CdR {datetime.now(tz=UTC).year} ventes {seller.name}.xlsx"
+
+    Path.mkdir(Path(file_directory), parents=True, exist_ok=True)
+    df.to_excel(
+        Path(file_directory, str(file_uuid)),
+        index=False,
+        freeze_panes=(2, 3),
+        engine="xlsxwriter",
+    )
+    return Path(file_directory, str(file_uuid))
+
+    # Not working, we have to keep the file in the server
+    # hyperion_error_logger.debug(
+    #     f"Excel file for seller {seller.name} generated. Sending the email.",
+    # )
+    # send_email(
+    #     recipient=emails.emails,
+    #     subject=f"Résultats de ventes pour {seller.name}",
+    #     content=f"Bonjour,\n\nVous trouverez en pièce jointe le fichier Excel contenant les résultats de ventes pour la CdR pour l'association {seller.name}.",
+    #     settings=settings,
+    #     file_directory=file_directory,
+    #     file_uuid=file_uuid,
+    #     file_name=file_name,
+    #     main_type="text",
+    #     sub_type="xlsx",
+    # )
+    # hyperion_error_logger.info(
+    #     f"Results for seller {seller.name} sent to {emails.emails}",
+    # )
+    # Path.unlink(Path(file_directory, file_name))
+
+
+@module.router.get(
+    "/cdr/sellers/{seller_id}/results/",
+    status_code=200,
+    response_class=FileResponse,
+)
+async def send_seller_results(
+    seller_id: UUID,
+    # emails: schemas_cdr.ResultRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
+    # settings: Settings = Depends(get_settings),
+):
+    """
+    Get a seller's results.
+
+    **User must be CDR Admin to use this endpoint**
+    """
+    # We don't use the emails parameter for now
+    # background_tasks.add_task(
+    #     generate_and_send_results,
+    #     seller_id=seller_id,
+    #     # emails=emails,
+    #     db=db,
+    #     # settings=settings,
+    # )
+
+    path = await generate_and_send_results(seller_id=seller_id, db=db)
+    return FileResponse(path)
+
+
 @module.router.get(
     "/cdr/online/products/",
     response_model=list[schemas_cdr.ProductComplete],
@@ -552,12 +696,6 @@ async def create_product(
 
     **User must be part of the seller's group to use this endpoint**
     """
-    if product.generate_ticket:
-        if product.ticket_expiration is None or product.ticket_max_use is None:
-            raise HTTPException(
-                status_code=403,
-                detail="You must specify a ticket expiration date and a ticket max use when the product generate a ticket",
-            )
     await is_user_in_a_seller_group(
         seller_id,
         user=user,
@@ -572,7 +710,9 @@ async def create_product(
     db_product = models_cdr.CdrProduct(
         id=uuid4(),
         seller_id=seller_id,
-        **product.model_dump(exclude={"product_constraints", "document_constraints"}),
+        **product.model_dump(
+            exclude={"product_constraints", "document_constraints", "ticket"},
+        ),
     )
     try:
         cruds_cdr.create_product(db, db_product)
@@ -591,6 +731,11 @@ async def create_product(
                     product_id=db_product.id,
                     document_id=constraint_id,
                 ),
+            )
+        for ticket in product.tickets:
+            cruds_cdr.create_ticket_generator(
+                db,
+                models_cdr.TicketGenerator(id=uuid4(), **ticket.model_dump()),
             )
         await db.commit()
         return await cruds_cdr.get_product_by_id(db, db_product.id)
@@ -1422,15 +1567,17 @@ async def mark_purchase_as_validated(
                 product_variant=product_variant,
                 db=db,
             )
-        if product.generate_ticket and product.ticket_expiration:
+        for ticketgen in product.tickets:
             ticket = models_cdr.Ticket(
                 id=uuid4(),
                 secret=uuid4(),
+                name=ticketgen.name,
+                generator_id=ticketgen.id,
                 product_variant_id=product_variant.id,
                 user_id=user_id,
-                scan_left=product.ticket_max_use,
+                scan_left=ticketgen.max_use,
                 tags="",
-                expiration=product.ticket_expiration,
+                expiration=ticketgen.expiration,
             )
             cruds_cdr.create_ticket(db=db, ticket=ticket)
     else:
@@ -1450,7 +1597,7 @@ async def mark_purchase_as_validated(
                     db=db,
                 )
 
-        if product.generate_ticket:
+        if product.tickets:
             await cruds_cdr.delete_ticket_of_user(
                 db=db,
                 user_id=user_id,
@@ -2326,6 +2473,39 @@ async def create_membership(
         return db_membership
 
 
+@module.router.patch(
+    "/cdr/users/{user_id}/memberships/{membership}/",
+    status_code=204,
+)
+async def update_membership(
+    user_id: str,
+    membership: AvailableAssociationMembership,
+    membership_edit: schemas_cdr.MembershipEdit,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
+):
+    db_membership = await cruds_cdr.get_membership_by_user_id_and_membership_name(
+        user_id=user_id,
+        membership=membership,
+        db=db,
+    )
+    if db_membership is None:
+        raise HTTPException(
+            status_code=404,
+            detail="This user doesn't have this membership",
+        )
+    try:
+        await cruds_cdr.update_membership(
+            membership_id=db_membership.id,
+            membership=membership_edit,
+            db=db,
+        )
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+
+
 @module.router.delete(
     "/cdr/users/{user_id}/memberships/{membership_id}/",
     status_code=204,
@@ -2407,6 +2587,18 @@ async def update_status(
 
 
 @module.router.get(
+    "/cdr/users/me/tickets/",
+    response_model=list[schemas_cdr.Ticket],
+    status_code=200,
+)
+async def get_my_tickets(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user),
+):
+    return await cruds_cdr.get_tickets_of_user(db=db, user_id=user.id)
+
+
+@module.router.get(
     "/cdr/users/{user_id}/tickets/",
     response_model=list[schemas_cdr.Ticket],
     status_code=200,
@@ -2452,29 +2644,21 @@ async def get_ticket_secret(
 
 
 @module.router.get(
-    "/cdr/products/{product_id}/tickets/{secret}/",
+    "/cdr/sellers/{seller_id}/products/{product_id}/tickets/{generator_id}/{secret}/",
     response_model=schemas_cdr.Ticket,
     status_code=200,
 )
 async def get_ticket_by_secret(
+    seller_id: UUID,
     product_id: UUID,
+    generator_id: UUID,
     secret: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    ticket = await cruds_cdr.get_ticket_by_secret(db=db, secret=secret)
-    if not ticket:
-        raise HTTPException(
-            status_code=404,
-            detail="Ticket not found.",
-        )
-    if ticket.product_variant.product_id != product_id:
-        raise HTTPException(
-            status_code=404,
-            detail="This Ticket is not related to this product.",
-        )
-    product = await cruds_cdr.get_product_by_id(
+    product = await check_request_consistency(
         db=db,
+        seller_id=seller_id,
         product_id=product_id,
     )
     if not product:
@@ -2482,46 +2666,51 @@ async def get_ticket_by_secret(
             status_code=404,
             detail="Product not found.",
         )
-    seller = await cruds_cdr.get_seller_by_id(db=db, seller_id=product.seller_id)
-    if not seller:
+    await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
+    ticket_generator = await cruds_cdr.get_ticket_generator(
+        db=db,
+        ticket_generator_id=generator_id,
+    )
+    if not ticket_generator:
         raise HTTPException(
             status_code=404,
-            detail="Seller not found.",
+            detail="Ticket generator not found.",
         )
-    if not (
-        is_user_member_of_an_allowed_group(user, [seller.group_id, GroupType.admin_cdr])
-    ):
+    if ticket_generator.product_id != product_id:
         raise HTTPException(
-            status_code=403,
-            detail="You can't scan this type of ticket.",
+            status_code=404,
+            detail="This Ticket generator is not related to this product.",
+        )
+    ticket = await cruds_cdr.get_ticket_by_secret(db=db, secret=secret)
+    if not ticket:
+        raise HTTPException(
+            status_code=404,
+            detail="Ticket not found.",
+        )
+    if ticket.generator_id != generator_id:
+        raise HTTPException(
+            status_code=404,
+            detail="This Ticket is not related to this product.",
         )
     return ticket
 
 
 @module.router.patch(
-    "/cdr/products/{product_id}/tickets/{secret}/",
+    "/cdr/sellers/{seller_id}/products/{product_id}/tickets/{generator_id}/{secret}/",
     status_code=204,
 )
 async def scan_ticket(
+    seller_id: UUID,
     product_id: UUID,
+    generator_id: UUID,
     secret: UUID,
     ticket_data: schemas_cdr.TicketScan,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    ticket = await cruds_cdr.get_ticket_by_secret(db=db, secret=secret)
-    if not ticket:
-        raise HTTPException(
-            status_code=404,
-            detail="Ticket not found.",
-        )
-    if ticket.product_variant.product_id != product_id:
-        raise HTTPException(
-            status_code=404,
-            detail="This Ticket is not related to this product.",
-        )
-    product = await cruds_cdr.get_product_by_id(
+    product = await check_request_consistency(
         db=db,
+        seller_id=seller_id,
         product_id=product_id,
     )
     if not product:
@@ -2529,18 +2718,31 @@ async def scan_ticket(
             status_code=404,
             detail="Product not found.",
         )
-    seller = await cruds_cdr.get_seller_by_id(db=db, seller_id=product.seller_id)
-    if not seller:
+    await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
+    ticket_generator = await cruds_cdr.get_ticket_generator(
+        db=db,
+        ticket_generator_id=generator_id,
+    )
+    if not ticket_generator:
         raise HTTPException(
             status_code=404,
-            detail="Seller not found.",
+            detail="Ticket generator not found.",
         )
-    if not (
-        is_user_member_of_an_allowed_group(user, [seller.group_id, GroupType.admin_cdr])
-    ):
+    if ticket_generator.product_id != product_id:
         raise HTTPException(
-            status_code=403,
-            detail="You can't scan this type of ticket.",
+            status_code=404,
+            detail="This Ticket generator is not related to this product.",
+        )
+    ticket = await cruds_cdr.get_ticket_by_secret(db=db, secret=secret)
+    if not ticket:
+        raise HTTPException(
+            status_code=404,
+            detail="Ticket not found.",
+        )
+    if ticket.generator_id != generator_id:
+        raise HTTPException(
+            status_code=404,
+            detail="This Ticket is not related to this product.",
         )
     if ticket.scan_left <= 0:
         raise HTTPException(
@@ -2559,6 +2761,107 @@ async def scan_ticket(
             scan=ticket.scan_left - 1,
             tags=ticket.tags + "," + ticket_data.tag.strip(),
         )
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+
+
+@module.router.post(
+    "/cdr/sellers/{seller_id}/products/{product_id}/tickets/",
+    status_code=201,
+    response_model=schemas_cdr.ProductComplete,
+)
+async def generate_ticket_for_product(
+    seller_id: UUID,
+    product_id: UUID,
+    ticket_data: schemas_cdr.GenerateTicketBase,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
+    product = await check_request_consistency(
+        db=db,
+        seller_id=seller_id,
+        product_id=product_id,
+    )
+    if not product:
+        raise HTTPException(
+            status_code=404,
+            detail="Product not found.",
+        )
+    ticketgen = models_cdr.TicketGenerator(
+        id=uuid4(),
+        product_id=product_id,
+        **ticket_data.model_dump(),
+    )
+    cruds_cdr.create_ticket_generator(db=db, ticket=ticketgen)
+
+    validated_purchases = await cruds_cdr.get_product_validated_purchases(
+        db=db,
+        product_id=ticketgen.product_id,
+    )
+    for purchase in validated_purchases:
+        ticket = models_cdr.Ticket(
+            id=uuid4(),
+            secret=uuid4(),
+            name=ticketgen.name,
+            generator_id=ticketgen.id,
+            product_variant_id=purchase.product_variant_id,
+            user_id=purchase.user_id,
+            scan_left=ticketgen.max_use,
+            tags="",
+            expiration=ticketgen.expiration,
+        )
+        cruds_cdr.create_ticket(db=db, ticket=ticket)
+    try:
+        await db.commit()
+        return await cruds_cdr.get_product_by_id(db=db, product_id=product_id)
+    except Exception:
+        await db.rollback()
+        raise
+
+
+@module.router.delete(
+    "/cdr/sellers/{seller_id}/products/{product_id}/tickets/{ticket_generator_id}",
+    status_code=204,
+)
+async def delete_ticket_generator_for_product(
+    seller_id: UUID,
+    product_id: UUID,
+    ticket_generator_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
+    product = await check_request_consistency(
+        db=db,
+        seller_id=seller_id,
+        product_id=product_id,
+    )
+    if not product:
+        raise HTTPException(
+            status_code=404,
+            detail="Product not found.",
+        )
+    ticketgen = await cruds_cdr.get_ticket_generator(
+        db=db,
+        ticket_generator_id=ticket_generator_id,
+    )
+    if not ticketgen:
+        raise HTTPException(
+            status_code=404,
+            detail="Product Ticket not found.",
+        )
+    await cruds_cdr.delete_ticket_generator(
+        db=db,
+        ticket_generator_id=ticket_generator_id,
+    )
+    await cruds_cdr.delete_product_generated_tickets(
+        db=db,
+        ticket_generator_id=ticket_generator_id,
+    )
+    try:
         await db.commit()
     except Exception:
         await db.rollback()
