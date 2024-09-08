@@ -865,7 +865,7 @@ async def merge_users(
     background_tasks.add_task(
         send_email,
         recipient=[user_kept.email, user_deleted.email],
-        subject="MyECL - Account fusion",
+        subject="MyECL - Fusion de compte",
         content=f"Le compte {user_deleted.email} a été fusionné avec le compte {user_kept.email}. Tout le contenu du compte {user_deleted.email} a été transféré sur le compte {user_kept.email}.\nMerci de vous connecter avec le compte {user_kept.email} pour accéder à vos données.",
         settings=settings,
     )
