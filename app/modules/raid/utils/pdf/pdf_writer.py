@@ -1,4 +1,5 @@
 import io
+import logging
 import pathlib
 from pathlib import Path
 from typing import cast
@@ -27,6 +28,8 @@ from app.modules.raid.utils.pdf.conversion_utils import (
 from app.utils.tools import get_file_path_from_data
 
 templates = Jinja2Templates(directory="assets/templates")
+
+hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 def maximize_image(
@@ -429,13 +432,20 @@ class HTMLPDFWriter:
             autoescape=select_autoescape(["html"]),
         )
         results_template = environment.get_template("template.html")
+
         context = {
             **participant.__dict__,
             "information": {
-                "president": information.president.__dict__,
-                "rescue": information.rescue.__dict__,
-                "security_responsible": information.security_responsible.__dict__,
-                "volunteer_responsible": information.volunteer_responsible.__dict__,
+                "president": information.president.__dict__
+                if information.president
+                else None,
+                "rescue": information.rescue.__dict__ if information.rescue else None,
+                "security_responsible": information.security_responsible.__dict__
+                if information.security_responsible
+                else None,
+                "volunteer_responsible": information.volunteer_responsible.__dict__
+                if information.volunteer_responsible
+                else None,
             },
             "team_number": team_number,
         }

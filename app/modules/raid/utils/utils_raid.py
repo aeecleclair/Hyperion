@@ -7,11 +7,13 @@ import aiofiles
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import Settings
 from app.core.payment import schemas_payment
 from app.modules.raid import coredata_raid, cruds_raid, models_raid, schemas_raid
 from app.modules.raid.schemas_raid import ParticipantBase, ParticipantUpdate
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.modules.raid.utils.pdf.pdf_writer import HTMLPDFWriter, PDFWriter
+from app.utils.google_api.google_api import DriveGoogleAPI
 from app.utils.tools import (
     get_core_data,
 )
@@ -90,6 +92,7 @@ async def write_teams_csv(
     teams: Sequence[models_raid.Team],
     db: AsyncSession,
     drive_file_manager: DriveFileManager,
+    settings: Settings,
 ) -> None:
     file_name = "Équipes - " + datetime.now(UTC).strftime("%Y-%m-%d_%H_%M_%S") + ".csv"
     file_path = "data/raid/" + file_name
@@ -117,7 +120,12 @@ async def write_teams_csv(
         for line in data:
             await file.write(",".join(line) + "\n")
 
-    await drive_file_manager.upload_raid_file(file_path, file_name, db)
+    await drive_file_manager.upload_raid_file(
+        file_path,
+        file_name,
+        db,
+        settings=settings,
+    )
     Path(file_path).unlink()
 
 
@@ -136,6 +144,7 @@ async def save_team_info(
     team: models_raid.Team,
     db: AsyncSession,
     drive_file_manager: DriveFileManager,
+    settings: Settings,
 ) -> None:
     try:
         pdf_writer = PDFWriter()
@@ -143,7 +152,8 @@ async def save_team_info(
         file_name = file_path.split("/")[-1]
         if team.file_id:
             try:
-                file_id = drive_file_manager.replace_file(file_path, team.file_id)
+                async with DriveGoogleAPI(db, settings) as google_api:
+                    file_id = google_api.replace_file(file_path, team.file_id)
             except Exception:
                 hyperion_error_logger.exception(
                     "RAID: could not replace file",
@@ -152,12 +162,14 @@ async def save_team_info(
                     file_path,
                     file_name,
                     db,
+                    settings=settings,
                 )
         else:
             file_id = await drive_file_manager.upload_team_file(
                 file_path,
                 file_name,
                 db,
+                settings=settings,
             )
         await cruds_raid.update_team_file_id(team.id, file_id, db)
         pdf_writer.clear_pdf()
@@ -170,6 +182,7 @@ async def post_update_actions(
     team: models_raid.Team | None,
     db: AsyncSession,
     drive_file_manager: DriveFileManager,
+    settings: Settings,
 ) -> None:
     try:
         if team:
@@ -177,8 +190,18 @@ async def post_update_actions(
                 await set_team_number(team, db)
                 all_teams = await cruds_raid.get_all_validated_teams(db)
                 if all_teams:
-                    await write_teams_csv(all_teams, db, drive_file_manager)
-            await save_team_info(team, db, drive_file_manager)
+                    await write_teams_csv(
+                        all_teams,
+                        db,
+                        drive_file_manager,
+                        settings=settings,
+                    )
+            await save_team_info(
+                team,
+                db,
+                drive_file_manager,
+                settings=settings,
+            )
     except Exception:
         hyperion_error_logger.exception("Error while creating pdf")
         return None
@@ -190,6 +213,7 @@ async def save_security_file(
     team_number: int | None,
     db: AsyncSession,
     drive_file_manager: DriveFileManager,
+    settings: Settings,
 ) -> None:
     try:
         pdf_writer = HTMLPDFWriter()
@@ -199,22 +223,24 @@ async def save_security_file(
             team_number,
         )
         file_name = f"{str(team_number) + '_' if team_number else ''}{participant.firstname}_{participant.name}_fiche_sécurité.pdf"
-        if participant.security_file and participant.security_file.file_id:
-            file_id = drive_file_manager.replace_file(
-                file_path,
-                participant.security_file.file_id,
-            )
-        else:
-            file_id = await drive_file_manager.upload_participant_file(
-                file_path,
-                file_name,
+        async with DriveGoogleAPI(db, settings) as google_api:
+            if participant.security_file and participant.security_file.file_id:
+                file_id = google_api.replace_file(
+                    file_path,
+                    participant.security_file.file_id,
+                )
+            else:
+                file_id = await drive_file_manager.upload_participant_file(
+                    file_path,
+                    file_name,
+                    db,
+                    settings=settings,
+                )
+            await cruds_raid.update_security_file_id(
+                participant.security_file.id,
+                file_id,
                 db,
             )
-        await cruds_raid.update_security_file_id(
-            participant.security_file.id,
-            file_id,
-            db,
-        )
         Path(file_path).unlink()
     except Exception:
         hyperion_error_logger.exception("Error while creating pdf")
