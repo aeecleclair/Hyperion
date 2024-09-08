@@ -43,17 +43,6 @@ def send_email(
     msg["To"] = ";".join(recipient)
     msg["Subject"] = subject
 
-    # Not working
-    # if file_directory and file_name:
-    #     file_path = Path(file_directory, str(file_uuid))
-    #     with Path.open(file_path, "rb") as file:
-    #         msg.add_attachment(
-    #             file.read(),
-    #             main_type=main_type,
-    #             sub_type=sub_type,
-    #             filename=file_name,
-    #         )
-
     with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT) as server:
         server.starttls(context=context)
         server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
