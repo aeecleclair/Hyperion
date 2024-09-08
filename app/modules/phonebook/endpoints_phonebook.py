@@ -1,3 +1,4 @@
+import logging
 import uuid
 
 from fastapi import Depends, File, HTTPException, UploadFile
@@ -5,10 +6,17 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, standard_responses
+from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
 from app.core.users import cruds_users
-from app.dependencies import get_db, get_request_id, is_user_an_ecl_member
+from app.dependencies import (
+    get_db,
+    get_request_id,
+    is_user_a_member_of,
+    is_user_an_ecl_member,
+)
 from app.modules.phonebook import cruds_phonebook, models_phonebook, schemas_phonebook
+from app.modules.phonebook.types_phonebook import RoleTags
 from app.types.content_type import ContentType
 from app.types.module import Module
 from app.utils.tools import (
@@ -22,6 +30,8 @@ module = Module(
     tag="Phonebook",
     default_allowed_groups_ids=[GroupType.student, GroupType.staff],
 )
+
+hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 # ---------------------------------------------------------------------------- #
@@ -39,7 +49,19 @@ async def get_all_associations(
     """
     Return all associations from database as a list of AssociationComplete schemas
     """
-    return await cruds_phonebook.get_all_associations(db)
+    associations = await cruds_phonebook.get_all_associations(db)
+    associations_complete = []
+    for association in associations:
+        association_dict = association.__dict__
+        association_dict["associated_groups"] = [
+            group.id for group in association.associated_groups
+        ]
+        associations_complete.append(
+            schemas_phonebook.AssociationComplete(
+                **association_dict,
+            ),
+        )
+    return associations_complete
 
 
 @module.router.get(
@@ -155,6 +177,53 @@ async def update_association(
         raise HTTPException(status_code=400, detail=str(error))
 
 
+@module.router.patch(
+    "/phonebook/associations/{association_id}/groups",
+    status_code=204,
+)
+async def update_association_groups(
+    association_id: str,
+    association_groups_edit: schemas_phonebook.AssociationGroupsEdit,
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Update the groups associated with an Association
+
+    **This endpoint is only usable by Admins (not BDE and CAA)**
+    """
+    await cruds_phonebook.update_association_groups(
+        association_id=association_id,
+        association_groups_edit=association_groups_edit,
+        db=db,
+    )
+
+
+@module.router.patch(
+    "/phonebook/associations/{association_id}/deactivate",
+    status_code=204,
+)
+async def deactivate_association(
+    association_id: str,
+    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Deactivate an Association
+
+    **This endpoint is only usable by CAA and BDE**
+    """
+    if not is_user_member_of_an_allowed_group(
+        user=user,
+        allowed_groups=[GroupType.CAA, GroupType.BDE],
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail=f"You are not allowed to delete association {association_id}",
+        )
+    await cruds_phonebook.deactivate_association(association_id, db)
+
+
 @module.router.delete(
     "/phonebook/associations/{association_id}",
     status_code=204,
@@ -179,6 +248,14 @@ async def delete_association(
         raise HTTPException(
             status_code=403,
             detail=f"You are not allowed to delete association {association_id}",
+        )
+    association = await cruds_phonebook.get_association_by_id(association_id, db)
+    if association is None:
+        raise HTTPException(404, "Association does not exist.")
+    if not association.deactivated:
+        raise HTTPException(
+            400,
+            "Only deactivated associations can be deleted.",
         )
     return await cruds_phonebook.delete_association(
         association_id=association_id,
@@ -308,6 +385,13 @@ async def create_membership(
     **This endpoint is only usable by CAA, BDE and association's president**
     """
 
+    user_added = await cruds_users.get_user_by_id(db, membership.user_id)
+    if user_added is None:
+        raise HTTPException(
+            400,
+            "Error : User does not exist",
+        )
+
     if not (
         is_user_member_of_an_allowed_group(
             user=user,
@@ -324,6 +408,18 @@ async def create_membership(
             detail=f"You are not allowed to create a new membership for association {membership.association_id}",
         )
 
+    if membership.role_tags is not None:
+        if RoleTags.president.value in membership.role_tags.split(
+            ";",
+        ) and not is_user_member_of_an_allowed_group(
+            user=user,
+            allowed_groups=[GroupType.CAA, GroupType.BDE],
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="You are not allowed to update a membership with the role of president",
+            )
+
     association = await cruds_phonebook.get_association_by_id(
         membership.association_id,
         db,
@@ -331,7 +427,12 @@ async def create_membership(
     if association is None:
         raise HTTPException(
             400,
-            "Error : No association in the scheme. Can't create the membership. Please add an association id in your membership scheme",
+            "Error : Association does not exist",
+        )
+    if association.deactivated:
+        raise HTTPException(
+            400,
+            "Error : Association is deactivated",
         )
 
     if (
@@ -356,6 +457,16 @@ async def create_membership(
 
     await cruds_phonebook.create_membership(membership_model, db)
 
+    user_groups_id = [group.id for group in user_added.groups]
+    for associated_group in association.associated_groups:
+        if associated_group.id not in user_groups_id:
+            await cruds_groups.create_membership(
+                models_core.CoreMembership(
+                    user_id=membership.user_id,
+                    group_id=associated_group.id,
+                ),
+                db,
+            )
     return schemas_phonebook.MembershipComplete(**membership_model.__dict__)
 
 
@@ -364,7 +475,7 @@ async def create_membership(
     status_code=204,
 )
 async def update_membership(
-    membership: schemas_phonebook.MembershipEdit,
+    updated_membership: schemas_phonebook.MembershipEdit,
     membership_id: str,
     user: models_core.CoreUser = Depends(is_user_an_ecl_member),
     db: AsyncSession = Depends(get_db),
@@ -375,11 +486,11 @@ async def update_membership(
     **This endpoint is only usable by CAA, BDE and association's president**
     """
 
-    membership_db = await cruds_phonebook.get_membership_by_id(
+    old_membership = await cruds_phonebook.get_membership_by_id(
         membership_id=membership_id,
         db=db,
     )
-    if not membership_db:
+    if not old_membership:
         raise HTTPException(
             status_code=400,
             detail=f"No membership to update for membership_id {membership_id}",
@@ -391,18 +502,39 @@ async def update_membership(
             allowed_groups=[GroupType.CAA, GroupType.BDE],
         )
         or await cruds_phonebook.is_user_president(
-            association_id=membership_db.association_id,
+            association_id=old_membership.association_id,
             user=user,
             db=db,
         )
     ):
         raise HTTPException(
             status_code=403,
-            detail=f"You are not allowed to update membership for association {membership_db.association_id}",
+            detail=f"You are not allowed to update membership for association {old_membership.association_id}",
         )
 
-    membership_edit = schemas_phonebook.MembershipEdit(**membership.model_dump())
-    await cruds_phonebook.update_membership(membership_edit, membership_id, db)
+    if updated_membership.role_tags is not None:
+        if RoleTags.president.value in updated_membership.role_tags.split(
+            ";",
+        ) and not is_user_member_of_an_allowed_group(
+            user=user,
+            allowed_groups=[GroupType.CAA, GroupType.BDE],
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="Only CAA and BDE can update a membership with the role of president",
+            )
+
+    if updated_membership.member_order is not None:
+        await cruds_phonebook.update_order_of_memberships(
+            db,
+            old_membership.association_id,
+            old_membership.mandate_year,
+            old_membership.member_order,
+            updated_membership.member_order,
+        )
+
+    # We update the membership after updating the member_order to avoid conflicts
+    await cruds_phonebook.update_membership(updated_membership, membership_id, db)
 
 
 @module.router.delete(
@@ -442,6 +574,13 @@ async def delete_membership(
             status_code=403,
             detail=f"You are not allowed to delete membership for association {membership.association_id}",
         )
+
+    await cruds_phonebook.update_order_of_memberships(
+        db,
+        membership.association_id,
+        membership.mandate_year,
+        membership.member_order,
+    )
 
     await cruds_phonebook.delete_membership(membership_id, db)
 

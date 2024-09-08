@@ -68,6 +68,23 @@ class CdrUserUpdate(BaseModel):
     )
 
 
+class GenerateTicketBase(BaseModel):
+    name: str
+    max_use: int
+    expiration: datetime
+
+
+class GenerateTicketComplete(GenerateTicketBase):
+    id: UUID
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class GenerateTicketEdit(BaseModel):
+    max_use: int | None = None
+    expiration: datetime | None = None
+
+
 class ProductVariantBase(BaseModel):
     name_fr: str
     name_en: str | None = None
@@ -115,9 +132,7 @@ class ProductBase(BaseModel):
     description_en: str | None = None
     available_online: bool
     related_membership: AvailableAssociationMembership | None = None
-    generate_ticket: bool
-    ticket_max_use: int | None = None
-    ticket_expiration: datetime | None = None
+    tickets: list[GenerateTicketBase] = []
     product_constraints: list[UUID]
     document_constraints: list[UUID]
 
@@ -132,9 +147,7 @@ class ProductCompleteNoConstraint(BaseModel):
     seller_id: UUID
     variants: list[ProductVariantComplete] = []
     related_membership: AvailableAssociationMembership | None = None
-    generate_ticket: bool
-    ticket_max_use: int | None = None
-    ticket_expiration: datetime | None = None
+    tickets: list[GenerateTicketComplete]
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -149,11 +162,9 @@ class ProductComplete(BaseModel):
     seller_id: UUID
     variants: list[ProductVariantComplete] = []
     related_membership: AvailableAssociationMembership | None = None
-    generate_ticket: bool
-    ticket_max_use: int | None = None
-    ticket_expiration: datetime | None = None
     product_constraints: list[ProductCompleteNoConstraint] = []
     document_constraints: list[DocumentComplete] = []
+    tickets: list[GenerateTicketComplete] = []
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -166,9 +177,6 @@ class ProductEdit(BaseModel):
     description: str | None = None
     available_online: bool | None = None
     related_membership: AvailableAssociationMembership | None = None
-    generate_ticket: bool | None = None
-    ticket_max_use: int | None = None
-    ticket_expiration: datetime | None = None
     product_constraints: list[UUID] | None = None
     document_constraints: list[UUID] | None = None
 
@@ -284,6 +292,7 @@ class Ticket(BaseModel):
     scan_left: int
     tags: str
     expiration: datetime
+    name: str
 
 
 class TicketScan(BaseModel):
@@ -325,3 +334,7 @@ class CustomDataComplete(CustomDataBase):
     field: CustomDataFieldComplete
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ResultRequest(BaseModel):
+    emails: list[str]

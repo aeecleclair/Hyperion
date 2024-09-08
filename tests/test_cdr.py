@@ -64,6 +64,7 @@ payment: models_cdr.Payment
 membership: models_core.CoreAssociationMembership
 
 ticket: models_cdr.Ticket
+ticket_generator: models_cdr.TicketGenerator
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
@@ -125,7 +126,6 @@ async def init_objects():
         description_fr="Un Produit",
         description_en="A Product",
         available_online=False,
-        generate_ticket=False,
     )
     await add_object_to_db(product)
 
@@ -138,7 +138,6 @@ async def init_objects():
         description_fr="Un Produit disponible en ligne",
         description_en="An online available Product",
         available_online=True,
-        generate_ticket=False,
     )
     await add_object_to_db(online_product)
 
@@ -149,7 +148,6 @@ async def init_objects():
         name_fr="Produit sans variante",
         name_en="Unused product",
         available_online=False,
-        generate_ticket=False,
     )
     await add_object_to_db(empty_product)
 
@@ -160,7 +158,6 @@ async def init_objects():
         name_fr="Produit utilisable",
         name_en="Usable product",
         available_online=False,
-        generate_ticket=False,
     )
     await add_object_to_db(usable_product)
 
@@ -320,9 +317,6 @@ async def init_objects():
         name_fr="Produit a ticket",
         name_en="Usable product",
         available_online=False,
-        generate_ticket=True,
-        ticket_max_use=1,
-        ticket_expiration=datetime.now(UTC) + timedelta(days=1),
     )
     await add_object_to_db(ticket_product)
 
@@ -338,11 +332,23 @@ async def init_objects():
     )
     await add_object_to_db(ticket_variant)
 
+    global ticket_generator
+    ticket_generator = models_cdr.TicketGenerator(
+        id=uuid.uuid4(),
+        product_id=ticket_product.id,
+        name="Ticket",
+        max_use=2,
+        expiration=datetime.now(UTC) + timedelta(days=1),
+    )
+    await add_object_to_db(ticket_generator)
+
     global ticket
     ticket = models_cdr.Ticket(
         id=uuid.uuid4(),
         secret=uuid.uuid4(),
         product_variant_id=ticket_variant.id,
+        generator_id=ticket_generator.id,
+        name="Ticket",
         user_id=cdr_user.id,
         scan_left=1,
         tags="",
@@ -733,26 +739,6 @@ def test_get_available_online_products_no_product(client: TestClient):
     assert response.json() == []
 
 
-def test_create_product_seller_without_ticket_expiration(client: TestClient):
-    response = client.post(
-        f"/cdr/sellers/{seller.id!s}/products/",
-        json={
-            "name_fr": "Produit créé",
-            "name_en": "Created product",
-            "available_online": False,
-            "product_constraints": [],
-            "document_constraints": [],
-            "generate_ticket": True,
-            "ticket_expiration": None,
-        },
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 403
-    assert response.json() == {
-        "detail": "You must specify a ticket expiration date and a ticket max use when the product generate a ticket",
-    }
-
-
 def test_create_product_seller(client: TestClient):
     response = client.post(
         f"/cdr/sellers/{seller.id!s}/products/",
@@ -762,7 +748,6 @@ def test_create_product_seller(client: TestClient):
             "available_online": False,
             "product_constraints": [str(product.id)],
             "document_constraints": [str(document.id)],
-            "generate_ticket": False,
         },
         headers={"Authorization": f"Bearer {token_bde}"},
     )
@@ -787,7 +772,6 @@ def test_create_product_user(client: TestClient):
             "available_online": False,
             "product_constraints": [],
             "document_constraints": [],
-            "generate_ticket": False,
         },
         headers={"Authorization": f"Bearer {token_user}"},
     )
@@ -2196,7 +2180,6 @@ def test_create_product_closed(client: TestClient):
             "available_online": False,
             "product_constraints": [],
             "document_constraints": [],
-            "generate_ticket": False,
         },
         headers={"Authorization": f"Bearer {token_bde}"},
     )
@@ -2402,7 +2385,7 @@ def test_get_ticket_secret_wrong_id(client: TestClient):
 
 def test_get_ticket_by_secret(client: TestClient):
     response = client.get(
-        f"/cdr/products/{ticket_product.id}/tickets/{ticket.secret}",
+        f"/cdr/sellers/{seller.id}/products/{ticket_product.id}/tickets/{ticket_generator.id}/{ticket.secret}/",
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
@@ -2411,7 +2394,7 @@ def test_get_ticket_by_secret(client: TestClient):
 
 def test_get_ticket_by_secret_user(client: TestClient):
     response = client.get(
-        f"/cdr/products/{ticket_product.id}/tickets/{ticket.secret}",
+        f"/cdr/sellers/{seller.id}/products/{ticket_product.id}/tickets/{ticket_generator.id}/{ticket.secret}/",
         headers={"Authorization": f"Bearer {token_user}"},
     )
     assert response.status_code == 403
@@ -2419,30 +2402,30 @@ def test_get_ticket_by_secret_user(client: TestClient):
 
 def test_get_ticket_by_secret_wrong_id(client: TestClient):
     response = client.get(
-        f"/cdr/products/{ticket_product.id}/tickets/{uuid.uuid4()}",
-        headers={"Authorization": f"Bearer {token_user}"},
+        f"/cdr/sellers/{seller.id}/products/{ticket_product.id}/tickets/{ticket_generator.id}/{uuid.uuid4()}/",
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 404
 
 
 def test_get_ticket_by_secret_wrong_product(client: TestClient):
     response = client.get(
-        f"/cdr/products/{product.id}/tickets/{ticket.secret}",
-        headers={"Authorization": f"Bearer {token_user}"},
+        f"/cdr/sellers/{seller.id}/products/{product.id}/tickets/{ticket_generator.id}/{ticket.secret}/",
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 404
 
 
 def test_scan_ticket(client: TestClient):
     response = client.patch(
-        f"/cdr/products/{ticket_product.id}/tickets/{ticket.secret}",
+        f"/cdr/sellers/{seller.id}/products/{ticket_product.id}/tickets/{ticket_generator.id}/{ticket.secret}/",
         json={"tag": "Bus 2"},
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 204
 
     response = client.get(
-        f"/cdr/products/{ticket_product.id}/tickets/{ticket.secret}",
+        f"/cdr/sellers/{seller.id}/products/{ticket_product.id}/tickets/{ticket_generator.id}/{ticket.secret}/",
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
@@ -2451,7 +2434,7 @@ def test_scan_ticket(client: TestClient):
 
 def test_scan_ticket_user(client: TestClient):
     response = client.patch(
-        f"/cdr/products/{ticket_product.id}/tickets/{ticket.secret}",
+        f"/cdr/sellers/{seller.id}/products/{ticket_product.id}/tickets/{ticket_generator.id}/{ticket.secret}/",
         json={"tag": "Bus 2"},
         headers={"Authorization": f"Bearer {token_user}"},
     )
@@ -2460,18 +2443,18 @@ def test_scan_ticket_user(client: TestClient):
 
 def test_scan_ticket_wrong_id(client: TestClient):
     response = client.patch(
-        f"/cdr/products/{ticket_product.id}/tickets/{uuid.uuid4()}",
+        f"/cdr/sellers/{seller.id}/products/{ticket_product.id}/tickets/{ticket_generator.id}/{uuid.uuid4()}/",
         json={"tag": "Bus 2"},
-        headers={"Authorization": f"Bearer {token_user}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 404
 
 
 def test_scan_ticket_wrong_product(client: TestClient):
     response = client.patch(
-        f"/cdr/products/{product.id}/tickets/{ticket.secret}",
+        f"/cdr/sellers/{seller.id}/products/{product.id}/tickets/{ticket_generator.id}/{ticket.secret}/",
         json={"tag": "Bus 2"},
-        headers={"Authorization": f"Bearer {token_user}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 404
 
@@ -2480,6 +2463,8 @@ async def test_scan_ticket_no_scan_left(client: TestClient):
     no_scan_ticket = models_cdr.Ticket(
         id=uuid.uuid4(),
         secret=uuid.uuid4(),
+        generator_id=ticket_generator.id,
+        name="Ticket",
         product_variant_id=ticket_variant.id,
         user_id=cdr_user.id,
         scan_left=0,
@@ -2489,7 +2474,7 @@ async def test_scan_ticket_no_scan_left(client: TestClient):
     await add_object_to_db(no_scan_ticket)
 
     response = client.patch(
-        f"/cdr/products/{ticket_product.id}/tickets/{no_scan_ticket.secret}",
+        f"/cdr/sellers/{seller.id}/products/{ticket_product.id}/tickets/{ticket_generator.id}/{no_scan_ticket.secret}/",
         json={"tag": "Bus 2"},
         headers={"Authorization": f"Bearer {token_bde}"},
     )
@@ -2500,6 +2485,8 @@ async def test_scan_ticket_expired(client: TestClient):
     expired_ticket = models_cdr.Ticket(
         id=uuid.uuid4(),
         secret=uuid.uuid4(),
+        name="Ticket",
+        generator_id=ticket_generator.id,
         product_variant_id=ticket_variant.id,
         user_id=cdr_user.id,
         scan_left=1,
@@ -2509,7 +2496,7 @@ async def test_scan_ticket_expired(client: TestClient):
     await add_object_to_db(expired_ticket)
 
     response = client.patch(
-        f"/cdr/products/{ticket_product.id}/tickets/{expired_ticket.secret}",
+        f"/cdr/sellers/{seller.id}/products/{ticket_product.id}/tickets/{ticket_generator.id}/{expired_ticket.secret}/",
         json={"tag": "Bus 2"},
         headers={"Authorization": f"Bearer {token_bde}"},
     )
@@ -2523,7 +2510,6 @@ async def test_validate_purchase(client: TestClient):
         name_fr="Produit à adhésion",
         name_en="Product",
         available_online=False,
-        generate_ticket=False,
         related_membership=AvailableAssociationMembership.useecl,
     )
     await add_object_to_db(product_membership)
@@ -2533,7 +2519,6 @@ async def test_validate_purchase(client: TestClient):
         name_fr="Produit à adhésion",
         name_en="Product",
         available_online=False,
-        generate_ticket=False,
         related_membership=AvailableAssociationMembership.aeecl,
     )
     await add_object_to_db(product_membership_to_purchase)
@@ -2543,7 +2528,6 @@ async def test_validate_purchase(client: TestClient):
         name_fr="Produit à adhésion",
         name_en="Product",
         available_online=False,
-        generate_ticket=False,
     )
     await add_object_to_db(product_2)
     variant_to_validate = models_cdr.ProductVariant(
