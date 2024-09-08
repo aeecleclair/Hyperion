@@ -826,18 +826,23 @@ async def update_current_user(
     await cruds_users.update_user(db=db, user_id=user.id, user_update=user_update)
 
 
-@router.patch(
-    "/users/fusion",
+@router.post(
+    "/users/merge",
     status_code=204,
 )
-async def fusion_users(
+async def merge_users(
     user_fusion: schemas_core.CoreUserFusionRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Fusion two users into one. The first user will be deleted and its data will be transferred to the second user.
     """
+    hyperion_security_logger.info(
+        f"User {user.email} - {user.id} has requested to merge {user_fusion.user_deleted_email} into {user_fusion.user_kept_email}",
+    )
     user_kept = await cruds_users.get_user_by_email(
         db=db,
         email=user_fusion.user_kept_email,
@@ -856,6 +861,16 @@ async def fusion_users(
         db=db,
         user_kept_id=user_kept.id,
         user_deleted_id=user_deleted.id,
+    )
+    background_tasks.add_task(
+        send_email,
+        recipient=[user_kept.email, user_deleted.email],
+        subject="MyECL - Account fusion",
+        content=f"Le compte {user_deleted.email} a été fusionné avec le compte {user_kept.email}. Tout le contenu du compte {user_deleted.email} a été transféré sur le compte {user_kept.email}.\nMerci de vous connecter avec le compte {user_kept.email} pour accéder à vos données.",
+        settings=settings,
+    )
+    hyperion_security_logger.info(
+        f"User {user_kept.email} - {user_kept.id} has been merged with {user_deleted.email} - {user_deleted.id}",
     )
 
 
