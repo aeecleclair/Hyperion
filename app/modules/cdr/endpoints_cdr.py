@@ -6,13 +6,14 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 from uuid import UUID, uuid4
 
-import pandas as pd
 from fastapi import (
+    BackgroundTasks,
     Depends,
     HTTPException,
     WebSocket,
     WebSocketDisconnect,
 )
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, schemas_core
@@ -39,6 +40,7 @@ from app.modules.cdr.types_cdr import (
 )
 from app.modules.cdr.utils_cdr import (
     check_request_consistency,
+    construct_dataframe_from_users_purchases,
     is_user_in_a_seller_group,
     validate_payment,
 )
@@ -53,7 +55,8 @@ from app.types.websocket import (
     WebsocketConnectionManager,
 )
 from app.utils.auth import auth_utils
-from app.utils.mail.mailworker import send_email
+
+# from app.utils.mail.mailworker import send_email
 from app.utils.tools import (
     create_and_send_email_migration,
     get_core_data,
@@ -355,119 +358,12 @@ async def get_online_sellers(
     return await cruds_cdr.get_online_sellers(db)
 
 
-def construct_dataframe_from_users_purchases(
-    users_purchases: dict[str, list[models_cdr.Purchase]],
-    users_answers: dict[str, list[models_cdr.CustomData]],
-    users: list[models_core.CoreUser],
-    products: list[models_cdr.CdrProduct],
-    variants: list[models_cdr.ProductVariant],
-    data_fields: dict[UUID, list[models_cdr.CustomDataField]],
-) -> pd.DataFrame:
-    """
-    Construct a pandas DataFrame from a dict of users purchases.
-
-    Args:
-        users_purchases (dict[str, list[models_cdr.Purchase]]): A dict of users purchases.
-
-    Returns:
-        pd.DataFrame: A pandas DataFrame.
-    """
-    columns = ["Nom", "Prénom", "Surnom", "Email"]
-    data = ["", "", "", "Prix"]
-    field_to_column = {}
-    variant_to_column = {}
-    for product in products:
-        product_variants = [
-            variant for variant in variants if variant.product_id == product.id
-        ]
-        columns.extend(
-            [f"{product.name_fr} : {variant.name_fr}" for variant in product_variants],
-        )
-        fields = data_fields.get(product.id, [])
-        columns.extend(
-            [f"{product.name_fr} : {field.name}" for field in fields],
-        )
-        data.extend([str(variant.price) for variant in product_variants])
-
-        data.extend([" " for _ in fields])
-        field_to_column.update(
-            {field.id: f"{product.name_fr} : {field.name}" for field in fields},
-        )
-        variant_to_column.update(
-            {
-                variant.id: f"{product.name_fr} : {variant.name_fr}"
-                for variant in product_variants
-            },
-        )
-    columns.append("Panier payé")
-    data.append(" ")
-    columns.append("Commentaire")
-    data.append(" ")
-    df = pd.DataFrame(
-        columns=columns,
-    )
-    df = pd.concat(
-        [
-            df,
-            pd.DataFrame(
-                data=[data],
-                columns=columns,
-            ),
-        ],
-    )
-    for user_id, purchases in users_purchases.items():
-        for purchase in purchases:
-            df.loc[
-                user_id,
-                variant_to_column[purchase.product_variant_id],
-            ] = purchase.quantity
-
-    for user_id, answers in users_answers.items():
-        for answer in answers:
-            column = field_to_column.get(answer.field_id)
-            if column:
-                df.loc[
-                    user_id,
-                    field_to_column[answer.field_id],
-                ] = answer.value
-
-    for user_id in df.index:
-        user = next((u for u in users if u.id == user_id), None)
-        if user is None:
-            continue
-        df.loc[user_id, "Nom"] = user.name
-        df.loc[user_id, "Prénom"] = user.firstname
-        df.loc[user_id, "Surnom"] = user.nickname
-        df.loc[user_id, "Email"] = user.email
-        if all(purchase.validated for purchase in users_purchases[user_id]):
-            df.loc[user_id, "Panier payé"] = True
-        else:
-            df.loc[user_id, "Panier payé"] = False
-            df.loc[user_id, "Commentaire"] = "Manquant : " + ", ".join(
-                variant_to_column[purchase.product_variant_id]
-                for purchase in users_purchases[user_id]
-                if not purchase.validated
-            )
-    for column in df.columns:
-        df[column] = df[column].apply(lambda x: x if pd.notna(x) else "")
-    return df
-
-
-@module.router.post(
-    "/cdr/sellers/{seller_id}/results/",
-    status_code=200,
-)
-async def send_seller_results(
+async def generate_and_send_results(
     seller_id: UUID,
-    email: schemas_cdr.ResultRequest,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
-):
-    """
-    Get a seller's results.
-
-    **User must be CDR Admin to use this endpoint**
-    """
+    # emails: schemas_cdr.ResultRequest,
+    db: AsyncSession,
+    # settings: Settings,
+) -> Path:
     seller = await cruds_cdr.get_seller_by_id(db, seller_id)
     if not seller:
         raise HTTPException(
@@ -513,12 +409,15 @@ async def send_seller_results(
             purchases_by_users[purchase.user_id].append(purchase)
     users_answers = {}
     for each_user in users:
-        users_answers[user.id] = list(
+        users_answers[each_user.id] = list(
             await cruds_cdr.get_customdata_by_user_id(
                 db,
                 each_user.id,
             ),
         )
+    hyperion_error_logger.info(
+        f"Data for seller {seller.name} fetched. Starting to construct the dataframe.",
+    )
     df = construct_dataframe_from_users_purchases(
         users_purchases=purchases_by_users,
         users=list(users),
@@ -527,23 +426,73 @@ async def send_seller_results(
         data_fields=product_fields,
         users_answers=users_answers,
     )
-    file_path = f"/tmp/CdR {datetime.now(tz=UTC).year} ventes {seller.name}.xlsx"  # noqa: S108
+    hyperion_error_logger.info(
+        f"Dataframe for seller {seller.name} constructed. Generating the Excel file.",
+    )
+
+    file_directory = "/app/data/cdr"
+    file_uuid = uuid4()
+    # file_name = f"CdR {datetime.now(tz=UTC).year} ventes {seller.name}.xlsx"
+
+    Path.mkdir(Path(file_directory), parents=True, exist_ok=True)
     df.to_excel(
-        file_path,
+        Path(file_directory, str(file_uuid)),
         index=False,
         freeze_panes=(2, 3),
         engine="xlsxwriter",
     )
-    send_email(
-        recipient=email.email,
-        subject=f"Résultats de ventes pour {seller.name}",
-        content=f"Bonjour,\n\nVous trouverez en pièce jointe le fichier Excel contenant les résultats de ventes pour la CdR pour l'association {seller.name}.",
-        settings=get_settings(),
-        file_path=file_path,
-        main_type="text",
-        sub_type="xlsx",
-    )
-    Path.unlink(Path(file_path))
+    return Path(file_directory, str(file_uuid))
+
+    # Not working, we have to keep the file in the server
+    # hyperion_error_logger.debug(
+    #     f"Excel file for seller {seller.name} generated. Sending the email.",
+    # )
+    # send_email(
+    #     recipient=emails.emails,
+    #     subject=f"Résultats de ventes pour {seller.name}",
+    #     content=f"Bonjour,\n\nVous trouverez en pièce jointe le fichier Excel contenant les résultats de ventes pour la CdR pour l'association {seller.name}.",
+    #     settings=settings,
+    #     file_directory=file_directory,
+    #     file_uuid=file_uuid,
+    #     file_name=file_name,
+    #     main_type="text",
+    #     sub_type="xlsx",
+    # )
+    # hyperion_error_logger.info(
+    #     f"Results for seller {seller.name} sent to {emails.emails}",
+    # )
+    # Path.unlink(Path(file_directory, file_name))
+
+
+@module.router.get(
+    "/cdr/sellers/{seller_id}/results/",
+    status_code=200,
+    response_class=FileResponse,
+)
+async def send_seller_results(
+    seller_id: UUID,
+    # emails: schemas_cdr.ResultRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin_cdr)),
+    # settings: Settings = Depends(get_settings),
+):
+    """
+    Get a seller's results.
+
+    **User must be CDR Admin to use this endpoint**
+    """
+    # We don't use the emails parameter for now
+    # background_tasks.add_task(
+    #     generate_and_send_results,
+    #     seller_id=seller_id,
+    #     # emails=emails,
+    #     db=db,
+    #     # settings=settings,
+    # )
+
+    path = await generate_and_send_results(seller_id=seller_id, db=db)
+    return FileResponse(path)
 
 
 @module.router.get(

@@ -6,7 +6,7 @@ import pytest_asyncio
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from app.modules.cdr import models_cdr
-from app.modules.cdr.endpoints_cdr import construct_dataframe_from_users_purchases
+from app.modules.cdr.utils_cdr import construct_dataframe_from_users_purchases
 from tests.commons import (
     create_api_access_token,
     create_user_with_groups,
@@ -349,7 +349,7 @@ def test_construct_dataframe_from_users_purchases():
         1,
         "",
         False,
-        "Manquant : Produit2 : Variante",
+        "Manquant : \n-Produit2 : Variante",
     ]
     assert list(df.loc[cdr_user2.id]) == [
         cdr_user2.name,
@@ -363,7 +363,7 @@ def test_construct_dataframe_from_users_purchases():
         1,
         "",
         False,
-        "Manquant : Produit : Variante2, Produit2 : Variante",
+        "Manquant : \n-Produit : Variante2\n-Produit2 : Variante",
     ]
     assert list(df.loc[cdr_user3.id]) == [
         cdr_user3.name,
