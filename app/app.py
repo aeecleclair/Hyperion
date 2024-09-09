@@ -301,16 +301,17 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator:
         # Init Google API credentials
-        async for db in app.dependency_overrides.get(
-            get_db,
-            get_db,
-        )():
-            google_api = GoogleAPI()
-            try:
-                await google_api.get_credentials(db, settings)
-            except GoogleAPIInvalidCredentialsError:
-                # We expect this error to be raised if the credentials were never set before
-                pass
+        google_api = GoogleAPI()
+        if google_api.is_google_api_configured(settings):
+            async for db in app.dependency_overrides.get(
+                get_db,
+                get_db,
+            )():
+                try:
+                    await google_api.get_credentials(db, settings)
+                except GoogleAPIInvalidCredentialsError:
+                    # We expect this error to be raised if the credentials were never set before
+                    pass
 
         ws_manager = app.dependency_overrides.get(
             get_websocket_connection_manager,
