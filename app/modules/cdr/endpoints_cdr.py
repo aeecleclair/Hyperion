@@ -393,7 +393,7 @@ async def generate_and_send_results(
                 product.id,
             ),
         )
-    variant_ids = [v.id for v in product_variants]
+    variant_ids = [v.id for v in variants]
     purchases = await cruds_cdr.get_all_purchases(db)
     if len(purchases) == 0:
         raise HTTPException(
@@ -1767,6 +1767,7 @@ async def delete_purchase(
             user_id=user_id,
             product_variant_id=product_variant_id,
             db=db,
+            product_id=product.id,
         )
         cruds_cdr.create_action(db, db_action)
         await db.commit()

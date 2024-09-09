@@ -480,7 +480,25 @@ async def delete_purchase(
     db: AsyncSession,
     user_id: str,
     product_variant_id: UUID,
+    product_id: UUID,
 ):
+    fields = (
+        (
+            await db.execute(
+                select(models_cdr.CustomDataField).where(
+                    models_cdr.CustomDataField.product_id == product_id,
+                ),
+            )
+        )
+        .scalars()
+        .all()
+    )
+    await db.execute(
+        delete(models_cdr.CustomData).where(
+            models_cdr.CustomData.user_id == user_id,
+            models_cdr.CustomData.field_id.in_([field.id for field in fields]),
+        ),
+    )
     await db.execute(
         delete(models_cdr.Purchase).where(
             models_cdr.Purchase.user_id == user_id,
