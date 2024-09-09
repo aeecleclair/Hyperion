@@ -1753,7 +1753,6 @@ async def delete_purchase(
                                     status_code=403,
                                     detail="You can't delete this purchase as a validated purchase depends on it.",
                                 )
-    fields = await cruds_cdr.get_product_customdata_fields(db=db, product_id=product.id)
 
     db_action = models_cdr.CdrAction(
         id=uuid4(),
@@ -1764,16 +1763,11 @@ async def delete_purchase(
         timestamp=datetime.now(UTC),
     )
     try:
-        for field in fields:
-            await cruds_cdr.delete_customdata(
-                db=db,
-                user_id=user_id,
-                field_id=field.id,
-            )
         await cruds_cdr.delete_purchase(
             user_id=user_id,
             product_variant_id=product_variant_id,
             db=db,
+            product_id=product.id,
         )
         cruds_cdr.create_action(db, db_action)
         await db.commit()
