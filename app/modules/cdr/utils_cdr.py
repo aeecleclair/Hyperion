@@ -176,8 +176,8 @@ def construct_dataframe_from_users_purchases(
     """
     columns = ["Nom", "Prénom", "Surnom", "Email"]
     data = ["", "", "", "Prix"]
-    field_to_column = {}
-    variant_to_column = {}
+    field_to_column: dict[UUID, str] = {}
+    variant_to_column: dict[UUID, str] = {}
     for product in products:
         product_variants = [
             variant for variant in variants if variant.product_id == product.id
@@ -189,7 +189,7 @@ def construct_dataframe_from_users_purchases(
         columns.extend(
             [f"{product.name_fr} : {field.name}" for field in fields],
         )
-        data.extend([str(variant.price) for variant in product_variants])
+        data.extend([str(variant.price / 100) for variant in product_variants])
 
         data.extend([" " for _ in fields])
         field_to_column.update(
@@ -241,14 +241,15 @@ def construct_dataframe_from_users_purchases(
         df.loc[user_id, "Prénom"] = user.firstname
         df.loc[user_id, "Surnom"] = user.nickname
         df.loc[user_id, "Email"] = user.email
-        if all(purchase.validated for purchase in users_purchases[user_id]):
-            df.loc[user_id, "Panier payé"] = True
-        else:
-            df.loc[user_id, "Panier payé"] = False
-            df.loc[user_id, "Commentaire"] = "Manquant : \n-" + "\n-".join(
-                variant_to_column[purchase.product_variant_id]
-                for purchase in users_purchases[user_id]
-                if not purchase.validated
-            )
+        if user_id in users_purchases:
+            if all(purchase.validated for purchase in users_purchases[user_id]):
+                df.loc[user_id, "Panier payé"] = True
+            else:
+                df.loc[user_id, "Panier payé"] = False
+                df.loc[user_id, "Commentaire"] = "Manquant : \n-" + "\n-".join(
+                    variant_to_column[purchase.product_variant_id]
+                    for purchase in users_purchases[user_id]
+                    if not purchase.validated
+                )
     df.fillna("", inplace=True)
     return df
