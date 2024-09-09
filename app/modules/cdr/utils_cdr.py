@@ -250,6 +250,5 @@ def construct_dataframe_from_users_purchases(
                 for purchase in users_purchases[user_id]
                 if not purchase.validated
             )
-    for column in df.columns:
-        df[column] = df[column].apply(lambda x: x if pd.notna(x) else "")
+    df.fillna("", inplace=True)
     return df
