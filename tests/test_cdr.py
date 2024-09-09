@@ -2750,3 +2750,30 @@ async def test_delete_customdata(client: TestClient):
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 204
+
+
+async def test_customdata_deletion_on_purchase_deletion(client: TestClient):
+    field = models_cdr.CustomDataField(
+        id=uuid.uuid4(),
+        product_id=product.id,
+        name="Supprime",
+    )
+    await add_object_to_db(field)
+    customdata = models_cdr.CustomData(
+        field_id=field.id,
+        user_id=cdr_user.id,
+        value="Edit",
+    )
+    await add_object_to_db(customdata)
+
+    response = client.delete(
+        f"/cdr/users/{cdr_user.id}/purchases/{variant.id}/",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 204
+
+    response = client.get(
+        f"/cdr/sellers/{seller.id}/products/{product.id}/users/{cdr_user.id}/data/{field.id}/",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 404
