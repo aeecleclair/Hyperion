@@ -612,15 +612,6 @@ async def migrate_mail(
     This endpoint will send a confirmation code to the user's new email address. He will need to use this code to confirm the change with `/users/confirm-mail-migration` endpoint.
     """
 
-    if not re.match(
-        r"^[\w\-.]*@((ecl\d{2})|(alternance\d{4})|(master)|(auditeur))\.ec-lyon\.fr$",
-        user.email,
-    ):
-        raise HTTPException(
-            status_code=400,
-            detail="Only student users with an old email address can migrate their email address",
-        )
-
     if not re.match(r"^[\w\-.]*@etu(-enise)?\.ec-lyon\.fr$", mail_migration.new_email):
         raise HTTPException(
             status_code=400,
@@ -653,7 +644,7 @@ async def migrate_mail(
         old_email=user.email,
         db=db,
         settings=settings,
-        make_user_external=user.external,
+        make_user_external=False,
     )
 
 
