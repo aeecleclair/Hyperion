@@ -4,7 +4,7 @@ from uuid import UUID
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import noload, selectinload
 
 from app.core.models_core import CoreAssociationMembership, CoreUser
 from app.modules.cdr import models_cdr, schemas_cdr
@@ -872,7 +872,7 @@ async def scan_ticket(db: AsyncSession, ticket_id: UUID, scan: int, tags: str):
         .where(
             models_cdr.Ticket.id == ticket_id,
         )
-        .values(scan_left=scan, tags=tags),
+        .values(scan_left=scan, tags=tags.lower()),
     )
 
 
@@ -1016,3 +1016,39 @@ async def delete_product_generated_tickets(db: AsyncSession, ticket_generator_id
             models_cdr.Ticket.generator_id == ticket_generator_id,
         ),
     )
+
+
+async def get_tickets_by_tag(
+    db: AsyncSession,
+    generator_id: UUID,
+    tag: str,
+) -> Sequence[models_cdr.Ticket]:
+    result = await db.execute(
+        select(models_cdr.Ticket)
+        .where(
+            models_cdr.Ticket.generator_id == generator_id,
+            models_cdr.Ticket.tags.contains(tag.lower()),
+        )
+        .options(
+            noload(models_cdr.Ticket.product_variant),
+            selectinload(models_cdr.Ticket.user),
+        ),
+    )
+
+    return result.scalars().all()
+
+
+async def get_tickets_by_generator(
+    db: AsyncSession,
+    generator_id: UUID,
+) -> Sequence[models_cdr.Ticket]:
+    result = await db.execute(
+        select(models_cdr.Ticket)
+        .where(models_cdr.Ticket.generator_id == generator_id)
+        .options(
+            noload(models_cdr.Ticket.product_variant),
+            noload(models_cdr.Ticket.user),
+        ),
+    )
+
+    return result.scalars().all()

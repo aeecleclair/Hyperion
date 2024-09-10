@@ -2430,6 +2430,7 @@ def test_scan_ticket(client: TestClient):
     )
     assert response.status_code == 200
     assert response.json()["scan_left"] == 0
+    assert "bus 2" in response.json()["tags"]
 
 
 def test_scan_ticket_user(client: TestClient):
@@ -2501,6 +2502,36 @@ async def test_scan_ticket_expired(client: TestClient):
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 403
+
+
+def test_get_ticket_tags(client: TestClient):
+    response = client.patch(
+        f"/cdr/sellers/{seller.id}/products/{ticket_product.id}/tickets/{ticket_generator.id}/{ticket.secret}/",
+        json={"tag": "Bus 2"},
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 204
+
+    response = client.get(
+        f"/cdr/sellers/{seller.id}/products/{ticket_product.id}/tags/{ticket_generator.id}/",
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert "bus 2" in response.json()
+
+
+def test_get_ticket_list(client: TestClient):
+    response = client.patch(
+        f"/cdr/sellers/{seller.id}/products/{ticket_product.id}/tickets/{ticket_generator.id}/{ticket.secret}/",
+        json={"tag": "Bus 2"},
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 204
+
+    response = client.get(
+        f"/cdr/sellers/{seller.id}/products/{ticket_product.id}/tickets/{ticket_generator.id}/lists/Bus 2/",
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert str(cdr_user.id) in [user["id"] for user in response.json()]
 
 
 async def test_validate_purchase(client: TestClient):

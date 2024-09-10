@@ -2760,12 +2760,107 @@ async def scan_ticket(
             db=db,
             ticket_id=ticket.id,
             scan=ticket.scan_left - 1,
-            tags=ticket.tags + "," + ticket_data.tag.strip(),
+            tags=ticket.tags + "," + ticket_data.tag.strip()
+            if ticket.tags != ""
+            else ticket_data.tag.strip(),
         )
         await db.commit()
     except Exception:
         await db.rollback()
         raise
+
+
+@module.router.get(
+    "/cdr/sellers/{seller_id}/products/{product_id}/tickets/{generator_id}/lists/{tag}/",
+    response_model=list[schemas_core.CoreUserSimple],
+    status_code=200,
+)
+async def get_users_by_tag(
+    seller_id: UUID,
+    product_id: UUID,
+    generator_id: UUID,
+    tag: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    product = await check_request_consistency(
+        db=db,
+        seller_id=seller_id,
+        product_id=product_id,
+    )
+    if not product:
+        raise HTTPException(
+            status_code=404,
+            detail="Product not found.",
+        )
+    ticket_generator = await cruds_cdr.get_ticket_generator(
+        db=db,
+        ticket_generator_id=generator_id,
+    )
+    if not ticket_generator:
+        raise HTTPException(
+            status_code=404,
+            detail="Ticket generator not found.",
+        )
+    if ticket_generator.product_id != product_id:
+        raise HTTPException(
+            status_code=404,
+            detail="This Ticket generator is not related to this product.",
+        )
+
+    tickets = await cruds_cdr.get_tickets_by_tag(
+        db=db,
+        generator_id=generator_id,
+        tag=tag,
+    )
+
+    return [ticket.user for ticket in tickets]
+
+
+@module.router.get(
+    "/cdr/sellers/{seller_id}/products/{product_id}/tags/{generator_id}/",
+    response_model=list[str],
+    status_code=200,
+)
+async def get_tags_of_ticket(
+    seller_id: UUID,
+    product_id: UUID,
+    generator_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    product = await check_request_consistency(
+        db=db,
+        seller_id=seller_id,
+        product_id=product_id,
+    )
+    if not product:
+        raise HTTPException(
+            status_code=404,
+            detail="Product not found.",
+        )
+    ticket_generator = await cruds_cdr.get_ticket_generator(
+        db=db,
+        ticket_generator_id=generator_id,
+    )
+    if not ticket_generator:
+        raise HTTPException(
+            status_code=404,
+            detail="Ticket generator not found.",
+        )
+    if ticket_generator.product_id != product_id:
+        raise HTTPException(
+            status_code=404,
+            detail="This Ticket generator is not related to this product.",
+        )
+
+    tickets = await cruds_cdr.get_tickets_by_generator(db=db, generator_id=generator_id)
+
+    tags = set()
+    for ticket in tickets:
+        for tag in ticket.tags.split(","):
+            tags.add(tag)
+    return list(tags)
 
 
 @module.router.post(
