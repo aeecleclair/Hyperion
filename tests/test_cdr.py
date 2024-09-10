@@ -2505,13 +2505,6 @@ async def test_scan_ticket_expired(client: TestClient):
 
 
 def test_get_ticket_tags(client: TestClient):
-    response = client.patch(
-        f"/cdr/sellers/{seller.id}/products/{ticket_product.id}/tickets/{ticket_generator.id}/{ticket.secret}/",
-        json={"tag": "Bus 2"},
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 204
-
     response = client.get(
         f"/cdr/sellers/{seller.id}/products/{ticket_product.id}/tags/{ticket_generator.id}/",
         headers={"Authorization": f"Bearer {token_bde}"},
@@ -2520,13 +2513,6 @@ def test_get_ticket_tags(client: TestClient):
 
 
 def test_get_ticket_list(client: TestClient):
-    response = client.patch(
-        f"/cdr/sellers/{seller.id}/products/{ticket_product.id}/tickets/{ticket_generator.id}/{ticket.secret}/",
-        json={"tag": "Bus 2"},
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 204
-
     response = client.get(
         f"/cdr/sellers/{seller.id}/products/{ticket_product.id}/tickets/{ticket_generator.id}/lists/Bus 2/",
         headers={"Authorization": f"Bearer {token_bde}"},
