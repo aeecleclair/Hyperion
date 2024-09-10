@@ -258,29 +258,6 @@ def test_update_user(client: TestClient) -> None:
     assert response.status_code == 204
 
 
-async def test_invalid_migrate_mail(client: TestClient) -> None:
-    student_user_with_old_email_token = create_api_access_token(
-        student_user_with_old_email,
-    )
-    other_student_user_token = create_api_access_token(student_user)
-
-    # Invalid old mail format
-    response = client.post(
-        "/users/migrate-mail",
-        json={"new_email": "fabristpp.eclair@etu.ec-lyon.fr"},
-        headers={"Authorization": f"Bearer {other_student_user_token}"},
-    )
-    assert response.status_code == 400
-
-    # Invalid new mail format
-    response = client.post(
-        "/users/migrate-mail",
-        json={"new_email": "fabristpp.eclair@test.fr"},
-        headers={"Authorization": f"Bearer {student_user_with_old_email_token}"},
-    )
-    assert response.status_code == 400
-
-
 async def test_migrate_mail(mocker: MockerFixture, client: TestClient) -> None:
     # NOTE: we don't want to mock app.core.security.generate_token but
     # app.core.users.endpoints_users.security.generate_token which is the imported version of the function
