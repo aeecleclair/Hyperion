@@ -1030,7 +1030,9 @@ async def get_tickets_by_tag(
             models_cdr.Ticket.tags.contains(tag.lower()),
         )
         .options(
-            noload(models_cdr.Ticket.product_variant),
+            noload(
+                models_cdr.Ticket.product_variant,
+            ),  # We will only return users so we won't load useless data
             selectinload(models_cdr.Ticket.user),
         ),
     )
@@ -1045,7 +1047,7 @@ async def get_tickets_by_generator(
     result = await db.execute(
         select(models_cdr.Ticket)
         .where(models_cdr.Ticket.generator_id == generator_id)
-        .options(
+        .options(  # We will only return tags so we won't load useless data
             noload(models_cdr.Ticket.product_variant),
             noload(models_cdr.Ticket.user),
         ),
