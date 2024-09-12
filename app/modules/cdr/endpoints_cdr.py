@@ -2760,9 +2760,9 @@ async def scan_ticket(
             db=db,
             ticket_id=ticket.id,
             scan=ticket.scan_left - 1,
-            tags=ticket.tags + "," + ticket_data.tag.strip()
+            tags=ticket.tags + "," + ticket_data.tag
             if ticket.tags != ""
-            else ticket_data.tag.strip(),
+            else ticket_data.tag,
         )
         await db.commit()
     except Exception:

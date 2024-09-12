@@ -296,7 +296,10 @@ class Ticket(BaseModel):
 
 
 class TicketScan(BaseModel):
-    tag: Annotated[str, StringConstraints(to_lower=True)]
+    tag: Annotated[
+        str,
+        StringConstraints(to_lower=True, strip_whitespace=True, pattern=r"[^,]+"),
+    ]
 
 
 class TicketSecret(BaseModel):
