@@ -1,8 +1,8 @@
 from datetime import date, datetime, timedelta
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, StringConstraints, field_validator
 
 from app.core.schemas_core import CoreUserSimple
 from app.modules.cdr.types_cdr import (
@@ -296,7 +296,10 @@ class Ticket(BaseModel):
 
 
 class TicketScan(BaseModel):
-    tag: str
+    tag: Annotated[
+        str,
+        StringConstraints(to_lower=True, strip_whitespace=True, pattern=r"[^,]+"),
+    ]
 
 
 class TicketSecret(BaseModel):

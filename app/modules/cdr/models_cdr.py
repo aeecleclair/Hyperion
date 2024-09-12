@@ -259,7 +259,7 @@ class Ticket(Base):
     name: Mapped[str]
     user: Mapped["CoreUser"] = relationship("CoreUser")
     scan_left: Mapped[int]
-    tags: Mapped[str]
+    tags: Mapped[str]  # Comma separated values
     expiration: Mapped[datetime]
 
 

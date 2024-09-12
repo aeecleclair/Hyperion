@@ -178,29 +178,42 @@ def construct_dataframe_from_users_purchases(
     data = ["", "", "", "Prix"]
     field_to_column: dict[UUID, str] = {}
     variant_to_column: dict[UUID, str] = {}
+    i = 1
     for product in products:
         product_variants = [
             variant for variant in variants if variant.product_id == product.id
         ]
         columns.extend(
-            [f"{product.name_fr} : {variant.name_fr}" for variant in product_variants],
-        )
-        fields = data_fields.get(product.id, [])
-        columns.extend(
-            [f"{product.name_fr} : {field.name}" for field in fields],
-        )
-        data.extend([str(variant.price / 100) for variant in product_variants])
-
-        data.extend([" " for _ in fields])
-        field_to_column.update(
-            {field.id: f"{product.name_fr} : {field.name}" for field in fields},
+            [
+                f"{i+j}. {product.name_fr} : {variant.name_fr}"
+                for j, variant in enumerate(product_variants)
+            ],
         )
         variant_to_column.update(
             {
-                variant.id: f"{product.name_fr} : {variant.name_fr}"
-                for variant in product_variants
+                variant.id: f"{i+j}. {product.name_fr} : {variant.name_fr}"
+                for j, variant in enumerate(product_variants)
             },
         )
+        i += len(product_variants)
+        fields = data_fields.get(product.id, [])
+        columns.extend(
+            [
+                f"{i+j}. {product.name_fr} : {field.name}"
+                for j, field in enumerate(fields)
+            ],
+        )
+        field_to_column.update(
+            {
+                field.id: f"{i+j}. {product.name_fr} : {field.name}"
+                for j, field in enumerate(fields)
+            },
+        )
+        i += len(fields)
+        data.extend([str(variant.price / 100) for variant in product_variants])
+
+        data.extend([" " for _ in fields])
+
     columns.append("Panier payé")
     data.append(" ")
     columns.append("Commentaire")
@@ -247,7 +260,7 @@ def construct_dataframe_from_users_purchases(
             else:
                 df.loc[user_id, "Panier payé"] = False
                 df.loc[user_id, "Commentaire"] = "Manquant : \n-" + "\n-".join(
-                    variant_to_column[purchase.product_variant_id]
+                    variant_to_column[purchase.product_variant_id].split(". ")[1]
                     for purchase in users_purchases[user_id]
                     if not purchase.validated
                 )
