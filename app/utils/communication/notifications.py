@@ -12,7 +12,6 @@ from app.core.notification.schemas_notification import Message
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
-
 class NotificationManager:
     """
     Notification manager for Firebase.
@@ -101,7 +100,7 @@ class NotificationManager:
             # And https://developer.apple.com/documentation/usernotifications/setting_up_a_remote_notification_server/pushing_background_updates_to_your_app
             androidconfig = messaging.AndroidConfig(priority="high")
             apnsconfig = messaging.APNSConfig(
-                headers={"apns-priority": "5", "apns-push-type": "background"},
+                headers={"apns-priority": "10", "apns-push-type": "background"},
                 payload=messaging.APNSPayload(
                     aps=messaging.Aps(content_available=True),
                 ),
@@ -117,7 +116,6 @@ class NotificationManager:
                 "Notification: Unable to send firebase notification to tokens",
             )
             raise
-
         await self._manage_firebase_batch_response(
             response=result,
             tokens=tokens,
@@ -135,7 +133,6 @@ class NotificationManager:
         without sending the content of the notification.
         This is better for privacy and RGPD compliance.
         """
-
         # Push without any data or notification may not be processed by the app in the background.
         # We thus need to send a data object with a dummy key to make sure the notification is processed.
         # See https://stackoverflow.com/questions/59298850/firebase-messaging-background-message-handler-method-not-called-when-the-app
