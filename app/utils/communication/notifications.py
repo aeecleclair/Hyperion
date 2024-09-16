@@ -12,6 +12,7 @@ from app.core.notification.schemas_notification import Message
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
+
 class NotificationManager:
     """
     Notification manager for Firebase.
