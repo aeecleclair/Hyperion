@@ -22,4 +22,4 @@ GOOGLE_API_CLIENT_SECRET
 5. Go to [Credentials](https://console.cloud.google.com/apis/credentials). Select "Create credentials" then:
    a. OAuth client id
    b. Web Application
-   c. TODO: redirect uri?
+   c. Redirect uri: "https://<yourdomain>/google-api/oauth2callback"

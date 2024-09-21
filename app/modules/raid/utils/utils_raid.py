@@ -8,12 +8,12 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
+from app.core.google_api.google_api import DriveGoogleAPI
 from app.core.payment import schemas_payment
 from app.modules.raid import coredata_raid, cruds_raid, models_raid, schemas_raid
 from app.modules.raid.schemas_raid import ParticipantBase, ParticipantUpdate
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.modules.raid.utils.pdf.pdf_writer import HTMLPDFWriter, PDFWriter
-from app.utils.google_api.google_api import DriveGoogleAPI
 from app.utils.tools import (
     get_core_data,
 )

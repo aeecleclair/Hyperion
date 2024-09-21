@@ -10,14 +10,14 @@ from googleapiclient.http import MediaFileUpload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
+from app.core.google_api.coredata_google_api import (
+    GoogleAPICredentials,
+    GoogleAPIOAuthFlow,
+)
 from app.types.exceptions import (
     CoreDataNotFoundError,
     GoogleAPIInvalidCredentialsError,
     GoogleAPIMissingConfigInDotenvError,
-)
-from app.utils.google_api.coredata_google_api import (
-    GoogleAPICredentials,
-    GoogleAPIOAuthFlow,
 )
 from app.utils.tools import get_core_data, set_core_data
 
