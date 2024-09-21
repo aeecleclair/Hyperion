@@ -10,10 +10,11 @@ from googleapiclient.http import MediaFileUpload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
+from app.core.google_api import cruds_google_api
 from app.core.google_api.coredata_google_api import (
     GoogleAPICredentials,
-    GoogleAPIOAuthFlow,
 )
+from app.core.google_api.models_google_api import OAuthFlowState
 from app.types.exceptions import (
     CoreDataNotFoundError,
     GoogleAPIInvalidCredentialsError,
@@ -92,8 +93,11 @@ class GoogleAPI:
         )
 
         # We store the state in the database to be able to check it later in the callback endpoint.
-        core_data = GoogleAPIOAuthFlow(state=state)
-        await set_core_data(core_data=core_data, db=db)
+        oauth_flow_state = OAuthFlowState(state=state)
+        await cruds_google_api.create_oauth_flow_state(
+            oauth_flow_state=oauth_flow_state,
+            db=db,
+        )
 
         hyperion_error_logger.error(
             f"Google API authentication. Visit {authorization_url} to authorize Hyperion",
@@ -105,16 +109,24 @@ class GoogleAPI:
         settings: Settings,
         request: Request,
     ):
-        auth_flow_core_data: GoogleAPIOAuthFlow = await get_core_data(
-            GoogleAPIOAuthFlow,
+        data = request.query_params
+
+        provided_state = data.get("state", None)
+        if provided_state is None:
+            hyperion_error_logger.error(
+                "Missing state in Google API authentication callback",
+            )
+            raise HTTPException(400, "Missing state in Google API authentication")
+
+        # There may be multiple states in the database, if the authentication process was instanced more than once
+        oauth_flow_state = await cruds_google_api.get_oauth_flow_state_by_state(
+            state=provided_state,
             db=db,
         )
 
-        data = request.query_params
-
-        if data.get("state", None) != auth_flow_core_data.state:
+        if oauth_flow_state is None:
             hyperion_error_logger.error(
-                f"Mismatched state in Google API authentication, got {data.get('state', None)} but expected {auth_flow_core_data.state}",
+                f"Invalid state in Google API authentication, got {provided_state}. This may also happen if a previous auth was successful, purging existing and waiting states",
             )
             raise HTTPException(400, "Mismatched state in Google API authentication")
 
@@ -128,6 +140,8 @@ class GoogleAPI:
             creds.to_json(),
         )
         await set_core_data(core_data=credentials_core_data, db=db)
+
+        await cruds_google_api.delete_all_states(db=db)
 
     async def get_credentials(
         self,
