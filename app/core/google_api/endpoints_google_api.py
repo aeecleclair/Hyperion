@@ -33,5 +33,5 @@ async def google_api_callback(
             "Google API authentication callback error",
         )
         return "An error occurred during the Google API authentication callback"
-    else:
-        return "Ok"
+
+    return "Ok"
