@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, schemas_core
 from app.core.config import Settings
+from app.core.google_api.google_api import DriveGoogleAPI
 from app.core.groups.groups_type import GroupType
 from app.core.payment.payment_tool import PaymentTool
 from app.dependencies import (
@@ -31,7 +32,6 @@ from app.modules.raid.utils.utils_raid import (
 )
 from app.types.content_type import ContentType
 from app.types.module import Module
-from app.utils.google_api.google_api import DriveGoogleAPI
 from app.utils.tools import (
     get_core_data,
     get_file_from_data,

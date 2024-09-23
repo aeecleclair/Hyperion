@@ -208,7 +208,7 @@ When using multiples workers, a Redis server must be configured to broadcast mes
 ## Google API usage
 
 Hyperion can use Google API to run App Script and upload files to Google Drive.
-See [app/utils/google_api/README.md](./app/utils/google_api/README.md) for more information.
+See [app/core/google_api/README.md](./app/core/google_api/README.md) for more information.
 
 ---
 

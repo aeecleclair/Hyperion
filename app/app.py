@@ -24,6 +24,7 @@ from sqlalchemy.orm import Session
 from app import api
 from app.core import models_core
 from app.core.config import Settings
+from app.core.google_api.google_api import GoogleAPI
 from app.core.groups.groups_type import GroupType
 from app.core.log import LogConfig
 from app.dependencies import (
@@ -36,7 +37,6 @@ from app.modules.module_list import module_list
 from app.types.exceptions import ContentHTTPException, GoogleAPIInvalidCredentialsError
 from app.types.sqlalchemy import Base
 from app.utils import initialization
-from app.utils.google_api.google_api import GoogleAPI
 from app.utils.redis import limiter
 
 if TYPE_CHECKING:

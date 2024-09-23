@@ -11,7 +11,3 @@ class GoogleAPICredentials(BaseCoreData):
     client_secret: str
     scopes: list[str]
     expiry: datetime
-
-
-class GoogleAPIOAuthFlow(BaseCoreData):
-    state: str | None = None

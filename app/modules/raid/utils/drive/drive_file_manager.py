@@ -3,8 +3,8 @@ import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
+from app.core.google_api.google_api import DriveGoogleAPI
 from app.modules.raid import coredata_raid
-from app.utils.google_api.google_api import DriveGoogleAPI
 from app.utils.tools import get_core_data, set_core_data
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
