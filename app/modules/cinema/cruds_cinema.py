@@ -19,10 +19,12 @@ async def get_sessions_in_time_frame(
     db: AsyncSession,
 ) -> Sequence[models_cinema.Session]:
     result = await db.execute(
-        select(models_cinema.Session).where(
+        select(models_cinema.Session)
+        .where(
             models_cinema.Session.start >= start_after,
             models_cinema.Session.start < start_before,
-        ),
+        )
+        .order_by(models_cinema.Session.start),
     )
     return result.scalars().all()
 
