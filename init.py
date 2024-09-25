@@ -1,5 +1,4 @@
 import logging
-import multiprocessing
 import os
 
 from app.app import init_db

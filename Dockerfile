@@ -1,20 +1,21 @@
-# PROD
 FROM ghcr.io/astral-sh/uv:python3.11-bookworm
 
 COPY ./requirements-common.txt /requirements-common.txt
 COPY ./requirements-prod.txt /requirements-prod.txt
 RUN uv pip install --system -r /requirements-prod.txt
 
-COPY ./start.sh /app/start.sh
-RUN chmod +x /app/start.sh
+WORKDIR /app
 
-COPY ./prestart.py /app/prestart.py
+COPY init.py .
 
-COPY ./alembic.ini /app/alembic.ini
-COPY ./migrations /app/migrations
+COPY alembic.ini .
+COPY migrations .
 
-COPY ./assets /app/assets
+COPY assets assets/
 
-COPY ./app/ /app/app/
+COPY app app/
 
-CMD ["/app/start.sh"]
+COPY start.sh .
+RUN chmod +x start.sh
+
+ENTRYPOINT ["./start.sh"]

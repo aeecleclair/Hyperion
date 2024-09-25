@@ -1,5 +1,5 @@
-#!bin/sh
+#!/usr/bin/env bash
+set -e
 
-cd /app
-python3 prestart.py
-fastapi run app/main.py --port 80 --workers 4
+python3 init.py
+exec fastapi run app/main.py "$@"
