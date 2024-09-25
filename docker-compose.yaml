@@ -32,7 +32,6 @@ services:
     image: hyperion-app
     container_name: hyperion-app
     restart: unless-stopped
-    command: ["--port", "80"]
     depends_on:
       hyperion-db:
         condition: service_healthy
