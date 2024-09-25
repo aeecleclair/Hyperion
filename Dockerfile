@@ -7,12 +7,9 @@ RUN uv pip install --system -r /requirements-prod.txt
 WORKDIR /app
 
 COPY init.py .
-
 COPY alembic.ini .
-COPY migrations .
-
+COPY migrations migrations/
 COPY assets assets/
-
 COPY app app/
 
 COPY start.sh .
