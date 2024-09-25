@@ -685,6 +685,16 @@ async def migrate_mail_confirm(
             detail=f"There is already an account with the email {migration_object.new_email}",
         )
 
+    user = await cruds_users.get_user_by_id(
+        db=db,
+        user_id=migration_object.user_id,
+    )
+    if user is None:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found",
+        )
+
     try:
         await cruds_users.update_user_email_by_id(
             db=db,
@@ -692,6 +702,22 @@ async def migrate_mail_confirm(
             new_email=migration_object.new_email,
             make_user_external=migration_object.make_user_external,
         )
+        if not migration_object.make_user_external:
+            group_ids = [group.id for group in user.groups]
+            if GroupType.external in group_ids:
+                await cruds_groups.delete_membership_by_group_and_user_id(
+                    db=db,
+                    group_id=GroupType.external,
+                    user_id=migration_object.user_id,
+                )
+            if GroupType.student not in group_ids:
+                await cruds_groups.create_membership(
+                    db=db,
+                    membership=models_core.CoreMembership(
+                        group_id=GroupType.student,
+                        user_id=migration_object.user_id,
+                    ),
+                )
     except Exception as error:
         raise HTTPException(status_code=400, detail=str(error))
 
@@ -962,3 +988,43 @@ async def read_user_profile_picture(
         filename=str(user_id),
         default_asset="assets/images/default_profile_picture.png",
     )
+
+
+@router.patch(
+    "/users/external",
+    status_code=204,
+)
+async def switch_external_user_internal(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Switch all external users to internal users if they have an ECL email address.
+
+    **This endpoint is only usable by administrators**
+    """
+
+    users = await cruds_users.get_users(db=db)
+    for user in users:
+        if re.match(r"^[\w\-.]*@etu(-enise)?\.ec-lyon\.fr$", user.email):
+            await cruds_users.update_user(
+                db=db,
+                user_id=user.id,
+                user_update=schemas_core.CoreUserUpdateAdmin(external=False),
+            )
+            group_ids = [group.id for group in user.groups]
+            if GroupType.external in group_ids:
+                await cruds_groups.delete_membership_by_group_and_user_id(
+                    db=db,
+                    group_id=GroupType.external,
+                    user_id=user.id,
+                )
+            if GroupType.student not in group_ids:
+                await cruds_groups.create_membership(
+                    db=db,
+                    membership=models_core.CoreMembership(
+                        group_id=GroupType.student,
+                        user_id=user.id,
+                    ),
+                )
