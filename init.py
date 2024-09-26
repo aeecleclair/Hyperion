@@ -20,7 +20,7 @@ LogConfig().initialize_loggers(settings=settings)
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 hyperion_error_logger.warning(
-    "Starting Gunicorn server and initializing the database.",
+    "Starting Uvicorn server and initializing the database.",
 )
 
 init_db(
