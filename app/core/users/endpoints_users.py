@@ -995,7 +995,6 @@ async def read_user_profile_picture(
     status_code=204,
 )
 async def switch_external_user_internal(
-    user_id: str,
     db: AsyncSession = Depends(get_db),
     _: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
