@@ -996,7 +996,7 @@ async def read_user_profile_picture(
 )
 async def switch_external_user_internal(
     db: AsyncSession = Depends(get_db),
-    _: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    u: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
     Switch all external users to internal users if they have an ECL email address.
