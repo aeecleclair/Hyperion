@@ -843,6 +843,45 @@ async def update_current_user(
     await cruds_users.update_user(db=db, user_id=user.id, user_update=user_update)
 
 
+@router.patch(
+    "/users/external",
+    status_code=204,
+)
+async def switch_external_user_internal(
+    db: AsyncSession = Depends(get_db),
+    u: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Switch all external users to internal users if they have an ECL email address.
+
+    **This endpoint is only usable by administrators**
+    """
+
+    users = await cruds_users.get_users(db=db)
+    for user in users:
+        if re.match(r"^[\w\-.]*@etu(-enise)?\.ec-lyon\.fr$", user.email):
+            await cruds_users.update_user(
+                db=db,
+                user_id=user.id,
+                user_update=schemas_core.CoreUserUpdateAdmin(external=False),
+            )
+            group_ids = [group.id for group in user.groups]
+            if GroupType.external in group_ids:
+                await cruds_groups.delete_membership_by_group_and_user_id(
+                    db=db,
+                    group_id=GroupType.external,
+                    user_id=user.id,
+                )
+            if GroupType.student not in group_ids:
+                await cruds_groups.create_membership(
+                    db=db,
+                    membership=models_core.CoreMembership(
+                        group_id=GroupType.student,
+                        user_id=user.id,
+                    ),
+                )
+
+
 @router.post(
     "/users/merge",
     status_code=204,
@@ -988,42 +1027,3 @@ async def read_user_profile_picture(
         filename=str(user_id),
         default_asset="assets/images/default_profile_picture.png",
     )
-
-
-@router.patch(
-    "/users/external",
-    status_code=204,
-)
-async def switch_external_user_internal(
-    db: AsyncSession = Depends(get_db),
-    u: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
-):
-    """
-    Switch all external users to internal users if they have an ECL email address.
-
-    **This endpoint is only usable by administrators**
-    """
-
-    users = await cruds_users.get_users(db=db)
-    for user in users:
-        if re.match(r"^[\w\-.]*@etu(-enise)?\.ec-lyon\.fr$", user.email):
-            await cruds_users.update_user(
-                db=db,
-                user_id=user.id,
-                user_update=schemas_core.CoreUserUpdateAdmin(external=False),
-            )
-            group_ids = [group.id for group in user.groups]
-            if GroupType.external in group_ids:
-                await cruds_groups.delete_membership_by_group_and_user_id(
-                    db=db,
-                    group_id=GroupType.external,
-                    user_id=user.id,
-                )
-            if GroupType.student not in group_ids:
-                await cruds_groups.create_membership(
-                    db=db,
-                    membership=models_core.CoreMembership(
-                        group_id=GroupType.student,
-                        user_id=user.id,
-                    ),
-                )
