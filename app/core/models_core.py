@@ -52,6 +52,7 @@ class CoreUser(Base):
         "CoreGroup",
         secondary="core_membership",
         back_populates="members",
+        lazy="selectin",
     )
 
 
