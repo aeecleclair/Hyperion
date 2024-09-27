@@ -49,6 +49,8 @@ hyperion_security_logger = logging.getLogger("hyperion.security")
 
 templates = Jinja2Templates(directory="assets/templates")
 
+ECL_EMAIL_REGEX = r"^[\w\-.]*@etu(-enise)?\.ec-lyon\.fr$"
+
 
 @router.get(
     "/users/",
@@ -612,7 +614,7 @@ async def migrate_mail(
     This endpoint will send a confirmation code to the user's new email address. He will need to use this code to confirm the change with `/users/confirm-mail-migration` endpoint.
     """
 
-    if not re.match(r"^[\w\-.]*@etu(-enise)?\.ec-lyon\.fr$", mail_migration.new_email):
+    if not re.match(ECL_EMAIL_REGEX, mail_migration.new_email):
         raise HTTPException(
             status_code=400,
             detail="The new email address must match the new ECL format for student users",
@@ -859,7 +861,7 @@ async def switch_external_user_internal(
 
     users = await cruds_users.get_users(db=db)
     for user in users:
-        if re.match(r"^[\w\-.]*@etu(-enise)?\.ec-lyon\.fr$", user.email):
+        if re.match(ECL_EMAIL_REGEX, user.email):
             await cruds_users.update_user(
                 db=db,
                 user_id=user.id,
