@@ -14,7 +14,7 @@ from tests.commons import (
 
 admin_user: models_core.CoreUser
 student_user: models_core.CoreUser
-
+external_user: models_core.CoreUser
 student_user_with_old_email: models_core.CoreUser
 
 token_admin_user: str
@@ -31,7 +31,7 @@ student_user_password = "password"
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
-    global admin_user, student_user, student_user_with_old_email
+    global admin_user, student_user, student_user_with_old_email, external_user
 
     admin_user = await create_user_with_groups(
         [GroupType.admin],
@@ -41,6 +41,10 @@ async def init_objects() -> None:
         [GroupType.student],
         email=student_user_email,
         password=student_user_password,
+    )
+    external_user = await create_user_with_groups(
+        [GroupType.external],
+        external=True,
     )
 
     student_user_with_old_email = await create_user_with_groups(
@@ -357,3 +361,28 @@ def test_read_user_profile_picture(client: TestClient) -> None:
     )
 
     assert response.status_code == 200
+
+
+def test_batch_internal_user(client: TestClient) -> None:
+    token = create_api_access_token(admin_user)
+
+    response = client.patch(
+        "/users/external",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 204
+
+    response = client.get(
+        f"/groups/{GroupType.external.value}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.json()["members"] == []
+
+    response = client.get(
+        f"/groups/{GroupType.student.value}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    members = response.json()["members"]
+    members_ids = [member["id"] for member in members]
+    assert external_user.id in members_ids
