@@ -1,5 +1,4 @@
 import logging
-import os
 
 from app.app import init_db
 from app.core.config import construct_prod_settings
