@@ -245,18 +245,6 @@ class LogConfig:
                     "level": MINIMUM_LOG_LEVEL,
                     "propagate": False,
                 },
-                # In production we use gunicorn instead of uvicorn
-                # We disable "uvicorn.access" to replace it with our custom "hyperion.access" which add custom information like the request_id
-                "gunicorn.access": {"handlers": []},
-                "gunicorn.error": {
-                    "handlers": [
-                        "file_errors",
-                        "matrix_errors",
-                        "console",
-                    ],
-                    "level": MINIMUM_LOG_LEVEL,
-                    "propagate": False,
-                },
             },
         }
 

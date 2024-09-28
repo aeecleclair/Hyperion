@@ -183,7 +183,7 @@ curl --location --request POST 'http://127.0.0.1:8000/users/make-admin'
 
 Install docker and the compose plugin (https://docs.docker.com/compose/install/)
 
-`docker-compose.yaml` includes the minimal settings required to run Hyperion using docker compose. Docker images are based on [tiangolo/uvicorn-gunicorn-fastapi](https://github.com/tiangolo/uvicorn-gunicorn-fastapi-docker), and preloading the app is required to perform migrations and database initializations when running multiple workers.
+`docker-compose.yaml` includes the minimal settings required to run Hyperion using docker compose.
 
 > During dev, `docker-compose-dev.yaml` can be used to run the database, the redis server etc... If you really want to run the project without docker, you can do it but you will have to install the database, redis, etc ... yourself or disable corresponding features in the .env file (which is not recommended).
 
@@ -212,10 +212,8 @@ See [app/core/google_api/README.md](./app/core/google_api/README.md) for more in
 
 ---
 
-## Running Hyperion with Gunicorn
+## Hyperion deployment
 
-For production we encourage to use Gunicorn to run and manage multiple Uvicorn workers. You can use our [docker image](./Dockerfile) and [docker-compose file](./docker-compose.yaml) files to run Hyperion with Gunicorn. See [Gunicorn with Uvicorn](https://fastapi.tiangolo.com/deployment/server-workers/#gunicorn-with-uvicorn-workers) FastAPI documentation.
+For production we encourage to use multiple Uvicorn workers. You can use our [docker image](./Dockerfile) and [docker-compose file](./docker-compose.yaml) files to run Hyperion with Unicorn.
 
-Do not use gunicorn `--preload` flag. It initialise a first Hyperion instance then fork it to create workers. This is not compatible with the way we handle loggers in their own thread.
-
-You should use our [Gunicorn configuration file](./gunicorn_conf.py) to ensure that database initialization and migrations are only run once.
+You should use our [init file](./init.py) to ensure that database initialization and migrations are only run once.

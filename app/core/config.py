@@ -200,7 +200,7 @@ class Settings(BaseSettings):
     ######################################
 
     # If Hyperion should initialize the database on startup
-    # This environment variable is set by the Gunicorn on_starting hook, to tell the workers to avoid initializing the database
+    # This environment variable is set by our init Python file to tell the workers to avoid initializing the database
     # You don't want to set this variable manually
     HYPERION_INIT_DB: bool = True
 
