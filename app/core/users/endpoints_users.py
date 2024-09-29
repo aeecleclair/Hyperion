@@ -1,5 +1,6 @@
 import logging
 import re
+import string
 import uuid
 from datetime import UTC, datetime, timedelta
 
@@ -103,9 +104,9 @@ async def search_users(
     user: models_core.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
-    Search for a user using Jaro_Winkler distance algorithm. The
-
-    `query` will be compared against users name, firstname and nickname
+    Search for a user using Jaro_Winkler distance algorithm.
+    The `query` will be compared against users name, firstname and nickname.
+    Assume that `query` is the beginning of a name, so we can capitalize words to improve results.
 
     **The user must be authenticated to use this endpoint**
     """
@@ -116,7 +117,7 @@ async def search_users(
         excluded_groups=excludedGroups,
     )
 
-    return sort_user(query, users)
+    return sort_user(string.capwords(query), users)
 
 
 @router.get(
