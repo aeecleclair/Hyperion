@@ -1,5 +1,4 @@
 import logging
-import os
 
 from app.app import init_db
 from app.core.config import construct_prod_settings
@@ -9,10 +8,6 @@ from app.core.log import LogConfig
 # - we know we want to use the production settings
 # - we will edit environment variables to avoid initializing the database and `get_settings()` is a cached function
 settings = construct_prod_settings()
-
-# We set an environment variable to tell workers to avoid initializing the database
-# as we want to do it only once before workers are forked from the arbiter
-os.environ["HYPERION_INIT_DB"] = "False"
 
 # Initialize loggers
 LogConfig().initialize_loggers(settings=settings)
