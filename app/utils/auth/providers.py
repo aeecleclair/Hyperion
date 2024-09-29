@@ -334,3 +334,15 @@ class SiarnaqAuthClient(BaseAuthClient):
     allowed_scopes: set[ScopeType | str] = {ScopeType.API}
 
     allow_external_users: bool = True
+
+
+class OverleafAuthClient(BaseAuthClient):
+    @classmethod
+    def get_userinfo(cls, user: models_core.CoreUser):
+        return {
+            "sub": user.id,
+            "firstname": user.firstname,
+            "lastname": user.name,
+            "email": user.email,
+            "is_admin": is_user_member_of_an_allowed_group(user, [GroupType.admin]),
+        }
