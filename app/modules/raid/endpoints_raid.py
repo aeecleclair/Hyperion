@@ -265,6 +265,31 @@ async def create_team(
     return created_team
 
 
+@module.router.post(
+    "/raid/teams/generate-pdf",
+    status_code=204,
+)
+async def generate_teams_pdf(
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.raid_admin)),
+    db: AsyncSession = Depends(get_db),
+    drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
+    settings: Settings = Depends(get_settings),
+):
+    """
+    PDF are automatically generated when a team is created or updated.
+    This endpoint is used to regenerate all the PDFs.
+    """
+    teams = await cruds_raid.get_all_teams(db)
+
+    for team in teams:
+        await post_update_actions(
+            team,
+            db,
+            drive_file_manager,
+            settings=settings,
+        )
+
+
 @module.router.get(
     "/raid/participants/{participant_id}/team",
     response_model=schemas_raid.Team,
