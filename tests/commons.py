@@ -22,6 +22,7 @@ from app.dependencies import get_settings
 from app.types.exceptions import RedisConnectionError
 from app.types.floors_type import FloorsType
 from app.types.sqlalchemy import Base
+from app.types.transactional_async_session import TransactionalAsyncSession
 from app.utils.redis import connect, disconnect
 from app.utils.tools import get_random_string
 
@@ -67,6 +68,16 @@ async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
             yield db
         finally:
             await db.close()
+
+
+async def override_get_transactional_db() -> (
+    AsyncGenerator[TransactionalAsyncSession, None]
+):
+    # We call db.begin() to enter a SessionTransaction
+    async with TestingSessionLocal() as db, db.begin():
+        # We wrap our Session in a TransactionalAsyncSession object
+        # to prevent its commit method from doing anything
+        yield TransactionalAsyncSession(db)
 
 
 # By default the redis client is deactivated

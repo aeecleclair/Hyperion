@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.modules.flappybird import models_flappybird
+from app.types.transactional_async_session import TransactionalAsyncSession
 
 
 async def get_flappybird_score_leaderboard(
@@ -48,9 +49,9 @@ async def get_flappybird_score_position(
 
 
 async def create_flappybird_score(
-    db: AsyncSession,
+    db: TransactionalAsyncSession,
     flappybird_score: models_flappybird.FlappyBirdScore,
-) -> models_flappybird.FlappyBirdScore:
+) -> None:
     """Add a FlappyBirdScore in database"""
     db.add(flappybird_score)
     try:
@@ -58,14 +59,12 @@ async def create_flappybird_score(
     except IntegrityError:
         await db.rollback()
         raise
-    else:
-        return flappybird_score
 
 
 async def create_flappybird_best_score(
-    db: AsyncSession,
+    db: TransactionalAsyncSession,
     flappybird_best_score: models_flappybird.FlappyBirdBestScore,
-) -> models_flappybird.FlappyBirdBestScore:
+) -> None:
     """Add a FlappyBirdBestScore in database"""
     db.add(flappybird_best_score)
     try:
@@ -73,8 +72,6 @@ async def create_flappybird_best_score(
     except IntegrityError:
         await db.rollback()
         raise
-    else:
-        return flappybird_best_score
 
 
 async def update_flappybird_best_score(

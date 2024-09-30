@@ -6,13 +6,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
-from app.dependencies import get_db, is_user_a_member
+from app.dependencies import get_db, get_transactional_db, is_user_a_member
 from app.modules.flappybird import (
     cruds_flappybird,
     models_flappybird,
     schemas_flappybird,
 )
 from app.types.module import Module
+from app.types.transactional_async_session import TransactionalAsyncSession
 
 module = Module(
     root="flappybird",
@@ -81,7 +82,7 @@ async def get_current_user_flappybird_personal_best(
 async def create_flappybird_score(
     flappybird_score: schemas_flappybird.FlappyBirdScoreBase,
     user: models_core.CoreUser = Depends(is_user_a_member),
-    db: AsyncSession = Depends(get_db),
+    db: TransactionalAsyncSession = Depends(get_transactional_db),
 ):
     # Currently, flappybird_score is a schema instance
     # To add it to the database, we need to create a model
