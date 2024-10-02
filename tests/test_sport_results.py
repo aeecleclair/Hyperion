@@ -2,13 +2,13 @@ import datetime
 import uuid
 
 import pytest_asyncio
+from fastapi.testclient import TestClient
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
-from app.modules.sports_results import models_sport_results, schemas_sport_results
+from app.modules.sports_results import models_sport_results
 from tests.commons import (
     add_object_to_db,
-    client,
     create_api_access_token,
     create_user_with_groups,
 )
@@ -30,7 +30,7 @@ captain: models_sport_results.Captain
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
-async def init_objects():
+async def init_objects(client: TestClient) -> None:
     global bds_user
     bds_user = await create_user_with_groups([GroupType.BDS])
 
@@ -93,7 +93,7 @@ async def init_objects():
     await add_object_to_db(result2)
 
 
-def test_get_results():
+def test_get_results(client: TestClient) -> None:
     response = client.get(
         "/sport-results/results/",
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -108,7 +108,7 @@ def test_get_results():
     ]
 
 
-def test_get_results_by_sport_id():
+def test_get_results_by_sport_id(client: TestClient) -> None:
     response = client.get(
         f"/sport-results/results/sport/{sport1.id}",
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -123,7 +123,7 @@ def test_get_results_by_sport_id():
     ]
 
 
-def test_get_result_by_id():
+def test_get_result_by_id(client: TestClient) -> None:
     response = client.get(
         f"/sport-results/results/{result1.id}",
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -133,7 +133,7 @@ def test_get_result_by_id():
     assert str(result1.id) == response_json["id"]
 
 
-def test_get_sports():
+def test_get_sports(client: TestClient) -> None:
     response = client.get(
         "/sport-results/sports/",
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -144,7 +144,7 @@ def test_get_sports():
     assert str(sport2.id) in [response_sport["id"] for response_sport in response_json]
 
 
-def test_add_sport():
+def test_add_sport(client: TestClient) -> None:
     response = client.post(
         "/sport-results/sport",
         json={
@@ -156,7 +156,7 @@ def test_add_sport():
     assert response.status_code == 201
 
 
-def test_update_sport():
+def test_update_sport(client: TestClient) -> None:
     response = client.patch(
         f"/sport-results/sport/{sport1.id}",
         json={
@@ -167,7 +167,7 @@ def test_update_sport():
     assert response.status_code == 204
 
 
-def test_delete_sport():
+def test_delete_sport(client: TestClient) -> None:
     response = client.delete(
         f"/sport-results/sport/{sport1.id}",
         headers={"Authtorization": f"Bearer {token_bds}"},
@@ -175,7 +175,7 @@ def test_delete_sport():
     assert response.status_code == 204
 
 
-def test_add_result():
+def test_add_result(client: TestClient) -> None:
     response = client.post(
         "/sport-results/result",
         json={
