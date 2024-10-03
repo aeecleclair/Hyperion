@@ -1,8 +1,7 @@
 from collections.abc import Sequence
 from datetime import UTC, datetime
-from typing import List
 
-from sqlalchemy import delete, func, or_, select, update
+from sqlalchemy import delete, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
