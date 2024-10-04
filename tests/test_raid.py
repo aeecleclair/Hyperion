@@ -11,7 +11,12 @@ from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from app.modules.raid import coredata_raid, models_raid
 from app.modules.raid.models_raid import Document, Participant, SecurityFile, Team
-from app.modules.raid.raid_type import DocumentType, DocumentValidation
+from app.modules.raid.raid_type import (
+    Difficulty,
+    DocumentType,
+    DocumentValidation,
+    MeetingPlace,
+)
 from app.modules.raid.utils.pdf.pdf_writer import (
     HTMLPDFWriter,
     PDFWriter,
@@ -26,16 +31,24 @@ from tests.commons import (
 participant: models_raid.Participant
 
 team: models_raid.Team
+validated_team: models_raid.Team
+
+validated_document: models_raid.Document
 
 raid_admin_user: models_core.CoreUser
 simple_user: models_core.CoreUser
 simple_user_without_participant: models_core.CoreUser
 simple_user_without_team: models_core.CoreUser
 
+validated_team_captain: models_core.CoreUser
+validated_team_second: models_core.CoreUser
+
 token_raid_admin: str
 token_simple: str
 token_simple_without_participant: str
 token_simple_without_team: str
+
+token_validated_team_captain: str
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
@@ -58,6 +71,13 @@ async def init_objects() -> None:
     simple_user_without_team = await create_user_with_groups([GroupType.student])
     token_simple_without_team = create_api_access_token(simple_user_without_team)
 
+    global validated_team_captain, token_validated_team_captain
+    validated_team_captain = await create_user_with_groups([GroupType.student])
+    token_validated_team_captain = create_api_access_token(validated_team_captain)
+
+    global validated_team_second
+    validated_team_second = await create_user_with_groups([GroupType.student])
+
     document = models_raid.Document(
         id="some_document_id",
         name="test.pdf",
@@ -65,8 +85,17 @@ async def init_objects() -> None:
         validation=DocumentValidation.pending,
         type=DocumentType.idCard,
     )
-
     await add_object_to_db(document)
+
+    validated_document = models_raid.Document(
+        id="validated_document_id",
+        name="validated.pdf",
+        uploaded_at=datetime.datetime.now(tz=datetime.UTC),
+        validation=DocumentValidation.accepted,
+        type=DocumentType.idCard,
+    )
+
+    await add_object_to_db(validated_document)
 
     global participant
     participant = models_raid.Participant(
@@ -98,6 +127,63 @@ async def init_objects() -> None:
         email="test@no_team.fr",
     )
     await add_object_to_db(no_team_participant)
+
+    validated_team_participant_captain = models_raid.Participant(
+        id=validated_team_captain.id,
+        firstname="Validated",
+        name="Captain",
+        address="123 rue de la rue",
+        birthday=datetime.date(2001, 1, 1),
+        phone="0606060606",
+        email="test@validated.fr",
+        t_shirt_size="M",
+        bike_size="M",
+        attestation_on_honour=True,
+        situation="centrale",
+        payment=True,
+        id_card_id=validated_document.id,
+        medical_certificate_id=validated_document.id,
+        student_card_id=validated_document.id,
+        raid_rules_id=validated_document.id,
+        parent_authorization_id=validated_document.id,
+    )
+
+    await add_object_to_db(validated_team_participant_captain)
+
+    validated_team_participant_second = models_raid.Participant(
+        id=validated_team_second.id,
+        firstname="Validated",
+        name="Second",
+        address="123 rue de la rue",
+        birthday=datetime.date(2001, 1, 1),
+        phone="0606060606",
+        email="test2@validated.fr",
+        t_shirt_size="M",
+        bike_size="M",
+        attestation_on_honour=True,
+        situation="centrale",
+        payment=True,
+        id_card_id=validated_document.id,
+        medical_certificate_id=validated_document.id,
+        student_card_id=validated_document.id,
+        raid_rules_id=validated_document.id,
+        parent_authorization_id=validated_document.id,
+    )
+
+    await add_object_to_db(validated_team_participant_second)
+
+    global validated_team
+    validated_team = models_raid.Team(
+        id=str(uuid.uuid4()),
+        name="ValidatedTeam",
+        difficulty=Difficulty.sports,
+        meeting_place=MeetingPlace.centrale,
+        captain_id=validated_team_captain.id,
+        second_id=validated_team_second.id,
+        file_id=str(uuid.uuid4()),
+    )
+
+    await add_object_to_db(validated_team)
 
 
 def test_get_participant_by_id(client: TestClient):
@@ -278,6 +364,17 @@ def test_update_team(client: TestClient):
         headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response.status_code == 204
+
+
+def set_team_number(client: TestClient):
+    update_data = {"name": "Updated Validated Team"}
+    response = client.patch(
+        f"/raid/teams/{validated_team.id}",
+        json=update_data,
+        headers={"Authorization": f"Bearer {token_validated_team_captain}"},
+    )
+    assert response.status_code == 204
+    assert response.json()["number"] == 1
 
 
 def test_upload_document(client: TestClient):
@@ -836,6 +933,17 @@ def test_html_pdf_writer_init():
 #     html_pdf_writer = HTMLPDFWriter()
 #     mock_information = Mock()
 #     result = html_pdf_writer.write_participant_security_file(
+#         mock_participant,
+#         mock_information,
+#         1,
+#     )
+#     assert result == f"data/raid/{mock_participant.id}.pdf"
+#     result = html_pdf_writer.write_participant_security_file(
+#         mock_participant,
+#         mock_information,
+#         1,
+#     )
+#     assert result == f"data/raid/{mock_participant.id}.pdf"
 #         mock_participant,
 #         mock_information,
 #         1,
