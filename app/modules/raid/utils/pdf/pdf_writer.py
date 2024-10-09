@@ -150,7 +150,11 @@ class PDFWriter(FPDF):
             participant.parent_authorization,
         ]:
             if document:
-                pdf = get_file_path_from_data("raid", document.id, "documents")
+                pdf = get_file_path_from_data(
+                    "raid",
+                    document.id,
+                    "assets/pdf/default_PDF.pdf",
+                )
                 extension = pdf.absolute().suffix[1:]
                 if extension in ["jpg", "jpeg", "png"]:
                     self.write_document(document, participant)
