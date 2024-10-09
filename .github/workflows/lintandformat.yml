@@ -6,7 +6,7 @@ on:
     types: [opened, edited, ready_for_review, synchronize]
 
 jobs:
-  test:
+  lintandformat:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
