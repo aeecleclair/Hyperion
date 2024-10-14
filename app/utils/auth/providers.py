@@ -278,6 +278,8 @@ class OpenProjectAuthClient(BaseAuthClient):
     # See app.types.scopes_type.ScopeType for possible values
     allowed_scopes: set[ScopeType | str] = {ScopeType.openid, ScopeType.profile}
 
+    allow_external_users: bool = True
+
     @classmethod
     def get_userinfo(cls, user: models_core.CoreUser):
         return {
