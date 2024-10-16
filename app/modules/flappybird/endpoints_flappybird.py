@@ -124,3 +124,14 @@ async def create_flappybird_score(
             db=db,
         )
     return db_flappybird_score
+
+
+@module.router.delete(
+    "/flappybird/scores/me",
+    status_code=204,
+)
+async def remove_flappybird_score(
+    user: models_core.CoreUser = Depends(is_user_a_member),
+    db: AsyncSession = Depends(get_db),
+):
+    await cruds_flappybird.delete_flappybird_best_score(db=db, user_id=user.id)

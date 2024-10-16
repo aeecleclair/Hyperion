@@ -1,4 +1,4 @@
-from sqlalchemy import func, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -77,12 +77,24 @@ async def create_flappybird_best_score(
         return flappybird_best_score
 
 
+async def delete_flappybird_best_score(
+    db: AsyncSession,
+    user_id: str,
+):
+    """Remove a FlappyBirdBestScore in database"""
+    await db.execute(
+        delete(models_flappybird.FlappyBirdBestScore).where(
+            models_flappybird.FlappyBirdBestScore.user_id == user_id,
+        ),
+    )
+
+
 async def update_flappybird_best_score(
     db: AsyncSession,
     user_id: str,
     best_score: int,
 ):
-    """Add a FlappyBirdBestScore in database"""
+    """Update a FlappyBirdBestScore in database"""
     await db.execute(
         update(models_flappybird.FlappyBirdBestScore)
         .where(
