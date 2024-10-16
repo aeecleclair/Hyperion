@@ -84,3 +84,11 @@ def test_update_flappybird_score(client: TestClient):
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 201
+
+
+def test_delete_flappybird_score(client: TestClient):
+    response = client.delete(
+        "flappybird/scores/me",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 204
