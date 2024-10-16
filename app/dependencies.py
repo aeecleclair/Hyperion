@@ -32,10 +32,7 @@ from app.types.websocket import WebsocketConnectionManager
 from app.utils.auth import auth_utils
 from app.utils.communication.notifications import NotificationManager, NotificationTool
 from app.utils.redis import connect
-from app.utils.tools import (
-    is_user_external,
-    is_user_member_of_an_allowed_group,
-)
+from app.utils.tools import is_user_external, is_user_member_of_an_allowed_group
 
 # We could maybe use hyperion.security
 hyperion_access_logger = logging.getLogger("hyperion.access")
@@ -54,6 +51,10 @@ engine: AsyncEngine | None = (
 SessionLocal: Callable[[], AsyncSession] | None = (
     None  # Create a global variable for the database session, so that it can be instancied in the startup event
 )
+
+
+class AsyncDBSession(AsyncSession):
+    pass
 
 
 notification_manager: NotificationManager | None = None
