@@ -13,9 +13,11 @@ from tests.commons import (
     create_user_with_groups,
 )
 
-flappybird_score: models_flappybird.FlappyBirdScore | None = None
-user: models_core.CoreUser | None = None
+flappybird_score: models_flappybird.FlappyBirdScore
+user: models_core.CoreUser
 token: str = ""
+admin_user: models_core.CoreUser
+admin_token: str = ""
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
@@ -23,8 +25,14 @@ async def init_objects() -> None:
     global user
     user = await create_user_with_groups([GroupType.student])
 
+    global admin_user
+    admin_user = await create_user_with_groups([GroupType.admin])
+
     global token
     token = create_api_access_token(user=user)
+
+    global admin_token
+    admin_token = create_api_access_token(user=admin_user)
 
     global flappybird_score
     flappybird_score = models_flappybird.FlappyBirdScore(
@@ -84,3 +92,11 @@ def test_update_flappybird_score(client: TestClient):
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 201
+
+
+def test_delete_flappybird_score(client: TestClient):
+    response = client.delete(
+        f"flappybird/scores/{user.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 204
