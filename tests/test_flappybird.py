@@ -13,9 +13,11 @@ from tests.commons import (
     create_user_with_groups,
 )
 
-flappybird_score: models_flappybird.FlappyBirdScore | None = None
-user: models_core.CoreUser | None = None
+flappybird_score: models_flappybird.FlappyBirdScore
+user: models_core.CoreUser
 token: str = ""
+admin_user: models_core.CoreUser
+admin_token: str = ""
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
