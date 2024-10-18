@@ -59,6 +59,10 @@ TestingSessionLocal = async_sessionmaker(
 )  # Create a session for testing purposes
 
 
+def send_test_db() -> async_sessionmaker[AsyncSession]:
+    return TestingSessionLocal()
+
+
 async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
     """Override the get_db function to use the testing session"""
 
