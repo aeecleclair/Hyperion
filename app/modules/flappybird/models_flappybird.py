@@ -16,6 +16,9 @@ class FlappyBirdScore(Base):
     value: Mapped[int]
     creation_time: Mapped[datetime]
 
+    def to_dict(self):
+        return {field.name: getattr(self, field.name) for field in self.__table__.c}
+
 
 class FlappyBirdBestScore(Base):
     __tablename__ = "flappy-bird_best_score"
