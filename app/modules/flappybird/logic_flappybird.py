@@ -17,12 +17,12 @@ class FlappyBirdLogicException(Exception):
 
 class BestScoreNotFound(FlappyBirdLogicException):
     def __init__(self):
-        super().__init__("No best score was found")
+        super().__init__()
 
 
 class ScorePositionNotFound(FlappyBirdLogicException):
     def __init__(self):
-        super().__init__("No position score was found")
+        super().__init__()
 
 
 async def get_flappybird_score_leaderboard(db: AsyncDBSession):
@@ -41,7 +41,6 @@ async def get_current_user_flappybird_personnal_best(
             user_id=user.id,
         )
     )
-
     if user_personal_best_table is None:
         raise BestScoreNotFound
 

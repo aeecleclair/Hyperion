@@ -3,9 +3,7 @@ from datetime import UTC, datetime
 from unittest.mock import patch
 
 import pytest_asyncio
-from fastapi.testclient import TestClient
 
-from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from app.dependencies import AsyncDBSession
 from app.modules.flappybird import (
@@ -14,8 +12,6 @@ from app.modules.flappybird import (
     schemas_flappybird,
 )
 from tests.commons import (
-    add_object_to_db,
-    create_api_access_token,
     create_user_with_groups,
 )
 
@@ -23,7 +19,7 @@ from tests.commons import (
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
     global users
-    users = [await create_user_with_groups([GroupType.student]) for i in range(5)]
+    users = [await create_user_with_groups([GroupType.student]) for i in range(3)]
 
     global flappybird_leaderboard
     flappybird_leaderboard = [
@@ -64,10 +60,11 @@ async def test_get_flappybird_score_leaderboard(get_flappybird_score_leaderboard
 
 @patch("app.modules.flappybird.cruds_flappybird.get_flappybird_score_position")
 @patch(
-    "app.modules.flappybird.cruds_flappybird.get_flappybird_personal_best_by_user_id"
+    "app.modules.flappybird.cruds_flappybird.get_flappybird_personal_best_by_user_id",
 )
 async def test_get_current_user_flappbird_personal_best(
-    get_flappbird_personal_best_by_user_id_mock, get_flappybird_score_position_mock
+    get_flappbird_personal_best_by_user_id_mock,
+    get_flappybird_score_position_mock,
 ):
     """[WARNING] Patch functions are in the inverse way"""
     best_score = flappybird_leaderboard[main_user_number]

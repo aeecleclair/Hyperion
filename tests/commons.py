@@ -59,7 +59,7 @@ TestingSessionLocal = async_sessionmaker(
 )  # Create a session for testing purposes
 
 
-def send_test_db() -> async_sessionmaker[AsyncSession]:
+def send_test_db() -> AsyncSession:
     return TestingSessionLocal()
 
 
