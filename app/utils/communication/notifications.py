@@ -195,6 +195,12 @@ class NotificationManager:
                 db=db,
             )
         )
+
+        if len(firebase_device_tokens) == 0:
+            hyperion_error_logger.warning(
+                f"Notification: No firebase device token found for the message {message.title} {message.content}",
+            )
+
         await self._add_message_for_user_in_database(
             message=message,
             tokens=firebase_device_tokens,
