@@ -29,12 +29,15 @@ async def init_objects() -> None:
         for i in range(len(users))
     ]
 
+    global main_user_number
+    main_user_number = 0
+
     global flappybird_scores
     flappybird_scores = [
         models_flappybird.FlappyBirdScore(
             id=uuid4(),
-            user_id=users[0].id,
-            user=users[0],
+            user_id=users[main_user_number].id,
+            user=users[main_user_number],
             value=25,
             creation_time=datetime.now(UTC),
         )
@@ -48,9 +51,25 @@ async def test_get_flappbird_score_leaderboard() -> None:
 
     # db_session = await anext(override_get_db())
     async with send_test_db() as db_session:
-        tested_value = await cruds_flappybird.get_flappybird_score_leaderboard(
+        test_return_value = await cruds_flappybird.get_flappybird_score_leaderboard(
             db=db_session,
         )
-        assert [value.to_dict() for value in tested_value] == [
+        assert [value.to_dict() for value in test_return_value] == [
             best_score.to_dict() for best_score in flappybird_best_scores
         ]
+
+
+async def test_get_flappybird_personal_best_by_user_id() -> None:
+    await add_object_to_db(flappybird_best_scores[main_user_number])
+
+    async with send_test_db() as db_session:
+        test_return_value = (
+            await cruds_flappybird.get_flappybird_personal_best_by_user_id(
+                db=db_session,
+                user_id=users[main_user_number].id,
+            )
+        )
+        assert (
+            test_return_value.to_dict()
+            == flappybird_best_scores[main_user_number].to_dict()
+        )
