@@ -13,8 +13,8 @@ from tests.commons import (
     create_user_with_groups,
 )
 
-flappybird_score: models_flappybird.FlappyBirdScore | None = None
-user: models_core.CoreUser | None = None
+flappybird_score: models_flappybird.FlappyBirdScore
+user: models_core.CoreUser
 token: str = ""
 
 
@@ -30,7 +30,6 @@ async def init_objects() -> None:
     flappybird_score = models_flappybird.FlappyBirdScore(
         id=uuid.uuid4(),
         user_id=user.id,
-        user=user,
         value=25,
         creation_time=datetime.now(UTC),
     )
@@ -40,7 +39,6 @@ async def init_objects() -> None:
     flappybird_best_score = models_flappybird.FlappyBirdBestScore(
         id=uuid.uuid4(),
         user_id=user.id,
-        user=user,
         value=25,
         creation_time=datetime.now(UTC),
     )
@@ -54,6 +52,8 @@ def test_get_flappybird_score(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
+    body = response.json()
+    assert body[0]["user"]["firstname"] == user.firstname
 
 
 def test_get_current_user_flappybird_personal_best(client: TestClient) -> None:
@@ -62,6 +62,8 @@ def test_get_current_user_flappybird_personal_best(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
+    body = response.json()
+    assert body["user"]["firstname"] == user.firstname
 
 
 def test_create_flappybird_score(client: TestClient) -> None:
