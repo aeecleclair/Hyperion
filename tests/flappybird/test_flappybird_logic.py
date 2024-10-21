@@ -3,7 +3,9 @@ from datetime import UTC, datetime
 from unittest.mock import patch
 
 import pytest_asyncio
+import pytest_mock
 
+import app.modules.flappybird.cruds_flappybird as cruds
 from app.core.groups.groups_type import GroupType
 from app.dependencies import AsyncDBSession
 from app.modules.flappybird import (
@@ -11,9 +13,7 @@ from app.modules.flappybird import (
     models_flappybird,
     schemas_flappybird,
 )
-from tests.commons import (
-    create_user_with_groups,
-)
+from tests.commons import create_user_with_groups
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
@@ -49,8 +49,11 @@ async def init_objects() -> None:
     ]
 
 
-@patch("app.modules.flappybird.cruds_flappybird.get_flappybird_score_leaderboard")
-async def test_get_flappybird_score_leaderboard(get_flappybird_score_leaderboard_mock):
+async def test_get_flappybird_score_leaderboard(module_mocker):
+    get_flappybird_score_leaderboard_mock = module_mocker.patch.object(
+        cruds,
+        "get_flappybird_score_leaderboard",
+    )
     get_flappybird_score_leaderboard_mock.return_value = flappybird_leaderboard
     test_return_value = await logic_flappybird.get_flappybird_score_leaderboard(
         AsyncDBSession(),
@@ -58,15 +61,15 @@ async def test_get_flappybird_score_leaderboard(get_flappybird_score_leaderboard
     assert test_return_value == flappybird_leaderboard
 
 
-@patch("app.modules.flappybird.cruds_flappybird.get_flappybird_score_position")
-@patch(
-    "app.modules.flappybird.cruds_flappybird.get_flappybird_personal_best_by_user_id",
-)
-async def test_get_current_user_flappbird_personal_best(
-    get_flappbird_personal_best_by_user_id_mock,
-    get_flappybird_score_position_mock,
-):
-    """[WARNING] Patch functions are in the inverse way"""
+async def test_get_current_user_flappbird_personal_best(mocker):
+    get_flappbird_personal_best_by_user_id_mock = mocker.patch.object(
+        cruds,
+        "get_flappybird_personal_best_by_user_id",
+    )
+    get_flappybird_score_position_mock = mocker.patch.object(
+        cruds,
+        "get_flappybird_score_position",
+    )
     best_score = flappybird_leaderboard[main_user_number]
     position = 0
     get_flappybird_score_position_mock.return_value = position
