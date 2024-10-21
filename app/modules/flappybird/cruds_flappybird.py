@@ -1,13 +1,13 @@
 from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.dependencies import AsyncDBSession
 from app.modules.flappybird import models_flappybird
 
 
 async def get_flappybird_score_leaderboard(
-    db: AsyncSession,
+    db: AsyncDBSession,
 ) -> list[models_flappybird.FlappyBirdBestScore]:
     """Return the flappybird leaderboard scores"""
     result = await db.execute(
@@ -19,7 +19,7 @@ async def get_flappybird_score_leaderboard(
 
 
 async def get_flappybird_personal_best_by_user_id(
-    db: AsyncSession,
+    db: AsyncDBSession,
     user_id: str,
 ) -> models_flappybird.FlappyBirdBestScore | None:
     """Return the flappybird PB in the leaderboard by user_id"""
@@ -33,7 +33,7 @@ async def get_flappybird_personal_best_by_user_id(
 
 
 async def get_flappybird_score_position(
-    db: AsyncSession,
+    db: AsyncDBSession,
     score_value: int,
 ) -> int | None:
     """Return the position in the leaderboard of a given score value"""
@@ -48,7 +48,7 @@ async def get_flappybird_score_position(
 
 
 async def create_flappybird_score(
-    db: AsyncSession,
+    db: AsyncDBSession,
     flappybird_score: models_flappybird.FlappyBirdScore,
 ) -> models_flappybird.FlappyBirdScore:
     """Add a FlappyBirdScore in database"""
@@ -63,7 +63,7 @@ async def create_flappybird_score(
 
 
 async def create_flappybird_best_score(
-    db: AsyncSession,
+    db: AsyncDBSession,
     flappybird_best_score: models_flappybird.FlappyBirdBestScore,
 ) -> models_flappybird.FlappyBirdBestScore:
     """Add a FlappyBirdBestScore in database"""
@@ -78,7 +78,7 @@ async def create_flappybird_best_score(
 
 
 async def update_flappybird_best_score(
-    db: AsyncSession,
+    db: AsyncDBSession,
     user_id: str,
     best_score: int,
 ):
