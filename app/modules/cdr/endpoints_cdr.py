@@ -710,9 +710,12 @@ async def create_product(
     db_product = models_cdr.CdrProduct(
         id=uuid4(),
         seller_id=seller_id,
-        **product.model_dump(
-            exclude={"product_constraints", "document_constraints", "ticket"},
-        ),
+        name_fr=product.name_fr,
+        name_en=product.name_en,
+        available_online=product.available_online,
+        description_fr=product.description_fr,
+        description_en=product.description_en,
+        related_membership=product.related_membership,
     )
     try:
         cruds_cdr.create_product(db, db_product)
