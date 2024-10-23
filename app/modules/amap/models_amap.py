@@ -3,14 +3,14 @@
 from datetime import date, datetime
 
 from sqlalchemy import Date, Enum, Float, ForeignKey, Integer, String
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column, relationship
 
 from app.core.models_core import CoreUser
 from app.modules.amap.types_amap import AmapSlotType, DeliveryStatusType
 from app.types.sqlalchemy import Base, TZDateTime
 
 
-class AmapOrderContent(Base):
+class AmapOrderContent(MappedAsDataclass, Base):
     __tablename__ = "amap_order_content"
     product_id: Mapped[str] = mapped_column(
         ForeignKey("amap_product.id"),
@@ -20,11 +20,11 @@ class AmapOrderContent(Base):
         ForeignKey("amap_order.order_id"),
         primary_key=True,
     )
-    quantity: Mapped[int] = mapped_column(Integer)
-    product: Mapped["Product"] = relationship("Product")
+    quantity: Mapped[int]
+    product: Mapped["Product"] = relationship("Product", init=False)
 
 
-class AmapDeliveryContent(Base):
+class AmapDeliveryContent(MappedAsDataclass, Base):
     __tablename__ = "amap_delivery_content"
     product_id: Mapped[str] = mapped_column(
         ForeignKey("amap_product.id"),
@@ -36,87 +36,78 @@ class AmapDeliveryContent(Base):
     )
 
 
-class Product(Base):
+class Product(MappedAsDataclass, Base):
     __tablename__ = "amap_product"
 
-    id: Mapped[Mapped[str]] = mapped_column(String, primary_key=True, index=True)
-    name: Mapped[Mapped[str]] = mapped_column(
-        String,
+    id: Mapped[str] = mapped_column(primary_key=True, index=True)
+    name: Mapped[str] = mapped_column(
         index=True,
-        nullable=False,
         unique=True,
     )
-    price: Mapped[float] = mapped_column(Float, nullable=False)
-    category: Mapped[str] = mapped_column(String, index=True, nullable=False)
+    price: Mapped[float]
+    category: Mapped[str] = mapped_column(index=True)
 
 
-class Delivery(Base):
+class Delivery(MappedAsDataclass, Base):
     __tablename__ = "amap_delivery"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, index=True)
+    id: Mapped[str] = mapped_column(primary_key=True, index=True)
     delivery_date: Mapped[date] = mapped_column(
-        Date,
-        nullable=False,
         unique=False,
         index=True,
     )
+    status: Mapped[DeliveryStatusType]
+    orders: Mapped[list["Order"]] = relationship("Order", init=False)
     products: Mapped[list[Product]] = relationship(
         "Product",
         secondary="amap_delivery_content",
+        init=False,
     )
-    orders: Mapped[list["Order"]] = relationship("Order")
-    status: Mapped[DeliveryStatusType] = mapped_column(String, nullable=False)
 
 
-class Order(Base):
+class Order(MappedAsDataclass, Base):
     __tablename__ = "amap_order"
 
     user_id: Mapped[str] = mapped_column(
-        String,
         ForeignKey("core_user.id"),
-        nullable=False,
-    )
-    user: Mapped[CoreUser] = relationship(
-        "CoreUser",
     )
     delivery_id: Mapped[str] = mapped_column(
-        String,
         ForeignKey("amap_delivery.id"),
         index=True,
-        nullable=False,
     )
-    order_id: Mapped[str] = mapped_column(String, primary_key=True, index=True)
+    order_id: Mapped[str] = mapped_column(primary_key=True, index=True)
+    amount: Mapped[float]
+    collection_slot: Mapped[AmapSlotType]
+    ordering_date: Mapped[datetime]
+    delivery_date: Mapped[date]
+    user: Mapped[CoreUser] = relationship(
+        "CoreUser",
+        init=False,
+    )
     products: Mapped[list[Product]] = relationship(
         "Product",
         secondary="amap_order_content",
         viewonly=True,
+        init=False,
     )
-    amount: Mapped[float] = mapped_column(Float, nullable=False)
-    collection_slot: Mapped[AmapSlotType] = mapped_column(
-        Enum(AmapSlotType),
-        nullable=False,
-    )
-    ordering_date: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
-    delivery_date: Mapped[date] = mapped_column(Date, nullable=False)
 
 
-class Cash(Base):
+class Cash(MappedAsDataclass, Base):
     __tablename__ = "amap_cash"
 
     user_id: Mapped[str] = mapped_column(
-        String,
         ForeignKey("core_user.id"),
         primary_key=True,
     )
-    user: Mapped[CoreUser] = relationship("CoreUser")
-    balance: Mapped[float] = mapped_column(Float, nullable=False)
+    balance: Mapped[float]
+    user: Mapped[CoreUser] = relationship("CoreUser", init=False)
 
 
-class AmapInformation(Base):
+class AmapInformation(MappedAsDataclass, Base):
     __tablename__ = "amap_information"
 
     # unique_id should always be `information`
-    unique_id: Mapped[str] = mapped_column(String, primary_key=True, index=True)
-    manager: Mapped[str] = mapped_column(String, nullable=False)
-    link: Mapped[str] = mapped_column(String, nullable=False)
-    description: Mapped[str] = mapped_column(String, nullable=False)
+    unique_id: Mapped[str] = mapped_column(primary_key=True, index=True)
+    manager: Mapped[str]
+    link: Mapped[str]
+    description: Mapped[str]
