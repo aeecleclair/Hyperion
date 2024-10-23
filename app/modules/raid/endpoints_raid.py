@@ -400,9 +400,13 @@ async def delete_team(
     if team.file_id:
         async with DriveGoogleAPI(db, settings) as google_api:
             google_api.delete_file(team.file_id)
-            if team.captain.security_file.file_id:
+            if team.captain.security_file and team.captain.security_file.file_id:
                 google_api.delete_file(team.captain.security_file.file_id)
-            if team.second and team.second.security_file.file_id:
+            if (
+                team.second
+                and team.second.security_file
+                and team.second.security_file.file_id
+            ):
                 google_api.delete_file(team.second.security_file.file_id)
 
 
@@ -455,7 +459,7 @@ async def upload_document(
         uploaded_at=datetime.now(UTC).date(),
         validation=DocumentValidation.pending,
         id=document_id,
-        name=file.filename,
+        name=file.filename or document_id,
         type=document_type,
     )
 
