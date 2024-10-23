@@ -11,7 +11,11 @@ from app.core.config import Settings
 from app.core.google_api.google_api import DriveGoogleAPI
 from app.core.payment import schemas_payment
 from app.modules.raid import coredata_raid, cruds_raid, models_raid, schemas_raid
-from app.modules.raid.schemas_raid import ParticipantBase, ParticipantUpdate
+from app.modules.raid.schemas_raid import (
+    ParticipantBase,
+    ParticipantUpdate,
+    SecurityFile,
+)
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.modules.raid.utils.pdf.pdf_writer import HTMLPDFWriter, PDFWriter
 from app.utils.tools import (
@@ -224,10 +228,10 @@ async def save_security_file(
         )
         file_name = f"{str(team_number) + '_' if team_number else ''}{participant.firstname}_{participant.name}_fiche_sécurité.pdf"
         async with DriveGoogleAPI(db, settings) as google_api:
-            if participant.security_file and participant.security_file.file_id:
+            if participant.security_file_id:
                 file_id = google_api.replace_file(
                     file_path,
-                    participant.security_file.file_id,
+                    participant.security_file_id,
                 )
             else:
                 file_id = await drive_file_manager.upload_participant_file(
@@ -237,7 +241,7 @@ async def save_security_file(
                     settings=settings,
                 )
             await cruds_raid.update_security_file_id(
-                participant.security_file.id,
+                participant.security_file_id,
                 file_id,
                 db,
             )

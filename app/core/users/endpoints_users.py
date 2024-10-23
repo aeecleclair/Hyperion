@@ -419,6 +419,7 @@ async def activate_user(
         membership=models_core.CoreMembership(
             group_id=unconfirmed_user.account_type,
             user_id=unconfirmed_user.id,
+            description=None,
         ),
     )
 
@@ -461,6 +462,7 @@ async def make_admin(
             membership=models_core.CoreMembership(
                 user_id=users[0].id,
                 group_id=GroupType.admin,
+                description=None,
             ),
         )
     except Exception as error:
@@ -719,6 +721,7 @@ async def migrate_mail_confirm(
                     membership=models_core.CoreMembership(
                         group_id=GroupType.student,
                         user_id=migration_object.user_id,
+                        description=None,
                     ),
                 )
     except Exception as error:
@@ -881,6 +884,7 @@ async def switch_external_user_internal(
                     membership=models_core.CoreMembership(
                         group_id=GroupType.student,
                         user_id=user.id,
+                        description=None,
                     ),
                 )
 

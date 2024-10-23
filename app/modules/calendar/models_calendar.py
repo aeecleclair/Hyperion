@@ -1,34 +1,31 @@
 from datetime import datetime
 
 from sqlalchemy import Boolean, Enum, ForeignKey, String
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column, relationship
 
 from app.core.models_core import CoreUser
 from app.modules.calendar.types_calendar import CalendarEventType
 from app.types.sqlalchemy import Base, TZDateTime
 
 
-class Event(Base):
+class Event(MappedAsDataclass, Base):
     """Events for calendar."""
 
     __tablename__ = "calendar_events"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, index=True)
-    name: Mapped[str] = mapped_column(String, nullable=False)
-    organizer: Mapped[str] = mapped_column(String, nullable=False)
+    id: Mapped[str] = mapped_column(primary_key=True, index=True)
+    name: Mapped[str]
+    organizer: Mapped[str]
     applicant_id: Mapped[str] = mapped_column(
         ForeignKey("core_user.id"),
-        nullable=False,
     )
-    applicant: Mapped[CoreUser] = relationship("CoreUser")
-    start: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
-    end: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
-    all_day: Mapped[bool] = mapped_column(Boolean, nullable=False)
-    location: Mapped[str] = mapped_column(String, nullable=False)
-    type: Mapped[CalendarEventType] = mapped_column(
-        Enum(CalendarEventType),
-        nullable=False,
-    )
-    description: Mapped[str] = mapped_column(String, nullable=False)
-    decision: Mapped[str] = mapped_column(String, nullable=False)
-    recurrence_rule: Mapped[str | None] = mapped_column(String)
+    start: Mapped[datetime]
+    end: Mapped[datetime]
+    all_day: Mapped[bool]
+    location: Mapped[str]
+    type: Mapped[CalendarEventType]
+    description: Mapped[str]
+    decision: Mapped[str]
+    recurrence_rule: Mapped[str | None]
+
+    applicant: Mapped[CoreUser] = relationship("CoreUser", init=False)

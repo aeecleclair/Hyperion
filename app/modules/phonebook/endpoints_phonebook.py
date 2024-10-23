@@ -50,17 +50,18 @@ async def get_all_associations(
     Return all associations from database as a list of AssociationComplete schemas
     """
     associations = await cruds_phonebook.get_all_associations(db)
-    associations_complete = []
-    for association in associations:
-        association_dict = association.__dict__
-        association_dict["associated_groups"] = [
-            group.id for group in association.associated_groups
-        ]
-        associations_complete.append(
-            schemas_phonebook.AssociationComplete(
-                **association_dict,
-            ),
+    associations_complete = [
+        schemas_phonebook.AssociationComplete(
+            id=association.id,
+            name=association.name,
+            kind=association.kind,
+            mandate_year=association.mandate_year,
+            description=association.description,
+            associated_groups=[group.id for group in association.associated_groups],
+            deactivated=association.deactivated,
         )
+        for association in associations
+    ]
     return associations_complete
 
 
@@ -123,17 +124,28 @@ async def create_association(
             detail="You are not allowed to create association",
         )
 
-    associationId = str(uuid.uuid4())
+    association_id = str(uuid.uuid4())
     association_model = models_phonebook.Association(
-        id=associationId,
-        **association.model_dump(),
+        id=association_id,
+        name=association.name,
+        description=association.description,
+        kind=association.kind,
+        mandate_year=association.mandate_year,
+        deactivated=association.deactivated,
     )
 
-    try:
-        result = await cruds_phonebook.create_association(association_model, db)
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
-    return result
+    await cruds_phonebook.create_association(association_model, db)
+
+    await cruds_phonebook.update_association_groups(
+        association_id=association_id,
+        new_associated_group_ids=association.associated_groups,
+        db=db,
+    )
+
+    return schemas_phonebook.AssociationComplete(
+        id=association_id,
+        **association.model_dump(),
+    )
 
 
 @module.router.patch(
@@ -194,7 +206,7 @@ async def update_association_groups(
     """
     await cruds_phonebook.update_association_groups(
         association_id=association_id,
-        association_groups_edit=association_groups_edit,
+        new_associated_group_ids=association_groups_edit.associated_groups,
         db=db,
     )
 
@@ -464,6 +476,7 @@ async def create_membership(
                 models_core.CoreMembership(
                     user_id=membership.user_id,
                     group_id=associated_group.id,
+                    description=None,
                 ),
                 db,
             )

@@ -8,6 +8,7 @@ from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from app.modules.booking.types_booking import Decision
 from app.modules.calendar import models_calendar
+from app.modules.calendar.types_calendar import CalendarEventType
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
@@ -48,9 +49,10 @@ async def init_objects() -> None:
         end=datetime.datetime.fromisoformat("2022-09-22T23:00:00Z"),
         all_day=False,
         location="Skylab",
-        type="Event AE",
+        type=CalendarEventType.eventAE,
         description="Apprendre à coder !",
         decision=Decision.pending,
+        recurrence_rule=None,
     )
     await add_object_to_db(calendar_event)
 
@@ -64,9 +66,10 @@ async def init_objects() -> None:
         end=datetime.datetime.fromisoformat("2022-09-22T23:00:00Z"),
         all_day=False,
         location="Skylab",
-        type="Event AE",
+        type=CalendarEventType.eventAE,
         description="Apprendre à coder !",
         decision=Decision.pending,
+        recurrence_rule=None,
     )
     await add_object_to_db(calendar_event_to_delete)
 
