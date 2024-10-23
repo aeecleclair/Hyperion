@@ -1,11 +1,11 @@
 from datetime import date
 
-from sqlalchemy.orm import Mapped
+from sqlalchemy.orm import Mapped, MappedAsDataclass
 
 from app.types.sqlalchemy import Base, PrimaryKey
 
 
-class Paper(Base):
+class Paper(MappedAsDataclass, Base):
     __tablename__ = "ph_papers"
 
     id: Mapped[PrimaryKey]

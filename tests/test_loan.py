@@ -65,7 +65,6 @@ async def init_objects() -> None:
         ).seconds,
         suggested_caution=10,
         total_quantity=8,
-        loaner=loaner,
     )
     await add_object_to_db(item)
 
@@ -78,7 +77,6 @@ async def init_objects() -> None:
         ).seconds,
         suggested_caution=10,
         total_quantity=5,
-        loaner=loaner,
     )
     await add_object_to_db(item_to_delete)
     loan = models_loan.Loan(
@@ -90,6 +88,7 @@ async def init_objects() -> None:
         caution="Carte etudiante",
         returned=False,
         items=[item],
+        notes=None,
     )
     await add_object_to_db(loan)
 
