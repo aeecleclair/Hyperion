@@ -108,7 +108,7 @@ async def update_association(
 
 async def update_association_groups(
     association_id: str,
-    association_groups_edit: schemas_phonebook.AssociationGroupsEdit,
+    new_associated_group_ids: list[str],
     db: AsyncSession,
 ):
     """Update the associated_groups of an Association in database"""
@@ -119,7 +119,7 @@ async def update_association_groups(
             == association_id,
         ),
     )
-    for group_id in association_groups_edit.associated_groups:
+    for group_id in new_associated_group_ids:
         db.add(
             models_phonebook.AssociationAssociatedGroups(
                 association_id=association_id,

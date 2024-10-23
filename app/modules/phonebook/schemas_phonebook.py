@@ -22,7 +22,7 @@ class AssociationBase(BaseModel):
     kind: Kinds
     mandate_year: int
     description: str | None = None
-    associated_groups: list[str] = []
+    associated_groups: list[str] = []  # Should be a list of ids
     deactivated: bool = False  # Deactivated associations won't be displayed in the phonebook unless looking at previous years and cannot be used for new memberships
 
 
@@ -40,7 +40,7 @@ class AssociationEdit(BaseModel):
 
 
 class AssociationGroupsEdit(BaseModel):
-    associated_groups: list[str] = []
+    associated_groups: list[str] = []  # Should be a list of ids
 
 
 class MembershipBase(BaseModel):
