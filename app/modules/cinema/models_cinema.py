@@ -1,18 +1,18 @@
 from datetime import datetime
 
 from sqlalchemy import Integer, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column
 
 from app.types.sqlalchemy import Base, TZDateTime
 
 
-class Session(Base):
+class Session(MappedAsDataclass, Base):
     __tablename__ = "cinema_session"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, nullable=False)
-    name: Mapped[str] = mapped_column(String, nullable=False)
-    start: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
-    duration: Mapped[int] = mapped_column(Integer, nullable=False)
-    overview: Mapped[str] = mapped_column(String, nullable=True)
-    genre: Mapped[str] = mapped_column(String, nullable=True)
-    tagline: Mapped[str] = mapped_column(String, nullable=True)
+    id: Mapped[str] = mapped_column(primary_key=True)
+    name: Mapped[str]
+    start: Mapped[datetime]
+    duration: Mapped[int]
+    overview: Mapped[str | None]
+    genre: Mapped[str | None]
+    tagline: Mapped[str | None]
