@@ -127,6 +127,11 @@ async def create_user_with_groups(
         firstname=firstname or get_random_string(),
         floor=floor,
         external=external,
+        nickname=None,
+        birthday=None,
+        promo=None,
+        phone=None,
+        created_on=None,
     )
 
     async with TestingSessionLocal() as db:
@@ -139,6 +144,7 @@ async def create_user_with_groups(
                     membership=models_core.CoreMembership(
                         group_id=group.value,
                         user_id=user_id,
+                        description=None,
                     ),
                 )
 
