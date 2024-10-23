@@ -97,6 +97,8 @@ async def init_objects() -> None:
         decision="approved",
         applicant_id=simple_user.id,
         entity="dbs",
+        note=None,
+        recurrence_rule=None,
     )
     await add_object_to_db(booking)
 
@@ -112,6 +114,8 @@ async def init_objects() -> None:
         decision="pending",
         applicant_id=simple_user.id,
         entity="Test",
+        note=None,
+        recurrence_rule=None,
     )
     await add_object_to_db(booking_to_delete)
 
