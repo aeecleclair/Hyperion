@@ -103,6 +103,7 @@ async def init_objects():
         name="ECLAIR",
         mandate_year=2023,
         deactivated=False,
+        description=None,
     )
 
     association2 = models_phonebook.Association(
@@ -111,6 +112,7 @@ async def init_objects():
         name="Nom",
         mandate_year=2023,
         deactivated=False,
+        description=None,
     )
 
     association3 = models_phonebook.Association(
@@ -119,6 +121,7 @@ async def init_objects():
         name="Test prez",
         mandate_year=2023,
         deactivated=False,
+        description=None,
     )
 
     association2_group2 = models_phonebook.AssociationAssociatedGroups(

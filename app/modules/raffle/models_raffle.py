@@ -15,14 +15,16 @@ class Raffle(MappedAsDataclass, Base):
         index=True,
     )
     name: Mapped[str]
-    status: Mapped[RaffleStatusType] = mapped_column(
-        default=RaffleStatusType.creation,
-    )
+
     group_id: Mapped[str] = mapped_column(
         ForeignKey("core_group.id"),
         index=True,
     )
     description: Mapped[str | None] = mapped_column(index=True)
+
+    status: Mapped[RaffleStatusType] = mapped_column(
+        default=RaffleStatusType.creation,
+    )
 
     group: Mapped[CoreGroup] = relationship("CoreGroup", init=False)
 
