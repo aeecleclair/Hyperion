@@ -38,7 +38,6 @@ async def init_objects() -> None:
     flappybird_score = models_flappybird.FlappyBirdScore(
         id=uuid.uuid4(),
         user_id=user.id,
-        user=user,
         value=25,
         creation_time=datetime.now(UTC),
     )
@@ -48,7 +47,6 @@ async def init_objects() -> None:
     flappybird_best_score = models_flappybird.FlappyBirdBestScore(
         id=uuid.uuid4(),
         user_id=user.id,
-        user=user,
         value=25,
         creation_time=datetime.now(UTC),
     )
