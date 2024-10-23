@@ -1,110 +1,95 @@
 """Models file for module_tombola"""
 
 from sqlalchemy import Enum, Float, ForeignKey, Integer, String
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column, relationship
 
 from app.core.models_core import CoreGroup, CoreUser
 from app.modules.raffle.types_raffle import RaffleStatusType
 from app.types.sqlalchemy import Base
 
 
-class Raffle(Base):
+class Raffle(MappedAsDataclass, Base):
     __tablename__ = "raffle"
     id: Mapped[str] = mapped_column(
-        String,
         primary_key=True,
         index=True,
-        nullable=False,
     )
-    name: Mapped[str] = mapped_column(String, nullable=False)
+    name: Mapped[str]
     status: Mapped[RaffleStatusType] = mapped_column(
-        Enum(RaffleStatusType),
-        nullable=False,
         default=RaffleStatusType.creation,
     )
     group_id: Mapped[str] = mapped_column(
         ForeignKey("core_group.id"),
         index=True,
-        nullable=False,
     )
-    description: Mapped[str] = mapped_column(String, index=True, nullable=True)
+    description: Mapped[str | None] = mapped_column(index=True)
 
-    group: Mapped[CoreGroup] = relationship("CoreGroup")
+    group: Mapped[CoreGroup] = relationship("CoreGroup", init=False)
 
 
-class PackTicket(Base):
+class PackTicket(MappedAsDataclass, Base):
     __tablename__ = "raffle_pack_ticket"
     id: Mapped[str] = mapped_column(
-        String,
         primary_key=True,
         index=True,
-        nullable=False,
     )
-    price: Mapped[float] = mapped_column(Float, nullable=False)
-    pack_size: Mapped[int] = mapped_column(Integer, nullable=False)
+    price: Mapped[float]
+    pack_size: Mapped[int]
     raffle_id: Mapped[str] = mapped_column(
         ForeignKey("raffle.id"),
         index=True,
-        nullable=False,
     )
 
-    raffle: Mapped[Raffle] = relationship("Raffle")
+    raffle: Mapped[Raffle] = relationship("Raffle", init=False)
 
 
-class Prize(Base):
+class Prize(MappedAsDataclass, Base):
     __tablename__ = "raffle_prize"
 
     id: Mapped[str] = mapped_column(
-        String,
         primary_key=True,
         index=True,
-        nullable=False,
     )
     raffle_id: Mapped[str] = mapped_column(
         ForeignKey("raffle.id"),
         index=True,
-        nullable=False,
     )
-    description: Mapped[str] = mapped_column(String, nullable=True)
-    name: Mapped[str] = mapped_column(String, nullable=True)
-    quantity: Mapped[int] = mapped_column(Integer)
+    description: Mapped[str | None]
+    name: Mapped[str | None]
+    quantity: Mapped[int]
 
-    raffle: Mapped[Raffle] = relationship("Raffle")
+    raffle: Mapped[Raffle] = relationship("Raffle", init=False)
 
 
-class Ticket(Base):
+class Ticket(MappedAsDataclass, Base):
     __tablename__ = "raffle_ticket"
 
     id: Mapped[str] = mapped_column(
-        String,
         primary_key=True,
         index=True,
-        nullable=False,
     )
     pack_id: Mapped[str] = mapped_column(
         ForeignKey("raffle_pack_ticket.id"),
-        nullable=False,
     )
-    user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), nullable=False)
-    winning_prize: Mapped[str] = mapped_column(
+    user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"))
+    winning_prize: Mapped[str | None] = mapped_column(
         ForeignKey("raffle_prize.id"),
-        nullable=True,
         index=True,
+        default=None,
     )
 
-    pack_ticket: Mapped[PackTicket] = relationship("PackTicket")
-    prize: Mapped[Prize | None] = relationship("Prize")
-    user: Mapped[CoreUser] = relationship("CoreUser")
+    pack_ticket: Mapped[PackTicket] = relationship("PackTicket", init=False)
+    prize: Mapped[Prize | None] = relationship("Prize", init=False)
+    user: Mapped[CoreUser] = relationship("CoreUser", init=False)
 
 
-class Cash(Base):
+class Cash(MappedAsDataclass, Base):
     __tablename__ = "raffle_cash"
 
     user_id: Mapped[str] = mapped_column(
-        String,
         ForeignKey("core_user.id"),
         primary_key=True,
     )
-    balance: Mapped[float] = mapped_column(Float, nullable=False)
+    balance: Mapped[float]
 
-    user: Mapped[CoreUser] = relationship("CoreUser")
+    user: Mapped[CoreUser] = relationship("CoreUser", init=False)

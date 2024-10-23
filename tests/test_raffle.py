@@ -58,6 +58,7 @@ async def init_objects() -> None:
         name="Antoine's raffle",
         status=RaffleStatusType.creation,
         group_id=GroupType.BDE,
+        description=None,
     )
     await add_object_to_db(raffle_to_delete)
     raffle = models_raffle.Raffle(
