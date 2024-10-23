@@ -311,6 +311,35 @@ def test_create_association_admin(client: TestClient):
     assert isinstance(association["id"], str)
 
 
+def test_create_association_with_related_groups(client: TestClient):
+    response = client.post(
+        "/phonebook/associations/",
+        json={
+            "name": "Bazar2",
+            "kind": "Section USE",
+            "mandate_year": 2023,
+            "description": "Bazar description",
+            "associated_groups": [association1_group.id],
+        },
+        headers={"Authorization": f"Bearer {token_BDE}"},
+    )
+
+    associations = client.get(
+        "/phonebook/associations/",
+        headers={"Authorization": f"Bearer {token_simple}"},
+    ).json()
+    assert len(associations) == 5
+
+    association = associations[4]
+
+    assert response.status_code == 201
+    assert association["name"] == "Bazar2"
+    assert association["kind"] == "Section USE"
+    assert association["mandate_year"] == 2023
+    assert association["description"] == "Bazar description"
+    assert association["associated_groups"] == [association1_group.id]
+
+
 def test_add_membership_simple(client: TestClient):
     response = client.post(
         "/phonebook/associations/memberships",
