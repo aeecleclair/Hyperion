@@ -1,12 +1,12 @@
 from datetime import datetime
 
 from sqlalchemy import ForeignKey, String
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column, relationship
 
 from app.types.sqlalchemy import Base, TZDateTime
 
 
-class Advertiser(Base):
+class Advertiser(MappedAsDataclass, Base):
     __tablename__ = "advert_advertisers"
 
     id: Mapped[str] = mapped_column(primary_key=True, index=True)
@@ -21,7 +21,7 @@ class Advertiser(Base):
     )
 
 
-class Advert(Base):
+class Advert(MappedAsDataclass, Base):
     __tablename__ = "advert_adverts"
 
     id: Mapped[str] = mapped_column(primary_key=True)
@@ -34,5 +34,4 @@ class Advert(Base):
         "Advertiser",
         lazy="joined",
         back_populates="adverts",
-        init=False,
     )
