@@ -1,11 +1,11 @@
 from datetime import datetime
 
-from sqlalchemy.orm import Mapped
+from sqlalchemy.orm import Mapped, MappedAsDataclass
 
 from app.types.sqlalchemy import Base, PrimaryKey
 
 
-class Recommendation(Base):
+class Recommendation(MappedAsDataclass, Base):
     __tablename__ = "recommendation"
 
     id: Mapped[PrimaryKey]
