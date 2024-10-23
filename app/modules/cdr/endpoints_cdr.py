@@ -1446,13 +1446,13 @@ async def remove_existing_membership(
 async def add_membership(
     memberships: Sequence[models_core.CoreAssociationMembership],
     user_id: str,
-    product: models_cdr.CdrProduct,
+    product_related_membership: AvailableAssociationMembership,
     product_variant: models_cdr.ProductVariant,
     db: AsyncSession,
 ):
     if product_variant.related_membership_added_duration:
         existing_membership = next(
-            (m for m in memberships if m.membership == product.related_membership),
+            (m for m in memberships if m.membership == product_related_membership),
             None,
         )
         if existing_membership:
@@ -1468,7 +1468,7 @@ async def add_membership(
             added_membership = models_core.CoreAssociationMembership(
                 id=uuid4(),
                 user_id=user_id,
-                membership=product.related_membership,
+                membership=product_related_membership,
                 start_date=date(datetime.now(tz=UTC).date().year, 9, 1),
                 end_date=date(datetime.now(tz=UTC).date().year, 9, 1)
                 + product_variant.related_membership_added_duration,
@@ -1563,7 +1563,7 @@ async def mark_purchase_as_validated(
             await add_membership(
                 memberships=memberships,
                 user_id=user_id,
-                product=product,
+                product_related_membership=product.related_membership,
                 product_variant=product_variant,
                 db=db,
             )

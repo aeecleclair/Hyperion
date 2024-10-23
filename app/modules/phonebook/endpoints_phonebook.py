@@ -464,6 +464,7 @@ async def create_membership(
                 models_core.CoreMembership(
                     user_id=membership.user_id,
                     group_id=associated_group.id,
+                    description=None,
                 ),
                 db,
             )
