@@ -1,12 +1,12 @@
 import uuid
 
 from sqlalchemy import ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column, relationship
 
 from app.types.sqlalchemy import Base, PrimaryKey
 
 
-class CheckoutPayment(Base):
+class CheckoutPayment(MappedAsDataclass, Base):
     __tablename__ = "payment_checkout_payment"
 
     id: Mapped[PrimaryKey]
@@ -16,7 +16,7 @@ class CheckoutPayment(Base):
     hello_asso_payment_id: Mapped[int] = mapped_column(index=True, unique=True)
 
 
-class Checkout(Base):
+class Checkout(MappedAsDataclass, Base):
     """
     The checkout table store data about HelloAsso checkouts.
     """
@@ -36,4 +36,4 @@ class Checkout(Base):
     # to ensure the webhook call was made by HelloAsso
     secret: Mapped[str]
 
-    payments: Mapped[list[CheckoutPayment]] = relationship()
+    payments: Mapped[list[CheckoutPayment]] = relationship(init=False)
