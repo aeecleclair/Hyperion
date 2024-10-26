@@ -9,6 +9,35 @@ from app.core.notification import models_notification
 from app.core.notification.notification_types import CustomTopic, Topic
 
 
+
+
+async def create_batch_messages(
+    messages: list[models_notification.Message],
+    db: AsyncSession,
+) -> None:
+    db.add_all(messages)
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise
+
+
+
+async def remove_messages_by_context_and_firebase_device_tokens_list(
+    context: str,
+    tokens: list[str],
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_notification.Message).where(
+            models_notification.Message.context == context,
+            models_notification.Message.firebase_device_token.in_(tokens),
+        ),
+    )
+    await db.commit()
+
+
 async def get_firebase_devices_by_user_id(
     user_id: str,
     db: AsyncSession,
