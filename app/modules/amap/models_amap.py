@@ -61,7 +61,7 @@ class Delivery(MappedAsDataclass, Base):
     products: Mapped[list[Product]] = relationship(
         "Product",
         secondary="amap_delivery_content",
-        init=False,
+        default_factory=list,
     )
 
 
@@ -88,7 +88,7 @@ class Order(MappedAsDataclass, Base):
         "Product",
         secondary="amap_order_content",
         viewonly=True,
-        init=False,
+        default_factory=list,
     )
 
 

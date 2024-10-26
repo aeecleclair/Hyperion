@@ -15,7 +15,10 @@ class Manager(MappedAsDataclass, Base):
     id: Mapped[str] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(unique=True)
     group_id: Mapped[str] = mapped_column(ForeignKey("core_group.id"))
-    rooms: Mapped[list["Room"]] = relationship(back_populates="manager", init=False)
+    rooms: Mapped[list["Room"]] = relationship(
+        back_populates="manager",
+        default_factory=list,
+    )
 
 
 class Room(MappedAsDataclass, Base):
@@ -31,7 +34,10 @@ class Room(MappedAsDataclass, Base):
         back_populates="rooms",
         init=False,
     )
-    bookings: Mapped[list["Booking"]] = relationship(back_populates="room", init=False)
+    bookings: Mapped[list["Booking"]] = relationship(
+        back_populates="room",
+        default_factory=list,
+    )
 
 
 class Booking(MappedAsDataclass, Base):

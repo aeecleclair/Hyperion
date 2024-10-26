@@ -18,13 +18,13 @@ class Loaner(MappedAsDataclass, Base):
         "Item",
         lazy="joined",
         back_populates="loaner",
-        init=False,
+        default_factory=list,
     )
     loans: Mapped[list["Loan"]] = relationship(
         "Loan",
         lazy="joined",
         back_populates="loaner",
-        init=False,
+        default_factory=list,
     )
 
 

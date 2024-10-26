@@ -52,7 +52,7 @@ class CoreUser(MappedAsDataclass, Base):
         secondary="core_membership",
         back_populates="members",
         lazy="selectin",
-        init=False,
+        default_factory=list,
     )
 
 
@@ -116,7 +116,7 @@ class CoreGroup(MappedAsDataclass, Base):
         "CoreUser",
         secondary="core_membership",
         back_populates="groups",
-        init=False,
+        default_factory=list,
     )
 
 

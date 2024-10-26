@@ -36,4 +36,4 @@ class Checkout(MappedAsDataclass, Base):
     # to ensure the webhook call was made by HelloAsso
     secret: Mapped[str]
 
-    payments: Mapped[list[CheckoutPayment]] = relationship(init=False)
+    payments: Mapped[list[CheckoutPayment]] = relationship(default_factory=list)

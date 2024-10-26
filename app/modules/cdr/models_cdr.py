@@ -86,23 +86,23 @@ class CdrProduct(MappedAsDataclass, Base):
         secondaryjoin="ProductConstraint.product_constraint_id==CdrProduct.id",
         lazy="joined",
         join_depth=1,
-        init=False,
+        default_factory=list,
     )
     document_constraints: Mapped[list["Document"]] = relationship(
         "app.modules.cdr.models_cdr.Document",
         secondary="cdr_document_constraint",
         lazy="selectin",  # Constraints are always loaded in cruds so we set this to not have to put selectinload
-        init=False,
+        default_factory=list,
     )
     variants: Mapped[list["ProductVariant"]] = relationship(
         "ProductVariant",
         lazy="selectin",
-        init=False,
+        default_factory=list,
     )
     tickets: Mapped[list["TicketGenerator"]] = relationship(
         "TicketGenerator",
         lazy="selectin",
-        init=False,
+        default_factory=list,
     )
 
     related_membership: Mapped[AvailableAssociationMembership | None] = mapped_column(
@@ -166,7 +166,7 @@ class ProductVariant(MappedAsDataclass, Base):
         "Curriculum",
         secondary="cdr_allowed_curriculum",
         lazy="selectin",
-        init=False,
+        default_factory=list,
     )
 
 

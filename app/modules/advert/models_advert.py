@@ -17,7 +17,7 @@ class Advertiser(MappedAsDataclass, Base):
         "Advert",
         lazy="subquery",
         back_populates="advertiser",
-        init=False,
+        default_factory=list,
     )
 
 

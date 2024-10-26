@@ -44,7 +44,7 @@ class Association(MappedAsDataclass, Base):
         "CoreGroup",
         secondary="phonebook_association_associated_groups",
         lazy="selectin",
-        init=False,
+        default_factory=list,
     )
 
 

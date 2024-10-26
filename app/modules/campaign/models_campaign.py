@@ -31,7 +31,7 @@ class Sections(MappedAsDataclass, Base):
     lists: Mapped[list["Lists"]] = relationship(
         "Lists",
         back_populates="section",
-        init=False,
+        default_factory=list,
     )
 
 
