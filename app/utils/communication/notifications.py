@@ -75,6 +75,7 @@ class NotificationManager:
         self,
         db: AsyncSession,
         tokens: list[str],
+        message_content: Message,
     ):
         """
         Send a firebase push notification to a list of tokens.
@@ -96,6 +97,7 @@ class NotificationManager:
             await self._send_firebase_push_notification_by_tokens(
                 tokens=tokens[500:],
                 db=db,
+                message_content=message_content,
             )
             tokens = tokens[:500]
 
@@ -105,18 +107,15 @@ class NotificationManager:
             # This allow to ensure that the notification will be processed in the background
             # See https://firebase.google.com/docs/cloud-messaging/concept-options#setting-the-priority-of-a-message
             # And https://developer.apple.com/documentation/usernotifications/setting_up_a_remote_notification_server/pushing_background_updates_to_your_app
-            androidconfig = messaging.AndroidConfig(priority="high")
-            apnsconfig = messaging.APNSConfig(
-                headers={"apns-priority": "10", "apns-push-type": "background"},
-                payload=messaging.APNSPayload(
-                    aps=messaging.Aps(content_available=True),
-                ),
-            )
+            
             message = messaging.MulticastMessage(
                 tokens=tokens,
-                android=androidconfig,
-                apns=apnsconfig,
+                notification=messaging.Notification(
+                    title=message_content.title,
+                    body=message_content.content,
+                ),
             )
+
             result = messaging.send_each_for_multicast(message)
         except Exception:
             hyperion_error_logger.exception(
@@ -133,6 +132,7 @@ class NotificationManager:
         self,
         db: AsyncSession,
         tokens: list[str],
+        message_content: Message,
     ):
         """
         Send a firebase trigger notification to a list of tokens.
@@ -143,7 +143,7 @@ class NotificationManager:
         # Push without any data or notification may not be processed by the app in the background.
         # We thus need to send a data object with a dummy key to make sure the notification is processed.
         # See https://stackoverflow.com/questions/59298850/firebase-messaging-background-message-handler-method-not-called-when-the-app
-        await self._send_firebase_push_notification_by_tokens(tokens=tokens, db=db)
+        await self._send_firebase_push_notification_by_tokens(tokens=tokens, db=db, message_content=message_content)
 
     async def _add_message_for_user_in_database(
         self,
@@ -211,6 +211,7 @@ class NotificationManager:
             await self._send_firebase_trigger_notification_by_tokens(
                 tokens=firebase_device_tokens,
                 db=db,
+                message_content=message,
             )
         except Exception as error:
             hyperion_error_logger.warning(
