@@ -9,16 +9,6 @@ from app.core.notification import models_notification
 from app.core.notification.notification_types import CustomTopic, Topic
 
 
-async def create_message(
-    message: models_notification.Message,
-    db: AsyncSession,
-) -> None:
-    db.add(message)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
 
 
 async def create_batch_messages(
@@ -32,57 +22,6 @@ async def create_batch_messages(
         await db.rollback()
         raise
 
-
-async def get_messages_by_firebase_token(
-    firebase_token: str,
-    db: AsyncSession,
-) -> Sequence[models_notification.Message]:
-    result = await db.execute(
-        select(models_notification.Message).where(
-            models_notification.Message.firebase_device_token == firebase_token,
-        ),
-    )
-    return result.scalars().all()
-
-
-async def get_messages_by_context_and_firebase_tokens(
-    context: str,
-    firebase_tokens: list[str],
-    db: AsyncSession,
-) -> Sequence[models_notification.Message]:
-    result = await db.execute(
-        select(models_notification.Message).where(
-            models_notification.Message.context == context,
-            models_notification.Message.firebase_device_token.in_(firebase_tokens),
-        ),
-    )
-    return result.scalars().all()
-
-
-async def remove_message_by_context_and_firebase_device_token(
-    context: str,
-    firebase_device_token: str,
-    db: AsyncSession,
-):
-    await db.execute(
-        delete(models_notification.Message).where(
-            models_notification.Message.context == context,
-            models_notification.Message.firebase_device_token == firebase_device_token,
-        ),
-    )
-    await db.commit()
-
-
-async def remove_message_by_firebase_device_token(
-    firebase_device_token: str,
-    db: AsyncSession,
-):
-    await db.execute(
-        delete(models_notification.Message).where(
-            models_notification.Message.firebase_device_token == firebase_device_token,
-        ),
-    )
-    await db.commit()
 
 
 async def remove_messages_by_context_and_firebase_device_tokens_list(
