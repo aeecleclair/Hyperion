@@ -125,6 +125,7 @@ async def create_user_with_groups(
     name: str | None = None,
     firstname: str | None = None,
     floor: FloorsType | None = None,
+    nickname: str | None = None,
 ) -> models_core.CoreUser:
     """
     Add a dummy user to the database
@@ -142,6 +143,7 @@ async def create_user_with_groups(
         password_hash=password_hash,
         name=name or get_random_string(),
         firstname=firstname or get_random_string(),
+        nickname=nickname,
         floor=floor,
         account_type=account_type,
         nickname=None,
