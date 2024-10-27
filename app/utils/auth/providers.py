@@ -4,7 +4,7 @@ from typing import Any
 import unidecode
 
 from app.core import models_core
-from app.core.groups.groups_type import GroupType, get_ecl_groups
+from app.core.groups.groups_type import AccountType, GroupType, get_ecl_account_types
 from app.types.floors_type import FloorsType
 from app.types.scopes_type import ScopeType
 from app.utils.tools import get_display_name, is_user_member_of_an_allowed_group
@@ -31,6 +31,9 @@ class BaseAuthClient:
     # Restrict the authentication to this client to specific Hyperion groups.
     # When set to `None`, users from any group can use the auth client
     allowed_groups: list[GroupType] | None = None
+    # Restrict the authentication to this client to specific Hyperion account types.
+    # When set to `None`, users from any account type can use the auth client
+    allowed_account_types: list[AccountType] | None = None
     # redirect_uri should alway match the one provided by the client
     redirect_uri: list[str]
     # Sometimes, when the client is wrongly configured, it may return an incorrect return_uri. This may also be useful for debugging clients.
@@ -119,7 +122,7 @@ class APIToolAuthClient(BaseAuthClient):
 
 
 class NextcloudAuthClient(BaseAuthClient):
-    allowed_groups: list[GroupType] | None = get_ecl_groups()
+    allowed_account_types: list[AccountType] | None = get_ecl_account_types()
 
     # For Nextcloud:
     # Required iss : the issuer value form .well-known (corresponding code : https://github.com/pulsejet/nextcloud-oidc-login/blob/0c072ecaa02579384bb5e10fbb9d219bbd96cfb8/3rdparty/jumbojett/openid-connect-php/src/OpenIDConnectClient.php#L1255)
@@ -150,7 +153,7 @@ class NextcloudAuthClient(BaseAuthClient):
 class PiwigoAuthClient(BaseAuthClient):
     # Restrict the authentication to this client to specific Hyperion groups.
     # When set to `None`, users from any group can use the auth client
-    allowed_groups: list[GroupType] | None = get_ecl_groups()
+    allowed_account_types: list[AccountType] | None = get_ecl_account_types()
 
     def get_userinfo(self, user: models_core.CoreUser) -> dict[str, Any]:
         """

@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import cruds_core, models_core, security
 from app.core.groups import cruds_groups
-from app.core.groups.groups_type import GroupType
+from app.core.groups.groups_type import AccountType, GroupType
 from app.core.models_core import CoreUser
 from app.core.users import cruds_users
 from app.types import core_data
@@ -45,7 +45,7 @@ uuid_regex = re.compile(
 
 def is_user_member_of_an_allowed_group(
     user: CoreUser,
-    allowed_groups: list[GroupType] | list[str],
+    allowed_groups: list[GroupType],
 ) -> bool:
     """
     Test if the provided user is a member of at least one group from `allowed_groups`.
@@ -70,7 +70,7 @@ def is_user_external(
     """
     Users that are not members won't be able to use all features
     """
-    return user.external is True
+    return user.account_type == AccountType.external
 
 
 def sort_user(

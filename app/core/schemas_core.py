@@ -62,6 +62,7 @@ class CoreUser(CoreUserSimple):
     """Schema for user's model similar to core_user table in database"""
 
     email: str
+    account_type: AccountType
     birthday: date | None = None
     promo: int | None = None
     floor: FloorsType | None = None
@@ -95,6 +96,7 @@ class CoreUserFusionRequest(BaseModel):
 
 
 class CoreUserUpdateAdmin(BaseModel):
+    account_type: AccountType | None = None
     name: str | None = None
     firstname: str | None = None
     promo: int | None = None

@@ -322,6 +322,19 @@ async def authorize_validation(
                 ),
                 status_code=status.HTTP_302_FOUND,
             )
+    if auth_client.allowed_account_types is not None:
+        if user.account_type not in auth_client.allowed_account_types:
+            # TODO We should show an HTML page explaining the issue
+            hyperion_access_logger.warning(
+                f"Authorize-validation: user account type is not allowed {authorizereq.email} ({request_id})",
+            )
+			return RedirectResponse(
+                settings.CLIENT_URL
+                + calypsso.get_error_relative_url(
+                    message="User is not member of an allowed group",
+                ),
+                status_code=status.HTTP_302_FOUND,
+            )
     if not auth_client.allow_external_users:
         if is_user_external(user):
             hyperion_access_logger.warning(

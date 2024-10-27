@@ -24,7 +24,7 @@ from sqlalchemy.ext.asyncio import (
 from app.core import models_core, security
 from app.core.auth import schemas_auth
 from app.core.config import Settings, construct_prod_settings
-from app.core.groups.groups_type import GroupType, get_ecl_groups
+from app.core.groups.groups_type import GroupType, get_ecl_account_types
 from app.core.payment.payment_tool import PaymentTool
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.types.scopes_type import ScopeType
@@ -344,10 +344,7 @@ def is_user_an_ecl_member(
     To check if the user is the member of a group, use is_user_a_member_of generator
     """
 
-    if is_user_member_of_an_allowed_group(
-        user=user,
-        allowed_groups=get_ecl_groups(),
-    ):
+    if user.account_type in get_ecl_account_types():
         # We know the user is a member of the group, we don't need to return an error and can return the CoreUser object
         return user
 
