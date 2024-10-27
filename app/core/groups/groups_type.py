@@ -42,6 +42,7 @@ class AccountType(str, Enum):
     staff = "staff"
     association = "association"
     external = "external"
+    other_school_student = "other_school_student"
     demo = "demo"
 
     def __str__(self):
