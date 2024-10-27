@@ -29,6 +29,7 @@ class CoreUser(Base):
         index=True,
     )  # Use UUID later
     email: Mapped[str] = mapped_column(unique=True, index=True)
+    school_id: Mapped[str] = mapped_column(ForeignKey("core_school.id"))
     password_hash: Mapped[str]
     # Depending on the account type, the user may have different rights and access to different features
     # External users may exist for:
@@ -54,6 +55,7 @@ class CoreUser(Base):
         lazy="selectin",
         default_factory=list,
     )
+    school: Mapped["CoreSchool"] = relationship("CoreSchool", back_populates="students")
 
 
 class CoreUserUnconfirmed(Base):
@@ -65,6 +67,7 @@ class CoreUserUnconfirmed(Base):
     # for example after losing the previously received confirmation email.
     # For each user creation request, a row will be added in this table with a new token
     email: Mapped[str]
+    school_id: Mapped[str] = mapped_column(ForeignKey("core_school.id"))
     activation_token: Mapped[str]
     created_on: Mapped[datetime]
     expire_on: Mapped[datetime]
@@ -115,6 +118,19 @@ class CoreGroup(Base):
         secondary="core_membership",
         back_populates="groups",
         default_factory=list,
+    )
+
+
+class CoreSchool(Base):
+    __tablename__ = "core_school"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, index=True)
+    name: Mapped[str] = mapped_column(String, index=True, nullable=False, unique=True)
+    email_regex: Mapped[str] = mapped_column(String, nullable=False)
+
+    students: Mapped[list["CoreUser"]] = relationship(
+        "CoreUser",
+        back_populates="school",
     )
 
 
