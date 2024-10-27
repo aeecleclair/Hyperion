@@ -19,6 +19,44 @@ class CoreInformation(BaseModel):
     minimal_titan_version_code: int
 
 
+class CoreGroupBase(BaseModel):
+    """Base schema for group's model"""
+
+    name: str
+    description: str | None = None
+
+    _normalize_name = field_validator("name")(validators.trailing_spaces_remover)
+
+
+class CoreGroupSimple(CoreGroupBase):
+    """Simplified schema for group's model, used when getting all groups"""
+
+    id: str
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CoreSchoolBase(BaseModel):
+    """Schema for school's model"""
+
+    name: str
+    email_regex: str
+
+    _normalize_name = field_validator("name")(validators.trailing_spaces_remover)
+
+
+class CoreSchoolSimple(CoreSchoolBase):
+    id: str
+
+
+class CoreSchoolUpdate(BaseModel):
+    """Schema for school update"""
+
+    name: str | None = None
+    email_regex: str | None = None
+
+    _normalize_name = field_validator("name")(validators.trailing_spaces_remover)
+
+
 class CoreUserBase(BaseModel):
     """Base schema for user's model"""
 
@@ -35,15 +73,6 @@ class CoreUserBase(BaseModel):
     )
 
 
-class CoreGroupBase(BaseModel):
-    """Base schema for group's model"""
-
-    name: str
-    description: str | None = None
-
-    _normalize_name = field_validator("name")(validators.trailing_spaces_remover)
-
-
 class CoreUserSimple(CoreUserBase):
     """Simplified schema for user's model, used when getting all users"""
 
@@ -52,17 +81,19 @@ class CoreUserSimple(CoreUserBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class CoreGroupSimple(CoreGroupBase):
-    """Simplified schema for group's model, used when getting all groups"""
+class CoreSchool(CoreSchoolSimple):
+    """Schema for school's model similar to core_school table in database"""
 
-    id: str
     model_config = ConfigDict(from_attributes=True)
+
+    students: list[CoreUserSimple] = []
 
 
 class CoreUser(CoreUserSimple):
     """Schema for user's model similar to core_user table in database"""
 
     email: str
+    school_id: str
     account_type: AccountType
     birthday: date | None = None
     promo: int | None = None
@@ -70,6 +101,7 @@ class CoreUser(CoreUserSimple):
     phone: str | None = None
     created_on: datetime | None = None
     groups: list[CoreGroupSimple] = []
+    school: CoreSchoolSimple | None = None
 
 
 class CoreUserUpdate(BaseModel):
@@ -97,6 +129,7 @@ class CoreUserFusionRequest(BaseModel):
 
 
 class CoreUserUpdateAdmin(BaseModel):
+    school_id: str | None = None
     account_type: AccountType | None = None
     name: str | None = None
     firstname: str | None = None
@@ -125,6 +158,7 @@ class CoreUserCreateRequest(BaseModel):
     """
 
     email: str
+    school_id: str
     accept_external: bool | None = Field(
         None,
         deprecated=True,
@@ -146,6 +180,7 @@ class CoreBatchUserCreateRequest(BaseModel):
     """
 
     email: str
+    school_id: str
 
     # Email normalization, this will modify the email variable
     # https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
@@ -164,7 +199,7 @@ class CoreUserActivateRequest(CoreUserBase):
     floor: FloorsType | None = None
     promo: int | None = Field(
         default=None,
-        description="Promotion of the student, an integer like 21",
+        description="Promotion of the student, an integer like 2021",
     )
 
     # Password validator
@@ -187,13 +222,6 @@ class CoreGroup(CoreGroupSimple):
 
 class CoreGroupCreate(CoreGroupBase):
     """Model for group creation schema"""
-
-
-class CoreGroupInDB(CoreGroupBase):
-    """Schema for user activation"""
-
-    id: str
-    model_config = ConfigDict(from_attributes=True)
 
 
 class CoreGroupUpdate(BaseModel):
