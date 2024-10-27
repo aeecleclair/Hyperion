@@ -5,6 +5,7 @@ from datetime import date, datetime
 from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.groups.groups_type import AccountType
 from app.types.floors_type import FloorsType
 from app.types.membership import AvailableAssociationMembership
 from app.types.sqlalchemy import Base, PrimaryKey
@@ -29,6 +30,12 @@ class CoreUser(Base):
     )  # Use UUID later
     email: Mapped[str] = mapped_column(unique=True, index=True)
     password_hash: Mapped[str]
+    # Depending on the account type, the user may have different rights and access to different features
+    # External users may exist for:
+    # - accounts meant to be used by external services based on Hyperion SSO or Hyperion backend
+    # - new users that need to do additional steps before being able to all features,
+    #   like using a specific email address, going through an inscription process or being manually validated
+    account_type: Mapped[AccountType]
     name: Mapped[str]
     firstname: Mapped[str]
     nickname: Mapped[str | None]
@@ -37,13 +44,6 @@ class CoreUser(Base):
     phone: Mapped[str | None]
     floor: Mapped[FloorsType | None]
     created_on: Mapped[datetime | None]
-
-    # Users that are externals (not members) won't be able to use all features
-    # These, self registered, external users may exist for:
-    # - accounts meant to be used by external services based on Hyperion SSO or Hyperion backend
-    # - new users that need to do additional steps before being able to all features,
-    #   like using a specific email address, going through an inscription process or being manually validated
-    external: Mapped[bool] = mapped_column(default=False)
 
     # We use list["CoreGroup"] with quotes as CoreGroup is only defined after this class
     # Defining CoreUser after CoreGroup would cause a similar issue
@@ -65,11 +65,11 @@ class CoreUserUnconfirmed(Base):
     # for example after losing the previously received confirmation email.
     # For each user creation request, a row will be added in this table with a new token
     email: Mapped[str]
-    account_type: Mapped[str]
+    account_type: Mapped[AccountType]
     activation_token: Mapped[str]
     created_on: Mapped[datetime]
     expire_on: Mapped[datetime]
-    external: Mapped[bool] = mapped_column(default=False)
+    external: Mapped[bool]
 
 
 class CoreUserRecoverRequest(Base):

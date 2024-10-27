@@ -235,24 +235,6 @@ async def delete_email_migration_code_by_token(
     await db.commit()
 
 
-async def update_user_email_by_id(
-    user_id: str,
-    new_email: str,
-    db: AsyncSession,
-    make_user_external: bool = False,
-):
-    try:
-        await db.execute(
-            update(models_core.CoreUser)
-            .where(models_core.CoreUser.id == user_id)
-            .values(email=new_email, external=make_user_external),
-        )
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-
-
 async def delete_recover_request_by_email(db: AsyncSession, email: str):
     """Delete a user from database by id"""
 
@@ -292,7 +274,7 @@ async def fusion_users(
     If the user_deleted_id is referenced in a table where the user_kept_id is also referenced,
     and the change would create a duplicate that violates a unique constraint, the row will be deleted
 
-    There are thre cases to consider:
+    There are three cases to consider:
     1. The foreign key is not a primary key of the table:
         In this case, we can update the row
     2. The foreign key is one of the primary keys of the table:

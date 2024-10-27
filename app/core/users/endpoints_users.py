@@ -401,6 +401,7 @@ async def activate_user(
     confirmed_user = models_core.CoreUser(
         id=unconfirmed_user.id,
         email=unconfirmed_user.email,
+        account_type=unconfirmed_user.account_type,
         password_hash=password_hash,
         name=user.name,
         firstname=user.firstname,
@@ -410,18 +411,9 @@ async def activate_user(
         phone=user.phone,
         floor=user.floor,
         created_on=datetime.now(UTC),
-        external=unconfirmed_user.external,
     )
     # We add the new user to the database
     await cruds_users.create_user(db=db, user=confirmed_user)
-    await cruds_groups.create_membership(
-        db=db,
-        membership=models_core.CoreMembership(
-            group_id=unconfirmed_user.account_type,
-            user_id=unconfirmed_user.id,
-            description=None,
-        ),
-    )
 
     # We remove all unconfirmed users with the same email address
     await cruds_users.delete_unconfirmed_user_by_email(
@@ -701,29 +693,14 @@ async def migrate_mail_confirm(
         )
 
     try:
-        await cruds_users.update_user_email_by_id(
-            db=db,
-            user_id=migration_object.user_id,
-            new_email=migration_object.new_email,
-            make_user_external=migration_object.make_user_external,
+        await cruds_users.update_user(
+            db,
+            migration_object.user_id,
+            user_update=schemas_core.CoreUserUpdateAdmin(
+                email=migration_object.new_email,
+                account_type=AccountType.student,
+            ),
         )
-        if not migration_object.make_user_external:
-            group_ids = [group.id for group in user.groups]
-            if GroupType.external in group_ids:
-                await cruds_groups.delete_membership_by_group_and_user_id(
-                    db=db,
-                    group_id=GroupType.external,
-                    user_id=migration_object.user_id,
-                )
-            if GroupType.student not in group_ids:
-                await cruds_groups.create_membership(
-                    db=db,
-                    membership=models_core.CoreMembership(
-                        group_id=GroupType.student,
-                        user_id=migration_object.user_id,
-                        description=None,
-                    ),
-                )
     except Exception as error:
         raise HTTPException(status_code=400, detail=str(error))
 
@@ -869,24 +846,10 @@ async def switch_external_user_internal(
             await cruds_users.update_user(
                 db=db,
                 user_id=user.id,
-                user_update=schemas_core.CoreUserUpdateAdmin(external=False),
+                user_update=schemas_core.CoreUserUpdateAdmin(
+                    account_type=AccountType.student,
+                ),
             )
-            group_ids = [group.id for group in user.groups]
-            if GroupType.external in group_ids:
-                await cruds_groups.delete_membership_by_group_and_user_id(
-                    db=db,
-                    group_id=GroupType.external,
-                    user_id=user.id,
-                )
-            if GroupType.student not in group_ids:
-                await cruds_groups.create_membership(
-                    db=db,
-                    membership=models_core.CoreMembership(
-                        group_id=GroupType.student,
-                        user_id=user.id,
-                        description=None,
-                    ),
-                )
 
 
 @router.post(
