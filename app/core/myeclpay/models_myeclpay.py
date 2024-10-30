@@ -28,7 +28,7 @@ class Wallet(MappedAsDataclass, Base):
     user: Mapped[models_core.CoreUser | None] = relationship(
         init=False,
         secondary="myeclpay_user_payment",
-        lazy="joined"
+        lazy="joined",
     )
 
 
@@ -38,7 +38,7 @@ class WalletDevice(MappedAsDataclass, Base):
     id: Mapped[PrimaryKey]
     name: Mapped[str]
     wallet_id: Mapped[UUID] = mapped_column(ForeignKey("myeclpay_wallet.id"))
-    public_rsa_key: Mapped[str]
+    ed25519_public_key: Mapped[bytes]
     creation: Mapped[datetime]
     status: Mapped[WalletDeviceStatus]
     activation_token: Mapped[str]
@@ -53,7 +53,7 @@ class Transaction(MappedAsDataclass, Base):
         ForeignKey("myeclpay_wallet_device.id"),
     )
     receiver_wallet_id: Mapped[UUID] = mapped_column(ForeignKey("myeclpay_wallet.id"))
-    type: Mapped[TransactionType]
+    transaction_type: Mapped[TransactionType]
 
     # User that scanned the qr code
     # Will be None if the transaction is a request
@@ -66,8 +66,12 @@ class Transaction(MappedAsDataclass, Base):
     # The Seller may add a note to the transaction, for example to specify the product that was buyed
     store_note: Mapped[str | None]
 
-    giver_wallet: Mapped[Wallet] = relationship(init=False, foreign_keys=[giver_wallet_id])
-    receiver_wallet: Mapped[Wallet] = relationship(init=False, foreign_keys=[receiver_wallet_id])
+    giver_wallet: Mapped[Wallet] = relationship(
+        init=False, foreign_keys=[giver_wallet_id]
+    )
+    receiver_wallet: Mapped[Wallet] = relationship(
+        init=False, foreign_keys=[receiver_wallet_id]
+    )
 
 
 class Store(MappedAsDataclass, Base):
@@ -118,7 +122,8 @@ class Seller(MappedAsDataclass, Base):
 
     user_id: Mapped[str] = mapped_column(primary_key=True)
     store_id: Mapped[UUID] = mapped_column(
-        ForeignKey("myeclpay_store.id"), primary_key=True,
+        ForeignKey("myeclpay_store.id"),
+        primary_key=True,
     )
     can_bank: Mapped[bool]
     can_see_historic: Mapped[bool]
@@ -136,9 +141,7 @@ class UserPayment(MappedAsDataclass, Base):
     accepted_cgu_version: Mapped[int]
 
 
-class UsedTransaction(MappedAsDataclass, Base):
-    __tablename__ = "myeclpay_used_transaction"
+class UsedQRCode(MappedAsDataclass, Base):
+    __tablename__ = "myeclpay_used_qrcode"
 
-    transaction_id: Mapped[PrimaryKey]
-    user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"))
-    success: Mapped[bool]
+    qr_code_id: Mapped[PrimaryKey]
