@@ -1,18 +1,30 @@
+import logging
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.models_core import CoreUser
 from app.core.myeclpay import cruds_myeclpay, schemas_myeclpay
-from app.core.myeclpay.types_myeclpay import HistoryType, TransactionStatus, WalletType
-from app.dependencies import get_db, is_user_an_ecl_member
+from app.core.myeclpay.types_myeclpay import (
+    HistoryType,
+    TransactionStatus,
+    TransactionType,
+    WalletType,
+)
+from app.core.myeclpay.utils_myeclpay import compute_signable_data, verify_signature
+from app.dependencies import get_db, get_request_id, is_user_an_ecl_member
 from app.utils.tools import get_display_name
 
 router = APIRouter(tags=["MyECLPay"])
 
 LATEST_CGU = 1
+MAX_TRANSACTION_TOTAL = 2000
+QRCODE_EXPIRATION = 5  # minutes
+
+hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 @router.post(
@@ -42,7 +54,7 @@ async def register_user(
         wallet_id = uuid.uuid4()
         await cruds_myeclpay.create_wallet(
             wallet_id=wallet_id,
-            type=WalletType.USER,
+            wallet_type=WalletType.USER,
             balance=0,
             db=db,
         )
@@ -75,10 +87,10 @@ async def register_user(
 
 
 @router.get(
-    "/myeclpay/users/me/wallet/transactions",
+    "/myeclpay/users/me/wallet/history",
     response_model=list[schemas_myeclpay.History],
 )
-async def get_user_wallet_transactions(
+async def get_user_wallet_history(
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user_an_ecl_member),
 ):
@@ -159,3 +171,157 @@ async def get_user_wallet_transactions(
 
     return history
     # TODO: limite by datetime
+
+
+@router.post(
+    "/myeclpay/store/{store_id}/scan",
+    response_model=list[schemas_myeclpay.History],
+)
+async def store_scan_qrcode(
+    store_id: UUID,
+    qr_code_content: schemas_myeclpay.QRCodeContent,
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(is_user_an_ecl_member),
+    request_id: str = Depends(get_request_id),
+):
+    """
+    Scan and bank a QR code for this store.
+
+    **The user must be authenticated to use this endpoint**
+    **The user must have the `can_bank` permission for this store**
+    """
+    # If the QR Code is already used, we return an error
+    already_existing_used_qrcode = await cruds_myeclpay.get_used_qrcode(
+        qr_code_id=qr_code_content.qr_code_id,
+        db=db,
+    )
+    if already_existing_used_qrcode is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="QR Code already used",
+        )
+
+    # After scanning a QR Code, we want to add it to the list of already scanned QR Code
+    # even if it fail to be banked
+    await cruds_myeclpay.create_used_qrcode(
+        qr_code_id=qr_code_content.qr_code_id,
+        db=db,
+    )
+    await db.commit()
+
+    store = await cruds_myeclpay.get_store(
+        store_id=store_id,
+        db=db,
+    )
+    if store is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Store does not exist",
+        )
+
+    seller = await cruds_myeclpay.get_seller_by_user_id_and_store_id(
+        store_id=store_id,
+        user_id=user.id,
+        db=db,
+    )
+
+    if seller is None or not seller.can_bank:
+        raise HTTPException(
+            status_code=400,
+            detail="User does not have `can_bank` permission for this store",
+        )
+
+    # We verify the signature
+    debited_wallet_device = await cruds_myeclpay.get_wallet_device(
+        wallet_device_id=qr_code_content.walled_device_id,
+        db=db,
+    )
+
+    if debited_wallet_device is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Wallet device does not exist",
+        )
+
+    if not verify_signature(
+        public_key_bytes=debited_wallet_device.ed25519_public_key,
+        signature=qr_code_content.signature,
+        data=compute_signable_data(qr_code_content),
+        wallet_device_id=qr_code_content.walled_device_id,
+        request_id=request_id,
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid signature",
+        )
+
+    # We verify the content respect some rules
+    if qr_code_content.total <= 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Total must be greater than 0",
+        )
+
+    if qr_code_content.total > MAX_TRANSACTION_TOTAL:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Total can not exceed {MAX_TRANSACTION_TOTAL}",
+        )
+
+    if qr_code_content.creation < datetime.now(UTC) - timedelta(
+        minutes=QRCODE_EXPIRATION,
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="QR Code is expired",
+        )
+
+    # We verify that the debited walled contains enough money
+    debited_wallet = await cruds_myeclpay.get_wallet(
+        wallet_id=debited_wallet_device.wallet_id,
+        db=db,
+    )
+    if debited_wallet is None:
+        hyperion_error_logger.error(
+            f"MyECLPay: Could not find wallet associated with the debited wallet device {debited_wallet_device.id}, this should never happen",
+        )
+        raise HTTPException(
+            status_code=400,
+            detail="Could not find wallet associated with the debited wallet device",
+        )
+    if debited_wallet.balance < qr_code_content.total:
+        raise HTTPException(
+            status_code=400,
+            detail="Insufficient balance in the debited wallet",
+        )
+
+    # We increment the receiving wallet balance
+    await cruds_myeclpay.increment_wallet_balance(
+        wallet_id=store.wallet_id,
+        amount=qr_code_content.total,
+        db=db,
+    )
+
+    # We decrement the debited wallet balance
+    await cruds_myeclpay.increment_wallet_balance(
+        wallet_id=debited_wallet.id,
+        amount=-qr_code_content.total,
+        db=db,
+    )
+
+    # We create a transaction
+    await cruds_myeclpay.create_transaction(
+        transaction_id=uuid.uuid4(),
+        giver_wallet_id=debited_wallet_device.id,
+        giver_wallet_device_id=debited_wallet_device.id,
+        receiver_wallet_id=store.wallet_id,
+        transaction_type=TransactionType.DIRECT,
+        seller_user_id=user.id,
+        total=qr_code_content.total,
+        creation=datetime.now(UTC),
+        status=TransactionStatus.CONFIRMED,
+        store_note=None,
+        db=db,
+    )
+
+    # TODO: log the transaction
