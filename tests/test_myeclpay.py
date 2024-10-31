@@ -422,6 +422,7 @@ def ensure_qr_code_id_is_already_used(qr_code_id: str | UUID, client: TestClient
             "walled_device_id": str(ecl_user_wallet_device.id),
             "total": 100,
             "creation": (datetime.now(UTC)).isoformat(),
+            "store": True,
             "signature": "sign",
         },
     )
@@ -445,6 +446,7 @@ def test_store_scan_invalid_store_id(client: TestClient):
             "walled_device_id": str(ecl_user_wallet_device.id),
             "total": 100,
             "creation": datetime.now(UTC).isoformat(),
+            "store": True,
             "signature": "sign",
         },
     )
@@ -465,6 +467,7 @@ def test_store_scan_store_when_not_seller(client: TestClient):
             "walled_device_id": str(ecl_user_wallet_device.id),
             "total": 100,
             "creation": datetime.now(UTC).isoformat(),
+            "store": True,
             "signature": "sign",
         },
     )
@@ -490,6 +493,7 @@ def test_store_scan_store_when_seller_but_can_not_bank(client: TestClient):
             "walled_device_id": str(ecl_user_wallet_device.id),
             "total": 100,
             "creation": datetime.now(UTC).isoformat(),
+            "store": True,
             "signature": "sign",
         },
     )
@@ -513,6 +517,7 @@ def test_store_scan_store_invalid_wallet_device_id(client: TestClient):
             "walled_device_id": str(uuid4()),
             "total": 100,
             "creation": datetime.now(UTC).isoformat(),
+            "store": True,
             "signature": "sign",
         },
     )
@@ -533,6 +538,7 @@ def test_store_scan_store_invalid_signature(client: TestClient):
             "walled_device_id": str(ecl_user_wallet_device.id),
             "total": 100,
             "creation": datetime.now(UTC).isoformat(),
+            "store": True,
             "signature": "invalid signature",
         },
     )
@@ -542,13 +548,14 @@ def test_store_scan_store_invalid_signature(client: TestClient):
     ensure_qr_code_id_is_already_used(qr_code_id=qr_code_id, client=client)
 
 
-def test_store_scan_store_negative_total(client: TestClient):
+def test_store_scan_store_with_non_store_qr_code(client: TestClient):
     qr_code_id = str(uuid4())
 
     qr_code_content = QRCodeContentBase(
         qr_code_id=qr_code_id,
         total=-1,
         creation=datetime.now(UTC),
+        store=False,
         walled_device_id=ecl_user_wallet_device.id,
     )
 
@@ -564,6 +571,42 @@ def test_store_scan_store_negative_total(client: TestClient):
             "walled_device_id": str(qr_code_content.walled_device_id),
             "total": qr_code_content.total,
             "creation": qr_code_content.creation.isoformat(),
+            "store": qr_code_content.store,
+            "signature": base64.b64encode(signature).decode("utf-8"),
+        },
+    )
+    assert response.status_code == 400
+    assert (
+        response.json()["detail"] == "QR Code is not intended to be scanned for a store"
+    )
+
+    ensure_qr_code_id_is_already_used(qr_code_id=qr_code_id, client=client)
+
+
+def test_store_scan_store_negative_total(client: TestClient):
+    qr_code_id = str(uuid4())
+
+    qr_code_content = QRCodeContentBase(
+        qr_code_id=qr_code_id,
+        total=-1,
+        creation=datetime.now(UTC),
+        store=True,
+        walled_device_id=ecl_user_wallet_device.id,
+    )
+
+    signature = ecl_user_wallet_device_private_key.sign(
+        compute_signable_data(qr_code_content),
+    )
+
+    response = client.post(
+        f"/myeclpay/store/{store.id}/scan",
+        headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
+        json={
+            "qr_code_id": str(qr_code_content.qr_code_id),
+            "walled_device_id": str(qr_code_content.walled_device_id),
+            "total": qr_code_content.total,
+            "creation": qr_code_content.creation.isoformat(),
+            "store": qr_code_content.store,
             "signature": base64.b64encode(signature).decode("utf-8"),
         },
     )
@@ -580,6 +623,7 @@ def test_store_scan_store_total_greater_than_max(client: TestClient):
         qr_code_id=qr_code_id,
         total=4000,
         creation=datetime.now(UTC),
+        store=True,
         walled_device_id=ecl_user_wallet_device.id,
     )
 
@@ -595,6 +639,7 @@ def test_store_scan_store_total_greater_than_max(client: TestClient):
             "walled_device_id": str(qr_code_content.walled_device_id),
             "total": qr_code_content.total,
             "creation": qr_code_content.creation.isoformat(),
+            "store": qr_code_content.store,
             "signature": base64.b64encode(signature).decode("utf-8"),
         },
     )
@@ -620,6 +665,7 @@ def test_store_scan_store_missing_wallet(
         qr_code_id=qr_code_id,
         total=100,
         creation=datetime.now(UTC),
+        store=True,
         walled_device_id=ecl_user_wallet_device.id,
     )
 
@@ -635,6 +681,7 @@ def test_store_scan_store_missing_wallet(
             "walled_device_id": str(qr_code_content.walled_device_id),
             "total": qr_code_content.total,
             "creation": qr_code_content.creation.isoformat(),
+            "store": qr_code_content.store,
             "signature": base64.b64encode(signature).decode("utf-8"),
         },
     )
@@ -654,6 +701,7 @@ def test_store_scan_store_insufficient_ballance(client: TestClient):
         qr_code_id=qr_code_id,
         total=1100,
         creation=datetime.now(UTC),
+        store=True,
         walled_device_id=ecl_user_wallet_device.id,
     )
 
@@ -669,6 +717,7 @@ def test_store_scan_store_insufficient_ballance(client: TestClient):
             "walled_device_id": str(qr_code_content.walled_device_id),
             "total": qr_code_content.total,
             "creation": qr_code_content.creation.isoformat(),
+            "store": qr_code_content.store,
             "signature": base64.b64encode(signature).decode("utf-8"),
         },
     )
@@ -685,6 +734,7 @@ def test_store_scan_store_successful_scan(client: TestClient):
         qr_code_id=qr_code_id,
         total=500,
         creation=datetime.now(UTC),
+        store=True,
         walled_device_id=ecl_user_wallet_device.id,
     )
 
@@ -700,9 +750,10 @@ def test_store_scan_store_successful_scan(client: TestClient):
             "walled_device_id": str(qr_code_content.walled_device_id),
             "total": qr_code_content.total,
             "creation": qr_code_content.creation.isoformat(),
+            "store": qr_code_content.store,
             "signature": base64.b64encode(signature).decode("utf-8"),
         },
     )
-    assert response.status_code == 200
+    assert response.status_code == 204
 
     # TODO: verify that wallet balances were updated and that a transaction was created
