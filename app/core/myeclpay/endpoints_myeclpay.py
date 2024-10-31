@@ -175,7 +175,7 @@ async def get_user_wallet_history(
 
 @router.post(
     "/myeclpay/store/{store_id}/scan",
-    response_model=list[schemas_myeclpay.History],
+    status_code=204,
 )
 async def store_scan_qrcode(
     store_id: UUID,
@@ -186,6 +186,25 @@ async def store_scan_qrcode(
 ):
     """
     Scan and bank a QR code for this store.
+
+    `signature` should be a base64 encoded string
+     - signed using *ed25519*,
+     - where data are a `QRCodeContentData` object:
+        ```
+        {
+            id: UUID
+            tot: int
+            iat: datetime
+            key: UUID
+        }
+        ```
+
+    The provided content is checked to ensure:
+        - the QR Code is not already used
+        - the QR Code is not expired
+        - the QR Code is intended to be scanned for a store `qr_code_content.store`
+        - the signature is valid and correspond to `walled_device_id` public key
+        - the giver's Wallet balance greater than the QR Code total
 
     **The user must be authenticated to use this endpoint**
     **The user must have the `can_bank` permission for this store**
@@ -253,6 +272,12 @@ async def store_scan_qrcode(
         raise HTTPException(
             status_code=400,
             detail="Invalid signature",
+        )
+
+    if not qr_code_content.store:
+        raise HTTPException(
+            status_code=400,
+            detail="QR Code is not intended to be scanned for a store",
         )
 
     # We verify the content respect some rules
