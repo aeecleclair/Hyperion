@@ -18,6 +18,7 @@ def compute_signable_data(content: QRCodeContentBase) -> bytes:
             tot=content.total,
             iat=content.creation,
             key=content.walled_device_id,
+            store=content.store,
         )
         .model_dump_json()
         .encode("utf-8")
