@@ -67,10 +67,12 @@ class Transaction(MappedAsDataclass, Base):
     store_note: Mapped[str | None]
 
     giver_wallet: Mapped[Wallet] = relationship(
-        init=False, foreign_keys=[giver_wallet_id]
+        init=False,
+        foreign_keys=[giver_wallet_id],
     )
     receiver_wallet: Mapped[Wallet] = relationship(
-        init=False, foreign_keys=[receiver_wallet_id]
+        init=False,
+        foreign_keys=[receiver_wallet_id],
     )
 
 
