@@ -2,13 +2,21 @@ import logging
 from uuid import UUID
 
 from cryptography.hazmat.primitives.asymmetric import ed25519
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.myeclpay import cruds_myeclpay
+from app.core.myeclpay.models_myeclpay import UserPayment
 from app.core.myeclpay.schemas_myeclpay import (
     QRCodeContentBase,
     QRCodeContentData,
 )
 
 hyperion_security_logger = logging.getLogger("hyperion.security")
+
+
+LATEST_CGU = 1
+MAX_TRANSACTION_TOTAL = 2000
+QRCODE_EXPIRATION = 5  # minutes
 
 
 def compute_signable_data(content: QRCodeContentBase) -> bytes:
@@ -48,3 +56,13 @@ def verify_signature(
         return False
     else:
         return True
+
+
+def is_user_registered_and_latest_cgu_signed(
+    user_payment: UserPayment,
+) -> bool:
+    """
+    Check if the user has signed the latest CGU version.
+    """
+
+    return user_payment.accepted_cgu_version == LATEST_CGU
