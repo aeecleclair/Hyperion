@@ -10,7 +10,7 @@ from pytest_mock import MockerFixture
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
-from app.core.myeclpay import models_myeclpay
+from app.core.myeclpay import cruds_myeclpay, models_myeclpay
 from app.core.myeclpay.schemas_myeclpay import QRCodeContentBase
 from app.core.myeclpay.types_myeclpay import (
     TransactionStatus,
@@ -22,6 +22,7 @@ from app.core.myeclpay.types_myeclpay import (
 from app.core.myeclpay.utils_myeclpay import compute_signable_data
 from app.types.membership import AvailableAssociationMembership
 from tests.commons import (
+    TestingSessionLocal,
     add_object_to_db,
     create_api_access_token,
     create_user_with_groups,
@@ -32,6 +33,7 @@ ecl_user_access_token: str
 ecl_user_wallet: models_myeclpay.Wallet
 ecl_user_wallet_device_private_key: Ed25519PrivateKey
 ecl_user_wallet_device: models_myeclpay.WalletDevice
+ecl_user_wallet_device_unactive: models_myeclpay.WalletDevice
 ecl_user_payment: models_myeclpay.UserPayment
 ecl_user_transfer: models_myeclpay.Transfer
 
@@ -43,6 +45,7 @@ ecl_user2_payment: models_myeclpay.UserPayment
 
 store_wallet: models_myeclpay.Wallet
 store: models_myeclpay.Store
+store_wallet_device_private_key: Ed25519PrivateKey
 store_wallet_device: models_myeclpay.WalletDevice
 
 
@@ -84,7 +87,10 @@ async def init_objects() -> None:
     )
     await add_object_to_db(ecl_user_payment)
 
-    global ecl_user_wallet_device, ecl_user_wallet_device_private_key
+    global \
+        ecl_user_wallet_device, \
+        ecl_user_wallet_device_private_key, \
+        ecl_user_wallet_device_unactive
     ecl_user_wallet_device_private_key = Ed25519PrivateKey.generate()
     ecl_user_wallet_device = models_myeclpay.WalletDevice(
         id=uuid4(),
@@ -96,9 +102,19 @@ async def init_objects() -> None:
         ),
         creation=datetime.now(UTC),
         status=WalletDeviceStatus.ACTIVE,
-        activation_token="activation_token",
+        activation_token="activation_token_ecl_user_wallet_device",
     )
     await add_object_to_db(ecl_user_wallet_device)
+    ecl_user_wallet_device_unactive = models_myeclpay.WalletDevice(
+        id=uuid4(),
+        name="Test device unactive",
+        wallet_id=ecl_user_wallet.id,
+        ed25519_public_key=b"key",
+        creation=datetime.now(UTC),
+        status=WalletDeviceStatus.UNACTIVE,
+        activation_token="activation_token_ecl_user_wallet_device_unactive",
+    )
+    await add_object_to_db(ecl_user_wallet_device_unactive)
 
     # ecl_user2
     global ecl_user2, ecl_user2_access_token
@@ -135,7 +151,7 @@ async def init_objects() -> None:
         ed25519_public_key=b"ed25519_public_key",
         creation=datetime.now(UTC),
         status=WalletDeviceStatus.ACTIVE,
-        activation_token="activation_token",
+        activation_token="activation_token_ecl_user2_wallet_device",
     )
     await add_object_to_db(ecl_user2_wallet_device)
 
@@ -158,12 +174,16 @@ async def init_objects() -> None:
     await add_object_to_db(store)
 
     # NOTE: in practice we won't allow a store to emit transactions and to have a WalletDevice
-    global store_wallet_device
+    global store_wallet_device, store_wallet_device_private_key
+    store_wallet_device_private_key = Ed25519PrivateKey.generate()
     store_wallet_device = models_myeclpay.WalletDevice(
         id=uuid4(),
         name="Store test device",
         wallet_id=store_wallet.id,
-        ed25519_public_key=b"ed25519_public_key",
+        ed25519_public_key=store_wallet_device_private_key.public_key().public_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PublicFormat.Raw,
+        ),
         creation=datetime.now(UTC),
         status=WalletDeviceStatus.ACTIVE,
         activation_token="activation_token",
@@ -527,6 +547,27 @@ def test_store_scan_store_invalid_wallet_device_id(client: TestClient):
     ensure_qr_code_id_is_already_used(qr_code_id=qr_code_id, client=client)
 
 
+def test_store_scan_store_non_active_wallet_device_id(client: TestClient):
+    qr_code_id = str(uuid4())
+
+    response = client.post(
+        f"/myeclpay/store/{store.id}/scan",
+        headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
+        json={
+            "qr_code_id": qr_code_id,
+            "walled_device_id": str(ecl_user_wallet_device_unactive.id),
+            "total": 100,
+            "creation": datetime.now(UTC).isoformat(),
+            "store": True,
+            "signature": "sign",
+        },
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Wallet device is not active"
+
+    ensure_qr_code_id_is_already_used(qr_code_id=qr_code_id, client=client)
+
+
 def test_store_scan_store_invalid_signature(client: TestClient):
     qr_code_id = str(uuid4())
 
@@ -694,6 +735,42 @@ def test_store_scan_store_missing_wallet(
     ensure_qr_code_id_is_already_used(qr_code_id=qr_code_id, client=client)
 
 
+def test_store_scan_store_from_store_wallet(client: TestClient):
+    qr_code_id = str(uuid4())
+
+    qr_code_content = QRCodeContentBase(
+        qr_code_id=qr_code_id,
+        total=1100,
+        creation=datetime.now(UTC),
+        store=True,
+        walled_device_id=store_wallet_device.id,
+    )
+
+    signature = store_wallet_device_private_key.sign(
+        compute_signable_data(qr_code_content),
+    )
+
+    response = client.post(
+        f"/myeclpay/store/{store.id}/scan",
+        headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
+        json={
+            "qr_code_id": str(qr_code_content.qr_code_id),
+            "walled_device_id": str(qr_code_content.walled_device_id),
+            "total": qr_code_content.total,
+            "creation": qr_code_content.creation.isoformat(),
+            "store": qr_code_content.store,
+            "signature": base64.b64encode(signature).decode("utf-8"),
+        },
+    )
+    assert response.status_code == 400
+    assert (
+        response.json()["detail"]
+        == "Stores are not allowed to make transaction by QR code"
+    )
+
+    ensure_qr_code_id_is_already_used(qr_code_id=qr_code_id, client=client)
+
+
 def test_store_scan_store_insufficient_ballance(client: TestClient):
     qr_code_id = str(uuid4())
 
@@ -727,7 +804,7 @@ def test_store_scan_store_insufficient_ballance(client: TestClient):
     ensure_qr_code_id_is_already_used(qr_code_id=qr_code_id, client=client)
 
 
-def test_store_scan_store_successful_scan(client: TestClient):
+async def test_store_scan_store_successful_scan(client: TestClient):
     qr_code_id = str(uuid4())
 
     qr_code_content = QRCodeContentBase(
@@ -741,6 +818,18 @@ def test_store_scan_store_successful_scan(client: TestClient):
     signature = ecl_user_wallet_device_private_key.sign(
         compute_signable_data(qr_code_content),
     )
+
+    async with TestingSessionLocal() as db:
+        store_wallet_before_scan = await cruds_myeclpay.get_wallet(
+            db=db,
+            wallet_id=store_wallet.id,
+        )
+        user_wallet_before_scan = await cruds_myeclpay.get_wallet(
+            db=db,
+            wallet_id=ecl_user_wallet_device.wallet_id,
+        )
+    assert store_wallet_before_scan is not None
+    assert user_wallet_before_scan is not None
 
     response = client.post(
         f"/myeclpay/store/{store.id}/scan",
@@ -756,4 +845,29 @@ def test_store_scan_store_successful_scan(client: TestClient):
     )
     assert response.status_code == 204
 
-    # TODO: verify that wallet balances were updated and that a transaction was created
+    ensure_qr_code_id_is_already_used(qr_code_id=qr_code_id, client=client)
+
+    async with TestingSessionLocal() as db:
+        store_wallet_after_scan = await cruds_myeclpay.get_wallet(
+            db=db,
+            wallet_id=store_wallet.id,
+        )
+        user_wallet_after_scan = await cruds_myeclpay.get_wallet(
+            db=db,
+            wallet_id=ecl_user_wallet_device.wallet_id,
+        )
+    assert store_wallet_after_scan is not None
+    assert user_wallet_after_scan is not None
+
+    # We check that the wallet balances were updated
+    assert (
+        store_wallet_after_scan.balance
+        == store_wallet_before_scan.balance + qr_code_content.total
+    )
+    assert (
+        user_wallet_after_scan.balance
+        == user_wallet_before_scan.balance - qr_code_content.total
+    )
+
+    # We check that a transaction was created
+    # TODO: verify that a transaction was created
