@@ -41,7 +41,7 @@ class WalletDevice(MappedAsDataclass, Base):
     ed25519_public_key: Mapped[bytes]
     creation: Mapped[datetime]
     status: Mapped[WalletDeviceStatus]
-    activation_token: Mapped[str]
+    activation_token: Mapped[str] = mapped_column(unique=True)
 
 
 class Transaction(MappedAsDataclass, Base):
@@ -84,7 +84,10 @@ class Store(MappedAsDataclass, Base):
 
     membership: Mapped[AvailableAssociationMembership]
 
-    wallet_id: Mapped[UUID] = mapped_column(ForeignKey("myeclpay_wallet.id"))
+    wallet_id: Mapped[UUID] = mapped_column(
+        ForeignKey("myeclpay_wallet.id"),
+        unique=True,
+    )
 
 
 class Request(MappedAsDataclass, Base):
@@ -138,7 +141,10 @@ class UserPayment(MappedAsDataclass, Base):
     __tablename__ = "myeclpay_user_payment"
 
     user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), primary_key=True)
-    wallet_id: Mapped[UUID] = mapped_column(ForeignKey("myeclpay_wallet.id"))
+    wallet_id: Mapped[UUID] = mapped_column(
+        ForeignKey("myeclpay_wallet.id"),
+        unique=True,
+    )
     accepted_cgu_signature: Mapped[datetime]
     accepted_cgu_version: Mapped[int]
 
