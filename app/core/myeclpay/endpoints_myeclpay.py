@@ -15,7 +15,13 @@ from app.core.myeclpay.types_myeclpay import (
     WalletDeviceStatus,
     WalletType,
 )
-from app.core.myeclpay.utils_myeclpay import compute_signable_data, verify_signature
+from app.core.myeclpay.utils_myeclpay import (
+    LATEST_CGU,
+    MAX_TRANSACTION_TOTAL,
+    QRCODE_EXPIRATION,
+    compute_signable_data,
+    verify_signature,
+)
 from app.core.notification.schemas_notification import Message
 from app.dependencies import (
     get_db,
@@ -28,9 +34,6 @@ from app.utils.tools import get_display_name
 
 router = APIRouter(tags=["MyECLPay"])
 
-LATEST_CGU = 1
-MAX_TRANSACTION_TOTAL = 2000
-QRCODE_EXPIRATION = 5  # minutes
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
@@ -52,6 +55,12 @@ async def register_user(
 
     **The user must be authenticated to use this endpoint**
     """
+    if signature.accepted_cgu_version != LATEST_CGU:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Only the latest CGU version {LATEST_CGU} is accepted",
+        )
+
     # Check if user is already registered
     existing_user_payment = await cruds_myeclpay.get_user_payment(
         user_id=user.id,
@@ -213,6 +222,7 @@ async def store_scan_qrcode(
         - the QR Code is not expired
         - the QR Code is intended to be scanned for a store `qr_code_content.store`
         - the signature is valid and correspond to `walled_device_id` public key
+        - the giver's wallet device is active
         - the giver's Wallet balance greater than the QR Code total
 
     **The user must be authenticated to use this endpoint**
