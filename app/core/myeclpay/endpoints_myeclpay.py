@@ -12,10 +12,18 @@ from app.core.myeclpay.types_myeclpay import (
     HistoryType,
     TransactionStatus,
     TransactionType,
+    WalletDeviceStatus,
     WalletType,
 )
 from app.core.myeclpay.utils_myeclpay import compute_signable_data, verify_signature
-from app.dependencies import get_db, get_request_id, is_user_an_ecl_member
+from app.core.notification.schemas_notification import Message
+from app.dependencies import (
+    get_db,
+    get_notification_tool,
+    get_request_id,
+    is_user_an_ecl_member,
+)
+from app.utils.communication.notifications import NotificationTool
 from app.utils.tools import get_display_name
 
 router = APIRouter(tags=["MyECLPay"])
@@ -183,6 +191,7 @@ async def store_scan_qrcode(
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user_an_ecl_member),
     request_id: str = Depends(get_request_id),
+    notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
     Scan and bank a QR code for this store.
@@ -262,6 +271,12 @@ async def store_scan_qrcode(
             detail="Wallet device does not exist",
         )
 
+    if debited_wallet_device.status != WalletDeviceStatus.ACTIVE:
+        raise HTTPException(
+            status_code=400,
+            detail="Wallet device is not active",
+        )
+
     if not verify_signature(
         public_key_bytes=debited_wallet_device.ed25519_public_key,
         signature=qr_code_content.signature,
@@ -314,6 +329,12 @@ async def store_scan_qrcode(
             status_code=400,
             detail="Could not find wallet associated with the debited wallet device",
         )
+    if debited_wallet.user is None or debited_wallet.store is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="Stores are not allowed to make transaction by QR code",
+        )
+
     if debited_wallet.balance < qr_code_content.total:
         raise HTTPException(
             status_code=400,
@@ -349,4 +370,21 @@ async def store_scan_qrcode(
         db=db,
     )
 
+    await db.commit()
+
     # TODO: log the transaction
+
+    message = Message(
+        context=f"payment-{qr_code_content.qr_code_id}",
+        is_visible=True,
+        title=f"💳 Paiement - {store.name}",
+        # TODO: convert and add unit
+        content=f"Une transaction de {qr_code_content.total} a été effectuée",
+        expire_on=datetime.now(UTC) + timedelta(days=3),
+    )
+    await notification_tool.send_notification_to_user(
+        user_id=debited_wallet.user.id,
+        message=message,
+    )
+
+    # TODO: check is the device is revoked or unactive
