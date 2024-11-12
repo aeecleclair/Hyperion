@@ -552,7 +552,7 @@ async def authorization_code_grant(
 
     # Then we verify passed client_secret or code_verifier are valid
 
-    # If the auth provider expect to use a client secret, we don't use PKCE
+    # If the auth provider expect to use a client secret, we verify it
     if auth_client.secret is not None:
         # We need to check the correct client_secret was provided
         if auth_client.secret != tokenreq.client_secret:
@@ -565,7 +565,7 @@ async def authorization_code_grant(
                 error_description="Invalid client id or secret",
             )
 
-    # If there is no client secret, we use PKCE
+    # If we use PKCE, we need to verify the code_verifier
     if (
         db_authorization_code.code_challenge is not None
         and tokenreq.code_verifier is not None
