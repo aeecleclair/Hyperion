@@ -349,6 +349,7 @@ class DocumensoAuthClient(BaseAuthClient):
             "email": user.email,
         }
 
+
 class RAIDRegisteringAuthClient(BaseAuthClient):
     """
     An auth client for The Raid registering website

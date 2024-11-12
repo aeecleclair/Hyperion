@@ -4,7 +4,7 @@ Create Date: 2024-08-22 09:02:59.887161
 """
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 from app.core.groups.groups_type import GroupType
 
@@ -14,8 +14,6 @@ if TYPE_CHECKING:
 import sqlalchemy as sa
 from alembic import op
 
-from app.types.sqlalchemy import TZDateTime
-
 # revision identifiers, used by Alembic.
 revision: str = "c73c7b821728"
 down_revision: str | None = "d24003cffdcd"
@@ -24,7 +22,6 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    print("Starting")
     t_group = sa.Table(
         "core_group",
         sa.MetaData(),
