@@ -180,7 +180,7 @@ def downgrade() -> None:
         "core_user",
         sa.Column(
             "external",
-            sa.BOOLEAN(),
+            sa.Boolean(),
             server_default=sa.text("1"),
             nullable=False,
         ),
@@ -205,7 +205,7 @@ def downgrade() -> None:
         "core_user",
         sa.MetaData(),
         sa.Column("id", sa.String),
-        sa.Column("email", sa.String),
+        sa.Column("external", sa.Boolean),
     )
     users = conn.execute(
         sa.select(
