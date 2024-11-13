@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
-from app.core.groups.groups_type import GroupType
+from app.core.groups.groups_type import AccountType, GroupType
 from app.dependencies import get_db, is_user_a_member_of, is_user_an_ecl_member
 from app.modules.calendar import cruds_calendar, models_calendar, schemas_calendar
 from app.modules.calendar.types_calendar import Decision
@@ -16,7 +16,7 @@ from app.utils.tools import is_user_member_of_an_allowed_group
 module = Module(
     root="event",
     tag="Calendar",
-    default_allowed_groups_ids=[GroupType.student, GroupType.staff],
+    default_allowed_account_types=[AccountType.student, AccountType.staff],
 )
 
 ical_file_path = "data/ics/ae_calendar.ics"

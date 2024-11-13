@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import models_core, schemas_core
 from app.core.config import Settings
 from app.core.google_api.google_api import DriveGoogleAPI
-from app.core.groups.groups_type import GroupType
+from app.core.groups.groups_type import AccountType, GroupType
 from app.core.payment.payment_tool import PaymentTool
 from app.dependencies import (
     get_db,
@@ -48,7 +48,7 @@ module = Module(
     root="raid",
     tag="Raid",
     payment_callback=validate_payment,
-    default_allowed_groups_ids=[GroupType.student, GroupType.staff],
+    default_allowed_account_types=[AccountType.student, AccountType.staff],
 )
 
 

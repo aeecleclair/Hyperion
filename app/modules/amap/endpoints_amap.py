@@ -7,7 +7,7 @@ from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, schemas_core
-from app.core.groups.groups_type import GroupType
+from app.core.groups.groups_type import AccountType, GroupType
 from app.core.notification.notification_types import CustomTopic, Topic
 from app.core.notification.schemas_notification import Message
 from app.core.users import cruds_users
@@ -30,7 +30,7 @@ from app.utils.tools import is_user_member_of_an_allowed_group
 module = Module(
     root="amap",
     tag="AMAP",
-    default_allowed_groups_ids=[GroupType.student, GroupType.staff],
+    default_allowed_account_types=[AccountType.student, AccountType.staff],
 )
 
 hyperion_amap_logger = logging.getLogger("hyperion.amap")

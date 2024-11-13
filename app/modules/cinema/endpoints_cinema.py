@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, standard_responses
 from app.core.config import Settings
-from app.core.groups.groups_type import GroupType
+from app.core.groups.groups_type import AccountType, GroupType
 from app.core.notification.notification_types import CustomTopic, Topic
 from app.core.notification.schemas_notification import Message
 from app.dependencies import (
@@ -34,7 +34,7 @@ from app.utils.tools import get_file_from_data, save_file_as_data
 module = Module(
     root="cinema",
     tag="Cinema",
-    default_allowed_groups_ids=[GroupType.student, GroupType.staff],
+    default_allowed_account_types=[AccountType.student, AccountType.staff],
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")

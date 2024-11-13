@@ -5,7 +5,7 @@ from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
-from app.core.groups.groups_type import GroupType
+from app.core.groups.groups_type import AccountType, GroupType
 from app.dependencies import get_db, is_user_a_member, is_user_a_member_of
 from app.modules.flappybird import (
     cruds_flappybird,
@@ -17,7 +17,7 @@ from app.types.module import Module
 module = Module(
     root="flappybird",
     tag="Flappy Bird",
-    default_allowed_groups_ids=[GroupType.student],
+    default_allowed_account_types=[AccountType.student],
 )
 
 
