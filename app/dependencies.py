@@ -390,7 +390,7 @@ def is_user_a_member_of(
         * return the corresponding user `models_core.CoreUser` object
     """
 
-    async def is_user_a_member_of(
+    async def is_user_a_member_of_without_external(
         user: models_core.CoreUser = Depends(
             is_user(included_groups=[group_id], exclude_external=exclude_external),
         ),
@@ -402,4 +402,31 @@ def is_user_a_member_of(
 
         return user
 
-    return is_user_a_member_of
+    async def is_user_a_member_of_with_external(
+        user: models_core.CoreUser = Depends(
+            is_user,
+        ),
+        request_id: str = Depends(get_request_id),
+    ) -> models_core.CoreUser:
+        """
+        A dependency that checks that user is a member of the group with the given id then returns the corresponding user.
+        """
+
+        if is_user_member_of_an_allowed_group(user=user, allowed_groups=[group_id]):
+            # We know the user is a member of the group, we don't need to return an error and can return the CoreUser object
+            return user
+
+        hyperion_access_logger.warning(
+            f"Is_user_a_member_of: user is not a member of the group {group_id} ({request_id})",
+        )
+
+        raise HTTPException(
+            status_code=403,
+            detail=f"Unauthorized, user is not a member of the group {group_id}",
+        )
+
+    return (
+        is_user_a_member_of_with_external
+        if not exclude_external
+        else is_user_a_member_of_without_external
+    )
