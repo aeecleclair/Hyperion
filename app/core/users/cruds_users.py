@@ -2,13 +2,14 @@
 
 from collections.abc import Sequence
 
-from sqlalchemy import ForeignKey, and_, delete, not_, select, update
+from sqlalchemy import ForeignKey, and_, delete, not_, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy_utils import get_referencing_foreign_keys  # type: ignore
 
 from app.core import models_core, schemas_core
+from app.core.groups.groups_type import AccountType
 
 
 async def count_users(db: AsyncSession) -> int:
@@ -20,14 +21,18 @@ async def count_users(db: AsyncSession) -> int:
 
 async def get_users(
     db: AsyncSession,
+    included_account_types: list[AccountType] | None = None,
+    excluded_account_types: list[AccountType] | None = None,
     included_groups: list[str] | None = None,
     excluded_groups: list[str] | None = None,
 ) -> Sequence[models_core.CoreUser]:
     """
     Return all users from database.
 
-    Parameters `included_groups` and `excluded_groups` can be used to filter results.
+    Parameters `excluded_account_types` and `excluded_groups` can be used to filter results.
     """
+    included_account_types = included_account_types or []
+    excluded_account_types = excluded_account_types or []
     included_groups = included_groups or []
     excluded_groups = excluded_groups or []
 
@@ -42,6 +47,19 @@ async def get_users(
                         models_core.CoreGroup.id == group_id,
                     )
                     for group_id in included_groups
+                ],
+                or_(
+                    False,
+                    *[
+                        models_core.CoreUser.account_type == account_type
+                        for account_type in included_account_types
+                    ],
+                ),
+                *[
+                    not_(
+                        models_core.CoreUser.account_type == account_type,
+                    )
+                    for account_type in excluded_account_types
                 ],
                 # We want, for each group that should not be included
                 # check that the following condition is false :

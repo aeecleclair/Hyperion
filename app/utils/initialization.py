@@ -23,20 +23,47 @@ def get_sync_db_engine(settings: Settings) -> Engine:
     return engine
 
 
-def get_all_module_visibility_membership_sync(
+def get_all_module_group_visibility_membership_sync(
     db: Session,
 ):
     """
     Return the every module with their visibility
     """
-    result = db.execute(select(models_core.ModuleVisibility))
+    result = db.execute(select(models_core.ModuleGroupVisibility))
     return result.unique().scalars().all()
 
 
-def create_module_visibility_sync(
-    module_visibility: models_core.ModuleVisibility,
+def get_all_module_account_type_visibility_membership_sync(
     db: Session,
-) -> models_core.ModuleVisibility:
+):
+    """
+    Return the every module with their visibility
+    """
+    result = db.execute(select(models_core.ModuleAccountTypeVisibility))
+    return result.unique().scalars().all()
+
+
+def create_module_group_visibility_sync(
+    module_visibility: models_core.ModuleGroupVisibility,
+    db: Session,
+) -> models_core.ModuleGroupVisibility:
+    """
+    Create a new module visibility in database and return it
+    """
+    db.add(module_visibility)
+    try:
+        db.commit()
+    except IntegrityError as error:
+        db.rollback()
+        raise ValueError(error) from error
+    else:
+        return module_visibility
+
+
+def create_module_account_type_visibility_sync(
+    module_visibility: models_core.ModuleAccountTypeVisibility,
+    db: Session,
+) -> models_core.ModuleAccountTypeVisibility:
     """
     Create a new module visibility in database and return it
     """

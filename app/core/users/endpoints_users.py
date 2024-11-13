@@ -50,15 +50,18 @@ hyperion_security_logger = logging.getLogger("hyperion.security")
 
 templates = Jinja2Templates(directory="assets/templates")
 
-ECL_EMAIL_REGEX = r"^[\w\-.]*@etu(-enise)?\.ec-lyon\.fr$"
+ECL_STAFF_REGEX = r"^[\w\-.]*@(enise\.)?ec-lyon\.fr$"
+ECL_STUDENT_REGEX = r"^[\w\-.]*@etu(-enise)?\.ec-lyon\.fr$"
+ECL_FORMER_STUDENT_REGEX = r"^[\w\-.]*@centraliens-lyon\.net$"
 
 
 @router.get(
-    "/users/",
+    "/users",
     response_model=list[schemas_core.CoreUserSimple],
     status_code=200,
 )
 async def read_users(
+    accountTypes: list[AccountType] = Query(default=list(AccountType)),
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
@@ -67,8 +70,11 @@ async def read_users(
 
     **This endpoint is only usable by administrators**
     """
+    hyperion_security_logger.debug(
+        accountTypes,
+    )
 
-    users = await cruds_users.get_users(db)
+    users = await cruds_users.get_users(db, included_account_types=accountTypes)
     return users
 
 
@@ -82,7 +88,7 @@ async def count_users(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
-    Return all users from database as a list of `CoreUserSimple`
+    Return the number of users in the database
 
     **This endpoint is only usable by administrators**
     """
@@ -98,6 +104,8 @@ async def count_users(
 )
 async def search_users(
     query: str,
+    includedAccountTypes: list[AccountType] = Query(default=[]),
+    excludedAccountTypes: list[AccountType] = Query(default=[]),
     includedGroups: list[str] = Query(default=[]),
     excludedGroups: list[str] = Query(default=[]),
     db: AsyncSession = Depends(get_db),
@@ -113,6 +121,8 @@ async def search_users(
 
     users = await cruds_users.get_users(
         db,
+        included_account_types=includedAccountTypes,
+        excluded_account_types=excludedAccountTypes,
         included_groups=includedGroups,
         excluded_groups=excludedGroups,
     )
@@ -176,19 +186,19 @@ async def create_user_by_user(
     # All accepted emails
     # ^[\w\-.]*@(((etu(-enise)?|enise)\.)?ec-lyon\.fr|centraliens-lyon\.net)$
 
-    if re.match(r"^[\w\-.]*@(enise\.)?ec-lyon\.fr$", user_create.email):
+    if re.match(ECL_STAFF_REGEX, user_create.email):
         # Its a staff email address
         account_type = AccountType.staff
         external = False
     elif re.match(
-        r"^[\w\-.]*@etu(-enise)?\.ec-lyon\.fr$",
+        ECL_STUDENT_REGEX,
         user_create.email,
     ):
         # Its a student email address
         account_type = AccountType.student
         external = False
     elif re.match(
-        r"^[\w\-.]*@centraliens-lyon\.net$",
+        ECL_FORMER_STUDENT_REGEX,
         user_create.email,
     ):
         # Its a former student email address
@@ -609,7 +619,7 @@ async def migrate_mail(
     This endpoint will send a confirmation code to the user's new email address. He will need to use this code to confirm the change with `/users/confirm-mail-migration` endpoint.
     """
 
-    if not re.match(ECL_EMAIL_REGEX, mail_migration.new_email):
+    if not re.match(ECL_STUDENT_REGEX, mail_migration.new_email):
         raise HTTPException(
             status_code=400,
             detail="The new email address must match the new ECL format for student users",
@@ -769,7 +779,7 @@ async def read_user(
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
-    Return `CoreUserSimple` representation of user with id `user_id`
+    Return `CoreUser` representation of user with id `user_id`
 
     **The user must be authenticated to use this endpoint**
     """
@@ -840,9 +850,12 @@ async def switch_external_user_internal(
     **This endpoint is only usable by administrators**
     """
 
-    users = await cruds_users.get_users(db=db)
+    users = await cruds_users.get_users(
+        db=db,
+        included_account_types=[AccountType.external],
+    )
     for user in users:
-        if re.match(ECL_EMAIL_REGEX, user.email):
+        if re.match(ECL_STUDENT_REGEX, user.email):
             await cruds_users.update_user(
                 db=db,
                 user_id=user.id,
