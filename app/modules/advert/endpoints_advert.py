@@ -48,6 +48,8 @@ async def read_advertisers(
 ):
     """
     Get existing advertisers.
+
+    **The user must be authenticated to use this endpoint**
     """
 
     return await cruds_advert.get_advertisers(db=db)
@@ -61,14 +63,14 @@ async def read_advertisers(
 async def create_advertiser(
     advertiser: schemas_advert.AdvertiserBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
     Create a new advertiser.
 
     Each advertiser is associated with a `manager_group`. Users belonging to this group are able to manage the adverts related to the advertiser.
 
-    **The user must be authenticated to use this endpoint**
+    **This endpoint is only usable by administrators**
     """
 
     # We need to check that advertiser.group_manager_id is a valid group
