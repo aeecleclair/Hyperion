@@ -150,11 +150,18 @@ class CoreData(Base):
     data: Mapped[str]
 
 
-class ModuleVisibility(Base):
-    __tablename__ = "module_visibility"
+class ModuleGroupVisibility(Base):
+    __tablename__ = "module_group_visibility"
 
     root: Mapped[str] = mapped_column(primary_key=True)
     allowed_group_id: Mapped[str] = mapped_column(primary_key=True)
+
+
+class ModuleAccountTypeVisibility(Base):
+    __tablename__ = "module_account_type_visibility"
+
+    root: Mapped[str] = mapped_column(String, primary_key=True)
+    allowed_account_type: Mapped[AccountType] = mapped_column(String, primary_key=True)
 
 
 class AlembicVersion(Base):

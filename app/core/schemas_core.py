@@ -48,6 +48,7 @@ class CoreUserSimple(CoreUserBase):
     """Simplified schema for user's model, used when getting all users"""
 
     id: str
+    account_type: AccountType
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -274,10 +275,12 @@ class CoreMembershipDelete(BaseModel):
 class ModuleVisibility(BaseModel):
     root: str
     allowed_group_ids: list[str]
+    allowed_account_types: list[AccountType]
     model_config = ConfigDict(from_attributes=True)
 
 
 class ModuleVisibilityCreate(BaseModel):
     root: str
-    allowed_group_id: str
+    allowed_group_id: str | None = None
+    allowed_account_type: AccountType | None = None
     model_config = ConfigDict(from_attributes=True)
