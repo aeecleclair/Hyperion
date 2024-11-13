@@ -56,7 +56,7 @@ ECL_FORMER_STUDENT_REGEX = r"^[\w\-.]*@centraliens-lyon\.net$"
 
 
 @router.get(
-    "/users/",
+    "/users",
     response_model=list[schemas_core.CoreUserSimple],
     status_code=200,
 )
