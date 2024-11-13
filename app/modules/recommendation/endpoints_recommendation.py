@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, standard_responses
-from app.core.groups.groups_type import GroupType
+from app.core.groups.groups_type import AccountType, GroupType
 from app.dependencies import (
     get_db,
     get_request_id,
@@ -28,7 +28,7 @@ router = APIRouter()
 module = Module(
     root="recommendation",
     tag="Recommendation",
-    default_allowed_groups_ids=[GroupType.student, GroupType.staff],
+    default_allowed_account_types=[AccountType.student, AccountType.staff],
 )
 
 

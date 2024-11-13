@@ -3,7 +3,7 @@ from collections.abc import Awaitable, Callable
 from fastapi import APIRouter
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.groups.groups_type import GroupType
+from app.core.groups.groups_type import AccountType, GroupType
 from app.core.payment import schemas_payment
 
 
@@ -12,7 +12,8 @@ class Module:
         self,
         root: str,
         tag: str,
-        default_allowed_groups_ids: list[GroupType],
+        default_allowed_groups_ids: list[GroupType] | None = None,
+        default_allowed_account_types: list[AccountType] | None = None,
         router: APIRouter | None = None,
         payment_callback: Callable[
             [schemas_payment.CheckoutPayment, AsyncSession],
@@ -29,6 +30,7 @@ class Module:
         """
         self.root = root
         self.default_allowed_groups_ids = default_allowed_groups_ids
+        self.default_allowed_account_types = default_allowed_account_types
         self.router = router or APIRouter(tags=[tag])
         self.payment_callback: (
             Callable[[schemas_payment.CheckoutPayment, AsyncSession], Awaitable[None]]
