@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from app.core import models_core
 from app.core.auth import models_auth
-from app.core.groups.groups_type import GroupType
+from app.core.groups.groups_type import AccountType
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
@@ -30,13 +30,15 @@ async def init_objects() -> None:
     global user
     user = await create_user_with_groups(
         groups=[],
+        account_type=AccountType.student,
         email="email@myecl.fr",
         password="azerty",
     )
 
     global ecl_user
     ecl_user = await create_user_with_groups(
-        groups=[GroupType.student],
+        groups=[],
+        account_type=AccountType.student,
         email="email@etu.ec-lyon.fr",
         password="azerty",
     )
@@ -46,7 +48,6 @@ async def init_objects() -> None:
         groups=[],
         email="external@myecl.fr",
         password="azerty",
-        external=True,
     )
 
     global access_token

@@ -14,7 +14,7 @@ from requests import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import schemas_core
-from app.core.groups.groups_type import GroupType
+from app.core.groups.groups_type import AccountType
 from app.core.payment import cruds_payment, models_payment, schemas_payment
 from app.core.payment.payment_tool import PaymentTool
 from app.dependencies import get_payment_tool
@@ -74,7 +74,10 @@ async def init_objects() -> None:
     await add_object_to_db(checkout)
 
     global user_schema
-    user = await create_user_with_groups(groups=[GroupType.student])
+    user = await create_user_with_groups(
+        groups=[],
+        account_type=AccountType.student,
+    )
     user_schema = schemas_core.CoreUser(**user.__dict__)
 
 

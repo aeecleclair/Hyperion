@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 import pytest_asyncio
 
 from app.core import models_core
-from app.core.groups.groups_type import GroupType
+from app.core.groups.groups_type import AccountType, GroupType
 from app.modules.cdr import models_cdr
 from app.modules.cdr.utils_cdr import construct_dataframe_from_users_purchases
 from tests.commons import (
@@ -53,7 +53,8 @@ customdata_user3: models_cdr.CustomData
 async def init_objects():
     global cdr_admin
     cdr_admin = await create_user_with_groups(
-        [GroupType.student, GroupType.admin_cdr],
+        [GroupType.admin_cdr],
+        AccountType.student,
         email="cdr_admin@etu.ec-lyon.fr",
     )
 
@@ -62,7 +63,8 @@ async def init_objects():
 
     global cdr_user1
     cdr_user1 = await create_user_with_groups(
-        [GroupType.student],
+        [],
+        AccountType.student,
         email="demo@demo.fr",
         name="Demo",
         firstname="Oui",
@@ -72,10 +74,16 @@ async def init_objects():
     token_user = create_api_access_token(cdr_user1)
 
     global cdr_user2
-    cdr_user2 = await create_user_with_groups([GroupType.student])
+    cdr_user2 = await create_user_with_groups(
+        [],
+        AccountType.student,
+    )
 
     global cdr_user3
-    cdr_user3 = await create_user_with_groups([GroupType.student])
+    cdr_user3 = await create_user_with_groups(
+        [],
+        AccountType.student,
+    )
 
     global seller1
     seller1 = models_cdr.Seller(

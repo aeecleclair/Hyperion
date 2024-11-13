@@ -6,7 +6,7 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 
 from app.core import models_core
-from app.core.groups.groups_type import GroupType
+from app.core.groups.groups_type import AccountType, GroupType
 from app.modules.loan import models_loan
 from tests.commons import (
     add_object_to_db,
@@ -39,7 +39,10 @@ async def init_objects() -> None:
     global item_to_delete
     admin_user = await create_user_with_groups([GroupType.admin])
 
-    loan_user_loaner = await create_user_with_groups([GroupType.CAA])
+    loan_user_loaner = await create_user_with_groups(
+        [GroupType.CAA],
+        AccountType.student,
+    )
     loaner = models_loan.Loaner(
         id=str(uuid.uuid4()),
         name="CAA",
@@ -47,7 +50,10 @@ async def init_objects() -> None:
     )
     await add_object_to_db(loaner)
 
-    loan_user_simple = await create_user_with_groups([GroupType.amap])
+    loan_user_simple = await create_user_with_groups(
+        [GroupType.amap],
+        AccountType.student,
+    )
 
     loaner_to_delete = models_loan.Loaner(
         id=str(uuid.uuid4()),

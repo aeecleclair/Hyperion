@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from PIL import Image
 
 from app.core import models_core
-from app.core.groups.groups_type import GroupType
+from app.core.groups.groups_type import AccountType, GroupType
 from app.modules.raid import coredata_raid, models_raid
 from app.modules.raid.models_raid import Document, Participant, SecurityFile, Team
 from app.modules.raid.raid_type import DocumentType, DocumentValidation, Size
@@ -45,17 +45,26 @@ async def init_objects() -> None:
     token_raid_admin = create_api_access_token(raid_admin_user)
 
     global simple_user, token_simple
-    simple_user = await create_user_with_groups([GroupType.student])
+    simple_user = await create_user_with_groups(
+        [],
+        AccountType.student,
+    )
     token_simple = create_api_access_token(simple_user)
 
     global simple_user_without_participant, token_simple_without_participant
-    simple_user_without_participant = await create_user_with_groups([GroupType.student])
+    simple_user_without_participant = await create_user_with_groups(
+        [],
+        AccountType.student,
+    )
     token_simple_without_participant = create_api_access_token(
         simple_user_without_participant,
     )
 
     global simple_user_without_team, token_simple_without_team
-    simple_user_without_team = await create_user_with_groups([GroupType.student])
+    simple_user_without_team = await create_user_with_groups(
+        [],
+        AccountType.student,
+    )
     token_simple_without_team = create_api_access_token(simple_user_without_team)
 
     document = models_raid.Document(
@@ -547,7 +556,7 @@ def test_delete_team(client: TestClient):
     assert response.status_code == 204
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_get_payment_url_no_participant(client: TestClient, mocker):
     # Mock the necessary dependencies
     mocker.patch("app.modules.raid.cruds_raid.get_participant_by_id", return_value=None)
@@ -567,7 +576,7 @@ async def test_get_payment_url_no_participant(client: TestClient, mocker):
     assert response.json()["url"] == "https://some.url.fr/checkout"
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_get_payment_url_participant_no_payment(client: TestClient, mocker):
     # Mock the necessary dependencies
     mocker.patch(
@@ -595,7 +604,7 @@ async def test_get_payment_url_participant_no_payment(client: TestClient, mocker
     assert response.json()["url"] == "https://some.url.fr/checkout"
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_get_payment_url_participant_with_tshirt(client: TestClient, mocker):
     # Mock the necessary dependencies
     mocker.patch(
@@ -649,7 +658,7 @@ async def test_get_payment_url_participant_with_tshirt(client: TestClient, mocke
 #     assert response.json()["detail"] == "Prices not set."
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_get_payment_url_participant_already_paid(client: TestClient, mocker):
     # Mock the necessary dependencies
     mocker.patch(
@@ -680,7 +689,7 @@ async def test_get_payment_url_participant_already_paid(client: TestClient, mock
 ## Test for pdf writer
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_team():
     return Mock(
         spec=Team,
@@ -719,12 +728,12 @@ def mock_team():
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_security_file():
     return Mock(spec=SecurityFile, allergy="None", asthma=False)
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_participant():
     return Mock(
         spec=Participant,
@@ -757,7 +766,7 @@ def mock_participant():
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_document():
     return Mock(
         spec=Document,

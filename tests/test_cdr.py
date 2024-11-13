@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
 from app.core import models_core
-from app.core.groups.groups_type import GroupType
+from app.core.groups.groups_type import AccountType, GroupType
 from app.modules.cdr import models_cdr
 from app.modules.cdr.types_cdr import (
     CdrStatus,
@@ -71,7 +71,8 @@ ticket_generator: models_cdr.TicketGenerator
 async def init_objects():
     global cdr_admin
     cdr_admin = await create_user_with_groups(
-        [GroupType.student, GroupType.admin_cdr],
+        [GroupType.admin_cdr],
+        AccountType.student,
         email="cdr_admin@etu.ec-lyon.fr",
     )
 
@@ -79,13 +80,19 @@ async def init_objects():
     token_admin = create_api_access_token(cdr_admin)
 
     global cdr_bde
-    cdr_bde = await create_user_with_groups([GroupType.student, GroupType.BDE])
+    cdr_bde = await create_user_with_groups(
+        [GroupType.BDE],
+        AccountType.student,
+    )
 
     global token_bde
     token_bde = create_api_access_token(cdr_bde)
 
     global cdr_user
-    cdr_user = await create_user_with_groups([GroupType.student])
+    cdr_user = await create_user_with_groups(
+        [],
+        AccountType.student,
+    )
 
     global token_user
     token_user = create_api_access_token(cdr_user)
@@ -238,7 +245,8 @@ async def init_objects():
     await add_object_to_db(unused_curriculum)
 
     cdr_user_with_curriculum_without_purchase = await create_user_with_groups(
-        [GroupType.student],
+        [],
+        AccountType.student,
     )
     curriculum_membership = models_cdr.CurriculumMembership(
         user_id=cdr_user_with_curriculum_without_purchase.id,
@@ -249,7 +257,8 @@ async def init_objects():
     global cdr_user_with_curriculum_with_non_validated_purchase
     cdr_user_with_curriculum_with_non_validated_purchase = (
         await create_user_with_groups(
-            [GroupType.student],
+            [],
+            AccountType.student,
         )
     )
     curriculum_membership_for_user_with_curriculum_with_non_validated_purchase = (
