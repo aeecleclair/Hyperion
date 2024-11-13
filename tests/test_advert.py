@@ -6,7 +6,7 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 
 from app.core import models_core
-from app.core.groups.groups_type import GroupType
+from app.core.groups.groups_type import AccountType, GroupType
 from app.modules.advert import models_advert
 from tests.commons import (
     add_object_to_db,
@@ -41,13 +41,19 @@ async def init_objects() -> None:
     )
     await add_object_to_db(advertiser)
 
-    user_advertiser = await create_user_with_groups([GroupType.student, GroupType.CAA])
+    user_advertiser = await create_user_with_groups(
+        [GroupType.CAA],
+        AccountType.student,
+    )
 
     global token_advertiser
     token_advertiser = create_api_access_token(user_advertiser)
 
     global user_simple
-    user_simple = await create_user_with_groups([GroupType.student])
+    user_simple = await create_user_with_groups(
+        [],
+        AccountType.student,
+    )
 
     global token_simple
     token_simple = create_api_access_token(user_simple)

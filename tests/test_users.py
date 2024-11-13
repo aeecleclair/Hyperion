@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
 from app.core import models_core
-from app.core.groups.groups_type import GroupType
+from app.core.groups.groups_type import AccountType, GroupType
 from tests.commons import (
     create_api_access_token,
     create_user_with_groups,
@@ -38,17 +38,16 @@ async def init_objects() -> None:
         email=FABRISTPP_EMAIL_1,
     )
     student_user = await create_user_with_groups(
-        [GroupType.student],
+        [],
+        AccountType.student,
         email=student_user_email,
         password=student_user_password,
     )
-    external_user = await create_user_with_groups(
-        [GroupType.external],
-        external=True,
-    )
+    external_user = await create_user_with_groups([], AccountType.external)
 
     student_user_with_old_email = await create_user_with_groups(
-        [GroupType.student],
+        [],
+        AccountType.student,
         email=FABRISTPP_EMAIL_2,
     )
 
@@ -69,31 +68,32 @@ def test_count_users(client: TestClient) -> None:
 
 
 def test_search_users(client: TestClient) -> None:
-    group = GroupType.student.value
+    account_type = AccountType.student.value
 
     response = client.get(
-        f"/groups/{group}",
+        f"/users?query=&accountTypes={account_type}",
         headers={"Authorization": f"Bearer {token_admin_user}"},
     )
-    group_users = set(member["id"] for member in response.json()["members"])
+    print(response.json())
+    account_type_users = set(user["id"] for user in response.json())
 
     response = client.get(
-        f"/users/search?query=&includedGroups={group}",
+        f"/users/search?query=&includedAccountTypes={account_type}",
         headers={"Authorization": f"Bearer {token_student_user}"},
     )
     assert response.status_code == 200
     data_users = set(user["id"] for user in response.json())
     assert (
-        data_users <= group_users
+        data_users <= account_type_users
     )  # This endpoint is limited to 10 members, so we only need an inclusion between the two sets, in case there are more than 10 members in the group.
 
     response = client.get(
-        f"/users/search?query=&excludedGroups={group}",
+        f"/users/search?query=&includedAccountTypes={account_type}",
         headers={"Authorization": f"Bearer {token_student_user}"},
     )
     assert response.status_code == 200
     data = response.json()
-    assert all(user["id"] not in group_users for user in data)
+    assert all(user["id"] not in account_type_users for user in data)
 
 
 def test_read_current_user(client: TestClient) -> None:
@@ -208,7 +208,7 @@ def activate_user_with_invalid_phone_number(
 
 
 def test_update_batch_create_users(client: TestClient) -> None:
-    student = "39691052-2ae5-4e12-99d0-7a9f5f2b0136"
+    student = AccountType.student.value
     response = client.post(
         "/users/batch-creation",
         json=[
@@ -404,15 +404,16 @@ def test_batch_internal_user(client: TestClient) -> None:
     assert response.status_code == 204
 
     response = client.get(
-        f"/groups/{GroupType.external.value}",
+        f"/users/search?query=&includedAccountTypes={AccountType.external.value}",
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert response.json()["members"] == []
+    print(response.json())
+    assert response.json() == []
 
     response = client.get(
-        f"/groups/{GroupType.student.value}",
+        f"/users/search?query=&includedAccountTypes={AccountType.student.value}",
         headers={"Authorization": f"Bearer {token}"},
     )
-    members = response.json()["members"]
+    members = response.json()
     members_ids = [member["id"] for member in members]
     assert external_user.id in members_ids

@@ -4,7 +4,7 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 
 from app.core import models_core
-from app.core.groups.groups_type import GroupType
+from app.core.groups.groups_type import AccountType, GroupType
 from app.modules.phonebook import models_phonebook
 from app.modules.phonebook.types_phonebook import Kinds, RoleTags
 from tests.commons import (
@@ -69,18 +69,31 @@ async def init_objects():
     global association2_group2
 
     phonebook_user_BDE = await create_user_with_groups(
-        [GroupType.student, GroupType.BDE],
+        [GroupType.BDE],
+        AccountType.student,
     )
     token_BDE = create_api_access_token(phonebook_user_BDE)
 
-    phonebook_user_president = await create_user_with_groups([GroupType.student])
+    phonebook_user_president = await create_user_with_groups(
+        [],
+        AccountType.student,
+    )
     token_president = create_api_access_token(phonebook_user_president)
 
-    phonebook_user_simple = await create_user_with_groups([GroupType.student])
+    phonebook_user_simple = await create_user_with_groups(
+        [],
+        AccountType.student,
+    )
     token_simple = create_api_access_token(phonebook_user_simple)
 
-    phonebook_user_simple2 = await create_user_with_groups([GroupType.student])
-    phonebook_user_simple3 = await create_user_with_groups([GroupType.student])
+    phonebook_user_simple2 = await create_user_with_groups(
+        [],
+        AccountType.student,
+    )
+    phonebook_user_simple3 = await create_user_with_groups(
+        [],
+        AccountType.student,
+    )
 
     phonebook_user_admin = await create_user_with_groups([GroupType.admin])
     token_admin = create_api_access_token(phonebook_user_admin)

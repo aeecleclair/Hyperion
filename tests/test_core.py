@@ -26,7 +26,7 @@ async def init_objects() -> None:
     user_simple = await create_user_with_groups([GroupType.AE])
     global token_simple
     token_simple = create_api_access_token(user_simple)
-    module_visibility = models_core.ModuleVisibility(
+    module_visibility = models_core.ModuleGroupVisibility(
         root=root,
         allowed_group_id=group_id,
     )
@@ -61,9 +61,9 @@ def test_add_module_visibility(client: TestClient) -> None:
     assert response.status_code == 201
 
 
-def test_delete_loaners(client: TestClient) -> None:
+def test_delete_visibility(client: TestClient) -> None:
     response = client.delete(
-        f"/module-visibility/{root}/{group_id}",
+        f"/module-visibility/{root}/groups/{group_id}",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 204
