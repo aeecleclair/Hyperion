@@ -201,16 +201,6 @@ def downgrade() -> None:
             ],
         ),
     )
-    conn.execute(
-        sa.insert(
-            membership_t,
-        ).values(
-            [
-                {"user_id": DEMO_ID, "group_id": DEMO_GROUP_ID},
-                {"user_id": ECLAIR_ID, "group_id": ASSOCIATION_GROUP_ID},
-            ],
-        ),
-    )
     user_t2 = sa.Table(
         "core_user",
         sa.MetaData(),
