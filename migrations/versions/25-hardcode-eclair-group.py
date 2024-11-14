@@ -206,7 +206,7 @@ def pre_test_upgrade(
             "id": test_phonebook_association_id,
             "name": "TestAsso",
             "description": "TestAsso",
-            "kind": "Club AE",
+            "kind": "club_ae",
             "mandate_year": 2024,
             "deactivated": False,
         },
