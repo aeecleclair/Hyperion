@@ -40,7 +40,7 @@ async def read_information(settings: Settings = Depends(get_settings)):
     """
     scheduler = await get_scheduler()
 
-    await scheduler.queue_job(testing_print, uuid4(), 10)
+    await scheduler.queue_job(testing_print, str(uuid4()), 10)
 
     return schemas_core.CoreInformation(
         ready=True,
