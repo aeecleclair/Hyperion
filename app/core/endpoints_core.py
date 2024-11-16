@@ -11,6 +11,7 @@ from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
 from app.dependencies import (
     get_db,
+    get_scheduler,
     get_settings,
     is_user,
     is_user_a_member_of,
@@ -32,6 +33,12 @@ async def read_information(settings: Settings = Depends(get_settings)):
     """
     Return information about Hyperion. This endpoint can be used to check if the API is up.
     """
+    scheduler = await get_scheduler()
+
+    def testing_print():
+        print("Super, ça marche")
+
+    await scheduler.queue_job(testing_print, "testingprint10", 10)
 
     return schemas_core.CoreInformation(
         ready=True,
