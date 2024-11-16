@@ -23,6 +23,7 @@ from app.core.myeclpay.utils_myeclpay import (
     MAX_TRANSACTION_TOTAL,
     QRCODE_EXPIRATION,
     compute_signable_data,
+    is_user_latest_cgu_signed,
     verify_signature,
 )
 from app.core.notification.schemas_notification import Message
@@ -211,6 +212,8 @@ async def get_user_wallet_history(
             status_code=404,
             detail="User is not registered for MyECL Pay",
         )
+
+    is_user_latest_cgu_signed(user_payment)
 
     history: list[schemas_myeclpay.History] = []
 
@@ -428,6 +431,18 @@ async def store_scan_qrcode(
         raise HTTPException(
             status_code=400,
             detail="Stores are not allowed to make transaction by QR code",
+        )
+
+    debited_user_payment = await cruds_myeclpay.get_user_payment(
+        debited_wallet.user.id,
+        db=db,
+    )
+    if debited_user_payment is None or not is_user_latest_cgu_signed(
+        debited_user_payment,
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Debited user has not signed the latest CGU",
         )
 
     if debited_wallet.balance < qr_code_content.total:

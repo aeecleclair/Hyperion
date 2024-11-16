@@ -19,7 +19,7 @@ from app.core.myeclpay.types_myeclpay import (
     WalletDeviceStatus,
     WalletType,
 )
-from app.core.myeclpay.utils_myeclpay import compute_signable_data
+from app.core.myeclpay.utils_myeclpay import LATEST_CGU, compute_signable_data
 from app.types.membership import AvailableAssociationMembership
 from tests.commons import (
     TestingSessionLocal,
@@ -83,7 +83,7 @@ async def init_objects() -> None:
         user_id=ecl_user.id,
         wallet_id=ecl_user_wallet.id,
         accepted_cgu_signature=datetime.now(UTC),
-        accepted_cgu_version=1,
+        accepted_cgu_version=LATEST_CGU,
     )
     await add_object_to_db(ecl_user_payment)
 
@@ -139,7 +139,7 @@ async def init_objects() -> None:
         user_id=ecl_user2.id,
         wallet_id=ecl_user2_wallet.id,
         accepted_cgu_signature=datetime.now(UTC),
-        accepted_cgu_version=1,
+        accepted_cgu_version=LATEST_CGU,
     )
     await add_object_to_db(ecl_user2_payment)
 
@@ -806,6 +806,74 @@ def test_store_scan_store_from_store_wallet(client: TestClient):
         response.json()["detail"]
         == "Stores are not allowed to make transaction by QR code"
     )
+
+    ensure_qr_code_id_is_already_used(qr_code_id=qr_code_id, client=client)
+
+
+async def test_store_scan_store_from_wallet_with_old_cgu_version(client: TestClient):
+    ecl_user = await create_user_with_groups(
+        groups=[GroupType.student],
+    )
+    ecl_user_access_token = create_api_access_token(ecl_user)
+
+    ecl_user_wallet = models_myeclpay.Wallet(
+        id=uuid4(),
+        type=WalletType.USER,
+        balance=1000,  # 10€
+    )
+    await add_object_to_db(ecl_user_wallet)
+
+    ecl_user_payment = models_myeclpay.UserPayment(
+        user_id=ecl_user.id,
+        wallet_id=ecl_user_wallet.id,
+        accepted_cgu_signature=datetime.now(UTC),
+        accepted_cgu_version=0,
+    )
+    await add_object_to_db(ecl_user_payment)
+
+    ecl_user_wallet_device_private_key = Ed25519PrivateKey.generate()
+    ecl_user_wallet_device = models_myeclpay.WalletDevice(
+        id=uuid4(),
+        name="Test device",
+        wallet_id=ecl_user_wallet.id,
+        ed25519_public_key=ecl_user_wallet_device_private_key.public_key().public_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PublicFormat.Raw,
+        ),
+        creation=datetime.now(UTC),
+        status=WalletDeviceStatus.ACTIVE,
+        activation_token=str(uuid4()),
+    )
+    await add_object_to_db(ecl_user_wallet_device)
+
+    qr_code_id = str(uuid4())
+
+    qr_code_content = QRCodeContentBase(
+        qr_code_id=qr_code_id,
+        total=1100,
+        creation=datetime.now(UTC),
+        store=True,
+        walled_device_id=ecl_user_wallet_device.id,
+    )
+
+    signature = ecl_user_wallet_device_private_key.sign(
+        compute_signable_data(qr_code_content),
+    )
+
+    response = client.post(
+        f"/myeclpay/store/{store.id}/scan",
+        headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
+        json={
+            "qr_code_id": str(qr_code_content.qr_code_id),
+            "walled_device_id": str(qr_code_content.walled_device_id),
+            "total": qr_code_content.total,
+            "creation": qr_code_content.creation.isoformat(),
+            "store": qr_code_content.store,
+            "signature": base64.b64encode(signature).decode("utf-8"),
+        },
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Debited user has not signed the latest CGU"
 
     ensure_qr_code_id_is_already_used(qr_code_id=qr_code_id, client=client)
 
