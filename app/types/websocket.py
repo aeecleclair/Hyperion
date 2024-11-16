@@ -10,7 +10,6 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
-from app.dependencies import get_db
 from app.types.scopes_type import ScopeType
 from app.utils.auth import auth_utils
 
