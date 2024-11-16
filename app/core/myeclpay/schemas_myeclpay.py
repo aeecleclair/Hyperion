@@ -62,14 +62,16 @@ class QRCodeContentData(BaseModel):
     store: bool
 
 
-class WalletDevice(BaseModel):
-    id: UUID
+class WalletDeviceBase(BaseModel):
     name: str
+
+
+class WalletDevice(WalletDeviceBase):
+    id: UUID
     wallet_id: UUID
     creation: datetime
     status: WalletDeviceStatus
 
 
-class WalletDeviceCreation(BaseModel):
-    name: str
+class WalletDeviceCreation(WalletDeviceBase):
     ed25519_public_key: Base64Bytes
