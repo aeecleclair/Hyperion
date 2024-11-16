@@ -164,7 +164,7 @@ async def get_cdr_users_pending_validation(
 async def get_cdr_user(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
 ):
     """
     Get a user.
@@ -369,7 +369,7 @@ async def get_sellers_by_user_id(
 )
 async def get_online_sellers(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
 ):
     """
     Get all sellers that has online available products.
@@ -523,7 +523,7 @@ async def send_seller_results(
 )
 async def get_all_available_online_products(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
 ):
     """
     Get a seller's online available products.
@@ -693,7 +693,7 @@ async def get_products_by_seller_id(
 async def get_available_online_products(
     seller_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
 ):
     """
     Get a seller's online available products.
@@ -1256,7 +1256,7 @@ async def delete_document(
 async def get_purchases_by_user_id(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
 ):
     """
     Get a user's purchases.
@@ -1311,7 +1311,7 @@ async def get_purchases_by_user_id(
 )
 async def get_my_purchases(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
 ):
     return await get_purchases_by_user_id(user.id, db, user)
 
@@ -1325,7 +1325,7 @@ async def get_purchases_by_user_id_by_seller_id(
     seller_id: UUID,
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
 ):
     """
     Get a user's purchases.
@@ -1382,7 +1382,7 @@ async def create_purchase(
     product_variant_id: UUID,
     purchase: schemas_cdr.PurchaseBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
 ):
     """
     Create a purchase.
@@ -1720,7 +1720,7 @@ async def delete_purchase(
     user_id: str,
     product_variant_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
 ):
     """
     Delete a purchase.
@@ -1831,7 +1831,7 @@ async def delete_purchase(
 async def get_signatures_by_user_id(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
 ):
     """
     Get a user's signatures.
@@ -1858,7 +1858,7 @@ async def get_signatures_by_user_id_by_seller_id(
     seller_id: UUID,
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
 ):
     """
     Get a user's signatures for a single seller.
@@ -1885,7 +1885,7 @@ async def create_signature(
     document_id: UUID,
     signature: schemas_cdr.SignatureBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
 ):
     """
     Create a signature.
@@ -1990,7 +1990,7 @@ async def delete_signature(
 )
 async def get_curriculums(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
 ):
     """
     Get all curriculums.
@@ -2077,7 +2077,7 @@ async def create_curriculum_membership(
     user_id: str,
     curriculum_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
     ws_manager: WebsocketConnectionManager = Depends(get_websocket_connection_manager),
 ):
     """
@@ -2178,7 +2178,7 @@ async def update_curriculum_membership(
     user_id: str,
     curriculum_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
     ws_manager: WebsocketConnectionManager = Depends(get_websocket_connection_manager),
 ):
     """
@@ -2257,7 +2257,7 @@ async def delete_curriculum_membership(
     user_id: str,
     curriculum_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
     ws_manager: WebsocketConnectionManager = Depends(get_websocket_connection_manager),
 ):
     """
@@ -2333,7 +2333,7 @@ async def delete_curriculum_membership(
 async def get_payments_by_user_id(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
 ):
     """
     Get a user's payments.
@@ -2454,7 +2454,7 @@ async def delete_payment(
 )
 async def get_payment_url(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
     settings: Settings = Depends(get_settings),
     payment_tool: PaymentTool = Depends(get_payment_tool),
 ):
@@ -2525,7 +2525,7 @@ async def get_payment_url(
 async def get_memberships_by_user_id(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
 ):
     if not (
         user_id == user.id
@@ -2636,7 +2636,7 @@ async def delete_membership(
 )
 async def get_status(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
 ):
     return await get_core_data(schemas_cdr.Status, db)
 
@@ -2686,7 +2686,7 @@ async def update_status(
 )
 async def get_my_tickets(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
 ):
     return await cruds_cdr.get_tickets_of_user(db=db, user_id=user.id)
 
@@ -2699,7 +2699,7 @@ async def get_my_tickets(
 async def get_tickets_of_user(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
 ):
     if not (
         is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])
@@ -2720,7 +2720,7 @@ async def get_tickets_of_user(
 async def get_ticket_secret(
     ticket_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
 ):
     ticket = await cruds_cdr.get_ticket(db=db, ticket_id=ticket_id)
     if not ticket:

@@ -196,7 +196,7 @@ async def get_module_visibility(
 )
 async def get_user_modules_visibility(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
 ):
     """
     Get group user accessible root

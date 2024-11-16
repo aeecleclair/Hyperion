@@ -60,7 +60,7 @@ module = Module(
 async def get_participant_by_id(
     participant_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
 ):
     """
     Get a participant by id
@@ -85,7 +85,7 @@ async def get_participant_by_id(
 )
 async def create_participant(
     participant: schemas_raid.ParticipantBase,
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -119,7 +119,7 @@ async def create_participant(
 async def update_participant(
     participant_id: str,
     participant: schemas_raid.ParticipantUpdate,
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
     db: AsyncSession = Depends(get_db),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
     settings: Settings = Depends(get_settings),
@@ -230,7 +230,7 @@ async def update_participant(
 )
 async def create_team(
     team: schemas_raid.TeamBase,
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
     db: AsyncSession = Depends(get_db),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
     settings: Settings = Depends(get_settings),
@@ -299,7 +299,7 @@ async def generate_teams_pdf(
 async def get_team_by_participant_id(
     participant_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
 ):
     """
     Get a team by participant id
@@ -357,7 +357,7 @@ async def update_team(
     team_id: str,
     team: schemas_raid.TeamUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
     settings: Settings = Depends(get_settings),
 ):
@@ -434,7 +434,7 @@ async def upload_document(
     document_type: DocumentType,
     file: UploadFile = File(...),
     request_id: str = Depends(get_request_id),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -490,7 +490,7 @@ async def upload_document(
 async def read_document(
     document_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
 ):
     """
     Read a document
@@ -567,7 +567,7 @@ async def set_security_file(
     security_file: schemas_raid.SecurityFileBase,
     participant_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
     settings: Settings = Depends(get_settings),
 ):
@@ -698,7 +698,7 @@ async def confirm_t_shirt_payment(
 async def validate_attestation_on_honour(
     participant_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
     settings: Settings = Depends(get_settings),
 ):
@@ -725,7 +725,7 @@ async def validate_attestation_on_honour(
 async def create_invite_token(
     team_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
 ):
     """
     Create an invite token
@@ -759,7 +759,7 @@ async def create_invite_token(
 async def join_team(
     token: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
     settings: Settings = Depends(get_settings),
 ):
@@ -914,7 +914,7 @@ async def merge_teams(
 )
 async def get_raid_information(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
 ):
     """
     Get raid information
@@ -1031,7 +1031,7 @@ async def get_drive_folders(
 )
 async def get_raid_price(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
 ):
     """
     Get raid price
@@ -1061,7 +1061,7 @@ async def update_raid_price(
 )
 async def get_payment_url(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
     settings: Settings = Depends(get_settings),
     payment_tool: PaymentTool = Depends(get_payment_tool),
 ):
