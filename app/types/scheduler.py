@@ -10,6 +10,7 @@ scheduler_logger = logging.getLogger("scheduler")
 class Scheduler:
     def __init__(self, redis_pool: ArqRedis):
         self.redis_pool = redis_pool
+        scheduler_logger.debug(f"Pool in init {self.redis_pool}")
 
     async def queue_job(self, job_function, job_id, defer_time):
         job = await self.redis_pool.enqueue_job(
