@@ -93,7 +93,7 @@ def upgrade() -> None:
                 name="account_type",
             ),
             nullable=False,
-            server_default=sa.text("external"),
+            server_default=sa.text(AccountType.external.value),
         ),
     )
 
