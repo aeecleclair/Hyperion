@@ -31,7 +31,7 @@ async def get_users(
 
     Parameters `excluded_account_types` and `excluded_groups` can be used to filter results.
     """
-    included_account_types = included_account_types or []
+    included_account_types = included_account_types or list(AccountType)
     excluded_account_types = excluded_account_types or []
     included_groups = included_groups or []
     excluded_groups = excluded_groups or []
