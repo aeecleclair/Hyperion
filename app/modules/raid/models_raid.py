@@ -45,7 +45,10 @@ class SecurityFile(MappedAsDataclass, Base):
     surgical_operation: Mapped[str | None]
     trauma: Mapped[str | None]
     family: Mapped[str | None]
-    participant: Mapped["Participant"] = relationship(back_populates="security_file")
+    participant: Mapped["Participant"] = relationship(
+        back_populates="security_file",
+        init=False,
+    )
     emergency_person_firstname: Mapped[str | None]
     emergency_person_name: Mapped[str | None]
     emergency_person_phone: Mapped[str | None]

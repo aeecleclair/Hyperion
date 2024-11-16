@@ -86,6 +86,7 @@ async def init_objects() -> None:
         id=str(uuid.uuid4()),
         name="TestTeam",
         captain_id=simple_user.id,
+        difficulty=None,
     )
     await add_object_to_db(team)
 

@@ -252,6 +252,7 @@ async def create_team(
         number=None,
         captain_id=user.id,
         second_id=None,
+        difficulty=None,
     )
     await cruds_raid.create_team(db_team, db)
     # We need to get the team from the db to have access to relationships
@@ -596,7 +597,20 @@ async def set_security_file(
 
     model_security_file = models_raid.SecurityFile(
         id=str(uuid.uuid4()),
-        **security_file.model_dump(exclude_none=True),
+        allergy=security_file.allergy,
+        asthma=security_file.asthma,
+        intensive_care_unit=security_file.intensive_care_unit,
+        intensive_care_unit_when=security_file.intensive_care_unit_when,
+        ongoing_treatment=security_file.ongoing_treatment,
+        sicknesses=security_file.sicknesses,
+        hospitalization=security_file.hospitalization,
+        surgical_operation=security_file.surgical_operation,
+        trauma=security_file.trauma,
+        family=security_file.family,
+        emergency_person_firstname=security_file.emergency_person_firstname,
+        emergency_person_name=security_file.emergency_person_name,
+        emergency_person_phone=security_file.emergency_person_phone,
+        file_id=security_file.file_id,
     )
     created_security_file = await cruds_raid.add_security_file(model_security_file, db)
     await cruds_raid.assign_security_file(participant_id, created_security_file.id, db)
