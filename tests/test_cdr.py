@@ -1,7 +1,6 @@
 import uuid
 from datetime import UTC, date, datetime, timedelta
 
-import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
@@ -1602,7 +1601,6 @@ def test_validate_purchase_seller(client: TestClient):
             assert not x["validated"]
 
 
-@pytest.mark.skip(reason="Waiting for SG module")
 def test_validate_purchase_admin(client: TestClient):
     response = client.patch(
         f"/cdr/users/{cdr_admin.id}/purchases/{variant.id}/validated/?validated=True",
@@ -1621,7 +1619,6 @@ def test_validate_purchase_admin(client: TestClient):
             assert x["validated"]
 
 
-@pytest.mark.skip(reason="Waiting for SG module")
 def test_delete_purchase_validates(client: TestClient):
     response = client.delete(
         f"/cdr/users/{cdr_admin.id}/purchases/{variant.id}/",
@@ -2523,7 +2520,6 @@ def test_get_ticket_list(client: TestClient):
     assert str(cdr_user.id) in [user["id"] for user in response.json()]
 
 
-@pytest.mark.skip(reason="Waiting for SG module")
 async def test_validate_purchase(client: TestClient):
     product_membership = models_cdr.CdrProduct(
         id=uuid.uuid4(),
