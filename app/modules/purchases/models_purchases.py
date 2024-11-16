@@ -274,6 +274,7 @@ class CustomDataField(Base):
         ForeignKey("purchases_product.id"),
     )
     name: Mapped[str]
+    user_can_answer: Mapped[bool]
 
 
 class CustomData(Base):
@@ -285,3 +286,12 @@ class CustomData(Base):
     field: Mapped["CustomDataField"] = relationship("CustomDataField")
     user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), primary_key=True)
     value: Mapped[str]
+
+
+class CustomDataOption(Base):
+    __tablename__ = "purchases_customdata_option"
+    field_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("purchases_customdata_field.id"),
+        primary_key=True,
+    )
+    option: Mapped[str]
