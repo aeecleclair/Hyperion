@@ -234,6 +234,7 @@ class LogConfig:
                     ],
                     "level": MINIMUM_LOG_LEVEL,
                 },
+                "scheduler": {"handlers": ["console"], "level": MINIMUM_LOG_LEVEL},
                 # We disable "uvicorn.access" to replace it with our custom "hyperion.access" which add custom information like the request_id
                 "uvicorn.access": {"handlers": []},
                 "uvicorn.error": {

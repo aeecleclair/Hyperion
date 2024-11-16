@@ -13,6 +13,8 @@ from functools import lru_cache
 from typing import Any, cast
 
 import redis
+from arq import ArqRedis, create_pool
+from arq.connections import RedisSettings
 from fastapi import BackgroundTasks, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -27,15 +29,13 @@ from app.core.config import Settings, construct_prod_settings
 from app.core.groups.groups_type import AccountType, GroupType, get_ecl_account_types
 from app.core.payment.payment_tool import PaymentTool
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
+from app.types.scheduler import Scheduler
 from app.types.scopes_type import ScopeType
 from app.types.websocket import WebsocketConnectionManager
 from app.utils.auth import auth_utils
 from app.utils.communication.notifications import NotificationManager, NotificationTool
 from app.utils.redis import connect
-from app.utils.tools import (
-    is_user_external,
-    is_user_member_of_an_allowed_group,
-)
+from app.utils.tools import is_user_external, is_user_member_of_an_allowed_group
 
 # We could maybe use hyperion.security
 hyperion_access_logger = logging.getLogger("hyperion.access")
@@ -44,6 +44,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 redis_client: redis.Redis | bool | None = (
     None  # Create a global variable for the redis client, so that it can be instancied in the startup event
 )
+scheduler: ArqRedis | None = None
 # Is None if the redis client is not instantiated, is False if the redis client is instancied but not connected, is a redis.Redis object if the redis client is connected
 
 websocket_connection_manager: WebsocketConnectionManager | None = None
@@ -162,6 +163,16 @@ def get_redis_client(
         else:
             redis_client = False
     return redis_client
+
+
+async def get_scheduler() -> ArqRedis:
+    global scheduler
+    if scheduler is None:
+        settings = get_settings()
+        arq_settings = RedisSettings(host=settings.REDIS_HOST, port=settings.REDIS_PORT)
+        scheduler = Scheduler(await create_pool(arq_settings))
+
+    return scheduler
 
 
 def get_websocket_connection_manager(
