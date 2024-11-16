@@ -356,7 +356,7 @@ async def get_sellers_by_user_id(
 
     if is_user_member_of_an_allowed_group(
         user=user,
-        groups_id=[GroupType.admin_cdr],
+        allowed_groups=[GroupType.admin_cdr],
     ):
         return await cruds_cdr.get_sellers(db)
     return await cruds_cdr.get_sellers_by_group_ids(
@@ -1919,7 +1919,7 @@ async def create_signature(
             user_id == user.id
             and signature.signature_type == DocumentSignatureType.numeric
         )
-        or is_user_member_of_an_allowed_group(user=user, groups_id=sellers_groups)
+        or is_user_member_of_an_allowed_group(user=user, allowed_groups=sellers_groups)
     ):
         raise HTTPException(
             status_code=403,
