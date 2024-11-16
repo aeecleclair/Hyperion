@@ -103,11 +103,6 @@ class NotificationManager:
 
         # We may pass a notification object along the data
         try:
-            # Set high priority for android, and background notification for iOS
-            # This allow to ensure that the notification will be processed in the background
-            # See https://firebase.google.com/docs/cloud-messaging/concept-options#setting-the-priority-of-a-message
-            # And https://developer.apple.com/documentation/usernotifications/setting_up_a_remote_notification_server/pushing_background_updates_to_your_app
-            
             message = messaging.MulticastMessage(
                 tokens=tokens,
                 notification=messaging.Notification(
@@ -128,46 +123,62 @@ class NotificationManager:
             db=db,
         )
 
-    async def _send_firebase_trigger_notification_by_tokens(
+    def _send_firebase_push_notification_by_topic(
         self,
-        db: AsyncSession,
-        tokens: list[str],
+        custom_topic: CustomTopic,
         message_content: Message,
     ):
         """
-        Send a firebase trigger notification to a list of tokens.
-        This approach let the application know that a new notification is available,
-        without sending the content of the notification.
-        This is better for privacy and RGPD compliance.
+        Send a firebase push notification for a given topic.
+        Prefer using `self._send_firebase_trigger_notification_by_topic` to send a trigger notification.
         """
-        # Push without any data or notification may not be processed by the app in the background.
-        # We thus need to send a data object with a dummy key to make sure the notification is processed.
-        # See https://stackoverflow.com/questions/59298850/firebase-messaging-background-message-handler-method-not-called-when-the-app
-        await self._send_firebase_push_notification_by_tokens(tokens=tokens, db=db, message_content=message_content)
 
-    async def _add_message_for_user_in_database(
-        self,
-        message: Message,
-        tokens: list[str],
-        db: AsyncSession,
-    ) -> None:
-        message_models = [
-            models_notification.Message(
-                firebase_device_token=token,
-                **message.model_dump(),
-            )
-            for token in tokens
-        ]
-
-        # We need to remove old messages with the same context and token
-        # as there can only be one message per context and token
-        await cruds_notification.remove_messages_by_context_and_firebase_device_tokens_list(
-            context=message.context,
-            tokens=tokens,
-            db=db,
+        if not self.use_firebase:
+            return
+        message = messaging.Message(
+            topic=custom_topic.to_str(),
+            notification=messaging.Notification(
+                    title=message_content.title,
+                    body=message_content.content,
+                ),
         )
+        try:
+            messaging.send(message)
+        except messaging.FirebaseError as error:
+            hyperion_error_logger.error(
+                f"Notification: Unable to send firebase notification for topic {custom_topic}: {error}",
+            )
+            raise
 
-        await cruds_notification.create_batch_messages(messages=message_models, db=db)
+    async def subscribe_tokens_to_topic(
+        self,
+        custom_topic: CustomTopic,
+        tokens: list[str],
+    ):
+        """
+        Subscribe a list of tokens to a given topic.
+        """
+        if not self.use_firebase:
+            return
+
+        response = messaging.subscribe_to_topic(tokens, custom_topic.to_str())
+        if response.failure_count > 0:
+            hyperion_error_logger.info(
+                f"Notification: Failed to subscribe to topic {custom_topic} due to {[error.reason for error in response.errors]}",
+            )
+
+    async def unsubscribe_tokens_to_topic(
+        self,
+        custom_topic: CustomTopic,
+        tokens: list[str],
+    ):
+        """
+        Unsubscribe a list of tokens to a given topic.
+        """
+        if not self.use_firebase:
+            return
+
+        messaging.unsubscribe_from_topic(tokens, custom_topic.to_str())
 
     async def send_notification_to_users(
         self,
@@ -196,19 +207,8 @@ class NotificationManager:
             )
         )
 
-        if len(firebase_device_tokens) == 0:
-            hyperion_error_logger.warning(
-                f"Notification: No firebase device token found for the message {message.title} {message.content}",
-            )
-
-        await self._add_message_for_user_in_database(
-            message=message,
-            tokens=firebase_device_tokens,
-            db=db,
-        )
-
         try:
-            await self._send_firebase_trigger_notification_by_tokens(
+            await self._send_firebase_push_notification_by_tokens(
                 tokens=firebase_device_tokens,
                 db=db,
                 message_content=message,
@@ -237,15 +237,12 @@ class NotificationManager:
             )
             return
 
-        user_ids = await cruds_notification.get_user_ids_by_topic(
-            custom_topic=custom_topic,
-            db=db,
-        )
-        await self.send_notification_to_users(
-            user_ids=user_ids,
-            message=message,
-            db=db,
-        )
+        try:
+            self._send_firebase_push_notification_by_topic(custom_topic=custom_topic, message_content=message)
+        except Exception as error:
+            hyperion_error_logger.warning(
+                f"Notification: Unable to send firebase notification for topic {custom_topic}: {error}",
+            )
 
     async def subscribe_user_to_topic(
         self,
@@ -275,6 +272,9 @@ class NotificationManager:
                 topic_membership=topic_membership,
                 db=db,
             )
+            tokens = await cruds_notification.get_firebase_tokens_by_user_ids(user_ids=[user_id], db=db)
+            await self.subscribe_tokens_to_topic(custom_topic=custom_topic, tokens=tokens)
+        
 
     async def unsubscribe_user_to_topic(
         self,
@@ -290,7 +290,8 @@ class NotificationManager:
             user_id=user_id,
             db=db,
         )
-
+        tokens = await cruds_notification.get_firebase_tokens_by_user_ids(user_ids=[user_id], db=db)
+        await self.unsubscribe_tokens_to_topic(custom_topic=custom_topic, tokens=tokens)
 
 class NotificationTool:
     """

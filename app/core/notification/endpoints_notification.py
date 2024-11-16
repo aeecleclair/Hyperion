@@ -96,47 +96,6 @@ async def unregister_firebase_device(
     )
 
 
-@router.get(
-    "/notification/messages/{firebase_token}",
-    response_model=list[schemas_notification.Message],
-    status_code=200,
-)
-async def get_messages(
-    firebase_token: str,
-    db: AsyncSession = Depends(get_db),
-    # If we want to enable authentification for /messages/{firebase_token} endpoint, we may to uncomment the following line
-    # user: models_core.CoreUser = Depends(is_user()),
-):
-    """
-    Get all messages for a specific device from the user
-
-    **The user must be authenticated to use this endpoint**
-    """
-    firebase_device = await cruds_notification.get_firebase_devices_by_user_id_and_firebase_token(
-        # If we want to enable authentification for /messages/{firebase_token} endpoint, we may to uncomment the following line
-        firebase_token=firebase_token,
-        db=db,  # user_id=user.id,
-    )
-
-    if firebase_device is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Device not found for user",  # {user.id}"
-        )
-
-    messages = await cruds_notification.get_messages_by_firebase_token(
-        firebase_token=firebase_token,
-        db=db,
-    )
-
-    await cruds_notification.remove_message_by_firebase_device_token(
-        firebase_device_token=firebase_token,
-        db=db,
-    )
-
-    return messages
-
-
 @router.post(
     "/notification/topics/{topic_str}/subscribe",
     status_code=204,
@@ -280,6 +239,31 @@ async def send_notification(
         message=message,
     )
 
+@router.post(
+    "/notification/send/topic",
+    status_code=201,
+)
+async def send_notification_topic(
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    notification_tool: NotificationTool = Depends(get_notification_tool),
+):
+    """
+    Send ourself a test notification.
+
+    **Only admins can use this endpoint**
+    """
+    message = schemas_notification.Message(
+        context="notification-test-topic",
+        is_visible=True,
+        title="Test notification topic",
+        content="Ceci est un test de notification topic",
+        # The notification will expire in 3 days
+        expire_on=datetime.now(UTC) + timedelta(days=3),
+    )
+    await notification_tool.send_notification_to_topic(
+       custom_topic=CustomTopic.from_str("test"),
+        message=message,
+    )
 
 @router.post(
     "/notification/send/future",
