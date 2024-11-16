@@ -4,14 +4,19 @@ from uuid import UUID
 from pydantic import Base64Bytes, BaseModel
 
 from app.core.myeclpay.types_myeclpay import (
-    CGUVersion,
     HistoryType,
     TransactionStatus,
 )
 
 
 class CGUSignature(BaseModel):
-    accepted_cgu_version: CGUVersion
+    accepted_cgu_version: int
+
+
+class CGUSignatureResponse(BaseModel):
+    accepted_cgu_version: int
+    latest_cgu_version: int
+    cgu_content: str
 
 
 class History(BaseModel):
