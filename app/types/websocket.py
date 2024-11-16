@@ -236,7 +236,7 @@ class WebsocketConnectionManager:
         It will create an infinite loop that will wait for messages from the websocket.
         The loop will be broken when the websocket is disconnected.
 
-        To get `get_db`, you need to use the dependency `get_db_dependency` in the FastAPI endpoint.
+        The databse is closed manually in this method, so you need to use the dependency `get_unsafe_db` in the FastAPI endpoint.
 
         NOTE:
         - you should not call methods after this call, as it will be unreachable until the websocket is disconnected
