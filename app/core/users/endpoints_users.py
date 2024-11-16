@@ -56,12 +56,12 @@ ECL_FORMER_STUDENT_REGEX = r"^[\w\-.]*@centraliens-lyon\.net$"
 
 
 @router.get(
-    "/users",
+    "/users/",
     response_model=list[schemas_core.CoreUserSimple],
     status_code=200,
 )
 async def read_users(
-    accountTypes: list[AccountType] = Query(default=list(AccountType)),
+    accountTypes: list[AccountType] | None = None,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
@@ -73,6 +73,7 @@ async def read_users(
     hyperion_security_logger.debug(
         accountTypes,
     )
+    accountTypes = accountTypes or list(AccountType)
 
     users = await cruds_users.get_users(db, included_account_types=accountTypes)
     return users

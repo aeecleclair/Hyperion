@@ -331,7 +331,7 @@ async def authorize_validation(
             return RedirectResponse(
                 settings.CLIENT_URL
                 + calypsso.get_error_relative_url(
-                    message="User is not member of an allowed group",
+                    message="User account type is not allowed",
                 ),
                 status_code=status.HTTP_302_FOUND,
             )

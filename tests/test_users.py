@@ -71,7 +71,7 @@ def test_search_users(client: TestClient) -> None:
     account_type = AccountType.student.value
 
     response = client.get(
-        f"/users?query=&accountTypes={account_type}",
+        f"/users/?query=&accountTypes={account_type}",
         headers={"Authorization": f"Bearer {token_admin_user}"},
     )
     account_type_users = set(user["id"] for user in response.json())
@@ -406,7 +406,6 @@ def test_batch_internal_user(client: TestClient) -> None:
         f"/users/search?query=&includedAccountTypes={AccountType.external.value}",
         headers={"Authorization": f"Bearer {token}"},
     )
-    print(response.json())
     assert response.json() == []
 
     response = client.get(
