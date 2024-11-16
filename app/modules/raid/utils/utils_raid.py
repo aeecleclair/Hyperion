@@ -14,7 +14,6 @@ from app.modules.raid import coredata_raid, cruds_raid, models_raid, schemas_rai
 from app.modules.raid.schemas_raid import (
     ParticipantBase,
     ParticipantUpdate,
-    SecurityFile,
 )
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.modules.raid.utils.pdf.pdf_writer import HTMLPDFWriter, PDFWriter

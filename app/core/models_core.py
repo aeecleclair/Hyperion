@@ -2,12 +2,12 @@
 
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, Enum, ForeignKey, Integer, String
+from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column, relationship
 
 from app.types.floors_type import FloorsType
 from app.types.membership import AvailableAssociationMembership
-from app.types.sqlalchemy import Base, PrimaryKey, TZDateTime
+from app.types.sqlalchemy import Base, PrimaryKey
 
 
 class CoreMembership(MappedAsDataclass, Base):

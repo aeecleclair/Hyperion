@@ -1302,7 +1302,6 @@ async def get_purchases_by_user_id(
                             validated=purchase.validated,
                             purchased_on=purchase.purchased_on,
                             quantity=purchase.quantity,
-                            #
                             price=product_variant.price,
                             product=product,
                             seller=seller,

@@ -1,9 +1,8 @@
 from datetime import datetime
 
-from sqlalchemy import Integer, String
 from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column
 
-from app.types.sqlalchemy import Base, TZDateTime
+from app.types.sqlalchemy import Base
 
 
 class Session(MappedAsDataclass, Base):

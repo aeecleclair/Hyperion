@@ -2,11 +2,11 @@
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, ForeignKey, String
+from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column, relationship
 
 from app.core.models_core import CoreUser
-from app.types.sqlalchemy import Base, TZDateTime
+from app.types.sqlalchemy import Base
 
 
 class Manager(MappedAsDataclass, Base):

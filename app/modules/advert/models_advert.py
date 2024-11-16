@@ -1,9 +1,9 @@
 from datetime import datetime
 
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column, relationship
 
-from app.types.sqlalchemy import Base, TZDateTime
+from app.types.sqlalchemy import Base
 
 
 class Advertiser(MappedAsDataclass, Base):

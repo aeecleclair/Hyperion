@@ -1,6 +1,6 @@
 from datetime import date
 
-from sqlalchemy import TEXT, Boolean, Date, ForeignKey, Integer, String
+from sqlalchemy import TEXT, ForeignKey
 from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column, relationship
 
 from app.core import models_core

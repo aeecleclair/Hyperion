@@ -1,6 +1,6 @@
 from typing import Any
 
-from sqlalchemy import Enum, ForeignKey, String
+from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column, relationship
 
 from app.core import models_core

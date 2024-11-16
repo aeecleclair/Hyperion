@@ -1,10 +1,10 @@
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, Enum, ForeignKey, String
+from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column
 
 from app.core.notification.notification_types import Topic
-from app.types.sqlalchemy import Base, TZDateTime
+from app.types.sqlalchemy import Base
 
 
 class Message(MappedAsDataclass, Base):

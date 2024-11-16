@@ -2,12 +2,12 @@
 
 from datetime import date, datetime
 
-from sqlalchemy import Date, Enum, Float, ForeignKey, Integer, String
+from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column, relationship
 
 from app.core.models_core import CoreUser
 from app.modules.amap.types_amap import AmapSlotType, DeliveryStatusType
-from app.types.sqlalchemy import Base, TZDateTime
+from app.types.sqlalchemy import Base
 
 
 class AmapOrderContent(MappedAsDataclass, Base):
