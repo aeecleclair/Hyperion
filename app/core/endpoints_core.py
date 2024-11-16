@@ -18,6 +18,7 @@ from app.dependencies import (
     is_user_in,
 )
 from app.modules.module_list import module_list
+from app.types.scheduler import Scheduler
 from app.utils.tools import is_group_id_valid
 
 router = APIRouter(tags=["Core"])
@@ -34,12 +35,13 @@ def testing_print():
     response_model=schemas_core.CoreInformation,
     status_code=200,
 )
-async def read_information(settings: Settings = Depends(get_settings)):
+async def read_information(
+    settings: Settings = Depends(get_settings),
+    scheduler: Scheduler = Depends(get_scheduler),
+):
     """
     Return information about Hyperion. This endpoint can be used to check if the API is up.
     """
-    scheduler = await get_scheduler()
-
     await scheduler.queue_job(testing_print, str(uuid4()), 10)
 
     return schemas_core.CoreInformation(
