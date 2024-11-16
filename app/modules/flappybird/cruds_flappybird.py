@@ -8,12 +8,12 @@ from app.modules.flappybird import models_flappybird
 
 async def get_flappybird_score_leaderboard(
     db: AsyncSession,
-) -> list[models_flappybird.FlappyBirdBestScore]:
+) -> list[models_flappybird.RFlappyBirdBestScore]:
     """Return the flappybird leaderboard scores"""
     result = await db.execute(
-        select(models_flappybird.FlappyBirdBestScore)
-        .order_by(models_flappybird.FlappyBirdBestScore.value.desc())
-        .options(selectinload(models_flappybird.FlappyBirdBestScore.user)),
+        select(models_flappybird.RFlappyBirdBestScore)
+        .order_by(models_flappybird.RFlappyBirdBestScore.value.desc())
+        .options(selectinload(models_flappybird.RFlappyBirdBestScore.user)),
     )
     return list(result.scalars().all())
 
@@ -21,13 +21,15 @@ async def get_flappybird_score_leaderboard(
 async def get_flappybird_personal_best_by_user_id(
     db: AsyncSession,
     user_id: str,
-) -> models_flappybird.FlappyBirdBestScore | None:
+) -> models_flappybird.RFlappyBirdBestScore | None:
     """Return the flappybird PB in the leaderboard by user_id"""
 
     personal_best_result = await db.execute(
-        select(models_flappybird.FlappyBirdBestScore).where(
-            models_flappybird.FlappyBirdBestScore.user_id == user_id,
-        ),
+        select(models_flappybird.RFlappyBirdBestScore)
+        .where(
+            models_flappybird.RFlappyBirdBestScore.user_id == user_id,
+        )
+        .options(selectinload(models_flappybird.RFlappyBirdBestScore.user)),
     )
     return personal_best_result.scalar()
 
