@@ -127,7 +127,7 @@ async def register_user(
 
 
 @router.post(
-    "/myeclpay/users/me/signcgu",
+    "/myeclpay/users/me/cgu",
     status_code=204,
 )
 async def sign_cgu(
