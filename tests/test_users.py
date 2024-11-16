@@ -74,7 +74,6 @@ def test_search_users(client: TestClient) -> None:
         f"/users?query=&accountTypes={account_type}",
         headers={"Authorization": f"Bearer {token_admin_user}"},
     )
-    print(response.json())
     account_type_users = set(user["id"] for user in response.json())
 
     response = client.get(
@@ -88,7 +87,7 @@ def test_search_users(client: TestClient) -> None:
     )  # This endpoint is limited to 10 members, so we only need an inclusion between the two sets, in case there are more than 10 members in the group.
 
     response = client.get(
-        f"/users/search?query=&includedAccountTypes={account_type}",
+        f"/users/search?query=&excludedAccountTypes={account_type}",
         headers={"Authorization": f"Bearer {token_student_user}"},
     )
     assert response.status_code == 200
