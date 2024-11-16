@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import cruds_core, models_core, security
 from app.core.groups import cruds_groups
-from app.core.groups.groups_type import GroupType
+from app.core.groups.groups_type import AccountType, GroupType
 from app.core.users import cruds_users
 from app.types import core_data
 from app.types.content_type import ContentType
@@ -41,8 +41,6 @@ templates = Jinja2Templates(directory="assets/templates")
 uuid_regex = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
 )
-
-
 
 
 def is_user_external(
