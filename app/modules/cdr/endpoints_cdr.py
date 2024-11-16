@@ -142,7 +142,15 @@ async def get_cdr_users_pending_validation(
     return [
         schemas_cdr.CdrUser(
             curriculum=curriculum_memberships_mapping.get(user.id, None),
-            **user.__dict__,
+            promo=user.promo,
+            email=user.email,
+            birthday=user.birthday,
+            phone=user.phone,
+            floor=user.floor,
+            id=user.id,
+            name=user.name,
+            firstname=user.firstname,
+            nickname=user.nickname,
         )
         for user in core_users
     ]
@@ -181,12 +189,23 @@ async def get_cdr_user(
             status_code=404,
             detail="User not found.",
         )
-    user_dict = user_db.__dict__
     curriculum = await cruds_cdr.get_cdr_user_curriculum(db, user_id)
     curriculum_complete = {c.id: c for c in await cruds_cdr.get_curriculums(db=db)}
-    if curriculum:
-        user_dict["curriculum"] = curriculum_complete[curriculum.curriculum_id]
-    return schemas_cdr.CdrUser(**user_dict)
+
+    return schemas_cdr.CdrUser(
+        name=user_db.name,
+        firstname=user_db.firstname,
+        nickname=user_db.nickname,
+        curriculum=curriculum_complete[curriculum.curriculum_id]
+        if curriculum
+        else None,
+        id=user_db.id,
+        promo=user_db.promo,
+        email=user_db.email,
+        birthday=user_db.birthday,
+        phone=user_db.phone,
+        floor=user_db.floor,
+    )
 
 
 @module.router.patch(
@@ -281,7 +300,15 @@ async def update_cdr_user(
                         curriculum=schemas_cdr.CurriculumComplete(
                             **curriculum.__dict__,
                         ),
-                        **user_db.__dict__,
+                        name=user_db.name,
+                        firstname=user_db.firstname,
+                        nickname=user_db.nickname,
+                        id=user_db.id,
+                        promo=user_db.promo,
+                        email=user_db.email,
+                        birthday=user_db.birthday,
+                        phone=user_db.phone,
+                        floor=user_db.floor,
                     ),
                 ),
                 room_id=HyperionWebsocketsRoom.CDR,
@@ -557,7 +584,9 @@ async def create_seller(
         )
     db_seller = models_cdr.Seller(
         id=uuid4(),
-        **seller.model_dump(),
+        name=seller.name,
+        group_id=seller.group_id,
+        order=seller.order,
     )
     try:
         cruds_cdr.create_seller(db, db_seller)
@@ -704,9 +733,12 @@ async def create_product(
     db_product = models_cdr.CdrProduct(
         id=uuid4(),
         seller_id=seller_id,
-        **product.model_dump(
-            exclude={"product_constraints", "document_constraints", "ticket"},
-        ),
+        name_fr=product.name_fr,
+        name_en=product.name_en,
+        available_online=product.available_online,
+        description_fr=product.description_fr,
+        description_en=product.description_en,
+        related_membership=product.related_membership,
     )
     try:
         cruds_cdr.create_product(db, db_product)
@@ -729,7 +761,13 @@ async def create_product(
         for ticket in product.tickets:
             cruds_cdr.create_ticket_generator(
                 db,
-                models_cdr.TicketGenerator(id=uuid4(), **ticket.model_dump()),
+                models_cdr.TicketGenerator(
+                    id=uuid4(),
+                    product_id=db_product.id,
+                    name=ticket.name,
+                    max_use=ticket.max_use,
+                    expiration=ticket.expiration,
+                ),
             )
         await db.commit()
         return await cruds_cdr.get_product_by_id(db, db_product.id)
@@ -905,7 +943,14 @@ async def create_product_variant(
     db_product_variant = models_cdr.ProductVariant(
         id=uuid4(),
         product_id=product_id,
-        **product_variant.model_dump(exclude={"allowed_curriculum"}),
+        name_fr=product_variant.name_fr,
+        name_en=product_variant.name_en,
+        price=product_variant.price,
+        enabled=product_variant.enabled,
+        unique=product_variant.unique,
+        related_membership_added_duration=product_variant.related_membership_added_duration,
+        description_fr=product_variant.description_fr,
+        description_en=product_variant.description_en,
     )
     if (
         product
@@ -1246,7 +1291,11 @@ async def get_purchases_by_user_id(
                 if seller:
                     result.append(
                         schemas_cdr.PurchaseReturn(
-                            **purchase.__dict__,
+                            user_id=purchase.user_id,
+                            product_variant_id=purchase.product_variant_id,
+                            validated=purchase.validated,
+                            purchased_on=purchase.purchased_on,
+                            quantity=purchase.quantity,
                             price=product_variant.price,
                             product=product,
                             seller=seller,
@@ -1310,7 +1359,11 @@ async def get_purchases_by_user_id_by_seller_id(
                 if seller:
                     result.append(
                         schemas_cdr.PurchaseReturn(
-                            **purchase.__dict__,
+                            user_id=purchase.user_id,
+                            product_variant_id=purchase.product_variant_id,
+                            validated=purchase.validated,
+                            purchased_on=purchase.purchased_on,
+                            quantity=purchase.quantity,
                             price=product_variant.price,
                             product=product,
                             seller=seller,
@@ -1440,13 +1493,13 @@ async def remove_existing_membership(
 async def add_membership(
     memberships: Sequence[models_core.CoreAssociationMembership],
     user_id: str,
-    product: models_cdr.CdrProduct,
+    product_related_membership: AvailableAssociationMembership,
     product_variant: models_cdr.ProductVariant,
     db: AsyncSession,
 ):
     if product_variant.related_membership_added_duration:
         existing_membership = next(
-            (m for m in memberships if m.membership == product.related_membership),
+            (m for m in memberships if m.membership == product_related_membership),
             None,
         )
         if existing_membership:
@@ -1462,7 +1515,7 @@ async def add_membership(
             added_membership = models_core.CoreAssociationMembership(
                 id=uuid4(),
                 user_id=user_id,
-                membership=product.related_membership,
+                membership=product_related_membership,
                 start_date=date(datetime.now(tz=UTC).date().year, 9, 1),
                 end_date=date(datetime.now(tz=UTC).date().year, 9, 1)
                 + product_variant.related_membership_added_duration,
@@ -1557,7 +1610,7 @@ async def mark_purchase_as_validated(
             await add_membership(
                 memberships=memberships,
                 user_id=user_id,
-                product=product,
+                product_related_membership=product.related_membership,
                 product_variant=product_variant,
                 db=db,
             )
@@ -1880,7 +1933,8 @@ async def create_signature(
     db_signature = models_cdr.Signature(
         user_id=user_id,
         document_id=document_id,
-        **signature.model_dump(exclude_none=False),
+        signature_type=signature.signature_type,
+        numeric_signature_id=signature.numeric_signature_id,
     )
     try:
         cruds_cdr.create_signature(db, db_signature)
@@ -2094,9 +2148,18 @@ async def create_curriculum_membership(
                 message=schemas_cdr.NewUserWSMessageModel(
                     data=schemas_cdr.CdrUser(
                         curriculum=schemas_cdr.CurriculumComplete(
-                            **wanted_curriculum.__dict__,
+                            id=wanted_curriculum.id,
+                            name=wanted_curriculum.name,
                         ),
-                        **db_user.__dict__,
+                        promo=db_user.promo,
+                        email=db_user.email,
+                        birthday=db_user.birthday,
+                        phone=db_user.phone,
+                        floor=db_user.floor,
+                        id=db_user.id,
+                        name=db_user.name,
+                        firstname=db_user.firstname,
+                        nickname=db_user.nickname,
                     ),
                 ),
                 room_id=HyperionWebsocketsRoom.CDR,
@@ -2164,9 +2227,18 @@ async def update_curriculum_membership(
                 message=schemas_cdr.UpdateUserWSMessageModel(
                     data=schemas_cdr.CdrUser(
                         curriculum=schemas_cdr.CurriculumComplete(
-                            **curriculum.__dict__,
+                            id=curriculum.id,
+                            name=curriculum.name,
                         ),
-                        **db_user.__dict__,
+                        promo=db_user.promo,
+                        email=db_user.email,
+                        birthday=db_user.birthday,
+                        phone=db_user.phone,
+                        floor=db_user.floor,
+                        id=db_user.id,
+                        name=db_user.name,
+                        firstname=db_user.firstname,
+                        nickname=db_user.nickname,
                     ),
                 ),
                 room_id=HyperionWebsocketsRoom.CDR,
@@ -2232,7 +2304,18 @@ async def delete_curriculum_membership(
         try:
             await ws_manager.send_message_to_room(
                 message=schemas_cdr.UpdateUserWSMessageModel(
-                    data=schemas_cdr.CdrUser(curriculum=None, **db_user.__dict__),
+                    data=schemas_cdr.CdrUser(
+                        curriculum=None,
+                        promo=db_user.promo,
+                        email=db_user.email,
+                        birthday=db_user.birthday,
+                        phone=db_user.phone,
+                        floor=db_user.floor,
+                        id=db_user.id,
+                        name=db_user.name,
+                        firstname=db_user.firstname,
+                        nickname=db_user.nickname,
+                    ),
                 ),
                 room_id=HyperionWebsocketsRoom.CDR,
             )
@@ -2293,7 +2376,8 @@ async def create_payment(
     db_payment = models_cdr.Payment(
         id=uuid4(),
         user_id=user_id,
-        **payment.model_dump(),
+        total=payment.total,
+        payment_type=payment.payment_type,
     )
     db_action = models_cdr.CdrAction(
         id=uuid4(),
@@ -2392,7 +2476,19 @@ async def get_payment_url(
             status_code=403,
             detail="Please give an amount in cents, greater than 1€.",
         )
-    user_schema = schemas_core.CoreUser(**user.__dict__)
+    user_schema = schemas_core.CoreUser(
+        email=user.email,
+        birthday=user.birthday,
+        promo=user.promo,
+        floor=user.floor,
+        phone=user.phone,
+        created_on=user.created_on,
+        groups=user.groups,
+        id=user.id,
+        name=user.name,
+        firstname=user.firstname,
+        nickname=user.nickname,
+    )
     checkout = await payment_tool.init_checkout(
         module=module.root,
         helloasso_slug="AEECL",
@@ -2456,7 +2552,9 @@ async def create_membership(
     db_membership = models_core.CoreAssociationMembership(
         id=uuid4(),
         user_id=user_id,
-        **membership.model_dump(),
+        membership=membership.membership,
+        start_date=membership.start_date,
+        end_date=membership.end_date,
     )
     try:
         cruds_cdr.create_membership(db, db_membership)
@@ -2883,7 +2981,9 @@ async def generate_ticket_for_product(
     ticketgen = models_cdr.TicketGenerator(
         id=uuid4(),
         product_id=product_id,
-        **ticket_data.model_dump(),
+        name=ticket_data.name,
+        max_use=ticket_data.max_use,
+        expiration=ticket_data.expiration,
     )
     cruds_cdr.create_ticket_generator(db=db, ticket=ticketgen)
 

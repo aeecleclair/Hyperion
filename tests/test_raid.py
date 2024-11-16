@@ -11,7 +11,7 @@ from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from app.modules.raid import coredata_raid, models_raid
 from app.modules.raid.models_raid import Document, Participant, SecurityFile, Team
-from app.modules.raid.raid_type import DocumentType, DocumentValidation
+from app.modules.raid.raid_type import DocumentType, DocumentValidation, Size
 from app.modules.raid.utils.pdf.pdf_writer import (
     HTMLPDFWriter,
     PDFWriter,
@@ -76,7 +76,7 @@ async def init_objects() -> None:
         birthday=datetime.date(2001, 1, 1),
         phone="0606060606",
         email="test@email.fr",
-        t_shirt_size="M",
+        t_shirt_size=Size.M,
         id_card_id=document.id,
     )
     await add_object_to_db(participant)
@@ -86,6 +86,7 @@ async def init_objects() -> None:
         id=str(uuid.uuid4()),
         name="TestTeam",
         captain_id=simple_user.id,
+        difficulty=None,
     )
     await add_object_to_db(team)
 

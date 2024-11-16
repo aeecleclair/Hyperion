@@ -55,6 +55,7 @@ async def init_objects() -> None:
     global advert
     advert = models_advert.Advert(
         id=str(uuid.uuid4()),
+        advertiser=advertiser,
         advertiser_id=advertiser.id,
         title="Advert",
         content="Example of advert",

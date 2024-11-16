@@ -2,7 +2,7 @@
 
 from datetime import date
 
-from sqlalchemy import Boolean, Date, Enum, ForeignKey, Integer, String
+from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.modules.raid.raid_type import (
@@ -18,49 +18,41 @@ from app.types.sqlalchemy import Base
 class Document(Base):
     __tablename__ = "raid_document"
     id: Mapped[str] = mapped_column(
-        String,
         primary_key=True,
         index=True,
-        nullable=False,
     )
-    name: Mapped[str] = mapped_column(String, nullable=False)
-    uploaded_at: Mapped[date] = mapped_column(Date, nullable=False)
+    name: Mapped[str]
+    uploaded_at: Mapped[date]
+    type: Mapped[DocumentType]
     validation: Mapped[DocumentValidation] = mapped_column(
-        Enum(DocumentValidation),
-        nullable=False,
         default=DocumentValidation.pending,
     )
-    type: Mapped[DocumentType] = mapped_column(Enum(DocumentType), nullable=False)
-
-    # user: Mapped["Participant"] = relationship("Participant")
 
 
 class SecurityFile(Base):
     __tablename__ = "raid_security_file"
     id: Mapped[str] = mapped_column(
-        String,
         primary_key=True,
         index=True,
-        nullable=False,
     )
-    allergy: Mapped[str | None] = mapped_column(String, nullable=True)
-    asthma: Mapped[bool] = mapped_column(Boolean, nullable=False)
-    intensive_care_unit: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
-    intensive_care_unit_when: Mapped[str | None] = mapped_column(String, nullable=True)
-    ongoing_treatment: Mapped[str | None] = mapped_column(String, nullable=True)
-    sicknesses: Mapped[str | None] = mapped_column(String, nullable=True)
-    hospitalization: Mapped[str | None] = mapped_column(String, nullable=True)
-    surgical_operation: Mapped[str | None] = mapped_column(String, nullable=True)
-    trauma: Mapped[str | None] = mapped_column(String, nullable=True)
-    family: Mapped[str | None] = mapped_column(String, nullable=True)
-    participant: Mapped["Participant"] = relationship(back_populates="security_file")
-    emergency_person_firstname: Mapped[str | None] = mapped_column(
-        String,
-        nullable=True,
+    allergy: Mapped[str | None]
+    asthma: Mapped[bool]
+    intensive_care_unit: Mapped[bool | None]
+    intensive_care_unit_when: Mapped[str | None]
+    ongoing_treatment: Mapped[str | None]
+    sicknesses: Mapped[str | None]
+    hospitalization: Mapped[str | None]
+    surgical_operation: Mapped[str | None]
+    trauma: Mapped[str | None]
+    family: Mapped[str | None]
+    participant: Mapped["Participant"] = relationship(
+        back_populates="security_file",
+        init=False,
     )
-    emergency_person_name: Mapped[str | None] = mapped_column(String, nullable=True)
-    emergency_person_phone: Mapped[str | None] = mapped_column(String, nullable=True)
-    file_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    emergency_person_firstname: Mapped[str | None]
+    emergency_person_name: Mapped[str | None]
+    emergency_person_phone: Mapped[str | None]
+    file_id: Mapped[str | None]
 
     @property
     def validation(self) -> DocumentValidation:
@@ -81,98 +73,82 @@ class SecurityFile(Base):
 class Participant(Base):
     __tablename__ = "raid_participant"
     id: Mapped[str] = mapped_column(
-        String,
         primary_key=True,
         index=True,
-        nullable=False,
     )
-    name: Mapped[str] = mapped_column(String, nullable=False)
-    firstname: Mapped[str] = mapped_column(String, nullable=False)
-    birthday: Mapped[date] = mapped_column(Date, nullable=False)
-    address: Mapped[str | None] = mapped_column(String, nullable=True)
-    phone: Mapped[str] = mapped_column(String, nullable=False)
-    email: Mapped[str] = mapped_column(String, nullable=False)
-    bike_size: Mapped[Size | None] = mapped_column(
-        Enum(Size),
-        nullable=True,
-        default=None,
-    )
-    t_shirt_size: Mapped[Size | None] = mapped_column(
-        Enum(Size),
-        nullable=True,
-        default=None,
-    )
-    situation: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
-    other_school: Mapped[str | None] = mapped_column(
-        String,
-        nullable=True,
-        default=None,
-    )
-    company: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
-    diet: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
+    name: Mapped[str]
+    firstname: Mapped[str]
+    birthday: Mapped[date]
+    phone: Mapped[str]
+    email: Mapped[str]
+    address: Mapped[str | None] = mapped_column(default=None)
+    bike_size: Mapped[Size | None] = mapped_column(default=None)
+    t_shirt_size: Mapped[Size | None] = mapped_column(default=None)
+    situation: Mapped[str | None] = mapped_column(default=None)
+    other_school: Mapped[str | None] = mapped_column(default=None)
+    company: Mapped[str | None] = mapped_column(default=None)
+    diet: Mapped[str | None] = mapped_column(default=None)
     id_card_id: Mapped[str | None] = mapped_column(
         ForeignKey("raid_document.id"),
-        nullable=True,
         default=None,
     )
-    id_card: Mapped[Document] = relationship(
+    id_card: Mapped[Document | None] = relationship(
         "app.modules.raid.models_raid.Document",
         foreign_keys=[id_card_id],
+        init=False,
     )
     medical_certificate_id: Mapped[str | None] = mapped_column(
         ForeignKey("raid_document.id"),
-        nullable=True,
         default=None,
     )
-    medical_certificate: Mapped[Document] = relationship(
+    medical_certificate: Mapped[Document | None] = relationship(
         "app.modules.raid.models_raid.Document",
         foreign_keys=[medical_certificate_id],
+        init=False,
     )
     security_file_id: Mapped[str | None] = mapped_column(
         ForeignKey("raid_security_file.id"),
-        nullable=True,
         default=None,
     )
-    security_file: Mapped[SecurityFile] = relationship(back_populates="participant")
+    security_file: Mapped[SecurityFile | None] = relationship(
+        back_populates="participant",
+        init=False,
+    )
     student_card_id: Mapped[str | None] = mapped_column(
         ForeignKey("raid_document.id"),
-        nullable=True,
         default=None,
     )
-    student_card: Mapped[Document] = relationship(
+    student_card: Mapped[Document | None] = relationship(
         "app.modules.raid.models_raid.Document",
         foreign_keys=[student_card_id],
+        init=False,
     )
     raid_rules_id: Mapped[str | None] = mapped_column(
         ForeignKey("raid_document.id"),
-        nullable=True,
         default=None,
     )
-    raid_rules: Mapped[Document] = relationship(
+    raid_rules: Mapped[Document | None] = relationship(
         "app.modules.raid.models_raid.Document",
         foreign_keys=[raid_rules_id],
+        init=False,
     )
     parent_authorization_id: Mapped[str | None] = mapped_column(
         ForeignKey("raid_document.id"),
-        nullable=True,
         default=None,
     )
-    parent_authorization: Mapped[Document] = relationship(
+    parent_authorization: Mapped[Document | None] = relationship(
         "app.modules.raid.models_raid.Document",
         foreign_keys=[parent_authorization_id],
+        init=False,
     )
     attestation_on_honour: Mapped[bool] = mapped_column(
-        Boolean,
-        nullable=False,
         default=False,
     )
-    payment: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    payment: Mapped[bool] = mapped_column(default=False)
     t_shirt_payment: Mapped[bool] = mapped_column(
-        Boolean,
-        nullable=False,
         default=False,
     )
-    is_minor: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_minor: Mapped[bool] = mapped_column(default=False)
 
     @property
     def number_of_document(self) -> int:
@@ -192,25 +168,25 @@ class Participant(Base):
         if (
             self.situation
             and self.situation.split(" : ")[0] in ["centrale", "otherschool"]
-            and self.student_card_id
+            and self.student_card
             and self.student_card.validation == DocumentValidation.accepted
         ):
             number_validated += 1
-        if self.id_card_id and self.id_card.validation == DocumentValidation.accepted:
+        if self.id_card and self.id_card.validation == DocumentValidation.accepted:
             number_validated += 1
         if (
-            self.medical_certificate_id
+            self.medical_certificate
             and self.medical_certificate.validation == DocumentValidation.accepted
         ):
             number_validated += 1
         if (
-            self.raid_rules_id
+            self.raid_rules
             and self.raid_rules.validation == DocumentValidation.accepted
         ):
             number_validated += 1
         if (
             self.is_minor
-            and self.parent_authorization_id
+            and self.parent_authorization
             and self.parent_authorization.validation == DocumentValidation.accepted
         ):
             number_validated += 1
@@ -236,33 +212,33 @@ class Participant(Base):
         ]:
             number_total += 1
             if (
-                self.student_card_id
+                self.student_card
                 and self.student_card.validation == DocumentValidation.accepted
             ):
                 number_validated += 1
         if self.is_minor:
             number_total += 1
-            if self.parent_authorization_id:
+            if self.parent_authorization:
                 if self.parent_authorization.validation == DocumentValidation.accepted:
                     number_validated += 1
                 elif (
                     self.parent_authorization.validation == DocumentValidation.temporary
                 ):
                     number_validated += 0.5
-        if self.id_card_id and self.id_card.validation == DocumentValidation.accepted:
+        if self.id_card and self.id_card.validation == DocumentValidation.accepted:
             number_validated += 1
-        if self.medical_certificate_id:
+        if self.medical_certificate:
             if self.medical_certificate.validation == DocumentValidation.accepted:
                 number_validated += 1
             elif self.medical_certificate.validation == DocumentValidation.temporary:
                 number_validated += 0.5
-        if self.security_file_id and self.security_file:
+        if self.security_file and self.security_file:
             if self.security_file.validation == DocumentValidation.accepted:
                 number_validated += 1
             elif self.security_file.validation == DocumentValidation.temporary:
                 number_validated += 0.5
         if (
-            self.raid_rules_id
+            self.raid_rules
             and self.raid_rules.validation == DocumentValidation.accepted
         ):
             number_validated += 1
@@ -272,32 +248,31 @@ class Participant(Base):
 class Team(Base):
     __tablename__ = "raid_team"
     id: Mapped[str] = mapped_column(
-        String,
         primary_key=True,
         index=True,
-        nullable=False,
     )
-    name: Mapped[str] = mapped_column(String, nullable=False)
-    number: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    difficulty: Mapped[Difficulty] = mapped_column(Enum(Difficulty), nullable=True)
+    name: Mapped[str]
+    difficulty: Mapped[Difficulty | None]
     captain_id: Mapped[str] = mapped_column(
         ForeignKey("raid_participant.id"),
-        nullable=False,
-    )
-    captain: Mapped[Participant] = relationship(
-        "Participant",
-        foreign_keys=[captain_id],
     )
     second_id: Mapped[str | None] = mapped_column(
         ForeignKey("raid_participant.id"),
-        nullable=True,
+        default=None,
     )
-    second: Mapped[Participant] = relationship("Participant", foreign_keys=[second_id])
-    meeting_place: Mapped[MeetingPlace | None] = mapped_column(
-        Enum(MeetingPlace),
-        nullable=True,
+    number: Mapped[int | None] = mapped_column(default=None)
+    captain: Mapped[Participant] = relationship(
+        "Participant",
+        foreign_keys=[captain_id],
+        init=False,
     )
-    file_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    second: Mapped[Participant] = relationship(
+        "Participant",
+        foreign_keys=[second_id],
+        init=False,
+    )
+    meeting_place: Mapped[MeetingPlace | None] = mapped_column(default=None)
+    file_id: Mapped[str | None] = mapped_column(default=None)
 
     @property
     def validation_progress(self) -> float:
@@ -316,25 +291,20 @@ class Team(Base):
 class InviteToken(Base):
     __tablename__ = "raid_invite"
     id: Mapped[str] = mapped_column(
-        String,
         primary_key=True,
         index=True,
-        nullable=False,
     )
-    team_id: Mapped[str] = mapped_column(ForeignKey("raid_team.id"), nullable=False)
-    token: Mapped[str] = mapped_column(String, nullable=False)
+    team_id: Mapped[str] = mapped_column(ForeignKey("raid_team.id"))
+    token: Mapped[str]
 
 
 class ParticipantCheckout(Base):
     __tablename__ = "raid_participant_checkout"
     id: Mapped[str] = mapped_column(
-        String,
         primary_key=True,
         index=True,
-        nullable=False,
     )
     participant_id: Mapped[str] = mapped_column(
         ForeignKey("raid_participant.id"),
-        nullable=False,
     )
     checkout_id: Mapped[str] = mapped_column(ForeignKey("payment_checkout.id"))

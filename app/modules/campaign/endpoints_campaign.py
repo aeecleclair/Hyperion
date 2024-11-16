@@ -205,6 +205,7 @@ async def add_list(
             models_campaign.ListMemberships(
                 user_id=member.user_id,
                 role=member.role,
+                list_id=list_id,
             ),
         )
 

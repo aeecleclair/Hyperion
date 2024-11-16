@@ -108,6 +108,7 @@ async def add_blank_option(db: AsyncSession):
                 description="",
                 section_id=section_id,
                 type=ListType.blank,
+                program=None,
                 members=[],
             ),
         )

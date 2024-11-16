@@ -3,7 +3,7 @@ import uuid
 from typing import Annotated
 
 from sqlalchemy import DateTime, types
-from sqlalchemy.orm import DeclarativeBase, mapped_column
+from sqlalchemy.orm import DeclarativeBase, MappedAsDataclass, mapped_column
 from sqlalchemy.types import TypeDecorator
 
 from app.types.exceptions import MissingTZInfoInDatetimeError
@@ -38,7 +38,7 @@ class TZDateTime(TypeDecorator):
 PrimaryKey = Annotated[uuid.UUID, mapped_column(primary_key=True)]
 
 
-class Base(DeclarativeBase):
+class Base(MappedAsDataclass, DeclarativeBase):
     """Base class for all models.
 
     The type map is overriden to use our custom datetime type (see https://docs.sqlalchemy.org/en/20/orm/declarative_tables.html#customizing-the-type-map)"""

@@ -414,10 +414,12 @@ async def get_purchase_by_id(
     product_variant_id: UUID,
 ) -> models_cdr.Purchase | None:
     result = await db.execute(
-        select(models_cdr.Purchase).where(
+        select(models_cdr.Purchase)
+        .where(
             models_cdr.Purchase.user_id == user_id,
             models_cdr.Purchase.product_variant_id == product_variant_id,
-        ),
+        )
+        .options(selectinload(models_cdr.Purchase.product_variant)),
     )
     return result.scalars().first()
 

@@ -1,6 +1,6 @@
 from typing import Any
 
-from sqlalchemy import Enum, ForeignKey, String
+from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core import models_core
@@ -16,34 +16,44 @@ class ListMemberships(Base):
         ForeignKey("campaign_lists.id"),
         primary_key=True,
     )
-    user: Mapped[models_core.CoreUser] = relationship("CoreUser")
-    lists: Mapped["Lists"] = relationship("Lists", back_populates="members")
-    role: Mapped[str] = mapped_column(String)
+    role: Mapped[str]
+
+    user: Mapped[models_core.CoreUser] = relationship("CoreUser", init=False)
+    lists: Mapped["Lists"] = relationship("Lists", back_populates="members", init=False)
 
 
 class Sections(Base):
     __tablename__ = "campaign_sections"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True)
-    name: Mapped[str] = mapped_column(String, unique=True)
-    description: Mapped[str] = mapped_column(String)
-    lists: Mapped[list["Lists"]] = relationship("Lists", back_populates="section")
+    id: Mapped[str] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(unique=True)
+    description: Mapped[str]
+    lists: Mapped[list["Lists"]] = relationship(
+        "Lists",
+        back_populates="section",
+        default_factory=list,
+    )
 
 
 class Lists(Base):
     __tablename__ = "campaign_lists"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True)
-    name: Mapped[str] = mapped_column(String)
-    description: Mapped[str] = mapped_column(String)
+    id: Mapped[str] = mapped_column(primary_key=True)
+    name: Mapped[str]
+    description: Mapped[str]
     section_id: Mapped[str] = mapped_column(ForeignKey("campaign_sections.id"))
-    section: Mapped[Sections] = relationship("Sections", back_populates="lists")
-    type: Mapped[str] = mapped_column(String, nullable=False)
+    type: Mapped[str]
+    program: Mapped[str | None]
     members: Mapped[list[ListMemberships]] = relationship(
         "ListMemberships",
         back_populates="lists",
     )
-    program: Mapped[str | None] = mapped_column(String)
+
+    section: Mapped[Sections] = relationship(
+        "Sections",
+        back_populates="lists",
+        init=False,
+    )
 
     def as_dict(self) -> dict[str, Any]:
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
@@ -56,16 +66,15 @@ class VoterGroups(Base):
 
     __tablename__ = "campaign_voter_groups"
 
-    group_id: Mapped[str] = mapped_column(String, nullable=False, primary_key=True)
+    group_id: Mapped[str] = mapped_column(primary_key=True)
 
 
 class Votes(Base):
     __tablename__ = "campaign_votes"
 
-    id = mapped_column(String, primary_key=True)
+    id: Mapped[str] = mapped_column(primary_key=True)
     list_id: Mapped[str] = mapped_column(
         ForeignKey("campaign_lists.id"),
-        nullable=False,
     )
 
 
@@ -83,5 +92,5 @@ class HasVoted(Base):
 class Status(Base):
     __tablename__ = "campaign_status"
 
-    id: Mapped[str] = mapped_column(String, nullable=False, primary_key=True)
-    status: Mapped[StatusType] = mapped_column(Enum(StatusType), nullable=False)
+    id: Mapped[str] = mapped_column(primary_key=True)
+    status: Mapped[StatusType]

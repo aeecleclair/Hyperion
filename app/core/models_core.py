@@ -2,12 +2,12 @@
 
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, Enum, ForeignKey, Integer, String
+from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.types.floors_type import FloorsType
 from app.types.membership import AvailableAssociationMembership
-from app.types.sqlalchemy import Base, PrimaryKey, TZDateTime
+from app.types.sqlalchemy import Base, PrimaryKey
 
 
 class CoreMembership(Base):
@@ -17,34 +17,33 @@ class CoreMembership(Base):
     group_id: Mapped[str] = mapped_column(ForeignKey("core_group.id"), primary_key=True)
     # A description can be added to the membership
     # This can be used to note why a user is in a given group
-    description: Mapped[str | None] = mapped_column(String)
+    description: Mapped[str | None]
 
 
 class CoreUser(Base):
     __tablename__ = "core_user"
 
     id: Mapped[str] = mapped_column(
-        String,
         primary_key=True,
         index=True,
     )  # Use UUID later
-    email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
-    password_hash: Mapped[str] = mapped_column(String, nullable=False)
-    name: Mapped[str] = mapped_column(String, nullable=False)
-    firstname: Mapped[str] = mapped_column(String, nullable=False)
-    nickname: Mapped[str | None] = mapped_column(String)
-    birthday: Mapped[date | None] = mapped_column(Date)
-    promo: Mapped[int | None] = mapped_column(Integer)
-    phone: Mapped[str | None] = mapped_column(String)
-    floor: Mapped[FloorsType | None] = mapped_column(Enum(FloorsType))
-    created_on: Mapped[datetime | None] = mapped_column(TZDateTime)
+    email: Mapped[str] = mapped_column(unique=True, index=True)
+    password_hash: Mapped[str]
+    name: Mapped[str]
+    firstname: Mapped[str]
+    nickname: Mapped[str | None]
+    birthday: Mapped[date | None]
+    promo: Mapped[int | None]
+    phone: Mapped[str | None]
+    floor: Mapped[FloorsType | None]
+    created_on: Mapped[datetime | None]
 
     # Users that are externals (not members) won't be able to use all features
     # These, self registered, external users may exist for:
     # - accounts meant to be used by external services based on Hyperion SSO or Hyperion backend
     # - new users that need to do additional steps before being able to all features,
     #   like using a specific email address, going through an inscription process or being manually validated
-    external: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    external: Mapped[bool] = mapped_column(default=False)
 
     # We use list["CoreGroup"] with quotes as CoreGroup is only defined after this class
     # Defining CoreUser after CoreGroup would cause a similar issue
@@ -53,23 +52,24 @@ class CoreUser(Base):
         secondary="core_membership",
         back_populates="members",
         lazy="selectin",
+        default_factory=list,
     )
 
 
 class CoreUserUnconfirmed(Base):
     __tablename__ = "core_user_unconfirmed"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True)
+    id: Mapped[str] = mapped_column(primary_key=True)
     # The email column should not be unique.
     # Someone can indeed create more than one user creation request,
     # for example after losing the previously received confirmation email.
     # For each user creation request, a row will be added in this table with a new token
-    email: Mapped[str] = mapped_column(String, nullable=False)
-    account_type: Mapped[str] = mapped_column(String, nullable=False)
-    activation_token: Mapped[str] = mapped_column(String, nullable=False)
-    created_on: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
-    expire_on: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
-    external: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    email: Mapped[str]
+    account_type: Mapped[str]
+    activation_token: Mapped[str]
+    created_on: Mapped[datetime]
+    expire_on: Mapped[datetime]
+    external: Mapped[bool] = mapped_column(default=False)
 
 
 class CoreUserRecoverRequest(Base):
@@ -77,11 +77,11 @@ class CoreUserRecoverRequest(Base):
 
     # The email column should not be unique.
     # Someone can indeed create more than one password reset request,
-    email: Mapped[str] = mapped_column(String, nullable=False)
-    user_id: Mapped[str] = mapped_column(String, nullable=False)
-    reset_token: Mapped[str] = mapped_column(String, nullable=False, primary_key=True)
-    created_on: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
-    expire_on: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
+    email: Mapped[str]
+    user_id: Mapped[str]
+    reset_token: Mapped[str] = mapped_column(primary_key=True)
+    created_on: Mapped[datetime]
+    expire_on: Mapped[datetime]
 
 
 class CoreUserEmailMigrationCode(Base):
@@ -92,11 +92,8 @@ class CoreUserEmailMigrationCode(Base):
     __tablename__ = "core_user_email_migration_code"
 
     user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), primary_key=True)
-    new_email: Mapped[str] = mapped_column(String, nullable=False)
-    old_email: Mapped[str] = mapped_column(String, nullable=False)
-
-    # If the user should become an external or a member user after the email change
-    make_user_external: Mapped[bool] = mapped_column(default=False)
+    new_email: Mapped[str]
+    old_email: Mapped[str]
 
     confirmation_token: Mapped[str] = mapped_column(
         String,
@@ -104,18 +101,22 @@ class CoreUserEmailMigrationCode(Base):
         primary_key=True,
     )
 
+    # If the user should become an external or a member user after the email change
+    make_user_external: Mapped[bool] = mapped_column(default=False)
+
 
 class CoreGroup(Base):
     __tablename__ = "core_group"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, index=True)
-    name: Mapped[str] = mapped_column(String, index=True, nullable=False, unique=True)
-    description: Mapped[str | None] = mapped_column(String)
+    id: Mapped[str] = mapped_column(primary_key=True, index=True)
+    name: Mapped[str] = mapped_column(index=True, unique=True)
+    description: Mapped[str | None]
 
     members: Mapped[list["CoreUser"]] = relationship(
         "CoreUser",
         secondary="core_membership",
         back_populates="groups",
+        default_factory=list,
     )
 
 
@@ -123,9 +124,8 @@ class CoreAssociationMembership(Base):
     __tablename__ = "core_association_membership"
 
     id: Mapped[PrimaryKey]
-    user_id = mapped_column(
+    user_id: Mapped[str] = mapped_column(
         ForeignKey("core_user.id"),
-        nullable=False,
     )
     membership: Mapped[AvailableAssociationMembership] = mapped_column(
         index=True,
@@ -146,15 +146,15 @@ class CoreData(Base):
 
     __tablename__ = "core_data"
 
-    schema: Mapped[str] = mapped_column(String, primary_key=True)
-    data: Mapped[str] = mapped_column(String, nullable=False)
+    schema: Mapped[str] = mapped_column(primary_key=True)
+    data: Mapped[str]
 
 
 class ModuleVisibility(Base):
     __tablename__ = "module_visibility"
 
-    root: Mapped[str] = mapped_column(String, primary_key=True)
-    allowed_group_id: Mapped[str] = mapped_column(String, primary_key=True)
+    root: Mapped[str] = mapped_column(primary_key=True)
+    allowed_group_id: Mapped[str] = mapped_column(primary_key=True)
 
 
 class AlembicVersion(Base):
@@ -168,4 +168,4 @@ class AlembicVersion(Base):
 
     __tablename__ = "alembic_version"
 
-    version_num: Mapped[str] = mapped_column(String, primary_key=True)
+    version_num: Mapped[str] = mapped_column(primary_key=True)

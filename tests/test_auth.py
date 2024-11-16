@@ -58,6 +58,7 @@ async def init_objects() -> None:
         expire_on=datetime.now(UTC) + timedelta(days=1),
         token=valid_refresh_token,
         user_id=user.id,
+        scope=None,
     )
     await add_object_to_db(valid_refresh_token_db)
 
@@ -67,6 +68,7 @@ async def init_objects() -> None:
         expire_on=datetime.now(UTC) - timedelta(days=1),
         token=expired_refresh_token,
         user_id=user.id,
+        scope=None,
     )
     await add_object_to_db(expired_refresh_token_db)
 
@@ -77,6 +79,7 @@ async def init_objects() -> None:
         revoked_on=datetime.now(UTC),
         token=revoked_refresh_token,
         user_id=user.id,
+        scope=None,
     )
     await add_object_to_db(revoked_refresh_token_db)
 

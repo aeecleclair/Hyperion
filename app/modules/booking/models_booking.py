@@ -2,56 +2,68 @@
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, ForeignKey, String
+from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.models_core import CoreUser
-from app.types.sqlalchemy import Base, TZDateTime
+from app.types.sqlalchemy import Base
 
 
 class Manager(Base):
     __tablename__ = "booking_manager"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, nullable=False)
-    name: Mapped[str] = mapped_column(String, nullable=False, unique=True)
-    group_id: Mapped[str] = mapped_column(ForeignKey("core_group.id"), nullable=False)
-    rooms: Mapped[list["Room"]] = relationship(back_populates="manager")
+    id: Mapped[str] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(unique=True)
+    group_id: Mapped[str] = mapped_column(ForeignKey("core_group.id"))
+    rooms: Mapped[list["Room"]] = relationship(
+        back_populates="manager",
+        default_factory=list,
+    )
 
 
 class Room(Base):
     __tablename__ = "booking_room"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, nullable=False)
-    name: Mapped[str] = mapped_column(String, nullable=False)
+    id: Mapped[str] = mapped_column(primary_key=True)
+    name: Mapped[str]
     manager_id: Mapped[str] = mapped_column(
         ForeignKey("booking_manager.id"),
-        nullable=False,
     )
-    manager: Mapped["Manager"] = relationship(lazy="joined", back_populates="rooms")
-    bookings: Mapped[list["Booking"]] = relationship(back_populates="room")
+    manager: Mapped["Manager"] = relationship(
+        lazy="joined",
+        back_populates="rooms",
+        init=False,
+    )
+    bookings: Mapped[list["Booking"]] = relationship(
+        back_populates="room",
+        default_factory=list,
+    )
 
 
 class Booking(Base):
     __tablename__ = "booking"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, index=True)
-    reason: Mapped[str] = mapped_column(String, nullable=False)
-    start: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
-    end: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
-    creation: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
-    note: Mapped[str] = mapped_column(String, nullable=True)
+    id: Mapped[str] = mapped_column(primary_key=True, index=True)
+    reason: Mapped[str]
+    start: Mapped[datetime]
+    end: Mapped[datetime]
+    creation: Mapped[datetime]
+    note: Mapped[str | None]
     room_id: Mapped[str] = mapped_column(
         ForeignKey("booking_room.id"),
-        nullable=False,
         index=True,
     )
-    room: Mapped[Room] = relationship(Room, lazy="joined", back_populates="bookings")
-    key: Mapped[bool] = mapped_column(Boolean, nullable=False)
-    decision: Mapped[str] = mapped_column(String, nullable=False)
-    recurrence_rule: Mapped[str | None] = mapped_column(String)
+    key: Mapped[bool]
+    decision: Mapped[str]
+    recurrence_rule: Mapped[str | None]
     applicant_id: Mapped[str] = mapped_column(
         ForeignKey("core_user.id"),
-        nullable=False,
     )
-    applicant: Mapped[CoreUser] = relationship("CoreUser")
-    entity: Mapped[str] = mapped_column(String)
+    entity: Mapped[str]
+
+    applicant: Mapped[CoreUser] = relationship("CoreUser", init=False)
+    room: Mapped[Room] = relationship(
+        lazy="joined",
+        back_populates="bookings",
+        init=False,
+    )

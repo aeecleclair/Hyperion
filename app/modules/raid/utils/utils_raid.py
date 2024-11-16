@@ -11,7 +11,10 @@ from app.core.config import Settings
 from app.core.google_api.google_api import DriveGoogleAPI
 from app.core.payment import schemas_payment
 from app.modules.raid import coredata_raid, cruds_raid, models_raid, schemas_raid
-from app.modules.raid.schemas_raid import ParticipantBase, ParticipantUpdate
+from app.modules.raid.schemas_raid import (
+    ParticipantBase,
+    ParticipantUpdate,
+)
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.modules.raid.utils.pdf.pdf_writer import HTMLPDFWriter, PDFWriter
 from app.utils.tools import (
@@ -105,7 +108,7 @@ async def write_teams_csv(
                 f"{team.second.firstname} {team.second.name}".replace(",", " ")
                 if team.second
                 else "",
-                team.difficulty,
+                str(team.difficulty or ""),
                 str(team.number or ""),
             ]
             for team in teams
@@ -130,6 +133,8 @@ async def write_teams_csv(
 
 
 async def set_team_number(team: models_raid.Team, db: AsyncSession) -> None:
+    if team.difficulty is None:
+        return
     new_team_number = await cruds_raid.get_number_of_team_by_difficulty(
         team.difficulty,
         db,
@@ -223,12 +228,19 @@ async def save_security_file(
             team_number,
         )
         file_name = f"{str(team_number) + '_' if team_number else ''}{participant.firstname}_{participant.name}_fiche_sécurité.pdf"
+        if participant.security_file is None:
+            hyperion_error_logger.error(
+                "RAID: The security file should have been created",
+            )
+            return None
+
         async with DriveGoogleAPI(db, settings) as google_api:
-            if participant.security_file and participant.security_file.file_id:
+            if participant.security_file.file_id:
                 file_id = google_api.replace_file(
                     file_path,
                     participant.security_file.file_id,
                 )
+
             else:
                 file_id = await drive_file_manager.upload_participant_file(
                     file_path,
@@ -236,11 +248,13 @@ async def save_security_file(
                     db,
                     settings=settings,
                 )
-            await cruds_raid.update_security_file_id(
-                participant.security_file.id,
-                file_id,
-                db,
-            )
+
+        await cruds_raid.update_security_file_id(
+            participant.security_file.id,
+            file_id,
+            db,
+        )
+
         Path(file_path).unlink()
     except Exception:
         hyperion_error_logger.exception("Error while creating pdf")

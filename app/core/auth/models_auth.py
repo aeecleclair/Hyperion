@@ -1,38 +1,37 @@
 from datetime import datetime
 
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.types.sqlalchemy import Base, TZDateTime
+from app.types.sqlalchemy import Base
 
 
 class AuthorizationCode(Base):
     __tablename__ = "authorization_code"
 
-    code: Mapped[str] = mapped_column(String, primary_key=True, index=True)
-    expire_on: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
-    scope: Mapped[str | None] = mapped_column(String)
-    redirect_uri: Mapped[str | None] = mapped_column(String)
-    user_id: Mapped[str] = mapped_column(String, nullable=False)
-    nonce: Mapped[str | None] = mapped_column(String)
-    code_challenge: Mapped[str | None] = mapped_column(String)
-    code_challenge_method: Mapped[str | None] = mapped_column(String)
+    code: Mapped[str] = mapped_column(primary_key=True, index=True)
+    expire_on: Mapped[datetime]
+    scope: Mapped[str | None]
+    redirect_uri: Mapped[str | None]
+    user_id: Mapped[str]
+    nonce: Mapped[str | None]
+    code_challenge: Mapped[str | None]
+    code_challenge_method: Mapped[str | None]
 
 
 class RefreshToken(Base):
     __tablename__ = "refresh_token"
 
-    client_id: Mapped[str] = mapped_column(String, index=True, nullable=False)
-    created_on: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
-    expire_on: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
-    revoked_on: Mapped[datetime | None] = mapped_column(TZDateTime)
+    client_id: Mapped[str] = mapped_column(index=True, nullable=False)
+    created_on: Mapped[datetime]
+    expire_on: Mapped[datetime]
     token: Mapped[str] = mapped_column(
-        String,
         index=True,
         primary_key=True,
         unique=True,
-        nullable=False,
     )
-    scope: Mapped[str | None] = mapped_column(String)
-    user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), nullable=False)
-    nonce: Mapped[str | None] = mapped_column(String)
+    scope: Mapped[str | None]
+    user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"))
+
+    nonce: Mapped[str | None] = mapped_column(default=None)
+    revoked_on: Mapped[datetime | None] = mapped_column(default=None)
