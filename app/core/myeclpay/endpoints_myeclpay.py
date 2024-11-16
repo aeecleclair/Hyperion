@@ -50,6 +50,149 @@ templates = Jinja2Templates(directory="assets/templates")
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
+# Members of group Payment #
+
+
+@router.post(
+    "/myeclpay/stores",
+    status_code=200,
+    response_model=schemas_myeclpay.Store,
+)
+async def create_store(
+    store: schemas_myeclpay.StoreBase,
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(is_user_a_member_of(GroupType.payment)),
+):
+    """
+    Create a store
+
+    **The user must be a member of group Payment**
+    """
+    # Create new wallet for user
+    wallet_id = uuid.uuid4()
+    await cruds_myeclpay.create_wallet(
+        wallet_id=wallet_id,
+        wallet_type=WalletType.USER,
+        balance=0,
+        db=db,
+    )
+
+    store_db = Store(
+        id=uuid.uuid4(),
+        name=store.name,
+        membership=store.membership,
+        wallet_id=wallet_id,
+    )
+    # Check if user is already registered
+    await cruds_myeclpay.create_store(
+        store=store_db,
+        db=db,
+    )
+
+    await db.commit()
+
+    return store_db
+
+
+@router.post(
+    "/myeclpay/stores/{store_id}/admins",
+    status_code=204,
+)
+async def create_store_admin_seller(
+    store_id: UUID,
+    seller: schemas_myeclpay.SellerAdminCreation,
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(is_user_a_member_of(GroupType.payment)),
+):
+    """
+    Create a store admin seller.
+
+    This admin will have permissions:
+    - can_bank
+    - can_see_historic
+    - can_cancel
+    - can_manage_sellers
+    - store_admin
+
+    **The user must be a member of group Payment**
+    """
+    await cruds_myeclpay.create_seller(
+        user_id=seller.user_id,
+        store_id=store_id,
+        can_bank=True,
+        can_see_historic=True,
+        can_cancel=True,
+        can_manage_sellers=True,
+        store_admin=True,
+        db=db,
+    )
+
+    await db.commit()
+
+
+@router.get(
+    "/myeclpay/stores/{store_id}/admins",
+    status_code=200,
+    response_model=list[schemas_myeclpay.Seller],
+)
+async def get_store_admin_seller(
+    store_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(is_user_a_member_of(GroupType.payment)),
+):
+    """
+    Get all sellers that have the `store_admin` permission for the given store.
+
+    **The user must be a member of group Payment**
+    """
+    sellers = await cruds_myeclpay.get_admin_sellers(
+        store_id=store_id,
+        db=db,
+    )
+
+    return sellers
+
+
+@router.delete(
+    "/myeclpay/stores/{store_id}/admins/{seller_id}",
+    status_code=204,
+)
+async def delete_store_admin_seller(
+    store_id: UUID,
+    seller_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(is_user_a_member_of(GroupType.payment)),
+):
+    """
+    Delete a store admin seller.
+
+    **The user must be a member of group Payment**
+    """
+    await cruds_myeclpay.get_seller(
+        seller_id=seller_id,
+        db=db,
+    )
+
+    if seller_id is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Seller does not exist",
+        )
+
+    if seller_id.store_id != store_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Seller does not belong to the store",
+        )
+
+    await cruds_myeclpay.delete_seller(
+        seller_id=seller_id,
+        db=db,
+    )
+
+    await db.commit()
+
+
 @router.get(
     "/myeclpay/users/me/cgu",
     status_code=200,
