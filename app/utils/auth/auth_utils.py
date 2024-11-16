@@ -33,7 +33,7 @@ def get_token_data(
         hyperion_access_logger.info(
             f"Get_token_data: Decoded a token for user {token_data.sub} ({request_id})",
         )
-    except (InvalidTokenError, ValidationError) as error:
+    except (InvalidTokenError, ValidationError):
         hyperion_access_logger.exception(
             f"Get_token_data: Failed to decode a token ({request_id})",
         )
@@ -41,7 +41,7 @@ def get_token_data(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Could not validate credentials",
         ) from None
-    except ExpiredSignatureError as error:
+    except ExpiredSignatureError:
         hyperion_access_logger.exception(
             f"Get_token_data: Token has expired ({request_id})",
         )
@@ -49,7 +49,7 @@ def get_token_data(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Token has expired",
         ) from None
-    except DecodeError as error:
+    except DecodeError:
         hyperion_access_logger.exception(
             f"Get_token_data: Failed to decode a token ({request_id})",
         )
