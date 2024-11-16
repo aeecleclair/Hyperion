@@ -1,11 +1,6 @@
 from enum import Enum
 
 
-class CGUVersion(int, Enum):
-    First = 1
-    Second = 2
-
-
 class WalletType(str, Enum):
     USER = "user"
     STORE = "store"
