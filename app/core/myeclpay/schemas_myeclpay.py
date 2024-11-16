@@ -8,6 +8,31 @@ from app.core.myeclpay.types_myeclpay import (
     TransactionStatus,
     WalletDeviceStatus,
 )
+from app.types.membership import AvailableAssociationMembership
+
+
+class StoreBase(BaseModel):
+    name: str
+    membership: AvailableAssociationMembership
+    wallet_id: UUID
+
+
+class Store(StoreBase):
+    id: UUID
+
+
+class SellerAdminCreation(BaseModel):
+    user_id: str
+
+
+class Seller(BaseModel):
+    user_id: str
+    store_id: UUID
+    can_bank: bool
+    can_see_historic: bool
+    can_cancel: bool
+    can_manage_sellers: bool
+    store_admin: bool
 
 
 class CGUSignature(BaseModel):
