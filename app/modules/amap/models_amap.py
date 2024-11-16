@@ -2,7 +2,7 @@
 
 from datetime import date, datetime
 
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.models_core import CoreUser
@@ -56,7 +56,7 @@ class Delivery(Base):
         unique=False,
         index=True,
     )
-    status: Mapped[DeliveryStatusType]
+    status: Mapped[DeliveryStatusType] = mapped_column(String)
     orders: Mapped[list["Order"]] = relationship("Order", init=False)
     products: Mapped[list[Product]] = relationship(
         "Product",
