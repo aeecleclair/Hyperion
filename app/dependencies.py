@@ -115,6 +115,15 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             await db.close()
 
 
+async def get_get_db_dependency() -> Callable[[], AsyncGenerator[AsyncSession, None]]:
+    """
+    Return the dependency `get_db`
+
+    NOTE: you should not use this dependency directly, prefer using `get_db` instead
+    """
+    return get_db
+
+
 @lru_cache
 def get_settings() -> Settings:
     """
