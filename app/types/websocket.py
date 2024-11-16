@@ -5,10 +5,13 @@ from enum import Enum
 from typing import Any, Literal
 
 from broadcaster import Broadcast
-from fastapi import WebSocket
+from fastapi import WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
+from app.types.scopes_type import ScopeType
+from app.utils.auth import auth_utils
 
 
 class HyperionWebsocketsRoom(str, Enum):
@@ -219,3 +222,88 @@ class WebsocketConnectionManager:
             hyperion_error_logger.exception("Error while sending websocket message")
             return False
         return True
+
+    async def manage_websocket(
+        self,
+        websocket: WebSocket,
+        settings: Settings,
+        room: HyperionWebsocketsRoom,
+        db: AsyncSession,
+    ):
+        """
+        This function is used to manage the websocket connection.
+
+        It will create an infinite loop that will wait for messages from the websocket.
+        The loop will be broken when the websocket is disconnected.
+
+        The databse is closed manually in this method, so you need to use the dependency `get_unsafe_db` in the FastAPI endpoint.
+
+        NOTE:
+        - you should not call methods after this call, as it will be unreachable until the websocket is disconnected
+        - you should never use `get_db` in the websocket endpoint, as the connection will never be closed  until the websocket is disconnected
+        If you use `get_db` in the websocket endpoint, you will have a lot of open connections to the database at the same time, which will led to a Postgresql error.
+        """
+
+        await websocket.accept()
+
+        try:
+            token_message = await websocket.receive_json()
+            token = token_message.get("token", None)
+
+            token_data = auth_utils.get_token_data(
+                settings=settings,
+                token=token,
+                request_id="websocket",
+            )
+
+            user = await auth_utils.get_user_from_token_with_scopes(
+                scopes=[[ScopeType.API]],
+                db=db,
+                token_data=token_data,
+            )
+        except Exception:
+            await websocket.send_text(
+                ConnectionWSMessageModel(
+                    data=ConnectionWSMessageModelData(
+                        status=ConnectionWSMessageModelStatus.invalid,
+                    ),
+                ).model_dump_json(),
+            )
+            await websocket.close()
+            return
+        finally:
+            await db.close()
+
+        hyperion_error_logger.debug(
+            f"{room}: New websocket connection from {user.id} on worker {os.getpid()}",
+        )
+
+        await websocket.send_text(
+            ConnectionWSMessageModel(
+                data=ConnectionWSMessageModelData(
+                    status=ConnectionWSMessageModelStatus.connected,
+                ),
+            ).model_dump_json(),
+        )
+
+        # Add the user to the connection stack
+        await self.add_connection_to_room(
+            room_id=room,
+            ws_connection=websocket,
+        )
+
+        try:
+            while True:
+                # TODO: we could use received messages from the websocket
+                await websocket.receive_json()
+        except WebSocketDisconnect:
+            await self.remove_connection_from_room(
+                room_id=room,
+                connection=websocket,
+            )
+        except Exception:
+            await self.remove_connection_from_room(
+                room_id=room,
+                connection=websocket,
+            )
+            raise
