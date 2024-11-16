@@ -613,11 +613,9 @@ async def create_loan(
     ]
 
     message = Message(
-        context=f"loan-new-{loan.id}-begin-notif",
-        is_visible=True,
         title="📦 Nouveau prêt",
         content=f"Un prêt a été enregistré pour l'association {loan.loaner.name}",
-        expire_on=datetime.now(UTC) + timedelta(days=3),
+        module="loan",
     )
     await notification_tool.send_notification_to_user(
         user_id=loan.borrower_id,
@@ -629,12 +627,9 @@ async def create_loan(
     expire_on_date = loan.end + timedelta(days=30)
     expire_on_datetime = datetime.combine(expire_on_date, delivery_time, tzinfo=UTC)
     message = Message(
-        context=f"loan-new-{loan.id}-end-notif",
-        is_visible=True,
         title="📦 Prêt arrivé à échéance",
         content=f"N'oublie pas de rendre ton prêt à l'association {loan.loaner.name} !",
-        delivery_datetime=delivery_datetime,
-        expire_on=expire_on_datetime,
+        module="loan",
     )
 
     await notification_tool.send_notification_to_user(
@@ -874,11 +869,9 @@ async def return_loan(
     )
 
     message = Message(
-        context=f"loan-new-{loan.id}-end-notif",
-        is_visible=False,
         title="",
         content="",
-        expire_on=datetime.now(UTC) + timedelta(days=3),
+        module="",
     )
     await notification_tool.send_notification_to_user(
         user_id=loan.borrower_id,
@@ -937,12 +930,9 @@ async def extend_loan(
     )
     # same context so the first notification will be removed
     message = Message(
-        context=f"loan-new-{loan.id}-end-notif",
-        is_visible=True,
         title="📦 Prêt arrivé à échéance",
         content=f"N'oublie pas de rendre ton prêt à l'association {loan.loaner.name} ! ",
-        delivery_datetime=loan.end,
-        expire_on=loan.end + timedelta(days=30),
+        action_module="loan",
     )
 
     await notification_tool.send_notification_to_user(

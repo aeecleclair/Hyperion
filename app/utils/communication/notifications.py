@@ -101,10 +101,10 @@ class NotificationManager:
             )
             tokens = tokens[:500]
 
-        # We may pass a notification object along the data
         try:
             message = messaging.MulticastMessage(
                 tokens=tokens,
+                data={"module":message_content.action_module},
                 notification=messaging.Notification(
                     title=message_content.title,
                     body=message_content.content,
