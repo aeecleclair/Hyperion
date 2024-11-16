@@ -2,7 +2,7 @@ import logging
 
 import jwt
 from fastapi import HTTPException, status
-from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
+from jwt.exceptions import DecodeError, ExpiredSignatureError, InvalidTokenError
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -33,22 +33,30 @@ def get_token_data(
         hyperion_access_logger.info(
             f"Get_token_data: Decoded a token for user {token_data.sub} ({request_id})",
         )
-    except (InvalidTokenError, ValidationError) as error:
+    except (InvalidTokenError, ValidationError):
         hyperion_access_logger.exception(
             f"Get_token_data: Failed to decode a token ({request_id})",
         )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Could not validate credentials",
-        ) from error
-    except ExpiredSignatureError as error:
+        ) from None
+    except ExpiredSignatureError:
         hyperion_access_logger.exception(
             f"Get_token_data: Token has expired ({request_id})",
         )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Token has expired",
-        ) from error
+        ) from None
+    except DecodeError:
+        hyperion_access_logger.exception(
+            f"Get_token_data: Failed to decode a token ({request_id})",
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Could not validate credentials",
+        ) from None
 
     return token_data
 
