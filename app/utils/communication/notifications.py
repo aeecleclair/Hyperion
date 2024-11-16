@@ -85,6 +85,12 @@ class NotificationManager:
         if not self.use_firebase:
             return
 
+        if len(tokens) == 0:
+            # We should not try to send a message to an emtpy list of tokens
+            # or we will get an error "max_workers must be greater than 0"
+            # See https://github.com/firebase/firebase-admin-python/issues/792
+            return
+
         # We can only send 500 tokens at a time
         if len(tokens) > 500:
             await self._send_firebase_push_notification_by_tokens(
@@ -189,6 +195,12 @@ class NotificationManager:
                 db=db,
             )
         )
+
+        if len(firebase_device_tokens) == 0:
+            hyperion_error_logger.warning(
+                f"Notification: No firebase device token found for the message {message.title} {message.content}",
+            )
+
         await self._add_message_for_user_in_database(
             message=message,
             tokens=firebase_device_tokens,
