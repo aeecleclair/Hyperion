@@ -92,13 +92,13 @@ def sort_user(
 
 def is_user_member_of_an_allowed_group(
     user: models_core.CoreUser,
-    groups_id: list[str] | list[GroupType],
+    allowed_groups: list[str] | list[GroupType],
 ) -> bool:
     """
     Check if the user is a member of the group.
     """
     user_groups_id = [group.id for group in user.groups]
-    return any(group_id in user_groups_id for group_id in groups_id)
+    return any(group_id in user_groups_id for group_id in allowed_groups)
 
 
 async def is_group_id_valid(group_id: str, db: AsyncSession) -> bool:
