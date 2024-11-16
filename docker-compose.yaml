@@ -25,7 +25,7 @@ services:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
   
   hyperion-scheduler-worker:
-    image: hyperion-scheduler-worker
+    image: hyperion-app
     container_name: hyperion-scheduler-worker
     depends_on:
       - hyperion-db
