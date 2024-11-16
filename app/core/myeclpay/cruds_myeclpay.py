@@ -2,7 +2,7 @@ from collections.abc import Sequence
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import or_, select, update
+from sqlalchemy import delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -13,6 +13,69 @@ from app.core.myeclpay.types_myeclpay import (
     WalletDeviceStatus,
     WalletType,
 )
+
+
+async def create_store(
+    store: models_myeclpay.Store,
+    db: AsyncSession,
+) -> None:
+    db.add(store)
+
+
+async def create_seller(
+    user_id: str,
+    store_id: UUID,
+    can_bank: bool,
+    can_see_historic: bool,
+    can_cancel: bool,
+    can_manage_sellers: bool,
+    store_admin: bool,
+    db: AsyncSession,
+) -> None:
+    wallet = models_myeclpay.Seller(
+        user_id=user_id,
+        store_id=store_id,
+        can_bank=can_bank,
+        can_see_historic=can_see_historic,
+        can_cancel=can_cancel,
+        can_manage_sellers=can_manage_sellers,
+        store_admin=store_admin,
+    )
+    db.add(wallet)
+
+
+async def get_admin_sellers(
+    store_id: UUID,
+    db: AsyncSession,
+) -> Sequence[models_myeclpay.Seller]:
+    result = await db.execute(
+        select(models_myeclpay.Seller).where(
+            models_myeclpay.Seller.store_id == store_id,
+            models_myeclpay.Seller.store_admin.is_(True),
+        ),
+    )
+    return result.scalars().all()
+
+
+async def get_seller(
+    seller_id: UUID,
+    db: AsyncSession,
+) -> models_myeclpay.Seller | None:
+    result = await db.execute(
+        select(models_myeclpay.Seller).where(
+            models_myeclpay.Seller.id == seller_id,
+        ),
+    )
+    return result.scalars().first()
+
+
+async def delete_seller(
+    seller_id: UUID,
+    db: AsyncSession,
+) -> models_myeclpay.Seller | None:
+    await db.execute(
+        delete(models_myeclpay.Seller).where(models_myeclpay.Seller.id == seller_id),
+    )
 
 
 async def create_wallet(
