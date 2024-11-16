@@ -46,7 +46,7 @@ else:
 
 engine = create_async_engine(
     SQLALCHEMY_DATABASE_URL,
-    echo=True,
+    echo=settings.DATABASE_DEBUG,
     # We need to use NullPool to run tests with Postgresql
     # See https://docs.sqlalchemy.org/en/20/orm/extensions/asyncio.html#using-multiple-asyncio-event-loops
     poolclass=NullPool,
