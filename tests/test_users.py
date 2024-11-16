@@ -177,6 +177,36 @@ def test_create_and_activate_user(mocker: MockerFixture, client: TestClient) -> 
     assert response.status_code == 201
 
 
+@pytest.mark.parametrize(
+    ("email", "expected_error"),
+    [
+        (
+            "123456789",
+            "Value error, Invalid phone number: (0) Missing or invalid default region.",
+        ),
+        ("+3300000000000", "Value error, Invalid phone number, number is not possible"),
+        ("+33000000000", "Value error, Invalid phone number, number is not valid"),
+    ],
+)
+def activate_user_with_invalid_phone_number(
+    phone: str,
+    expected_error: str,
+    client: TestClient,
+) -> None:
+    response = client.post(
+        "/users/activate",
+        json={
+            "activation_token": UNIQUE_TOKEN,
+            "password": "password",
+            "firstname": "firstname",
+            "name": "name",
+            "phone": phone,
+        },
+    )
+    assert response.status_code == 422
+    assert response.json()["detail"][0]["msg"] == expected_error
+
+
 def test_update_batch_create_users(client: TestClient) -> None:
     student = "39691052-2ae5-4e12-99d0-7a9f5f2b0136"
     response = client.post(

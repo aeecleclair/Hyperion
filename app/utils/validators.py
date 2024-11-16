@@ -5,8 +5,6 @@ See https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
 
 import phonenumbers
 
-from app.types.exceptions import PhoneNumberValidationError
-
 
 def password_validator(password: str) -> str:
     """
@@ -26,11 +24,16 @@ def phone_formatter(phone: str) -> str:
     This function is intended to be used as a Pydantic validator:
     https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
     """
-    parsed_phone = phonenumbers.parse(phone, None)
+
+    # We need to raise a ValueError for Pydantic to catch it and return an error response
+    try:
+        parsed_phone = phonenumbers.parse(phone, None)
+    except Exception as error:
+        raise ValueError(f"Invalid phone number: {error}")  # noqa: B904, TRY003
     if not phonenumbers.is_possible_number(parsed_phone):
-        raise PhoneNumberValidationError
+        raise ValueError("Invalid phone number, number is not possible")  # noqa: TRY003
     if not phonenumbers.is_valid_number(parsed_phone):
-        raise PhoneNumberValidationError
+        raise ValueError("Invalid phone number, number is not valid")  # noqa: TRY003
     return phonenumbers.format_number(parsed_phone, phonenumbers.PhoneNumberFormat.E164)
 
 
