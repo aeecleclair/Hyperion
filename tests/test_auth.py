@@ -519,7 +519,7 @@ def test_authorization_code_flow_with_auth_client_restricting_allowed_groups_and
 
     assert response.next_request is not None
     assert str(response.next_request.url).endswith(
-        "calypsso/error?message=User+is+not+member+of+an+allowed+group",
+        "calypsso/error?message=User+account+type+is+not+allowed",
     )
 
 
