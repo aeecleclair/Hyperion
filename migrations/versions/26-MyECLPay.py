@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
 
 from app.types.sqlalchemy import TZDateTime
 
@@ -41,7 +42,7 @@ def upgrade() -> None:
         sa.Column("name", sa.String(), nullable=False),
         sa.Column(
             "membership",
-            sa.Enum(name="availableassociationmembership", create_type=False),
+            postgresql.ENUM(name="availableassociationmembership", create_type=False),
             nullable=False,
         ),
         sa.Column("wallet_id", sa.Uuid(), nullable=False, unique=True),
