@@ -41,7 +41,7 @@ def upgrade() -> None:
         sa.Column("name", sa.String(), nullable=False),
         sa.Column(
             "membership",
-            sa.Enum("aeecl", "useecl", name="availableassociationmembership"),
+            sa.Enum(name="availableassociationmembership", create_type=False),
             nullable=False,
         ),
         sa.Column("wallet_id", sa.Uuid(), nullable=False, unique=True),
