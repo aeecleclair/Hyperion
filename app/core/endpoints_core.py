@@ -26,6 +26,10 @@ router = APIRouter(tags=["Core"])
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
+def testing_print():
+    print("Super, ça marche")
+
+
 @router.get(
     "/information",
     response_model=schemas_core.CoreInformation,
@@ -39,9 +43,6 @@ async def read_information(
     Return information about Hyperion. This endpoint can be used to check if the API is up.
     """
     scheduler = await get_scheduler()
-
-    def testing_print():
-        print("Super, ça marche")
 
     await scheduler.queue_job(testing_print, "testingprint10", 10)
 
