@@ -4,7 +4,10 @@ from uuid import UUID, uuid4
 
 import pytest_asyncio
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from cryptography.hazmat.primitives.asymmetric.ed25519 import (
+    Ed25519PrivateKey,
+    Ed25519PublicKey,
+)
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
@@ -32,6 +35,7 @@ ecl_user: models_core.CoreUser
 ecl_user_access_token: str
 ecl_user_wallet: models_myeclpay.Wallet
 ecl_user_wallet_device_private_key: Ed25519PrivateKey
+ecl_user_wallet_device_public_key: Ed25519PublicKey
 ecl_user_wallet_device: models_myeclpay.WalletDevice
 ecl_user_wallet_device_unactive: models_myeclpay.WalletDevice
 ecl_user_payment: models_myeclpay.UserPayment
@@ -58,6 +62,10 @@ used_qr_code: models_myeclpay.UsedQRCode
 
 store_seller_no_permission_user_access_token: str
 store_seller_can_bank_user_access_token: str
+
+unregistered_ecl_user_access_token: str
+
+UNIQUE_TOKEN = "UNIQUE_TOKEN"
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
@@ -90,8 +98,10 @@ async def init_objects() -> None:
     global \
         ecl_user_wallet_device, \
         ecl_user_wallet_device_private_key, \
+        ecl_user_wallet_device_public_key, \
         ecl_user_wallet_device_unactive
     ecl_user_wallet_device_private_key = Ed25519PrivateKey.generate()
+    ecl_user_wallet_device_public_key = ecl_user_wallet_device_private_key.public_key()
     ecl_user_wallet_device = models_myeclpay.WalletDevice(
         id=uuid4(),
         name="Test device",
@@ -308,6 +318,12 @@ async def init_objects() -> None:
     )
     await add_object_to_db(store_seller_can_bank)
 
+    global unregistered_ecl_user_access_token
+    unregistered_ecl_user = await create_user_with_groups(
+        groups=[GroupType.student],
+    )
+    unregistered_ecl_user_access_token = create_api_access_token(unregistered_ecl_user)
+
 
 async def get_cgu_for_unregistred_user(client: TestClient):
     unregistred_ecl_user = await create_user_with_groups(
@@ -387,6 +403,104 @@ async def test_sign_cgu(client: TestClient):
         json={"accepted_cgu_version": 2},
     )
     assert response.status_code == 204
+
+
+async def test_get_user_devices_with_unregistred_user(client: TestClient):
+    unregistred_ecl_user = await create_user_with_groups(
+        groups=[GroupType.student],
+    )
+    unregistred_ecl_user_access_token = create_api_access_token(unregistred_ecl_user)
+
+    response = client.get(
+        "/myeclpay/users/me/wallet/devices",
+        headers={"Authorization": f"Bearer {unregistred_ecl_user_access_token}"},
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "User is not registered for MyECL Pay"
+
+
+async def test_get_user_devices(client: TestClient):
+    response = client.get(
+        "/myeclpay/users/me/wallet/devices",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+    )
+    assert response.status_code == 200
+    assert len(response.json()) == 2
+
+
+async def test_create_user_device_unregistred_user(client: TestClient):
+    response = client.post(
+        "/myeclpay/users/me/wallet/devices",
+        headers={"Authorization": f"Bearer {unregistered_ecl_user_access_token}"},
+        json={
+            "name": "MyDevice",
+            "ed25519_public_key": base64.b64encode(
+                ecl_user_wallet_device_public_key.public_bytes(
+                    encoding=serialization.Encoding.Raw,
+                    format=serialization.PublicFormat.Raw,
+                ),
+            ).decode("utf-8"),
+        },
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "User is not registered for MyECL Pay"
+
+
+async def test_create_and_activate_user_device(
+    mocker: MockerFixture,
+    client: TestClient,
+) -> None:
+    # NOTE: we don't want to mock app.core.security.generate_token but
+    # app.core.users.endpoints_users.security.generate_token which is the imported version of the function
+    mocker.patch(
+        "app.core.users.endpoints_users.security.generate_token",
+        return_value=UNIQUE_TOKEN,
+    )
+
+    response = client.post(
+        "/myeclpay/users/me/wallet/devices",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+        json={
+            "name": "MySuperDevice",
+            "ed25519_public_key": base64.b64encode(
+                ecl_user_wallet_device_public_key.public_bytes(
+                    encoding=serialization.Encoding.Raw,
+                    format=serialization.PublicFormat.Raw,
+                ),
+            ).decode("utf-8"),
+        },
+    )
+    assert response.status_code == 201
+    assert response.json()["id"] is not None
+
+    response = client.get(
+        f"/myeclpay/users/me/wallet/devices/activate/{UNIQUE_TOKEN}",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+    )
+    assert response.status_code == 200
+    assert response.json() == "Wallet device activated"
+
+
+async def test_activate_non_existing_device(
+    client: TestClient,
+) -> None:
+    response = client.get(
+        "/myeclpay/users/me/wallet/devices/activate/invalidtoken",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Invalid token"
+
+
+async def test_activate_already_activated_device(
+    client: TestClient,
+) -> None:
+    response = client.get(
+        "/myeclpay/users/me/wallet/devices/activate/activation_token_ecl_user_wallet_device",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Wallet device is already activated or revoked"
 
 
 async def test_get_transactions_unregistered(client: TestClient):
@@ -814,7 +928,6 @@ async def test_store_scan_store_from_wallet_with_old_cgu_version(client: TestCli
     ecl_user = await create_user_with_groups(
         groups=[GroupType.student],
     )
-    ecl_user_access_token = create_api_access_token(ecl_user)
 
     ecl_user_wallet = models_myeclpay.Wallet(
         id=uuid4(),
