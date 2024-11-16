@@ -83,6 +83,7 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("root", "allowed_account_type"),
     )
+    op.drop_column("core_user", "external")
     op.add_column(
         "core_user",
         sa.Column(
@@ -95,7 +96,6 @@ def upgrade() -> None:
             server_default=sa.text("external"),
         ),
     )
-    op.drop_column("core_user", "external")
 
     conn = op.get_bind()
     conn.execute(
