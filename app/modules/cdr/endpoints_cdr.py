@@ -1,5 +1,4 @@
 import logging
-import os
 import re
 from collections.abc import Sequence
 from datetime import UTC, date, datetime
@@ -11,7 +10,6 @@ from fastapi import (
     Depends,
     HTTPException,
     WebSocket,
-    WebSocketDisconnect,
 )
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -47,15 +45,10 @@ from app.modules.cdr.utils_cdr import (
 )
 from app.types.membership import AvailableAssociationMembership
 from app.types.module import Module
-from app.types.scopes_type import ScopeType
 from app.types.websocket import (
-    ConnectionWSMessageModel,
-    ConnectionWSMessageModelData,
-    ConnectionWSMessageModelStatus,
     HyperionWebsocketsRoom,
     WebsocketConnectionManager,
 )
-from app.utils.auth import auth_utils
 
 # from app.utils.mail.mailworker import send_email
 from app.utils.tools import (
@@ -3227,4 +3220,4 @@ async def websocket_endpoint(
             websocket=websocket,
             settings=settings,
             room=HyperionWebsocketsRoom.CDR,
-            get_db=db,)
+            get_db=db)

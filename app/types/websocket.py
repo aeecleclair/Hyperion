@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import os
-from collections.abc import AsyncGenerator, Callable
 from enum import Enum
 from typing import Any, Literal
 
@@ -11,7 +10,6 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
-from app.dependencies import get_unsafe_db
 from app.types.scopes_type import ScopeType
 from app.utils.auth import auth_utils
 
