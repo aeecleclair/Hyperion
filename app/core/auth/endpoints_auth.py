@@ -312,24 +312,28 @@ async def authorize_validation(
             user=user,
             allowed_groups=auth_client.allowed_groups,
         ):
-            # TODO We should show an HTML page explaining the issue
             hyperion_access_logger.warning(
                 f"Authorize-validation: user is not member of an allowed group {authorizereq.email} ({request_id})",
             )
-            url = redirect_uri + "?error=" + "consent_required"
-            if authorizereq.state:
-                url += "&state=" + authorizereq.state
-            return RedirectResponse(url, status_code=status.HTTP_302_FOUND)
+            return RedirectResponse(
+                settings.CLIENT_URL
+                + calypsso.get_error_relative_url(
+                    message="User is not member of an allowed group",
+                ),
+                status_code=status.HTTP_302_FOUND,
+            )
     if not auth_client.allow_external_users:
         if is_user_external(user):
-            # TODO We should show an HTML page explaining the issue
             hyperion_access_logger.warning(
                 f"Authorize-validation: external users are disabled for this auth provider {auth_client.client_id} ({request_id})",
             )
-            url = redirect_uri + "?error=" + "consent_required"
-            if authorizereq.state:
-                url += "&state=" + authorizereq.state
-            return RedirectResponse(url, status_code=status.HTTP_302_FOUND)
+            return RedirectResponse(
+                settings.CLIENT_URL
+                + calypsso.get_error_relative_url(
+                    message="External users are not allowed",
+                ),
+                status_code=status.HTTP_302_FOUND,
+            )
 
     # We generate a new authorization_code
     # The authorization code MUST expire
@@ -513,21 +517,43 @@ async def authorization_code_grant(
             error_description="Invalid client id or secret",
         )
 
-    # If the auth provider expect to use a client secret, we don't use PKCE
     if auth_client.secret is not None:
         # As PKCE is not used, we need to make sure that PKCE related parameters were not used
         if (
             db_authorization_code.code_challenge is not None
             or tokenreq.code_verifier is not None
         ):
-            hyperion_access_logger.warning(
-                f"Token authorization_code_grant: PKCE related parameters should not be used when using a client secret ({request_id})",
-            )
-            raise AuthHTTPException(
-                status_code=400,
-                error="invalid_request",
-                error_description="PKCE related parameters should not be used",
-            )
+            # We allow some auth clients to bypass this verification
+            # because some auth providers may use PKCE with a client secret event if it's forbidden by the specifications
+            if not auth_client.allow_pkce_with_client_secret:
+                hyperion_access_logger.warning(
+                    f"Token authorization_code_grant: PKCE related parameters should not be used when using a client secret ({request_id})",
+                )
+                raise AuthHTTPException(
+                    status_code=400,
+                    error="invalid_request",
+                    error_description="PKCE related parameters should not be used",
+                )
+    elif (
+        db_authorization_code.code_challenge is not None
+        and tokenreq.code_verifier is not None
+    ):
+        # We use PKCE
+        pass
+    else:
+        hyperion_access_logger.warning(
+            f"Token authorization_code_grant: Client must provide a client_secret or a code_verifier ({request_id})",
+        )
+        raise AuthHTTPException(
+            status_code=400,
+            error="invalid_request",
+            error_description="Client must provide a client_secret or a code_verifier",
+        )
+
+    # Then we verify passed client_secret or code_verifier are valid
+
+    # If the auth provider expect to use a client secret, we verify it
+    if auth_client.secret is not None:
         # We need to check the correct client_secret was provided
         if auth_client.secret != tokenreq.client_secret:
             hyperion_access_logger.warning(
@@ -539,21 +565,11 @@ async def authorization_code_grant(
                 error_description="Invalid client id or secret",
             )
 
-    # If there is no client secret, we use PKCE
-    elif (
+    # If we use PKCE, we need to verify the code_verifier
+    if (
         db_authorization_code.code_challenge is not None
         and tokenreq.code_verifier is not None
     ):
-        # As PKCE is used, we make sure a client secret was not provided
-        if tokenreq.client_secret is not None:
-            hyperion_access_logger.warning(
-                f"Token authorization_code_grant: A client secret should not be used when using PKCE ({request_id})",
-            )
-            raise AuthHTTPException(
-                status_code=400,
-                error="invalid_request",
-                error_description="A client secret should not be used with PKCE",
-            )
         # We need to verify the hash correspond
         # The hash is a H256, urlbase64 encoded
         # If the last character is not a "=", we need to add it, as the = is optional for urlbase64 encoding
@@ -576,15 +592,6 @@ async def authorization_code_grant(
                 error="invalid_request",
                 error_description="Invalid code_verifier",
             )
-    else:
-        hyperion_access_logger.warning(
-            f"Token authorization_code_grant: Client must provide a client_secret or a code_verifier ({request_id})",
-        )
-        raise AuthHTTPException(
-            status_code=400,
-            error="invalid_request",
-            error_description="Client must provide a client_secret or a code_verifier",
-        )
 
     # We can check the authorization code
     if db_authorization_code.expire_on < datetime.now(UTC):

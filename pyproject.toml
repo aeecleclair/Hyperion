@@ -81,6 +81,8 @@ unfixable = []
 "migrations/env.py" = ["INP001"]
 # Allow raw SQL for migrations, allow assert for migration tests
 "migrations/versions/*" = ["S608", "S101"]
+# Allow complexe methods for auth endpoints
+"app/core/auth/endpoints_auth.py" = ["C901"]
 
 [tool.ruff.lint.mccabe]
 # Flag errors (`C901`) whenever the complexity level exceeds 18.

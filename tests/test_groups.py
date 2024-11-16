@@ -12,7 +12,7 @@ from tests.commons import (
 admin_user: models_core.CoreUser
 
 
-id_eclair = "8aab79e7-1e15-456d-b6e2-11e4e9f77e4f"
+id_test_eclair = "8aab79e7-1e15-456d-b6e2-11e4e9f77e4f"
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
@@ -20,8 +20,8 @@ async def init_objects() -> None:
     global admin_user
 
     eclair = models_core.CoreGroup(
-        id=id_eclair,
-        name="eclair",
+        id=id_test_eclair,
+        name="test_eclair",
         description="Les meilleurs",
     )
     await add_object_to_db(eclair)
@@ -43,12 +43,12 @@ def test_read_group(client: TestClient) -> None:
     token = create_api_access_token(admin_user)
 
     response = client.get(
-        f"/groups/{id_eclair}",
+        f"/groups/{id_test_eclair}",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
     data = response.json()
-    assert data["name"] == "eclair"
+    assert data["name"] == "test_eclair"
 
 
 def test_create_group(client: TestClient) -> None:
@@ -69,7 +69,7 @@ def test_update_group(client: TestClient) -> None:
     token = create_api_access_token(admin_user)
 
     response = client.patch(
-        f"/groups/{id_eclair}",
+        f"/groups/{id_test_eclair}",
         json={
             "name": "Group ECLAIR",
         },
@@ -85,7 +85,7 @@ def test_create_membership(client: TestClient) -> None:
         "/groups/membership",
         json={
             "user_id": admin_user.id,
-            "group_id": id_eclair,
+            "group_id": id_test_eclair,
             "description": "Group membership",
         },
         headers={"Authorization": f"Bearer {token}"},
@@ -101,7 +101,7 @@ def test_delete_membership(client: TestClient) -> None:
         url="/groups/membership",
         json={
             "user_id": admin_user.id,
-            "group_id": id_eclair,
+            "group_id": id_test_eclair,
         },
         headers={"Authorization": f"Bearer {token}"},
     )

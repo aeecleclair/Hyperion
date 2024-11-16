@@ -51,6 +51,11 @@ class BaseAuthClient:
     # We don't want to enable token introspection for all clients as it may be a security risk, allowing attackers to do token fishing.
     allow_token_introspection: bool = False
 
+    # OIDC specification forbids using PKCE when using a client secret.
+    # However, some clients may try to use PKCE anyway. This parameter allows to bypass this check.
+    # NOTE: you should only set this to True if you are sure the client is correctly configured and secure.
+    allow_pkce_with_client_secret: bool = False
+
     def get_userinfo(self, user: models_core.CoreUser) -> dict[str, Any]:
         """
         Return information about the user in a format understandable by the client.
@@ -303,6 +308,32 @@ class RalllyAuthClient(BaseAuthClient):
         ScopeType.profile,
         "email",
     }
+
+    return_userinfo_in_id_token: bool = True
+
+    @classmethod
+    def get_userinfo(cls, user: models_core.CoreUser):
+        return {
+            "sub": user.id,
+            "name": get_display_name(
+                firstname=user.firstname,
+                name=user.name,
+                nickname=user.nickname,
+            ),
+            "email": user.email,
+        }
+
+
+class DocumensoAuthClient(BaseAuthClient):
+    allowed_scopes: set[ScopeType | str] = {ScopeType.openid}
+
+    allow_pkce_with_client_secret: bool = True
+
+    allowed_groups: list[GroupType] | None = [
+        GroupType.admin,
+        GroupType.BDE,
+        GroupType.eclair,
+    ]
 
     return_userinfo_in_id_token: bool = True
 
