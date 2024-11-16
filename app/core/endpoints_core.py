@@ -1,6 +1,7 @@
 import logging
 from os import path
 from pathlib import Path
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
@@ -39,7 +40,7 @@ async def read_information(settings: Settings = Depends(get_settings)):
     """
     scheduler = await get_scheduler()
 
-    await scheduler.queue_job(testing_print, "testingprint10", 10)
+    await scheduler.queue_job(testing_print, uuid4(), 10)
 
     return schemas_core.CoreInformation(
         ready=True,
