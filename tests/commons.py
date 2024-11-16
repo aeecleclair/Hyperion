@@ -69,6 +69,13 @@ async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
             await db.close()
 
 
+async def override_get_unsafe_db() -> AsyncGenerator[AsyncSession, None]:
+    """Override the get_db function to use the testing session"""
+
+    async with TestingSessionLocal() as db:
+        yield db
+
+
 # By default the redis client is deactivated
 redis_client: redis.Redis | None | bool = False
 

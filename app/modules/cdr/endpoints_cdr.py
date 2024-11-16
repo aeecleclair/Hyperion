@@ -1,5 +1,4 @@
 import logging
-import os
 import re
 from collections.abc import Sequence
 from datetime import UTC, date, datetime
@@ -11,7 +10,6 @@ from fastapi import (
     Depends,
     HTTPException,
     WebSocket,
-    WebSocketDisconnect,
 )
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,6 +25,7 @@ from app.dependencies import (
     get_db,
     get_payment_tool,
     get_settings,
+    get_unsafe_db,
     get_websocket_connection_manager,
     is_user,
     is_user_a_member,
@@ -46,15 +45,10 @@ from app.modules.cdr.utils_cdr import (
 )
 from app.types.membership import AvailableAssociationMembership
 from app.types.module import Module
-from app.types.scopes_type import ScopeType
 from app.types.websocket import (
-    ConnectionWSMessageModel,
-    ConnectionWSMessageModelData,
-    ConnectionWSMessageModelStatus,
     HyperionWebsocketsRoom,
     WebsocketConnectionManager,
 )
-from app.utils.auth import auth_utils
 
 # from app.utils.mail.mailworker import send_email
 from app.utils.tools import (
@@ -3219,67 +3213,12 @@ async def delete_customdata(
 async def websocket_endpoint(
     websocket: WebSocket,
     ws_manager: WebsocketConnectionManager = Depends(get_websocket_connection_manager),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_unsafe_db),
     settings: Settings = Depends(get_settings),
 ):
-    await websocket.accept()
-
-    try:
-        token_message = await websocket.receive_json()
-        token = token_message.get("token", None)
-
-        token_data = auth_utils.get_token_data(
-            settings=settings,
-            token=token,
-            request_id="websocket",
-        )
-
-        user = await auth_utils.get_user_from_token_with_scopes(
-            scopes=[[ScopeType.API]],
-            db=db,
-            token_data=token_data,
-        )
-    except Exception:
-        await websocket.send_text(
-            ConnectionWSMessageModel(
-                data=ConnectionWSMessageModelData(
-                    status=ConnectionWSMessageModelStatus.invalid,
-                ),
-            ).model_dump_json(),
-        )
-        await websocket.close()
-        return
-
-    hyperion_error_logger.debug(
-        f"CDR: New websocket connection from {user.id} on worker {os.getpid()}",
+    await ws_manager.manage_websocket(
+        websocket=websocket,
+        settings=settings,
+        room=HyperionWebsocketsRoom.CDR,
+        db=db,
     )
-
-    await websocket.send_text(
-        ConnectionWSMessageModel(
-            data=ConnectionWSMessageModelData(
-                status=ConnectionWSMessageModelStatus.connected,
-            ),
-        ).model_dump_json(),
-    )
-
-    # Add the user to the connection stack
-    await ws_manager.add_connection_to_room(
-        room_id=HyperionWebsocketsRoom.CDR,
-        ws_connection=websocket,
-    )
-
-    try:
-        while True:
-            # TODO: we could use received messages from the websocket
-            await websocket.receive_json()
-    except WebSocketDisconnect:
-        await ws_manager.remove_connection_from_room(
-            room_id=HyperionWebsocketsRoom.CDR,
-            connection=websocket,
-        )
-    except Exception:
-        await ws_manager.remove_connection_from_room(
-            room_id=HyperionWebsocketsRoom.CDR,
-            connection=websocket,
-        )
-        raise
