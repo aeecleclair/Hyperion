@@ -6,18 +6,19 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 if TYPE_CHECKING:
-    from app.core.models_core import CoreUser
-from app.modules.cdr.types_cdr import (
-    CdrLogActionType,
+    from app.core.ticket.models_ticket import TicketGenerator
+
+from app.modules.purchases.types_purchases import (
     DocumentSignatureType,
     PaymentType,
+    PurchasesLogActionType,
 )
 from app.types.membership import AvailableAssociationMembership
 from app.types.sqlalchemy import Base, PrimaryKey
 
 
 class Seller(Base):
-    __tablename__ = "cdr_seller"
+    __tablename__ = "purchases_seller"
 
     id: Mapped[PrimaryKey]
     name: Mapped[str]
@@ -29,66 +30,67 @@ class Seller(Base):
 
 
 class DocumentConstraint(Base):
-    __tablename__ = "cdr_document_constraint"
+    __tablename__ = "purchases_document_constraint"
 
     product_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("cdr_product.id"),
+        ForeignKey("purchases_product.id"),
         primary_key=True,
     )
     document_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("cdr_document.id"),
+        ForeignKey("purchases_document.id"),
         primary_key=True,
     )
 
 
 class ProductConstraint(Base):
-    __tablename__ = "cdr_product_constraint"
+    __tablename__ = "purchases_product_constraint"
 
     product_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("cdr_product.id"),
+        ForeignKey("purchases_product.id"),
         primary_key=True,
     )
     product_constraint_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("cdr_product.id"),
+        ForeignKey("purchases_product.id"),
         primary_key=True,
     )
 
 
-class TicketGenerator(Base):
-    __tablename__ = "cdr_ticket_generator"
+class PurchasesTicketGenerator(Base):
+    __tablename__ = "purchases_ticket_generator"
 
-    id: Mapped[PrimaryKey]
     product_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("cdr_product.id"),
+        ForeignKey("purchases_product.id"),
+        primary_key=True,
     )
-    name: Mapped[str]
-    max_use: Mapped[int]
-    expiration: Mapped[datetime]
+    generator_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("ticket_generator.id"),
+        primary_key=True,
+    )
 
 
-class CdrProduct(Base):
-    __tablename__ = "cdr_product"
+class PurchasesProduct(Base):
+    __tablename__ = "purchases_product"
 
     id: Mapped[PrimaryKey]
     seller_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("cdr_seller.id"),
+        ForeignKey("purchases_seller.id"),
     )
     name_fr: Mapped[str]
     name_en: Mapped[str | None]
     description_fr: Mapped[str | None]
     description_en: Mapped[str | None]
     available_online: Mapped[bool]
-    product_constraints: Mapped[list["CdrProduct"]] = relationship(
-        "CdrProduct",
-        secondary="cdr_product_constraint",
-        primaryjoin="ProductConstraint.product_id==CdrProduct.id",
-        secondaryjoin="ProductConstraint.product_constraint_id==CdrProduct.id",
+    product_constraints: Mapped[list["PurchasesProduct"]] = relationship(
+        "PurchasesProduct",
+        secondary="purchases_product_constraint",
+        primaryjoin="ProductConstraint.product_id==PurchasesProduct.id",
+        secondaryjoin="ProductConstraint.product_constraint_id==PurchasesProduct.id",
         lazy="joined",
         join_depth=1,
     )
     document_constraints: Mapped[list["Document"]] = relationship(
-        "app.modules.cdr.models_cdr.Document",
-        secondary="cdr_document_constraint",
+        "app.modules.purchases.models_purchases.Document",
+        secondary="purchases_document_constraint",
         lazy="selectin",  # Constraints are always loaded in cruds so we set this to not have to put selectinload
     )
     variants: Mapped[list["ProductVariant"]] = relationship(
@@ -98,49 +100,50 @@ class CdrProduct(Base):
     related_membership: Mapped[AvailableAssociationMembership | None]
     tickets: Mapped[list["TicketGenerator"]] = relationship(
         "TicketGenerator",
+        secondary="purchases_ticket_generator",
         lazy="selectin",
     )
 
 
 class Curriculum(Base):
-    __tablename__ = "cdr_curriculum"
+    __tablename__ = "purchases_curriculum"
 
     id: Mapped[PrimaryKey]
     name: Mapped[str]
 
 
 class CurriculumMembership(Base):
-    __tablename__ = "cdr_curriculum_membership"
+    __tablename__ = "purchases_curriculum_membership"
 
     user_id: Mapped[str] = mapped_column(
         ForeignKey("core_user.id"),
         primary_key=True,
     )
     curriculum_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("cdr_curriculum.id"),
+        ForeignKey("purchases_curriculum.id"),
         primary_key=True,
     )
 
 
 class AllowedCurriculum(Base):
-    __tablename__ = "cdr_allowed_curriculum"
+    __tablename__ = "purchases_allowed_curriculum"
 
     product_variant_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("cdr_product_variant.id"),
+        ForeignKey("purchases_product_variant.id"),
         primary_key=True,
     )
     curriculum_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("cdr_curriculum.id"),
+        ForeignKey("purchases_curriculum.id"),
         primary_key=True,
     )
 
 
 class ProductVariant(Base):
-    __tablename__ = "cdr_product_variant"
+    __tablename__ = "purchases_product_variant"
 
     id: Mapped[PrimaryKey]
     product_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("cdr_product.id"),
+        ForeignKey("purchases_product.id"),
     )
     name_fr: Mapped[str]
     name_en: Mapped[str | None]
@@ -151,48 +154,50 @@ class ProductVariant(Base):
     unique: Mapped[bool]
     allowed_curriculum: Mapped[list[Curriculum]] = relationship(
         "Curriculum",
-        secondary="cdr_allowed_curriculum",
+        secondary="purchases_allowed_curriculum",
         lazy="selectin",
     )
     related_membership_added_duration: Mapped[timedelta | None]
+    needs_validation: Mapped[bool]
 
 
 class Document(Base):
-    __tablename__ = "cdr_document"
+    __tablename__ = "purchases_document"
 
     id: Mapped[PrimaryKey]
     seller_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("cdr_seller.id"),
+        ForeignKey("purchases_seller.id"),
     )
     name: Mapped[str]
 
 
 class Purchase(Base):
-    __tablename__ = "cdr_purchase"
+    __tablename__ = "purchases_purchase"
 
     user_id: Mapped[str] = mapped_column(
         ForeignKey("core_user.id"),
         primary_key=True,
     )
     product_variant_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("cdr_product_variant.id"),
+        ForeignKey("purchases_product_variant.id"),
         primary_key=True,
     )
     product_variant: Mapped["ProductVariant"] = relationship("ProductVariant")
     quantity: Mapped[int]
+    paid: Mapped[bool]
     validated: Mapped[bool]
     purchased_on: Mapped[datetime]
 
 
 class Signature(Base):
-    __tablename__ = "cdr_signature"
+    __tablename__ = "purchases_signature"
 
     user_id: Mapped[str] = mapped_column(
         ForeignKey("core_user.id"),
         primary_key=True,
     )
     document_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("cdr_document.id"),
+        ForeignKey("purchases_document.id"),
         primary_key=True,
     )
     signature_type: Mapped[DocumentSignatureType] = mapped_column(
@@ -202,7 +207,7 @@ class Signature(Base):
 
 
 class Payment(Base):
-    __tablename__ = "cdr_payment"
+    __tablename__ = "purchases_payment"
 
     id: Mapped[PrimaryKey]
     user_id: Mapped[str] = mapped_column(
@@ -215,8 +220,8 @@ class Payment(Base):
     )
 
 
-class CdrAction(Base):
-    __tablename__ = "cdr_action"
+class PurchasesAction(Base):
+    __tablename__ = "purchases_action"
 
     id: Mapped[PrimaryKey]
     user_id: Mapped[str | None] = mapped_column(
@@ -227,55 +232,54 @@ class CdrAction(Base):
         ForeignKey("core_user.id"),
         nullable=False,
     )  # For who the request was made
-    action_type: Mapped[CdrLogActionType]
+    action_type: Mapped[PurchasesLogActionType]
     action: Mapped[str]
     timestamp: Mapped[datetime]
 
 
 class Checkout(Base):
-    __tablename__ = "cdr_checkout"
+    __tablename__ = "purchases_checkout"
     id: Mapped[PrimaryKey]
     user_id = mapped_column(
         ForeignKey("core_user.id"),
         nullable=False,
     )
     checkout_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("payment_checkout.id"))
+    paid_products_ids: Mapped[list[ProductVariant]] = relationship(
+        "ProductVariant",
+        secondary="purchases_checkout_paid_product",
+        lazy="selectin",
+    )
 
 
-class Ticket(Base):
-    __tablename__ = "cdr_ticket"
-    id: Mapped[PrimaryKey]
-    secret: Mapped[uuid.UUID] = mapped_column(unique=True)
-    generator_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("cdr_ticket_generator.id"),
-    )
-    product_variant_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("cdr_product_variant.id"),
-    )
-    product_variant: Mapped["ProductVariant"] = relationship("ProductVariant")
-    user_id: Mapped[str] = mapped_column(
+class CheckoutPaidProduct(Base):
+    __tablename__ = "purchases_checkout_paid_product"
+    user_id = mapped_column(
         ForeignKey("core_user.id"),
+        nullable=False,
+        primary_key=True,
     )
-    name: Mapped[str]
-    user: Mapped["CoreUser"] = relationship("CoreUser")
-    scan_left: Mapped[int]
-    tags: Mapped[str]  # Comma separated values
-    expiration: Mapped[datetime]
+    product_variant_id = mapped_column(
+        ForeignKey("purchases_product_variant.id"),
+        nullable=False,
+        primary_key=True,
+    )
+    checkout_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("purchases_checkout.id"))
 
 
 class CustomDataField(Base):
-    __tablename__ = "cdr_customdata_field"
+    __tablename__ = "purchases_customdata_field"
     id: Mapped[PrimaryKey]
     product_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("cdr_product.id"),
+        ForeignKey("purchases_product.id"),
     )
     name: Mapped[str]
 
 
 class CustomData(Base):
-    __tablename__ = "cdr_customdata"
+    __tablename__ = "purchases_customdata"
     field_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("cdr_customdata_field.id"),
+        ForeignKey("purchases_customdata_field.id"),
         primary_key=True,
     )
     field: Mapped["CustomDataField"] = relationship("CustomDataField")

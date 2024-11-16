@@ -32,7 +32,7 @@ async def init_objects() -> None:
     global admin_user, student_user_to_delete, student_user_to_keep
 
     admin_user = await create_user_with_groups(
-        [GroupType.admin, GroupType.admin_cdr],
+        [GroupType.admin, GroupType.admin_purchases],
     )
     student_user_to_keep = await create_user_with_groups(
         [GroupType.student, GroupType.BDE],
@@ -109,7 +109,7 @@ def test_fusion_users(client: TestClient) -> None:
     assert student_user_to_keep.id in users_ids
 
     response = client.get(
-        f"/cdr/users/{student_user_to_keep.id}/memberships/",
+        f"/purchases/users/{student_user_to_keep.id}/memberships/",
         headers={"Authorization": f"Bearer {token_admin_user}"},
     )
     assert response.status_code == 200

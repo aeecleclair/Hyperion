@@ -14,14 +14,14 @@ class PaymentType(str, Enum):
     archived = "archived"
 
 
-class CdrStatus(str, Enum):
+class PurchasesStatus(str, Enum):
     pending = "pending"
     online = "online"
     onsite = "onsite"
     closed = "closed"
 
 
-class CdrLogActionType(str, Enum):
+class PurchasesLogActionType(str, Enum):
     purchase_add = "purchase_add"
     purchase_delete = "purchase_delete"
     payment_add = "payment_add"
