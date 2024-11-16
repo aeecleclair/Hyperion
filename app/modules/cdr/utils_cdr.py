@@ -83,7 +83,7 @@ async def is_user_in_a_seller_group(
 
     if is_user_member_of_an_allowed_group(
         user=user,
-        groups_id=[str(seller.group_id), GroupType.admin_cdr],
+        allowed_groups=[str(seller.group_id), GroupType.admin_cdr],
     ):
         return user
 
