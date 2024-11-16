@@ -3217,7 +3217,8 @@ async def websocket_endpoint(
     settings: Settings = Depends(get_settings),
 ):
     await ws_manager.manage_websocket(
-            websocket=websocket,
-            settings=settings,
-            room=HyperionWebsocketsRoom.CDR,
-            get_db=db)
+        websocket=websocket,
+        settings=settings,
+        room=HyperionWebsocketsRoom.CDR,
+        get_db=db,
+    )

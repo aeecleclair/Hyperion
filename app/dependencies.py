@@ -114,6 +114,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
         finally:
             await db.close()
 
+
 async def get_unsafe_db() -> AsyncGenerator[AsyncSession, None]:
     """
     Return a database session but don't close it automatically
@@ -128,6 +129,7 @@ async def get_unsafe_db() -> AsyncGenerator[AsyncSession, None]:
         )
     async with SessionLocal() as db:
         yield db
+
 
 @lru_cache
 def get_settings() -> Settings:
