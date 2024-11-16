@@ -3,7 +3,7 @@
 from datetime import date
 
 from sqlalchemy import ForeignKey
-from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.modules.raid.raid_type import (
     Difficulty,
@@ -15,7 +15,7 @@ from app.modules.raid.raid_type import (
 from app.types.sqlalchemy import Base
 
 
-class Document(MappedAsDataclass, Base):
+class Document(Base):
     __tablename__ = "raid_document"
     id: Mapped[str] = mapped_column(
         primary_key=True,
@@ -29,7 +29,7 @@ class Document(MappedAsDataclass, Base):
     )
 
 
-class SecurityFile(MappedAsDataclass, Base):
+class SecurityFile(Base):
     __tablename__ = "raid_security_file"
     id: Mapped[str] = mapped_column(
         primary_key=True,
@@ -70,7 +70,7 @@ class SecurityFile(MappedAsDataclass, Base):
         return DocumentValidation.temporary
 
 
-class Participant(MappedAsDataclass, Base):
+class Participant(Base):
     __tablename__ = "raid_participant"
     id: Mapped[str] = mapped_column(
         primary_key=True,
@@ -245,7 +245,7 @@ class Participant(MappedAsDataclass, Base):
         return (number_validated / number_total) * 100
 
 
-class Team(MappedAsDataclass, Base):
+class Team(Base):
     __tablename__ = "raid_team"
     id: Mapped[str] = mapped_column(
         primary_key=True,
@@ -288,7 +288,7 @@ class Team(MappedAsDataclass, Base):
         ) * 0.45
 
 
-class InviteToken(MappedAsDataclass, Base):
+class InviteToken(Base):
     __tablename__ = "raid_invite"
     id: Mapped[str] = mapped_column(
         primary_key=True,
@@ -298,7 +298,7 @@ class InviteToken(MappedAsDataclass, Base):
     token: Mapped[str]
 
 
-class ParticipantCheckout(MappedAsDataclass, Base):
+class ParticipantCheckout(Base):
     __tablename__ = "raid_participant_checkout"
     id: Mapped[str] = mapped_column(
         primary_key=True,

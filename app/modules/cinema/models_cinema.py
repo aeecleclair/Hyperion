@@ -1,11 +1,11 @@
 from datetime import datetime
 
-from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.types.sqlalchemy import Base
 
 
-class Session(MappedAsDataclass, Base):
+class Session(Base):
     __tablename__ = "cinema_session"
 
     id: Mapped[str] = mapped_column(primary_key=True)

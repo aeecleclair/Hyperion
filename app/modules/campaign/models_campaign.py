@@ -1,14 +1,14 @@
 from typing import Any
 
 from sqlalchemy import ForeignKey
-from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core import models_core
 from app.modules.campaign.types_campaign import StatusType
 from app.types.sqlalchemy import Base
 
 
-class ListMemberships(MappedAsDataclass, Base):
+class ListMemberships(Base):
     __tablename__ = "campaign_lists_membership"
 
     user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), primary_key=True)
@@ -22,7 +22,7 @@ class ListMemberships(MappedAsDataclass, Base):
     lists: Mapped["Lists"] = relationship("Lists", back_populates="members", init=False)
 
 
-class Sections(MappedAsDataclass, Base):
+class Sections(Base):
     __tablename__ = "campaign_sections"
 
     id: Mapped[str] = mapped_column(primary_key=True)
@@ -35,7 +35,7 @@ class Sections(MappedAsDataclass, Base):
     )
 
 
-class Lists(MappedAsDataclass, Base):
+class Lists(Base):
     __tablename__ = "campaign_lists"
 
     id: Mapped[str] = mapped_column(primary_key=True)
@@ -59,7 +59,7 @@ class Lists(MappedAsDataclass, Base):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 
-class VoterGroups(MappedAsDataclass, Base):
+class VoterGroups(Base):
     """
     VoterGroups are groups allowed to vote for a campaign
     """
@@ -69,7 +69,7 @@ class VoterGroups(MappedAsDataclass, Base):
     group_id: Mapped[str] = mapped_column(primary_key=True)
 
 
-class Votes(MappedAsDataclass, Base):
+class Votes(Base):
     __tablename__ = "campaign_votes"
 
     id: Mapped[str] = mapped_column(primary_key=True)
@@ -78,7 +78,7 @@ class Votes(MappedAsDataclass, Base):
     )
 
 
-class HasVoted(MappedAsDataclass, Base):
+class HasVoted(Base):
     __tablename__ = "campaign_has_voted"
 
     # There are two primary keys, has each user_id and section_id will be used multiple times but the combinaison of the two should always be unique
@@ -89,7 +89,7 @@ class HasVoted(MappedAsDataclass, Base):
     )
 
 
-class Status(MappedAsDataclass, Base):
+class Status(Base):
     __tablename__ = "campaign_status"
 
     id: Mapped[str] = mapped_column(primary_key=True)

@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 from sqlalchemy import ForeignKey
-from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.modules.phonebook.types_phonebook import Kinds
 from app.types.sqlalchemy import Base
@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from app.core.models_core import CoreGroup
 
 
-class Membership(MappedAsDataclass, Base):
+class Membership(Base):
     __tablename__ = "phonebook_membership"
 
     id: Mapped[str] = mapped_column(
@@ -31,7 +31,7 @@ class Membership(MappedAsDataclass, Base):
     member_order: Mapped[int]
 
 
-class Association(MappedAsDataclass, Base):
+class Association(Base):
     __tablename__ = "phonebook_association"
 
     id: Mapped[str] = mapped_column(primary_key=True, index=True)
@@ -48,7 +48,7 @@ class Association(MappedAsDataclass, Base):
     )
 
 
-class AssociationAssociatedGroups(MappedAsDataclass, Base):
+class AssociationAssociatedGroups(Base):
     __tablename__ = "phonebook_association_associated_groups"
 
     association_id: Mapped[str] = mapped_column(

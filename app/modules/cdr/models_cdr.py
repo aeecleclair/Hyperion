@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
 from sqlalchemy import ForeignKey
-from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 if TYPE_CHECKING:
     from app.core.models_core import CoreUser
@@ -16,7 +16,7 @@ from app.types.membership import AvailableAssociationMembership
 from app.types.sqlalchemy import Base, PrimaryKey
 
 
-class Seller(MappedAsDataclass, Base):
+class Seller(Base):
     __tablename__ = "cdr_seller"
 
     id: Mapped[PrimaryKey]
@@ -27,7 +27,7 @@ class Seller(MappedAsDataclass, Base):
     order: Mapped[int]
 
 
-class DocumentConstraint(MappedAsDataclass, Base):
+class DocumentConstraint(Base):
     __tablename__ = "cdr_document_constraint"
 
     product_id: Mapped[uuid.UUID] = mapped_column(
@@ -40,7 +40,7 @@ class DocumentConstraint(MappedAsDataclass, Base):
     )
 
 
-class ProductConstraint(MappedAsDataclass, Base):
+class ProductConstraint(Base):
     __tablename__ = "cdr_product_constraint"
 
     product_id: Mapped[uuid.UUID] = mapped_column(
@@ -53,7 +53,7 @@ class ProductConstraint(MappedAsDataclass, Base):
     )
 
 
-class TicketGenerator(MappedAsDataclass, Base):
+class TicketGenerator(Base):
     __tablename__ = "cdr_ticket_generator"
 
     id: Mapped[PrimaryKey]
@@ -65,7 +65,7 @@ class TicketGenerator(MappedAsDataclass, Base):
     expiration: Mapped[datetime]
 
 
-class CdrProduct(MappedAsDataclass, Base):
+class CdrProduct(Base):
     __tablename__ = "cdr_product"
 
     id: Mapped[PrimaryKey]
@@ -110,14 +110,14 @@ class CdrProduct(MappedAsDataclass, Base):
     )
 
 
-class Curriculum(MappedAsDataclass, Base):
+class Curriculum(Base):
     __tablename__ = "cdr_curriculum"
 
     id: Mapped[PrimaryKey]
     name: Mapped[str]
 
 
-class CurriculumMembership(MappedAsDataclass, Base):
+class CurriculumMembership(Base):
     __tablename__ = "cdr_curriculum_membership"
 
     user_id: Mapped[str] = mapped_column(
@@ -130,7 +130,7 @@ class CurriculumMembership(MappedAsDataclass, Base):
     )
 
 
-class AllowedCurriculum(MappedAsDataclass, Base):
+class AllowedCurriculum(Base):
     __tablename__ = "cdr_allowed_curriculum"
 
     product_variant_id: Mapped[uuid.UUID] = mapped_column(
@@ -143,7 +143,7 @@ class AllowedCurriculum(MappedAsDataclass, Base):
     )
 
 
-class ProductVariant(MappedAsDataclass, Base):
+class ProductVariant(Base):
     __tablename__ = "cdr_product_variant"
 
     id: Mapped[PrimaryKey]
@@ -170,7 +170,7 @@ class ProductVariant(MappedAsDataclass, Base):
     )
 
 
-class Document(MappedAsDataclass, Base):
+class Document(Base):
     __tablename__ = "cdr_document"
 
     id: Mapped[PrimaryKey]
@@ -180,7 +180,7 @@ class Document(MappedAsDataclass, Base):
     name: Mapped[str]
 
 
-class Purchase(MappedAsDataclass, Base):
+class Purchase(Base):
     __tablename__ = "cdr_purchase"
 
     user_id: Mapped[str] = mapped_column(
@@ -202,7 +202,7 @@ class Purchase(MappedAsDataclass, Base):
     )
 
 
-class Signature(MappedAsDataclass, Base):
+class Signature(Base):
     __tablename__ = "cdr_signature"
 
     user_id: Mapped[str] = mapped_column(
@@ -219,7 +219,7 @@ class Signature(MappedAsDataclass, Base):
     numeric_signature_id: Mapped[str | None]
 
 
-class Payment(MappedAsDataclass, Base):
+class Payment(Base):
     __tablename__ = "cdr_payment"
 
     id: Mapped[PrimaryKey]
@@ -232,7 +232,7 @@ class Payment(MappedAsDataclass, Base):
     )
 
 
-class CdrAction(MappedAsDataclass, Base):
+class CdrAction(Base):
     __tablename__ = "cdr_action"
 
     id: Mapped[PrimaryKey]
@@ -248,7 +248,7 @@ class CdrAction(MappedAsDataclass, Base):
     )  # Who made the request
 
 
-class Checkout(MappedAsDataclass, Base):
+class Checkout(Base):
     __tablename__ = "cdr_checkout"
     id: Mapped[PrimaryKey]
     user_id: Mapped[str] = mapped_column(
@@ -257,7 +257,7 @@ class Checkout(MappedAsDataclass, Base):
     checkout_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("payment_checkout.id"))
 
 
-class Ticket(MappedAsDataclass, Base):
+class Ticket(Base):
     __tablename__ = "cdr_ticket"
     id: Mapped[PrimaryKey]
     secret: Mapped[uuid.UUID] = mapped_column(unique=True)
@@ -286,7 +286,7 @@ class Ticket(MappedAsDataclass, Base):
     )
 
 
-class CustomDataField(MappedAsDataclass, Base):
+class CustomDataField(Base):
     __tablename__ = "cdr_customdata_field"
     id: Mapped[PrimaryKey]
     product_id: Mapped[uuid.UUID] = mapped_column(
@@ -295,7 +295,7 @@ class CustomDataField(MappedAsDataclass, Base):
     name: Mapped[str]
 
 
-class CustomData(MappedAsDataclass, Base):
+class CustomData(Base):
     __tablename__ = "cdr_customdata"
     field_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("cdr_customdata_field.id"),

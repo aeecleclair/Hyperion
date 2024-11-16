@@ -1,13 +1,13 @@
 from datetime import date
 
 from sqlalchemy import TEXT, ForeignKey
-from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core import models_core
 from app.types.sqlalchemy import Base
 
 
-class Loaner(MappedAsDataclass, Base):
+class Loaner(Base):
     __tablename__ = "loaner"
 
     id: Mapped[str] = mapped_column(primary_key=True, index=True)
@@ -28,7 +28,7 @@ class Loaner(MappedAsDataclass, Base):
     )
 
 
-class LoanContent(MappedAsDataclass, Base):
+class LoanContent(Base):
     __tablename__ = "loan_content"
 
     loan_id: Mapped[str] = mapped_column(ForeignKey("loan.id"), primary_key=True)
@@ -38,7 +38,7 @@ class LoanContent(MappedAsDataclass, Base):
     item: Mapped["Item"] = relationship("Item", init=False)
 
 
-class Item(MappedAsDataclass, Base):
+class Item(Base):
     __tablename__ = "loaner_item"
 
     id: Mapped[str] = mapped_column(primary_key=True, index=True)
@@ -56,7 +56,7 @@ class Item(MappedAsDataclass, Base):
     )
 
 
-class Loan(MappedAsDataclass, Base):
+class Loan(Base):
     __tablename__ = "loan"
 
     id: Mapped[str] = mapped_column(primary_key=True, index=True)

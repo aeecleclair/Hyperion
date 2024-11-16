@@ -5,7 +5,7 @@ from sqlalchemy.orm import Mapped, MappedAsDataclass
 from app.types.sqlalchemy import Base, PrimaryKey
 
 
-class Recommendation(MappedAsDataclass, Base):
+class Recommendation(Base):
     __tablename__ = "recommendation"
 
     id: Mapped[PrimaryKey]

@@ -3,14 +3,14 @@
 from datetime import date, datetime
 
 from sqlalchemy import ForeignKey, String
-from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.types.floors_type import FloorsType
 from app.types.membership import AvailableAssociationMembership
 from app.types.sqlalchemy import Base, PrimaryKey
 
 
-class CoreMembership(MappedAsDataclass, Base):
+class CoreMembership(Base):
     __tablename__ = "core_membership"
 
     user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), primary_key=True)
@@ -20,7 +20,7 @@ class CoreMembership(MappedAsDataclass, Base):
     description: Mapped[str | None]
 
 
-class CoreUser(MappedAsDataclass, Base):
+class CoreUser(Base):
     __tablename__ = "core_user"
 
     id: Mapped[str] = mapped_column(
@@ -40,7 +40,7 @@ class CoreUser(MappedAsDataclass, Base):
 
     # Users that are externals (not members) won't be able to use all features
     # These, self registered, external users may exist for:
-    # - accounts meant to be used by external services MappedAsDataclass, Based on Hyperion SSO or Hyperion backend
+    # - accounts meant to be used by external services based on Hyperion SSO or Hyperion backend
     # - new users that need to do additional steps before being able to all features,
     #   like using a specific email address, going through an inscription process or being manually validated
     external: Mapped[bool] = mapped_column(default=False)
@@ -56,7 +56,7 @@ class CoreUser(MappedAsDataclass, Base):
     )
 
 
-class CoreUserUnconfirmed(MappedAsDataclass, Base):
+class CoreUserUnconfirmed(Base):
     __tablename__ = "core_user_unconfirmed"
 
     id: Mapped[str] = mapped_column(primary_key=True)
@@ -72,7 +72,7 @@ class CoreUserUnconfirmed(MappedAsDataclass, Base):
     external: Mapped[bool] = mapped_column(default=False)
 
 
-class CoreUserRecoverRequest(MappedAsDataclass, Base):
+class CoreUserRecoverRequest(Base):
     __tablename__ = "core_user_recover_request"
 
     # The email column should not be unique.
@@ -84,7 +84,7 @@ class CoreUserRecoverRequest(MappedAsDataclass, Base):
     expire_on: Mapped[datetime]
 
 
-class CoreUserEmailMigrationCode(MappedAsDataclass, Base):
+class CoreUserEmailMigrationCode(Base):
     """
     The ECL changed the email format for student users, requiring them to migrate their email.
     """
@@ -105,7 +105,7 @@ class CoreUserEmailMigrationCode(MappedAsDataclass, Base):
     make_user_external: Mapped[bool] = mapped_column(default=False)
 
 
-class CoreGroup(MappedAsDataclass, Base):
+class CoreGroup(Base):
     __tablename__ = "core_group"
 
     id: Mapped[str] = mapped_column(primary_key=True, index=True)
@@ -120,7 +120,7 @@ class CoreGroup(MappedAsDataclass, Base):
     )
 
 
-class CoreAssociationMembership(MappedAsDataclass, Base):
+class CoreAssociationMembership(Base):
     __tablename__ = "core_association_membership"
 
     id: Mapped[PrimaryKey]
@@ -134,7 +134,7 @@ class CoreAssociationMembership(MappedAsDataclass, Base):
     end_date: Mapped[date]
 
 
-class CoreData(MappedAsDataclass, Base):
+class CoreData(Base):
     """
     A table to store arbitrary data.
 
@@ -150,14 +150,14 @@ class CoreData(MappedAsDataclass, Base):
     data: Mapped[str]
 
 
-class ModuleVisibility(MappedAsDataclass, Base):
+class ModuleVisibility(Base):
     __tablename__ = "module_visibility"
 
     root: Mapped[str] = mapped_column(primary_key=True)
     allowed_group_id: Mapped[str] = mapped_column(primary_key=True)
 
 
-class AlembicVersion(MappedAsDataclass, Base):
+class AlembicVersion(Base):
     """
     A table managed exclusively by Alembic, used to keep track of the database schema version.
     This model allows to have exactly the same tables in the models and in the database.

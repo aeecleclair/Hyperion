@@ -1,14 +1,14 @@
 from datetime import datetime
 
 from sqlalchemy import ForeignKey
-from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.models_core import CoreUser
 from app.modules.calendar.types_calendar import CalendarEventType
 from app.types.sqlalchemy import Base
 
 
-class Event(MappedAsDataclass, Base):
+class Event(Base):
     """Events for calendar."""
 
     __tablename__ = "calendar_events"

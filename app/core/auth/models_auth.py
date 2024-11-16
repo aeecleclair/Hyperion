@@ -1,12 +1,12 @@
 from datetime import datetime
 
 from sqlalchemy import ForeignKey
-from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.types.sqlalchemy import Base
 
 
-class AuthorizationCode(MappedAsDataclass, Base):
+class AuthorizationCode(Base):
     __tablename__ = "authorization_code"
 
     code: Mapped[str] = mapped_column(primary_key=True, index=True)
@@ -19,7 +19,7 @@ class AuthorizationCode(MappedAsDataclass, Base):
     code_challenge_method: Mapped[str | None]
 
 
-class RefreshToken(MappedAsDataclass, Base):
+class RefreshToken(Base):
     __tablename__ = "refresh_token"
 
     client_id: Mapped[str] = mapped_column(index=True, nullable=False)

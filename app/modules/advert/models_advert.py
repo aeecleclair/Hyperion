@@ -1,12 +1,12 @@
 from datetime import datetime
 
 from sqlalchemy import ForeignKey
-from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.types.sqlalchemy import Base
 
 
-class Advertiser(MappedAsDataclass, Base):
+class Advertiser(Base):
     __tablename__ = "advert_advertisers"
 
     id: Mapped[str] = mapped_column(primary_key=True, index=True)
@@ -21,7 +21,7 @@ class Advertiser(MappedAsDataclass, Base):
     )
 
 
-class Advert(MappedAsDataclass, Base):
+class Advert(Base):
     __tablename__ = "advert_adverts"
 
     id: Mapped[str] = mapped_column(primary_key=True)

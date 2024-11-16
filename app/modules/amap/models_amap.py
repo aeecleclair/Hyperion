@@ -3,14 +3,14 @@
 from datetime import date, datetime
 
 from sqlalchemy import ForeignKey
-from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.models_core import CoreUser
 from app.modules.amap.types_amap import AmapSlotType, DeliveryStatusType
 from app.types.sqlalchemy import Base
 
 
-class AmapOrderContent(MappedAsDataclass, Base):
+class AmapOrderContent(Base):
     __tablename__ = "amap_order_content"
     product_id: Mapped[str] = mapped_column(
         ForeignKey("amap_product.id"),
@@ -24,7 +24,7 @@ class AmapOrderContent(MappedAsDataclass, Base):
     product: Mapped["Product"] = relationship("Product", init=False)
 
 
-class AmapDeliveryContent(MappedAsDataclass, Base):
+class AmapDeliveryContent(Base):
     __tablename__ = "amap_delivery_content"
     product_id: Mapped[str] = mapped_column(
         ForeignKey("amap_product.id"),
@@ -36,7 +36,7 @@ class AmapDeliveryContent(MappedAsDataclass, Base):
     )
 
 
-class Product(MappedAsDataclass, Base):
+class Product(Base):
     __tablename__ = "amap_product"
 
     id: Mapped[str] = mapped_column(primary_key=True, index=True)
@@ -48,7 +48,7 @@ class Product(MappedAsDataclass, Base):
     category: Mapped[str] = mapped_column(index=True)
 
 
-class Delivery(MappedAsDataclass, Base):
+class Delivery(Base):
     __tablename__ = "amap_delivery"
 
     id: Mapped[str] = mapped_column(primary_key=True, index=True)
@@ -65,7 +65,7 @@ class Delivery(MappedAsDataclass, Base):
     )
 
 
-class Order(MappedAsDataclass, Base):
+class Order(Base):
     __tablename__ = "amap_order"
 
     user_id: Mapped[str] = mapped_column(
@@ -92,7 +92,7 @@ class Order(MappedAsDataclass, Base):
     )
 
 
-class Cash(MappedAsDataclass, Base):
+class Cash(Base):
     __tablename__ = "amap_cash"
 
     user_id: Mapped[str] = mapped_column(
@@ -103,7 +103,7 @@ class Cash(MappedAsDataclass, Base):
     user: Mapped[CoreUser] = relationship("CoreUser", init=False)
 
 
-class AmapInformation(MappedAsDataclass, Base):
+class AmapInformation(Base):
     __tablename__ = "amap_information"
 
     # unique_id should always be `information`

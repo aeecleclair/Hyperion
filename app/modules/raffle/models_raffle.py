@@ -1,14 +1,14 @@
 """Models file for module_tombola"""
 
 from sqlalchemy import ForeignKey
-from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.models_core import CoreGroup, CoreUser
 from app.modules.raffle.types_raffle import RaffleStatusType
 from app.types.sqlalchemy import Base
 
 
-class Raffle(MappedAsDataclass, Base):
+class Raffle(Base):
     __tablename__ = "raffle"
     id: Mapped[str] = mapped_column(
         primary_key=True,
@@ -29,7 +29,7 @@ class Raffle(MappedAsDataclass, Base):
     group: Mapped[CoreGroup] = relationship("CoreGroup", init=False)
 
 
-class PackTicket(MappedAsDataclass, Base):
+class PackTicket(Base):
     __tablename__ = "raffle_pack_ticket"
     id: Mapped[str] = mapped_column(
         primary_key=True,
@@ -45,7 +45,7 @@ class PackTicket(MappedAsDataclass, Base):
     raffle: Mapped[Raffle] = relationship("Raffle", init=False)
 
 
-class Prize(MappedAsDataclass, Base):
+class Prize(Base):
     __tablename__ = "raffle_prize"
 
     id: Mapped[str] = mapped_column(
@@ -63,7 +63,7 @@ class Prize(MappedAsDataclass, Base):
     raffle: Mapped[Raffle] = relationship("Raffle", init=False)
 
 
-class Ticket(MappedAsDataclass, Base):
+class Ticket(Base):
     __tablename__ = "raffle_ticket"
 
     id: Mapped[str] = mapped_column(
@@ -85,7 +85,7 @@ class Ticket(MappedAsDataclass, Base):
     user: Mapped[CoreUser] = relationship("CoreUser", init=False)
 
 
-class Cash(MappedAsDataclass, Base):
+class Cash(Base):
     __tablename__ = "raffle_cash"
 
     user_id: Mapped[str] = mapped_column(

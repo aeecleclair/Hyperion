@@ -1,12 +1,12 @@
 import uuid
 
 from sqlalchemy import ForeignKey
-from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.types.sqlalchemy import Base, PrimaryKey
 
 
-class CheckoutPayment(MappedAsDataclass, Base):
+class CheckoutPayment(Base):
     __tablename__ = "payment_checkout_payment"
 
     id: Mapped[PrimaryKey]
@@ -16,7 +16,7 @@ class CheckoutPayment(MappedAsDataclass, Base):
     hello_asso_payment_id: Mapped[int] = mapped_column(index=True, unique=True)
 
 
-class Checkout(MappedAsDataclass, Base):
+class Checkout(Base):
     """
     The checkout table store data about HelloAsso checkouts.
     """

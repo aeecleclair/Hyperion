@@ -1,13 +1,13 @@
 from datetime import date, datetime
 
 from sqlalchemy import ForeignKey
-from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.notification.notification_types import Topic
 from app.types.sqlalchemy import Base
 
 
-class Message(MappedAsDataclass, Base):
+class Message(Base):
     __tablename__ = "notification_message"
 
     # A context represents a topic (ex: a loan),
@@ -37,7 +37,7 @@ class Message(MappedAsDataclass, Base):
     is_visible: Mapped[bool] = mapped_column(default=True)
 
 
-class FirebaseDevice(MappedAsDataclass, Base):
+class FirebaseDevice(Base):
     __tablename__ = "notification_firebase_devices"
 
     user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"))
@@ -48,7 +48,7 @@ class FirebaseDevice(MappedAsDataclass, Base):
     register_date: Mapped[date]
 
 
-class TopicMembership(MappedAsDataclass, Base):
+class TopicMembership(Base):
     __tablename__ = "notification_topic_membership"
 
     user_id: Mapped[str] = mapped_column(

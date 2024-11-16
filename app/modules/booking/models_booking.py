@@ -3,13 +3,13 @@
 from datetime import datetime
 
 from sqlalchemy import ForeignKey
-from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.models_core import CoreUser
 from app.types.sqlalchemy import Base
 
 
-class Manager(MappedAsDataclass, Base):
+class Manager(Base):
     __tablename__ = "booking_manager"
 
     id: Mapped[str] = mapped_column(primary_key=True)
@@ -21,7 +21,7 @@ class Manager(MappedAsDataclass, Base):
     )
 
 
-class Room(MappedAsDataclass, Base):
+class Room(Base):
     __tablename__ = "booking_room"
 
     id: Mapped[str] = mapped_column(primary_key=True)
@@ -40,7 +40,7 @@ class Room(MappedAsDataclass, Base):
     )
 
 
-class Booking(MappedAsDataclass, Base):
+class Booking(Base):
     __tablename__ = "booking"
 
     id: Mapped[str] = mapped_column(primary_key=True, index=True)
