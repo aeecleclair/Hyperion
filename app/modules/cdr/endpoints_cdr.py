@@ -141,6 +141,7 @@ async def get_cdr_users_pending_validation(
 
     return [
         schemas_cdr.CdrUser(
+            account_type=user.account_type,
             curriculum=curriculum_memberships_mapping.get(user.id, None),
             promo=user.promo,
             email=user.email,
@@ -193,6 +194,7 @@ async def get_cdr_user(
     curriculum_complete = {c.id: c for c in await cruds_cdr.get_curriculums(db=db)}
 
     return schemas_cdr.CdrUser(
+        account_type=user_db.account_type,
         name=user_db.name,
         firstname=user_db.firstname,
         nickname=user_db.nickname,
@@ -300,6 +302,7 @@ async def update_cdr_user(
                         curriculum=schemas_cdr.CurriculumComplete(
                             **curriculum.__dict__,
                         ),
+                        account_type=user_db.account_type,
                         name=user_db.name,
                         firstname=user_db.firstname,
                         nickname=user_db.nickname,
@@ -2147,6 +2150,7 @@ async def create_curriculum_membership(
             await ws_manager.send_message_to_room(
                 message=schemas_cdr.NewUserWSMessageModel(
                     data=schemas_cdr.CdrUser(
+                        account_type=db_user.account_type,
                         curriculum=schemas_cdr.CurriculumComplete(
                             id=wanted_curriculum.id,
                             name=wanted_curriculum.name,
@@ -2226,6 +2230,7 @@ async def update_curriculum_membership(
             await ws_manager.send_message_to_room(
                 message=schemas_cdr.UpdateUserWSMessageModel(
                     data=schemas_cdr.CdrUser(
+                        account_type=db_user.account_type,
                         curriculum=schemas_cdr.CurriculumComplete(
                             id=curriculum.id,
                             name=curriculum.name,
@@ -2305,6 +2310,7 @@ async def delete_curriculum_membership(
             await ws_manager.send_message_to_room(
                 message=schemas_cdr.UpdateUserWSMessageModel(
                     data=schemas_cdr.CdrUser(
+                        account_type=db_user.account_type,
                         curriculum=None,
                         promo=db_user.promo,
                         email=db_user.email,
@@ -2477,6 +2483,7 @@ async def get_payment_url(
             detail="Please give an amount in cents, greater than 1€.",
         )
     user_schema = schemas_core.CoreUser(
+        account_type=user.account_type,
         email=user.email,
         birthday=user.birthday,
         promo=user.promo,
