@@ -57,7 +57,7 @@ def verify_signature(
         return True
 
 
-def is_user_registered_and_latest_cgu_signed(
+def is_user_latest_cgu_signed(
     user_payment: UserPayment,
 ) -> bool:
     """
