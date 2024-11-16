@@ -1,9 +1,8 @@
 import logging
 import uuid
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Callable
 from datetime import timedelta
 from functools import lru_cache
-from typing import Callable
 
 import redis
 from fastapi import Depends

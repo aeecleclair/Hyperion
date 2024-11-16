@@ -1,9 +1,8 @@
 import logging
 import re
-from collections.abc import Sequence
+from collections.abc import AsyncGenerator, Callable, Sequence
 from datetime import UTC, date, datetime
 from pathlib import Path
-from typing import AsyncGenerator, Callable
 from uuid import UUID, uuid4
 
 from fastapi import (

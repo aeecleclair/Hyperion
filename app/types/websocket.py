@@ -1,8 +1,9 @@
 import asyncio
 import logging
 import os
+from collections.abc import AsyncGenerator, Callable
 from enum import Enum
-from typing import Any, AsyncGenerator, Callable, Literal
+from typing import Any, Literal
 
 from broadcaster import Broadcast
 from fastapi import WebSocket, WebSocketDisconnect
