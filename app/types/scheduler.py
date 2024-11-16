@@ -18,7 +18,7 @@ class Scheduler:
             _job_id=job_id,
             _defer_by=timedelta(seconds=defer_time),
         )
-        scheduler_logger.debug(f"Job queued {job}")
+        scheduler_logger.debug(f"Job {job_id} queued {job}")
         return job
 
     async def cancel_job(self, job_id):
