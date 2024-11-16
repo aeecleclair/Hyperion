@@ -53,7 +53,6 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 async def get_cgu(
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user_an_ecl_member),
-    settings: Settings = Depends(get_settings),
 ):
     """
     Get the latest CGU version and the user signed CGU version.
