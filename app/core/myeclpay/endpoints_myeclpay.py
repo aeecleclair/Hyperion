@@ -9,9 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import security
 from app.core.config import Settings
+from app.core.groups.groups_type import GroupType
 from app.core.models_core import CoreUser
 from app.core.myeclpay import cruds_myeclpay, schemas_myeclpay
-from app.core.myeclpay.models_myeclpay import WalletDevice
+from app.core.myeclpay.models_myeclpay import Store, WalletDevice
 from app.core.myeclpay.types_myeclpay import (
     HistoryType,
     TransactionStatus,
@@ -34,6 +35,7 @@ from app.dependencies import (
     get_notification_tool,
     get_request_id,
     get_settings,
+    is_user_a_member_of,
     is_user_an_ecl_member,
 )
 from app.utils.communication.notifications import NotificationTool
@@ -115,6 +117,8 @@ async def register_user(
         balance=0,
         db=db,
     )
+
+    await db.commit()
 
     # Create new payment user with wallet
     await cruds_myeclpay.create_user_payment(
@@ -220,6 +224,52 @@ async def get_user_devices(
         wallet_id=user_payment.wallet_id,
         db=db,
     )
+
+    return wallet_devices
+
+
+@router.get(
+    "/myeclpay/users/me/wallet/devices/{wallet_device_id}",
+    status_code=200,
+    response_model=schemas_myeclpay.WalletDevice,
+)
+async def get_user_device(
+    wallet_device_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(is_user_an_ecl_member),
+):
+    """
+    Get user devices.
+
+    **The user must be authenticated to use this endpoint**
+    """
+    # Check if user is already registered
+    user_payment = await cruds_myeclpay.get_user_payment(
+        user_id=user.id,
+        db=db,
+    )
+    if user_payment is None or not is_user_latest_cgu_signed(user_payment):
+        raise HTTPException(
+            status_code=400,
+            detail="User is not registered for MyECL Pay",
+        )
+
+    wallet_devices = await cruds_myeclpay.get_wallet_device(
+        wallet_device_id=wallet_device_id,
+        db=db,
+    )
+
+    if wallet_devices is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Wallet device does not exist",
+        )
+
+    if wallet_devices.wallet_id != user_payment.wallet_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Wallet device does not belong to the user",
+        )
 
     return wallet_devices
 
