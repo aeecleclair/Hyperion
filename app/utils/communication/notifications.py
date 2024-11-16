@@ -104,6 +104,7 @@ class NotificationManager:
         try:
             message = messaging.MulticastMessage(
                 tokens=tokens,
+                data={"module":message_content.action_module},
                 notification=messaging.Notification(
                     title=message_content.title,
                     body=message_content.content,
