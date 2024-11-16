@@ -65,3 +65,15 @@ with op.batch_alter_table("table_name") as batch_op:
 
 **Boolean**
 You need to use `server_default=sa.sql.false()`
+
+### Use an existing Enum for a column
+
+```python
+from sqlalchemy.dialects import postgresql
+```
+
+You need to use:
+
+```python
+postgresql.ENUM(name="availableassociationmembership", create_type=False),
+```
