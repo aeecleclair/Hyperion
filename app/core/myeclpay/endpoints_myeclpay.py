@@ -7,9 +7,11 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import security
 from app.core.config import Settings
 from app.core.models_core import CoreUser
 from app.core.myeclpay import cruds_myeclpay, schemas_myeclpay
+from app.core.myeclpay.models_myeclpay import WalletDevice
 from app.core.myeclpay.types_myeclpay import (
     HistoryType,
     TransactionStatus,
@@ -187,6 +189,193 @@ async def sign_cgu(
             content=account_exists_content,
             settings=settings,
         )
+
+
+@router.get(
+    "/myeclpay/users/me/wallet/devices",
+    status_code=200,
+    response_model=list[schemas_myeclpay.WalletDevice],
+)
+async def get_user_devices(
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(is_user_an_ecl_member),
+):
+    """
+    Get user devices.
+
+    **The user must be authenticated to use this endpoint**
+    """
+    # Check if user is already registered
+    user_payment = await cruds_myeclpay.get_user_payment(
+        user_id=user.id,
+        db=db,
+    )
+    if user_payment is None or not is_user_latest_cgu_signed(user_payment):
+        raise HTTPException(
+            status_code=400,
+            detail="User is not registered for MyECL Pay",
+        )
+
+    wallet_devices = await cruds_myeclpay.get_wallet_devices_by_wallet_id(
+        wallet_id=user_payment.wallet_id,
+        db=db,
+    )
+
+    return wallet_devices
+
+
+@router.post(
+    "/myeclpay/users/me/wallet/devices",
+    status_code=201,
+    response_model=schemas_myeclpay.WalletDevice,
+)
+async def create_user_devices(
+    wallet_device_creation: schemas_myeclpay.WalletDeviceCreation,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(is_user_an_ecl_member),
+    settings: Settings = Depends(get_settings),
+):
+    """
+    Create a new device for the user.
+    The user will need to activate it using a token sent by email.
+
+    **The user must be authenticated to use this endpoint**
+    """
+    # Check if user is already registered
+    user_payment = await cruds_myeclpay.get_user_payment(
+        user_id=user.id,
+        db=db,
+    )
+    if user_payment is None or not is_user_latest_cgu_signed(user_payment):
+        raise HTTPException(
+            status_code=400,
+            detail="User is not registered for MyECL Pay",
+        )
+
+    activation_token = security.generate_token(nbytes=16)
+
+    wallet_device_db = WalletDevice(
+        id=uuid.uuid4(),
+        name=wallet_device_creation.name,
+        wallet_id=user_payment.wallet_id,
+        ed25519_public_key=wallet_device_creation.ed25519_public_key,
+        creation=datetime.now(UTC),
+        status=WalletDeviceStatus.UNACTIVE,
+        activation_token=activation_token,
+    )
+
+    await cruds_myeclpay.create_wallet_device(
+        wallet_device=wallet_device_db,
+        db=db,
+    )
+
+    await db.commit()
+
+    # TODO: use the correct template content
+    if settings.SMTP_ACTIVE:
+        account_exists_content = templates.get_template(
+            "account_exists_mail.html",
+        ).render()
+        background_tasks.add_task(
+            send_email,
+            recipient=user.email,
+            subject="MyECL - activate your device",
+            content=account_exists_content,
+            settings=settings,
+        )
+    else:
+        hyperion_error_logger.warning(
+            f"MyECLPay: activate your device using the token: {activation_token}",
+        )
+
+    return wallet_device_db
+
+
+@router.get(
+    "/myeclpay/users/me/wallet/devices/activate/{activation_token}",
+    status_code=200,
+)
+async def activate_user_device(
+    activation_token: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Activate a wallet device
+    """
+
+    wallet_device = await cruds_myeclpay.get_wallet_device_by_activation_token(
+        activation_token=activation_token,
+        db=db,
+    )
+
+    if wallet_device is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid token",
+        )
+
+    if wallet_device.status != WalletDeviceStatus.UNACTIVE:
+        raise HTTPException(
+            status_code=400,
+            detail="Wallet device is already activated or revoked",
+        )
+
+    await cruds_myeclpay.update_wallet_device_status(
+        wallet_device_id=wallet_device.id,
+        status=WalletDeviceStatus.ACTIVE,
+        db=db,
+    )
+
+    return "Wallet device activated"
+
+
+@router.post(
+    "/myeclpay/users/me/wallet/devices/{wallet_device_id}/revoke",
+    status_code=204,
+)
+async def revoke_user_devices(
+    wallet_device_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(is_user_an_ecl_member),
+):
+    """
+    Revoke a device for the user.
+
+    **The user must be authenticated to use this endpoint**
+    """
+    # Check if user is already registered
+    user_payment = await cruds_myeclpay.get_user_payment(
+        user_id=user.id,
+        db=db,
+    )
+    if user_payment is None or not is_user_latest_cgu_signed(user_payment):
+        raise HTTPException(
+            status_code=400,
+            detail="User is not registered for MyECL Pay",
+        )
+
+    wallet_device = await cruds_myeclpay.get_wallet_device(
+        wallet_device_id=wallet_device_id, db=db
+    )
+
+    if wallet_device is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Wallet device does not exist",
+        )
+
+    if wallet_device.wallet_id != user_payment.wallet_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Wallet device does not belong to the user",
+        )
+
+    await cruds_myeclpay.update_wallet_device_status(
+        wallet_device_id=wallet_device_id,
+        status=WalletDeviceStatus.DISABLED,
+        db=db,
+    )
 
 
 @router.get(
