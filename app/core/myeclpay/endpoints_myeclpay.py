@@ -3,9 +3,11 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import Settings
 from app.core.models_core import CoreUser
 from app.core.myeclpay import cruds_myeclpay, schemas_myeclpay
 from app.core.myeclpay.types_myeclpay import (
@@ -16,6 +18,7 @@ from app.core.myeclpay.types_myeclpay import (
     WalletType,
 )
 from app.core.myeclpay.utils_myeclpay import (
+    CGU_CONTENT,
     LATEST_CGU,
     MAX_TRANSACTION_TOTAL,
     QRCODE_EXPIRATION,
@@ -27,15 +30,52 @@ from app.dependencies import (
     get_db,
     get_notification_tool,
     get_request_id,
+    get_settings,
     is_user_an_ecl_member,
 )
 from app.utils.communication.notifications import NotificationTool
+from app.utils.mail.mailworker import send_email
 from app.utils.tools import get_display_name
 
 router = APIRouter(tags=["MyECLPay"])
 
+templates = Jinja2Templates(directory="assets/templates")
+
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
+
+
+@router.get(
+    "/myeclpay/users/me/cgu",
+    status_code=200,
+    response_model=schemas_myeclpay.CGUSignatureResponse,
+)
+async def get_cgu(
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(is_user_an_ecl_member),
+    settings: Settings = Depends(get_settings),
+):
+    """
+    Get the latest CGU version and the user signed CGU version.
+
+    **The user must be authenticated to use this endpoint**
+    """
+    # Check if user is already registered
+    existing_user_payment = await cruds_myeclpay.get_user_payment(
+        user_id=user.id,
+        db=db,
+    )
+    if existing_user_payment is None:
+        raise HTTPException(
+            status_code=400,
+            detail="User is not registered for MyECL Pay",
+        )
+
+    return schemas_myeclpay.CGUSignatureResponse(
+        accepted_cgu_version=existing_user_payment.accepted_cgu_version,
+        latest_cgu_version=LATEST_CGU,
+        cgu_content=CGU_CONTENT,
+    )
 
 
 @router.post(
@@ -43,15 +83,64 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
     status_code=204,
 )
 async def register_user(
-    signature: schemas_myeclpay.CGUSignature,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
     Sign MyECL Pay CGU for the given user.
 
-    If the user is already registred in the MyECLPay system, this will update the CGU version.
-    If the use has never signed CGU, we will create a new UserPayment and and associated wallet.
+    The user will need to accept the latest CGU version to be able to use MyECL Pay.
+
+    **The user must be authenticated to use this endpoint**
+    """
+
+    # Check if user is already registered
+    existing_user_payment = await cruds_myeclpay.get_user_payment(
+        user_id=user.id,
+        db=db,
+    )
+    if existing_user_payment is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="User is already registered for MyECL Pay",
+        )
+
+    # Create new wallet for user
+    wallet_id = uuid.uuid4()
+    await cruds_myeclpay.create_wallet(
+        wallet_id=wallet_id,
+        wallet_type=WalletType.USER,
+        balance=0,
+        db=db,
+    )
+
+    # Create new payment user with wallet
+    await cruds_myeclpay.create_user_payment(
+        user_id=user.id,
+        wallet_id=wallet_id,
+        accepted_cgu_signature=datetime.now(UTC),
+        accepted_cgu_version=0,
+        db=db,
+    )
+
+    await db.commit()
+
+
+@router.post(
+    "/myeclpay/users/me/signcgu",
+    status_code=204,
+)
+async def sign_cgu(
+    signature: schemas_myeclpay.CGUSignature,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(is_user_an_ecl_member),
+    settings: Settings = Depends(get_settings),
+):
+    """
+    Sign MyECL Pay CGU for the given user.
+
+    If the user is already registered in the MyECLPay system, this will update the CGU version.
 
     **The user must be authenticated to use this endpoint**
     """
@@ -67,40 +156,37 @@ async def register_user(
         db=db,
     )
     if existing_user_payment is None:
-        # Create new wallet for user
-        wallet_id = uuid.uuid4()
-        await cruds_myeclpay.create_wallet(
-            wallet_id=wallet_id,
-            wallet_type=WalletType.USER,
-            balance=0,
-            db=db,
+        raise HTTPException(
+            status_code=400,
+            detail="User is not registered for MyECL Pay",
         )
 
-        # Create new payment user with wallet
-        await cruds_myeclpay.create_user_payment(
-            user_id=user.id,
-            wallet_id=wallet_id,
-            accepted_cgu_signature=datetime.now(UTC),
-            accepted_cgu_version=signature.accepted_cgu_version,
-            db=db,
-        )
-    else:
-        if existing_user_payment.accepted_cgu_version >= signature.accepted_cgu_version:
-            raise HTTPException(
-                status_code=400,
-                detail="You have already signed a more recent CGU version",
-            )
-        # Update existing user payment
-        await cruds_myeclpay.update_user_payment(
-            user_id=user.id,
-            accepted_cgu_signature=datetime.now(UTC),
-            accepted_cgu_version=signature.accepted_cgu_version,
-            db=db,
-        )
+    # Update existing user payment
+    await cruds_myeclpay.update_user_payment(
+        user_id=user.id,
+        accepted_cgu_signature=datetime.now(UTC),
+        accepted_cgu_version=signature.accepted_cgu_version,
+        db=db,
+    )
 
     await db.commit()
 
-    # TODO: maybe send notification and/or mail
+    # TODO: add logs
+    # hyperion_security_logger.warning(
+    #     f"Create_user: an user with email {user_create.email} already exists ({request_id})",
+    # )
+    # TODO: change template
+    if settings.SMTP_ACTIVE:
+        account_exists_content = templates.get_template(
+            "account_exists_mail.html",
+        ).render()
+        background_tasks.add_task(
+            send_email,
+            recipient=user.email,
+            subject="MyECL - you have signed CGU",
+            content=account_exists_content,
+            settings=settings,
+        )
 
 
 @router.get(
