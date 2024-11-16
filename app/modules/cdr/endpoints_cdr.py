@@ -1,6 +1,7 @@
 import logging
+import os
 import re
-from collections.abc import AsyncGenerator, Callable, Sequence
+from collections.abc import Sequence
 from datetime import UTC, date, datetime
 from pathlib import Path
 from uuid import UUID, uuid4
@@ -10,6 +11,7 @@ from fastapi import (
     Depends,
     HTTPException,
     WebSocket,
+    WebSocketDisconnect,
 )
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,9 +25,9 @@ from app.core.users import cruds_users
 from app.core.users.cruds_users import get_user_by_id, get_users
 from app.dependencies import (
     get_db,
-    get_get_db_dependency,
     get_payment_tool,
     get_settings,
+    get_unsafe_db,
     get_websocket_connection_manager,
     is_user,
     is_user_a_member,
@@ -45,10 +47,15 @@ from app.modules.cdr.utils_cdr import (
 )
 from app.types.membership import AvailableAssociationMembership
 from app.types.module import Module
+from app.types.scopes_type import ScopeType
 from app.types.websocket import (
+    ConnectionWSMessageModel,
+    ConnectionWSMessageModelData,
+    ConnectionWSMessageModelStatus,
     HyperionWebsocketsRoom,
     WebsocketConnectionManager,
 )
+from app.utils.auth import auth_utils
 
 # from app.utils.mail.mailworker import send_email
 from app.utils.tools import (
@@ -3213,14 +3220,11 @@ async def delete_customdata(
 async def websocket_endpoint(
     websocket: WebSocket,
     ws_manager: WebsocketConnectionManager = Depends(get_websocket_connection_manager),
+    db: AsyncSession = Depends(get_unsafe_db),
     settings: Settings = Depends(get_settings),
-    get_db_dependency: Callable[[], AsyncGenerator[AsyncSession, None]] = Depends(
-        get_get_db_dependency,
-    ),
 ):
     await ws_manager.manage_websocket(
-        websocket=websocket,
-        settings=settings,
-        room=HyperionWebsocketsRoom.CDR,
-        get_db_dependency=get_db_dependency,
-    )
+            websocket=websocket,
+            settings=settings,
+            room=HyperionWebsocketsRoom.CDR,
+            get_db=db,)

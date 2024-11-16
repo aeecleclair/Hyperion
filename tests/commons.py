@@ -1,6 +1,6 @@
 import logging
 import uuid
-from collections.abc import AsyncGenerator, Callable
+from collections.abc import AsyncGenerator
 from datetime import timedelta
 from functools import lru_cache
 
@@ -68,17 +68,11 @@ async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
         finally:
             await db.close()
 
+async def override_get_unsafe_db() -> AsyncGenerator[AsyncSession, None]:
+    """Override the get_db function to use the testing session"""
 
-async def override_get_db_dependency() -> (
-    Callable[[], AsyncGenerator[AsyncSession, None]]
-):
-    """
-    Return the dependency `get_db`
-
-    NOTE: you should not use this dependency directly, prefer using `get_db` instead
-    """
-    return override_get_db
-
+    async with TestingSessionLocal() as db:
+        yield db
 
 # By default the redis client is deactivated
 redis_client: redis.Redis | None | bool = False

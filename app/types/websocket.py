@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
+from app.dependencies import get_unsafe_db
 from app.types.scopes_type import ScopeType
 from app.utils.auth import auth_utils
 
@@ -229,7 +230,7 @@ class WebsocketConnectionManager:
         websocket: WebSocket,
         settings: Settings,
         room: HyperionWebsocketsRoom,
-        get_db: Callable[[], AsyncGenerator[AsyncSession, None]],
+        db: AsyncSession,
     ):
         """
         This function is used to manage the websocket connection.
@@ -257,12 +258,11 @@ class WebsocketConnectionManager:
                 request_id="websocket",
             )
 
-            async for db in get_db():
-                user = await auth_utils.get_user_from_token_with_scopes(
-                    scopes=[[ScopeType.API]],
-                    db=db,
-                    token_data=token_data,
-                )
+            user = await auth_utils.get_user_from_token_with_scopes(
+                scopes=[[ScopeType.API]],
+                db=db,
+                token_data=token_data,
+            )
         except Exception:
             await websocket.send_text(
                 ConnectionWSMessageModel(
@@ -273,6 +273,8 @@ class WebsocketConnectionManager:
             )
             await websocket.close()
             return
+        finally:
+            await db.close()
 
         hyperion_error_logger.debug(
             f"{room}: New websocket connection from {user.id} on worker {os.getpid()}",
