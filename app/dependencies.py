@@ -13,7 +13,7 @@ from functools import lru_cache
 from typing import Any, cast
 
 import redis
-from arq import ArqRedis
+from arq import ArqRedis, create_pool
 from arq.connections import RedisSettings
 from fastapi import BackgroundTasks, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import (
@@ -166,21 +166,12 @@ def get_redis_client(
     return redis_client
 
 
-scheduler_logger = logging.getLogger("scheduler")
-
-
-async def get_scheduler(settings: Settings = Depends(get_settings)) -> ArqRedis | None:
+async def get_scheduler() -> ArqRedis:
     global scheduler
     if scheduler is None:
-        if settings.REDIS_HOST != "":
-            scheduler_logger.debug("Initializing Scheduler")
-            arq_settings = RedisSettings(
-                host=settings.REDIS_HOST,
-                port=settings.REDIS_PORT,
-                password=settings.REDIS_PASSWORD,
-            )
-            scheduler = Scheduler(await create_pool(arq_settings))
-            scheduler_logger.debug(f"Scheduler {scheduler} initialized")
+        settings = get_settings()
+        arq_settings = RedisSettings(host=settings.REDIS_HOST, port=settings.REDIS_PORT)
+        scheduler = Scheduler(await create_pool(arq_settings))
 
     return scheduler
 
