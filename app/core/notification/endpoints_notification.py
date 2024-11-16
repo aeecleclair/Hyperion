@@ -227,12 +227,10 @@ async def send_notification(
     **Only admins can use this endpoint**
     """
     message = schemas_notification.Message(
-        context="notification-test",
-        is_visible=True,
         title="Test notification",
         content="Ceci est un test de notification",
-        # The notification will expire in 3 days
-        expire_on=datetime.now(UTC) + timedelta(days=3),
+        action_module="test",
+        
     )
     await notification_tool.send_notification_to_user(
         user_id=user.id,
@@ -253,12 +251,9 @@ async def send_notification_topic(
     **Only admins can use this endpoint**
     """
     message = schemas_notification.Message(
-        context="notification-test-topic",
-        is_visible=True,
         title="Test notification topic",
         content="Ceci est un test de notification topic",
-        # The notification will expire in 3 days
-        expire_on=datetime.now(UTC) + timedelta(days=3),
+        action_module="test",
     )
     await notification_tool.send_notification_to_topic(
        custom_topic=CustomTopic.from_str("test"),
@@ -279,13 +274,9 @@ async def send_future_notification(
     **Only admins can use this endpoint**
     """
     message = schemas_notification.Message(
-        context="future-notification-test",
-        is_visible=True,
         title="Test notification future",
         content="Ceci est un test de notification future",
-        # The notification will expire in 3 days
-        expire_on=datetime.now(UTC) + timedelta(days=3),
-        delivery_datetime=datetime.now(UTC) + timedelta(minutes=3),
+        action_module="test",
     )
     await notification_tool.send_notification_to_user(
         user_id=user.id,

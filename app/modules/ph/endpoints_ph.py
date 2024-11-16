@@ -124,16 +124,9 @@ async def create_paper(
         # We only want to send a notification if the paper was released less than a month ago.
         if paper_db.release_date >= now.date() - timedelta(days=30):
             message = Message(
-                context=f"ph-{paper_db.id}",
-                is_visible=True,
                 title=f"📗 PH - {paper_db.name}",
                 content="Un nouveau journal est disponible! 🎉",
-                delivery_datetime=datetime.combine(
-                    paper_db.release_date,
-                    time(hour=8, tzinfo=UTC),
-                ),
-                # The notification will expire in 10 days
-                expire_on=now + timedelta(days=10),
+                action_module="ph",
             )
             await notification_tool.send_notification_to_topic(
                 custom_topic=CustomTopic(topic=Topic.ph),
