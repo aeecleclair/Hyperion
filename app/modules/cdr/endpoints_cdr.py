@@ -3220,5 +3220,5 @@ async def websocket_endpoint(
         websocket=websocket,
         settings=settings,
         room=HyperionWebsocketsRoom.CDR,
-        get_db=db,
+        db=db,
     )
