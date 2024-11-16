@@ -3,7 +3,7 @@ import uuid
 from typing import Annotated
 
 from sqlalchemy import DateTime, types
-from sqlalchemy.orm import DeclarativeBase, mapped_column
+from sqlalchemy.orm import DeclarativeBase, MappedAsDataclass,mapped_column
 from sqlalchemy.types import TypeDecorator
 
 from app.types.exceptions import MissingTZInfoInDatetimeError

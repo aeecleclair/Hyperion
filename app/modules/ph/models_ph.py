@@ -1,6 +1,6 @@
 from datetime import date
 
-from sqlalchemy.orm import Mapped, MappedAsDataclass
+from sqlalchemy.orm import Mapped
 
 from app.types.sqlalchemy import Base, PrimaryKey
 
