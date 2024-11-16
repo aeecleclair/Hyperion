@@ -137,7 +137,7 @@ async def search_users(
     status_code=200,
 )
 async def read_current_user(
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
 ):
     """
     Return `CoreUser` representation of current user
@@ -612,7 +612,7 @@ async def reset_password(
 async def migrate_mail(
     mail_migration: schemas_core.MailMigrationRequest,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
     settings: Settings = Depends(get_settings),
 ):
     """
@@ -808,7 +808,7 @@ async def read_user(
     status_code=204,
 )
 async def delete_user(
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
 ):
     """
     This endpoint will ask administrators to process to the user deletion.
@@ -826,7 +826,7 @@ async def delete_user(
 async def update_current_user(
     user_update: schemas_core.CoreUserUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
 ):
     """
     Update the current user, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value
@@ -943,7 +943,7 @@ async def update_user(
 )
 async def create_current_user_profile_picture(
     image: UploadFile = File(...),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
     request_id: str = Depends(get_request_id),
 ):
     """
@@ -974,7 +974,7 @@ async def create_current_user_profile_picture(
     status_code=200,
 )
 async def read_own_profile_picture(
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
 ):
     """
     Get the profile picture of the authenticated user.
