@@ -170,7 +170,11 @@ async def get_scheduler() -> ArqRedis:
     global scheduler
     if scheduler is None:
         settings = get_settings()
-        arq_settings = RedisSettings(host=settings.REDIS_HOST, port=settings.REDIS_PORT)
+        arq_settings = RedisSettings(
+            host=settings.REDIS_HOST,
+            port=settings.REDIS_PORT,
+            password=settings.REDIS_PASSWORD,
+        )
         scheduler = Scheduler(await create_pool(arq_settings))
 
     return scheduler
