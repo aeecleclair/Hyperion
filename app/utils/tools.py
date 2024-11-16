@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import cruds_core, models_core, security
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import AccountType, GroupType
+from app.core.models_core import CoreUser
 from app.core.users import cruds_users
 from app.types import core_data
 from app.types.content_type import ContentType
@@ -29,7 +30,6 @@ from app.utils.mail.mailworker import send_email
 
 if TYPE_CHECKING:
     from app.core.config import Settings
-    from app.core.models_core import CoreUser
 
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
