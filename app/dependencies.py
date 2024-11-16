@@ -177,6 +177,7 @@ async def get_scheduler() -> ArqRedis:
             password=settings.REDIS_PASSWORD,
         )
         scheduler = Scheduler(await create_pool(arq_settings))
+        scheduler_logger.debug(f"Scheduler {scheduler} initialized")
 
     return scheduler
 
