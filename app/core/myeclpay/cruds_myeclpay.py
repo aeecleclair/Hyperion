@@ -10,6 +10,7 @@ from app.core.myeclpay import models_myeclpay
 from app.core.myeclpay.types_myeclpay import (
     TransactionStatus,
     TransactionType,
+    WalletDeviceStatus,
     WalletType,
 )
 
@@ -50,6 +51,49 @@ async def get_wallet_device(
         ),
     )
     return result.scalars().first()
+
+
+async def get_wallet_devices_by_wallet_id(
+    wallet_id: UUID,
+    db: AsyncSession,
+) -> Sequence[models_myeclpay.WalletDevice]:
+    result = await db.execute(
+        select(models_myeclpay.WalletDevice).where(
+            models_myeclpay.WalletDevice.wallet_id == wallet_id,
+        ),
+    )
+    return result.scalars().all()
+
+
+async def get_wallet_device_by_activation_token(
+    activation_token: str,
+    db: AsyncSession,
+) -> models_myeclpay.WalletDevice | None:
+    result = await db.execute(
+        select(models_myeclpay.WalletDevice).where(
+            models_myeclpay.WalletDevice.activation_token == activation_token,
+        ),
+    )
+    return result.scalars().first()
+
+
+async def create_wallet_device(
+    wallet_device: models_myeclpay.WalletDevice,
+    db: AsyncSession,
+) -> None:
+    db.add(wallet_device)
+
+
+async def update_wallet_device_status(
+    wallet_device_id: UUID,
+    status: WalletDeviceStatus,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        update(models_myeclpay.WalletDevice)
+        .where(models_myeclpay.WalletDevice.id == wallet_device_id)
+        .values(status=status),
+    )
 
 
 async def increment_wallet_balance(

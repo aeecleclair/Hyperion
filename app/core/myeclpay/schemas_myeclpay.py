@@ -6,6 +6,7 @@ from pydantic import Base64Bytes, BaseModel
 from app.core.myeclpay.types_myeclpay import (
     HistoryType,
     TransactionStatus,
+    WalletDeviceStatus,
 )
 
 
@@ -59,3 +60,16 @@ class QRCodeContentData(BaseModel):
     iat: datetime
     key: UUID
     store: bool
+
+
+class WalletDevice(BaseModel):
+    id: UUID
+    name: str
+    wallet_id: UUID
+    creation: datetime
+    status: WalletDeviceStatus
+
+
+class WalletDeviceCreation(BaseModel):
+    name: str
+    ed25519_public_key: Base64Bytes
