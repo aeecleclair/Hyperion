@@ -232,36 +232,10 @@ async def send_notification(
         title="Test notification",
         content="Ceci est un test de notification",
         action_module="test",
-
+        
     )
     await notification_tool.send_notification_to_user(
         user_id=user.id,
-        message=message,
-    )
-
-@router.post(
-    "/notification/send/topic",
-    status_code=201,
-)
-async def send_notification_topic(
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
-    notification_tool: NotificationTool = Depends(get_notification_tool),
-):
-    """
-    Send ourself a test notification.
-
-    **Only admins can use this endpoint**
-    """
-    message = schemas_notification.Message(
-        context="notification-test-topic",
-        is_visible=True,
-        title="Test notification topic",
-        content="Ceci est un test de notification topic",
-        # The notification will expire in 3 days
-        expire_on=datetime.now(UTC) + timedelta(days=3),
-    )
-    await notification_tool.send_notification_to_topic(
-       custom_topic=CustomTopic.from_str("test"),
         message=message,
     )
 
@@ -289,12 +263,12 @@ async def send_notification_topic(
     )
 
 @router.post(
-    "/notification/send/future",
+    "/notification/send/topic",
     status_code=201,
 )
-async def send_future_notification(
+async def send_notification_topic(
     user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
-    notification_tool: NotificationTool = Depends(get_future_notification_tool),
+    notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
     Send ourself a test notification.
