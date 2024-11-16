@@ -3,86 +3,84 @@ from datetime import UTC, datetime
 
 import pytest_asyncio
 
+from app.core import models_core
 from app.core.groups.groups_type import GroupType
-from app.core.users import models_users
-from app.modules.cdr import models_cdr
-from app.modules.cdr.utils_cdr import construct_dataframe_from_users_purchases
+from app.modules.purchases import models_purchases
+from app.modules.purchases.utils_purchases import (
+    construct_dataframe_from_users_purchases,
+)
 from tests.commons import (
     create_api_access_token,
     create_user_with_groups,
 )
 
-cdr_admin: models_users.CoreUser
-cdr_user1: models_users.CoreUser
-cdr_user2: models_users.CoreUser
-cdr_user3: models_users.CoreUser
+purchases_admin: models_core.CoreUser
+purchases_user1: models_core.CoreUser
+purchases_user2: models_core.CoreUser
+purchases_user3: models_core.CoreUser
 
 token_admin: str
 token_user: str
 
-seller1: models_cdr.Seller
-seller2: models_cdr.Seller
+seller1: models_purchases.Seller
+seller2: models_purchases.Seller
 
-product1: models_cdr.CdrProduct
-product2: models_cdr.CdrProduct
-product3: models_cdr.CdrProduct
+product1: models_purchases.PurchasesProduct
+product2: models_purchases.PurchasesProduct
+product3: models_purchases.PurchasesProduct
 
-product1_variant1: models_cdr.ProductVariant
-product1_variant2: models_cdr.ProductVariant
-product1_variant3: models_cdr.ProductVariant
-product2_variant1: models_cdr.ProductVariant
-product3_variant1: models_cdr.ProductVariant
+product1_variant1: models_purchases.ProductVariant
+product1_variant2: models_purchases.ProductVariant
+product1_variant3: models_purchases.ProductVariant
+product2_variant1: models_purchases.ProductVariant
+product3_variant1: models_purchases.ProductVariant
 
-purchase_user1_product1_variant1: models_cdr.Purchase
-purchase_user1_product2_variant1: models_cdr.Purchase
-purchase_user1_product3_variant1: models_cdr.Purchase
-purchase_user2_product1_variant2: models_cdr.Purchase
-purchase_user2_product2_variant1: models_cdr.Purchase
-purchase_user3_product1_variant3: models_cdr.Purchase
-purchase_user3_product3_variant1: models_cdr.Purchase
+purchase_user1_product1_variant1: models_purchases.Purchase
+purchase_user1_product2_variant1: models_purchases.Purchase
+purchase_user1_product3_variant1: models_purchases.Purchase
+purchase_user2_product1_variant2: models_purchases.Purchase
+purchase_user2_product2_variant1: models_purchases.Purchase
+purchase_user3_product1_variant3: models_purchases.Purchase
+purchase_user3_product3_variant1: models_purchases.Purchase
 
-customdata_field1: models_cdr.CustomDataField
-customdata_field2: models_cdr.CustomDataField
+customdata_field1: models_purchases.CustomDataField
+customdata_field2: models_purchases.CustomDataField
 
-customdata_user1: models_cdr.CustomData
-customdata_user2: models_cdr.CustomData
-customdata_user3: models_cdr.CustomData
+customdata_user1: models_purchases.CustomData
+customdata_user2: models_purchases.CustomData
+customdata_user3: models_purchases.CustomData
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects():
-    global cdr_admin
-    cdr_admin = await create_user_with_groups(
-        [GroupType.admin_cdr],
-        email="cdr_admin@etu.ec-lyon.fr",
+    global purchases_admin
+    purchases_admin = await create_user_with_groups(
+        [GroupType.student, GroupType.admin_purchases],
+        email="purchases_admin@etu.ec-lyon.fr",
     )
 
     global token_admin
-    token_admin = create_api_access_token(cdr_admin)
+    token_admin = create_api_access_token(purchases_admin)
 
-    global cdr_user1
-    cdr_user1 = await create_user_with_groups(
-        [],
+    global purchases_user1
+    purchases_user1 = await create_user_with_groups(
+        [GroupType.student],
         email="demo@demo.fr",
         name="Demo",
         firstname="Oui",
     )
 
     global token_user
-    token_user = create_api_access_token(cdr_user1)
+    token_user = create_api_access_token(purchases_user1)
 
-    global cdr_user2
-    cdr_user2 = await create_user_with_groups(
-        [],
-    )
+    global purchases_user2
+    purchases_user2 = await create_user_with_groups([GroupType.student])
 
-    global cdr_user3
-    cdr_user3 = await create_user_with_groups(
-        [],
-    )
+    global purchases_user3
+    purchases_user3 = await create_user_with_groups([GroupType.student])
 
     global seller1
-    seller1 = models_cdr.Seller(
+    seller1 = models_purchases.Seller(
         id=uuid.uuid4(),
         name="BDE",
         group_id=str(GroupType.BDE.value),
@@ -90,7 +88,7 @@ async def init_objects():
     )
 
     global seller2
-    seller2 = models_cdr.Seller(
+    seller2 = models_purchases.Seller(
         id=uuid.uuid4(),
         name="CAA",
         group_id=str(GroupType.CAA.value),
@@ -98,7 +96,7 @@ async def init_objects():
     )
 
     global product1
-    product1 = models_cdr.CdrProduct(
+    product1 = models_purchases.PurchasesProduct(
         id=uuid.uuid4(),
         seller_id=seller1.id,
         name_fr="Produit",
@@ -109,7 +107,7 @@ async def init_objects():
     )
 
     global product2
-    product2 = models_cdr.CdrProduct(
+    product2 = models_purchases.PurchasesProduct(
         id=uuid.uuid4(),
         seller_id=seller1.id,
         name_fr="Produit2",
@@ -120,7 +118,7 @@ async def init_objects():
     )
 
     global product3
-    product3 = models_cdr.CdrProduct(
+    product3 = models_purchases.PurchasesProduct(
         id=uuid.uuid4(),
         seller_id=seller2.id,
         name_fr="Produit3",
@@ -131,21 +129,21 @@ async def init_objects():
     )
 
     global customdata_field1
-    customdata_field1 = models_cdr.CustomDataField(
+    customdata_field1 = models_purchases.CustomDataField(
         id=uuid.uuid4(),
         product_id=product1.id,
         name="Champ 1",
     )
 
     global customdata_field2
-    customdata_field2 = models_cdr.CustomDataField(
+    customdata_field2 = models_purchases.CustomDataField(
         id=uuid.uuid4(),
         product_id=product2.id,
         name="Champ 2",
     )
 
     global product1_variant1
-    product1_variant1 = models_cdr.ProductVariant(
+    product1_variant1 = models_purchases.ProductVariant(
         id=uuid.uuid4(),
         product_id=product1.id,
         name_fr="Variante",
@@ -156,7 +154,7 @@ async def init_objects():
     )
 
     global product1_variant2
-    product1_variant2 = models_cdr.ProductVariant(
+    product1_variant2 = models_purchases.ProductVariant(
         id=uuid.uuid4(),
         product_id=product1.id,
         name_fr="Variante2",
@@ -167,7 +165,7 @@ async def init_objects():
     )
 
     global product1_variant3
-    product1_variant3 = models_cdr.ProductVariant(
+    product1_variant3 = models_purchases.ProductVariant(
         id=uuid.uuid4(),
         product_id=product1.id,
         name_fr="Variante3",
@@ -178,7 +176,7 @@ async def init_objects():
     )
 
     global product2_variant1
-    product2_variant1 = models_cdr.ProductVariant(
+    product2_variant1 = models_purchases.ProductVariant(
         id=uuid.uuid4(),
         product_id=product2.id,
         name_fr="Variante",
@@ -189,7 +187,7 @@ async def init_objects():
     )
 
     global product3_variant1
-    product3_variant1 = models_cdr.ProductVariant(
+    product3_variant1 = models_purchases.ProductVariant(
         id=uuid.uuid4(),
         product_id=product3.id,
         name_fr="Variante",
@@ -200,8 +198,8 @@ async def init_objects():
     )
 
     global purchase_user1_product1_variant1
-    purchase_user1_product1_variant1 = models_cdr.Purchase(
-        user_id=cdr_user1.id,
+    purchase_user1_product1_variant1 = models_purchases.Purchase(
+        user_id=purchases_user1.id,
         product_variant_id=product1_variant1.id,
         quantity=10,
         validated=True,
@@ -209,8 +207,8 @@ async def init_objects():
     )
 
     global purchase_user1_product2_variant1
-    purchase_user1_product2_variant1 = models_cdr.Purchase(
-        user_id=cdr_user1.id,
+    purchase_user1_product2_variant1 = models_purchases.Purchase(
+        user_id=purchases_user1.id,
         product_variant_id=product2_variant1.id,
         quantity=1,
         validated=False,
@@ -218,8 +216,8 @@ async def init_objects():
     )
 
     global purchase_user1_product3_variant1
-    purchase_user1_product3_variant1 = models_cdr.Purchase(
-        user_id=cdr_user1.id,
+    purchase_user1_product3_variant1 = models_purchases.Purchase(
+        user_id=purchases_user1.id,
         product_variant_id=product3_variant1.id,
         quantity=1,
         validated=False,
@@ -227,8 +225,8 @@ async def init_objects():
     )
 
     global purchase_user2_product1_variant2
-    purchase_user2_product1_variant2 = models_cdr.Purchase(
-        user_id=cdr_user2.id,
+    purchase_user2_product1_variant2 = models_purchases.Purchase(
+        user_id=purchases_user2.id,
         product_variant_id=product1_variant2.id,
         quantity=1,
         validated=False,
@@ -236,8 +234,8 @@ async def init_objects():
     )
 
     global purchase_user2_product2_variant1
-    purchase_user2_product2_variant1 = models_cdr.Purchase(
-        user_id=cdr_user2.id,
+    purchase_user2_product2_variant1 = models_purchases.Purchase(
+        user_id=purchases_user2.id,
         product_variant_id=product2_variant1.id,
         quantity=1,
         validated=False,
@@ -245,8 +243,8 @@ async def init_objects():
     )
 
     global purchase_user3_product1_variant3
-    purchase_user3_product1_variant3 = models_cdr.Purchase(
-        user_id=cdr_user3.id,
+    purchase_user3_product1_variant3 = models_purchases.Purchase(
+        user_id=purchases_user3.id,
         product_variant_id=product1_variant3.id,
         quantity=50,
         validated=True,
@@ -254,8 +252,8 @@ async def init_objects():
     )
 
     global purchase_user3_product3_variant1
-    purchase_user3_product3_variant1 = models_cdr.Purchase(
-        user_id=cdr_user3.id,
+    purchase_user3_product3_variant1 = models_purchases.Purchase(
+        user_id=purchases_user3.id,
         product_variant_id=product3_variant1.id,
         quantity=1,
         validated=False,
@@ -263,22 +261,22 @@ async def init_objects():
     )
 
     global customdata_user1
-    customdata_user1 = models_cdr.CustomData(
-        user_id=cdr_user1.id,
+    customdata_user1 = models_purchases.CustomData(
+        user_id=purchases_user1.id,
         field_id=customdata_field1.id,
         value="Value 1",
     )
 
     global customdata_user2
-    customdata_user2 = models_cdr.CustomData(
-        user_id=cdr_user2.id,
+    customdata_user2 = models_purchases.CustomData(
+        user_id=purchases_user2.id,
         field_id=customdata_field1.id,
         value="Value 2",
     )
 
     global customdata_user3
-    customdata_user3 = models_cdr.CustomData(
-        user_id=cdr_user3.id,
+    customdata_user3 = models_purchases.CustomData(
+        user_id=purchases_user3.id,
         field_id=customdata_field1.id,
         value="Value 3",
     )
@@ -286,19 +284,19 @@ async def init_objects():
 
 def test_construct_dataframe_from_users_purchases():
     users_purchases = {
-        cdr_user1.id: [
+        purchases_user1.id: [
             purchase_user1_product1_variant1,
             purchase_user1_product2_variant1,
         ],
-        cdr_user2.id: [
+        purchases_user2.id: [
             purchase_user2_product1_variant2,
             purchase_user2_product2_variant1,
         ],
-        cdr_user3.id: [
+        purchases_user3.id: [
             purchase_user3_product1_variant3,
         ],
     }
-    users = [cdr_user1, cdr_user2, cdr_user3]
+    users = [purchases_user1, purchases_user2, purchases_user3]
     products = [product1, product2]
     product_variants = [
         product1_variant1,
@@ -311,9 +309,9 @@ def test_construct_dataframe_from_users_purchases():
         product2.id: [customdata_field2],
     }
     users_answers = {
-        cdr_user1.id: [customdata_user1],
-        cdr_user2.id: [customdata_user2],
-        cdr_user3.id: [customdata_user3],
+        purchases_user1.id: [customdata_user1],
+        purchases_user2.id: [customdata_user2],
+        purchases_user3.id: [customdata_user3],
     }
 
     df = construct_dataframe_from_users_purchases(
@@ -341,11 +339,11 @@ def test_construct_dataframe_from_users_purchases():
     ]
     for user_id in [user.id for user in users]:
         assert user_id in df.index
-    assert list(df.loc[cdr_user1.id]) == [
-        cdr_user1.name,
-        cdr_user1.firstname,
+    assert list(df.loc[purchases_user1.id]) == [
+        purchases_user1.name,
+        purchases_user1.firstname,
         "",
-        cdr_user1.email,
+        purchases_user1.email,
         10,
         "",
         "",
@@ -355,11 +353,11 @@ def test_construct_dataframe_from_users_purchases():
         False,
         "Manquant : \n-Produit2 : Variante",
     ]
-    assert list(df.loc[cdr_user2.id]) == [
-        cdr_user2.name,
-        cdr_user2.firstname,
+    assert list(df.loc[purchases_user2.id]) == [
+        purchases_user2.name,
+        purchases_user2.firstname,
         "",
-        cdr_user2.email,
+        purchases_user2.email,
         "",
         1,
         "",
@@ -369,11 +367,11 @@ def test_construct_dataframe_from_users_purchases():
         False,
         "Manquant : \n-Produit : Variante2\n-Produit2 : Variante",
     ]
-    assert list(df.loc[cdr_user3.id]) == [
-        cdr_user3.name,
-        cdr_user3.firstname,
+    assert list(df.loc[purchases_user3.id]) == [
+        purchases_user3.name,
+        purchases_user3.firstname,
         "",
-        cdr_user3.email,
+        purchases_user3.email,
         "",
         "",
         50,

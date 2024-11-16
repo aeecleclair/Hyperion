@@ -8,19 +8,19 @@ from fastapi import (
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from app.core.payment import schemas_payment
-from app.core.users import models_users
 from app.dependencies import (
     hyperion_access_logger,
 )
-from app.modules.cdr import cruds_cdr, models_cdr
-from app.modules.cdr.types_cdr import (
-    CdrLogActionType,
+from app.modules.purchases import cruds_purchases, models_purchases
+from app.modules.purchases.types_purchases import (
     PaymentType,
+    PurchasesLogActionType,
 )
 from app.utils.tools import (
-    is_user_member_of_any_group,
+    is_user_member_of_an_allowed_group,
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
@@ -33,32 +33,37 @@ async def validate_payment(
     paid_amount = checkout_payment.paid_amount
     checkout_id = checkout_payment.checkout_id
 
-    checkout = await cruds_cdr.get_checkout_by_checkout_id(
+    checkout = await cruds_purchases.get_checkout_by_checkout_id(
         db=db,
         checkout_id=checkout_id,
     )
     if not checkout:
         hyperion_error_logger.error(
-            f"CDR payment callback: user checkout {checkout_id} not found.",
+            f"Purchases payment callback: user checkout {checkout_id} not found.",
         )
         raise ValueError(f"User checkout {checkout_id} not found.")  # noqa: TRY003
 
-    db_payment = models_cdr.Payment(
+    db_payment = models_purchases.Payment(
         id=uuid4(),
         user_id=checkout.user_id,
         total=paid_amount,
         payment_type=PaymentType.helloasso,
     )
-    db_action = models_cdr.CdrAction(
+    db_action = models_purchases.PurchasesAction(
         id=uuid4(),
         subject_id=checkout.user_id,
-        action_type=CdrLogActionType.payment_add,
+        action_type=PurchasesLogActionType.payment_add,
         action=str(checkout_payment.__dict__),
         timestamp=datetime.now(UTC),
     )
     try:
-        cruds_cdr.create_payment(db=db, payment=db_payment)
-        cruds_cdr.create_action(db=db, action=db_action)
+        cruds_purchases.create_payment(db=db, payment=db_payment)
+        await cruds_purchases.mark_purchase_as_paid(
+            db=db,
+            user_id=checkout.user_id,
+            product_variant_ids=[variant.id for variant in checkout.paid_products_ids],
+        )
+        cruds_purchases.create_action(db=db, action=db_action)
         await db.commit()
     except Exception:
         await db.rollback()
@@ -67,13 +72,13 @@ async def validate_payment(
 
 async def is_user_in_a_seller_group(
     seller_id: UUID,
-    user: models_users.CoreUser,
+    user: models_core.CoreUser,
     db: AsyncSession,
 ):
     """
-    Check if the user is in the group related to a seller or CDR Admin.
+    Check if the user is in the group related to a seller or Purchases Admin.
     """
-    seller = await cruds_cdr.get_seller_by_id(db, seller_id=seller_id)
+    seller = await cruds_purchases.get_seller_by_id(db, seller_id=seller_id)
 
     if not seller:
         raise HTTPException(
@@ -81,9 +86,9 @@ async def is_user_in_a_seller_group(
             detail="Seller not found.",
         )
 
-    if is_user_member_of_any_group(
+    if is_user_member_of_an_allowed_group(
         user=user,
-        allowed_groups=[str(seller.group_id), GroupType.admin_cdr],
+        allowed_groups=[str(seller.group_id), GroupType.admin_purchases],
     ):
         return user
 
@@ -103,20 +108,23 @@ async def check_request_consistency(
     product_id: UUID | None = None,
     variant_id: UUID | None = None,
     document_id: UUID | None = None,
-) -> models_cdr.CdrProduct | None:
+) -> models_purchases.PurchasesProduct | None:
     """
     Check that given ids are consistent, ie. product's seller_id is the given seller_id.
     """
-    db_product: models_cdr.CdrProduct | None = None
+    db_product: models_purchases.PurchasesProduct | None = None
     if seller_id:
-        db_seller = await cruds_cdr.get_seller_by_id(db=db, seller_id=seller_id)
+        db_seller = await cruds_purchases.get_seller_by_id(db=db, seller_id=seller_id)
         if not db_seller:
             raise HTTPException(
                 status_code=404,
                 detail="Invalid seller_id",
             )
     if product_id:
-        db_product = await cruds_cdr.get_product_by_id(db=db, product_id=product_id)
+        db_product = await cruds_purchases.get_product_by_id(
+            db=db,
+            product_id=product_id,
+        )
         if not db_product:
             raise HTTPException(
                 status_code=404,
@@ -128,7 +136,7 @@ async def check_request_consistency(
                 detail="Product is not related to this seller.",
             )
     if variant_id:
-        db_variant = await cruds_cdr.get_product_variant_by_id(
+        db_variant = await cruds_purchases.get_product_variant_by_id(
             db=db,
             variant_id=variant_id,
         )
@@ -143,7 +151,10 @@ async def check_request_consistency(
                 detail="Variant is not related to this product.",
             )
     if document_id:
-        db_document = await cruds_cdr.get_document_by_id(db=db, document_id=document_id)
+        db_document = await cruds_purchases.get_document_by_id(
+            db=db,
+            document_id=document_id,
+        )
         if not db_document:
             raise HTTPException(
                 status_code=404,
@@ -158,18 +169,18 @@ async def check_request_consistency(
 
 
 def construct_dataframe_from_users_purchases(
-    users_purchases: dict[str, list[models_cdr.Purchase]],
-    users_answers: dict[str, list[models_cdr.CustomData]],
-    users: list[models_users.CoreUser],
-    products: list[models_cdr.CdrProduct],
-    variants: list[models_cdr.ProductVariant],
-    data_fields: dict[UUID, list[models_cdr.CustomDataField]],
+    users_purchases: dict[str, list[models_purchases.Purchase]],
+    users_answers: dict[str, list[models_purchases.CustomData]],
+    users: list[models_core.CoreUser],
+    products: list[models_purchases.PurchasesProduct],
+    variants: list[models_purchases.ProductVariant],
+    data_fields: dict[UUID, list[models_purchases.CustomDataField]],
 ) -> pd.DataFrame:
     """
     Construct a pandas DataFrame from a dict of users purchases.
 
     Args:
-        users_purchases (dict[str, list[models_cdr.Purchase]]): A dict of users purchases.
+        users_purchases (dict[str, list[models_purchases.Purchase]]): A dict of users purchases.
 
     Returns:
         pd.DataFrame: A pandas DataFrame.
