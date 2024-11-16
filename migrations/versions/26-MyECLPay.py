@@ -16,7 +16,7 @@ from app.types.sqlalchemy import TZDateTime
 
 # revision identifiers, used by Alembic.
 revision: str = "e16b58cc6084"
-down_revision: str | None = "d24003cffdcd"
+down_revision: str | None = "c73c7b821728"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -44,7 +44,7 @@ def upgrade() -> None:
             sa.Enum("aeecl", "useecl", name="availableassociationmembership"),
             nullable=False,
         ),
-        sa.Column("wallet_id", sa.Uuid(), nullable=False),
+        sa.Column("wallet_id", sa.Uuid(), nullable=False, unique=True),
         sa.ForeignKeyConstraint(
             ["wallet_id"],
             ["myeclpay_wallet.id"],
@@ -80,7 +80,7 @@ def upgrade() -> None:
     op.create_table(
         "myeclpay_user_payment",
         sa.Column("user_id", sa.String(), nullable=False),
-        sa.Column("wallet_id", sa.Uuid(), nullable=False),
+        sa.Column("wallet_id", sa.Uuid(), nullable=False, unique=True),
         sa.Column("accepted_cgu_signature", TZDateTime(), nullable=False),
         sa.Column("accepted_cgu_version", sa.Integer(), nullable=False),
         sa.ForeignKeyConstraint(
@@ -105,7 +105,7 @@ def upgrade() -> None:
             sa.Enum("UNACTIVE", "ACTIVE", "DISABLED", name="walletdevicestatus"),
             nullable=False,
         ),
-        sa.Column("activation_token", sa.String(), nullable=False),
+        sa.Column("activation_token", sa.String(), nullable=False, unique=True),
         sa.ForeignKeyConstraint(
             ["wallet_id"],
             ["myeclpay_wallet.id"],
