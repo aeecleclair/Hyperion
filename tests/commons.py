@@ -3,6 +3,7 @@ import uuid
 from collections.abc import AsyncGenerator
 from datetime import timedelta
 from functools import lru_cache
+from typing import Callable
 
 import redis
 from fastapi import Depends
@@ -67,6 +68,17 @@ async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
             yield db
         finally:
             await db.close()
+
+
+async def override_get_db_dependency() -> (
+    Callable[[], AsyncGenerator[AsyncSession, None]]
+):
+    """
+    Return the dependency `get_db`
+
+    NOTE: you should not use this dependency directly, prefer using `get_db` instead
+    """
+    return override_get_db
 
 
 # By default the redis client is deactivated
