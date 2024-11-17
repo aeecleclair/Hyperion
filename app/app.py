@@ -192,58 +192,69 @@ def initialize_module_visibility(
     """Add the default module visibilities for Titan"""
 
     with Session(sync_engine) as db:
-        # Is run to create default module visibilities or when the table is empty
-        existing_group_visibilities = (
-            initialization.get_all_module_group_visibility_membership_sync(db)
+        module_awareness = initialization.get_core_data_sync(
+            "module_awareness",
+            db,
         )
-        existing_account_type_visibilities = (
-            initialization.get_all_module_account_type_visibility_membership_sync(db)
-        )
+        if module_awareness is not None:
+            awareness_list = module_awareness.data.split(",")
 
-        hyperion_error_logger.info(
-            "Startup: Modules visibility settings are empty, initializing them",
-        )
-        for module in module_list:
-            if module.default_allowed_groups_ids is not None:
-                for default_group_id in module.default_allowed_groups_ids:
-                    if not any(
-                        visibility.root == module.root
-                        for visibility in existing_group_visibilities
-                    ):
+        awareness_list = awareness_list or []
+        # Is run to create default module visibilities or when the table is empty
+        if awareness_list != [module.root for module in module_list]:
+            hyperion_error_logger.info(
+                "Startup: Some modules visibility settings are empty, initializing them",
+            )
+            to_add = [
+                module for module in module_list if module.root not in awareness_list
+            ]
+            for module in to_add:
+                if module.default_allowed_groups_ids is not None:
+                    for group_id in module.default_allowed_groups_ids:
                         module_group_visibility = models_core.ModuleGroupVisibility(
                             root=module.root,
-                            allowed_group_id=default_group_id,
+                            allowed_group_id=group_id,
                         )
                         try:
                             initialization.create_module_group_visibility_sync(
-                                module_group_visibility,
-                                db,
+                                module_visibility=module_group_visibility,
+                                db=db,
                             )
-                        except IntegrityError as error:
+                        except ValueError as error:
                             hyperion_error_logger.fatal(
-                                f"Startup: Could not add module visibility {module.root}<{default_group_id}> in the database: {error}",
+                                f"Startup: Could not add module visibility {module.root} in the database: {error}",
                             )
-            if module.default_allowed_account_types is not None:
-                for default_account_type in module.default_allowed_account_types:
-                    if not any(
-                        visibility.root == module.root
-                        for visibility in existing_account_type_visibilities
-                    ):
-                        module_account_visibility = (
+                if module.default_allowed_account_types is not None:
+                    for account_type in module.default_allowed_account_types:
+                        module_account_type_visibility = (
                             models_core.ModuleAccountTypeVisibility(
                                 root=module.root,
-                                allowed_account_type=default_account_type,
+                                allowed_account_type=account_type,
                             )
                         )
                         try:
                             initialization.create_module_account_type_visibility_sync(
-                                module_account_visibility,
-                                db,
+                                module_visibility=module_account_type_visibility,
+                                db=db,
                             )
-                        except IntegrityError as error:
+                        except ValueError as error:
                             hyperion_error_logger.fatal(
-                                f"Startup: Could not add module visibility {module.root}<{default_account_type}> in the database: {error}",
+                                f"Startup: Could not add module visibility {module.root} in the database: {error}",
                             )
+            initialization.set_core_data_sync(
+                models_core.CoreData(
+                    "module_awareness",
+                    ",".join([module.root for module in module_list]),
+                ),
+                db,
+            )
+            hyperion_error_logger.info(
+                f"Startup: Modules visibility settings initialized for {[module.root for module in to_add]}",
+            )
+        else:
+            hyperion_error_logger.info(
+                "Startup: Modules visibility settings already initialized",
+            )
 
 
 def use_route_path_as_operation_ids(app: FastAPI) -> None:
