@@ -14,6 +14,9 @@ class Scheduler:
         scheduler_logger.debug(f"Pool in init {self.redis_pool}")
         self.name = str(uuid4())
 
+    def __enter__(self):
+        return self
+
     async def queue_job(self, job_function, job_id, defer_time):
         job = await self.redis_pool.enqueue_job(
             "run_task",
