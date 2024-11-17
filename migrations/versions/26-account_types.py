@@ -148,6 +148,25 @@ def upgrade() -> None:
         ),
     )
     conn.execute(
+        sa.update(
+            user_t,
+        )
+        .where(user_t.c.id == DEMO_ID)
+        .values(
+            account_type=AccountType.demo,
+        ),
+    )
+    conn.execute(
+        sa.update(
+            user_t,
+        )
+        .where(user_t.c.id == ECLAIR_ID)
+        .values(
+            account_type=AccountType.association,
+        ),
+    )
+
+    conn.execute(
         sa.delete(
             membership_t,
         ).where(
@@ -359,10 +378,27 @@ def downgrade() -> None:
             insert_membership(user.id, EXTERNAL_GROUP_ID)
             update_user(user.id, True)
 
-    insert_membership(DEMO_ID, DEMO_GROUP_ID)
-    update_user(DEMO_ID, False)
-    insert_membership(ECLAIR_ID, ASSOCIATION_GROUP_ID)
-    update_user(ECLAIR_ID, False)
+    demo = conn.execute(
+        sa.select(
+            user_t2,
+        ).where(
+            user_t2.c.id == DEMO_ID,
+        ),
+    ).fetchone()
+    if demo is not None:
+        insert_membership(DEMO_ID, DEMO_GROUP_ID)
+        update_user(DEMO_ID, False)
+
+    eclair = conn.execute(
+        sa.select(
+            user_t2,
+        ).where(
+            user_t2.c.id == ECLAIR_ID,
+        ),
+    ).fetchone()
+    if eclair is not None:
+        insert_membership(ECLAIR_ID, ASSOCIATION_GROUP_ID)
+        update_user(ECLAIR_ID, False)
 
     op.rename_table("module_group_visibility", "module_visibility")
     op.drop_table("module_account_type_visibility")
