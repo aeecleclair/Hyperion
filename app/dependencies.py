@@ -240,6 +240,7 @@ def get_future_notification_tool(
     return FutureNotificationTool(
         background_tasks=background_tasks,
         notification_manager=notification_manager,
+        scheduler=Depends(get_scheduler),
         db=db,
     )
 
