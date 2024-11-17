@@ -51,7 +51,7 @@ class FutureNotificationTool(NotificationTool):
         job_id: str,
     ) -> None:
 
-        await self.scheduler.queue_job_time_defer(self.send_notification_to_users,
+        await self.scheduler.queue_job_time_defer(job_function=NotificationTool.send_notification_to_users,
             user_ids=[user_id],
             message=message, job_id=job_id, defer_seconds=defer_seconds)
 
