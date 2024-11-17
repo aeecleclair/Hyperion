@@ -10,8 +10,6 @@ from app.core.config import Settings
 from app.core.notification import cruds_notification, models_notification
 from app.core.notification.notification_types import CustomTopic
 from app.core.notification.schemas_notification import Message
-from app.dependencies import get_scheduler
-from app.types.scheduler import Scheduler
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
