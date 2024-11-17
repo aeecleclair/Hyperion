@@ -284,6 +284,7 @@ async def create_user(
 
     calypsso_activate_url = settings.CLIENT_URL + calypsso.get_activate_relative_url(
         activation_token=activation_token,
+        external=True,
     )
 
     if settings.SMTP_ACTIVE:
