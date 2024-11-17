@@ -1,5 +1,6 @@
 import logging
 from datetime import timedelta
+from uuid import uuid4
 
 from arq import ArqRedis
 from arq.jobs import Job
@@ -11,6 +12,7 @@ class Scheduler:
     def __init__(self, redis_pool: ArqRedis):
         self.redis_pool = redis_pool
         scheduler_logger.debug(f"Pool in init {self.redis_pool}")
+        name = str(uuid4())
 
     async def queue_job(self, job_function, job_id, defer_time):
         job = await self.redis_pool.enqueue_job(
