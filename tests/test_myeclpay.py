@@ -326,65 +326,48 @@ async def init_objects() -> None:
 
 
 async def get_cgu_for_unregistred_user(client: TestClient):
-    unregistred_ecl_user = await create_user_with_groups(
-        groups=[GroupType.student],
-    )
-    unregistred_ecl_user_access_token = create_api_access_token(unregistred_ecl_user)
-
     response = client.get(
         "/myeclpay/users/me/cgu",
-        headers={"Authorization": f"Bearer {unregistred_ecl_user_access_token}"},
+        headers={"Authorization": f"Bearer {unregistered_ecl_user_access_token}"},
     )
     assert response.status_code == 400
     assert response.json()["detail"] == "User is not registered for MyECL Pa"
 
 
 async def test_register_new_user(client: TestClient):
-    unregistred_ecl_user = await create_user_with_groups(
+    user_to_register = await create_user_with_groups(
         groups=[GroupType.student],
     )
-    unregistred_ecl_user_access_token = create_api_access_token(unregistred_ecl_user)
+    user_to_register_token = create_api_access_token(user_to_register)
 
     response = client.post(
         "/myeclpay/users/me/register",
-        headers={"Authorization": f"Bearer {unregistred_ecl_user_access_token}"},
-        json={"accepted_cgu_version": 1},
+        headers={"Authorization": f"Bearer {user_to_register_token}"},
     )
     assert response.status_code == 204
 
     response = client.post(
         "/myeclpay/users/me/register",
-        headers={"Authorization": f"Bearer {unregistred_ecl_user_access_token}"},
-        json={"accepted_cgu_version": 1},
+        headers={"Authorization": f"Bearer {user_to_register_token}"},
     )
     assert response.status_code == 400
     assert response.json()["detail"] == "User is already registered for MyECL Pay"
 
 
 async def test_sign_cgu_for_old_cgu_version(client: TestClient):
-    unregistred_ecl_user = await create_user_with_groups(
-        groups=[GroupType.student],
-    )
-    unregistred_ecl_user_access_token = create_api_access_token(unregistred_ecl_user)
-
     response = client.post(
         "/myeclpay/users/me/cgu",
-        headers={"Authorization": f"Bearer {unregistred_ecl_user_access_token}"},
+        headers={"Authorization": f"Bearer {unregistered_ecl_user_access_token}"},
         json={"accepted_cgu_version": 0},
     )
     assert response.status_code == 400
     assert response.json()["detail"][:27] == "Only the latest CGU version"
 
 
-async def test_sign_cgu_for_unregistred_user(client: TestClient):
-    unregistred_ecl_user = await create_user_with_groups(
-        groups=[GroupType.student],
-    )
-    unregistred_ecl_user_access_token = create_api_access_token(unregistred_ecl_user)
-
+async def test_sign_cgu_for_unregistered_user(client: TestClient):
     response = client.post(
         "/myeclpay/users/me/cgu",
-        headers={"Authorization": f"Bearer {unregistred_ecl_user_access_token}"},
+        headers={"Authorization": f"Bearer {unregistered_ecl_user_access_token}"},
         json={"accepted_cgu_version": 1},
     )
     assert response.status_code == 400
@@ -392,28 +375,23 @@ async def test_sign_cgu_for_unregistred_user(client: TestClient):
 
 
 async def test_sign_cgu(client: TestClient):
-    unregistred_ecl_user = await create_user_with_groups(
+    unregistered_user = await create_user_with_groups(
         groups=[GroupType.student],
     )
-    unregistred_ecl_user_access_token = create_api_access_token(unregistred_ecl_user)
+    unregistered_user_token = create_api_access_token(unregistered_user)
 
     response = client.post(
         "/myeclpay/users/me/register",
-        headers={"Authorization": f"Bearer {unregistred_ecl_user_access_token}"},
-        json={"accepted_cgu_version": 2},
+        headers={"Authorization": f"Bearer {unregistered_user_token}"},
+        json={"accepted_cgu_version": LATEST_CGU},
     )
     assert response.status_code == 204
 
 
 async def test_get_user_devices_with_unregistred_user(client: TestClient):
-    unregistred_ecl_user = await create_user_with_groups(
-        groups=[GroupType.student],
-    )
-    unregistred_ecl_user_access_token = create_api_access_token(unregistred_ecl_user)
-
     response = client.get(
         "/myeclpay/users/me/wallet/devices",
-        headers={"Authorization": f"Bearer {unregistred_ecl_user_access_token}"},
+        headers={"Authorization": f"Bearer {unregistered_ecl_user_access_token}"},
     )
     assert response.status_code == 400
     assert response.json()["detail"] == "User is not registered for MyECL Pay"
@@ -540,14 +518,9 @@ async def test_activate_already_activated_device(
 
 
 async def test_get_transactions_unregistered(client: TestClient):
-    unregistred_ecl_user = await create_user_with_groups(
-        groups=[GroupType.student],
-    )
-    unregistred_ecl_user_access_token = create_api_access_token(unregistred_ecl_user)
-
     response = client.get(
         "/myeclpay/users/me/wallet/history",
-        headers={"Authorization": f"Bearer {unregistred_ecl_user_access_token}"},
+        headers={"Authorization": f"Bearer {unregistered_ecl_user_access_token}"},
     )
 
     assert response.status_code == 404
