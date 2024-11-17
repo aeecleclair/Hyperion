@@ -174,14 +174,16 @@ async def get_scheduler(settings: Settings = Depends(get_settings)) -> ArqRedis:
     global scheduler
     scheduler_logger.debug(f"Current scheduler {scheduler}")
     if scheduler is None:
-        scheduler_logger.debug("Initializing Scheduler")
-        arq_settings = RedisSettings(
-            host=settings.REDIS_HOST,
-            port=settings.REDIS_PORT,
-            password=settings.REDIS_PASSWORD,
-        )
-        scheduler = Scheduler(await create_pool(arq_settings))
-        scheduler_logger.debug(f"Scheduler {scheduler.name} initialized")
+        lock = asyncio.Lock()
+        async with lock:
+            scheduler_logger.debug("Initializing Scheduler")
+            arq_settings = RedisSettings(
+                host=settings.REDIS_HOST,
+                port=settings.REDIS_PORT,
+                password=settings.REDIS_PASSWORD,
+            )
+            scheduler = Scheduler(await create_pool(arq_settings))
+            scheduler_logger.debug(f"Scheduler {scheduler.name} initialized")
 
     return scheduler
 
