@@ -23,15 +23,6 @@ services:
     command: redis-server --requirepass ${REDIS_PASSWORD}
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
-  
-  hyperion-scheduler-worker:
-    image: hyperion-app
-    container_name: hyperion-scheduler-worker
-    depends_on:
-      - hyperion-db
-      - hyperion-redis
-    entrypoint: "./worker.sh"
-    env_file: .env
 
   hyperion-app:
     image: hyperion-app
