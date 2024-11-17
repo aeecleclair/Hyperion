@@ -232,15 +232,16 @@ def get_future_notification_tool(
         background_tasks: BackgroundTasks,
         db: AsyncSession = Depends(get_db),
         notification_manager: NotificationManager = Depends(get_notification_manager),
+        scheduler : Scheduler =Depends(get_scheduler),
     ) -> FutureNotificationTool:
     """
-    Dependency that returns a notification tool, allowing to send push notification as a background tasks.
+    Dependency that returns a notification tool, allowing to send push notification as a schedule tasks.
     """
 
     return FutureNotificationTool(
         background_tasks=background_tasks,
         notification_manager=notification_manager,
-        scheduler=Depends(get_scheduler),
+        scheduler=scheduler,
         db=db,
     )
 
