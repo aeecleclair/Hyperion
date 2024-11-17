@@ -16,6 +16,8 @@ async def create_scheduler(settings):
 
 
 class Scheduler:
+    """Disappears sometimes for no reason"""
+
     def __init__(self, redis_settings):
         self.settings = redis_settings
 
