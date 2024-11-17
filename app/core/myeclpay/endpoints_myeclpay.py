@@ -849,9 +849,10 @@ async def store_scan_qrcode(
     )
 
     # We create a transaction
+    # TODO: rename giver by debited
     await cruds_myeclpay.create_transaction(
         transaction_id=uuid.uuid4(),
-        giver_wallet_id=debited_wallet_device.id,
+        giver_wallet_id=debited_wallet_device.wallet_id,
         giver_wallet_device_id=debited_wallet_device.id,
         receiver_wallet_id=store.wallet_id,
         transaction_type=TransactionType.DIRECT,
