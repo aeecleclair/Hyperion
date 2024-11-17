@@ -26,7 +26,7 @@ router = APIRouter(tags=["Core"])
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
-def testing_print():
+async def testing_print():
     print("Super, ça marche")
     return 42
 
