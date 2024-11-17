@@ -10,7 +10,7 @@ class Message(BaseModel):
         None,
         description="An identifier for the module that should be triggered when the notification is clicked",
     )
-    
+
 
 
 class FirebaseDevice(BaseModel):

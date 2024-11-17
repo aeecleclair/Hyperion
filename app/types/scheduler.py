@@ -1,7 +1,7 @@
 import logging
+from collections.abc import Callable, Coroutine
 from datetime import datetime, timedelta
-from typing import Any, Callable, Coroutine
-from uuid import uuid4
+from typing import Any
 
 from arq import create_pool
 from arq.jobs import Job
@@ -32,6 +32,7 @@ class Scheduler:
         job_function: Callable[..., Coroutine[Any, Any, Any]],
         job_id: str,
         defer_seconds: float,
+        **kwargs,
     ):
         """
         Queue a job to execute job_function in defer_seconds amount of seconds
@@ -43,6 +44,7 @@ class Scheduler:
                 job_function=job_function,
                 _job_id=job_id,
                 _defer_by=timedelta(seconds=defer_seconds),
+                **kwargs,
             )
             scheduler_logger.debug(f"Job {job_id} queued {job}")
             return job

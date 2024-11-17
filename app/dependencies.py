@@ -7,14 +7,13 @@ async def get_users(db: AsyncSession = Depends(get_db)):
 ```
 """
 
-import asyncio
 import logging
 from collections.abc import AsyncGenerator, Callable, Coroutine
 from functools import lru_cache
 from typing import Any, cast
 
 import redis
-from arq import ArqRedis, create_pool
+from arq import ArqRedis
 from arq.connections import RedisSettings
 from fastapi import BackgroundTasks, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import (
@@ -30,7 +29,7 @@ from app.core.config import Settings, construct_prod_settings
 from app.core.groups.groups_type import AccountType, GroupType, get_ecl_account_types
 from app.core.payment.payment_tool import PaymentTool
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
-from app.types.scheduler import Scheduler, create_scheduler
+from app.types.scheduler import create_scheduler
 from app.types.scopes_type import ScopeType
 from app.types.websocket import WebsocketConnectionManager
 from app.utils.auth import auth_utils
