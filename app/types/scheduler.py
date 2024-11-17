@@ -18,8 +18,12 @@ async def create_scheduler(settings):
 class Scheduler:
     """Disappears sometimes for no reason"""
 
+    all_instances = []
+
     def __init__(self, redis_settings):
         self.settings = redis_settings
+        self.all_instances.append(self)
+        scheduler_logger.debug(f"Other instances {self.all_instances}")
 
     async def async_init(self):
         self.redis_pool = await create_pool(self.settings)
