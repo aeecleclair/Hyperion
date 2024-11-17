@@ -280,7 +280,7 @@ async def send_notification_topic(
         content="Ceci est un test de notification future",
         action_module="test",
     )
-    await notification_tool.send_future_notification_to_user(
+    await future_notification_tool.send_future_notification_to_user(
         user_id=user.id,
         message=message,
         defer_date=datetime.now() + timedelta(minutes=3),
