@@ -170,6 +170,7 @@ scheduler_logger = logging.getLogger("scheduler")
 
 async def get_scheduler(settings: Settings = Depends(get_settings)) -> ArqRedis:
     global scheduler
+    scheduler_logger.debug(f"Current scheduler {scheduler.name}")
     if scheduler is None:
         scheduler_logger.debug("Initializing Scheduler")
         arq_settings = RedisSettings(
@@ -178,7 +179,7 @@ async def get_scheduler(settings: Settings = Depends(get_settings)) -> ArqRedis:
             password=settings.REDIS_PASSWORD,
         )
         scheduler = Scheduler(await create_pool(arq_settings))
-        scheduler_logger.debug(f"Scheduler {scheduler} initialized")
+        scheduler_logger.debug(f"Scheduler {scheduler.name} initialized")
 
     return scheduler
 
