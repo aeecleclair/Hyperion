@@ -1,8 +1,7 @@
-from datetime import datetime
 import logging
 
 import firebase_admin
-from fastapi import BackgroundTasks, Depends
+from fastapi import BackgroundTasks
 from firebase_admin import credentials, messaging
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -275,7 +274,7 @@ class NotificationManager:
             )
             tokens = await cruds_notification.get_firebase_tokens_by_user_ids(user_ids=[user_id], db=db)
             await self.subscribe_tokens_to_topic(custom_topic=custom_topic, tokens=tokens)
-        
+
 
     async def unsubscribe_user_to_topic(
         self,

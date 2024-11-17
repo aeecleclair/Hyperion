@@ -43,6 +43,7 @@ class Scheduler:
                 job_function=job_function,
                 _job_id=job_id,
                 _defer_by=timedelta(seconds=defer_seconds),
+                **kwargs,
             )
             scheduler_logger.debug(f"Job {job_id} queued {job}")
             return job

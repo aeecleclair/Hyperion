@@ -1,6 +1,5 @@
-from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 
 class Message(BaseModel):
@@ -11,7 +10,7 @@ class Message(BaseModel):
         None,
         description="An identifier for the module that should be triggered when the notification is clicked",
     )
-    
+
 
 
 class FirebaseDevice(BaseModel):
