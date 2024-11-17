@@ -28,6 +28,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 
 def testing_print():
     print("Super, ça marche")
+    return 42
 
 
 @router.get(
