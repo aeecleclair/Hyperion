@@ -29,7 +29,7 @@ from app.core.config import Settings, construct_prod_settings
 from app.core.groups.groups_type import AccountType, GroupType, get_ecl_account_types
 from app.core.payment.payment_tool import PaymentTool
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
-from app.types.scheduler import Scheduler, create_scheduler
+from app.types.scheduler import Scheduler
 from app.types.scopes_type import ScopeType
 from app.types.websocket import WebsocketConnectionManager
 from app.utils.auth import auth_utils
@@ -45,8 +45,9 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 redis_client: redis.Redis | bool | None = (
     None  # Create a global variable for the redis client, so that it can be instancied in the startup event
 )
-scheduler: ArqRedis | None = None
 # Is None if the redis client is not instantiated, is False if the redis client is instancied but not connected, is a redis.Redis object if the redis client is connected
+
+scheduler: Scheduler | None = None
 
 websocket_connection_manager: WebsocketConnectionManager | None = None
 
@@ -166,22 +167,10 @@ def get_redis_client(
     return redis_client
 
 
-scheduler_logger = logging.getLogger("scheduler")
-
-
-async def get_scheduler(settings: Settings = Depends(get_settings)) -> ArqRedis:
+def get_scheduler() -> Scheduler:
     global scheduler
-    scheduler_logger.debug(f"Current scheduler {scheduler}")
     if scheduler is None:
-        scheduler_logger.debug("Initializing Scheduler")
-        arq_settings = RedisSettings(
-            host=settings.REDIS_HOST,
-            port=settings.REDIS_PORT,
-            password=settings.REDIS_PASSWORD,
-        )
-        scheduler = await create_scheduler(arq_settings)
-        scheduler_logger.debug(f"Scheduler {scheduler} initialized")
-
+        scheduler = Scheduler()
     return scheduler
 
 
@@ -228,12 +217,13 @@ def get_notification_tool(
         db=db,
     )
 
+
 def get_future_notification_tool(
-        background_tasks: BackgroundTasks,
-        db: AsyncSession = Depends(get_db),
-        notification_manager: NotificationManager = Depends(get_notification_manager),
-        scheduler : Scheduler =Depends(get_scheduler),
-    ) -> FutureNotificationTool:
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    notification_manager: NotificationManager = Depends(get_notification_manager),
+    scheduler: Scheduler = Depends(get_scheduler),
+) -> FutureNotificationTool:
     """
     Dependency that returns a notification tool, allowing to send push notification as a schedule tasks.
     """
@@ -244,6 +234,7 @@ def get_future_notification_tool(
         scheduler=scheduler,
         db=db,
     )
+
 
 def get_drive_file_manager() -> DriveFileManager:
     """
