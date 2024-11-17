@@ -2,20 +2,28 @@ import logging
 from datetime import timedelta
 from uuid import uuid4
 
-from arq import ArqRedis
+from arq import create_pool
 from arq.jobs import Job
 
 scheduler_logger = logging.getLogger("scheduler")
 
 
-class Scheduler:
-    def __init__(self, redis_pool: ArqRedis):
-        self.redis_pool = redis_pool
-        scheduler_logger.debug(f"Pool in init {self.redis_pool}")
-        self.name = str(uuid4())
+async def create_scheduler(settings):
+    scheduler = Scheduler(settings)
+    await scheduler.async_init()
+    return scheduler
 
-    def __enter__(self):
-        return self
+
+class Scheduler:
+    def __init__(self, redis_settings):
+        self.settings = redis_settings
+
+    async def async_init(self):
+        self.redis_pool = await create_pool(self.settings)
+        scheduler_logger.debug(f"Pool in init {self.redis_pool}")
+
+    def __del__(self):
+        scheduler_logger.debug(f"Del here with {self.redis_pool}")
 
     async def queue_job(self, job_function, job_id, defer_time):
         job = await self.redis_pool.enqueue_job(
