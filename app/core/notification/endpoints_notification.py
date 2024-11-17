@@ -13,11 +13,13 @@ from app.core.notification import (
 from app.core.notification.notification_types import CustomTopic, Topic
 from app.dependencies import (
     get_db,
+    get_future_notification_tool,
     get_notification_manager,
     get_notification_tool,
     is_user,
     is_user_in,
 )
+from app.utils.communication.future_notifications import FutureNotificationTool
 from app.utils.communication.notifications import NotificationManager, NotificationTool
 
 router = APIRouter(tags=["Notifications"])
@@ -266,7 +268,7 @@ async def send_notification_topic(
 )
 async def send_future_notification(
     user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
-    notification_tool: NotificationTool = Depends(get_notification_tool),
+    notification_tool: NotificationTool = Depends(get_future_notification_tool),
 ):
     """
     Send ourself a test notification.
@@ -278,7 +280,7 @@ async def send_future_notification(
         content="Ceci est un test de notification future",
         action_module="test",
     )
-    await notification_tool.send_future_notification_to_user(
+    await future_notification_tool.send_future_notification_to_user(
         user_id=user.id,
         message=message,
         defer_date=datetime.now() + timedelta(minutes=3),
