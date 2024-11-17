@@ -196,10 +196,10 @@ def initialize_module_visibility(
             "module_awareness",
             db,
         )
+        awareness_list = []
         if module_awareness is not None:
             awareness_list = module_awareness.data.split(",")
 
-        awareness_list = awareness_list or []
         # Is run to create default module visibilities or when the table is empty
         if awareness_list != [module.root for module in module_list]:
             hyperion_error_logger.info(
