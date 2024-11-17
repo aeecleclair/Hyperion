@@ -29,7 +29,7 @@ from app.core.config import Settings, construct_prod_settings
 from app.core.groups.groups_type import AccountType, GroupType, get_ecl_account_types
 from app.core.payment.payment_tool import PaymentTool
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
-from app.types.scheduler import create_scheduler
+from app.types.scheduler import Scheduler, create_scheduler
 from app.types.scopes_type import ScopeType
 from app.types.websocket import WebsocketConnectionManager
 from app.utils.auth import auth_utils
@@ -232,15 +232,16 @@ def get_future_notification_tool(
         background_tasks: BackgroundTasks,
         db: AsyncSession = Depends(get_db),
         notification_manager: NotificationManager = Depends(get_notification_manager),
+        scheduler : Scheduler =Depends(get_scheduler),
     ) -> FutureNotificationTool:
     """
-    Dependency that returns a notification tool, allowing to send push notification as a background tasks.
+    Dependency that returns a notification tool, allowing to send push notification as a schedule tasks.
     """
 
     return FutureNotificationTool(
         background_tasks=background_tasks,
         notification_manager=notification_manager,
-        scheduler=Depends(get_scheduler),
+        scheduler=scheduler,
         db=db,
     )
 
