@@ -48,6 +48,7 @@ user_t = sa.Table(
     "core_user",
     sa.MetaData(),
     sa.Column("email", sa.String),
+    sa.Column("account_type", sa.String),
 )
 group_t = sa.Table(
     "core_group",
@@ -219,6 +220,7 @@ def downgrade() -> None:
     insert_membership(DEMO_ID, DEMO_GROUP_ID)
     insert_membership(ECLAIR_ID, ASSOCIATION_GROUP_ID)
 
+    op.drop_column("core_user", "account_type")
     sa.Enum(AccountType, name="account_type").drop(
         op.get_bind(),
     )
