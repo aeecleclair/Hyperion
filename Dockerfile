@@ -19,7 +19,4 @@ COPY app app/
 COPY start.sh .
 RUN chmod +x start.sh
 
-COPY worker.sh .
-RUN chmod +x worker.sh
-
 ENTRYPOINT ["./start.sh"]
