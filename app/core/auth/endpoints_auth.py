@@ -310,7 +310,7 @@ async def authorize_validation(
     if auth_client.allowed_groups is not None:
         if not is_user_member_of_an_allowed_group(
             user=user,
-            allowed_groups=auth_client.allowed_groups,  # type: ignore
+            allowed_groups=auth_client.allowed_groups,
         ):
             hyperion_access_logger.warning(
                 f"Authorize-validation: user is not member of an allowed group {authorizereq.email} ({request_id})",
