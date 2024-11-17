@@ -1,31 +1,72 @@
+import asyncio
 import logging
 from collections.abc import Callable, Coroutine
 from datetime import datetime, timedelta
 from typing import Any
 
-from arq import create_pool
+from arq import Worker, create_pool, cron
+from arq.connections import RedisSettings
 from arq.jobs import Job
+from arq.typing import WorkerSettingsBase
+from arq.worker import create_worker
 
 scheduler_logger = logging.getLogger("scheduler")
 
 
-async def create_scheduler(settings):
-    scheduler = Scheduler(settings)
-    if scheduler.settings.host != "":
-        await scheduler.async_init()
-    return scheduler
+async def run_task(ctx, job_function, **kwargs):
+    scheduler_logger.debug(f"Job function consumed {job_function}")
+    return await job_function(**kwargs)
 
 
 class Scheduler:
-    """Disappears sometimes for no reason"""
+    """
+    An [arq](https://arq-docs.helpmanual.io/) scheduler.
+    The wrapper is intended to be used inside a FastAPI worker.
 
-    def __init__(self, redis_settings):
-        self.settings = redis_settings
+    The scheduler use a Redis database to store planned jobs.
+    """
 
-    async def async_init(self):
-        if self.settings.host != "":
-            self.redis_pool = await create_pool(self.settings)
-            scheduler_logger.debug(f"Pool in init {self.redis_pool}")
+    # See https://github.com/fastapi/fastapi/discussions/9143#discussioncomment-5157572
+
+    def __init__(self):
+        # ArqWorker, in charge of scheduling and executing tasks
+        self.worker: Worker | None = None
+        # Task will contain the asyncio task that runs the worker
+        self.task: asyncio.Task | None = None
+
+    async def start(
+        self,
+        redis_host: str,
+        redis_port: int,
+        redis_password: str,
+        **kwargs,
+    ):
+        class ArqWorkerSettings(WorkerSettingsBase):
+            functions = [run_task]
+            allow_abort_jobs = True
+            keep_result_forever = True
+            redis_settings = RedisSettings(
+                host=redis_host,
+                port=redis_port,
+                password=redis_password,
+            )
+
+        # We pass handle_signals=False to avoid arq from handling signals
+        # See https://github.com/python-arq/arq/issues/182
+        self.worker = create_worker(
+            ArqWorkerSettings,
+            handle_signals=False,
+            **kwargs,
+        )
+        # We run the worker in an asyncio task
+        self.task = asyncio.create_task(self.worker.async_run())
+
+        scheduler_logger.info("Scheduler started")
+
+    async def close(self):
+        # If the worker was started, we close it
+        if self.worker is not None:
+            await self.worker.close()
 
     async def queue_job_time_defer(
         self,
@@ -33,21 +74,23 @@ class Scheduler:
         job_id: str,
         defer_seconds: float,
         **kwargs,
-    ):
+    ) -> Job | None:
         """
         Queue a job to execute job_function in defer_seconds amount of seconds
         job_id will allow to abort if needed
         """
-        if self.settings.host != "":
-            job = await self.redis_pool.enqueue_job(
-                "run_task",
-                job_function=job_function,
-                _job_id=job_id,
-                _defer_by=timedelta(seconds=defer_seconds),
-                **kwargs,
-            )
-            scheduler_logger.debug(f"Job {job_id} queued {job}")
-            return job
+        if self.worker is None:
+            scheduler_logger.error("Scheduler not started")
+            return None
+        job = await self.worker.pool.enqueue_job(
+            "run_task",
+            job_function=job_function,
+            _job_id=job_id,
+            _defer_by=timedelta(seconds=defer_seconds),
+            **kwargs,
+        )
+        scheduler_logger.debug(f"Job {job_id} queued {job}")
+        return job
 
     async def queue_job_defer_to(
         self,
@@ -55,27 +98,31 @@ class Scheduler:
         job_id: str,
         defer_date: datetime,
         **kwargs,
-    ):
+    ) -> Job | None:
         """
         Queue a job to execute job_function at defer_date
         job_id will allow to abort if needed
         """
-        if self.settings.host != "":
-            job = await self.redis_pool.enqueue_job(
-                "run_task",
-                job_function=job_function,
-                _job_id=job_id,
-                _defer_until=defer_date,
-                **kwargs,
-            )
-            scheduler_logger.debug(f"Job {job_id} queued {job}")
-            return job
+        if self.worker is None:
+            scheduler_logger.error("Scheduler not started")
+            return None
+        job = await self.worker.pool.enqueue_job(
+            "run_task",
+            job_function=job_function,
+            _job_id=job_id,
+            _defer_until=defer_date,
+            **kwargs,
+        )
+        scheduler_logger.debug(f"Job {job_id} queued {job}")
+        return job
 
-    async def cancel_job(self, job_id):
+    async def cancel_job(self, job_id: str):
         """
         cancel a queued job based on its job_id
         """
-        if self.settings.host != "":
-            job = Job(job_id, redis=self.redis_pool)
-            scheduler_logger.debug(f"Job aborted {job}")
-            await job.abort()
+        if self.worker is None:
+            scheduler_logger.error("Scheduler not started")
+            return None
+        job = Job(job_id, redis=self.worker.pool)
+        scheduler_logger.debug(f"Job aborted {job}")
+        await job.abort()
