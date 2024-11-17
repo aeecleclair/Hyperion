@@ -1,4 +1,4 @@
-from sqlalchemy import Connection, MetaData, select
+from sqlalchemy import Connection, MetaData, select, update
 from sqlalchemy.engine import Engine, create_engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
@@ -106,6 +106,41 @@ def create_group_sync(
         raise
     else:
         return group
+
+
+def get_core_data_sync(schema: str, db: Session) -> models_core.CoreData | None:
+    """
+    Return core data with schema from database
+    """
+    result = db.execute(
+        select(models_core.CoreData).where(models_core.CoreData.schema == schema),
+    )
+    return result.scalars().first()
+
+
+def set_core_data_sync(
+    core_data: models_core.CoreData,
+    db: Session,
+) -> models_core.CoreData:
+    """
+    Set core data in database and return it
+    """
+    db_data = get_core_data_sync(core_data.schema, db)
+    if db_data is not None:
+        db.execute(
+            update(models_core.CoreData)
+            .where(models_core.CoreData.schema == core_data.schema)
+            .values(data=core_data.data),
+        )
+    else:
+        db.add(core_data)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise
+    else:
+        return core_data
 
 
 def drop_db_sync(conn: Connection):
