@@ -150,7 +150,6 @@ async def create_user_with_groups(
         nickname=nickname,
         floor=floor,
         account_type=account_type,
-        nickname=None,
         birthday=None,
         promo=None,
         phone=None,
