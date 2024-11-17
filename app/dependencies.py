@@ -13,7 +13,7 @@ from functools import lru_cache
 from typing import Any, cast
 
 import redis
-from arq import ArqRedis, create_pool
+from arq import ArqRedis
 from arq.connections import RedisSettings
 from fastapi import BackgroundTasks, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import (
