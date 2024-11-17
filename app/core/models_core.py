@@ -160,8 +160,8 @@ class ModuleGroupVisibility(Base):
 class ModuleAccountTypeVisibility(Base):
     __tablename__ = "module_account_type_visibility"
 
-    root: Mapped[str] = mapped_column(String, primary_key=True)
-    allowed_account_type: Mapped[AccountType] = mapped_column(String, primary_key=True)
+    root: Mapped[str] = mapped_column(primary_key=True)
+    allowed_account_type: Mapped[AccountType] = mapped_column(primary_key=True)
 
 
 class AlembicVersion(Base):
