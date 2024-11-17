@@ -49,6 +49,7 @@ class Scheduler:
         job_function: Callable[..., Coroutine[Any, Any, Any]],
         job_id: str,
         defer_date: datetime,
+        **kwargs,
     ):
         """
         Queue a job to execute job_function at defer_date
@@ -59,6 +60,7 @@ class Scheduler:
             job_function=job_function,
             _job_id=job_id,
             _defer_until=defer_date,
+            **kwargs,
         )
         scheduler_logger.debug(f"Job {job_id} queued {job}")
         return job
