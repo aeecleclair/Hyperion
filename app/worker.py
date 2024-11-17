@@ -2,7 +2,7 @@ import logging
 
 from arq.connections import RedisSettings
 
-from app.dependencies import get_scheduler, get_settings
+from app.dependencies import get_settings
 
 scheduler_logger = logging.getLogger("scheduler")
 
@@ -19,4 +19,8 @@ class WorkerSettings:
     functions = [run_task]
     allow_abort_jobs = True
     keep_result_forever = True
-    redis_pool = get_scheduler().redis_pool
+    redis_settings = RedisSettings(
+        host=settings.REDIS_HOST,
+        port=settings.REDIS_PORT,
+        password=settings.REDIS_PASSWORD,
+    )
