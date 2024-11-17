@@ -14,6 +14,7 @@ class GroupType(str, Enum):
     # Core groups
     admin = "0a25cb76-4b63-4fd3-b939-da6d9feabf28"
     AE = "45649735-866a-49df-b04b-a13c74fd5886"
+    payment = "5571adfd-47fc-4dde-a44b-6e1289476499"
 
     # Module related groups
     amap = "70db65ee-d533-4f6b-9ffa-a4d70a17b7ef"
