@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.notification import models_notification
 from app.core.notification.notification_types import CustomTopic, Topic
 
+
 async def get_firebase_devices_by_user_id(
     user_id: str,
     db: AsyncSession,
