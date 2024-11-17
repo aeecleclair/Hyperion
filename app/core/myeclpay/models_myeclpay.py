@@ -2,7 +2,7 @@ from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import ForeignKey
-from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core import models_core
 from app.core.myeclpay.types_myeclpay import (
@@ -17,7 +17,7 @@ from app.types.membership import AvailableAssociationMembership
 from app.types.sqlalchemy import Base, PrimaryKey
 
 
-class Wallet(MappedAsDataclass, Base):
+class Wallet(Base):
     __tablename__ = "myeclpay_wallet"
 
     id: Mapped[PrimaryKey]
@@ -32,7 +32,7 @@ class Wallet(MappedAsDataclass, Base):
     )
 
 
-class WalletDevice(MappedAsDataclass, Base):
+class WalletDevice(Base):
     __tablename__ = "myeclpay_wallet_device"
 
     id: Mapped[PrimaryKey]
@@ -44,7 +44,7 @@ class WalletDevice(MappedAsDataclass, Base):
     activation_token: Mapped[str] = mapped_column(unique=True)
 
 
-class Transaction(MappedAsDataclass, Base):
+class Transaction(Base):
     __tablename__ = "myeclpay_transaction"
 
     id: Mapped[PrimaryKey]
@@ -76,7 +76,7 @@ class Transaction(MappedAsDataclass, Base):
     )
 
 
-class Store(MappedAsDataclass, Base):
+class Store(Base):
     __tablename__ = "myeclpay_store"
 
     id: Mapped[PrimaryKey]
@@ -90,7 +90,7 @@ class Store(MappedAsDataclass, Base):
     )
 
 
-class Request(MappedAsDataclass, Base):
+class Request(Base):
     __tablename__ = "myeclpay_request"
 
     id: Mapped[PrimaryKey]
@@ -107,7 +107,7 @@ class Request(MappedAsDataclass, Base):
     )
 
 
-class Transfer(MappedAsDataclass, Base):
+class Transfer(Base):
     __tablename__ = "myeclpay_transfer"
 
     id: Mapped[PrimaryKey]
@@ -122,7 +122,7 @@ class Transfer(MappedAsDataclass, Base):
     creation: Mapped[datetime]
 
 
-class Seller(MappedAsDataclass, Base):
+class Seller(Base):
     __tablename__ = "myeclpay_seller"
 
     user_id: Mapped[str] = mapped_column(primary_key=True)
@@ -137,7 +137,7 @@ class Seller(MappedAsDataclass, Base):
     store_admin: Mapped[bool]
 
 
-class UserPayment(MappedAsDataclass, Base):
+class UserPayment(Base):
     __tablename__ = "myeclpay_user_payment"
 
     user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), primary_key=True)
@@ -149,7 +149,7 @@ class UserPayment(MappedAsDataclass, Base):
     accepted_cgu_version: Mapped[int]
 
 
-class UsedQRCode(MappedAsDataclass, Base):
+class UsedQRCode(Base):
     __tablename__ = "myeclpay_used_qrcode"
 
     qr_code_id: Mapped[PrimaryKey]

@@ -136,7 +136,6 @@ async def create_user_with_groups(
         nickname=nickname,
         floor=floor,
         external=external,
-        nickname=None,
         birthday=None,
         promo=None,
         phone=None,
