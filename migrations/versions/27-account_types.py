@@ -48,7 +48,6 @@ user_t = sa.Table(
     "core_user",
     sa.MetaData(),
     sa.Column("email", sa.String),
-    sa.Column("account_type", sa.Enum(AccountType, name="account_type")),
 )
 group_t = sa.Table(
     "core_group",
