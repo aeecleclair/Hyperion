@@ -58,23 +58,25 @@ async def get_admin_sellers(
 
 
 async def get_seller(
-    seller_id: UUID,
+    seller_user_id: UUID,
     db: AsyncSession,
 ) -> models_myeclpay.Seller | None:
     result = await db.execute(
         select(models_myeclpay.Seller).where(
-            models_myeclpay.Seller.id == seller_id,
+            models_myeclpay.Seller.user_id == seller_user_id,
         ),
     )
     return result.scalars().first()
 
 
 async def delete_seller(
-    seller_id: UUID,
+    seller_user_id: UUID,
     db: AsyncSession,
-) -> models_myeclpay.Seller | None:
+) -> None:
     await db.execute(
-        delete(models_myeclpay.Seller).where(models_myeclpay.Seller.id == seller_id),
+        delete(models_myeclpay.Seller).where(
+            models_myeclpay.Seller.user_id == seller_user_id,
+        ),
     )
 
 
