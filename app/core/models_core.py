@@ -65,11 +65,9 @@ class CoreUserUnconfirmed(Base):
     # for example after losing the previously received confirmation email.
     # For each user creation request, a row will be added in this table with a new token
     email: Mapped[str]
-    account_type: Mapped[AccountType]
     activation_token: Mapped[str]
     created_on: Mapped[datetime]
     expire_on: Mapped[datetime]
-    external: Mapped[bool]
 
 
 class CoreUserRecoverRequest(Base):

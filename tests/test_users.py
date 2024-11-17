@@ -207,13 +207,12 @@ def activate_user_with_invalid_phone_number(
 
 
 def test_update_batch_create_users(client: TestClient) -> None:
-    student = AccountType.student.value
     response = client.post(
         "/users/batch-creation",
         json=[
-            {"email": "1@1.fr", "account_type": student},
-            {"email": "2@1.fr", "account_type": student},
-            {"email": "3@b.fr", "account_type": student},
+            {"email": "1@1.fr"},
+            {"email": "2@1.fr"},
+            {"email": "3@b.fr"},
         ],
         headers={"Authorization": f"Bearer {token_admin_user}"},
     )

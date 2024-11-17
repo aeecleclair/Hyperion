@@ -169,56 +169,6 @@ async def create_user_by_user(
     When creating **student** or **staff** account a valid ECL email is required.
     Only admin users can create other **account types**, contact ÉCLAIR for more information.
     """
-    # By default we mark the user as external
-    # but if it has an ECL email address, we will mark it as member
-    external = True
-    # Check the account type
-
-    # For staff and student
-    # ^[\w\-.]*@((etu(-enise)?|enise)\.)?ec-lyon\.fr$
-    # For staff
-    # ^[\w\-.]*@(enise\.)?ec-lyon\.fr$
-    # For student
-    # ^[\w\-.]*@etu(-enise)?\.ec-lyon\.fr$
-
-    # For former students
-    # ^[\w\-.]*@centraliens-lyon\.net$
-
-    # All accepted emails
-    # ^[\w\-.]*@(((etu(-enise)?|enise)\.)?ec-lyon\.fr|centraliens-lyon\.net)$
-
-    if re.match(ECL_STAFF_REGEX, user_create.email):
-        # Its a staff email address
-        account_type = AccountType.staff
-        external = False
-    elif re.match(
-        ECL_STUDENT_REGEX,
-        user_create.email,
-    ):
-        # Its a student email address
-        account_type = AccountType.student
-        external = False
-    elif re.match(
-        ECL_FORMER_STUDENT_REGEX,
-        user_create.email,
-    ):
-        # Its a former student email address
-        account_type = AccountType.formerstudent
-        external = False
-    elif user_create.accept_external:
-        account_type = AccountType.external
-    else:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid ECL email address.",
-        )
-
-    if not user_create.accept_external:
-        if external:
-            raise HTTPException(
-                status_code=400,
-                detail="The user could not be marked as external. Try to add accept_external=True in the request or use an internal email address.",
-            )
 
     # Make sure a confirmed account does not already exist
     db_user = await cruds_users.get_user_by_email(db=db, email=user_create.email)
@@ -246,12 +196,10 @@ async def create_user_by_user(
 
     await create_user(
         email=user_create.email,
-        account_type=account_type,
         background_tasks=background_tasks,
         db=db,
         settings=settings,
         request_id=request_id,
-        external=external,
     )
 
     return standard_responses.Result(success=True)
@@ -287,12 +235,10 @@ async def batch_create_users(
         try:
             await create_user(
                 email=user_create.email,
-                account_type=user_create.account_type,
                 background_tasks=background_tasks,
                 db=db,
                 settings=settings,
                 request_id=request_id,
-                external=user_create.external,
             )
         except Exception as error:
             failed[user_create.email] = str(error)
@@ -302,12 +248,10 @@ async def batch_create_users(
 
 async def create_user(
     email: str,
-    account_type: AccountType,
     background_tasks: BackgroundTasks,
     db: AsyncSession,
     settings: Settings,
     request_id: str,
-    external: bool,
 ) -> None:
     """
     User creation process. This function is used by both `/users/create` and `/users/admin/create` endpoints
@@ -327,12 +271,10 @@ async def create_user(
     user_unconfirmed = models_core.CoreUserUnconfirmed(
         id=str(uuid.uuid4()),
         email=email,
-        account_type=account_type,
         activation_token=activation_token,
         created_on=datetime.now(UTC),
         expire_on=datetime.now(UTC)
         + timedelta(hours=settings.USER_ACTIVATION_TOKEN_EXPIRE_HOURS),
-        external=external,
     )
 
     await cruds_users.create_unconfirmed_user(user_unconfirmed=user_unconfirmed, db=db)
@@ -342,7 +284,6 @@ async def create_user(
 
     calypsso_activate_url = settings.CLIENT_URL + calypsso.get_activate_relative_url(
         activation_token=activation_token,
-        external=external,
     )
 
     if settings.SMTP_ACTIVE:
@@ -406,13 +347,47 @@ async def activate_user(
             detail=f"The account with the email {unconfirmed_user.email} is already confirmed",
         )
 
+    # Check the account type
+
+    # For staff and student
+    # ^[\w\-.]*@((etu(-enise)?|enise)\.)?ec-lyon\.fr$
+    # For staff
+    # ^[\w\-.]*@(enise\.)?ec-lyon\.fr$
+    # For student
+    # ^[\w\-.]*@etu(-enise)?\.ec-lyon\.fr$
+
+    # For former students
+    # ^[\w\-.]*@centraliens-lyon\.net$
+
+    # All accepted emails
+    # ^[\w\-.]*@(((etu(-enise)?|enise)\.)?ec-lyon\.fr|centraliens-lyon\.net)$
+
+    # By default we mark the user as external
+    # but if it has an ECL email address, we will mark it as member
+    account_type = AccountType.external
+    if re.match(ECL_STAFF_REGEX, unconfirmed_user.email):
+        # Its a staff email address
+        account_type = AccountType.staff
+    elif re.match(
+        ECL_STUDENT_REGEX,
+        unconfirmed_user.email,
+    ):
+        # Its a student email address
+        account_type = AccountType.student
+    elif re.match(
+        ECL_FORMER_STUDENT_REGEX,
+        unconfirmed_user.email,
+    ):
+        # Its a former student email address
+        account_type = AccountType.formerstudent
+
     # A password should have been provided
     password_hash = security.get_password_hash(user.password)
 
     confirmed_user = models_core.CoreUser(
         id=unconfirmed_user.id,
         email=unconfirmed_user.email,
-        account_type=unconfirmed_user.account_type,
+        account_type=account_type,
         password_hash=password_hash,
         name=user.name,
         firstname=user.firstname,
