@@ -154,12 +154,12 @@ async def get_store_admin_seller(
 
 
 @router.delete(
-    "/myeclpay/stores/{store_id}/admins/{seller_id}",
+    "/myeclpay/stores/{store_id}/admins/{seller_user_id}",
     status_code=204,
 )
 async def delete_store_admin_seller(
     store_id: UUID,
-    seller_id: UUID,
+    seller_user_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user_a_member_of(GroupType.payment)),
 ):
@@ -168,25 +168,25 @@ async def delete_store_admin_seller(
 
     **The user must be a member of group Payment**
     """
-    await cruds_myeclpay.get_seller(
-        seller_id=seller_id,
+    seller = await cruds_myeclpay.get_seller(
+        seller_user_id=seller_user_id,
         db=db,
     )
 
-    if seller_id is None:
+    if seller is None:
         raise HTTPException(
             status_code=404,
             detail="Seller does not exist",
         )
 
-    if seller_id.store_id != store_id:
+    if seller.store_id != store_id:
         raise HTTPException(
             status_code=400,
             detail="Seller does not belong to the store",
         )
 
     await cruds_myeclpay.delete_seller(
-        seller_id=seller_id,
+        seller_user_id=seller_user_id,
         db=db,
     )
 
@@ -549,7 +549,8 @@ async def revoke_user_devices(
         )
 
     wallet_device = await cruds_myeclpay.get_wallet_device(
-        wallet_device_id=wallet_device_id, db=db
+        wallet_device_id=wallet_device_id,
+        db=db,
     )
 
     if wallet_device is None:
