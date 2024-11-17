@@ -1,5 +1,6 @@
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
+from typing import Any, Callable, Coroutine
 from uuid import uuid4
 
 from arq import create_pool
@@ -15,30 +16,55 @@ async def create_scheduler(settings):
 
 
 class Scheduler:
-    current_instance = None  # Trying to fool the garbage collector
-
     def __init__(self, redis_settings):
         self.settings = redis_settings
-        self.current_instance = self
 
     async def async_init(self):
         self.redis_pool = await create_pool(self.settings)
         scheduler_logger.debug(f"Pool in init {self.redis_pool}")
 
-    def __del__(self):
-        scheduler_logger.debug(f"Del here with {self.redis_pool}")
-
-    async def queue_job(self, job_function, job_id, defer_time):
+    async def queue_job_time_defer(
+        self,
+        job_function: Callable[..., Coroutine[Any, Any, Any]],
+        job_id: str,
+        defer_seconds: float,
+    ):
+        """
+        Queue a job to execute job_function in defer_seconds amount of seconds
+        job_id will allow to abort if needed
+        """
         job = await self.redis_pool.enqueue_job(
             "run_task",
             job_function=job_function,
             _job_id=job_id,
-            _defer_by=timedelta(seconds=defer_time),
+            _defer_by=timedelta(seconds=defer_seconds),
+        )
+        scheduler_logger.debug(f"Job {job_id} queued {job}")
+        return job
+
+    async def queue_job_defer_to(
+        self,
+        job_function: Callable[..., Coroutine[Any, Any, Any]],
+        job_id: str,
+        defer_date: datetime,
+    ):
+        """
+        Queue a job to execute job_function at defer_date
+        job_id will allow to abort if needed
+        """
+        job = await self.redis_pool.enqueue_job(
+            "run_task",
+            job_function=job_function,
+            _job_id=job_id,
+            _defer_until=defer_date,
         )
         scheduler_logger.debug(f"Job {job_id} queued {job}")
         return job
 
     async def cancel_job(self, job_id):
+        """
+        cancel a queued job based on its job_id
+        """
         job = Job(job_id, redis=self.redis_pool)
         scheduler_logger.debug(f"Job aborted {job}")
         await job.abort()
