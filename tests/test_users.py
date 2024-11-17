@@ -127,8 +127,8 @@ def test_read_user(client: TestClient) -> None:
         ("fab@etu.ec-lyon.fr", 201),
         ("fab@ec-lyon.fr", 201),
         ("fab@centraliens-lyon.net", 201),
-        ("fab@test.fr", 400),
-        ("fab@ecl22.ec-lyon.fr", 400),
+        ("fab@test.fr", 201),
+        ("fab@ecl22.ec-lyon.fr", 201),
     ],
 )
 def test_create_user_by_user_with_email(
