@@ -170,7 +170,7 @@ scheduler_logger = logging.getLogger("scheduler")
 
 async def get_scheduler(settings: Settings = Depends(get_settings)) -> ArqRedis:
     global scheduler
-    scheduler_logger.debug(f"Current scheduler {scheduler.name}")
+    scheduler_logger.debug(f"Current scheduler {scheduler}")
     if scheduler is None:
         scheduler_logger.debug("Initializing Scheduler")
         arq_settings = RedisSettings(
