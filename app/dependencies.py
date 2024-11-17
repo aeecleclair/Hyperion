@@ -7,6 +7,7 @@ async def get_users(db: AsyncSession = Depends(get_db)):
 ```
 """
 
+import asyncio
 import logging
 from collections.abc import AsyncGenerator, Callable, Coroutine
 from functools import lru_cache
