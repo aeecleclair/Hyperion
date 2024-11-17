@@ -47,6 +47,7 @@ ECL_FORMER_STUDENT_REGEX = r"^[\w\-.]*@centraliens-lyon\.net$"
 user_t = sa.Table(
     "core_user",
     sa.MetaData(),
+    sa.Column("id", sa.String),
     sa.Column("email", sa.String),
     sa.Column("account_type", sa.Enum(AccountType, name="accounttype")),
 )
