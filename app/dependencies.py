@@ -168,10 +168,9 @@ def get_redis_client(
 scheduler_logger = logging.getLogger("scheduler")
 
 
-async def get_scheduler() -> ArqRedis:
+async def get_scheduler(settings: Settings = Depends(get_settings)) -> ArqRedis:
     global scheduler
     if scheduler is None:
-        settings = get_settings()
         scheduler_logger.debug("Initializing Scheduler")
         arq_settings = RedisSettings(
             host=settings.REDIS_HOST,
