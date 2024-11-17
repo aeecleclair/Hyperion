@@ -250,7 +250,7 @@ def downgrade() -> None:
         sa.Column(
             "external",
             sa.BOOLEAN(),
-            server_default=sa.text("1"),
+            server_default=sa.sql.true(),
             nullable=False,
         ),
     )
@@ -263,7 +263,7 @@ def downgrade() -> None:
         sa.Column(
             "external",
             sa.Boolean(),
-            server_default=sa.text("1"),
+            server_default=sa.sql.true(),
             nullable=False,
         ),
     )
