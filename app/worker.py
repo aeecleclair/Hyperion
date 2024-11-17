@@ -7,9 +7,9 @@ from app.dependencies import get_settings
 scheduler_logger = logging.getLogger("scheduler")
 
 
-async def run_task(ctx, job_function):
+async def run_task(ctx, job_function, **kwargs):
     scheduler_logger.debug(f"Job function consumed {job_function}")
-    return await job_function()
+    return await job_function(**kwargs)
 
 
 settings = get_settings()  # Ce fichier ne doit être lancé que par la prod
