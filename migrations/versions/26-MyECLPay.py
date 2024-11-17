@@ -67,7 +67,14 @@ def upgrade() -> None:
     op.create_table(
         "myeclpay_wallet",
         sa.Column("id", sa.Uuid(), nullable=False),
-        sa.Column("type", sa.Enum(WalletType), nullable=False),
+        sa.Column(
+            "type",
+            sa.Enum(
+                WalletType,
+                name="wallettype",
+            ),
+            nullable=False,
+        ),
         sa.Column("balance", sa.Integer(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
@@ -93,7 +100,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column(
             "type",
-            sa.Enum(TransferType),
+            sa.Enum(TransferType, name="transfertype"),
             nullable=False,
         ),
         sa.Column("transfer_identifier", sa.String(), nullable=False),
@@ -132,7 +139,7 @@ def upgrade() -> None:
         sa.Column("creation", TZDateTime(), nullable=False),
         sa.Column(
             "status",
-            sa.Enum(WalletDeviceStatus),
+            sa.Enum(WalletDeviceStatus, name="walletdevicestatus"),
             nullable=False,
         ),
         sa.Column("activation_token", sa.String(), nullable=False, unique=True),
@@ -165,7 +172,7 @@ def upgrade() -> None:
         sa.Column("receiver_wallet_id", sa.Uuid(), nullable=False),
         sa.Column(
             "transaction_type",
-            sa.Enum(TransactionType),
+            sa.Enum(TransactionType, name="transactiontype"),
             nullable=False,
         ),
         sa.Column("seller_user_id", sa.String(), nullable=True),
@@ -173,7 +180,7 @@ def upgrade() -> None:
         sa.Column("creation", TZDateTime(), nullable=False),
         sa.Column(
             "status",
-            sa.Enum(TransactionStatus),
+            sa.Enum(TransactionStatus, name="transactionstatus"),
             nullable=False,
         ),
         sa.Column("store_note", sa.String(), nullable=True),
@@ -207,7 +214,7 @@ def upgrade() -> None:
         sa.Column("callback", sa.String(), nullable=False),
         sa.Column(
             "status",
-            sa.Enum(RequestStatus),
+            sa.Enum(RequestStatus, name="requeststatus"),
             nullable=False,
         ),
         sa.Column("transaction_id", sa.Uuid(), nullable=True),
@@ -230,14 +237,33 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_table("myeclpay_used_qrcode")
-    op.drop_table("myeclpay_wallet")
-    op.drop_table("myeclpay_store")
     op.drop_table("myeclpay_transfer")
     op.drop_table("myeclpay_user_payment")
-    op.drop_table("myeclpay_wallet_device")
     op.drop_table("myeclpay_seller")
-    op.drop_table("myeclpay_transaction")
     op.drop_table("myeclpay_request")
+    op.drop_table("myeclpay_transaction")
+    op.drop_table("myeclpay_wallet_device")
+    op.drop_table("myeclpay_store")
+    op.drop_table("myeclpay_wallet")
+
+    sa.Enum(TransactionType, name="transactiontype").drop(
+        op.get_bind(),
+    )
+    sa.Enum(WalletType, name="wallettype").drop(
+        op.get_bind(),
+    )
+    sa.Enum(TransferType, name="transfertype").drop(
+        op.get_bind(),
+    )
+    sa.Enum(WalletDeviceStatus, name="walletdevicestatus").drop(
+        op.get_bind(),
+    )
+    sa.Enum(TransactionStatus, name="transactionstatus").drop(
+        op.get_bind(),
+    )
+    sa.Enum(RequestStatus, name="requeststatus").drop(
+        op.get_bind(),
+    )
 
 
 def pre_test_upgrade(
