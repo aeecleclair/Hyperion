@@ -344,29 +344,3 @@ class NotificationTool:
             message=message,
             db=self.db,
         )
-
-    async def send_future_notification_to_user(
-        self,
-        user_id: str,
-        message: Message,
-        defer_date: datetime,
-        job_id: str,
-        scheduler: Scheduler = Depends(get_scheduler),
-    ) -> None:
-        
-        await scheduler.queue_job_defer_to(self.send_notification_to_users,
-            user_ids=[user_id],
-            message=message, job_id=job_id, defer_date=defer_date)
-    
-    async def send_future_notification_to_topic(
-        self,
-        message: Message,
-        custom_topic: CustomTopic,
-        defer_date: datetime,
-        job_id: str,
-        scheduler: Scheduler = Depends(get_scheduler),
-    ) -> None:
-        
-        await scheduler.queue_job_defer_to(self.send_notification_to_topic,
-            custom_topic=custom_topic,
-            message=message, job_id=job_id, defer_date=defer_date)
