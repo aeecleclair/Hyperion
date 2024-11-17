@@ -1,7 +1,8 @@
+from datetime import datetime
 import logging
 
 import firebase_admin
-from fastapi import BackgroundTasks
+from fastapi import BackgroundTasks, Depends
 from firebase_admin import credentials, messaging
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,6 +10,8 @@ from app.core.config import Settings
 from app.core.notification import cruds_notification, models_notification
 from app.core.notification.notification_types import CustomTopic
 from app.core.notification.schemas_notification import Message
+from app.dependencies import get_scheduler
+from app.types.scheduler import Scheduler
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
@@ -341,3 +344,29 @@ class NotificationTool:
             message=message,
             db=self.db,
         )
+
+    async def send_future_notification_to_user(
+        self,
+        user_id: str,
+        message: Message,
+        defer_date: datetime,
+        job_id: str,
+        scheduler: Scheduler = Depends(get_scheduler),
+    ) -> None:
+        
+        await scheduler.queue_job_defer_to(self.send_notification_to_users,
+            user_ids=[user_id],
+            message=message, job_id=job_id, defer_date=defer_date)
+    
+    async def send_future_notification_to_topic(
+        self,
+        message: Message,
+        custom_topic: CustomTopic,
+        defer_date: datetime,
+        job_id: str,
+        scheduler: Scheduler = Depends(get_scheduler),
+    ) -> None:
+        
+        await scheduler.queue_job_defer_to(self.send_notification_to_topic,
+            custom_topic=custom_topic,
+            message=message, job_id=job_id, defer_date=defer_date)
