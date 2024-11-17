@@ -159,7 +159,7 @@ async def get_store_admin_seller(
 )
 async def delete_store_admin_seller(
     store_id: UUID,
-    seller_user_id: UUID,
+    seller_user_id: str,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user_a_member_of(GroupType.payment)),
 ):
@@ -170,6 +170,7 @@ async def delete_store_admin_seller(
     """
     seller = await cruds_myeclpay.get_seller(
         seller_user_id=seller_user_id,
+        store_id=store_id,
         db=db,
     )
 
@@ -179,7 +180,13 @@ async def delete_store_admin_seller(
             detail="Seller does not exist",
         )
 
-    if seller.store_id != store_id:
+    await cruds_myeclpay.delete_seller(
+        seller_user_id=seller_user_id,
+        store_id=store_id,
+        db=db,
+    )
+
+    await db.commit()
         raise HTTPException(
             status_code=400,
             detail="Seller does not belong to the store",
@@ -191,6 +198,9 @@ async def delete_store_admin_seller(
     )
 
     await db.commit()
+
+
+# User registration #
 
 
 @router.get(
