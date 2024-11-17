@@ -254,10 +254,6 @@ def downgrade() -> None:
             nullable=False,
         ),
     )
-
-    sa.Enum(AccountType, name="accounttype").drop(
-        op.get_bind(),
-    )
     op.add_column(
         "core_user",
         sa.Column(
@@ -371,6 +367,9 @@ def downgrade() -> None:
     op.rename_table("module_group_visibility", "module_visibility")
     op.drop_table("module_account_type_visibility")
     op.drop_column("core_user", "account_type")
+    sa.Enum(AccountType, name="accounttype").drop(
+        op.get_bind(),
+    )
     # ### end Alembic commands ###
 
 
