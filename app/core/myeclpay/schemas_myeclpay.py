@@ -14,11 +14,11 @@ from app.types.membership import AvailableAssociationMembership
 class StoreBase(BaseModel):
     name: str
     membership: AvailableAssociationMembership
-    wallet_id: UUID
 
 
 class Store(StoreBase):
     id: UUID
+    wallet_id: UUID
 
 
 class SellerAdminCreation(BaseModel):
