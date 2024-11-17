@@ -15,8 +15,11 @@ async def create_scheduler(settings):
 
 
 class Scheduler:
+    current_instance = None  # Trying to fool the garbage collector
+
     def __init__(self, redis_settings):
         self.settings = redis_settings
+        self.current_instance = self
 
     async def async_init(self):
         self.redis_pool = await create_pool(self.settings)
