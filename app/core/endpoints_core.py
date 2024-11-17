@@ -44,6 +44,7 @@ async def read_information(
     Return information about Hyperion. This endpoint can be used to check if the API is up.
     """
     await scheduler.queue_job(testing_print, str(uuid4()), 10)
+    print(scheduler)
 
     return schemas_core.CoreInformation(
         ready=True,
