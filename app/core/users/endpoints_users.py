@@ -61,7 +61,7 @@ ECL_FORMER_STUDENT_REGEX = r"^[\w\-.]*@centraliens-lyon\.net$"
     status_code=200,
 )
 async def read_users(
-    accountTypes: list[AccountType] | None = None,
+    accountTypes: list[AccountType] = Query(default=[]),
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
@@ -70,10 +70,7 @@ async def read_users(
 
     **This endpoint is only usable by administrators**
     """
-    hyperion_security_logger.debug(
-        accountTypes,
-    )
-    accountTypes = accountTypes or list(AccountType)
+    accountTypes = accountTypes if len(accountTypes) != 0 else list(AccountType)
 
     users = await cruds_users.get_users(db, included_account_types=accountTypes)
     return users
