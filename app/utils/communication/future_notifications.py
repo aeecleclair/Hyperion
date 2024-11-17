@@ -42,7 +42,7 @@ class FutureNotificationTool(NotificationTool):
         await self.scheduler.queue_job_defer_to(self.send_notification_to_topic,
             custom_topic=custom_topic,
             message=message, job_id=job_id, defer_date=defer_date)
-        
+
     async def send_future_notification_to_user_time_defer(
         self,
         user_id: str,

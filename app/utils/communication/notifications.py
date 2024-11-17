@@ -145,7 +145,7 @@ class NotificationManager:
         try:
             messaging.send(message)
         except messaging.FirebaseError as error:
-            hyperion_error_logger.error(
+            hyperion_error_logger.exception(
                 f"Notification: Unable to send firebase notification for topic {custom_topic}: {error}",
             )
             raise
