@@ -48,7 +48,7 @@ user_t = sa.Table(
     "core_user",
     sa.MetaData(),
     sa.Column("email", sa.String),
-    sa.Column("account_type", sa.Enum(AccountType, name="account_type")),
+    sa.Column("account_type", sa.Enum(AccountType, name="accounttype")),
 )
 group_t = sa.Table(
     "core_group",
@@ -78,7 +78,7 @@ def upgrade() -> None:
         sa.Column("root", sa.String(), nullable=False),
         sa.Column(
             "allowed_account_type",
-            sa.Enum(AccountType, name="account_type"),
+            sa.Enum(AccountType, name="accounttype"),
             nullable=False,
         ),
         sa.PrimaryKeyConstraint("root", "allowed_account_type"),
@@ -89,7 +89,7 @@ def upgrade() -> None:
             "account_type",
             sa.Enum(
                 AccountType,
-                name="account_type",
+                name="accounttype",
             ),
             nullable=False,
             server_default=sa.text(AccountType.external.value),
