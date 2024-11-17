@@ -107,6 +107,7 @@ def upgrade() -> None:
                 name="accounttype",
             ),
             existing_nullable=False,
+            using="account_type::accounttype",
         )
     op.add_column(
         "core_user",
