@@ -13,7 +13,7 @@ class GroupType(str, Enum):
 
     # Account types
     # student = "39691052-2ae5-4e12-99d0-7a9f5f2b0136"
-    # formerstudent = "ab4c7503-41b3-11ee-8177-089798f1a4a5"
+    # former_student = "ab4c7503-41b3-11ee-8177-089798f1a4a5"
     # staff = "703056c4-be9d-475c-aa51-b7fc62a96aaa"
     # association = "29751438-103c-42f2-b09b-33fbb20758a7"
     # external = "b1cd979e-ecc1-4bd0-bc2b-4dad2ba8cded"
@@ -46,7 +46,7 @@ class AccountType(str, Enum):
     """
 
     student = "student"
-    formerstudent = "formerstudent"
+    former_student = "former_student"
     staff = "staff"
     association = "association"
     external = "external"
@@ -59,7 +59,7 @@ class AccountType(str, Enum):
 def get_ecl_account_types() -> list[AccountType]:
     return [
         AccountType.student,
-        AccountType.formerstudent,
+        AccountType.former_student,
         AccountType.staff,
         AccountType.association,
     ]
@@ -68,7 +68,7 @@ def get_ecl_account_types() -> list[AccountType]:
 def get_account_types_except_external() -> list[AccountType]:
     return [
         AccountType.student,
-        AccountType.formerstudent,
+        AccountType.former_student,
         AccountType.staff,
         AccountType.association,
         AccountType.demo,
