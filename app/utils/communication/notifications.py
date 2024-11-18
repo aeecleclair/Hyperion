@@ -341,6 +341,23 @@ class NotificationTool:
             defer_seconds=defer_seconds,
         )
     
+    async def send_future_notification_to_users_defer_to(
+            self, 
+            user_ids: list[str], 
+            message: Message, 
+            scheduler: Scheduler, 
+            defer_date:datetime, 
+            job_id:str
+        ):
+        
+        await scheduler.queue_job_defer_to(self.notification_manager.send_notification_to_users,
+            user_ids=user_ids,
+            message=message,
+            db=None,
+            job_id=job_id,
+            defer_date=defer_date,
+        )
+    
     
             
     async def send_notification_to_user(
