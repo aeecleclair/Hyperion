@@ -55,7 +55,12 @@ class CoreUser(Base):
         lazy="selectin",
         default_factory=list,
     )
-    school: Mapped["CoreSchool"] = relationship("CoreSchool", back_populates="students")
+    school: Mapped["CoreSchool"] = relationship(
+        "CoreSchool",
+        back_populates="students",
+        lazy="selectin",
+        default_factory=dict,
+    )
 
 
 class CoreUserUnconfirmed(Base):
