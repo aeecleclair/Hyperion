@@ -23,7 +23,7 @@ depends_on: str | Sequence[str] | None = None
 
 class AccountType(Enum):
     student = "student"
-    formerstudent = "formerstudent"
+    former_student = "former_student"
     staff = "staff"
     association = "association"
     external = "external"
@@ -134,7 +134,7 @@ def upgrade() -> None:
             user_t.c.email.regexp_match(ECL_FORMER_STUDENT_REGEX),
         )
         .values(
-            account_type=AccountType.formerstudent,
+            account_type=AccountType.former_student,
         ),
     )
     conn.execute(
@@ -186,7 +186,7 @@ def upgrade() -> None:
     )
     group_to_account_type = {
         STUDENT_GROUP_ID: AccountType.student,
-        FORMER_STUDENT_GROUP_ID: AccountType.formerstudent,
+        FORMER_STUDENT_GROUP_ID: AccountType.former_student,
         STAFF_GROUP_ID: AccountType.staff,
         ASSOCIATION_GROUP_ID: AccountType.association,
         DEMO_GROUP_ID: AccountType.demo,
@@ -293,7 +293,7 @@ def downgrade() -> None:
 
     account_type_to_group = {
         AccountType.student: STUDENT_GROUP_ID,
-        AccountType.formerstudent: FORMER_STUDENT_GROUP_ID,
+        AccountType.former_student: FORMER_STUDENT_GROUP_ID,
         AccountType.staff: STAFF_GROUP_ID,
         AccountType.association: ASSOCIATION_GROUP_ID,
         AccountType.demo: DEMO_GROUP_ID,
@@ -308,7 +308,7 @@ def downgrade() -> None:
         ).values(
             [
                 {"id": STUDENT_GROUP_ID, "name": "student"},
-                {"id": FORMER_STUDENT_GROUP_ID, "name": "formerstudent"},
+                {"id": FORMER_STUDENT_GROUP_ID, "name": "former_student"},
                 {"id": STAFF_GROUP_ID, "name": "staff"},
                 {"id": ASSOCIATION_GROUP_ID, "name": "association"},
                 {"id": EXTERNAL_GROUP_ID, "name": "external"},
@@ -622,7 +622,7 @@ def test_upgrade(
         "5c5f9fdd-bedd-449b-91a3-f3437b95e36b": "student",
         "64b83ef5-4e13-4827-9f4f-ab4ce1244f4c": "staff",
         "f1265ac3-d3cc-4ce5-97f5-82d25b5063f2": "staff",
-        "b059f348-3678-4d7f-a90e-b1663d60de37": "formerstudent",
+        "b059f348-3678-4d7f-a90e-b1663d60de37": "former_student",
         DEMO_ID: "demo",
         ECLAIR_ID: "association",
     }

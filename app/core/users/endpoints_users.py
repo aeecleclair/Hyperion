@@ -377,7 +377,7 @@ async def activate_user(
         unconfirmed_user.email,
     ):
         # Its a former student email address
-        account_type = AccountType.formerstudent
+        account_type = AccountType.former_student
 
     # A password should have been provided
     password_hash = security.get_password_hash(user.password)
