@@ -1,3 +1,4 @@
+from datetime import datetime
 import logging
 
 import firebase_admin
@@ -9,6 +10,7 @@ from app.core.config import Settings
 from app.core.notification import cruds_notification, models_notification
 from app.core.notification.notification_types import CustomTopic
 from app.core.notification.schemas_notification import Message
+from app.types.scheduler import Scheduler
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
@@ -307,10 +309,12 @@ class NotificationTool:
         background_tasks: BackgroundTasks,
         notification_manager: NotificationManager,
         db: AsyncSession,
+        #scheduler: Scheduler,
     ):
         self.background_tasks = background_tasks
         self.notification_manager = notification_manager
         self.db = db
+        #self.scheduler = scheduler
 
     async def send_notification_to_users(self, user_ids: list[str], message: Message):
         self.background_tasks.add_task(
@@ -319,7 +323,26 @@ class NotificationTool:
             message=message,
             db=self.db,
         )
-
+    
+    async def send_future_notification_to_users_time_defer(
+            self, 
+            user_ids: list[str], 
+            message: Message, 
+            scheduler: Scheduler, 
+            defer_seconds:float, 
+            job_id:str
+        ):
+        
+        await scheduler.queue_job_time_defer(self.notification_manager.send_notification_to_users,
+            user_ids=user_ids,
+            message=message,
+            db=None,
+            job_id=job_id,
+            defer_seconds=defer_seconds,
+        )
+    
+    
+            
     async def send_notification_to_user(
         self,
         user_id: str,
@@ -340,4 +363,38 @@ class NotificationTool:
             custom_topic=custom_topic,
             message=message,
             db=self.db,
+        )
+
+    async def send_future_notification_to_topic_defer_to(
+        self, 
+        custom_topic: CustomTopic, 
+        message: Message, 
+        scheduler: Scheduler, 
+        defer_date:datetime, 
+        job_id:str
+    ):
+        
+        await scheduler.queue_job_defer_to(self.notification_manager.send_notification_to_topic,
+            custom_topic=custom_topic,
+            message=message,
+            db=None,
+            job_id=job_id,
+            defer_date=defer_date,
+        )
+
+    async def send_future_notification_to_topic_time_defer(
+        self, 
+        custom_topic: CustomTopic, 
+        message: Message, 
+        scheduler: Scheduler, 
+        defer_seconds:float, 
+        job_id:str
+    ):
+        
+        await scheduler.queue_job_time_defer(self.notification_manager.send_notification_to_topic,
+            custom_topic=custom_topic,
+            message=message,
+            db=None,
+            job_id=job_id,
+            defer_seconds=defer_seconds,
         )

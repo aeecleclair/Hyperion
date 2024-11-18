@@ -33,7 +33,6 @@ from app.types.scheduler import Scheduler
 from app.types.scopes_type import ScopeType
 from app.types.websocket import WebsocketConnectionManager
 from app.utils.auth import auth_utils
-from app.utils.communication.future_notifications import FutureNotificationTool
 from app.utils.communication.notifications import NotificationManager, NotificationTool
 from app.utils.redis import connect
 from app.utils.tools import is_user_external, is_user_member_of_an_allowed_group
@@ -206,6 +205,7 @@ def get_notification_tool(
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     notification_manager: NotificationManager = Depends(get_notification_manager),
+    scheduler: Scheduler = Depends(get_scheduler),
 ) -> NotificationTool:
     """
     Dependency that returns a notification tool, allowing to send push notification as a background tasks.
@@ -214,26 +214,7 @@ def get_notification_tool(
     return NotificationTool(
         background_tasks=background_tasks,
         notification_manager=notification_manager,
-        db=db,
-    )
-
-
-def get_future_notification_tool(
-    background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db),
-    notification_manager: NotificationManager = Depends(get_notification_manager),
-    scheduler: Scheduler = Depends(get_scheduler),
-) -> FutureNotificationTool:
-    """
-    Dependency that returns a notification tool, allowing to send push notification as a schedule tasks.
-    """
-
-    return FutureNotificationTool(
-        background_tasks=background_tasks,
-        notification_manager=notification_manager,
-        scheduler=scheduler,
-        db=db,
-    )
+        db=db,)
 
 
 def get_drive_file_manager() -> DriveFileManager:

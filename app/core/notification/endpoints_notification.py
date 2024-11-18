@@ -13,13 +13,13 @@ from app.core.notification import (
 from app.core.notification.notification_types import CustomTopic, Topic
 from app.dependencies import (
     get_db,
-    get_future_notification_tool,
     get_notification_manager,
     get_notification_tool,
+    get_scheduler,
     is_user,
     is_user_in,
 )
-from app.utils.communication.future_notifications import FutureNotificationTool
+from app.types.scheduler import Scheduler
 from app.utils.communication.notifications import NotificationManager, NotificationTool
 
 router = APIRouter(tags=["Notifications"])
@@ -268,6 +268,7 @@ async def send_notification_topic(
 )
 async def send_notification_topic(
     user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
+    scheduler: Scheduler = Depends(get_scheduler),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
@@ -280,13 +281,40 @@ async def send_notification_topic(
         content="Ceci est un test de notification future",
         action_module="test",
     )
-    await future_notification_tool.send_future_notification_to_user_time_defer(
-        user_id=user.id,
+    await notification_tool.send_future_notification_to_users_time_defer(
+        user_ids=[user.id],
         message=message,
-        defer_seconds=30,
-        job_id = "test-notification",
+        defer_seconds=10,
+        job_id="test25",
+        scheduler=scheduler,
     )
 
+@router.post(
+    "/notification/send/topic/future",
+    status_code=201,
+)
+async def send_future_notification_topic(
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    notification_tool: NotificationTool = Depends(get_notification_tool),
+    scheduler: Scheduler = Depends(get_scheduler),
+):
+    """
+    Send ourself a test notification.
+
+    **Only admins can use this endpoint**
+    """
+    message = schemas_notification.Message(
+        title="Test notification future topic",
+        content="Ceci est un test de notification future topic",
+        action_module="test",
+    )
+    await notification_tool.send_future_notification_to_topic_time_defer(
+       custom_topic=CustomTopic.from_str("test"),
+        message=message,
+        defer_seconds=10,
+        job_id="test26",
+        scheduler=scheduler,
+    )
 
 @router.get(
     "/notification/devices",
