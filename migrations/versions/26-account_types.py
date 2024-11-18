@@ -414,11 +414,236 @@ def pre_test_upgrade(
     alembic_runner: "MigrationContext",
     alembic_connection: sa.Connection,
 ) -> None:
-    pass
+    alembic_runner.insert_into(
+        "core_user",
+        {
+            "id": DEMO_ID,
+            "email": "demo@myecl.fr",
+            "password_hash": "password_hash",
+            "name": "name",
+            "firstname": "firstname",
+            "nickname": "nickname",
+            "birthday": None,
+            "promo": 21,
+            "phone": "phone",
+            "floor": "Autre",
+            "created_on": None,
+            "external": False,
+        },
+    )
+    alembic_runner.insert_into(
+        "core_membership",
+        {
+            "user_id": DEMO_ID,
+            "group_id": DEMO_GROUP_ID,
+        },
+    )
+    alembic_runner.insert_into(
+        "core_user",
+        {
+            "id": "5c5f9fdd-bedd-449b-91a3-f3437b95e36b",
+            "email": "test@etu.ec-lyon.fr",
+            "password_hash": "password_hash",
+            "name": "name",
+            "firstname": "firstname",
+            "nickname": "nickname",
+            "birthday": None,
+            "promo": 21,
+            "phone": "phone",
+            "floor": "Autre",
+            "created_on": None,
+            "external": False,
+        },
+    )
+    alembic_runner.insert_into(
+        "core_membership",
+        {
+            "user_id": "5c5f9fdd-bedd-449b-91a3-f3437b95e36b",
+            "group_id": STUDENT_GROUP_ID,
+        },
+    )
+    alembic_runner.insert_into(
+        "core_user",
+        {
+            "id": "3d565333-aae1-4d70-a645-e6a3bc3ac198",
+            "email": "test@etu-enise.ec-lyon.fr",
+            "password_hash": "password_hash",
+            "name": "name",
+            "firstname": "firstname",
+            "nickname": "nickname",
+            "birthday": None,
+            "promo": 21,
+            "phone": "phone",
+            "floor": "Autre",
+            "created_on": None,
+            "external": False,
+        },
+    )
+    alembic_runner.insert_into(
+        "core_membership",
+        {
+            "user_id": "3d565333-aae1-4d70-a645-e6a3bc3ac198",
+            "group_id": EXTERNAL_GROUP_ID,
+        },
+    )
+    alembic_runner.insert_into(
+        "core_user",
+        {
+            "id": "1dd04834-700d-4960-ba68-2beab1fa8663",
+            "email": "test2@gmail.com",
+            "password_hash": "password_hash",
+            "name": "name",
+            "firstname": "firstname",
+            "nickname": "nickname",
+            "birthday": None,
+            "promo": 21,
+            "phone": "phone",
+            "floor": "Autre",
+            "created_on": None,
+            "external": False,
+        },
+    )
+    alembic_runner.insert_into(
+        "core_membership",
+        {
+            "user_id": "1dd04834-700d-4960-ba68-2beab1fa8663",
+            "group_id": EXTERNAL_GROUP_ID,
+        },
+    )
+    alembic_runner.insert_into(
+        "core_user",
+        {
+            "id": ECLAIR_ID,
+            "email": "eclair@myecl.fr",
+            "password_hash": "password_hash",
+            "name": "name",
+            "firstname": "firstname",
+            "nickname": "nickname",
+            "birthday": None,
+            "promo": 21,
+            "phone": "phone",
+            "floor": "Autre",
+            "created_on": None,
+            "external": False,
+        },
+    )
+    alembic_runner.insert_into(
+        "core_membership",
+        {
+            "user_id": ECLAIR_ID,
+            "group_id": ASSOCIATION_GROUP_ID,
+        },
+    )
+    alembic_runner.insert_into(
+        "core_user",
+        {
+            "id": "64b83ef5-4e13-4827-9f4f-ab4ce1244f4c",
+            "email": "test2@ec-lyon.fr",
+            "password_hash": "password_hash",
+            "name": "name",
+            "firstname": "firstname",
+            "nickname": "nickname",
+            "birthday": None,
+            "promo": 21,
+            "phone": "phone",
+            "floor": "Autre",
+            "created_on": None,
+            "external": False,
+        },
+    )
+    alembic_runner.insert_into(
+        "core_membership",
+        {
+            "user_id": "64b83ef5-4e13-4827-9f4f-ab4ce1244f4c",
+            "group_id": STAFF_GROUP_ID,
+        },
+    )
+    alembic_runner.insert_into(
+        "core_user",
+        {
+            "id": "f1265ac3-d3cc-4ce5-97f5-82d25b5063f2",
+            "email": "test2@enise.ec-lyon.fr",
+            "password_hash": "password_hash",
+            "name": "name",
+            "firstname": "firstname",
+            "nickname": "nickname",
+            "birthday": None,
+            "promo": 21,
+            "phone": "phone",
+            "floor": "Autre",
+            "created_on": None,
+            "external": False,
+        },
+    )
+    alembic_runner.insert_into(
+        "core_membership",
+        {
+            "user_id": "f1265ac3-d3cc-4ce5-97f5-82d25b5063f2",
+            "group_id": STAFF_GROUP_ID,
+        },
+    )
+    alembic_runner.insert_into(
+        "core_user",
+        {
+            "id": "b059f348-3678-4d7f-a90e-b1663d60de37",
+            "email": "test2@centraliens-lyon.net",
+            "password_hash": "password_hash",
+            "name": "name",
+            "firstname": "firstname",
+            "nickname": "nickname",
+            "birthday": None,
+            "promo": 21,
+            "phone": "phone",
+            "floor": "Autre",
+            "created_on": None,
+            "external": False,
+        },
+    )
+    alembic_runner.insert_into(
+        "core_membership",
+        {
+            "user_id": "b059f348-3678-4d7f-a90e-b1663d60de37",
+            "group_id": FORMER_STUDENT_GROUP_ID,
+        },
+    )
 
 
 def test_upgrade(
     alembic_runner: "MigrationContext",
     alembic_connection: sa.Connection,
 ) -> None:
-    pass
+    users = alembic_connection.execute(
+        sa.text("SELECT id, account_type from core_user"),
+    ).fetchall()
+
+    duos = {
+        "1dd04834-700d-4960-ba68-2beab1fa8663": "external",
+        "3d565333-aae1-4d70-a645-e6a3bc3ac198": "student",
+        "5c5f9fdd-bedd-449b-91a3-f3437b95e36b": "student",
+        "64b83ef5-4e13-4827-9f4f-ab4ce1244f4c": "staff",
+        "f1265ac3-d3cc-4ce5-97f5-82d25b5063f2": "staff",
+        "b059f348-3678-4d7f-a90e-b1663d60de37": "formerstudent",
+        DEMO_ID: "demo",
+        ECLAIR_ID: "association",
+    }
+
+    for row in users:
+        account = duos.get(row[0])
+        if account is not None:
+            assert row[1] == account
+
+    groups = alembic_connection.execute(
+        sa.text("SELECT id from core_group"),
+    ).fetchall()
+
+    group_ids = {
+        STUDENT_GROUP_ID,
+        FORMER_STUDENT_GROUP_ID,
+        STAFF_GROUP_ID,
+        ASSOCIATION_GROUP_ID,
+        EXTERNAL_GROUP_ID,
+        DEMO_GROUP_ID,
+    }
+
+    for group_id in group_ids:
+        assert (group_id,) not in groups
