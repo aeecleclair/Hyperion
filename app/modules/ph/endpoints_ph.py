@@ -1,5 +1,5 @@
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, time, timedelta
 
 from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -13,12 +13,14 @@ from app.dependencies import (
     get_db,
     get_notification_tool,
     get_request_id,
+    get_scheduler,
     is_user_a_member,
     is_user_in,
 )
 from app.modules.ph import cruds_ph, models_ph, schemas_ph
 from app.types.content_type import ContentType
 from app.types.module import Module
+from app.types.scheduler import Scheduler
 from app.utils.communication.notifications import NotificationTool
 from app.utils.tools import (
     delete_file_from_data,
@@ -105,6 +107,7 @@ async def create_paper(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_in(GroupType.ph)),
     notification_tool: NotificationTool = Depends(get_notification_tool),
+    scheduler:Scheduler = Depends(get_scheduler),
 ):
     """Create a new paper."""
 
@@ -128,10 +131,21 @@ async def create_paper(
                 content="Un nouveau journal est disponible! 🎉",
                 action_module="ph",
             )
-            await notification_tool.send_notification_to_topic(
-                custom_topic=CustomTopic(topic=Topic.ph),
-                message=message,
-            )
+            if paper_db.release_date == now.date():
+                await notification_tool.send_notification_to_topic(
+                    custom_topic=CustomTopic(topic=Topic.ph),
+                    message=message,
+                )
+            else :
+                delivery_time = time(11, 00, 00, tzinfo=UTC)
+                release_date = datetime.combine(paper_db.release_date, delivery_time)
+                await notification_tool.send_future_notification_to_topic_defer_to(
+                    custom_topic=CustomTopic(topic=Topic.ph),
+                    message=message,
+                    scheduler=scheduler,
+                    defer_date=release_date,
+                    job_id=f"ph_{paper_db.id}",
+                )
         return await cruds_ph.create_paper(paper=paper_db, db=db)
 
     except ValueError as error:

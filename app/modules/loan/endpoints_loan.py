@@ -12,11 +12,13 @@ from app.core.notification.schemas_notification import Message
 from app.dependencies import (
     get_db,
     get_notification_tool,
+    get_scheduler,
     is_user_a_member,
     is_user_in,
 )
 from app.modules.loan import cruds_loan, models_loan, schemas_loan
 from app.types.module import Module
+from app.types.scheduler import Scheduler
 from app.utils.communication.notifications import NotificationTool
 from app.utils.tools import (
     is_group_id_valid,
@@ -499,6 +501,7 @@ async def create_loan(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
     notification_tool: NotificationTool = Depends(get_notification_tool),
+    scheduler: Scheduler = Depends(get_scheduler),
 ):
     """
     Create a new loan in database and add the requested items
@@ -624,17 +627,19 @@ async def create_loan(
 
     delivery_time = time(11, 00, 00, tzinfo=UTC)
     delivery_datetime = datetime.combine(loan.end, delivery_time, tzinfo=UTC)
-    expire_on_date = loan.end + timedelta(days=30)
-    expire_on_datetime = datetime.combine(expire_on_date, delivery_time, tzinfo=UTC)
+
     message = Message(
         title="📦 Prêt arrivé à échéance",
         content=f"N'oublie pas de rendre ton prêt à l'association {loan.loaner.name} !",
         module="loan",
     )
 
-    await notification_tool.send_notification_to_user(
-        user_id=loan.borrower_id,
+    await notification_tool.send_future_notification_to_users_defer_to(
+        user_ids=[loan.borrower_id],
         message=message,
+        scheduler=scheduler,
+        defer_date=delivery_datetime,
+        job_id=f"loan_start_{loan.id}",
     )
 
     return schemas_loan.Loan(items_qty=items_qty_ret, **loan.__dict__)
@@ -867,16 +872,16 @@ async def return_loan(
         returned=True,
         returned_date=datetime.now(UTC),
     )
-
-    message = Message(
-        title="",
-        content="",
-        module="",
-    )
-    await notification_tool.send_notification_to_user(
-        user_id=loan.borrower_id,
-        message=message,
-    )
+    #TODO
+    # message = Message(
+    #     title="",
+    #     content="",
+    #     module="",
+    # )
+    # await notification_tool.send_notification_to_user(
+    #     user_id=loan.borrower_id,
+    #     message=message,
+    # )
 
 
 @module.router.post(
@@ -889,6 +894,7 @@ async def extend_loan(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
     notification_tool: NotificationTool = Depends(get_notification_tool),
+    scheduler: Scheduler = Depends(get_scheduler),
 ):
     """
     A new `end` date or an extended `duration` can be provided. If the two are provided, only `end` will be used.
@@ -928,14 +934,18 @@ async def extend_loan(
         loan_update=loan_update,
         db=db,
     )
-    # same context so the first notification will be removed
-    message = Message(
-        title="📦 Prêt arrivé à échéance",
-        content=f"N'oublie pas de rendre ton prêt à l'association {loan.loaner.name} ! ",
-        action_module="loan",
-    )
+    #TODO
+    # # same context so the first notification will be removed
+    # message = Message(
+    #     title="📦 Prêt arrivé à échéance",
+    #     content=f"N'oublie pas de rendre ton prêt à l'association {loan.loaner.name} ! ",
+    #     action_module="loan",
+    # )
 
-    await notification_tool.send_notification_to_user(
-        user_id=loan.borrower_id,
-        message=message,
-    )
+    # await notification_tool.send_future_notification_to_users_defer_to(
+    #     user_ids=[loan.borrower_id],
+    #     message=message,
+    #     scheduler=scheduler,
+    #     defer_date=loan.end,
+    #     job_id=f"loan_end_{loan.id}",
+    # )
