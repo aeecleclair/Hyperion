@@ -19,6 +19,7 @@ from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from app import api
@@ -366,11 +367,19 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
             get_scheduler,
         )()
 
+        _get_db: Callable[[], AsyncGenerator[AsyncSession, None]] = (
+            app.dependency_overrides.get(
+                get_db,
+                get_db,
+            )
+        )
+
         await ws_manager.connect_broadcaster()
         await arq_scheduler.start(
             redis_host=settings.REDIS_HOST,
             redis_port=settings.REDIS_PORT,
             redis_password=settings.REDIS_PASSWORD,
+            _get_db=_get_db,
         )
 
         yield

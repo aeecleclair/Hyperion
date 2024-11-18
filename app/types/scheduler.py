@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from collections.abc import Callable, Coroutine
+from collections.abc import AsyncGenerator, Callable, Coroutine
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -9,12 +9,23 @@ from arq.connections import RedisSettings
 from arq.jobs import Job
 from arq.typing import WorkerSettingsBase
 from arq.worker import create_worker
+from sqlalchemy.ext.asyncio import AsyncSession
 
 scheduler_logger = logging.getLogger("scheduler")
 
 
-async def run_task(ctx, job_function, **kwargs):
+async def run_task(
+    ctx,
+    job_function: Callable[..., Coroutine[Any, Any, Any]],
+    _get_db: Callable[[], AsyncGenerator[AsyncSession, None]],
+    **kwargs,
+):
     scheduler_logger.debug(f"Job function consumed {job_function}")
+
+    if "db" in kwargs:
+        async for db in _get_db():
+            kwargs["db"] = db
+
     return await job_function(**kwargs)
 
 
@@ -33,14 +44,25 @@ class Scheduler:
         self.worker: Worker | None = None
         # Task will contain the asyncio task that runs the worker
         self.task: asyncio.Task | None = None
+        # Pointer to the get_db dependency
+        # self._get_db: Callable[[], AsyncGenerator[AsyncSession, None]]
 
     async def start(
         self,
         redis_host: str,
         redis_port: int,
         redis_password: str,
+        _get_db: Callable[[], AsyncGenerator[AsyncSession, None]],
         **kwargs,
     ):
+        """
+        Parameters:
+        - redis_host: str
+        - redis_port: int
+        - redis_password: str
+        - get_db: Callable[[], AsyncGenerator[AsyncSession, None]] a pointer to `get_db` dependency
+        """
+
         class ArqWorkerSettings(WorkerSettingsBase):
             functions = [run_task]
             allow_abort_jobs = True
@@ -60,6 +82,8 @@ class Scheduler:
         )
         # We run the worker in an asyncio task
         self.task = asyncio.create_task(self.worker.async_run())
+
+        self._get_db = _get_db
 
         scheduler_logger.info("Scheduler started")
 
@@ -87,6 +111,7 @@ class Scheduler:
             job_function=job_function,
             _job_id=job_id,
             _defer_by=timedelta(seconds=defer_seconds),
+            _get_db=self._get_db,
             **kwargs,
         )
         scheduler_logger.debug(f"Job {job_id} queued {job}")
@@ -111,6 +136,7 @@ class Scheduler:
             job_function=job_function,
             _job_id=job_id,
             _defer_until=defer_date,
+            _get_db=self._get_db,
             **kwargs,
         )
         scheduler_logger.debug(f"Job {job_id} queued {job}")
