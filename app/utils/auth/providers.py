@@ -7,7 +7,7 @@ from app.core import models_core
 from app.core.groups.groups_type import (
     AccountType,
     GroupType,
-    get_account_types_except_external,
+    get_account_types_except_externals,
     get_ecl_account_types,
 )
 from app.types.floors_type import FloorsType
@@ -39,7 +39,7 @@ class BaseAuthClient:
     # Restrict the authentication to this client to specific Hyperion account types.
     # When set to `None`, users from any account type can use the auth client
     allowed_account_types: list[AccountType] | None = (
-        get_account_types_except_external()
+        get_account_types_except_externals()
     )
     # redirect_uri should alway match the one provided by the client
     redirect_uri: list[str]
