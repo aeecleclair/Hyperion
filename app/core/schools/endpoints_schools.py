@@ -70,7 +70,7 @@ async def read_school(
     status_code=201,
 )
 async def create_school(
-    school: schemas_core.CoreSchoolSimple,
+    school: schemas_core.CoreSchoolBase,
     db: AsyncSession = Depends(get_db),
     user=Depends(is_user_a_member_of(GroupType.admin)),
 ):
