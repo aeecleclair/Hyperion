@@ -45,7 +45,7 @@ DEMO_ID = "9bccbd61-2af3-4bd6-adb7-2a5e48756f66"
 ECLAIR_ID = "e68d744f-472f-49e5-896f-662d83be7b9a"
 
 ECL_STAFF_REGEX = r"^[\w\-.]*@(enise\.)?ec-lyon\.fr$"
-ECL_STUDENT_REGEX = r"^[\w\-.]*@etu(-enise)?\.ec-lyon\.fr$"
+ECL_STUDENT_REGEX = r"^[\w\-.]*@((etu(-enise)?)|(ecl\d{2}))\.ec-lyon\.fr$"
 ECL_FORMER_STUDENT_REGEX = r"^[\w\-.]*@centraliens-lyon\.net$"
 
 school_table = sa.Table(
