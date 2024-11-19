@@ -5,15 +5,17 @@ School management is part of the core of Hyperion. These endpoints allow managin
 """
 
 import logging
+import re
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, schemas_core
-from app.core.groups.groups_type import GroupType
+from app.core.groups.groups_type import AccountType, GroupType
 from app.core.schools import cruds_schools
 from app.core.schools.schools_type import SchoolType
+from app.core.users import cruds_users
 from app.dependencies import (
     get_db,
     is_user_a_member_of,
@@ -72,7 +74,7 @@ async def read_school(
 async def create_school(
     school: schemas_core.CoreSchoolBase,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_a_member_of(GroupType.admin)),
+    user: schemas_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     """
     Create a new school.
@@ -94,9 +96,25 @@ async def create_school(
             name=school.name,
             email_regex=school.email_regex,
         )
-        return await cruds_schools.create_school(school=db_school, db=db)
+        new_school = await cruds_schools.create_school(school=db_school, db=db)
+        users = await cruds_users.get_users(
+            db=db,
+            included_account_types=[AccountType.external],
+        )
+        for db_user in users:
+            if re.match(db_school.email_regex, db_user.email):
+                await cruds_users.update_user(
+                    db,
+                    db_user.id,
+                    schemas_core.CoreUserUpdateAdmin(
+                        school_id=db_school.id,
+                        account_type=AccountType.other_school_student,
+                    ),
+                )
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error))
+    else:
+        return new_school
 
 
 @router.patch(
