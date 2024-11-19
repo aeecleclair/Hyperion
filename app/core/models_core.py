@@ -59,7 +59,7 @@ class CoreUser(Base):
         "CoreSchool",
         back_populates="students",
         lazy="selectin",
-        default_factory=dict,
+        init=False,
     )
 
 
@@ -136,6 +136,8 @@ class CoreSchool(Base):
     students: Mapped[list["CoreUser"]] = relationship(
         "CoreUser",
         back_populates="school",
+        lazy="selectin",
+        default_factory=list,
     )
 
 
