@@ -99,12 +99,14 @@ def upgrade() -> None:
         batch_op.alter_column(
             "account_type",
             type_=sa.Enum(AccountType2, name="accounttype2"),
+            using="account_type::accounttype2",
         )
 
     with op.batch_alter_table("module_account_type_visibility") as batch_op:
         batch_op.alter_column(
             "allowed_account_type",
             type_=sa.Enum(AccountType2, name="accounttype2"),
+            using="account_type::accounttype2",
         )
 
     sa.Enum(AccountType, name="accounttype").drop(
@@ -118,12 +120,14 @@ def upgrade() -> None:
         batch_op.alter_column(
             "account_type",
             type_=sa.Enum(AccountType2, name="accounttype"),
+            using="account_type::accounttype",
         )
 
     with op.batch_alter_table("module_account_type_visibility") as batch_op:
         batch_op.alter_column(
             "allowed_account_type",
             type_=sa.Enum(AccountType2, name="accounttype"),
+            using="account_type::accounttype",
         )
 
     sa.Enum(AccountType2, name="accounttype2").drop(
@@ -189,6 +193,7 @@ def downgrade() -> None:
             type_=sa.Enum(
                 AccountType,
                 name="accounttype2",
+                using="account_type::accounttype2",
             ),
         )
 
@@ -198,6 +203,7 @@ def downgrade() -> None:
             type_=sa.Enum(
                 AccountType,
                 name="accounttype2",
+                using="account_type::accounttype2",
             ),
         )
 
@@ -214,6 +220,7 @@ def downgrade() -> None:
             type_=sa.Enum(
                 AccountType,
                 name="accounttype",
+                using="account_type::accounttype",
             ),
         )
 
@@ -223,6 +230,7 @@ def downgrade() -> None:
             type_=sa.Enum(
                 AccountType,
                 name="accounttype",
+                using="account_type::accounttype",
             ),
         )
 
