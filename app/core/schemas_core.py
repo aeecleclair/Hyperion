@@ -158,7 +158,6 @@ class CoreUserCreateRequest(BaseModel):
     """
 
     email: str
-    school_id: str
     accept_external: bool | None = Field(
         None,
         deprecated=True,
@@ -180,7 +179,6 @@ class CoreBatchUserCreateRequest(BaseModel):
     """
 
     email: str
-    school_id: str
 
     # Email normalization, this will modify the email variable
     # https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
