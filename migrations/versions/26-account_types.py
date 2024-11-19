@@ -415,6 +415,49 @@ def pre_test_upgrade(
     alembic_connection: sa.Connection,
 ) -> None:
     alembic_runner.insert_into(
+        "core_group",
+        {
+            "id": DEMO_GROUP_ID,
+            "name": "demo",
+        },
+    )
+    alembic_runner.insert_into(
+        "core_group",
+        {
+            "id": STUDENT_GROUP_ID,
+            "name": "student",
+        },
+    )
+    alembic_runner.insert_into(
+        "core_group",
+        {
+            "id": FORMER_STUDENT_GROUP_ID,
+            "name": "former_student",
+        },
+    )
+    alembic_runner.insert_into(
+        "core_group",
+        {
+            "id": STAFF_GROUP_ID,
+            "name": "staff",
+        },
+    )
+    alembic_runner.insert_into(
+        "core_group",
+        {
+            "id": ASSOCIATION_GROUP_ID,
+            "name": "association",
+        },
+    )
+    alembic_runner.insert_into(
+        "core_group",
+        {
+            "id": EXTERNAL_GROUP_ID,
+            "name": "external",
+        },
+    )
+
+    alembic_runner.insert_into(
         "core_user",
         {
             "id": DEMO_ID,
@@ -431,6 +474,7 @@ def pre_test_upgrade(
             "external": False,
         },
     )
+
     alembic_runner.insert_into(
         "core_membership",
         {
@@ -455,6 +499,7 @@ def pre_test_upgrade(
             "external": False,
         },
     )
+
     alembic_runner.insert_into(
         "core_membership",
         {
