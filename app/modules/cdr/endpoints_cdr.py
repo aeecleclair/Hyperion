@@ -2484,6 +2484,7 @@ async def get_payment_url(
         )
     user_schema = schemas_core.CoreUser(
         account_type=user.account_type,
+        school_id=user.school_id,
         email=user.email,
         birthday=user.birthday,
         promo=user.promo,

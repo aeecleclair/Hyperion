@@ -1087,13 +1087,15 @@ async def get_payment_url(
             if not participant.payment:
                 checkout_name += " + "
             checkout_name += "T Shirt taille" + participant.t_shirt_size.value
+    user_dict = user.__dict__
+    user_dict.pop("school", None)
     checkout = await payment_tool.init_checkout(
         module=module.root,
         helloasso_slug="AEECL",
         checkout_amount=price,
         checkout_name=checkout_name,
         redirection_uri=settings.RAID_PAYMENT_REDIRECTION_URL or "",
-        payer_user=schemas_core.CoreUser(**user.__dict__),
+        payer_user=schemas_core.CoreUser(**user_dict),
         db=db,
     )
     hyperion_error_logger.info(f"RAID: Logging Checkout id {checkout.id}")
