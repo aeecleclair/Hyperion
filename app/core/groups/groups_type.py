@@ -58,7 +58,7 @@ def get_ecl_account_types() -> list[AccountType]:
     ]
 
 
-def get_account_types_except_external() -> list[AccountType]:
+def get_account_types_except_externals() -> list[AccountType]:
     return [
         AccountType.student,
         AccountType.former_student,
