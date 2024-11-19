@@ -140,6 +140,31 @@ def set_core_data_crud_sync(
         return core_data
 
 
+def get_school_by_id_sync(school_id: str, db: Session) -> models_core.CoreSchool | None:
+    """
+    Return group with id from database
+    """
+    result = db.execute(
+        select(models_core.CoreSchool).where(models_core.CoreSchool.id == school_id),
+    )
+    return result.scalars().first()
+
+
+def create_school_sync(
+    school: models_core.CoreSchool,
+    db: Session,
+) -> models_core.CoreSchool:
+    """
+    Create a new group in database and return it
+    """
+    db.add(school)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise
+    else:
+        return school
 def delete_core_data_crud_sync(schema: str, db: Session) -> None:
     """
     Delete core data with schema from database

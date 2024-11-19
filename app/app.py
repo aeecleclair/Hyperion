@@ -27,6 +27,7 @@ from app.core.config import Settings
 from app.core.google_api.google_api import GoogleAPI
 from app.core.groups.groups_type import GroupType
 from app.core.log import LogConfig
+from app.core.schools.schools_type import SchoolType
 from app.dependencies import (
     get_db,
     get_redis_client,
@@ -189,6 +190,32 @@ def initialize_groups(
                     )
 
 
+def initialize_schools(
+    sync_engine: Engine,
+    hyperion_error_logger: logging.Logger,
+) -> None:
+    """Add the necessary shools"""
+
+    hyperion_error_logger.info("Startup: Adding new groups to the database")
+    with Session(sync_engine) as db:
+        for school in SchoolType:
+            exists = initialization.get_school_by_id_sync(school_id=school, db=db)
+            # We don't want to recreate the groups if they already exist
+            if not exists:
+                db_school = models_core.CoreSchool(
+                    id=school,
+                    name=school.name,
+                    email_regex=".*",
+                )
+
+                try:
+                    initialization.create_school_sync(school=db_school, db=db)
+                except IntegrityError as error:
+                    hyperion_error_logger.fatal(
+                        f"Startup: Could not add group {db_school.name}<{db_school.id}> in the database: {error}",
+                    )
+
+
 def initialize_module_visibility(
     sync_engine: Engine,
     hyperion_error_logger: logging.Logger,
@@ -298,6 +325,10 @@ def init_db(
 
     # Initialize database tables
     initialize_groups(
+        sync_engine=sync_engine,
+        hyperion_error_logger=hyperion_error_logger,
+    )
+    initialize_schools(
         sync_engine=sync_engine,
         hyperion_error_logger=hyperion_error_logger,
     )
