@@ -60,7 +60,19 @@ user_table = sa.Table(
     sa.MetaData(),
     sa.Column("id", sa.String(), nullable=False),
     sa.Column("email", sa.String(), nullable=False),
+    sa.Column("account_type", sa.Enum(AccountType, name="accounttype"), nullable=False),
     sa.Column("school_id", sa.String(), nullable=False),
+)
+
+visibility_table = sa.Table(
+    "module_account_type_visibility",
+    sa.MetaData(),
+    sa.Column("root", sa.String(), nullable=False),
+    sa.Column(
+        "allowed_account_type",
+        sa.Enum(AccountType, name="accounttype"),
+        nullable=False,
+    ),
 )
 
 
@@ -84,6 +96,14 @@ def upgrade() -> None:
         ),
     )
 
+    users = conn.execute(
+        sa.select(user_table.c.id, user_table.c.account_type),
+    ).fetchall()
+
+    visibilities = conn.execute(
+        sa.select(visibility_table.c.root, visibility_table.c.allowed_account_type),
+    ).fetchall()
+
     with op.batch_alter_table("core_user") as batch_op:
         batch_op.add_column(
             sa.Column(
@@ -101,8 +121,7 @@ def upgrade() -> None:
         )
         batch_op.drop_column("account_type")
 
-    with op.batch_alter_table("module_account_type_visibility") as batch_op:
-        batch_op.drop_column("allowed_account_type")
+    op.drop_table("module_account_type_visibility")
 
     sa.Enum(AccountType, name="accounttype").drop(
         conn,
@@ -121,15 +140,16 @@ def upgrade() -> None:
             ),
         )
 
-    with op.batch_alter_table("module_account_type_visibility") as batch_op:
-        batch_op.add_column(
-            sa.Column(
-                "allowed_account_type",
-                sa.Enum(AccountType2, name="accounttype"),
-                nullable=False,
-                server_default="external",
-            ),
-        )
+    op.create_table(
+        "module_account_type_visibility",
+        sa.Column("root", sa.String(), nullable=False),
+        sa.Column(
+            "allowed_account_type",
+            sa.Enum(AccountType2, name="accounttype"),
+            nullable=False,
+        ),
+        sa.PrimaryKeyConstraint("root", "allowed_account_type"),
+    )
 
     with op.batch_alter_table("core_user_unconfirmed") as batch_op:
         batch_op.add_column(
@@ -154,62 +174,26 @@ def upgrade() -> None:
             email_regex=centrale_regex,
         ),
     )
-    conn.execute(
-        sa.update(
-            user_table,
+
+    for user in users:
+        conn.execute(
+            sa.update(user_table)
+            .where(user_table.c.id == user.id)
+            .values(
+                account_type=user.account_type,
+                school_id="d9772da7-1142-4002-8b86-b694b431dfed"
+                if user.account_type != AccountType.external
+                else "dce19aa2-8863-4c93-861e-fb7be8f610ed",
+            ),
         )
-        .where(
-            user_table.c.email.regexp_match(ECL_STUDENT_REGEX),
+
+    for visibility in visibilities:
+        conn.execute(
+            sa.insert(visibility_table).values(
+                root=visibility.root,
+                allowed_account_type=visibility.allowed_account_type,
+            ),
         )
-        .values(
-            account_type=AccountType.student,
-            school_id="d9772da7-1142-4002-8b86-b694b431dfed",
-        ),
-    )
-    conn.execute(
-        sa.update(
-            user_table,
-        )
-        .where(
-            user_table.c.email.regexp_match(ECL_FORMER_STUDENT_REGEX),
-        )
-        .values(
-            account_type=AccountType.former_student,
-            school_id="d9772da7-1142-4002-8b86-b694b431dfed",
-        ),
-    )
-    conn.execute(
-        sa.update(
-            user_table,
-        )
-        .where(
-            user_table.c.email.regexp_match(ECL_STAFF_REGEX),
-        )
-        .values(
-            account_type=AccountType.staff,
-            school_id="d9772da7-1142-4002-8b86-b694b431dfed",
-        ),
-    )
-    conn.execute(
-        sa.update(
-            user_table,
-        )
-        .where(user_table.c.id == DEMO_ID)
-        .values(
-            account_type=AccountType.demo,
-            school_id="d9772da7-1142-4002-8b86-b694b431dfed",
-        ),
-    )
-    conn.execute(
-        sa.update(
-            user_table,
-        )
-        .where(user_table.c.id == ECLAIR_ID)
-        .values(
-            account_type=AccountType.association,
-            school_id="d9772da7-1142-4002-8b86-b694b431dfed",
-        ),
-    )
 
     # ### end Alembic commands ###
 
@@ -223,13 +207,22 @@ def downgrade() -> None:
         )
         batch_op.drop_column("school_id")
 
+    conn = op.get_bind()
+
+    users = conn.execute(
+        sa.select(user_table.c.id, user_table.c.account_type),
+    ).fetchall()
+
+    visibilities = conn.execute(
+        sa.select(visibility_table.c.root, visibility_table.c.allowed_account_type),
+    ).fetchall()
+
     with op.batch_alter_table("core_user") as batch_op:
         batch_op.drop_constraint("core_user_school_id", type_="foreignkey")
         batch_op.drop_column("school_id")
         batch_op.drop_column("account_type")
 
-    with op.batch_alter_table("module_account_type_visibility") as batch_op:
-        batch_op.drop_column("allowed_account_type")
+    op.drop_table("module_account_type_visibility")
 
     sa.Enum(AccountType2, name="accounttype").drop(
         op.get_bind(),
@@ -248,73 +241,39 @@ def downgrade() -> None:
             ),
         )
 
-    with op.batch_alter_table("module_account_type_visibility") as batch_op:
-        batch_op.add_column(
-            sa.Column(
-                "allowed_account_type",
-                sa.Enum(AccountType, name="accounttype"),
-                nullable=False,
-                server_default="external",
-            ),
-        )
+    op.create_table(
+        "module_account_type_visibility",
+        sa.Column("root", sa.String(), nullable=False),
+        sa.Column(
+            "allowed_account_type",
+            sa.Enum(AccountType, name="accounttype"),
+            nullable=False,
+        ),
+        sa.PrimaryKeyConstraint("root", "allowed_account_type"),
+    )
 
     op.drop_index(op.f("ix_core_school_name"), table_name="core_school")
     op.drop_index(op.f("ix_core_school_id"), table_name="core_school")
     op.drop_table("core_school")
 
-    conn = op.get_bind()
+    for user in users:
+        conn.execute(
+            sa.update(user_table)
+            .where(user_table.c.id == user.id)
+            .values(
+                account_type=user.account_type
+                if user.account_type != AccountType2.other_school_student
+                else AccountType.external,
+            ),
+        )
 
-    conn.execute(
-        sa.update(
-            user_table,
+    for visibility in visibilities:
+        conn.execute(
+            sa.insert(visibility_table).values(
+                root=visibility.root,
+                allowed_account_type=visibility.allowed_account_type,
+            ),
         )
-        .where(
-            user_table.c.email.regexp_match(ECL_STUDENT_REGEX),
-        )
-        .values(
-            account_type=AccountType.student,
-        ),
-    )
-    conn.execute(
-        sa.update(
-            user_table,
-        )
-        .where(
-            user_table.c.email.regexp_match(ECL_FORMER_STUDENT_REGEX),
-        )
-        .values(
-            account_type=AccountType.former_student,
-        ),
-    )
-    conn.execute(
-        sa.update(
-            user_table,
-        )
-        .where(
-            user_table.c.email.regexp_match(ECL_STAFF_REGEX),
-        )
-        .values(
-            account_type=AccountType.staff,
-        ),
-    )
-    conn.execute(
-        sa.update(
-            user_table,
-        )
-        .where(user_table.c.id == DEMO_ID)
-        .values(
-            account_type=AccountType.demo,
-        ),
-    )
-    conn.execute(
-        sa.update(
-            user_table,
-        )
-        .where(user_table.c.id == ECLAIR_ID)
-        .values(
-            account_type=AccountType.association,
-        ),
-    )
     # ### end Alembic commands ###
 
 
