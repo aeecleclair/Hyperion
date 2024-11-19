@@ -98,15 +98,15 @@ def upgrade() -> None:
         )
         batch_op.alter_column(
             "account_type",
+            existing_type=sa.Enum(AccountType, name="accounttype"),
             type_=sa.Enum(AccountType2, name="accounttype2"),
-            using="account_type::accounttype2",
         )
 
     with op.batch_alter_table("module_account_type_visibility") as batch_op:
         batch_op.alter_column(
             "allowed_account_type",
+            existing_type=sa.Enum(AccountType, name="accounttype"),
             type_=sa.Enum(AccountType2, name="accounttype2"),
-            using="account_type::accounttype2",
         )
 
     sa.Enum(AccountType, name="accounttype").drop(
@@ -119,15 +119,15 @@ def upgrade() -> None:
     with op.batch_alter_table("core_user") as batch_op:
         batch_op.alter_column(
             "account_type",
+            existing_type=sa.Enum(AccountType2, name="accounttype2"),
             type_=sa.Enum(AccountType2, name="accounttype"),
-            using="account_type::accounttype",
         )
 
     with op.batch_alter_table("module_account_type_visibility") as batch_op:
         batch_op.alter_column(
             "allowed_account_type",
+            existing_type=sa.Enum(AccountType2, name="accounttype2"),
             type_=sa.Enum(AccountType2, name="accounttype"),
-            using="account_type::accounttype",
         )
 
     sa.Enum(AccountType2, name="accounttype2").drop(
@@ -190,21 +190,15 @@ def downgrade() -> None:
         batch_op.drop_column("school_id")
         batch_op.alter_column(
             "account_type",
-            type_=sa.Enum(
-                AccountType,
-                name="accounttype2",
-                using="account_type::accounttype2",
-            ),
+            existing_type=sa.Enum(AccountType2, name="accounttype"),
+            type_=sa.Enum(AccountType, name="accounttype2"),
         )
 
     with op.batch_alter_table("module_account_type_visibility") as batch_op:
         batch_op.alter_column(
             "allowed_account_type",
-            type_=sa.Enum(
-                AccountType,
-                name="accounttype2",
-                using="account_type::accounttype2",
-            ),
+            existing_type=sa.Enum(AccountType, name="accounttype2"),
+            type_=sa.Enum(AccountType, name="accounttype2"),
         )
 
     sa.Enum(AccountType2, name="accounttype").drop(
@@ -217,21 +211,15 @@ def downgrade() -> None:
     with op.batch_alter_table("core_user") as batch_op:
         batch_op.alter_column(
             "account_type",
-            type_=sa.Enum(
-                AccountType,
-                name="accounttype",
-                using="account_type::accounttype",
-            ),
+            existing_type=sa.Enum(AccountType, name="accounttype2"),
+            type_=sa.Enum(AccountType, name="accounttype"),
         )
 
     with op.batch_alter_table("module_account_type_visibility") as batch_op:
         batch_op.alter_column(
             "allowed_account_type",
-            type_=sa.Enum(
-                AccountType,
-                name="accounttype",
-                using="account_type::accounttype",
-            ),
+            existing_type=sa.Enum(AccountType, name="accounttype2"),
+            type_=sa.Enum(AccountType, name="accounttype"),
         )
 
     op.drop_index(op.f("ix_core_school_name"), table_name="core_school")
