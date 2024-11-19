@@ -7,6 +7,7 @@ from pytest_mock import MockerFixture
 
 from app.core import models_core
 from app.core.groups.groups_type import AccountType, GroupType
+from app.core.schools.schools_type import SchoolType
 from tests.commons import (
     create_api_access_token,
     create_user_with_groups,
@@ -150,6 +151,7 @@ def test_create_user_by_user_with_email(
         "/users/create",
         json={
             "email": email,
+            "school_id": SchoolType.centrale_lyon.value,
         },
     )
     assert response.status_code == expected_code
@@ -167,6 +169,7 @@ def test_create_and_activate_user(mocker: MockerFixture, client: TestClient) -> 
         "/users/create",
         json={
             "email": "new_user@etu.ec-lyon.fr",
+            "school_id": SchoolType.centrale_lyon.value,
         },
     )
     assert response.status_code == 201
@@ -220,9 +223,9 @@ def test_update_batch_create_users(client: TestClient) -> None:
     response = client.post(
         "/users/batch-creation",
         json=[
-            {"email": "1@1.fr"},
-            {"email": "2@1.fr"},
-            {"email": "3@b.fr"},
+            {"email": "1@1.fr", "school_id": SchoolType.centrale_lyon.value},
+            {"email": "2@1.fr", "school_id": SchoolType.centrale_lyon.value},
+            {"email": "3@b.fr", "school_id": SchoolType.centrale_lyon.value},
         ],
         headers={"Authorization": f"Bearer {token_admin_user}"},
     )

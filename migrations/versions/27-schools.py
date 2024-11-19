@@ -126,8 +126,19 @@ def upgrade() -> None:
     sa.Enum(AccountType, name="accounttype").drop(
         conn,
     )
-    sa.Enum(AccountType2, name="accounttype").create(
-        conn,
+
+    op.create_table(
+        "module_account_type_visibility",
+        sa.Column("root", sa.String(), nullable=False),
+        sa.Column(
+            "allowed_account_type",
+            sa.Enum(
+                AccountType2,
+                name="accounttype",
+            ),
+            nullable=False,
+        ),
+        sa.PrimaryKeyConstraint("root", "allowed_account_type"),
     )
 
     with op.batch_alter_table("core_user") as batch_op:
@@ -139,17 +150,6 @@ def upgrade() -> None:
                 server_default="external",
             ),
         )
-
-    op.create_table(
-        "module_account_type_visibility",
-        sa.Column("root", sa.String(), nullable=False),
-        sa.Column(
-            "allowed_account_type",
-            sa.Enum(AccountType2, name="accounttype"),
-            nullable=False,
-        ),
-        sa.PrimaryKeyConstraint("root", "allowed_account_type"),
-    )
 
     with op.batch_alter_table("core_user_unconfirmed") as batch_op:
         batch_op.add_column(
@@ -227,19 +227,6 @@ def downgrade() -> None:
     sa.Enum(AccountType2, name="accounttype").drop(
         op.get_bind(),
     )
-    sa.Enum(AccountType, name="accounttype").create(
-        op.get_bind(),
-    )
-
-    with op.batch_alter_table("core_user") as batch_op:
-        batch_op.add_column(
-            sa.Column(
-                "account_type",
-                sa.Enum(AccountType, name="accounttype"),
-                nullable=False,
-                server_default="external",
-            ),
-        )
 
     op.create_table(
         "module_account_type_visibility",
@@ -251,6 +238,16 @@ def downgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("root", "allowed_account_type"),
     )
+
+    with op.batch_alter_table("core_user") as batch_op:
+        batch_op.add_column(
+            sa.Column(
+                "account_type",
+                sa.Enum(AccountType, name="accounttype"),
+                nullable=False,
+                server_default="external",
+            ),
+        )
 
     op.drop_index(op.f("ix_core_school_name"), table_name="core_school")
     op.drop_index(op.f("ix_core_school_id"), table_name="core_school")
