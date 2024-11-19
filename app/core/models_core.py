@@ -72,7 +72,6 @@ class CoreUserUnconfirmed(Base):
     # for example after losing the previously received confirmation email.
     # For each user creation request, a row will be added in this table with a new token
     email: Mapped[str]
-    school_id: Mapped[str] = mapped_column(ForeignKey("core_school.id"))
     activation_token: Mapped[str]
     created_on: Mapped[datetime]
     expire_on: Mapped[datetime]

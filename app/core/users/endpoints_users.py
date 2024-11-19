@@ -284,7 +284,6 @@ async def create_user(
     user_unconfirmed = models_core.CoreUserUnconfirmed(
         id=str(uuid.uuid4()),
         email=email,
-        school_id=school_id,
         activation_token=activation_token,
         created_on=datetime.now(UTC),
         expire_on=datetime.now(UTC)
@@ -380,42 +379,51 @@ async def activate_user(
     # By default we mark the user as external
     # but if it has an ECL email address, we will mark it as member
     account_type = AccountType.external
-    if unconfirmed_user.school_id == SchoolType.centrale_lyon:
-        if re.match(ECL_STAFF_REGEX, unconfirmed_user.email):
-            # Its a staff email address
-            account_type = AccountType.staff
-        elif re.match(
-            ECL_STUDENT_REGEX,
-            unconfirmed_user.email,
-        ):
-            # Its a student email address
-            account_type = AccountType.student
-        elif re.match(
-            ECL_FORMER_STUDENT_REGEX,
-            unconfirmed_user.email,
-        ):
-            # Its a former student email address
-            account_type = AccountType.former_student
-    else:
-        school = await cruds_schools.get_school_by_id(
-            db=db,
-            school_id=unconfirmed_user.school_id,
+    if re.match(ECL_STAFF_REGEX, unconfirmed_user.email):
+        # Its a staff email address
+        account_type = AccountType.staff
+    elif re.match(
+        ECL_STUDENT_REGEX,
+        unconfirmed_user.email,
+    ):
+        # Its a student email address
+        account_type = AccountType.student
+    elif re.match(
+        ECL_FORMER_STUDENT_REGEX,
+        unconfirmed_user.email,
+    ):
+        # Its a former student email address
+        account_type = AccountType.former_student
+    if account_type == AccountType.external:
+        schools = await cruds_schools.get_schools(db=db)
+        schools = [
+            school
+            for school in schools
+            if school.id not in (SchoolType.no_school, SchoolType.centrale_lyon)
+        ]
+        school = next(
+            (
+                school
+                for school in schools
+                if re.match(school.email_regex, unconfirmed_user.email)
+            ),
+            None,
         )
-        if school is None:
-            raise HTTPException(
-                status_code=404,
-                detail="School not found",
-            )
-        if re.match(school.email_regex, unconfirmed_user.email):
+        if school is not None:
             account_type = AccountType.other_school_student
-
+            school_id = school.id
+        else:
+            account_type = AccountType.external
+            school_id = SchoolType.no_school
+    else:
+        school_id = SchoolType.centrale_lyon
     # A password should have been provided
     password_hash = security.get_password_hash(user.password)
 
     confirmed_user = models_core.CoreUser(
         id=unconfirmed_user.id,
         email=unconfirmed_user.email,
-        school_id=unconfirmed_user.school_id,
+        school_id=school_id,
         account_type=account_type,
         password_hash=password_hash,
         name=user.name,
