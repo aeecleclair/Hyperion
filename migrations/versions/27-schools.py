@@ -100,6 +100,7 @@ def upgrade() -> None:
             "account_type",
             existing_type=sa.Enum(AccountType, name="accounttype"),
             type_=sa.Enum(AccountType2, name="accounttype2"),
+            using="account_type::text::accounttype2",
         )
 
     with op.batch_alter_table("module_account_type_visibility") as batch_op:
@@ -107,6 +108,7 @@ def upgrade() -> None:
             "allowed_account_type",
             existing_type=sa.Enum(AccountType, name="accounttype"),
             type_=sa.Enum(AccountType2, name="accounttype2"),
+            using="allowed_account_type::text::accounttype2",
         )
 
     sa.Enum(AccountType, name="accounttype").drop(
@@ -121,6 +123,7 @@ def upgrade() -> None:
             "account_type",
             existing_type=sa.Enum(AccountType2, name="accounttype2"),
             type_=sa.Enum(AccountType2, name="accounttype"),
+            using="account_type::text::accounttype",
         )
 
     with op.batch_alter_table("module_account_type_visibility") as batch_op:
@@ -128,6 +131,7 @@ def upgrade() -> None:
             "allowed_account_type",
             existing_type=sa.Enum(AccountType2, name="accounttype2"),
             type_=sa.Enum(AccountType2, name="accounttype"),
+            using="allowed_account_type::text::accounttype",
         )
 
     sa.Enum(AccountType2, name="accounttype2").drop(
@@ -192,6 +196,7 @@ def downgrade() -> None:
             "account_type",
             existing_type=sa.Enum(AccountType2, name="accounttype"),
             type_=sa.Enum(AccountType, name="accounttype2"),
+            using="account_type::text::accounttype2",
         )
 
     with op.batch_alter_table("module_account_type_visibility") as batch_op:
@@ -199,6 +204,7 @@ def downgrade() -> None:
             "allowed_account_type",
             existing_type=sa.Enum(AccountType, name="accounttype2"),
             type_=sa.Enum(AccountType, name="accounttype2"),
+            using="allowed_account_type::text::accounttype2",
         )
 
     sa.Enum(AccountType2, name="accounttype").drop(
@@ -213,6 +219,7 @@ def downgrade() -> None:
             "account_type",
             existing_type=sa.Enum(AccountType, name="accounttype2"),
             type_=sa.Enum(AccountType, name="accounttype"),
+            using="account_type::text::accounttype",
         )
 
     with op.batch_alter_table("module_account_type_visibility") as batch_op:
@@ -220,6 +227,7 @@ def downgrade() -> None:
             "allowed_account_type",
             existing_type=sa.Enum(AccountType, name="accounttype2"),
             type_=sa.Enum(AccountType, name="accounttype"),
+            using="allowed_account_type::text::accounttype",
         )
 
     op.drop_index(op.f("ix_core_school_name"), table_name="core_school")
