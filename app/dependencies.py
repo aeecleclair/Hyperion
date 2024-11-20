@@ -27,7 +27,7 @@ from app.core.config import Settings, construct_prod_settings
 from app.core.groups.groups_type import AccountType, GroupType, get_ecl_account_types
 from app.core.payment.payment_tool import PaymentTool
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
-from app.types.scheduler import Scheduler
+from app.types.scheduler import DummyScheduler, Scheduler
 from app.types.scopes_type import ScopeType
 from app.types.websocket import WebsocketConnectionManager
 from app.utils.auth import auth_utils
@@ -164,10 +164,10 @@ def get_redis_client(
     return redis_client
 
 
-def get_scheduler() -> Scheduler:
+def get_scheduler(settings: Settings = Depends(get_settings)) -> Scheduler:
     global scheduler
     if scheduler is None:
-        scheduler = Scheduler()
+        scheduler = Scheduler() if settings.REDIS_HOST != "" else DummyScheduler()
     return scheduler
 
 
@@ -212,7 +212,8 @@ def get_notification_tool(
     return NotificationTool(
         background_tasks=background_tasks,
         notification_manager=notification_manager,
-        db=db)
+        db=db,
+    )
 
 
 def get_drive_file_manager() -> DriveFileManager:
