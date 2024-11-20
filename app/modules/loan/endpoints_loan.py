@@ -827,7 +827,7 @@ async def return_loan(
     loan_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
-    notification_tool: NotificationTool = Depends(get_notification_tool),
+    scheduler: Scheduler = Depends(get_scheduler),
 ):
     """
     Mark a loan as returned. This will update items availability.
@@ -872,16 +872,7 @@ async def return_loan(
         returned=True,
         returned_date=datetime.now(UTC),
     )
-    #TODO
-    # message = Message(
-    #     title="",
-    #     content="",
-    #     module="",
-    # )
-    # await notification_tool.send_notification_to_user(
-    #     user_id=loan.borrower_id,
-    #     message=message,
-    # )
+    await scheduler.cancel_job(f"loan_end_{loan.id}")
 
 
 @module.router.post(
@@ -912,7 +903,7 @@ async def extend_loan(
             status_code=400,
             detail="Invalid loan_id",
         )
-
+    end = loan.end
     # The user should be a member of the loaner's manager group
     if not is_user_member_of_an_allowed_group(user, [loan.loaner.group_manager_id]):
         raise HTTPException(
@@ -921,12 +912,14 @@ async def extend_loan(
         )
 
     if loan_extend.end is not None:
+        end = loan_extend.end
         loan_update = schemas_loan.LoanUpdate(
-            end=loan_extend.end,
+            end=end,
         )
     elif loan_extend.duration is not None:
+        end = loan.end + timedelta(seconds=loan_extend.duration)
         loan_update = schemas_loan.LoanUpdate(
-            end=loan.end + timedelta(seconds=loan_extend.duration),
+            end=end,
         )
 
     await cruds_loan.update_loan(
@@ -935,17 +928,32 @@ async def extend_loan(
         db=db,
     )
     #TODO
-    # # same context so the first notification will be removed
-    # message = Message(
-    #     title="📦 Prêt arrivé à échéance",
-    #     content=f"N'oublie pas de rendre ton prêt à l'association {loan.loaner.name} ! ",
-    #     action_module="loan",
-    # )
 
-    # await notification_tool.send_future_notification_to_users_defer_to(
-    #     user_ids=[loan.borrower_id],
-    #     message=message,
-    #     scheduler=scheduler,
-    #     defer_date=loan.end,
-    #     job_id=f"loan_end_{loan.id}",
-    # )
+    await scheduler.cancel_job(f"loan_end_{loan.id}")
+
+    message = Message(
+        title="📦 Prêt prolongé",
+        content=f"Ton prêt à l'association {loan.loaner.name} à bien été renouvellé !",
+        module="loan",
+    )
+    await notification_tool.send_notification_to_user(
+        user_id=loan.borrower_id,
+        message=message,
+    )
+
+    delivery_time = time(11, 00, 00, tzinfo=UTC)
+    delivery_datetime = datetime.combine(end, delivery_time, tzinfo=UTC)
+
+    message = Message(
+        title="📦 Prêt arrivé à échéance",
+        content=f"N'oublie pas de rendre ton prêt à l'association {loan.loaner.name} !",
+        module="loan",
+    )
+
+    await notification_tool.send_future_notification_to_users_defer_to(
+        user_ids=[loan.borrower_id],
+        message=message,
+        scheduler=scheduler,
+        defer_date=delivery_datetime,
+        job_id=f"loan_end_{loan.id}",
+    )
