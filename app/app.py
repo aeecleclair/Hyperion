@@ -365,7 +365,7 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         arq_scheduler: Scheduler = app.dependency_overrides.get(
             get_scheduler,
             get_scheduler,
-        )()
+        )(settings=settings)
 
         _get_db: Callable[[], AsyncGenerator[AsyncSession, None]] = (
             app.dependency_overrides.get(
