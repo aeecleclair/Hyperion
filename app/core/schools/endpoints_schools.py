@@ -81,7 +81,7 @@ async def create_school(
 
     **This endpoint is only usable by administrators**
     """
-    if (
+    if (  # We can't have two schools with the same name
         await cruds_schools.get_school_by_name(school_name=school.name, db=db)
         is not None
     ):
