@@ -51,7 +51,7 @@ class Scheduler:
         self,
         redis_host: str,
         redis_port: int,
-        redis_password: str,
+        redis_password: str | None,
         _get_db: Callable[[], AsyncGenerator[AsyncSession, None]],
         **kwargs,
     ):
@@ -70,7 +70,7 @@ class Scheduler:
             redis_settings = RedisSettings(
                 host=redis_host,
                 port=redis_port,
-                password=redis_password,
+                password=redis_password if redis_password is not None else "",
             )
 
         # We pass handle_signals=False to avoid arq from handling signals
@@ -98,7 +98,7 @@ class Scheduler:
         job_id: str,
         defer_seconds: float,
         **kwargs,
-    ) -> Job | None:
+    ):
         """
         Queue a job to execute job_function in defer_seconds amount of seconds
         job_id will allow to abort if needed
@@ -115,7 +115,6 @@ class Scheduler:
             **kwargs,
         )
         scheduler_logger.debug(f"Job {job_id} queued {job}")
-        return job
 
     async def queue_job_defer_to(
         self,
@@ -123,7 +122,7 @@ class Scheduler:
         job_id: str,
         defer_date: datetime,
         **kwargs,
-    ) -> Job | None:
+    ):
         """
         Queue a job to execute job_function at defer_date
         job_id will allow to abort if needed
@@ -140,7 +139,6 @@ class Scheduler:
             **kwargs,
         )
         scheduler_logger.debug(f"Job {job_id} queued {job}")
-        return job
 
     async def cancel_job(self, job_id: str):
         """
@@ -173,7 +171,7 @@ class DummyScheduler(Scheduler):
         self,
         redis_host: str,
         redis_port: int,
-        redis_password: str,
+        redis_password: str | None,
         _get_db: Callable[[], AsyncGenerator[AsyncSession, None]],
         **kwargs,
     ):
@@ -198,7 +196,7 @@ class DummyScheduler(Scheduler):
         job_id: str,
         defer_seconds: float,
         **kwargs,
-    ) -> Job | None:
+    ):
         """
         Queue a job to execute job_function in defer_seconds amount of seconds
         job_id will allow to abort if needed
@@ -213,7 +211,7 @@ class DummyScheduler(Scheduler):
         job_id: str,
         defer_date: datetime,
         **kwargs,
-    ) -> Job | None:
+    ):
         """
         Queue a job to execute job_function at defer_date
         job_id will allow to abort if needed
