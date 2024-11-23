@@ -6,7 +6,7 @@ from sqlalchemy import delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.myeclpay import models_myeclpay
+from app.core.myeclpay import models_myeclpay, schemas_myeclpay
 from app.core.myeclpay.types_myeclpay import (
     TransactionStatus,
     TransactionType,
@@ -20,6 +20,19 @@ async def create_store(
     db: AsyncSession,
 ) -> None:
     db.add(store)
+
+
+async def update_store(
+    store_id: UUID,
+    store_update: schemas_myeclpay.StoreUpdate,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        update(models_myeclpay.Store)
+        .where(models_myeclpay.Store.id == store_id)
+        .values(**store_update.model_dump(exclude_none=True)),
+    )
+    await db.commit()
 
 
 async def create_seller(

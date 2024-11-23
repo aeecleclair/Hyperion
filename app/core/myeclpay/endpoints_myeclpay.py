@@ -180,6 +180,12 @@ async def delete_store_admin_seller(
             detail="Seller does not exist",
         )
 
+    if not seller.store_admin:
+        raise HTTPException(
+            status_code=400,
+            detail="Seller is not a store admin",
+        )
+
     await cruds_myeclpay.delete_seller(
         seller_user_id=seller_user_id,
         store_id=store_id,
@@ -187,13 +193,41 @@ async def delete_store_admin_seller(
     )
 
     await db.commit()
+
+
+# Store admin #
+
+
+@router.patch(
+    "/myeclpay/stores/{store_id}",
+    status_code=204,
+)
+async def patch_store(
+    store_id: UUID,
+    store_update: schemas_myeclpay.StoreUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(is_user_an_ecl_member),
+):
+    """
+    Update a store
+
+    **The user must be a member of group Payment**
+    """
+    seller = await cruds_myeclpay.get_seller(
+        seller_user_id=user.id,
+        store_id=store_id,
+        db=db,
+    )
+
+    if seller is None:
         raise HTTPException(
-            status_code=400,
-            detail="Seller does not belong to the store",
+            status_code=403,
+            detail="You are not a seller for this store",
         )
 
-    await cruds_myeclpay.delete_seller(
-        seller_user_id=seller_user_id,
+    await cruds_myeclpay.update_store(
+        store_id=store_id,
+        store_update=store_update,
         db=db,
     )
 
