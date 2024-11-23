@@ -21,6 +21,11 @@ class Store(StoreBase):
     wallet_id: UUID
 
 
+class StoreUpdate(BaseModel):
+    name: str | None = None
+    membership: AvailableAssociationMembership | None = None
+
+
 class SellerAdminCreation(BaseModel):
     user_id: str
 
