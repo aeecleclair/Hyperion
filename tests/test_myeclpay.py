@@ -31,6 +31,9 @@ from tests.commons import (
     create_user_with_groups,
 )
 
+group_payment_user: models_core.CoreUser
+group_payment_user_token: str
+
 ecl_user: models_core.CoreUser
 ecl_user_access_token: str
 ecl_user_wallet: models_myeclpay.Wallet
@@ -62,6 +65,8 @@ used_qr_code: models_myeclpay.UsedQRCode
 
 store_seller_no_permission_user_access_token: str
 store_seller_can_bank_user_access_token: str
+store_seller_admin_user: models_core.CoreUser
+store_seller_admin_user_access_token: str
 
 unregistered_ecl_user_access_token: str
 
@@ -70,6 +75,10 @@ UNIQUE_TOKEN = "UNIQUE_TOKEN"
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
+    global group_payment_user, group_payment_user_token
+    group_payment_user = await create_user_with_groups(groups=[GroupType.payment])
+    group_payment_user_token = create_api_access_token(group_payment_user)
+
     # ecl_user
 
     global ecl_user, ecl_user_access_token
@@ -318,6 +327,24 @@ async def init_objects() -> None:
     )
     await add_object_to_db(store_seller_can_bank)
 
+    global store_seller_admin_user, store_seller_admin_user_access_token
+    store_seller_admin_user = await create_user_with_groups(
+        groups=[GroupType.student],
+    )
+    store_seller_admin_user_access_token = create_api_access_token(
+        store_seller_admin_user,
+    )
+    store_seller_admin = models_myeclpay.Seller(
+        user_id=store_seller_admin_user.id,
+        store_id=store.id,
+        can_bank=True,
+        can_see_historic=False,
+        can_cancel=False,
+        can_manage_sellers=False,
+        store_admin=True,
+    )
+    await add_object_to_db(store_seller_admin)
+
     global unregistered_ecl_user_access_token
     unregistered_ecl_user = await create_user_with_groups(
         groups=[GroupType.student],
@@ -325,13 +352,112 @@ async def init_objects() -> None:
     unregistered_ecl_user_access_token = create_api_access_token(unregistered_ecl_user)
 
 
-async def get_cgu_for_unregistred_user(client: TestClient):
+async def test_create_store(client: TestClient):
+    response = client.post(
+        "/myeclpay/stores",
+        headers={"Authorization": f"Bearer {group_payment_user_token}"},
+        json={
+            "name": "test_create_store Test Store",
+            "membership": AvailableAssociationMembership.aeecl,
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["id"] is not None
+
+
+async def test_create_store_admin(client: TestClient):
+    user = await create_user_with_groups(
+        groups=[GroupType.student],
+    )
+    response = client.post(
+        f"/myeclpay/stores/{store.id}/admins",
+        headers={"Authorization": f"Bearer {group_payment_user_token}"},
+        json={
+            "user_id": user.id,
+        },
+    )
+    assert response.status_code == 204
+
+
+async def test_get_store_admins(client: TestClient):
+    response = client.get(
+        f"/myeclpay/stores/{store.id}/admins",
+        headers={"Authorization": f"Bearer {group_payment_user_token}"},
+    )
+    assert response.status_code == 200
+    assert any(
+        user["user_id"] == store_seller_admin_user.id for user in response.json()
+    )
+
+
+async def test_delete_store_admin_seller_does_not_exist(client: TestClient):
+    response = client.delete(
+        f"/myeclpay/stores/{store.id}/admins/{uuid4()}",
+        headers={"Authorization": f"Bearer {group_payment_user_token}"},
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Seller does not exist"
+
+
+async def test_delete_store_admin_seller_is_not_admin(client: TestClient):
+    user = await create_user_with_groups(
+        groups=[GroupType.student],
+    )
+    seller = models_myeclpay.Seller(
+        user_id=user.id,
+        store_id=store.id,
+        can_bank=False,
+        can_see_historic=False,
+        can_cancel=False,
+        can_manage_sellers=False,
+        store_admin=False,
+    )
+    await add_object_to_db(seller)
+
+    response = client.delete(
+        f"/myeclpay/stores/{store.id}/admins/{user.id}",
+        headers={"Authorization": f"Bearer {group_payment_user_token}"},
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Seller is not a store admin"
+
+
+async def test_delete_store_admin_seller(client: TestClient):
+    user = await create_user_with_groups(
+        groups=[GroupType.student],
+    )
+    seller = models_myeclpay.Seller(
+        user_id=user.id,
+        store_id=store.id,
+        can_bank=False,
+        can_see_historic=False,
+        can_cancel=False,
+        can_manage_sellers=False,
+        store_admin=True,
+    )
+    await add_object_to_db(seller)
+
+    response = client.delete(
+        f"/myeclpay/stores/{store.id}/admins/{user.id}",
+        headers={"Authorization": f"Bearer {group_payment_user_token}"},
+    )
+    assert response.status_code == 204
+
+    response = client.delete(
+        f"/myeclpay/stores/{store.id}/admins/{user.id}",
+        headers={"Authorization": f"Bearer {group_payment_user_token}"},
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Seller does not exist"
+
+
+async def test_get_cgu_for_unregistered_user(client: TestClient):
     response = client.get(
         "/myeclpay/users/me/cgu",
         headers={"Authorization": f"Bearer {unregistered_ecl_user_access_token}"},
     )
     assert response.status_code == 400
-    assert response.json()["detail"] == "User is not registered for MyECL Pa"
+    assert response.json()["detail"] == "User is not registered for MyECL Pay"
 
 
 async def test_register_new_user(client: TestClient):
