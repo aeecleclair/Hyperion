@@ -115,7 +115,7 @@ class Transfer(Base):
     transfer_identifier: Mapped[str]
 
     # TODO remove if we only accept hello asso
-    approver_user_id: Mapped[str | None]
+    approver_user_id: Mapped[str | None] = mapped_column(ForeignKey("core_user.id"))
 
     wallet_id: Mapped[UUID] = mapped_column(ForeignKey("myeclpay_wallet.id"))
     total: Mapped[int]  # Stored in cents
@@ -125,7 +125,10 @@ class Transfer(Base):
 class Seller(Base):
     __tablename__ = "myeclpay_seller"
 
-    user_id: Mapped[str] = mapped_column(primary_key=True)
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("core_user.id"),
+        primary_key=True,
+    )
     store_id: Mapped[UUID] = mapped_column(
         ForeignKey("myeclpay_store.id"),
         primary_key=True,
@@ -140,7 +143,10 @@ class Seller(Base):
 class UserPayment(Base):
     __tablename__ = "myeclpay_user_payment"
 
-    user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), primary_key=True)
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("core_user.id"),
+        primary_key=True,
+    )
     wallet_id: Mapped[UUID] = mapped_column(
         ForeignKey("myeclpay_wallet.id"),
         unique=True,
