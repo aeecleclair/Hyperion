@@ -95,6 +95,16 @@ def test_search_users(client: TestClient) -> None:
     assert all(user["id"] not in account_type_users for user in data)
 
 
+def test_get_account_types(client: TestClient) -> None:
+    response = client.get(
+        "/users/accounttypes",
+        headers={"Authorization": f"Bearer {token_admin_user}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data == list(AccountType)
+
+
 def test_read_current_user(client: TestClient) -> None:
     token = create_api_access_token(student_user)
     response = client.get(

@@ -129,6 +129,22 @@ async def search_users(
 
 
 @router.get(
+    "/users/accounttypes",
+    response_model=list[AccountType],
+    status_code=200,
+)
+async def get_account_types(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+):
+    """
+    Return all account types hardcoded in the system
+    """
+
+    return list(AccountType)
+
+
+@router.get(
     "/users/me",
     response_model=schemas_core.CoreUser,
     status_code=200,
