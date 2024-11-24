@@ -129,7 +129,7 @@ async def search_users(
 
 
 @router.get(
-    "/users/accounttypes",
+    "/users/account-types",
     response_model=list[AccountType],
     status_code=200,
 )

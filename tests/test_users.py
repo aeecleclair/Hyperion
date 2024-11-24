@@ -97,7 +97,7 @@ def test_search_users(client: TestClient) -> None:
 
 def test_get_account_types(client: TestClient) -> None:
     response = client.get(
-        "/users/accounttypes",
+        "/users/account-types",
         headers={"Authorization": f"Bearer {token_admin_user}"},
     )
     assert response.status_code == 200
