@@ -385,9 +385,15 @@ async def test_get_store_admins(client: TestClient):
         headers={"Authorization": f"Bearer {group_payment_user_token}"},
     )
     assert response.status_code == 200
-    assert any(
-        user["user_id"] == store_seller_admin_user.id for user in response.json()
-    )
+
+    sellers = [
+        user
+        for user in response.json()
+        if user["user_id"] == store_seller_admin_user.id
+    ]
+    assert len(sellers) == 1
+    seller = sellers[0]
+    assert seller["user"]["id"] == store_seller_admin_user.id
 
 
 async def test_delete_store_admin_seller_does_not_exist(client: TestClient):
