@@ -35,7 +35,7 @@ class Seller(BaseModel):
     user_id: str
     store_id: UUID
     can_bank: bool
-    can_see_historic: bool
+    can_see_history: bool
     can_cancel: bool
     can_manage_sellers: bool
     store_admin: bool
