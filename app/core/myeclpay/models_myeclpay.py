@@ -139,6 +139,8 @@ class Seller(Base):
     can_manage_sellers: Mapped[bool]
     store_admin: Mapped[bool]
 
+    user: Mapped[models_core.CoreUser] = relationship(init=False)
+
 
 class UserPayment(Base):
     __tablename__ = "myeclpay_user_payment"

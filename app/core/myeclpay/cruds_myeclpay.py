@@ -62,10 +62,12 @@ async def get_admin_sellers(
     db: AsyncSession,
 ) -> Sequence[models_myeclpay.Seller]:
     result = await db.execute(
-        select(models_myeclpay.Seller).where(
+        select(models_myeclpay.Seller)
+        .where(
             models_myeclpay.Seller.store_id == store_id,
             models_myeclpay.Seller.store_admin.is_(True),
-        ),
+        )
+        .options(selectinload(models_myeclpay.Seller.user)),
     )
     return result.scalars().all()
 
