@@ -7,7 +7,7 @@ class WalletType(str, Enum):
 
 
 class WalletDeviceStatus(str, Enum):
-    UNACTIVE = "unactive"
+    INACTIVE = "inactive"
     ACTIVE = "active"
     DISABLED = "disabled"
 
