@@ -3,6 +3,7 @@ from uuid import UUID
 
 from pydantic import Base64Bytes, BaseModel
 
+from app.core import schemas_core
 from app.core.myeclpay.types_myeclpay import (
     HistoryType,
     TransactionStatus,
@@ -38,6 +39,8 @@ class Seller(BaseModel):
     can_cancel: bool
     can_manage_sellers: bool
     store_admin: bool
+
+    user: schemas_core.CoreUserSimple
 
 
 class CGUSignature(BaseModel):
