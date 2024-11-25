@@ -161,7 +161,7 @@ concurrency = [
 [tool.coverage.report]
 # Regexes for lines to exclude from consideration
 # See https://coverage.readthedocs.io/en/latest/excluding.html#excluding for more info
-exclude_also = []
+exclude_also = ["if TYPE_CHECKING:"]
 
 skip_covered = true
 show_missing = true
