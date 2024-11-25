@@ -927,7 +927,7 @@ async def extend_loan(
         loan_update=loan_update,
         db=db,
     )
-    #TODO
+    # TODO
 
     await scheduler.cancel_job(f"loan_end_{loan.id}")
 

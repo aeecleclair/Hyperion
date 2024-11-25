@@ -241,7 +241,8 @@ class NotificationManager:
 
         try:
             self._send_firebase_push_notification_by_topic(
-                custom_topic=custom_topic, message_content=message,
+                custom_topic=custom_topic,
+                message_content=message,
             )
         except Exception as error:
             hyperion_error_logger.warning(
@@ -277,10 +278,12 @@ class NotificationManager:
                 db=db,
             )
             tokens = await cruds_notification.get_firebase_tokens_by_user_ids(
-                user_ids=[user_id], db=db,
+                user_ids=[user_id],
+                db=db,
             )
             await self.subscribe_tokens_to_topic(
-                custom_topic=custom_topic, tokens=tokens,
+                custom_topic=custom_topic,
+                tokens=tokens,
             )
 
     async def unsubscribe_user_to_topic(
@@ -298,7 +301,8 @@ class NotificationManager:
             db=db,
         )
         tokens = await cruds_notification.get_firebase_tokens_by_user_ids(
-            user_ids=[user_id], db=db,
+            user_ids=[user_id],
+            db=db,
         )
         await self.unsubscribe_tokens_to_topic(custom_topic=custom_topic, tokens=tokens)
 

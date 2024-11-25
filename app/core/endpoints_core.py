@@ -25,7 +25,6 @@ router = APIRouter(tags=["Core"])
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
-
 @router.get(
     "/information",
     response_model=schemas_core.CoreInformation,
