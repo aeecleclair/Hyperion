@@ -19,7 +19,6 @@ from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from app import api
@@ -37,18 +36,16 @@ from app.dependencies import (
 )
 from app.modules.module_list import module_list
 from app.types.exceptions import ContentHTTPException, GoogleAPIInvalidCredentialsError
-from app.types.scheduler import Scheduler
-from app.types.exceptions import (
-    ContentHTTPException,
-    GoogleAPIInvalidCredentialsError,
-)
 from app.types.sqlalchemy import Base
-from app.types.websocket import WebsocketConnectionManager
 from app.utils import initialization
 from app.utils.redis import limiter
 
 if TYPE_CHECKING:
     import redis
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from app.types.scheduler import Scheduler
+    from app.types.websocket import WebsocketConnectionManager
 
 # NOTE: We can not get loggers at the top of this file like we do in other files
 # as the loggers are not yet initialized

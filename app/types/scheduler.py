@@ -2,14 +2,16 @@ import asyncio
 import logging
 from collections.abc import AsyncGenerator, Callable, Coroutine
 from datetime import datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from arq import Worker
 from arq.connections import RedisSettings
 from arq.jobs import Job
 from arq.typing import WorkerSettingsBase
 from arq.worker import create_worker
 from sqlalchemy.ext.asyncio import AsyncSession
+
+if TYPE_CHECKING:
+    from arq import Worker
 
 scheduler_logger = logging.getLogger("scheduler")
 
@@ -217,7 +219,7 @@ class DummyScheduler(Scheduler):
         job_id will allow to abort if needed
         """
         scheduler_logger.debug(
-            f"Job {job_id} queued in DummyScheduler with defer to {defer_date}"
+            f"Job {job_id} queued in DummyScheduler with defer to {defer_date}",
         )
 
     async def cancel_job(self, job_id: str):
