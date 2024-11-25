@@ -370,6 +370,8 @@ class SiarnaqAuthClient(BaseAuthClient):
 
 
 class OverleafAuthClient(BaseAuthClient):
+    allowed_groups: list[GroupType] | None = get_ecl_groups()
+
     @classmethod
     def get_userinfo(cls, user: models_core.CoreUser):
         return {
