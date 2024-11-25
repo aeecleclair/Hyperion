@@ -1,8 +1,11 @@
+import pytest
 from fastapi.testclient import TestClient
 
+from app.types.exceptions import RedisConnectionError
 from tests.commons import change_redis_client_status, settings
 
 
+@pytest.mark.xfail(raises=RedisConnectionError)
 def test_limiter(client: TestClient) -> None:
     change_redis_client_status(activated=True)
     try:
