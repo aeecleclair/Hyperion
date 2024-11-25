@@ -4,7 +4,7 @@ from collections.abc import AsyncGenerator, Callable, Coroutine
 from datetime import datetime, timedelta
 from typing import Any
 
-from arq import Worker, create_pool, cron
+from arq import Worker
 from arq.connections import RedisSettings
 from arq.jobs import Job
 from arq.typing import WorkerSettingsBase
