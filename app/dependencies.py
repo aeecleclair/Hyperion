@@ -13,8 +13,6 @@ from functools import lru_cache
 from typing import Any, cast
 
 import redis
-from arq import ArqRedis
-from arq.connections import RedisSettings
 from fastapi import BackgroundTasks, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -214,7 +212,7 @@ def get_notification_tool(
     return NotificationTool(
         background_tasks=background_tasks,
         notification_manager=notification_manager,
-        db=db,)
+        db=db)
 
 
 def get_drive_file_manager() -> DriveFileManager:
