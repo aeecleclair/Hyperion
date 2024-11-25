@@ -1,7 +1,6 @@
 import logging
 from os import path
 from pathlib import Path
-from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
@@ -26,10 +25,6 @@ router = APIRouter(tags=["Core"])
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
-async def testing_print():
-    print("Super, ça marche")
-    return 42
-
 
 @router.get(
     "/information",
@@ -43,7 +38,6 @@ async def read_information(
     """
     Return information about Hyperion. This endpoint can be used to check if the API is up.
     """
-    await scheduler.queue_job_time_defer(testing_print, str(uuid4()), 5)
 
     return schemas_core.CoreInformation(
         ready=True,

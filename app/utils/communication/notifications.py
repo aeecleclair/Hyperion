@@ -106,7 +106,7 @@ class NotificationManager:
         try:
             message = messaging.MulticastMessage(
                 tokens=tokens,
-                data={"module":message_content.action_module},
+                data={"module": message_content.action_module},
                 notification=messaging.Notification(
                     title=message_content.title,
                     body=message_content.content,
@@ -140,15 +140,15 @@ class NotificationManager:
         message = messaging.Message(
             topic=custom_topic.to_str(),
             notification=messaging.Notification(
-                    title=message_content.title,
-                    body=message_content.content,
-                ),
+                title=message_content.title,
+                body=message_content.content,
+            ),
         )
         try:
             messaging.send(message)
-        except messaging.FirebaseError as error:
+        except messaging.FirebaseError:
             hyperion_error_logger.exception(
-                f"Notification: Unable to send firebase notification for topic {custom_topic}: {error}",
+                f"Notification: Unable to send firebase notification for topic {custom_topic}",
             )
             raise
 
@@ -240,7 +240,9 @@ class NotificationManager:
             return
 
         try:
-            self._send_firebase_push_notification_by_topic(custom_topic=custom_topic, message_content=message)
+            self._send_firebase_push_notification_by_topic(
+                custom_topic=custom_topic, message_content=message,
+            )
         except Exception as error:
             hyperion_error_logger.warning(
                 f"Notification: Unable to send firebase notification for topic {custom_topic}: {error}",
@@ -274,9 +276,12 @@ class NotificationManager:
                 topic_membership=topic_membership,
                 db=db,
             )
-            tokens = await cruds_notification.get_firebase_tokens_by_user_ids(user_ids=[user_id], db=db)
-            await self.subscribe_tokens_to_topic(custom_topic=custom_topic, tokens=tokens)
-
+            tokens = await cruds_notification.get_firebase_tokens_by_user_ids(
+                user_ids=[user_id], db=db,
+            )
+            await self.subscribe_tokens_to_topic(
+                custom_topic=custom_topic, tokens=tokens,
+            )
 
     async def unsubscribe_user_to_topic(
         self,
@@ -292,8 +297,11 @@ class NotificationManager:
             user_id=user_id,
             db=db,
         )
-        tokens = await cruds_notification.get_firebase_tokens_by_user_ids(user_ids=[user_id], db=db)
+        tokens = await cruds_notification.get_firebase_tokens_by_user_ids(
+            user_ids=[user_id], db=db,
+        )
         await self.unsubscribe_tokens_to_topic(custom_topic=custom_topic, tokens=tokens)
+
 
 class NotificationTool:
     """
@@ -309,12 +317,12 @@ class NotificationTool:
         background_tasks: BackgroundTasks,
         notification_manager: NotificationManager,
         db: AsyncSession,
-        #scheduler: Scheduler,
+        # scheduler: Scheduler,
     ):
         self.background_tasks = background_tasks
         self.notification_manager = notification_manager
         self.db = db
-        #self.scheduler = scheduler
+        # self.scheduler = scheduler
 
     async def send_notification_to_users(self, user_ids: list[str], message: Message):
         self.background_tasks.add_task(
@@ -325,15 +333,15 @@ class NotificationTool:
         )
 
     async def send_future_notification_to_users_time_defer(
-            self,
-            user_ids: list[str],
-            message: Message,
-            scheduler: Scheduler,
-            defer_seconds:float,
-            job_id:str,
-        ):
-
-        await scheduler.queue_job_time_defer(self.notification_manager.send_notification_to_users,
+        self,
+        user_ids: list[str],
+        message: Message,
+        scheduler: Scheduler,
+        defer_seconds: float,
+        job_id: str,
+    ):
+        await scheduler.queue_job_time_defer(
+            self.notification_manager.send_notification_to_users,
             user_ids=user_ids,
             message=message,
             db=None,
@@ -342,23 +350,21 @@ class NotificationTool:
         )
 
     async def send_future_notification_to_users_defer_to(
-            self,
-            user_ids: list[str],
-            message: Message,
-            scheduler: Scheduler,
-            defer_date:datetime,
-            job_id:str,
-        ):
-
-        await scheduler.queue_job_defer_to(self.notification_manager.send_notification_to_users,
+        self,
+        user_ids: list[str],
+        message: Message,
+        scheduler: Scheduler,
+        defer_date: datetime,
+        job_id: str,
+    ):
+        await scheduler.queue_job_defer_to(
+            self.notification_manager.send_notification_to_users,
             user_ids=user_ids,
             message=message,
             db=None,
             job_id=job_id,
             defer_date=defer_date,
         )
-
-
 
     async def send_notification_to_user(
         self,
@@ -387,11 +393,11 @@ class NotificationTool:
         custom_topic: CustomTopic,
         message: Message,
         scheduler: Scheduler,
-        defer_date:datetime,
-        job_id:str,
+        defer_date: datetime,
+        job_id: str,
     ):
-
-        await scheduler.queue_job_defer_to(self.notification_manager.send_notification_to_topic,
+        await scheduler.queue_job_defer_to(
+            self.notification_manager.send_notification_to_topic,
             custom_topic=custom_topic,
             message=message,
             db=None,
@@ -404,11 +410,11 @@ class NotificationTool:
         custom_topic: CustomTopic,
         message: Message,
         scheduler: Scheduler,
-        defer_seconds:float,
-        job_id:str,
+        defer_seconds: float,
+        job_id: str,
     ):
-
-        await scheduler.queue_job_time_defer(self.notification_manager.send_notification_to_topic,
+        await scheduler.queue_job_time_defer(
+            self.notification_manager.send_notification_to_topic,
             custom_topic=custom_topic,
             message=message,
             db=None,
