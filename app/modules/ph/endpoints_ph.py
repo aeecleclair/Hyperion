@@ -107,7 +107,7 @@ async def create_paper(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_in(GroupType.ph)),
     notification_tool: NotificationTool = Depends(get_notification_tool),
-    scheduler:Scheduler = Depends(get_scheduler),
+    scheduler: Scheduler = Depends(get_scheduler),
 ):
     """Create a new paper."""
 
@@ -136,7 +136,7 @@ async def create_paper(
                     custom_topic=CustomTopic(topic=Topic.ph),
                     message=message,
                 )
-            else :
+            else:
                 delivery_time = time(11, 00, 00, tzinfo=UTC)
                 release_date = datetime.combine(paper_db.release_date, delivery_time)
                 await notification_tool.send_future_notification_to_topic_defer_to(

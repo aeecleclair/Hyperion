@@ -122,7 +122,7 @@ async def create_session(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_in(GroupType.cinema)),
     notification_tool: NotificationTool = Depends(get_notification_tool),
-    scheduler:Scheduler = Depends(get_scheduler),
+    scheduler: Scheduler = Depends(get_scheduler),
 ):
     db_session = schemas_cinema.CineSessionComplete(
         id=str(uuid.uuid4()),

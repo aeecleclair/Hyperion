@@ -232,12 +232,12 @@ async def send_notification(
         title="Test notification",
         content="Ceci est un test de notification",
         action_module="test",
-
     )
     await notification_tool.send_notification_to_user(
         user_id=user.id,
         message=message,
     )
+
 
 @router.post(
     "/notification/send/topic",
@@ -258,9 +258,10 @@ async def send_notification_topic(
         action_module="test",
     )
     await notification_tool.send_notification_to_topic(
-       custom_topic=CustomTopic.from_str("test"),
+        custom_topic=CustomTopic.from_str("test"),
         message=message,
     )
+
 
 @router.post(
     "/notification/send/topic",
@@ -289,6 +290,7 @@ async def send_notification_topic(
         scheduler=scheduler,
     )
 
+
 @router.post(
     "/notification/send/topic/future",
     status_code=201,
@@ -309,12 +311,13 @@ async def send_future_notification_topic(
         action_module="test",
     )
     await notification_tool.send_future_notification_to_topic_time_defer(
-       custom_topic=CustomTopic.from_str("test"),
+        custom_topic=CustomTopic.from_str("test"),
         message=message,
         defer_seconds=10,
         job_id="test26",
         scheduler=scheduler,
     )
+
 
 @router.get(
     "/notification/devices",
