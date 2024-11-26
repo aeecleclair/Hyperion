@@ -134,7 +134,7 @@ class Seller(Base):
         primary_key=True,
     )
     can_bank: Mapped[bool]
-    can_see_historic: Mapped[bool]
+    can_see_history: Mapped[bool]
     can_cancel: Mapped[bool]
     can_manage_sellers: Mapped[bool]
     store_admin: Mapped[bool]
