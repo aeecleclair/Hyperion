@@ -98,7 +98,7 @@ class Scheduler:
         self,
         job_function: Callable[..., Coroutine[Any, Any, Any]],
         job_id: str,
-        defer_seconds: float,
+        defer_seconds: int,
         **kwargs,
     ):
         """
