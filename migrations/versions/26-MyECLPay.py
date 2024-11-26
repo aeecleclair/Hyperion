@@ -41,7 +41,7 @@ class TransferType(str, Enum):
 
 
 class WalletDeviceStatus(str, Enum):
-    UNACTIVE = "unactive"
+    INACTIVE = "inactive"
     ACTIVE = "active"
     DISABLED = "disabled"
 
@@ -154,7 +154,7 @@ def upgrade() -> None:
         sa.Column("user_id", sa.String(), nullable=False),
         sa.Column("store_id", sa.Uuid(), nullable=False),
         sa.Column("can_bank", sa.Boolean(), nullable=False),
-        sa.Column("can_see_historic", sa.Boolean(), nullable=False),
+        sa.Column("can_see_history", sa.Boolean(), nullable=False),
         sa.Column("can_cancel", sa.Boolean(), nullable=False),
         sa.Column("can_manage_sellers", sa.Boolean(), nullable=False),
         sa.Column("store_admin", sa.Boolean(), nullable=False),
