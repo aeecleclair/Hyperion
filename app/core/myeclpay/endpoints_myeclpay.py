@@ -109,7 +109,7 @@ async def create_store_admin_seller(
 
     This admin will have permissions:
     - can_bank
-    - can_see_historic
+    - can_see_history
     - can_cancel
     - can_manage_sellers
     - store_admin
@@ -120,7 +120,7 @@ async def create_store_admin_seller(
         user_id=seller.user_id,
         store_id=store_id,
         can_bank=True,
-        can_see_historic=True,
+        can_see_history=True,
         can_cancel=True,
         can_manage_sellers=True,
         store_admin=True,
@@ -498,7 +498,7 @@ async def create_user_devices(
         wallet_id=user_payment.wallet_id,
         ed25519_public_key=wallet_device_creation.ed25519_public_key,
         creation=datetime.now(UTC),
-        status=WalletDeviceStatus.UNACTIVE,
+        status=WalletDeviceStatus.INACTIVE,
         activation_token=activation_token,
     )
 
@@ -552,7 +552,7 @@ async def activate_user_device(
             detail="Invalid token",
         )
 
-    if wallet_device.status != WalletDeviceStatus.UNACTIVE:
+    if wallet_device.status != WalletDeviceStatus.INACTIVE:
         raise HTTPException(
             status_code=400,
             detail="Wallet device is already activated or revoked",
@@ -925,4 +925,4 @@ async def store_scan_qrcode(
         message=message,
     )
 
-    # TODO: check is the device is revoked or unactive
+    # TODO: check is the device is revoked or inactive
