@@ -268,7 +268,7 @@ async def create_advert(
     message = Message(
         title=f"📣 Annonce - {result.title}",
         content=result.content,
-        action_module="advert",
+        action_module=module.root,
     )
 
     await notification_tool.send_notification_to_topic(
