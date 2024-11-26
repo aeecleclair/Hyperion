@@ -40,7 +40,7 @@ ecl_user_wallet: models_myeclpay.Wallet
 ecl_user_wallet_device_private_key: Ed25519PrivateKey
 ecl_user_wallet_device_public_key: Ed25519PublicKey
 ecl_user_wallet_device: models_myeclpay.WalletDevice
-ecl_user_wallet_device_unactive: models_myeclpay.WalletDevice
+ecl_user_wallet_device_inactive: models_myeclpay.WalletDevice
 ecl_user_payment: models_myeclpay.UserPayment
 ecl_user_transfer: models_myeclpay.Transfer
 
@@ -108,7 +108,7 @@ async def init_objects() -> None:
         ecl_user_wallet_device, \
         ecl_user_wallet_device_private_key, \
         ecl_user_wallet_device_public_key, \
-        ecl_user_wallet_device_unactive
+        ecl_user_wallet_device_inactive
     ecl_user_wallet_device_private_key = Ed25519PrivateKey.generate()
     ecl_user_wallet_device_public_key = ecl_user_wallet_device_private_key.public_key()
     ecl_user_wallet_device = models_myeclpay.WalletDevice(
@@ -124,16 +124,16 @@ async def init_objects() -> None:
         activation_token="activation_token_ecl_user_wallet_device",
     )
     await add_object_to_db(ecl_user_wallet_device)
-    ecl_user_wallet_device_unactive = models_myeclpay.WalletDevice(
+    ecl_user_wallet_device_inactive = models_myeclpay.WalletDevice(
         id=uuid4(),
-        name="Test device unactive",
+        name="Test device inactive",
         wallet_id=ecl_user_wallet.id,
         ed25519_public_key=b"key",
         creation=datetime.now(UTC),
-        status=WalletDeviceStatus.UNACTIVE,
-        activation_token="activation_token_ecl_user_wallet_device_unactive",
+        status=WalletDeviceStatus.INACTIVE,
+        activation_token="activation_token_ecl_user_wallet_device_inactive",
     )
-    await add_object_to_db(ecl_user_wallet_device_unactive)
+    await add_object_to_db(ecl_user_wallet_device_inactive)
 
     # ecl_user2
     global ecl_user2, ecl_user2_access_token
@@ -302,7 +302,7 @@ async def init_objects() -> None:
         user_id=store_seller_no_permission_user.id,
         store_id=store.id,
         can_bank=False,
-        can_see_historic=False,
+        can_see_history=False,
         can_cancel=False,
         can_manage_sellers=False,
         store_admin=False,
@@ -320,7 +320,7 @@ async def init_objects() -> None:
         user_id=store_seller_can_bank_user.id,
         store_id=store.id,
         can_bank=True,
-        can_see_historic=False,
+        can_see_history=False,
         can_cancel=False,
         can_manage_sellers=False,
         store_admin=False,
@@ -338,7 +338,7 @@ async def init_objects() -> None:
         user_id=store_seller_admin_user.id,
         store_id=store.id,
         can_bank=True,
-        can_see_historic=False,
+        can_see_history=False,
         can_cancel=False,
         can_manage_sellers=False,
         store_admin=True,
@@ -413,7 +413,7 @@ async def test_delete_store_admin_seller_is_not_admin(client: TestClient):
         user_id=user.id,
         store_id=store.id,
         can_bank=False,
-        can_see_historic=False,
+        can_see_history=False,
         can_cancel=False,
         can_manage_sellers=False,
         store_admin=False,
@@ -436,7 +436,7 @@ async def test_delete_store_admin_seller(client: TestClient):
         user_id=user.id,
         store_id=store.id,
         can_bank=False,
-        can_see_historic=False,
+        can_see_history=False,
         can_cancel=False,
         can_manage_sellers=False,
         store_admin=True,
@@ -849,7 +849,7 @@ def test_store_scan_store_non_active_wallet_device_id(client: TestClient):
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={
             "qr_code_id": qr_code_id,
-            "walled_device_id": str(ecl_user_wallet_device_unactive.id),
+            "walled_device_id": str(ecl_user_wallet_device_inactive.id),
             "total": 100,
             "creation": datetime.now(UTC).isoformat(),
             "store": True,
