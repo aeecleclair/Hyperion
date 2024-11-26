@@ -72,7 +72,7 @@ class Scheduler:
             redis_settings = RedisSettings(
                 host=redis_host,
                 port=redis_port,
-                password=redis_password if redis_password is not None else "",
+                password=redis_password or "",
             )
 
         # We pass handle_signals=False to avoid arq from handling signals
