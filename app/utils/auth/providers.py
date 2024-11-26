@@ -147,9 +147,8 @@ class NextcloudAuthClient(BaseAuthClient):
                 nickname=user.nickname,
             ),
             # TODO: should we use group ids instead of names? It would be less human readable but would guarantee uniqueness. Question: are group names unique?
-            "groups": [
-                group.name for group in user.groups
-            ],  # We may want to filter which groups are provided as they won't always all be useful
+            # We may want to filter which groups are provided as they won't always all be useful
+            "groups": [group.name for group in user.groups] + [user.account_type.value],
             "email": user.email,
             "picture": f"https://hyperion.myecl.fr/users/{user.id}/profile-picture",
             "is_admin": is_user_member_of_an_allowed_group(user, [GroupType.admin]),
@@ -183,7 +182,7 @@ class PiwigoAuthClient(BaseAuthClient):
                 name=user.name,
                 nickname=user.nickname,
             ),
-            "groups": [group.name for group in user.groups],
+            "groups": [group.name for group in user.groups] + [user.account_type.value],
             "email": user.email,
         }
 
@@ -223,7 +222,7 @@ class WikijsAuthClient(BaseAuthClient):
                 nickname=user.nickname,
             ),
             "email": user.email,
-            "groups": [group.name for group in user.groups],
+            "groups": [group.name for group in user.groups] + [user.account_type.value],
         }
 
 
