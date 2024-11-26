@@ -202,7 +202,7 @@ async def delete_store_admin_seller(
     "/myeclpay/stores/{store_id}",
     status_code=204,
 )
-async def patch_store(
+async def update_store(
     store_id: UUID,
     store_update: schemas_myeclpay.StoreUpdate,
     db: AsyncSession = Depends(get_db),
@@ -219,10 +219,10 @@ async def patch_store(
         db=db,
     )
 
-    if seller is None:
+    if seller is None or not seller.store_admin:
         raise HTTPException(
             status_code=403,
-            detail="You are not a seller for this store",
+            detail="User is not a store admin seller for this store",
         )
 
     await cruds_myeclpay.update_store(

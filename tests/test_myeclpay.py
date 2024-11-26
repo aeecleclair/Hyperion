@@ -457,6 +457,35 @@ async def test_delete_store_admin_seller(client: TestClient):
     assert response.json()["detail"] == "Seller does not exist"
 
 
+async def test_update_store_non_store_admin(client: TestClient):
+    response = client.patch(
+        f"/myeclpay/stores/{store.id}",
+        headers={
+            "Authorization": f"Bearer {store_seller_no_permission_user_access_token}"
+        },
+        json={
+            "name": "new name",
+            "membership": AvailableAssociationMembership.aeecl,
+        },
+    )
+    assert response.status_code == 403
+    assert (
+        response.json()["detail"] == "User is not a store admin seller for this store"
+    )
+
+
+async def test_update_store(client: TestClient):
+    response = client.patch(
+        f"/myeclpay/stores/{store.id}",
+        headers={"Authorization": f"Bearer {store_seller_admin_user_access_token}"},
+        json={
+            "name": "Test Store",
+            "membership": AvailableAssociationMembership.aeecl,
+        },
+    )
+    assert response.status_code == 204
+
+
 async def test_get_cgu_for_unregistered_user(client: TestClient):
     response = client.get(
         "/myeclpay/users/me/cgu",
