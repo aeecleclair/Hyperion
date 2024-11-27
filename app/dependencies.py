@@ -404,7 +404,7 @@ def is_user_a_member_of(
 
     async def is_user_a_member_of_with_external(
         user: models_core.CoreUser = Depends(
-            is_user,
+            is_user(),
         ),
         request_id: str = Depends(get_request_id),
     ) -> models_core.CoreUser:
