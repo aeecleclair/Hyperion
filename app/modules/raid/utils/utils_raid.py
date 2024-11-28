@@ -12,8 +12,8 @@ from app.core.google_api.google_api import DriveGoogleAPI
 from app.core.payment import schemas_payment
 from app.modules.raid import coredata_raid, cruds_raid, models_raid, schemas_raid
 from app.modules.raid.schemas_raid import (
-    ParticipantBase,
-    ParticipantUpdate,
+    RaidParticipantBase,
+    RaidParticipantUpdate,
 )
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.modules.raid.utils.pdf.pdf_writer import HTMLPDFWriter, PDFWriter
@@ -30,7 +30,9 @@ class RaidPayementError(ValueError):
 
 
 def will_participant_be_minor_on(
-    participant: ParticipantUpdate | models_raid.Participant | ParticipantBase,
+    participant: RaidParticipantUpdate
+    | models_raid.RaidParticipant
+    | RaidParticipantBase,
     raid_start_date: date | None,
 ) -> bool:
     """
@@ -213,7 +215,7 @@ async def post_update_actions(
 
 
 async def save_security_file(
-    participant: models_raid.Participant,
+    participant: models_raid.RaidParticipant,
     information: coredata_raid.RaidInformation,
     team_number: int | None,
     db: AsyncSession,
@@ -264,8 +266,8 @@ async def save_security_file(
 async def get_participant(
     participant_id: str,
     db: AsyncSession,
-) -> models_raid.Participant:
+) -> models_raid.RaidParticipant:
     participant = await cruds_raid.get_participant_by_id(participant_id, db)
     if not participant:
-        raise HTTPException(status_code=404, detail="Participant not found.")
+        raise HTTPException(status_code=404, detail="RaidParticipant not found.")
     return participant

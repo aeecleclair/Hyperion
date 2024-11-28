@@ -10,7 +10,7 @@ from PIL import Image
 from app.core import models_core
 from app.core.groups.groups_type import AccountType, GroupType
 from app.modules.raid import coredata_raid, models_raid
-from app.modules.raid.models_raid import Document, Participant, SecurityFile, Team
+from app.modules.raid.models_raid import Document, RaidParticipant, SecurityFile, Team
 from app.modules.raid.raid_type import DocumentType, DocumentValidation, Size
 from app.modules.raid.utils.pdf.pdf_writer import (
     HTMLPDFWriter,
@@ -23,7 +23,7 @@ from tests.commons import (
     create_user_with_groups,
 )
 
-participant: models_raid.Participant
+participant: models_raid.RaidParticipant
 
 team: models_raid.Team
 
@@ -78,7 +78,7 @@ async def init_objects() -> None:
     await add_object_to_db(document)
 
     global participant
-    participant = models_raid.Participant(
+    participant = models_raid.RaidParticipant(
         id=simple_user.id,
         firstname="TestFirstname",
         name="TestName",
@@ -99,7 +99,7 @@ async def init_objects() -> None:
     )
     await add_object_to_db(team)
 
-    no_team_participant = models_raid.Participant(
+    no_team_participant = models_raid.RaidParticipant(
         id=simple_user_without_team.id,
         firstname="NoTeam",
         name="NoTeam",
@@ -122,7 +122,7 @@ def test_get_participant_by_id(client: TestClient):
 def test_create_participant(client: TestClient):
     participant_data = {
         "firstname": "New",
-        "name": "Participant",
+        "name": "RaidParticipant",
         "birthday": "2000-01-01",
         "phone": "0123456789",
         "email": "new@participant.com",
@@ -333,7 +333,7 @@ def test_read_document_participant_not_found(client: TestClient):
         headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response.status_code == 404
-    assert response.json()["detail"] == "Participant owning the document not found."
+    assert response.json()["detail"] == "RaidParticipant owning the document not found."
 
 
 # requires a document to be added
@@ -696,7 +696,7 @@ def mock_team():
         name="Test Team",
         number=1,
         captain=Mock(
-            spec=Participant,
+            spec=RaidParticipant,
             name="Doe",
             firstname="John",
             birthday=datetime.datetime(1990, 1, 1, tzinfo=datetime.UTC),
@@ -736,7 +736,7 @@ def mock_security_file():
 @pytest.fixture
 def mock_participant():
     return Mock(
-        spec=Participant,
+        spec=RaidParticipant,
         name="Doe",
         firstname="John",
         birthday=datetime.datetime(1990, 1, 1, tzinfo=datetime.UTC),

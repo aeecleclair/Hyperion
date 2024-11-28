@@ -11,9 +11,9 @@ from app.modules.raid.raid_type import Difficulty, DocumentValidation
 
 
 async def create_participant(
-    participant: models_raid.Participant,
+    participant: models_raid.RaidParticipant,
     db: AsyncSession,
-) -> models_raid.Participant:
+) -> models_raid.RaidParticipant:
     db.add(participant)
     try:
         await db.commit()
@@ -26,10 +26,10 @@ async def create_participant(
 
 async def get_all_participants(
     db: AsyncSession,
-) -> Sequence[models_raid.Participant]:
+) -> Sequence[models_raid.RaidParticipant]:
     participants = await db.execute(
-        select(models_raid.Participant).options(
-            # Since there is nested classes in the Participant model, we need to load all the related data
+        select(models_raid.RaidParticipant).options(
+            # Since there is nested classes in the RaidParticipant model, we need to load all the related data
             selectinload("*"),
         ),
     )
@@ -38,13 +38,13 @@ async def get_all_participants(
 
 async def update_participant(
     participant_id: str,
-    participant: schemas_raid.ParticipantUpdate,
+    participant: schemas_raid.RaidParticipantUpdate,
     is_minor: bool | None,
     db: AsyncSession,
 ) -> None:
     query = (
-        update(models_raid.Participant)
-        .where(models_raid.Participant.id == participant_id)
+        update(models_raid.RaidParticipant)
+        .where(models_raid.RaidParticipant.id == participant_id)
         .values(**participant.model_dump(exclude_none=True))
     )
 
@@ -60,8 +60,8 @@ async def update_participant_minority(
     db: AsyncSession,
 ) -> None:
     await db.execute(
-        update(models_raid.Participant)
-        .where(models_raid.Participant.id == participant_id)
+        update(models_raid.RaidParticipant)
+        .where(models_raid.RaidParticipant.id == participant_id)
         .values(is_minor=is_minor),
     )
     await db.commit()
@@ -72,7 +72,9 @@ async def is_user_a_participant(
     db: AsyncSession,
 ) -> bool:
     participant = await db.execute(
-        select(models_raid.Participant).where(models_raid.Participant.id == user_id),
+        select(models_raid.RaidParticipant).where(
+            models_raid.RaidParticipant.id == user_id
+        ),
     )
     return bool(participant.scalars().first())
 
@@ -195,8 +197,8 @@ async def delete_participant(
     db: AsyncSession,
 ) -> None:
     await db.execute(
-        delete(models_raid.Participant).where(
-            models_raid.Participant.id == participant_id,
+        delete(models_raid.RaidParticipant).where(
+            models_raid.RaidParticipant.id == participant_id,
         ),
     )
     await db.commit()
@@ -288,8 +290,8 @@ async def assign_security_file(
     db: AsyncSession,
 ) -> None:
     await db.execute(
-        update(models_raid.Participant)
-        .where(models_raid.Participant.id == participant_id)
+        update(models_raid.RaidParticipant)
+        .where(models_raid.RaidParticipant.id == participant_id)
         .values(security_file_id=security_file_id),
     )
     await db.commit()
@@ -317,8 +319,8 @@ async def assign_document(
     db: AsyncSession,
 ) -> None:
     await db.execute(
-        update(models_raid.Participant)
-        .where(models_raid.Participant.id == participant_id)
+        update(models_raid.RaidParticipant)
+        .where(models_raid.RaidParticipant.id == participant_id)
         .values({document_key: document_id}),
     )
     await db.commit()
@@ -350,14 +352,14 @@ async def get_document_by_id(
 async def get_user_by_document_id(
     document_id: str,
     db: AsyncSession,
-) -> models_raid.Participant | None:
+) -> models_raid.RaidParticipant | None:
     document = await db.execute(
-        select(models_raid.Participant).where(
+        select(models_raid.RaidParticipant).where(
             or_(
-                models_raid.Participant.id_card_id == document_id,
-                models_raid.Participant.medical_certificate_id == document_id,
-                models_raid.Participant.student_card_id == document_id,
-                models_raid.Participant.raid_rules_id == document_id,
+                models_raid.RaidParticipant.id_card_id == document_id,
+                models_raid.RaidParticipant.medical_certificate_id == document_id,
+                models_raid.RaidParticipant.student_card_id == document_id,
+                models_raid.RaidParticipant.raid_rules_id == document_id,
             ),
         ),
     )
@@ -409,8 +411,8 @@ async def confirm_payment(
     db: AsyncSession,
 ) -> None:
     await db.execute(
-        update(models_raid.Participant)
-        .where(models_raid.Participant.id == participant_id)
+        update(models_raid.RaidParticipant)
+        .where(models_raid.RaidParticipant.id == participant_id)
         .values(payment=True),
     )
     await db.commit()
@@ -421,8 +423,8 @@ async def confirm_t_shirt_payment(
     db: AsyncSession,
 ) -> None:
     await db.execute(
-        update(models_raid.Participant)
-        .where(models_raid.Participant.id == participant_id)
+        update(models_raid.RaidParticipant)
+        .where(models_raid.RaidParticipant.id == participant_id)
         .values(t_shirt_payment=True),
     )
     await db.commit()
@@ -433,8 +435,8 @@ async def validate_attestation_on_honour(
     db: AsyncSession,
 ) -> None:
     await db.execute(
-        update(models_raid.Participant)
-        .where(models_raid.Participant.id == participant_id)
+        update(models_raid.RaidParticipant)
+        .where(models_raid.RaidParticipant.id == participant_id)
         .values(attestation_on_honour=True),
     )
     await db.commit()
@@ -443,10 +445,10 @@ async def validate_attestation_on_honour(
 async def get_participant_by_id(
     participant_id: str,
     db: AsyncSession,
-) -> models_raid.Participant | None:
+) -> models_raid.RaidParticipant | None:
     participant = await db.execute(
-        select(models_raid.Participant)
-        .where(models_raid.Participant.id == participant_id)
+        select(models_raid.RaidParticipant)
+        .where(models_raid.RaidParticipant.id == participant_id)
         .options(
             selectinload("*"),
         ),
@@ -572,9 +574,9 @@ async def get_number_of_team_by_difficulty(
 
 
 async def create_participant_checkout(
-    checkout: models_raid.ParticipantCheckout,
+    checkout: models_raid.RaidParticipantCheckout,
     db: AsyncSession,
-) -> models_raid.ParticipantCheckout:
+) -> models_raid.RaidParticipantCheckout:
     db.add(checkout)
     try:
         await db.commit()
@@ -589,10 +591,10 @@ async def get_participant_checkout_by_checkout_id(
     # TODO: use UUID
     checkout_id: str,
     db: AsyncSession,
-) -> models_raid.ParticipantCheckout | None:
+) -> models_raid.RaidParticipantCheckout | None:
     checkout = await db.execute(
-        select(models_raid.ParticipantCheckout).where(
-            models_raid.ParticipantCheckout.checkout_id == checkout_id,
+        select(models_raid.RaidParticipantCheckout).where(
+            models_raid.RaidParticipantCheckout.checkout_id == checkout_id,
         ),
     )
     return checkout.scalars().first()

@@ -54,7 +54,7 @@ module = Module(
 
 @module.router.get(
     "/raid/participants/{participant_id}",
-    response_model=schemas_raid.Participant,
+    response_model=schemas_raid.RaidParticipant,
     status_code=200,
 )
 async def get_participant_by_id(
@@ -80,11 +80,11 @@ async def get_participant_by_id(
 
 @module.router.post(
     "/raid/participants",
-    response_model=schemas_raid.Participant,
+    response_model=schemas_raid.RaidParticipant,
     status_code=201,
 )
 async def create_participant(
-    participant: schemas_raid.ParticipantBase,
+    participant: schemas_raid.RaidParticipantBase,
     user: models_core.CoreUser = Depends(is_user()),
     db: AsyncSession = Depends(get_db),
 ):
@@ -104,7 +104,7 @@ async def create_participant(
         raid_start_date=raid_information.raid_start_date,
     )
 
-    db_participant = models_raid.Participant(
+    db_participant = models_raid.RaidParticipant(
         **participant.__dict__,
         id=user.id,
         is_minor=is_minor,
@@ -118,7 +118,7 @@ async def create_participant(
 )
 async def update_participant(
     participant_id: str,
-    participant: schemas_raid.ParticipantUpdate,
+    participant: schemas_raid.RaidParticipantUpdate,
     user: models_core.CoreUser = Depends(is_user()),
     db: AsyncSession = Depends(get_db),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
@@ -513,7 +513,7 @@ async def read_document(
             )
         raise HTTPException(
             status_code=404,
-            detail="Participant owning the document not found.",
+            detail="RaidParticipant owning the document not found.",
         )
 
     if not await cruds_raid.are_user_in_the_same_team(
@@ -839,7 +839,7 @@ async def kick_team_member(
             db,
         )
     elif team.second_id != participant_id:
-        raise HTTPException(status_code=404, detail="Participant not found.")
+        raise HTTPException(status_code=404, detail="RaidParticipant not found.")
     await cruds_raid.update_team_second_id(team_id, None, db)
     await post_update_actions(
         team,
@@ -1100,7 +1100,7 @@ async def get_payment_url(
     )
     hyperion_error_logger.info(f"RAID: Logging Checkout id {checkout.id}")
     await cruds_raid.create_participant_checkout(
-        models_raid.ParticipantCheckout(
+        models_raid.RaidParticipantCheckout(
             id=str(uuid.uuid4()),
             participant_id=user.id,
             # TODO: use UUID

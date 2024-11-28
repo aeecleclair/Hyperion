@@ -45,7 +45,7 @@ class SecurityFile(Base):
     surgical_operation: Mapped[str | None]
     trauma: Mapped[str | None]
     family: Mapped[str | None]
-    participant: Mapped["Participant"] = relationship(
+    participant: Mapped["RaidParticipant"] = relationship(
         back_populates="security_file",
         init=False,
     )
@@ -70,7 +70,7 @@ class SecurityFile(Base):
         return DocumentValidation.temporary
 
 
-class Participant(Base):
+class RaidParticipant(Base):
     __tablename__ = "raid_participant"
     id: Mapped[str] = mapped_column(
         primary_key=True,
@@ -261,13 +261,13 @@ class Team(Base):
         default=None,
     )
     number: Mapped[int | None] = mapped_column(default=None)
-    captain: Mapped[Participant] = relationship(
-        "Participant",
+    captain: Mapped[RaidParticipant] = relationship(
+        "RaidParticipant",
         foreign_keys=[captain_id],
         init=False,
     )
-    second: Mapped[Participant] = relationship(
-        "Participant",
+    second: Mapped[RaidParticipant] = relationship(
+        "RaidParticipant",
         foreign_keys=[second_id],
         init=False,
     )
@@ -298,7 +298,7 @@ class InviteToken(Base):
     token: Mapped[str]
 
 
-class ParticipantCheckout(Base):
+class RaidParticipantCheckout(Base):
     __tablename__ = "raid_participant_checkout"
     id: Mapped[str] = mapped_column(
         primary_key=True,
