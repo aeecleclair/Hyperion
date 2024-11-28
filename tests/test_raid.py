@@ -10,7 +10,12 @@ from PIL import Image
 from app.core import models_core
 from app.core.groups.groups_type import AccountType, GroupType
 from app.modules.raid import coredata_raid, models_raid
-from app.modules.raid.models_raid import Document, RaidParticipant, SecurityFile, Team
+from app.modules.raid.models_raid import (
+    Document,
+    RaidParticipant,
+    RaidTeam,
+    SecurityFile,
+)
 from app.modules.raid.raid_type import DocumentType, DocumentValidation, Size
 from app.modules.raid.utils.pdf.pdf_writer import (
     HTMLPDFWriter,
@@ -25,7 +30,7 @@ from tests.commons import (
 
 participant: models_raid.RaidParticipant
 
-team: models_raid.Team
+team: models_raid.RaidTeam
 
 raid_admin_user: models_core.CoreUser
 simple_user: models_core.CoreUser
@@ -91,9 +96,9 @@ async def init_objects() -> None:
     await add_object_to_db(participant)
 
     global team
-    team = models_raid.Team(
+    team = models_raid.RaidTeam(
         id=str(uuid.uuid4()),
-        name="TestTeam",
+        name="TestRaidTeam",
         captain_id=simple_user.id,
         difficulty=None,
     )
@@ -101,8 +106,8 @@ async def init_objects() -> None:
 
     no_team_participant = models_raid.RaidParticipant(
         id=simple_user_without_team.id,
-        firstname="NoTeam",
-        name="NoTeam",
+        firstname="NoRaidTeam",
+        name="NoRaidTeam",
         birthday=datetime.date(2001, 1, 1),
         phone="0606060606",
         email="test@no_team.fr",
@@ -235,14 +240,14 @@ def test_update_participant_invalid_security_file_id(client: TestClient):
 
 
 def test_create_team(client: TestClient):
-    team_data = {"name": "New Team"}
+    team_data = {"name": "New RaidTeam"}
     response = client.post(
         "/raid/teams",
         json=team_data,
         headers={"Authorization": f"Bearer {token_simple_without_team}"},
     )
     assert response.status_code == 201
-    assert response.json()["name"] == "New Team"
+    assert response.json()["name"] == "New RaidTeam"
 
 
 def test_generate_teams_pdf(client: TestClient):
@@ -281,7 +286,7 @@ def test_get_team_by_id(client: TestClient):
 
 
 def test_update_team(client: TestClient):
-    update_data = {"name": "Updated Team"}
+    update_data = {"name": "Updated RaidTeam"}
     response = client.patch(
         f"/raid/teams/{team.id}",
         json=update_data,
@@ -470,7 +475,7 @@ def test_merge_teams(client: TestClient):
 
     team2_response = client.post(
         "/raid/teams",
-        json={"name": "Team 2"},
+        json={"name": "RaidTeam 2"},
         headers={"Authorization": f"Bearer {token_simple_without_participant}"},
     )
     assert team2_response.status_code == 201
@@ -692,8 +697,8 @@ async def test_get_payment_url_participant_already_paid(client: TestClient, mock
 @pytest.fixture
 def mock_team():
     return Mock(
-        spec=Team,
-        name="Test Team",
+        spec=RaidTeam,
+        name="Test RaidTeam",
         number=1,
         captain=Mock(
             spec=RaidParticipant,

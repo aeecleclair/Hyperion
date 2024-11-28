@@ -82,17 +82,17 @@ async def is_user_a_participant(
 async def get_team_by_participant_id(
     participant_id: str,
     db: AsyncSession,
-) -> models_raid.Team | None:
+) -> models_raid.RaidTeam | None:
     team = await db.execute(
-        select(models_raid.Team)
+        select(models_raid.RaidTeam)
         .where(
             or_(
-                models_raid.Team.captain_id == participant_id,
-                models_raid.Team.second_id == participant_id,
+                models_raid.RaidTeam.captain_id == participant_id,
+                models_raid.RaidTeam.second_id == participant_id,
             ),
         )
         .options(
-            # Since there is nested classes in the Team model, we need to load all the related data
+            # Since there is nested classes in the RaidTeam model, we need to load all the related data
             selectinload("*"),
         ),
     )
@@ -101,10 +101,10 @@ async def get_team_by_participant_id(
 
 async def get_all_teams(
     db: AsyncSession,
-) -> Sequence[models_raid.Team]:
+) -> Sequence[models_raid.RaidTeam]:
     teams = await db.execute(
-        select(models_raid.Team).options(
-            # Since there is nested classes in the Team model, we need to load all the related data
+        select(models_raid.RaidTeam).options(
+            # Since there is nested classes in the RaidTeam model, we need to load all the related data
             selectinload("*"),
         ),
     )
@@ -113,10 +113,10 @@ async def get_all_teams(
 
 async def get_all_validated_teams(
     db: AsyncSession,
-) -> list[models_raid.Team]:
+) -> list[models_raid.RaidTeam]:
     teams = await db.execute(
-        select(models_raid.Team).options(
-            # Since there is nested classes in the Team model, we need to load all the related data
+        select(models_raid.RaidTeam).options(
+            # Since there is nested classes in the RaidTeam model, we need to load all the related data
             selectinload("*"),
         ),
     )
@@ -129,12 +129,12 @@ async def get_all_validated_teams(
 async def get_team_by_id(
     team_id: str,
     db: AsyncSession,
-) -> models_raid.Team | None:
+) -> models_raid.RaidTeam | None:
     team = await db.execute(
-        select(models_raid.Team)
-        .where(models_raid.Team.id == team_id)
+        select(models_raid.RaidTeam)
+        .where(models_raid.RaidTeam.id == team_id)
         .options(
-            # Since there is nested classes in the Team model, we need to load all the related data
+            # Since there is nested classes in the RaidTeam model, we need to load all the related data
             selectinload("*"),
         ),
     )
@@ -142,7 +142,7 @@ async def get_team_by_id(
 
 
 async def create_team(
-    team: models_raid.Team,
+    team: models_raid.RaidTeam,
     db: AsyncSession,
 ) -> None:
     db.add(team)
@@ -155,12 +155,12 @@ async def create_team(
 
 async def update_team(
     team_id: str,
-    team: schemas_raid.TeamUpdate,
+    team: schemas_raid.RaidTeamUpdate,
     db: AsyncSession,
 ) -> None:
     await db.execute(
-        update(models_raid.Team)
-        .where(models_raid.Team.id == team_id)
+        update(models_raid.RaidTeam)
+        .where(models_raid.RaidTeam.id == team_id)
         .values(**team.model_dump(exclude_none=True)),
     )
     await db.commit()
@@ -172,8 +172,8 @@ async def update_team_captain_id(
     db: AsyncSession,
 ) -> None:
     await db.execute(
-        update(models_raid.Team)
-        .where(models_raid.Team.id == team_id)
+        update(models_raid.RaidTeam)
+        .where(models_raid.RaidTeam.id == team_id)
         .values(captain_id=captain_id),
     )
     await db.commit()
@@ -185,8 +185,8 @@ async def update_team_second_id(
     db: AsyncSession,
 ) -> None:
     await db.execute(
-        update(models_raid.Team)
-        .where(models_raid.Team.id == team_id)
+        update(models_raid.RaidTeam)
+        .where(models_raid.RaidTeam.id == team_id)
         .values(second_id=second_id),
     )
     await db.commit()
@@ -220,14 +220,16 @@ async def delete_team(
     team_id: str,
     db: AsyncSession,
 ) -> None:
-    await db.execute(delete(models_raid.Team).where(models_raid.Team.id == team_id))
+    await db.execute(
+        delete(models_raid.RaidTeam).where(models_raid.RaidTeam.id == team_id)
+    )
     await db.commit()
 
 
 async def delete_all_teams(
     db: AsyncSession,
 ) -> None:
-    await db.execute(delete(models_raid.Team))
+    await db.execute(delete(models_raid.RaidTeam))
     await db.commit()
 
 
@@ -459,7 +461,7 @@ async def get_participant_by_id(
 async def get_number_of_teams(
     db: AsyncSession,
 ) -> int:
-    result = await db.execute(select(models_raid.Team))
+    result = await db.execute(select(models_raid.RaidTeam))
     return len(result.scalars().all())
 
 
@@ -540,7 +542,7 @@ async def get_team_if_users_in_the_same_team(
     participant_id_1: str,
     participant_id_2: str,
     db: AsyncSession,
-) -> models_raid.Team | None:
+) -> models_raid.RaidTeam | None:
     team_1 = await get_team_by_participant_id(participant_id_1, db)
     team_2 = await get_team_by_participant_id(participant_id_2, db)
     if team_1 is None or team_2 is None:
@@ -556,8 +558,8 @@ async def update_team_file_id(
     db: AsyncSession,
 ) -> None:
     await db.execute(
-        update(models_raid.Team)
-        .where(models_raid.Team.id == team_id)
+        update(models_raid.RaidTeam)
+        .where(models_raid.RaidTeam.id == team_id)
         .values(file_id=file_id),
     )
     await db.commit()
@@ -568,7 +570,7 @@ async def get_number_of_team_by_difficulty(
     db: AsyncSession,
 ) -> int:
     result = await db.execute(
-        select(func.count()).where(models_raid.Team.difficulty == difficulty),
+        select(func.count()).where(models_raid.RaidTeam.difficulty == difficulty),
     )
     return result.scalar() or 0
 

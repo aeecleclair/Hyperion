@@ -14,7 +14,12 @@ from PIL import Image
 from pypdf import PdfReader, PdfWriter
 
 from app.modules.raid import coredata_raid
-from app.modules.raid.models_raid import Document, RaidParticipant, SecurityFile, Team
+from app.modules.raid.models_raid import (
+    Document,
+    RaidParticipant,
+    RaidTeam,
+    SecurityFile,
+)
 from app.modules.raid.utils.pdf.conversion_utils import (
     date_to_string,
     get_difficulty_label,
@@ -92,7 +97,7 @@ class PDFWriter(FPDF):
                 new_y=YPos.BMARGIN,
             )
 
-    def write_team(self, team: Team) -> str:
+    def write_team(self, team: RaidTeam) -> str:
         self.pdf_indexes: list[int] = []
         self.pdf_paths: list[str] = []
         self.pdf_pages = []
@@ -321,7 +326,7 @@ class PDFWriter(FPDF):
         x = ((self.epw * 2.85 - image_width) / 2) / 2.85 + 10
         self.image(image, x=x)
 
-    def write_team_summary(self, team: Team):
+    def write_team_summary(self, team: RaidTeam):
         self.set_font("times", "", 12)
         data = [
             ["Parcours", "Lieu de rendez-vous", "Numéro", "Inscription"],

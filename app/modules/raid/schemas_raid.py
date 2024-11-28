@@ -110,11 +110,11 @@ class RaidParticipantUpdate(BaseModel):
     parent_authorization_id: str | None = None
 
 
-class TeamBase(BaseModel):
+class RaidTeamBase(BaseModel):
     name: str
 
 
-class TeamPreview(TeamBase):
+class RaidTeamPreview(RaidTeamBase):
     id: str
     number: int | None
     captain: RaidParticipantPreview
@@ -124,7 +124,7 @@ class TeamPreview(TeamBase):
     validation_progress: float
 
 
-class Team(TeamBase):
+class RaidTeam(RaidTeamBase):
     id: str
     number: int | None
     captain: RaidParticipant
@@ -135,7 +135,7 @@ class Team(TeamBase):
     file_id: str | None
 
 
-class TeamUpdate(BaseModel):
+class RaidTeamUpdate(BaseModel):
     name: str | None = None
     number: int | None = None
     difficulty: Difficulty | None = None

@@ -245,7 +245,7 @@ class RaidParticipant(Base):
         return (number_validated / number_total) * 100
 
 
-class Team(Base):
+class RaidTeam(Base):
     __tablename__ = "raid_team"
     id: Mapped[str] = mapped_column(
         primary_key=True,
