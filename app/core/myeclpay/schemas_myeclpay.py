@@ -24,6 +24,14 @@ class Store(StoreBase):
     wallet_id: UUID
 
 
+class UserStore(Store):
+    can_bank: bool
+    can_see_history: bool
+    can_cancel: bool
+    can_manage_sellers: bool
+    store_admin: bool
+
+
 class StoreUpdate(BaseModel):
     name: str | None = None
     membership: AvailableAssociationMembership | None = None
