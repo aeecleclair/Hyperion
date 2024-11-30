@@ -35,6 +35,13 @@ async def update_store(
     await db.commit()
 
 
+async def get_stores(
+    db: AsyncSession,
+) -> Sequence[models_myeclpay.Store]:
+    result = await db.execute(select(models_myeclpay.Store))
+    return result.scalars().all()
+
+
 async def create_seller(
     user_id: str,
     store_id: UUID,
