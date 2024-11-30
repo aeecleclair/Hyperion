@@ -567,6 +567,24 @@ async def test_get_user_devices(client: TestClient):
     assert len(response.json()) == 2
 
 
+async def test_get_user_wallet_unregistred_user(client: TestClient):
+    response = client.get(
+        "/myeclpay/users/me/wallet",
+        headers={"Authorization": f"Bearer {unregistered_ecl_user_access_token}"},
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "User is not registered for MyECL Pay"
+
+
+async def test_get_user_wallet(client: TestClient):
+    response = client.get(
+        "/myeclpay/users/me/wallet",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+    )
+    assert response.status_code == 200
+    assert response.json()["id"] is not None
+
+
 async def test_get_user_device_non_existing_user(client: TestClient):
     response = client.get(
         "/myeclpay/users/me/wallet/devices/f33a6034-0420-4c08-8afd-46ef662d0b28",
