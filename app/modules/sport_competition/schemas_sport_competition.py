@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
 from app.core import schemas_core
-from app.modules.sport_competition.types_sport_competition import Gender
+from app.modules.sport_competition.types_sport_competition import SportCategory
 
 
 class CompetitionEditionBase(BaseModel):
@@ -46,6 +46,12 @@ class GroupMembership(BaseModel):
     edition_id: str
 
 
+class UserGroupMembership(BaseModel):
+    user_id: str
+    group_id: str
+    edition_id: str
+
+
 class GroupBase(BaseModel):
     name: str
     description: str | None
@@ -69,7 +75,7 @@ class SportBase(BaseModel):
     name: str
     team_size: int
     substitute_max: int | None
-    gender: Gender | None
+    sport_category: SportCategory | None
     activated: bool = True
 
 
@@ -82,7 +88,7 @@ class SportEdit(BaseModel):
     name: str | None
     team_size: int | None
     substitute_max: int | None
-    gender: Gender | None
+    sport_category: SportCategory | None
     activated: bool | None
 
 

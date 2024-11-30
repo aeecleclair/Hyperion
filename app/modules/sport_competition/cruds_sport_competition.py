@@ -132,6 +132,54 @@ async def load_all_groups(
     ]
 
 
+async def load_user_membership_with_group_id(
+    user_id: str,
+    group_id: str,
+    edition_id: str,
+    db: AsyncSession,
+) -> schemas_competition.UserGroupMembership | None:
+    membership = await db.get(
+        models_competition.AnnualGroupMembership,
+        (user_id, group_id, edition_id),
+    )
+    return (
+        schemas_competition.UserGroupMembership(
+            user_id=membership.user_id,
+            group_id=membership.group_id,
+            edition_id=membership.edition_id,
+        )
+        if membership
+        else None
+    )
+
+
+async def load_active_user_memberships(
+    user_id: str,
+    edition_id: str,
+    db: AsyncSession,
+) -> list[schemas_competition.UserGroupMembership]:
+    memberships = (
+        (
+            await db.execute(
+                select(models_competition.AnnualGroupMembership).where(
+                    models_competition.AnnualGroupMembership.user_id == user_id,
+                    models_competition.AnnualGroupMembership.edition_id == edition_id,
+                ),
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return [
+        schemas_competition.UserGroupMembership(
+            user_id=membership.user_id,
+            group_id=membership.group_id,
+            edition_id=membership.edition_id,
+        )
+        for membership in memberships
+    ]
+
+
 async def add_user_to_group(
     user_id: str,
     group_id: str,
@@ -182,7 +230,7 @@ async def store_school(
     else:
         await db.execute(
             update(models_competition.SchoolExtension)
-            .where(models_competition.SchoolExtension.id == school.id)
+            .where(models_competition.SchoolExtension.school_id == school.id)
             .values(**school.model_dump()),
         )
     try:
@@ -198,7 +246,7 @@ async def delete_school_by_id(
 ):
     await db.execute(
         delete(models_competition.SchoolExtension).where(
-            models_competition.SchoolExtension.id == school_id,
+            models_competition.SchoolExtension.school_id == school_id,
         ),
     )
     await db.commit()
@@ -270,7 +318,7 @@ async def load_all_schools(
     school_extensions = await db.execute(select(models_competition.SchoolExtension))
     return [
         schemas_competition.SchoolExtension(
-            id=school_extension.id,
+            id=school_extension.school_id,
             from_lyon=school_extension.from_lyon,
             activated=school_extension.activated,
             school=schemas_core.CoreSchool(**school_extension.school.__dict__),
@@ -332,15 +380,10 @@ async def load_participant_by_ids(
     edition_id: str,
     db: AsyncSession,
 ) -> schemas_competition.ParticipantComplete | None:
-    participant = (
-        await db.execute(
-            select(models_competition.Participant).where(
-                models_competition.Participant.user_id == user_id,
-                models_competition.Participant.sport_id == sport_id,
-                models_competition.Participant.edition_id == edition_id,
-            ),
-        )
-    ).scalar()
+    participant = await db.get(
+        models_competition.Participant,
+        (user_id, sport_id, edition_id),
+    )
     return (
         schemas_competition.ParticipantComplete(**participant.__dict__)
         if participant
@@ -492,15 +535,10 @@ async def load_quota_by_ids(
     edition_id: str,
     db: AsyncSession,
 ) -> schemas_competition.QuotaComplete | None:
-    quota = (
-        await db.execute(
-            select(models_competition.SchoolSportQuota).where(
-                models_competition.SchoolSportQuota.school_id == school_id,
-                models_competition.SchoolSportQuota.sport_id == sport_id,
-                models_competition.SchoolSportQuota.edition_id == edition_id,
-            ),
-        )
-    ).scalar()
+    quota = await db.get(
+        models_competition.SchoolSportQuota,
+        (school_id, sport_id, edition_id),
+    )
     return schemas_competition.QuotaComplete(**quota.__dict__) if quota else None
 
 

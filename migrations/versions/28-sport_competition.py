@@ -4,6 +4,7 @@ Create Date: 2024-11-28 04:47:43.954804
 """
 
 from collections.abc import Sequence
+from enum import Enum
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -17,6 +18,11 @@ revision: str = "2bd545ef13b7"
 down_revision: str | None = "a1e6e8b52103"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
+
+
+class SportCategory(Enum):
+    masculine = "masculine"
+    feminine = "feminine"
 
 
 def upgrade() -> None:
@@ -45,16 +51,20 @@ def upgrade() -> None:
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("team_size", sa.Integer(), nullable=False),
         sa.Column("substitute_max", sa.Integer(), nullable=True),
-        sa.Column("gender", sa.Enum("man", "woman", name="gender"), nullable=True),
+        sa.Column(
+            "sport_category",
+            sa.Enum(SportCategory, name="sportcategory"),
+            nullable=True,
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
         "competition_school_extension",
-        sa.Column("id", sa.String(), nullable=False),
+        sa.Column("school_id", sa.String(), nullable=False),
         sa.Column("from_lyon", sa.Boolean(), nullable=False),
         sa.Column("activated", sa.Boolean(), nullable=False),
-        sa.ForeignKeyConstraint(["id"], ["core_school.id"]),
-        sa.PrimaryKeyConstraint("id"),
+        sa.ForeignKeyConstraint(["school_id"], ["core_school.id"]),
+        sa.PrimaryKeyConstraint("school_id"),
     )
     op.create_table(
         "competition_school_general_quota",
@@ -66,7 +76,10 @@ def upgrade() -> None:
         sa.Column("fanfare_quota", sa.Integer(), nullable=True),
         sa.Column("non_athlete_quota", sa.Integer(), nullable=True),
         sa.ForeignKeyConstraint(["edition_id"], ["competition_edition.id"]),
-        sa.ForeignKeyConstraint(["school_id"], ["core_school.id"]),
+        sa.ForeignKeyConstraint(
+            ["school_id"],
+            ["competition_school_extension.school_id"],
+        ),
         sa.PrimaryKeyConstraint("school_id", "edition_id"),
     )
     op.create_table(
@@ -77,7 +90,10 @@ def upgrade() -> None:
         sa.Column("participant_quota", sa.Integer(), nullable=False),
         sa.Column("team_quota", sa.Integer(), nullable=False),
         sa.ForeignKeyConstraint(["edition_id"], ["competition_edition.id"]),
-        sa.ForeignKeyConstraint(["school_id"], ["core_school.id"]),
+        sa.ForeignKeyConstraint(
+            ["school_id"],
+            ["competition_school_extension.school_id"],
+        ),
         sa.ForeignKeyConstraint(["sport_id"], ["competition_sport.id"]),
         sa.PrimaryKeyConstraint("sport_id", "school_id", "edition_id"),
     )
@@ -101,9 +117,12 @@ def upgrade() -> None:
         sa.Column("captain_id", sa.String(), nullable=False),
         sa.ForeignKeyConstraint(["captain_id"], ["core_user.id"]),
         sa.ForeignKeyConstraint(["edition_id"], ["competition_edition.id"]),
-        sa.ForeignKeyConstraint(["school_id"], ["core_school.id"]),
+        sa.ForeignKeyConstraint(
+            ["school_id"],
+            ["competition_school_extension.school_id"],
+        ),
         sa.ForeignKeyConstraint(["sport_id"], ["competition_sport.id"]),
-        sa.PrimaryKeyConstraint("id", "edition_id"),
+        sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
         "competition_participant",
@@ -134,6 +153,7 @@ def downgrade() -> None:
     op.drop_table("competition_sport")
     op.drop_table("competition_group")
     op.drop_table("competition_edition")
+    sa.Enum(name="sportcategory").drop(op.get_bind())
     # ### end Alembic commands ###
 
 

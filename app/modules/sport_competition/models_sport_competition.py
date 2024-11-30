@@ -2,7 +2,7 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.models_core import CoreSchool, CoreUser
-from app.modules.sport_competition.types_sport_competition import Gender
+from app.modules.sport_competition.types_sport_competition import SportCategory
 from app.types.sqlalchemy import Base
 
 
@@ -39,7 +39,10 @@ class AnnualGroupMembership(Base):
 class SchoolExtension(Base):
     __tablename__ = "competition_school_extension"
 
-    id: Mapped[str] = mapped_column(ForeignKey("core_school.id"), primary_key=True)
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("core_school.id"),
+        primary_key=True,
+    )
     from_lyon: Mapped[bool]
     activated: Mapped[bool]
 
@@ -59,7 +62,7 @@ class SchoolGeneralQuota(Base):
     __tablename__ = "competition_school_general_quota"
 
     school_id: Mapped[str] = mapped_column(
-        ForeignKey("core_school.id"),
+        ForeignKey("competition_school_extension.school_id"),
         primary_key=True,
     )
     edition_id: Mapped[str] = mapped_column(
@@ -92,7 +95,7 @@ class Sport(Base):
     name: Mapped[str]
     team_size: Mapped[int]
     substitute_max: Mapped[int | None]
-    gender: Mapped[Gender | None]
+    sport_category: Mapped[SportCategory | None]
 
 
 class Team(Base):
@@ -100,17 +103,18 @@ class Team(Base):
 
     id: Mapped[str] = mapped_column(primary_key=True)
     sport_id: Mapped[str] = mapped_column(ForeignKey("competition_sport.id"))
-    school_id: Mapped[str] = mapped_column(ForeignKey("core_school.id"))
+    school_id: Mapped[str] = mapped_column(
+        ForeignKey("competition_school_extension.school_id"),
+    )
     edition_id: Mapped[str] = mapped_column(
         ForeignKey("competition_edition.id"),
-        primary_key=True,
     )
     name: Mapped[str]
     captain_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"))
 
     users: Mapped[list[CoreUser]] = relationship(
-        "User",
-        secondary="participants",
+        "CoreUser",
+        secondary="competition_participant",
         lazy="selectin",
         viewonly=True,
         init=False,
@@ -126,7 +130,7 @@ class Team(Base):
         init=False,
     )
     captain: Mapped[CoreUser] = relationship(
-        "User",
+        "CoreUser",
         lazy="joined",
         init=False,
     )
@@ -154,7 +158,7 @@ class Participant(Base):
     license: Mapped[str]
 
     user: Mapped[CoreUser] = relationship(
-        "User",
+        "CoreUser",
         lazy="joined",
         init=False,
     )
@@ -182,7 +186,7 @@ class SchoolSportQuota(Base):
         primary_key=True,
     )
     school_id: Mapped[str] = mapped_column(
-        ForeignKey("core_school.id"),
+        ForeignKey("competition_school_extension.school_id"),
         primary_key=True,
     )
     edition_id: Mapped[str] = mapped_column(
