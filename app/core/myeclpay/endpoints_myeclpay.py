@@ -55,7 +55,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 
 @router.post(
     "/myeclpay/stores",
-    status_code=200,
+    status_code=201,
     response_model=schemas_myeclpay.Store,
 )
 async def create_store(
@@ -92,6 +92,27 @@ async def create_store(
     await db.commit()
 
     return store_db
+
+
+@router.get(
+    "/myeclpay/stores",
+    status_code=200,
+    response_model=list[schemas_myeclpay.Store],
+)
+async def get_stores(
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(is_user_a_member_of(GroupType.payment)),
+):
+    """
+    Get all stores.
+
+    **The user must be a member of group Payment**
+    """
+    stores = await cruds_myeclpay.get_stores(
+        db=db,
+    )
+
+    return stores
 
 
 @router.post(
