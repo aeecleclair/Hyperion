@@ -365,6 +365,23 @@ async def test_create_store(client: TestClient):
     assert response.json()["id"] is not None
 
 
+async def test_get_stores_not_admin(client: TestClient):
+    response = client.get(
+        "/myeclpay/stores",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+    )
+    assert response.status_code == 403
+    assert response.json()["detail"] == "User is not a store admin"
+
+
+async def test_get_stores(client: TestClient):
+    response = client.get(
+        "/myeclpay/stores",
+        headers={"Authorization": f"Bearer {group_payment_user_token}"},
+    )
+    assert response.status_code == 200
+
+
 async def test_create_store_admin(client: TestClient):
     user = await create_user_with_groups(
         groups=[GroupType.student],
@@ -484,6 +501,7 @@ async def test_update_store(client: TestClient):
         },
     )
     assert response.status_code == 204
+
 
 async def test_get_user_stores_unregistred_user(client: TestClient):
     response = client.get(
