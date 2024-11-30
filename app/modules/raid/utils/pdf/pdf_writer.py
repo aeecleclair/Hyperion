@@ -14,7 +14,12 @@ from PIL import Image
 from pypdf import PdfReader, PdfWriter
 
 from app.modules.raid import coredata_raid
-from app.modules.raid.models_raid import Document, Participant, SecurityFile, Team
+from app.modules.raid.models_raid import (
+    Document,
+    RaidParticipant,
+    RaidTeam,
+    SecurityFile,
+)
 from app.modules.raid.utils.pdf.conversion_utils import (
     date_to_string,
     get_difficulty_label,
@@ -92,7 +97,7 @@ class PDFWriter(FPDF):
                 new_y=YPos.BMARGIN,
             )
 
-    def write_team(self, team: Team) -> str:
+    def write_team(self, team: RaidTeam) -> str:
         self.pdf_indexes: list[int] = []
         self.pdf_paths: list[str] = []
         self.pdf_pages = []
@@ -141,7 +146,7 @@ class PDFWriter(FPDF):
             new_y=YPos.NEXT,
         )
 
-    def write_participant_document(self, participant: Participant):
+    def write_participant_document(self, participant: RaidParticipant):
         for document in [
             participant.id_card,
             participant.medical_certificate,
@@ -165,7 +170,7 @@ class PDFWriter(FPDF):
                         self.add_page()
                     self.pdf_paths.append(document.id)
 
-    def write_document_header(self, document: Document, participant: Participant):
+    def write_document_header(self, document: Document, participant: RaidParticipant):
         self.add_page()
         self.set_y(self.get_y() + 6)
         self.set_font("times", "B", 12)
@@ -204,7 +209,7 @@ class PDFWriter(FPDF):
     def write_security_file(
         self,
         security_file: SecurityFile,
-        participant: Participant,
+        participant: RaidParticipant,
     ):
         self.add_page()
         self.set_y(self.get_y() + 6)
@@ -220,11 +225,11 @@ class PDFWriter(FPDF):
         self.set_font("times", "", 12)
         data: list[list[str] | None] = [
             ["Allergie", security_file.allergy if security_file.allergy else "Aucune"],
-            ["Asthme", security_file.asthma and "Oui" or "Non"],
+            ["Asthme", (security_file.asthma and "Oui") or "Non"],
             (
                 [
                     "Service de réanimation",
-                    security_file.intensive_care_unit and "Oui" or "Non",
+                    (security_file.intensive_care_unit and "Oui") or "Non",
                 ]
                 if security_file.allergy
                 else None
@@ -312,7 +317,7 @@ class PDFWriter(FPDF):
             if data_row:
                 self.write_key_label(data_row[0], data_row[1])
 
-    def write_document(self, document: Document, participant: Participant):
+    def write_document(self, document: Document, participant: RaidParticipant):
         self.write_document_header(document, participant)
         self.set_y(self.get_y() + 6)
         file = get_file_path_from_data("raid", document.id, "documents")
@@ -321,7 +326,7 @@ class PDFWriter(FPDF):
         x = ((self.epw * 2.85 - image_width) / 2) / 2.85 + 10
         self.image(image, x=x)
 
-    def write_team_summary(self, team: Team):
+    def write_team_summary(self, team: RaidTeam):
         self.set_font("times", "", 12)
         data = [
             ["Parcours", "Lieu de rendez-vous", "Numéro", "Inscription"],
@@ -350,7 +355,7 @@ class PDFWriter(FPDF):
 
     def write_participant_summary(
         self,
-        participant: Participant,
+        participant: RaidParticipant,
         is_second: bool = False,
     ):
         self.set_font("times", "B", 12)
@@ -358,7 +363,7 @@ class PDFWriter(FPDF):
         self.cell(
             w=0,
             h=12,
-            text=is_second and "Coéquipier" or "Capitaine",
+            text=(is_second and "Coéquipier") or "Capitaine",
             align="C",
             new_x=XPos.LMARGIN,
             new_y=YPos.NEXT,
@@ -423,7 +428,7 @@ class HTMLPDFWriter:
 
     def write_participant_security_file(
         self,
-        participant: Participant,
+        participant: RaidParticipant,
         information: coredata_raid.RaidInformation,
         team_number: int | None,
     ):
