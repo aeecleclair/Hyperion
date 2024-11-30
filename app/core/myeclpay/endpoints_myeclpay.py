@@ -461,6 +461,45 @@ async def get_user_device(
     return wallet_devices
 
 
+@router.get(
+    "/myeclpay/users/me/wallet",
+    status_code=200,
+    response_model=schemas_myeclpay.Wallet,
+)
+async def get_user_wallet(
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(is_user_an_ecl_member),
+):
+    """
+    Get user wallet.
+
+    **The user must be authenticated to use this endpoint**
+    """
+    # Check if user is already registered
+    user_payment = await cruds_myeclpay.get_user_payment(
+        user_id=user.id,
+        db=db,
+    )
+    if user_payment is None or not is_user_latest_cgu_signed(user_payment):
+        raise HTTPException(
+            status_code=400,
+            detail="User is not registered for MyECL Pay",
+        )
+
+    wallet = await cruds_myeclpay.get_wallet(
+        wallet_id=user_payment.wallet_id,
+        db=db,
+    )
+
+    if wallet is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Wallet does not exist",
+        )
+
+    return wallet
+
+
 @router.post(
     "/myeclpay/users/me/wallet/devices",
     status_code=201,
