@@ -102,7 +102,7 @@ async def write_teams_csv(
     file_name = "Équipes - " + datetime.now(UTC).strftime("%Y-%m-%d_%H_%M_%S") + ".csv"
     file_path = "data/raid/" + file_name
     data: list[list[str]] = [
-        ["RaidTeam name", "Captain", "Second", "Difficulty", "Number"]
+        ["RaidTeam name", "Captain", "Second", "Difficulty", "Number"],
     ]
     data.extend(
         [
