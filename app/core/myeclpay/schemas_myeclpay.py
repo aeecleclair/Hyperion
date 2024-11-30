@@ -10,7 +10,6 @@ from app.core.myeclpay.types_myeclpay import (
     WalletDeviceStatus,
     WalletType,
 )
-from app.core.users.schemas_users import CoreUser
 from app.types.membership import AvailableAssociationMembership
 
 
@@ -110,7 +109,7 @@ class Wallet(BaseModel):
     type: WalletType
     balance: int
     store: Store | None
-    user: CoreUser | None
+    user: schemas_core.CoreUser | None
 
 
 class WalletDeviceBase(BaseModel):
