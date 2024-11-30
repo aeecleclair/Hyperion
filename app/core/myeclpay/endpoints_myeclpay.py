@@ -744,6 +744,60 @@ async def get_user_wallet_history(
     # TODO: limite by datetime
 
 
+@router.get(
+    "/myeclpay/users/me/stores",
+    status_code=200,
+    response_model=list[schemas_myeclpay.UserStore],
+)
+async def get_user_stores(
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(is_user_an_ecl_member),
+):
+    """
+    Get all stores for the current user.
+
+    **The user must be authenticated to use this endpoint**
+    """
+    user_payment = await cruds_myeclpay.get_user_payment(
+        user_id=user.id,
+        db=db,
+    )
+
+    if user_payment is None:
+        raise HTTPException(
+            status_code=404,
+            detail="User is not registered for MyECL Pay",
+        )
+
+    sellers = await cruds_myeclpay.get_all_user_sellers(
+        user_id=user.id,
+        db=db,
+    )
+
+    stores: list[schemas_myeclpay.UserStore] = []
+    for seller in sellers:
+        store = await cruds_myeclpay.get_store(
+            store_id=seller.store_id,
+            db=db,
+        )
+        if store is not None:
+            stores.append(
+                schemas_myeclpay.UserStore(
+                    id=store.id,
+                    name=store.name,
+                    membership=store.membership,
+                    wallet_id=store.wallet_id,
+                    can_bank=seller.can_bank,
+                    can_see_history=seller.can_see_history,
+                    can_cancel=seller.can_cancel,
+                    can_manage_sellers=seller.can_manage_sellers,
+                    store_admin=seller.store_admin,
+                ),
+            )
+
+    return stores
+
+
 @router.post(
     "/myeclpay/store/{store_id}/scan",
     status_code=204,
