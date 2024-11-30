@@ -299,6 +299,18 @@ async def get_transfers_by_wallet_id(
     return result.scalars().all()
 
 
+async def get_all_user_sellers(
+    user_id: str,
+    db: AsyncSession,
+) -> Sequence[models_myeclpay.Seller]:
+    result = await db.execute(
+        select(models_myeclpay.Seller).where(
+            models_myeclpay.Seller.user_id == user_id,
+        ),
+    )
+    return result.scalars().all()
+
+
 async def get_seller_by_user_id_and_store_id(
     store_id: UUID,
     user_id: str,
