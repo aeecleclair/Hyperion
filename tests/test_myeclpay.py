@@ -477,7 +477,7 @@ async def test_update_store_non_store_admin(client: TestClient):
     response = client.patch(
         f"/myeclpay/stores/{store.id}",
         headers={
-            "Authorization": f"Bearer {store_seller_no_permission_user_access_token}"
+            "Authorization": f"Bearer {store_seller_no_permission_user_access_token}",
         },
         json={
             "name": "new name",
