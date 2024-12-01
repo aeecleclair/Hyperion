@@ -671,9 +671,11 @@ async def revoke_user_devices(
 
     await cruds_myeclpay.update_wallet_device_status(
         wallet_device_id=wallet_device_id,
-        status=WalletDeviceStatus.DISABLED,
+        status=WalletDeviceStatus.REVOKED,
         db=db,
     )
+
+    await db.commit()
 
 
 @router.get(
@@ -779,17 +781,6 @@ async def get_user_stores(
 
     **The user must be authenticated to use this endpoint**
     """
-    user_payment = await cruds_myeclpay.get_user_payment(
-        user_id=user.id,
-        db=db,
-    )
-
-    if user_payment is None:
-        raise HTTPException(
-            status_code=404,
-            detail="User is not registered for MyECL Pay",
-        )
-
     sellers = await cruds_myeclpay.get_all_user_sellers(
         user_id=user.id,
         db=db,

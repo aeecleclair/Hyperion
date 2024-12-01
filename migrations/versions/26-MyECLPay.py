@@ -43,7 +43,7 @@ class TransferType(str, Enum):
 class WalletDeviceStatus(str, Enum):
     INACTIVE = "inactive"
     ACTIVE = "active"
-    DISABLED = "disabled"
+    REVOKED = "revoked"
 
 
 class TransactionStatus(str, Enum):
