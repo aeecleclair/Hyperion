@@ -112,6 +112,10 @@ def upgrade() -> None:
             ["wallet_id"],
             ["myeclpay_wallet.id"],
         ),
+        sa.ForeignKeyConstraint(
+            ["approver_user_id"],
+            ["core_user.id"],
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
@@ -161,6 +165,10 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(
             ["store_id"],
             ["myeclpay_store.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["user_id"],
+            ["core_user.id"],
         ),
         sa.PrimaryKeyConstraint("user_id", "store_id"),
     )
