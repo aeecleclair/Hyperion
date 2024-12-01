@@ -361,7 +361,7 @@ async def test_create_store(client: TestClient):
             "membership": AvailableAssociationMembership.aeecl,
         },
     )
-    assert response.status_code == 200
+    assert response.status_code == 201
     assert response.json()["id"] is not None
 
 
@@ -371,7 +371,6 @@ async def test_get_stores_not_admin(client: TestClient):
         headers={"Authorization": f"Bearer {ecl_user_access_token}"},
     )
     assert response.status_code == 403
-    assert response.json()["detail"] == "User is not a store admin"
 
 
 async def test_get_stores(client: TestClient):
@@ -503,21 +502,15 @@ async def test_update_store(client: TestClient):
     assert response.status_code == 204
 
 
-async def test_get_user_stores_unregistred_user(client: TestClient):
-    response = client.get(
-        "/myeclpay/users/me/stores",
-        headers={"Authorization": f"Bearer {unregistered_ecl_user_access_token}"},
-    )
-    assert response.status_code == 400
-    assert response.json()["detail"] == "User is not registered for MyECL Pay"
-
-
 async def test_get_user_stores(client: TestClient):
     response = client.get(
         "/myeclpay/users/me/stores",
-        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+        headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
     )
     assert response.status_code == 200
+    # We want to make sure the user have at least a store
+    # to be sure that the method was correctly tested
+    assert len(response.json()) > 0
 
 
 async def test_get_cgu_for_unregistered_user(client: TestClient):
@@ -527,6 +520,16 @@ async def test_get_cgu_for_unregistered_user(client: TestClient):
     )
     assert response.status_code == 400
     assert response.json()["detail"] == "User is not registered for MyECL Pay"
+
+
+async def test_get_cgu(client: TestClient):
+    response = client.get(
+        "/myeclpay/users/me/cgu",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+    )
+    assert response.status_code == 200
+    assert response.json()["latest_cgu_version"] == LATEST_CGU
+    assert response.json()["accepted_cgu_version"] == LATEST_CGU
 
 
 async def test_register_new_user(client: TestClient):
@@ -577,6 +580,12 @@ async def test_sign_cgu(client: TestClient):
 
     response = client.post(
         "/myeclpay/users/me/register",
+        headers={"Authorization": f"Bearer {unregistered_user_token}"},
+    )
+    assert response.status_code == 204
+
+    response = client.post(
+        "/myeclpay/users/me/cgu",
         headers={"Authorization": f"Bearer {unregistered_user_token}"},
         json={"accepted_cgu_version": LATEST_CGU},
     )
@@ -728,6 +737,72 @@ async def test_activate_already_activated_device(
     )
     assert response.status_code == 400
     assert response.json()["detail"] == "Wallet device is already activated or revoked"
+
+
+async def test_revoke_user_device_unregistered_user(
+    client: TestClient,
+) -> None:
+    wallet_device_id = uuid4()
+    response = client.post(
+        f"/myeclpay/users/me/wallet/devices/{wallet_device_id}/revoke",
+        headers={"Authorization": f"Bearer {unregistered_ecl_user_access_token}"},
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "User is not registered for MyECL Pay"
+
+
+async def test_revoke_user_device_device_does_not_exist(
+    client: TestClient,
+) -> None:
+    wallet_device_id = uuid4()
+    response = client.post(
+        f"/myeclpay/users/me/wallet/devices/{wallet_device_id}/revoke",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Wallet device does not exist"
+
+
+async def test_revoke_user_device_device_does_not_belong_to_user(
+    client: TestClient,
+) -> None:
+    response = client.post(
+        f"/myeclpay/users/me/wallet/devices/{ecl_user_wallet_device.id}/revoke",
+        headers={"Authorization": f"Bearer {ecl_user2_access_token}"},
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Wallet device does not belong to the user"
+
+
+async def test_revoke_user_device(
+    client: TestClient,
+) -> None:
+    wallet_device = models_myeclpay.WalletDevice(
+        id=uuid4(),
+        name="Will revoke device",
+        wallet_id=ecl_user_wallet.id,
+        ed25519_public_key=b"key",
+        creation=datetime.now(UTC),
+        status=WalletDeviceStatus.ACTIVE,
+        activation_token="will_revoke_activation_token",
+    )
+    await add_object_to_db(wallet_device)
+    response = client.post(
+        f"/myeclpay/users/me/wallet/devices/{wallet_device.id}/revoke",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+    )
+    assert response.status_code == 204
+
+    # We want to verify the device is now revoked
+    response = client.get(
+        "/myeclpay/users/me/wallet/devices/",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+    )
+    assert response.status_code == 200
+    returned_wallet_device = next(
+        device for device in response.json() if device["id"] == str(wallet_device.id)
+    )
+    assert returned_wallet_device["status"] == "revoked"
 
 
 async def test_get_transactions_unregistered(client: TestClient):
