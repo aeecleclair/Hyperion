@@ -634,7 +634,7 @@ async def create_loan(
         module="loan",
     )
 
-    await notification_tool.send_future_notification_to_users_defer_to(
+    await notification_tool.send_notification_to_users(
         user_ids=[loan.borrower_id],
         message=message,
         scheduler=scheduler,
@@ -950,7 +950,7 @@ async def extend_loan(
         module="loan",
     )
 
-    await notification_tool.send_future_notification_to_users_defer_to(
+    await notification_tool.send_notification_to_users(
         user_ids=[loan.borrower_id],
         message=message,
         scheduler=scheduler,
