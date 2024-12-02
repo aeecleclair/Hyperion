@@ -169,7 +169,23 @@ def test_create_user_by_user_with_email(
     assert response.status_code == expected_code
 
 
-def test_create_and_activate_user(mocker: MockerFixture, client: TestClient) -> None:
+@pytest.mark.parametrize(
+    ("email", "expected_code", "expected_account_type"),
+    [
+        ("fab1@etu.ec-lyon.fr", 201, AccountType.student),
+        ("fab2@ec-lyon.fr", 201, AccountType.staff),
+        ("fab3@centraliens-lyon.net", 201, AccountType.former_student),
+        ("fab4@test.fr", 201, AccountType.external),
+        ("fab5@ecl22.ec-lyon.fr", 201, AccountType.student),
+    ],
+)
+def test_create_and_activate_user(
+    email: str,
+    expected_code: int,
+    expected_account_type: AccountType,
+    mocker: MockerFixture,
+    client: TestClient,
+) -> None:
     # NOTE: we don't want to mock app.core.security.generate_token but
     # app.core.users.endpoints_users.security.generate_token which is the imported version of the function
     mocker.patch(
@@ -180,10 +196,10 @@ def test_create_and_activate_user(mocker: MockerFixture, client: TestClient) -> 
     response = client.post(
         "/users/create",
         json={
-            "email": "new_user@etu.ec-lyon.fr",
+            "email": email,
         },
     )
-    assert response.status_code == 201
+    assert response.status_code == expected_code
 
     response = client.post(
         "/users/activate",
@@ -191,13 +207,21 @@ def test_create_and_activate_user(mocker: MockerFixture, client: TestClient) -> 
             "activation_token": UNIQUE_TOKEN,
             "password": "password",
             "firstname": "firstname",
-            "name": "name",
+            "name": email.split("@")[0],
             "nickname": "nickname",
             "floor": "X1",
         },
     )
 
-    assert response.status_code == 201
+    assert response.status_code == expected_code
+
+    users = client.get(
+        "/users/",
+        headers={"Authorization": f"Bearer {token_admin_user}"},
+    )
+    user = next(user for user in users.json() if user["name"] == email.split("@")[0])
+    assert user is not None
+    assert user["account_type"] == expected_account_type.value
 
 
 @pytest.mark.parametrize(
@@ -413,28 +437,3 @@ def test_read_user_profile_picture(client: TestClient) -> None:
     )
 
     assert response.status_code == 200
-
-
-def test_batch_internal_user(client: TestClient) -> None:
-    token = create_api_access_token(admin_user)
-
-    response = client.patch(
-        "/users/external",
-        headers={"Authorization": f"Bearer {token}"},
-    )
-
-    assert response.status_code == 204
-
-    response = client.get(
-        f"/users/search?query=&includedAccountTypes={AccountType.external.value}",
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert response.json() == []
-
-    response = client.get(
-        f"/users/search?query=&includedAccountTypes={AccountType.student.value}",
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    members = response.json()
-    members_ids = [member["id"] for member in members]
-    assert external_user.id in members_ids

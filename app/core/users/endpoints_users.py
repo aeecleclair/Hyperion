@@ -826,35 +826,6 @@ async def update_current_user(
     await cruds_users.update_user(db=db, user_id=user.id, user_update=user_update)
 
 
-@router.patch(
-    "/users/external",
-    status_code=204,
-)
-async def switch_external_user_internal(
-    db: AsyncSession = Depends(get_db),
-    u: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
-):
-    """
-    Switch all external users to internal users if they have an ECL email address.
-
-    **This endpoint is only usable by administrators**
-    """
-
-    users = await cruds_users.get_users(
-        db=db,
-        included_account_types=[AccountType.external],
-    )
-    for user in users:
-        if re.match(ECL_STUDENT_REGEX, user.email):
-            await cruds_users.update_user(
-                db=db,
-                user_id=user.id,
-                user_update=schemas_core.CoreUserUpdateAdmin(
-                    account_type=AccountType.student,
-                ),
-            )
-
-
 @router.post(
     "/users/merge",
     status_code=204,
