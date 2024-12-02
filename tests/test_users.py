@@ -1,4 +1,3 @@
-from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -10,7 +9,6 @@ from pytest_mock import MockerFixture
 from app.core import models_core
 from app.core.groups.groups_type import AccountType, GroupType
 from app.dependencies import is_user
-from app.utils.tools import is_user_external, is_user_member_of_an_allowed_group
 from tests.commons import (
     create_api_access_token,
     create_user_with_groups,
