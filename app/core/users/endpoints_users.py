@@ -24,6 +24,8 @@ from app.core import models_core, schemas_core, security, standard_responses
 from app.core.config import Settings
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import AccountType, GroupType
+from app.core.schools import cruds_schools
+from app.core.schools.schools_type import SchoolType
 from app.core.users import cruds_users
 from app.dependencies import (
     get_db,
@@ -56,7 +58,7 @@ ECL_FORMER_STUDENT_REGEX = r"^[\w\-.]*@centraliens-lyon\.net$"
 
 
 @router.get(
-    "/users/",
+    "/users",
     response_model=list[schemas_core.CoreUserSimple],
     status_code=200,
 )
@@ -159,6 +161,11 @@ async def read_current_user(
     """
 
     return user
+
+
+ECL_STAFF_REGEX = r"^[\w\-.]*@(enise\.)?ec-lyon\.fr$"
+ECL_STUDENT_REGEX = r"^[\w\-.]*@etu(-enise)?\.ec-lyon\.fr$"
+ECL_FORMER_STUDENT_REGEX = r"^[\w\-.]*@centraliens-lyon\.net$"
 
 
 @router.post(
@@ -394,13 +401,36 @@ async def activate_user(
     ):
         # Its a former student email address
         account_type = AccountType.former_student
-
+    if account_type == AccountType.external:
+        schools = await cruds_schools.get_schools(db=db)
+        schools = [
+            school
+            for school in schools
+            if school.id not in (SchoolType.no_school, SchoolType.centrale_lyon)
+        ]
+        school = next(
+            (
+                school
+                for school in schools
+                if re.match(school.email_regex, unconfirmed_user.email)
+            ),
+            None,
+        )
+        if school is not None:
+            account_type = AccountType.other_school_student
+            school_id = school.id
+        else:
+            account_type = AccountType.external
+            school_id = SchoolType.no_school
+    else:
+        school_id = SchoolType.centrale_lyon
     # A password should have been provided
     password_hash = security.get_password_hash(user.password)
 
     confirmed_user = models_core.CoreUser(
         id=unconfirmed_user.id,
         email=unconfirmed_user.email,
+        school_id=school_id,
         account_type=account_type,
         password_hash=password_hash,
         name=user.name,
@@ -609,10 +639,10 @@ async def migrate_mail(
     This endpoint will send a confirmation code to the user's new email address. He will need to use this code to confirm the change with `/users/confirm-mail-migration` endpoint.
     """
 
-    if not re.match(ECL_STUDENT_REGEX, mail_migration.new_email):
+    if not re.match(user.school.email_regex, mail_migration.new_email):
         raise HTTPException(
             status_code=400,
-            detail="The new email address must match the new ECL format for student users",
+            detail="The new email address must match the new email format for student users",
         )
 
     existing_user = await cruds_users.get_user_by_email(
@@ -693,14 +723,25 @@ async def migrate_mail_confirm(
         )
 
     try:
-        await cruds_users.update_user(
-            db,
-            migration_object.user_id,
-            user_update=schemas_core.CoreUserUpdateAdmin(
-                email=migration_object.new_email,
-                account_type=AccountType.student,
-            ),
-        )
+        if user.school.id == SchoolType.centrale_lyon:
+            await cruds_users.update_user(
+                db,
+                migration_object.user_id,
+                user_update=schemas_core.CoreUserUpdateAdmin(
+                    email=migration_object.new_email,
+                    account_type=AccountType.student,
+                ),
+            )
+        elif user.school.id != SchoolType.no_school:
+            await cruds_users.update_user(
+                db,
+                migration_object.user_id,
+                user_update=schemas_core.CoreUserUpdateAdmin(
+                    email=migration_object.new_email,
+                    account_type=AccountType.other_school_student,
+                ),
+            )
+
     except Exception as error:
         raise HTTPException(status_code=400, detail=str(error))
 
@@ -835,7 +876,7 @@ async def switch_external_user_internal(
     u: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
-    Switch all external users to internal users if they have an ECL email address.
+    Switch all external users to internal users if they have an email address corresponding to their school email regex.
 
     **This endpoint is only usable by administrators**
     """
@@ -845,14 +886,23 @@ async def switch_external_user_internal(
         included_account_types=[AccountType.external],
     )
     for user in users:
-        if re.match(ECL_STUDENT_REGEX, user.email):
-            await cruds_users.update_user(
-                db=db,
-                user_id=user.id,
-                user_update=schemas_core.CoreUserUpdateAdmin(
-                    account_type=AccountType.student,
-                ),
-            )
+        if re.match(user.school.email_regex, user.email):
+            if user.school.id == SchoolType.centrale_lyon:
+                await cruds_users.update_user(
+                    db,
+                    user.id,
+                    user_update=schemas_core.CoreUserUpdateAdmin(
+                        account_type=AccountType.student,
+                    ),
+                )
+            elif user.school.id != SchoolType.no_school:
+                await cruds_users.update_user(
+                    db,
+                    user.id,
+                    user_update=schemas_core.CoreUserUpdateAdmin(
+                        account_type=AccountType.other_school_student,
+                    ),
+                )
 
 
 @router.post(
@@ -921,6 +971,13 @@ async def update_user(
     db_user = await cruds_users.get_user_by_id(db=db, user_id=user_id)
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
+    if user_update.school_id is not None:
+        school = await cruds_schools.get_school_by_id(
+            db=db,
+            school_id=user_update.school_id,
+        )
+        if school is None:
+            raise HTTPException(status_code=404, detail="School not found")
 
     await cruds_users.update_user(db=db, user_id=user_id, user_update=user_update)
 
