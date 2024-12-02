@@ -264,7 +264,7 @@ def get_user_from_token_with_scopes(
      * return the corresponding user `models_core.CoreUser` object
 
     This endpoint allows to require scopes other than the API scope. This should only be used by the auth endpoints.
-    To restrict an endpoint from the API, use `is_user_of`.
+    To restrict an endpoint from the API, use `is_user_in`.
     """
 
     async def get_current_user(
@@ -298,7 +298,7 @@ def is_user(
         * make sure the user making the request exists
 
     To check if the user is not external, use is_user_a_member dependency
-    To check if the user is not external and is the member of a group, use is_user_of generator
+    To check if the user is not external and is the member of a group, use is_user_in generator
     To check if the user has an ecl account type, use is_user_an_ecl_member dependency
     """
 
@@ -359,7 +359,7 @@ def is_user_a_member(
         * make sure the user making the request exists
         * make sure the user is not an external user
 
-    To check if the user is the member of a group, use is_user_of generator
+    To check if the user is the member of a group, use is_user_in generator
     """
     return user
 
@@ -377,13 +377,13 @@ def is_user_an_ecl_member(
         * make sure the user is not an external user
         * make sure the user making the request exists
 
-    To check if the user is the member of a group, use is_user_of generator
+    To check if the user is the member of a group, use is_user_in generator
     """
 
     return user
 
 
-def is_user_of(
+def is_user_in(
     group_id: GroupType,
     exclude_external: bool = False,
 ) -> Callable[[models_core.CoreUser], Coroutine[Any, Any, models_core.CoreUser]]:
@@ -395,7 +395,7 @@ def is_user_of(
         * return the corresponding user `models_core.CoreUser` object
     """
 
-    async def is_user_of(
+    async def is_user_in(
         user: models_core.CoreUser = Depends(
             is_user(included_groups=[group_id], exclude_external=exclude_external),
         ),
@@ -407,4 +407,4 @@ def is_user_of(
 
         return user
 
-    return is_user_of
+    return is_user_in

@@ -13,7 +13,7 @@ from app.dependencies import (
     get_db,
     get_settings,
     is_user,
-    is_user_of,
+    is_user_in,
 )
 from app.modules.module_list import module_list
 from app.utils.tools import is_group_id_valid
@@ -160,7 +160,7 @@ async def get_favicon():
 )
 async def get_module_visibility(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Get all existing module_visibility.
@@ -214,7 +214,7 @@ async def get_user_modules_visibility(
 async def add_module_visibility(
     module_visibility: schemas_core.ModuleVisibilityCreate,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Add a new group or account type to a module
@@ -268,7 +268,7 @@ async def delete_module_group_visibility(
     root: str,
     group_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     await cruds_core.delete_module_group_visibility(
         root=root,
@@ -285,7 +285,7 @@ async def delete_module_account_type_visibility(
     root: str,
     account_type: AccountType,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     await cruds_core.delete_module_account_type_visibility(
         root=root,

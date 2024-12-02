@@ -14,7 +14,7 @@ from app.dependencies import (
     get_db,
     get_notification_tool,
     is_user_an_ecl_member,
-    is_user_of,
+    is_user_in,
 )
 from app.modules.booking import cruds_booking, models_booking, schemas_booking
 from app.modules.booking.types_booking import Decision
@@ -38,7 +38,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 )
 async def get_managers(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Get existing managers.
@@ -57,7 +57,7 @@ async def get_managers(
 async def create_manager(
     manager: schemas_booking.ManagerBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Create a manager.
@@ -92,7 +92,7 @@ async def update_manager(
     manager_id: str,
     manager_update: schemas_booking.ManagerUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Update a manager, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value.
@@ -124,7 +124,7 @@ async def update_manager(
 async def delete_manager(
     manager_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Delete a manager only if the manager is not linked to any room
@@ -422,7 +422,7 @@ async def get_rooms(
 async def create_room(
     room: schemas_booking.RoomBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Create a new room in database.
@@ -448,7 +448,7 @@ async def edit_room(
     room_id: str,
     room: schemas_booking.RoomBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Edit a room.
@@ -466,7 +466,7 @@ async def edit_room(
 async def delete_room(
     room_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Delete a room only if there are not future or ongoing bookings of this room

@@ -16,7 +16,7 @@ from app.dependencies import (
     get_notification_manager,
     get_notification_tool,
     is_user,
-    is_user_of,
+    is_user_in,
 )
 from app.utils.communication.notifications import NotificationManager, NotificationTool
 
@@ -259,7 +259,7 @@ async def get_topic_identifier(
     status_code=201,
 )
 async def send_notification(
-    user: models_core.CoreUser = Depends(is_user_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
@@ -286,7 +286,7 @@ async def send_notification(
     status_code=201,
 )
 async def send_future_notification(
-    user: models_core.CoreUser = Depends(is_user_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
@@ -315,7 +315,7 @@ async def send_future_notification(
     response_model=list[schemas_notification.FirebaseDevice],
 )
 async def get_devices(
-    user: models_core.CoreUser = Depends(is_user_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
     db: AsyncSession = Depends(get_db),
 ):
     """

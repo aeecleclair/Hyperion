@@ -14,7 +14,7 @@ from app.dependencies import (
     get_notification_tool,
     get_request_id,
     is_user_a_member,
-    is_user_of,
+    is_user_in,
 )
 from app.modules.ph import cruds_ph, models_ph, schemas_ph
 from app.types.content_type import ContentType
@@ -84,7 +84,7 @@ async def get_papers(
 )
 async def get_papers_admin(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_of(GroupType.ph)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.ph)),
 ):
     """
     Return all editions, sorted from the latest to the oldest
@@ -103,7 +103,7 @@ async def get_papers_admin(
 async def create_paper(
     paper: schemas_ph.PaperBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_of(GroupType.ph)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.ph)),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """Create a new paper."""
@@ -155,7 +155,7 @@ async def create_paper(
 async def create_paper_pdf_and_cover(
     paper_id: uuid.UUID,
     pdf: UploadFile = File(...),
-    user: models_core.CoreUser = Depends(is_user_of(GroupType.ph)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.ph)),
     request_id: str = Depends(get_request_id),
     db: AsyncSession = Depends(get_db),
 ):
@@ -215,7 +215,7 @@ async def get_cover(
 async def update_paper(
     paper_id: uuid.UUID,
     paper_update: schemas_ph.PaperUpdate,
-    user: models_core.CoreUser = Depends(is_user_of(GroupType.ph)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.ph)),
     db: AsyncSession = Depends(get_db),
 ):
     paper = await cruds_ph.get_paper_by_id(paper_id=paper_id, db=db)
@@ -238,7 +238,7 @@ async def update_paper(
 )
 async def delete_paper(
     paper_id: uuid.UUID,
-    user: models_core.CoreUser = Depends(is_user_of(GroupType.ph)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.ph)),
     db: AsyncSession = Depends(get_db),
 ):
     paper = await cruds_ph.get_paper_by_id(paper_id=paper_id, db=db)

@@ -31,7 +31,7 @@ from app.dependencies import (
     get_settings,
     is_user,
     is_user_an_ecl_member,
-    is_user_of,
+    is_user_in,
 )
 from app.types.content_type import ContentType
 from app.types.exceptions import UserWithEmailAlreadyExistError
@@ -63,7 +63,7 @@ ECL_FORMER_STUDENT_REGEX = r"^[\w\-.]*@centraliens-lyon\.net$"
 async def read_users(
     accountTypes: list[AccountType] = Query(default=[]),
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Return all users from database as a list of `CoreUserSimple`
@@ -83,7 +83,7 @@ async def read_users(
 )
 async def count_users(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Return the number of users in the database
@@ -135,7 +135,7 @@ async def search_users(
 )
 async def get_account_types(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Return all account types hardcoded in the system
@@ -229,7 +229,7 @@ async def batch_create_users(
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
     request_id: str = Depends(get_request_id),
-    user: models_core.CoreUser = Depends(is_user_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Batch user account creation process. All users will be sent an email with a link to activate their account.
@@ -766,7 +766,7 @@ async def change_password(
 async def read_user(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Return `CoreUser` representation of user with id `user_id`
@@ -785,7 +785,7 @@ async def read_user(
 #    "/users/{user_id}",
 #    status_code=204,
 ## )
-# async def delete_user(user_id: str, db: AsyncSession = Depends(get_db), user: models_core.CoreUser = Depends(is_user_of(GroupType.admin))):
+# async def delete_user(user_id: str, db: AsyncSession = Depends(get_db), user: models_core.CoreUser = Depends(is_user_in(GroupType.admin))):
 #    """Delete user from database by id"""
 #    # TODO: WARNING - deleting an user without removing its relations ship in other tables will have unexpected consequences
 #
@@ -832,7 +832,7 @@ async def update_current_user(
 )
 async def switch_external_user_internal(
     db: AsyncSession = Depends(get_db),
-    u: models_core.CoreUser = Depends(is_user_of(GroupType.admin)),
+    u: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Switch all external users to internal users if they have an ECL email address.
@@ -863,7 +863,7 @@ async def merge_users(
     user_fusion: schemas_core.CoreUserFusionRequest,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
     settings: Settings = Depends(get_settings),
 ):
     """
@@ -911,7 +911,7 @@ async def update_user(
     user_id: str,
     user_update: schemas_core.CoreUserUpdateAdmin,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Update an user, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value

@@ -18,7 +18,7 @@ from app.dependencies import (
     get_request_id,
     get_settings,
     is_user_a_member,
-    is_user_of,
+    is_user_in,
 )
 from app.modules.cinema import cruds_cinema, schemas_cinema
 from app.types.content_type import ContentType
@@ -47,7 +47,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 async def get_movie(
     themoviedb_id: str,
     settings: Settings = Depends(get_settings),
-    user: models_core.CoreUser = Depends(is_user_of(GroupType.cinema)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.cinema)),
 ):
     """
     Makes a HTTP request to The Movie Database (TMDB)
@@ -118,7 +118,7 @@ async def get_sessions(
 async def create_session(
     session: schemas_cinema.CineSessionBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_of(GroupType.cinema)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.cinema)),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     db_session = schemas_cinema.CineSessionComplete(
@@ -163,7 +163,7 @@ async def update_session(
     session_id: str,
     session_update: schemas_cinema.CineSessionUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_of(GroupType.cinema)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.cinema)),
 ):
     await cruds_cinema.update_session(
         session_id=session_id,
@@ -176,7 +176,7 @@ async def update_session(
 async def delete_session(
     session_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_of(GroupType.cinema)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.cinema)),
 ):
     await cruds_cinema.delete_session(session_id=session_id, db=db)
 
@@ -189,7 +189,7 @@ async def delete_session(
 async def create_campaigns_logo(
     session_id: str,
     image: UploadFile = File(...),
-    user: models_core.CoreUser = Depends(is_user_of(GroupType.cinema)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.cinema)),
     request_id: str = Depends(get_request_id),
     db: AsyncSession = Depends(get_db),
 ):

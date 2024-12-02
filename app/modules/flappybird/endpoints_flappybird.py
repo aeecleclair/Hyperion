@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
 from app.core.groups.groups_type import AccountType, GroupType
-from app.dependencies import get_db, is_user_a_member, is_user_of
+from app.dependencies import get_db, is_user_a_member, is_user_in
 from app.modules.flappybird import (
     cruds_flappybird,
     models_flappybird,
@@ -133,6 +133,6 @@ async def create_flappybird_score(
 async def remove_flappybird_score(
     targeted_user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     await cruds_flappybird.delete_flappybird_best_score(db=db, user_id=targeted_user_id)
