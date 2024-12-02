@@ -23,7 +23,9 @@ from app.types.exceptions import RedisConnectionError
 from app.types.floors_type import FloorsType
 from app.types.sqlalchemy import Base
 from app.utils.redis import connect, disconnect
-from app.utils.tools import get_random_string
+from app.utils.tools import (
+    get_random_string,
+)
 
 
 @lru_cache
@@ -160,8 +162,10 @@ async def create_user_with_groups(
             raise
         finally:
             await db.close()
-
-    return user
+    async with TestingSessionLocal() as db:
+        user_db = await cruds_users.get_user_by_id(db, user_id)
+        await db.close()
+    return user_db  # type: ignore # (user_db can't be None)
 
 
 def create_api_access_token(
