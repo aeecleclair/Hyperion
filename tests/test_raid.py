@@ -553,7 +553,6 @@ def test_delete_team(client: TestClient):
     assert response.status_code == 204
 
 
-@pytest.mark.asyncio
 async def test_get_payment_url_no_participant(client: TestClient, mocker):
     # Mock the necessary dependencies
     mocker.patch("app.modules.raid.cruds_raid.get_participant_by_id", return_value=None)
@@ -573,7 +572,6 @@ async def test_get_payment_url_no_participant(client: TestClient, mocker):
     assert response.json()["url"] == "https://some.url.fr/checkout"
 
 
-@pytest.mark.asyncio
 async def test_get_payment_url_participant_no_payment(client: TestClient, mocker):
     # Mock the necessary dependencies
     mocker.patch(
@@ -601,7 +599,6 @@ async def test_get_payment_url_participant_no_payment(client: TestClient, mocker
     assert response.json()["url"] == "https://some.url.fr/checkout"
 
 
-@pytest.mark.asyncio
 async def test_get_payment_url_participant_with_tshirt(client: TestClient, mocker):
     # Mock the necessary dependencies
     mocker.patch(
@@ -635,7 +632,6 @@ async def test_get_payment_url_participant_with_tshirt(client: TestClient, mocke
     assert response.json()["url"] == "https://some.url.fr/checkout"
 
 
-# @pytest.mark.asyncio()
 # async def test_get_payment_url_prices_not_set(client: TestClient, mocker):
 #     # Mock the necessary dependencies
 #     mocker.patch(
@@ -655,7 +651,6 @@ async def test_get_payment_url_participant_with_tshirt(client: TestClient, mocke
 #     assert response.json()["detail"] == "Prices not set."
 
 
-@pytest.mark.asyncio
 async def test_get_payment_url_participant_already_paid(client: TestClient, mocker):
     # Mock the necessary dependencies
     mocker.patch(
