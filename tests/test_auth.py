@@ -30,7 +30,6 @@ async def init_objects() -> None:
     global user
     user = await create_user_with_groups(
         groups=[],
-        account_type=AccountType.student,
         email="email@myecl.fr",
         password="azerty",
     )
@@ -38,7 +37,6 @@ async def init_objects() -> None:
     global ecl_user
     ecl_user = await create_user_with_groups(
         groups=[GroupType.eclair],
-        account_type=AccountType.student,
         email="email@etu.ec-lyon.fr",
         password="azerty",
     )
@@ -46,6 +44,7 @@ async def init_objects() -> None:
     global external_user
     external_user = await create_user_with_groups(
         groups=[],
+        account_type=AccountType.external,
         email="external@myecl.fr",
         password="azerty",
     )

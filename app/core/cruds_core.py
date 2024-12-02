@@ -61,9 +61,7 @@ async def get_allowed_groups_by_root(
         ).where(models_core.ModuleGroupVisibility.root == root),
     )
 
-    resultList = result.unique().scalars().all()
-
-    return resultList
+    return result.unique().scalars().all()
 
 
 async def get_allowed_account_types_by_root(
@@ -78,15 +76,13 @@ async def get_allowed_account_types_by_root(
         ).where(models_core.ModuleAccountTypeVisibility.root == root),
     )
 
-    resultList = result.unique().scalars().all()
-
-    return resultList
+    return result.unique().scalars().all()
 
 
 async def create_module_group_visibility(
     module_visibility: models_core.ModuleGroupVisibility,
     db: AsyncSession,
-) -> models_core.ModuleGroupVisibility:
+) -> None:
     """Create a new module visibility in database and return it"""
 
     db.add(module_visibility)
@@ -95,14 +91,12 @@ async def create_module_group_visibility(
     except IntegrityError:
         await db.rollback()
         raise
-    else:
-        return module_visibility
 
 
 async def create_module_account_type_visibility(
     module_visibility: models_core.ModuleAccountTypeVisibility,
     db: AsyncSession,
-) -> models_core.ModuleAccountTypeVisibility:
+) -> None:
     """Create a new module visibility in database and return it"""
 
     db.add(module_visibility)
@@ -111,8 +105,6 @@ async def create_module_account_type_visibility(
     except IntegrityError:
         await db.rollback()
         raise
-    else:
-        return module_visibility
 
 
 async def delete_module_group_visibility(

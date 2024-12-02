@@ -5,7 +5,7 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 
 from app.core import models_core
-from app.core.groups.groups_type import AccountType, GroupType
+from app.core.groups.groups_type import GroupType
 from app.types.membership import AvailableAssociationMembership
 from tests.commons import (
     add_object_to_db,
@@ -36,12 +36,10 @@ async def init_objects() -> None:
     )
     student_user_to_keep = await create_user_with_groups(
         [GroupType.BDE],
-        AccountType.student,
         email=FABRISTPP_EMAIL_1,
     )
     student_user_to_delete = await create_user_with_groups(
         [GroupType.BDE, GroupType.CAA],
-        AccountType.student,
         email=FABRISTPP_EMAIL_2,
     )
 

@@ -200,15 +200,15 @@ def initialize_module_visibility(
         if module_awareness is not None:
             awareness_list = module_awareness.data.split(",")
 
+        new_modules = [
+            module for module in module_list if module.root not in awareness_list
+        ]
         # Is run to create default module visibilities or when the table is empty
-        if awareness_list != [module.root for module in module_list]:
+        if new_modules:
             hyperion_error_logger.info(
                 "Startup: Some modules visibility settings are empty, initializing them",
             )
-            to_add = [
-                module for module in module_list if module.root not in awareness_list
-            ]
-            for module in to_add:
+            for module in new_modules:
                 if module.default_allowed_groups_ids is not None:
                     for group_id in module.default_allowed_groups_ids:
                         module_group_visibility = models_core.ModuleGroupVisibility(
@@ -249,7 +249,7 @@ def initialize_module_visibility(
                 db,
             )
             hyperion_error_logger.info(
-                f"Startup: Modules visibility settings initialized for {[module.root for module in to_add]}",
+                f"Startup: Modules visibility settings initialized for {[module.root for module in new_modules]}",
             )
         else:
             hyperion_error_logger.info(

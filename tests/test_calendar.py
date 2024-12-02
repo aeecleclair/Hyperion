@@ -5,7 +5,7 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 
 from app.core import models_core
-from app.core.groups.groups_type import AccountType, GroupType
+from app.core.groups.groups_type import GroupType
 from app.modules.booking.types_booking import Decision
 from app.modules.calendar import models_calendar
 from app.modules.calendar.types_calendar import CalendarEventType
@@ -28,14 +28,13 @@ async def init_objects() -> None:
     global calendar_user_bde
     calendar_user_bde = await create_user_with_groups(
         [GroupType.BDE],
-        AccountType.student,
     )
 
     global token_bde
     token_bde = create_api_access_token(calendar_user_bde)
 
     global calendar_user_simple
-    calendar_user_simple = await create_user_with_groups([], AccountType.student)
+    calendar_user_simple = await create_user_with_groups([])
 
     global token_simple
     token_simple = create_api_access_token(calendar_user_simple)

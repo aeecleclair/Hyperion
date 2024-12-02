@@ -14,8 +14,8 @@ from app.dependencies import (
     get_db,
     get_notification_tool,
     get_request_id,
-    is_user_a_member_of,
     is_user_an_ecl_member,
+    is_user_of,
 )
 from app.modules.advert import cruds_advert, models_advert, schemas_advert
 from app.types.content_type import ContentType
@@ -63,7 +63,7 @@ async def read_advertisers(
 async def create_advertiser(
     advertiser: schemas_advert.AdvertiserBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_of(GroupType.admin)),
 ):
     """
     Create a new advertiser.
@@ -99,7 +99,7 @@ async def create_advertiser(
 async def delete_advertiser(
     advertiser_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_of(GroupType.admin)),
 ):
     """
     Delete an advertiser. All adverts associated with the advertiser will also be deleted from the database.
@@ -130,7 +130,7 @@ async def update_advertiser(
     advertiser_id: str,
     advertiser_update: schemas_advert.AdvertiserUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_of(GroupType.admin)),
 ):
     """
     Update an advertiser

@@ -264,7 +264,7 @@ def get_user_from_token_with_scopes(
      * return the corresponding user `models_core.CoreUser` object
 
     This endpoint allows to require scopes other than the API scope. This should only be used by the auth endpoints.
-    To restrict an endpoint from the API, use `is_user_a_member_of`.
+    To restrict an endpoint from the API, use `is_user_of`.
     """
 
     async def get_current_user(
@@ -298,7 +298,8 @@ def is_user(
         * make sure the user making the request exists
 
     To check if the user is not external, use is_user_a_member dependency
-    To check if the user is not external and is the member of a group, use is_user_a_member_of generator
+    To check if the user is not external and is the member of a group, use is_user_of generator
+    To check if the user has an ecl account type, use is_user_an_ecl_member dependency
     """
 
     excluded_groups = excluded_groups or []
@@ -309,7 +310,7 @@ def is_user(
         user: models_core.CoreUser = Depends(
             get_user_from_token_with_scopes([[ScopeType.API]]),
         ),
-    ):
+    ) -> models_core.CoreUser:
         groups_id: list[str] = [group.id for group in user.groups]
         if GroupType.admin in groups_id:
             return user
@@ -336,8 +337,12 @@ def is_user(
                 status_code=403,
                 detail="Unauthorized, user is not a member of an allowed group",
             )
-        if user.account_type in included_account_types:
-            return user
+        if user.account_type not in included_account_types:
+            raise HTTPException(
+                status_code=403,
+                detail="Unauthorized, user account type is not allowed",
+            )
+        return user
 
     return is_user
 
@@ -354,7 +359,7 @@ def is_user_a_member(
         * make sure the user making the request exists
         * make sure the user is not an external user
 
-    To check if the user is the member of a group, use is_user_a_member_of generator
+    To check if the user is the member of a group, use is_user_of generator
     """
     return user
 
@@ -372,13 +377,13 @@ def is_user_an_ecl_member(
         * make sure the user is not an external user
         * make sure the user making the request exists
 
-    To check if the user is the member of a group, use is_user_a_member_of generator
+    To check if the user is the member of a group, use is_user_of generator
     """
 
     return user
 
 
-def is_user_a_member_of(
+def is_user_of(
     group_id: GroupType,
     exclude_external: bool = False,
 ) -> Callable[[models_core.CoreUser], Coroutine[Any, Any, models_core.CoreUser]]:
@@ -390,7 +395,7 @@ def is_user_a_member_of(
         * return the corresponding user `models_core.CoreUser` object
     """
 
-    async def is_user_a_member_of(
+    async def is_user_of(
         user: models_core.CoreUser = Depends(
             is_user(included_groups=[group_id], exclude_external=exclude_external),
         ),
@@ -402,4 +407,4 @@ def is_user_a_member_of(
 
         return user
 
-    return is_user_a_member_of
+    return is_user_of

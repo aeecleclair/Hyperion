@@ -39,7 +39,6 @@ async def init_objects() -> None:
     )
     student_user = await create_user_with_groups(
         [],
-        AccountType.student,
         email=student_user_email,
         password=student_user_password,
     )
@@ -47,7 +46,6 @@ async def init_objects() -> None:
 
     student_user_with_old_email = await create_user_with_groups(
         [],
-        AccountType.student,
         email=FABRISTPP_EMAIL_2,
     )
 

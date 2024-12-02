@@ -53,9 +53,9 @@ def create_module_group_visibility_sync(
     db.add(module_visibility)
     try:
         db.commit()
-    except IntegrityError as error:
+    except IntegrityError:
         db.rollback()
-        raise ValueError(error) from error
+        raise
     else:
         return module_visibility
 
@@ -70,9 +70,9 @@ def create_module_account_type_visibility_sync(
     db.add(module_visibility)
     try:
         db.commit()
-    except IntegrityError as error:
+    except IntegrityError:
         db.rollback()
-        raise ValueError(error) from error
+        raise
     else:
         return module_visibility
 

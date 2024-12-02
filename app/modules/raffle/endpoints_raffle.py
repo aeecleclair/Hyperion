@@ -16,7 +16,7 @@ from app.dependencies import (
     get_redis_client,
     get_request_id,
     is_user_a_member,
-    is_user_a_member_of,
+    is_user_of,
 )
 from app.modules.raffle import cruds_raffle, models_raffle, schemas_raffle
 from app.modules.raffle.types_raffle import RaffleStatusType
@@ -64,7 +64,7 @@ async def get_raffle(
 async def create_raffle(
     raffle: schemas_raffle.RaffleBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_of(GroupType.admin)),
 ):
     """
     Create a new raffle
@@ -427,7 +427,7 @@ async def get_pack_tickets_by_raffle_id(
 )
 async def get_tickets(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_of(GroupType.admin)),
 ):
     """
     Return all tickets
@@ -819,7 +819,7 @@ async def read_prize_logo(
 )
 async def get_users_cash(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_of(GroupType.admin)),
 ):
     """
     Get cash from all users.
@@ -877,7 +877,7 @@ async def create_cash_of_user(
     user_id: str,
     cash: schemas_raffle.CashEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_of(GroupType.admin)),
 ):
     """
     Create cash for a user.
@@ -919,7 +919,7 @@ async def edit_cash_by_id(
     user_id: str,
     balance: schemas_raffle.CashEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_of(GroupType.admin)),
     redis_client: Redis = Depends(get_redis_client),
 ):
     """

@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from PIL import Image
 
 from app.core import models_core
-from app.core.groups.groups_type import AccountType, GroupType
+from app.core.groups.groups_type import GroupType
 from app.modules.raid import coredata_raid, models_raid
 from app.modules.raid.models_raid import Document, Participant, SecurityFile, Team
 from app.modules.raid.raid_type import DocumentType, DocumentValidation, Size
@@ -47,14 +47,12 @@ async def init_objects() -> None:
     global simple_user, token_simple
     simple_user = await create_user_with_groups(
         [],
-        AccountType.student,
     )
     token_simple = create_api_access_token(simple_user)
 
     global simple_user_without_participant, token_simple_without_participant
     simple_user_without_participant = await create_user_with_groups(
         [],
-        AccountType.student,
     )
     token_simple_without_participant = create_api_access_token(
         simple_user_without_participant,
@@ -63,7 +61,6 @@ async def init_objects() -> None:
     global simple_user_without_team, token_simple_without_team
     simple_user_without_team = await create_user_with_groups(
         [],
-        AccountType.student,
     )
     token_simple_without_team = create_api_access_token(simple_user_without_team)
 

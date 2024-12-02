@@ -13,7 +13,7 @@ from app.dependencies import (
     get_db,
     get_notification_tool,
     is_user_a_member,
-    is_user_a_member_of,
+    is_user_of,
 )
 from app.modules.loan import cruds_loan, models_loan, schemas_loan
 from app.types.module import Module
@@ -45,7 +45,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 )
 async def read_loaners(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_of(GroupType.admin)),
 ):
     """
     Get existing loaners.
@@ -64,7 +64,7 @@ async def read_loaners(
 async def create_loaner(
     loaner: schemas_loan.LoanerBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_of(GroupType.admin)),
 ):
     """
     Create a new loaner.
@@ -100,7 +100,7 @@ async def create_loaner(
 async def delete_loaner(
     loaner_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_of(GroupType.admin)),
 ):
     """
     Delete a loaner. All items and loans associated with the loaner will also be deleted from the database.
@@ -136,7 +136,7 @@ async def update_loaner(
     loaner_id: str,
     loaner_update: schemas_loan.LoanerUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_of(GroupType.admin)),
 ):
     """
     Update a loaner, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value.

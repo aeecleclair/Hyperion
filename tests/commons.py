@@ -108,7 +108,7 @@ def change_redis_client_status(activated: bool) -> None:
 
 async def create_user_with_groups(
     groups: list[GroupType],
-    account_type: AccountType = AccountType.external,
+    account_type: AccountType = AccountType.student,
     user_id: str | None = None,
     email: str | None = None,
     password: str | None = None,
