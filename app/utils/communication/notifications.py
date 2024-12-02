@@ -341,7 +341,7 @@ class NotificationTool:
         user_ids: list[str],
         message: Message,
         scheduler: Scheduler,
-        defer_seconds: float,
+        defer_seconds: int,
         job_id: str,
     ):
         await scheduler.queue_job_time_defer(
@@ -414,7 +414,7 @@ class NotificationTool:
         custom_topic: CustomTopic,
         message: Message,
         scheduler: Scheduler,
-        defer_seconds: float,
+        defer_seconds: int,
         job_id: str,
     ):
         await scheduler.queue_job_time_defer(
