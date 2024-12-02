@@ -64,7 +64,8 @@ async def register_firebase_device(
         )
 
     user_topics = await cruds_notification.get_topic_memberships_by_user_id(
-        user_id=user.id, db=db,
+        user_id=user.id,
+        db=db,
     )
     for topic in user_topics:
         await notification_manager.subscribe_tokens_to_topic(
