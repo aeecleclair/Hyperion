@@ -328,13 +328,38 @@ class NotificationTool:
         self.db = db
         # self.scheduler = scheduler
 
-    async def send_notification_to_users(self, user_ids: list[str], message: Message):
-        self.background_tasks.add_task(
-            self.notification_manager.send_notification_to_users,
-            user_ids=user_ids,
-            message=message,
-            db=self.db,
-        )
+    async def send_notification_to_users(
+        self,
+        user_ids: list[str],
+        message: Message,
+        scheduler: Scheduler | None = None,
+        defer_seconds: int | None = None,
+        defer_date: datetime | None = None,
+        job_id: str | None = None,
+    ):
+        if defer_seconds is not None and scheduler is not None and job_id is not None:
+            await self.send_future_notification_to_users_time_defer(
+                user_ids=user_ids,
+                message=message,
+                scheduler=scheduler,
+                defer_seconds=defer_seconds,
+                job_id=job_id,
+            )
+        elif defer_date is not None and scheduler is not None and job_id is not None:
+            await self.send_future_notification_to_users_defer_to(
+                user_ids=user_ids,
+                message=message,
+                scheduler=scheduler,
+                defer_date=defer_date,
+                job_id=job_id,
+            )
+        else:
+            self.background_tasks.add_task(
+                self.notification_manager.send_notification_to_users,
+                user_ids=user_ids,
+                message=message,
+                db=self.db,
+            )
 
     async def send_future_notification_to_users_time_defer(
         self,
@@ -384,13 +409,34 @@ class NotificationTool:
         self,
         custom_topic: CustomTopic,
         message: Message,
+        scheduler: Scheduler | None = None,
+        defer_seconds: int | None = None,
+        defer_date: datetime | None = None,
+        job_id: str | None = None,
     ):
-        self.background_tasks.add_task(
-            self.notification_manager.send_notification_to_topic,
-            custom_topic=custom_topic,
-            message=message,
-            db=self.db,
-        )
+        if defer_seconds is not None and scheduler is not None and job_id is not None:
+            await self.send_future_notification_to_topic_time_defer(
+                custom_topic=custom_topic,
+                message=message,
+                scheduler=scheduler,
+                defer_seconds=defer_seconds,
+                job_id=job_id,
+            )
+        elif defer_date is not None and scheduler is not None and job_id is not None:
+            await self.send_future_notification_to_topic_defer_to(
+                custom_topic=custom_topic,
+                message=message,
+                scheduler=scheduler,
+                defer_date=defer_date,
+                job_id=job_id,
+            )
+        else:
+            self.background_tasks.add_task(
+                self.notification_manager.send_notification_to_topic,
+                custom_topic=custom_topic,
+                message=message,
+                db=self.db,
+            )
 
     async def send_future_notification_to_topic_defer_to(
         self,

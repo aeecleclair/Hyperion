@@ -139,7 +139,7 @@ async def create_paper(
             else:
                 delivery_time = time(11, 00, 00, tzinfo=UTC)
                 release_date = datetime.combine(paper_db.release_date, delivery_time)
-                await notification_tool.send_future_notification_to_topic_defer_to(
+                await notification_tool.send_notification_to_topic(
                     custom_topic=CustomTopic(topic=Topic.ph),
                     message=message,
                     scheduler=scheduler,

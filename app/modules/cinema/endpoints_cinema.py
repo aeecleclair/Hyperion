@@ -149,7 +149,7 @@ async def create_session(
             action_module="cinema",
         )
 
-        await notification_tool.send_future_notification_to_topic_defer_to(
+        await notification_tool.send_notification_to_topic(
             custom_topic=CustomTopic(topic=Topic.cinema),
             message=message,
             scheduler=scheduler,
