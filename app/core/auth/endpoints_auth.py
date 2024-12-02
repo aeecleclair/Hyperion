@@ -324,7 +324,6 @@ async def authorize_validation(
             )
     if auth_client.allowed_account_types is not None:
         if user.account_type not in auth_client.allowed_account_types:
-            # TODO We should show an HTML page explaining the issue
             hyperion_access_logger.warning(
                 f"Authorize-validation: user account type is not allowed {authorizereq.email} ({request_id})",
             )
