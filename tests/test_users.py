@@ -1,12 +1,15 @@
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
 import pytest_asyncio
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
 from app.core import models_core
 from app.core.groups.groups_type import AccountType, GroupType
+from app.utils.tools import is_user_external, is_user_member_of_an_allowed_group
 from tests.commons import (
     create_api_access_token,
     create_user_with_groups,
@@ -105,6 +108,96 @@ def test_get_account_types(client: TestClient) -> None:
     assert response.status_code == 200
     data = response.json()
     assert data == list(AccountType)
+
+
+def override_is_user(
+    excluded_groups: list[GroupType] | None = None,
+    included_groups: list[GroupType] | None = None,
+    excluded_account_types: list[AccountType] | None = None,
+    included_account_types: list[AccountType] | None = None,
+    exclude_external: bool = False,
+) -> Callable[[models_core.CoreUser], models_core.CoreUser]:
+    """
+    A dependency that will:
+        * check if the request header contains a valid API JWT token (a token that can be used to call endpoints from the API)
+        * make sure the user making the request exists
+
+    To check if the user is not external, use is_user_a_member dependency
+    To check if the user is not external and is the member of a group, use is_user_in generator
+    To check if the user has an ecl account type, use is_user_an_ecl_member dependency
+    """
+
+    excluded_groups = excluded_groups or []
+    excluded_account_types = excluded_account_types or []
+    included_account_types = included_account_types or list(AccountType)
+
+    empty_user = models_core.CoreUser(
+        id="",
+        email="",
+        password_hash="",
+        name="",
+        firstname="",
+        floor=None,
+        account_type=AccountType.student,
+        nickname=None,
+        birthday=None,
+        promo=None,
+        phone=None,
+        created_on=None,
+    )
+
+    def is_user_with_user(
+        user: models_core.CoreUser = empty_user,
+    ) -> models_core.CoreUser:
+        if user is None:
+            raise HTTPException(
+                status_code=403,
+                detail="Unauthorized, user is not provided",
+            )
+        groups_id: list[str] = [group.id for group in user.groups]
+        if GroupType.admin in groups_id:
+            return user
+        if user.account_type in excluded_account_types:
+            raise HTTPException(
+                status_code=403,
+                detail="Unauthorized, user account type is not allowed",
+            )
+        if exclude_external and is_user_external(user):
+            raise HTTPException(
+                status_code=403,
+                detail="Unauthorized, user is an external user",
+            )
+        if is_user_member_of_an_allowed_group(user, excluded_groups):
+            raise HTTPException(
+                status_code=403,
+                detail=f"Unauthorized, user is a member of any of the groups {excluded_groups}",
+            )
+        if included_groups is not None and not is_user_member_of_an_allowed_group(
+            user,
+            included_groups,
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="Unauthorized, user is not a member of an allowed group",
+            )
+        if user.account_type not in included_account_types:
+            raise HTTPException(
+                status_code=403,
+                detail="Unauthorized, user account type is not allowed",
+            )
+        return user
+
+    return is_user_with_user
+
+
+def test_restrict_access_on_group(client: TestClient) -> None:
+    with pytest.raises(
+        HTTPException,
+        match="Unauthorized, user is a member of any of the groups ",
+    ):
+        override_is_user(
+            excluded_groups=[GroupType.amap],
+        )(user_with_group)
 
 
 def test_read_current_user(client: TestClient) -> None:
