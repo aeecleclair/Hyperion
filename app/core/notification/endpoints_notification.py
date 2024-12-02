@@ -63,6 +63,15 @@ async def register_firebase_device(
             db=db,
         )
 
+    user_topics = await cruds_notification.get_topic_memberships_by_user_id(
+        user_id=user.id, db=db,
+    )
+    for topic in user_topics:
+        await notification_manager.subscribe_tokens_to_topic(
+            custom_topic=CustomTopic(topic.topic),
+            tokens=[firebase_token],
+        )
+
     firebase_device = models_notification.FirebaseDevice(
         user_id=user.id,
         firebase_device_token=firebase_token,
@@ -86,7 +95,7 @@ async def unregister_firebase_device(
     notification_manager: NotificationManager = Depends(get_notification_manager),
 ):
     """
-    Unregister a new firebase device for the user
+    Unregister a firebase device for the user
 
     **The user must be authenticated to use this endpoint**
     """
@@ -96,6 +105,16 @@ async def unregister_firebase_device(
         firebase_device_token=firebase_token,
         db=db,
     )
+
+    user_topics = await cruds_notification.get_topic_memberships_by_user_id(
+        user_id=user.id,
+        db=db,
+    )
+    for topic in user_topics:
+        await notification_manager.unsubscribe_tokens_to_topic(
+            custom_topic=CustomTopic(topic.topic),
+            tokens=[firebase_token],
+        )
 
 
 @router.post(
