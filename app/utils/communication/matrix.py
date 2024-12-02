@@ -57,9 +57,7 @@ class Matrix:
         `formatted_body` can contain html formatted text
         """
         url = (
-            "https://matrix.org/_matrix/client/r0/rooms/"
-            + room_id
-            + "/send/m.room.message"
+            self.server + "_matrix/client/r0/rooms/" + room_id + "/send/m.room.message"
         )
 
         # https://github.com/matrix-org/matrix-spec-proposals/issues/917
