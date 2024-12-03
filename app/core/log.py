@@ -246,6 +246,14 @@ class LogConfig:
                     "level": MINIMUM_LOG_LEVEL,
                     "propagate": False,
                 },
+                "arq.worker": {
+                    "handlers": [
+                        "console",
+                        "files_errors",
+                        "matrix_errors",
+                    ],
+                    "level": MINIMUM_LOG_LEVEL,
+                },
             },
         }
 
