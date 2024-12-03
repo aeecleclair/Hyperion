@@ -828,6 +828,7 @@ async def return_loan(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
     scheduler: Scheduler = Depends(get_scheduler),
+    notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
     Mark a loan as returned. This will update items availability.
@@ -872,7 +873,10 @@ async def return_loan(
         returned=True,
         returned_date=datetime.now(UTC),
     )
-    await scheduler.cancel_job(f"loan_end_{loan.id}")
+    await notification_tool.cancel_notification(
+        scheduler=scheduler,
+        job_id=f"loan_end_{loan.id}",
+    )
 
 
 @module.router.post(
@@ -927,9 +931,10 @@ async def extend_loan(
         loan_update=loan_update,
         db=db,
     )
-    # TODO
-
-    await scheduler.cancel_job(f"loan_end_{loan.id}")
+    await notification_tool.cancel_notification(
+        scheduler=scheduler,
+        job_id=f"loan_end_{loan.id}",
+    )
 
     message = Message(
         title="📦 Prêt prolongé",

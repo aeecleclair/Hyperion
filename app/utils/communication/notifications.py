@@ -471,3 +471,10 @@ class NotificationTool:
             job_id=job_id,
             defer_seconds=defer_seconds,
         )
+
+    async def cancel_notification(
+        self,
+        scheduler: Scheduler,
+        job_id: str,
+    ):
+        await scheduler.cancel_job(job_id=job_id)
