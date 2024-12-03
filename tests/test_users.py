@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
 from app.core import models_core
-from app.core.groups.groups_type import GroupType
+from app.core.groups.groups_type import AccountType, GroupType
 from tests.commons import (
     create_api_access_token,
     create_user_with_groups,
@@ -16,6 +16,7 @@ admin_user: models_core.CoreUser
 student_user: models_core.CoreUser
 external_user: models_core.CoreUser
 student_user_with_old_email: models_core.CoreUser
+user_with_group: models_core.CoreUser
 
 token_admin_user: str
 token_student_user: str
@@ -38,19 +39,19 @@ async def init_objects() -> None:
         email=FABRISTPP_EMAIL_1,
     )
     student_user = await create_user_with_groups(
-        [GroupType.student],
+        [],
         email=student_user_email,
         password=student_user_password,
     )
-    external_user = await create_user_with_groups(
-        [GroupType.external],
-        external=True,
-    )
+    external_user = await create_user_with_groups([], AccountType.external)
 
     student_user_with_old_email = await create_user_with_groups(
-        [GroupType.student],
+        [],
         email=FABRISTPP_EMAIL_2,
     )
+
+    global user_with_group
+    user_with_group = await create_user_with_groups([GroupType.amap])
 
     global token_admin_user
     token_admin_user = create_api_access_token(admin_user)
@@ -69,31 +70,41 @@ def test_count_users(client: TestClient) -> None:
 
 
 def test_search_users(client: TestClient) -> None:
-    group = GroupType.student.value
+    account_type = AccountType.student.value
 
     response = client.get(
-        f"/groups/{group}",
+        f"/users/?query=&accountTypes={account_type}",
         headers={"Authorization": f"Bearer {token_admin_user}"},
     )
-    group_users = set(member["id"] for member in response.json()["members"])
+    account_type_users = set(user["id"] for user in response.json())
 
     response = client.get(
-        f"/users/search?query=&includedGroups={group}",
+        f"/users/search?query=&includedAccountTypes={account_type}",
         headers={"Authorization": f"Bearer {token_student_user}"},
     )
     assert response.status_code == 200
     data_users = set(user["id"] for user in response.json())
     assert (
-        data_users <= group_users
+        data_users <= account_type_users
     )  # This endpoint is limited to 10 members, so we only need an inclusion between the two sets, in case there are more than 10 members in the group.
 
     response = client.get(
-        f"/users/search?query=&excludedGroups={group}",
+        f"/users/search?query=&excludedAccountTypes={account_type}",
         headers={"Authorization": f"Bearer {token_student_user}"},
     )
     assert response.status_code == 200
     data = response.json()
-    assert all(user["id"] not in group_users for user in data)
+    assert all(user["id"] not in account_type_users for user in data)
+
+
+def test_get_account_types(client: TestClient) -> None:
+    response = client.get(
+        "/users/account-types",
+        headers={"Authorization": f"Bearer {token_admin_user}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data == list(AccountType)
 
 
 def test_read_current_user(client: TestClient) -> None:
@@ -128,8 +139,8 @@ def test_read_user(client: TestClient) -> None:
         ("fab@etu.ec-lyon.fr", 201),
         ("fab@ec-lyon.fr", 201),
         ("fab@centraliens-lyon.net", 201),
-        ("fab@test.fr", 400),
-        ("fab@ecl22.ec-lyon.fr", 400),
+        ("fab@test.fr", 201),
+        ("fab@ecl22.ec-lyon.fr", 201),
     ],
 )
 def test_create_user_by_user_with_email(
@@ -146,7 +157,23 @@ def test_create_user_by_user_with_email(
     assert response.status_code == expected_code
 
 
-def test_create_and_activate_user(mocker: MockerFixture, client: TestClient) -> None:
+@pytest.mark.parametrize(
+    ("email", "expected_code", "expected_account_type"),
+    [
+        ("fab1@etu.ec-lyon.fr", 201, AccountType.student),
+        ("fab2@ec-lyon.fr", 201, AccountType.staff),
+        ("fab3@centraliens-lyon.net", 201, AccountType.former_student),
+        ("fab4@test.fr", 201, AccountType.external),
+        ("fab5@ecl22.ec-lyon.fr", 201, AccountType.student),
+    ],
+)
+def test_create_and_activate_user(
+    email: str,
+    expected_code: int,
+    expected_account_type: AccountType,
+    mocker: MockerFixture,
+    client: TestClient,
+) -> None:
     # NOTE: we don't want to mock app.core.security.generate_token but
     # app.core.users.endpoints_users.security.generate_token which is the imported version of the function
     mocker.patch(
@@ -157,10 +184,10 @@ def test_create_and_activate_user(mocker: MockerFixture, client: TestClient) -> 
     response = client.post(
         "/users/create",
         json={
-            "email": "new_user@etu.ec-lyon.fr",
+            "email": email,
         },
     )
-    assert response.status_code == 201
+    assert response.status_code == expected_code
 
     response = client.post(
         "/users/activate",
@@ -168,13 +195,21 @@ def test_create_and_activate_user(mocker: MockerFixture, client: TestClient) -> 
             "activation_token": UNIQUE_TOKEN,
             "password": "password",
             "firstname": "firstname",
-            "name": "name",
+            "name": email.split("@")[0],
             "nickname": "nickname",
             "floor": "X1",
         },
     )
 
-    assert response.status_code == 201
+    assert response.status_code == expected_code
+
+    users = client.get(
+        "/users/",
+        headers={"Authorization": f"Bearer {token_admin_user}"},
+    )
+    user = next(user for user in users.json() if user["name"] == email.split("@")[0])
+    assert user is not None
+    assert user["account_type"] == expected_account_type.value
 
 
 @pytest.mark.parametrize(
@@ -208,13 +243,12 @@ def activate_user_with_invalid_phone_number(
 
 
 def test_update_batch_create_users(client: TestClient) -> None:
-    student = "39691052-2ae5-4e12-99d0-7a9f5f2b0136"
     response = client.post(
         "/users/batch-creation",
         json=[
-            {"email": "1@1.fr", "account_type": student},
-            {"email": "2@1.fr", "account_type": student},
-            {"email": "3@b.fr", "account_type": student},
+            {"email": "1@1.fr"},
+            {"email": "2@1.fr"},
+            {"email": "3@b.fr"},
         ],
         headers={"Authorization": f"Bearer {token_admin_user}"},
     )
@@ -391,28 +425,3 @@ def test_read_user_profile_picture(client: TestClient) -> None:
     )
 
     assert response.status_code == 200
-
-
-def test_batch_internal_user(client: TestClient) -> None:
-    token = create_api_access_token(admin_user)
-
-    response = client.patch(
-        "/users/external",
-        headers={"Authorization": f"Bearer {token}"},
-    )
-
-    assert response.status_code == 204
-
-    response = client.get(
-        f"/groups/{GroupType.external.value}",
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert response.json()["members"] == []
-
-    response = client.get(
-        f"/groups/{GroupType.student.value}",
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    members = response.json()["members"]
-    members_ids = [member["id"] for member in members]
-    assert external_user.id in members_ids

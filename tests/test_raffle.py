@@ -50,7 +50,9 @@ async def init_objects() -> None:
         packticket_to_delete
 
     BDE_user = await create_user_with_groups([GroupType.BDE])
-    student_user = await create_user_with_groups([GroupType.student])
+    student_user = await create_user_with_groups(
+        [],
+    )
     admin_user = await create_user_with_groups([GroupType.admin])
 
     raffle_to_delete = models_raffle.Raffle(

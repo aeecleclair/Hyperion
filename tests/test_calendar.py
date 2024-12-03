@@ -27,14 +27,14 @@ token_simple: str
 async def init_objects() -> None:
     global calendar_user_bde
     calendar_user_bde = await create_user_with_groups(
-        [GroupType.student, GroupType.BDE],
+        [GroupType.BDE],
     )
 
     global token_bde
     token_bde = create_api_access_token(calendar_user_bde)
 
     global calendar_user_simple
-    calendar_user_simple = await create_user_with_groups([GroupType.student])
+    calendar_user_simple = await create_user_with_groups([])
 
     global token_simple
     token_simple = create_api_access_token(calendar_user_simple)

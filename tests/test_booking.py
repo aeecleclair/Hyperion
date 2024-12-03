@@ -39,13 +39,15 @@ async def init_objects() -> None:
     token_admin = create_api_access_token(admin_user)
 
     global manager_user
-    manager_user = await create_user_with_groups([GroupType.student, GroupType.BDE])
+    manager_user = await create_user_with_groups(
+        [GroupType.BDE],
+    )
 
     global token_manager
     token_manager = create_api_access_token(manager_user)
 
     global simple_user
-    simple_user = await create_user_with_groups([GroupType.student])
+    simple_user = await create_user_with_groups([])
 
     global token_simple
     token_simple = create_api_access_token(simple_user)

@@ -24,7 +24,7 @@ from sqlalchemy.ext.asyncio import (
 from app.core import models_core, security
 from app.core.auth import schemas_auth
 from app.core.config import Settings, construct_prod_settings
-from app.core.groups.groups_type import GroupType, get_ecl_groups
+from app.core.groups.groups_type import AccountType, GroupType, get_ecl_account_types
 from app.core.payment.payment_tool import PaymentTool
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.types.scopes_type import ScopeType
@@ -264,7 +264,7 @@ def get_user_from_token_with_scopes(
      * return the corresponding user `models_core.CoreUser` object
 
     This endpoint allows to require scopes other than the API scope. This should only be used by the auth endpoints.
-    To restrict an endpoint from the API, use `is_user_a_member_of`.
+    To restrict an endpoint from the API, use `is_user_in`.
     """
 
     async def get_current_user(
@@ -286,24 +286,70 @@ def get_user_from_token_with_scopes(
 
 
 def is_user(
-    user: models_core.CoreUser = Depends(
-        get_user_from_token_with_scopes([[ScopeType.API]]),
-    ),
-) -> models_core.CoreUser:
+    excluded_groups: list[GroupType] | None = None,
+    included_groups: list[GroupType] | None = None,
+    excluded_account_types: list[AccountType] | None = None,
+    included_account_types: list[AccountType] | None = None,
+    exclude_external: bool = False,
+) -> Callable[[models_core.CoreUser], models_core.CoreUser]:
     """
     A dependency that will:
         * check if the request header contains a valid API JWT token (a token that can be used to call endpoints from the API)
         * make sure the user making the request exists
 
     To check if the user is not external, use is_user_a_member dependency
-    To check if the user is not external and is the member of a group, use is_user_a_member_of generator
+    To check if the user is not external and is the member of a group, use is_user_in generator
+    To check if the user has an ecl account type, use is_user_an_ecl_member dependency
     """
-    return user
+
+    excluded_groups = excluded_groups or []
+    excluded_account_types = excluded_account_types or []
+    included_account_types = included_account_types or list(AccountType)
+
+    def is_user(
+        user: models_core.CoreUser = Depends(
+            get_user_from_token_with_scopes([[ScopeType.API]]),
+        ),
+    ) -> models_core.CoreUser:
+        groups_id: list[str] = [group.id for group in user.groups]
+        if GroupType.admin in groups_id:
+            return user
+        if user.account_type in excluded_account_types:
+            raise HTTPException(
+                status_code=403,
+                detail="Unauthorized, user account type is not allowed",
+            )
+        if exclude_external and is_user_external(user):
+            raise HTTPException(
+                status_code=403,
+                detail="Unauthorized, user is an external user",
+            )
+        if is_user_member_of_an_allowed_group(user, excluded_groups):
+            raise HTTPException(
+                status_code=403,
+                detail=f"Unauthorized, user is a member of any of the groups {excluded_groups}",
+            )
+        if included_groups is not None and not is_user_member_of_an_allowed_group(
+            user,
+            included_groups,
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="Unauthorized, user is not a member of an allowed group",
+            )
+        if user.account_type not in included_account_types:
+            raise HTTPException(
+                status_code=403,
+                detail="Unauthorized, user account type is not allowed",
+            )
+        return user
+
+    return is_user
 
 
 def is_user_a_member(
     user: models_core.CoreUser = Depends(
-        is_user,
+        is_user(exclude_external=True),
     ),
     request_id: str = Depends(get_request_id),
 ) -> models_core.CoreUser:
@@ -313,24 +359,14 @@ def is_user_a_member(
         * make sure the user making the request exists
         * make sure the user is not an external user
 
-    To check if the user is the member of a group, use is_user_a_member_of generator
+    To check if the user is the member of a group, use is_user_in generator
     """
-    if is_user_external(user):
-        hyperion_access_logger.warning(
-            f"Is_user_a_member: user is an external user ({request_id})",
-        )
-
-        raise HTTPException(
-            status_code=403,
-            detail="Unauthorized, user is an external user",
-        )
-
     return user
 
 
 def is_user_an_ecl_member(
     user: models_core.CoreUser = Depends(
-        is_user_a_member,
+        is_user(included_account_types=get_ecl_account_types()),
     ),
     request_id: str = Depends(get_request_id),
 ) -> models_core.CoreUser:
@@ -341,40 +377,27 @@ def is_user_an_ecl_member(
         * make sure the user is not an external user
         * make sure the user making the request exists
 
-    To check if the user is the member of a group, use is_user_a_member_of generator
+    To check if the user is the member of a group, use is_user_in generator
     """
 
-    if is_user_member_of_an_allowed_group(
-        user=user,
-        allowed_groups=get_ecl_groups(),
-    ):
-        # We know the user is a member of the group, we don't need to return an error and can return the CoreUser object
-        return user
-
-    hyperion_access_logger.warning(
-        f"Is_user_a_member_of: Unauthorized, user is not a member of student, staff, association or AE group ({request_id})",
-    )
-
-    raise HTTPException(
-        status_code=403,
-        detail="Unauthorized, user is not a member of student, staff or AE group",
-    )
+    return user
 
 
-def is_user_a_member_of(
+def is_user_in(
     group_id: GroupType,
+    exclude_external: bool = False,
 ) -> Callable[[models_core.CoreUser], Coroutine[Any, Any, models_core.CoreUser]]:
     """
     Generate a dependency which will:
         * check if the request header contains a valid API JWT token (a token that can be used to call endpoints from the API)
         * make sure the user making the request exists and is a member of the group with the given id
-        * make sure the user is not an external user
+        * make sure the user is not an external user if `exclude_external` is True
         * return the corresponding user `models_core.CoreUser` object
     """
 
-    async def is_user_a_member_of(
+    async def is_user_in(
         user: models_core.CoreUser = Depends(
-            is_user_a_member,
+            is_user(included_groups=[group_id], exclude_external=exclude_external),
         ),
         request_id: str = Depends(get_request_id),
     ) -> models_core.CoreUser:
@@ -382,17 +405,6 @@ def is_user_a_member_of(
         A dependency that checks that user is a member of the group with the given id then returns the corresponding user.
         """
 
-        if is_user_member_of_an_allowed_group(user=user, allowed_groups=[group_id]):
-            # We know the user is a member of the group, we don't need to return an error and can return the CoreUser object
-            return user
+        return user
 
-        hyperion_access_logger.warning(
-            f"Is_user_a_member_of: user is not a member of the group {group_id} ({request_id})",
-        )
-
-        raise HTTPException(
-            status_code=403,
-            detail=f"Unauthorized, user is not a member of the group {group_id}",
-        )
-
-    return is_user_a_member_of
+    return is_user_in

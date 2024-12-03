@@ -30,8 +30,8 @@ from app.dependencies import (
     get_request_id,
     get_settings,
     is_user,
-    is_user_a_member_of,
     is_user_an_ecl_member,
+    is_user_in,
 )
 from app.types.content_type import ContentType
 from app.types.exceptions import UserWithEmailAlreadyExistError
@@ -50,7 +50,9 @@ hyperion_security_logger = logging.getLogger("hyperion.security")
 
 templates = Jinja2Templates(directory="assets/templates")
 
-ECL_EMAIL_REGEX = r"^[\w\-.]*@etu(-enise)?\.ec-lyon\.fr$"
+ECL_STAFF_REGEX = r"^[\w\-.]*@(enise\.)?ec-lyon\.fr$"
+ECL_STUDENT_REGEX = r"^[\w\-.]*@((etu(-enise)?)|(ecl\d{2}))\.ec-lyon\.fr$"
+ECL_FORMER_STUDENT_REGEX = r"^[\w\-.]*@centraliens-lyon\.net$"
 
 
 @router.get(
@@ -59,16 +61,18 @@ ECL_EMAIL_REGEX = r"^[\w\-.]*@etu(-enise)?\.ec-lyon\.fr$"
     status_code=200,
 )
 async def read_users(
+    accountTypes: list[AccountType] = Query(default=[]),
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Return all users from database as a list of `CoreUserSimple`
 
     **This endpoint is only usable by administrators**
     """
+    accountTypes = accountTypes if len(accountTypes) != 0 else list(AccountType)
 
-    users = await cruds_users.get_users(db)
+    users = await cruds_users.get_users(db, included_account_types=accountTypes)
     return users
 
 
@@ -79,10 +83,10 @@ async def read_users(
 )
 async def count_users(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
-    Return all users from database as a list of `CoreUserSimple`
+    Return the number of users in the database
 
     **This endpoint is only usable by administrators**
     """
@@ -98,6 +102,8 @@ async def count_users(
 )
 async def search_users(
     query: str,
+    includedAccountTypes: list[AccountType] = Query(default=[]),
+    excludedAccountTypes: list[AccountType] = Query(default=[]),
     includedGroups: list[str] = Query(default=[]),
     excludedGroups: list[str] = Query(default=[]),
     db: AsyncSession = Depends(get_db),
@@ -113,6 +119,8 @@ async def search_users(
 
     users = await cruds_users.get_users(
         db,
+        included_account_types=includedAccountTypes,
+        excluded_account_types=excludedAccountTypes,
         included_groups=includedGroups,
         excluded_groups=excludedGroups,
     )
@@ -121,12 +129,28 @@ async def search_users(
 
 
 @router.get(
+    "/users/account-types",
+    response_model=list[AccountType],
+    status_code=200,
+)
+async def get_account_types(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
+):
+    """
+    Return all account types hardcoded in the system
+    """
+
+    return list(AccountType)
+
+
+@router.get(
     "/users/me",
     response_model=schemas_core.CoreUser,
     status_code=200,
 )
 async def read_current_user(
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
 ):
     """
     Return `CoreUser` representation of current user
@@ -158,56 +182,6 @@ async def create_user_by_user(
     When creating **student** or **staff** account a valid ECL email is required.
     Only admin users can create other **account types**, contact ÉCLAIR for more information.
     """
-    # By default we mark the user as external
-    # but if it has an ECL email address, we will mark it as member
-    external = True
-    # Check the account type
-
-    # For staff and student
-    # ^[\w\-.]*@((etu(-enise)?|enise)\.)?ec-lyon\.fr$
-    # For staff
-    # ^[\w\-.]*@(enise\.)?ec-lyon\.fr$
-    # For student
-    # ^[\w\-.]*@etu(-enise)?\.ec-lyon\.fr$
-
-    # For former students
-    # ^[\w\-.]*@centraliens-lyon\.net$
-
-    # All accepted emails
-    # ^[\w\-.]*@(((etu(-enise)?|enise)\.)?ec-lyon\.fr|centraliens-lyon\.net)$
-
-    if re.match(r"^[\w\-.]*@(enise\.)?ec-lyon\.fr$", user_create.email):
-        # Its a staff email address
-        account_type = AccountType.staff
-        external = False
-    elif re.match(
-        r"^[\w\-.]*@etu(-enise)?\.ec-lyon\.fr$",
-        user_create.email,
-    ):
-        # Its a student email address
-        account_type = AccountType.student
-        external = False
-    elif re.match(
-        r"^[\w\-.]*@centraliens-lyon\.net$",
-        user_create.email,
-    ):
-        # Its a former student email address
-        account_type = AccountType.formerstudent
-        external = False
-    elif user_create.accept_external:
-        account_type = AccountType.external
-    else:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid ECL email address.",
-        )
-
-    if not user_create.accept_external:
-        if external:
-            raise HTTPException(
-                status_code=400,
-                detail="The user could not be marked as external. Try to add accept_external=True in the request or use an internal email address.",
-            )
 
     # Make sure a confirmed account does not already exist
     db_user = await cruds_users.get_user_by_email(db=db, email=user_create.email)
@@ -235,12 +209,10 @@ async def create_user_by_user(
 
     await create_user(
         email=user_create.email,
-        account_type=account_type,
         background_tasks=background_tasks,
         db=db,
         settings=settings,
         request_id=request_id,
-        external=external,
     )
 
     return standard_responses.Result(success=True)
@@ -257,7 +229,7 @@ async def batch_create_users(
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
     request_id: str = Depends(get_request_id),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Batch user account creation process. All users will be sent an email with a link to activate their account.
@@ -276,12 +248,10 @@ async def batch_create_users(
         try:
             await create_user(
                 email=user_create.email,
-                account_type=user_create.account_type,
                 background_tasks=background_tasks,
                 db=db,
                 settings=settings,
                 request_id=request_id,
-                external=user_create.external,
             )
         except Exception as error:
             failed[user_create.email] = str(error)
@@ -291,12 +261,10 @@ async def batch_create_users(
 
 async def create_user(
     email: str,
-    account_type: AccountType,
     background_tasks: BackgroundTasks,
     db: AsyncSession,
     settings: Settings,
     request_id: str,
-    external: bool,
 ) -> None:
     """
     User creation process. This function is used by both `/users/create` and `/users/admin/create` endpoints
@@ -316,12 +284,10 @@ async def create_user(
     user_unconfirmed = models_core.CoreUserUnconfirmed(
         id=str(uuid.uuid4()),
         email=email,
-        account_type=account_type,
         activation_token=activation_token,
         created_on=datetime.now(UTC),
         expire_on=datetime.now(UTC)
         + timedelta(hours=settings.USER_ACTIVATION_TOKEN_EXPIRE_HOURS),
-        external=external,
     )
 
     await cruds_users.create_unconfirmed_user(user_unconfirmed=user_unconfirmed, db=db)
@@ -331,7 +297,7 @@ async def create_user(
 
     calypsso_activate_url = settings.CLIENT_URL + calypsso.get_activate_relative_url(
         activation_token=activation_token,
-        external=external,
+        external=True,
     )
 
     if settings.SMTP_ACTIVE:
@@ -395,12 +361,47 @@ async def activate_user(
             detail=f"The account with the email {unconfirmed_user.email} is already confirmed",
         )
 
+    # Check the account type
+
+    # For staff and student
+    # ^[\w\-.]*@((etu(-enise)?|enise)\.)?ec-lyon\.fr$
+    # For staff
+    # ^[\w\-.]*@(enise\.)?ec-lyon\.fr$
+    # For student
+    # ^[\w\-.]*@etu(-enise)?\.ec-lyon\.fr$
+
+    # For former students
+    # ^[\w\-.]*@centraliens-lyon\.net$
+
+    # All accepted emails
+    # ^[\w\-.]*@(((etu(-enise)?|enise)\.)?ec-lyon\.fr|centraliens-lyon\.net)$
+
+    # By default we mark the user as external
+    # but if it has an ECL email address, we will mark it as member
+    account_type = AccountType.external
+    if re.match(ECL_STAFF_REGEX, unconfirmed_user.email):
+        # Its a staff email address
+        account_type = AccountType.staff
+    elif re.match(
+        ECL_STUDENT_REGEX,
+        unconfirmed_user.email,
+    ):
+        # Its a student email address
+        account_type = AccountType.student
+    elif re.match(
+        ECL_FORMER_STUDENT_REGEX,
+        unconfirmed_user.email,
+    ):
+        # Its a former student email address
+        account_type = AccountType.former_student
+
     # A password should have been provided
     password_hash = security.get_password_hash(user.password)
 
     confirmed_user = models_core.CoreUser(
         id=unconfirmed_user.id,
         email=unconfirmed_user.email,
+        account_type=account_type,
         password_hash=password_hash,
         name=user.name,
         firstname=user.firstname,
@@ -410,18 +411,9 @@ async def activate_user(
         phone=user.phone,
         floor=user.floor,
         created_on=datetime.now(UTC),
-        external=unconfirmed_user.external,
     )
     # We add the new user to the database
     await cruds_users.create_user(db=db, user=confirmed_user)
-    await cruds_groups.create_membership(
-        db=db,
-        membership=models_core.CoreMembership(
-            group_id=unconfirmed_user.account_type,
-            user_id=unconfirmed_user.id,
-            description=None,
-        ),
-    )
 
     # We remove all unconfirmed users with the same email address
     await cruds_users.delete_unconfirmed_user_by_email(
@@ -609,7 +601,7 @@ async def reset_password(
 async def migrate_mail(
     mail_migration: schemas_core.MailMigrationRequest,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
     settings: Settings = Depends(get_settings),
 ):
     """
@@ -617,7 +609,7 @@ async def migrate_mail(
     This endpoint will send a confirmation code to the user's new email address. He will need to use this code to confirm the change with `/users/confirm-mail-migration` endpoint.
     """
 
-    if not re.match(ECL_EMAIL_REGEX, mail_migration.new_email):
+    if not re.match(ECL_STUDENT_REGEX, mail_migration.new_email):
         raise HTTPException(
             status_code=400,
             detail="The new email address must match the new ECL format for student users",
@@ -701,29 +693,14 @@ async def migrate_mail_confirm(
         )
 
     try:
-        await cruds_users.update_user_email_by_id(
-            db=db,
-            user_id=migration_object.user_id,
-            new_email=migration_object.new_email,
-            make_user_external=migration_object.make_user_external,
+        await cruds_users.update_user(
+            db,
+            migration_object.user_id,
+            user_update=schemas_core.CoreUserUpdateAdmin(
+                email=migration_object.new_email,
+                account_type=AccountType.student,
+            ),
         )
-        if not migration_object.make_user_external:
-            group_ids = [group.id for group in user.groups]
-            if GroupType.external in group_ids:
-                await cruds_groups.delete_membership_by_group_and_user_id(
-                    db=db,
-                    group_id=GroupType.external,
-                    user_id=migration_object.user_id,
-                )
-            if GroupType.student not in group_ids:
-                await cruds_groups.create_membership(
-                    db=db,
-                    membership=models_core.CoreMembership(
-                        group_id=GroupType.student,
-                        user_id=migration_object.user_id,
-                        description=None,
-                    ),
-                )
     except Exception as error:
         raise HTTPException(status_code=400, detail=str(error))
 
@@ -789,10 +766,10 @@ async def change_password(
 async def read_user(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
-    Return `CoreUserSimple` representation of user with id `user_id`
+    Return `CoreUser` representation of user with id `user_id`
 
     **The user must be authenticated to use this endpoint**
     """
@@ -808,7 +785,7 @@ async def read_user(
 #    "/users/{user_id}",
 #    status_code=204,
 ## )
-# async def delete_user(user_id: str, db: AsyncSession = Depends(get_db), user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin))):
+# async def delete_user(user_id: str, db: AsyncSession = Depends(get_db), user: models_core.CoreUser = Depends(is_user_in(GroupType.admin))):
 #    """Delete user from database by id"""
 #    # TODO: WARNING - deleting an user without removing its relations ship in other tables will have unexpected consequences
 #
@@ -820,7 +797,7 @@ async def read_user(
     status_code=204,
 )
 async def delete_user(
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
 ):
     """
     This endpoint will ask administrators to process to the user deletion.
@@ -838,7 +815,7 @@ async def delete_user(
 async def update_current_user(
     user_update: schemas_core.CoreUserUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
 ):
     """
     Update the current user, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value
@@ -849,46 +826,6 @@ async def update_current_user(
     await cruds_users.update_user(db=db, user_id=user.id, user_update=user_update)
 
 
-@router.patch(
-    "/users/external",
-    status_code=204,
-)
-async def switch_external_user_internal(
-    db: AsyncSession = Depends(get_db),
-    u: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
-):
-    """
-    Switch all external users to internal users if they have an ECL email address.
-
-    **This endpoint is only usable by administrators**
-    """
-
-    users = await cruds_users.get_users(db=db)
-    for user in users:
-        if re.match(ECL_EMAIL_REGEX, user.email):
-            await cruds_users.update_user(
-                db=db,
-                user_id=user.id,
-                user_update=schemas_core.CoreUserUpdateAdmin(external=False),
-            )
-            group_ids = [group.id for group in user.groups]
-            if GroupType.external in group_ids:
-                await cruds_groups.delete_membership_by_group_and_user_id(
-                    db=db,
-                    group_id=GroupType.external,
-                    user_id=user.id,
-                )
-            if GroupType.student not in group_ids:
-                await cruds_groups.create_membership(
-                    db=db,
-                    membership=models_core.CoreMembership(
-                        group_id=GroupType.student,
-                        user_id=user.id,
-                        description=None,
-                    ),
-                )
-
-
 @router.post(
     "/users/merge",
     status_code=204,
@@ -897,7 +834,7 @@ async def merge_users(
     user_fusion: schemas_core.CoreUserFusionRequest,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
     settings: Settings = Depends(get_settings),
 ):
     """
@@ -945,7 +882,7 @@ async def update_user(
     user_id: str,
     user_update: schemas_core.CoreUserUpdateAdmin,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Update an user, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value
@@ -966,7 +903,7 @@ async def update_user(
 )
 async def create_current_user_profile_picture(
     image: UploadFile = File(...),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
     request_id: str = Depends(get_request_id),
 ):
     """
@@ -997,7 +934,7 @@ async def create_current_user_profile_picture(
     status_code=200,
 )
 async def read_own_profile_picture(
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
 ):
     """
     Get the profile picture of the authenticated user.

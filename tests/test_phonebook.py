@@ -69,18 +69,26 @@ async def init_objects():
     global association2_group2
 
     phonebook_user_BDE = await create_user_with_groups(
-        [GroupType.student, GroupType.BDE],
+        [GroupType.BDE],
     )
     token_BDE = create_api_access_token(phonebook_user_BDE)
 
-    phonebook_user_president = await create_user_with_groups([GroupType.student])
+    phonebook_user_president = await create_user_with_groups(
+        [],
+    )
     token_president = create_api_access_token(phonebook_user_president)
 
-    phonebook_user_simple = await create_user_with_groups([GroupType.student])
+    phonebook_user_simple = await create_user_with_groups(
+        [],
+    )
     token_simple = create_api_access_token(phonebook_user_simple)
 
-    phonebook_user_simple2 = await create_user_with_groups([GroupType.student])
-    phonebook_user_simple3 = await create_user_with_groups([GroupType.student])
+    phonebook_user_simple2 = await create_user_with_groups(
+        [],
+    )
+    phonebook_user_simple3 = await create_user_with_groups(
+        [],
+    )
 
     phonebook_user_admin = await create_user_with_groups([GroupType.admin])
     token_admin = create_api_access_token(phonebook_user_admin)

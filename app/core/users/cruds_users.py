@@ -2,13 +2,14 @@
 
 from collections.abc import Sequence
 
-from sqlalchemy import ForeignKey, and_, delete, not_, select, update
+from sqlalchemy import ForeignKey, and_, delete, not_, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy_utils import get_referencing_foreign_keys  # type: ignore
 
 from app.core import models_core, schemas_core
+from app.core.groups.groups_type import AccountType
 
 
 async def count_users(db: AsyncSession) -> int:
@@ -20,14 +21,18 @@ async def count_users(db: AsyncSession) -> int:
 
 async def get_users(
     db: AsyncSession,
+    included_account_types: list[AccountType] | None = None,
+    excluded_account_types: list[AccountType] | None = None,
     included_groups: list[str] | None = None,
     excluded_groups: list[str] | None = None,
 ) -> Sequence[models_core.CoreUser]:
     """
     Return all users from database.
 
-    Parameters `included_groups` and `excluded_groups` can be used to filter results.
+    Parameters `excluded_account_types` and `excluded_groups` can be used to filter results.
     """
+    included_account_types = included_account_types or list(AccountType)
+    excluded_account_types = excluded_account_types or []
     included_groups = included_groups or []
     excluded_groups = excluded_groups or []
 
@@ -42,6 +47,19 @@ async def get_users(
                         models_core.CoreGroup.id == group_id,
                     )
                     for group_id in included_groups
+                ],
+                or_(
+                    False,
+                    *[
+                        models_core.CoreUser.account_type == account_type
+                        for account_type in included_account_types
+                    ],
+                ),
+                *[
+                    not_(
+                        models_core.CoreUser.account_type == account_type,
+                    )
+                    for account_type in excluded_account_types
                 ],
                 # We want, for each group that should not be included
                 # check that the following condition is false :
@@ -235,24 +253,6 @@ async def delete_email_migration_code_by_token(
     await db.commit()
 
 
-async def update_user_email_by_id(
-    user_id: str,
-    new_email: str,
-    db: AsyncSession,
-    make_user_external: bool = False,
-):
-    try:
-        await db.execute(
-            update(models_core.CoreUser)
-            .where(models_core.CoreUser.id == user_id)
-            .values(email=new_email, external=make_user_external),
-        )
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-
-
 async def delete_recover_request_by_email(db: AsyncSession, email: str):
     """Delete a user from database by id"""
 
@@ -292,7 +292,7 @@ async def fusion_users(
     If the user_deleted_id is referenced in a table where the user_kept_id is also referenced,
     and the change would create a duplicate that violates a unique constraint, the row will be deleted
 
-    There are thre cases to consider:
+    There are three cases to consider:
     1. The foreign key is not a primary key of the table:
         In this case, we can update the row
     2. The foreign key is one of the primary keys of the table:

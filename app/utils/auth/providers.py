@@ -4,7 +4,12 @@ from typing import Any
 import unidecode
 
 from app.core import models_core
-from app.core.groups.groups_type import GroupType, get_ecl_groups
+from app.core.groups.groups_type import (
+    AccountType,
+    GroupType,
+    get_account_types_except_external,
+    get_ecl_account_types,
+)
 from app.types.floors_type import FloorsType
 from app.types.scopes_type import ScopeType
 from app.utils.tools import get_display_name, is_user_member_of_an_allowed_group
@@ -31,6 +36,11 @@ class BaseAuthClient:
     # Restrict the authentication to this client to specific Hyperion groups.
     # When set to `None`, users from any group can use the auth client
     allowed_groups: list[GroupType] | None = None
+    # Restrict the authentication to this client to specific Hyperion account types.
+    # When set to `None`, users from any account type can use the auth client
+    allowed_account_types: list[AccountType] | None = (
+        get_account_types_except_external()
+    )
     # redirect_uri should alway match the one provided by the client
     redirect_uri: list[str]
     # Sometimes, when the client is wrongly configured, it may return an incorrect return_uri. This may also be useful for debugging clients.
@@ -43,9 +53,6 @@ class BaseAuthClient:
     # but instead require to include the user information in the id_token
     # By setting this parameter to True, the userinfo will be added to the id_token.
     return_userinfo_in_id_token: bool = False
-
-    # Some clients may allow external users to authenticate
-    allow_external_users: bool = False
 
     # Some clients may require to enable token introspection to validate access tokens.
     # We don't want to enable token introspection for all clients as it may be a security risk, allowing attackers to do token fishing.
@@ -107,7 +114,9 @@ class AppAuthClient(BaseAuthClient):
     # WARNING: to be able to use openid connect, `ScopeType.openid` should always be allowed
     allowed_scopes: set[ScopeType | str] = {ScopeType.API}
 
-    allow_external_users: bool = True
+    allowed_account_types: list[AccountType] | None = (
+        None  # No restriction on account types
+    )
 
 
 class APIToolAuthClient(BaseAuthClient):
@@ -119,7 +128,7 @@ class APIToolAuthClient(BaseAuthClient):
 
 
 class NextcloudAuthClient(BaseAuthClient):
-    allowed_groups: list[GroupType] | None = get_ecl_groups()
+    allowed_account_types: list[AccountType] | None = get_ecl_account_types()
 
     # For Nextcloud:
     # Required iss : the issuer value form .well-known (corresponding code : https://github.com/pulsejet/nextcloud-oidc-login/blob/0c072ecaa02579384bb5e10fbb9d219bbd96cfb8/3rdparty/jumbojett/openid-connect-php/src/OpenIDConnectClient.php#L1255)
@@ -138,9 +147,8 @@ class NextcloudAuthClient(BaseAuthClient):
                 nickname=user.nickname,
             ),
             # TODO: should we use group ids instead of names? It would be less human readable but would guarantee uniqueness. Question: are group names unique?
-            "groups": [
-                group.name for group in user.groups
-            ],  # We may want to filter which groups are provided as they won't always all be useful
+            # We may want to filter which groups are provided as they won't always all be useful
+            "groups": [group.name for group in user.groups] + [user.account_type.value],
             "email": user.email,
             "picture": f"https://hyperion.myecl.fr/users/{user.id}/profile-picture",
             "is_admin": is_user_member_of_an_allowed_group(user, [GroupType.admin]),
@@ -150,7 +158,7 @@ class NextcloudAuthClient(BaseAuthClient):
 class PiwigoAuthClient(BaseAuthClient):
     # Restrict the authentication to this client to specific Hyperion groups.
     # When set to `None`, users from any group can use the auth client
-    allowed_groups: list[GroupType] | None = get_ecl_groups()
+    allowed_account_types: list[AccountType] | None = get_ecl_account_types()
 
     def get_userinfo(self, user: models_core.CoreUser) -> dict[str, Any]:
         """
@@ -174,7 +182,7 @@ class PiwigoAuthClient(BaseAuthClient):
                 name=user.name,
                 nickname=user.nickname,
             ),
-            "groups": [group.name for group in user.groups],
+            "groups": [group.name for group in user.groups] + [user.account_type.value],
             "email": user.email,
         }
 
@@ -183,6 +191,8 @@ class HedgeDocAuthClient(BaseAuthClient):
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.types.scopes_type.ScopeType for possible values
     allowed_scopes: set[ScopeType | str] = {ScopeType.profile}
+
+    allowed_account_types: list[AccountType] | None = get_ecl_account_types()
 
     @classmethod
     def get_userinfo(cls, user: models_core.CoreUser):
@@ -200,6 +210,8 @@ class WikijsAuthClient(BaseAuthClient):
     # See app.types.scopes_type.ScopeType for possible values
     allowed_scopes: set[ScopeType | str] = {ScopeType.openid, ScopeType.profile}
 
+    allowed_account_types: list[AccountType] | None = get_ecl_account_types()
+
     @classmethod
     def get_userinfo(cls, user: models_core.CoreUser):
         return {
@@ -210,7 +222,7 @@ class WikijsAuthClient(BaseAuthClient):
                 nickname=user.nickname,
             ),
             "email": user.email,
-            "groups": [group.name for group in user.groups],
+            "groups": [group.name for group in user.groups] + [user.account_type.value],
         }
 
 
@@ -218,6 +230,8 @@ class SynapseAuthClient(BaseAuthClient):
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.types.scopes_type.ScopeType for possible values
     allowed_scopes: set[ScopeType | str] = {ScopeType.openid, ScopeType.profile}
+
+    allowed_account_types: list[AccountType] | None = get_ecl_account_types()
 
     # https://github.com/matrix-org/matrix-authentication-service/issues/2088
     return_userinfo_in_id_token: bool = True
@@ -253,6 +267,8 @@ class MinecraftAuthClient(BaseAuthClient):
     # See app.types.scopes_type.ScopeType for possible values
     allowed_scopes: set[ScopeType | str] = {ScopeType.profile}
 
+    allowed_account_types: list[AccountType] | None = get_ecl_account_types()
+
     @classmethod
     def get_userinfo(cls, user: models_core.CoreUser):
         return {
@@ -282,8 +298,6 @@ class OpenProjectAuthClient(BaseAuthClient):
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.types.scopes_type.ScopeType for possible values
     allowed_scopes: set[ScopeType | str] = {ScopeType.openid, ScopeType.profile}
-
-    allow_external_users: bool = True
 
     @classmethod
     def get_userinfo(cls, user: models_core.CoreUser):
@@ -360,17 +374,21 @@ class RAIDRegisteringAuthClient(BaseAuthClient):
     # WARNING: to be able to use openid connect, `ScopeType.openid` should always be allowed
     allowed_scopes: set[ScopeType | str] = {ScopeType.API}
 
-    allow_external_users: bool = True
+    allowed_account_types: list[AccountType] | None = (
+        None  # No restriction on account types
+    )
 
 
 class SiarnaqAuthClient(BaseAuthClient):
     allowed_scopes: set[ScopeType | str] = {ScopeType.API}
 
-    allow_external_users: bool = True
+    allowed_account_types: list[AccountType] | None = (
+        None  # No restriction on account types
+    )
 
 
 class OverleafAuthClient(BaseAuthClient):
-    allowed_groups: list[GroupType] | None = get_ecl_groups()
+    allowed_account_types: list[AccountType] | None = get_ecl_account_types()
 
     @classmethod
     def get_userinfo(cls, user: models_core.CoreUser):
