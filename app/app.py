@@ -34,7 +34,11 @@ from app.dependencies import (
     init_and_get_db_engine,
 )
 from app.modules.module_list import module_list
-from app.types.exceptions import ContentHTTPException, GoogleAPIInvalidCredentialsError
+from app.types.exceptions import (
+    ContentHTTPException,
+    CoreDataNotFoundError,
+    GoogleAPIInvalidCredentialsError,
+)
 from app.types.sqlalchemy import Base
 from app.utils import initialization
 from app.utils.redis import limiter
@@ -192,10 +196,13 @@ def initialize_module_visibility(
     """Add the default module visibilities for Titan"""
 
     with Session(sync_engine) as db:
-        module_awareness = initialization.get_core_data_sync(
-            schemas_core.ModuleVisibilityAwareness,
-            db,
-        )
+        try:
+            module_awareness = initialization.get_core_data_sync(
+                schemas_core.ModuleVisibilityAwareness,
+                db,
+            )
+        except CoreDataNotFoundError:
+            module_awareness = schemas_core.ModuleVisibilityAwareness(roots=[])
 
         new_modules = [
             module

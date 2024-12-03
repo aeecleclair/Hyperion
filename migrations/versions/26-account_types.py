@@ -8,6 +8,8 @@ from collections.abc import Sequence
 from enum import Enum
 from typing import TYPE_CHECKING
 
+from app.types.core_data import BaseCoreData
+
 if TYPE_CHECKING:
     from pytest_alembic import MigrationContext
 
@@ -43,6 +45,15 @@ ECLAIR_ID = "e68d744f-472f-49e5-896f-662d83be7b9a"
 ECL_STAFF_REGEX = r"^[\w\-.]*@(enise\.)?ec-lyon\.fr$"
 ECL_STUDENT_REGEX = r"^[\w\-.]*@((etu(-enise)?)|(ecl\d{2}))\.ec-lyon\.fr$"
 ECL_FORMER_STUDENT_REGEX = r"^[\w\-.]*@centraliens-lyon\.net$"
+
+
+class ModuleVisibilityAwareness(BaseCoreData):
+    """
+    Schema for module visibility awareness
+    """
+
+    roots: list[str]
+
 
 user_t = sa.Table(
     "core_user",
@@ -193,9 +204,9 @@ def upgrade() -> None:
         EXTERNAL_GROUP_ID: AccountType.external,
     }
 
-    module_awareness = {
-        group_visibility.root for group_visibility in group_visibilities
-    }
+    module_awareness = ModuleVisibilityAwareness(
+        roots={group_visibility.root for group_visibility in group_visibilities},
+    )
 
     conn.execute(
         sa.insert(
@@ -204,7 +215,7 @@ def upgrade() -> None:
             [
                 {
                     "schema": "module_awareness",
-                    "data": ",".join(module_awareness),
+                    "data": module_awareness.model_dump_json(),
                 },
             ],
         ),
