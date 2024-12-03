@@ -149,7 +149,10 @@ async def create_session(
             action_module="cinema",
         )
 
-        await scheduler.cancel_job(job_id=f"cinema_weekly_{sunday}")
+        await notification_tool.cancel_notification(
+            scheduler=scheduler,
+            job_id=f"cinema_weekly_{sunday}",
+        )
 
         await notification_tool.send_notification_to_topic(
             custom_topic=CustomTopic(topic=Topic.cinema),
