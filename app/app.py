@@ -22,7 +22,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import api
-from app.core import models_core
+from app.core import models_core, schemas_core
 from app.core.config import Settings
 from app.core.google_api.google_api import GoogleAPI
 from app.core.groups.groups_type import GroupType
@@ -193,15 +193,14 @@ def initialize_module_visibility(
 
     with Session(sync_engine) as db:
         module_awareness = initialization.get_core_data_sync(
-            "module_awareness",
+            schemas_core.ModuleVisibilityAwareness,
             db,
         )
-        awareness_list = []
-        if module_awareness is not None:
-            awareness_list = module_awareness.data.split(",")
 
         new_modules = [
-            module for module in module_list if module.root not in awareness_list
+            module
+            for module in module_list
+            if module.root not in module_awareness.roots
         ]
         # Is run to create default module visibilities or when the table is empty
         if new_modules:
@@ -242,9 +241,8 @@ def initialize_module_visibility(
                                 f"Startup: Could not add module visibility {module.root} in the database: {error}",
                             )
             initialization.set_core_data_sync(
-                models_core.CoreData(
-                    "module_awareness",
-                    ",".join([module.root for module in module_list]),
+                schemas_core.ModuleVisibilityAwareness(
+                    roots=[module.root for module in module_list],
                 ),
                 db,
             )

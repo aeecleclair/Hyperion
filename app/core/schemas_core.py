@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from pydantic.functional_validators import field_validator
 
 from app.core.groups.groups_type import AccountType
+from app.types.core_data import BaseCoreData
 from app.types.floors_type import FloorsType
 from app.utils import validators
 from app.utils.examples import examples_core
@@ -282,3 +283,11 @@ class ModuleVisibilityCreate(BaseModel):
     allowed_group_id: str | None = None
     allowed_account_type: AccountType | None = None
     model_config = ConfigDict(from_attributes=True)
+
+
+class ModuleVisibilityAwareness(BaseCoreData):
+    """
+    Schema for module visibility awareness
+    """
+
+    roots: list[str]
