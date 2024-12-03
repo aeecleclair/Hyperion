@@ -154,7 +154,7 @@ class Scheduler:
         await job.abort()
 
 
-class DummyScheduler(Scheduler):
+class OfflineScheduler(Scheduler):
     """
     A Dummy implementation of the Scheduler to allow to run the server without a REDIS config
     """
@@ -186,7 +186,7 @@ class DummyScheduler(Scheduler):
         """
         self._get_db = _get_db
 
-        scheduler_logger.info("DummyScheduler started")
+        scheduler_logger.info("OfflineScheduler started")
 
     async def close(self):
         # If the worker was started, we close it
@@ -204,7 +204,7 @@ class DummyScheduler(Scheduler):
         job_id will allow to abort if needed
         """
         scheduler_logger.debug(
-            f"Job {job_id} queued in DummyScheduler with defer {defer_seconds} seconds",
+            f"Job {job_id} queued in OfflineScheduler with defer {defer_seconds} seconds",
         )
 
     async def queue_job_defer_to(
@@ -219,11 +219,11 @@ class DummyScheduler(Scheduler):
         job_id will allow to abort if needed
         """
         scheduler_logger.debug(
-            f"Job {job_id} queued in DummyScheduler with defer to {defer_date}",
+            f"Job {job_id} queued in OfflineScheduler with defer to {defer_date}",
         )
 
     async def cancel_job(self, job_id: str):
         """
         cancel a queued job based on its job_id
         """
-        scheduler_logger.debug(f"Job {job_id} aborted in DummyScheduler")
+        scheduler_logger.debug(f"Job {job_id} aborted in OfflineScheduler")
