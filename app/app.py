@@ -364,19 +364,12 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
             get_scheduler,
         )(settings=settings)
 
-        _get_db: Callable[[], AsyncGenerator[AsyncSession, None]] = (
-            app.dependency_overrides.get(
-                get_db,
-                get_db,
-            )
-        )
-
         await ws_manager.connect_broadcaster()
         await arq_scheduler.start(
             redis_host=settings.REDIS_HOST,
             redis_port=settings.REDIS_PORT,
             redis_password=settings.REDIS_PASSWORD,
-            _get_db=_get_db,
+            _dependency_overrides=app.dependency_overrides,
         )
 
         yield

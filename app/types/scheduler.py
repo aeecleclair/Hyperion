@@ -2,33 +2,69 @@ import asyncio
 import logging
 from collections.abc import AsyncGenerator, Callable, Coroutine
 from datetime import datetime, timedelta
+from inspect import iscoroutinefunction, signature
 from typing import TYPE_CHECKING, Any
 
 from arq.connections import RedisSettings
 from arq.jobs import Job
 from arq.typing import WorkerSettingsBase
 from arq.worker import create_worker
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import params
+
+from app import dependencies
 
 if TYPE_CHECKING:
     from arq import Worker
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 scheduler_logger = logging.getLogger("scheduler")
 
 
 async def run_task(
     ctx,
-    job_function: Callable[..., Coroutine[Any, Any, Any]],
-    _get_db: Callable[[], AsyncGenerator[AsyncSession, None]],
+    job_function: Callable[..., Any],
+    _dependency_overrides: dict[Callable[..., Any], Callable[..., Any]],
     **kwargs,
 ):
+    """
+    Execute the job_function with the provided kwargs
+
+    `job_function` may be a coroutine function or a regular function
+
+    The method will inject the following known dependencies into the job_function if needed:
+     - `get_db`
+    """
     scheduler_logger.debug(f"Job function consumed {job_function}")
 
-    if "db" in kwargs:
-        async for db in _get_db():
-            kwargs["db"] = db
+    sign = signature(job_function)
+    for param in sign.parameters.values():
+        if isinstance(param.default, params.Depends):
+            # We iterate over the parameters of the job_function
+            # If we find a Depends object, we may want to inject the dependency
 
-    return await job_function(**kwargs)
+            # It is not easy to support any kind of Depends object
+            # as the corresponding method may be async or not, or be a special FastAPI object
+            # like BackgroundTasks or Request
+
+            # For now we filter accepted Depends objects manually
+            # and only accept `get_db`
+            if param.default.dependency == dependencies.get_db:
+                # `get_db` is the real dependency, defined in dependency.py
+                # `_get_db` may be the real dependency or an override
+                _get_db: Callable[[], AsyncGenerator[AsyncSession, None]] = (
+                    _dependency_overrides.get(
+                        dependencies.get_db,
+                        dependencies.get_db,
+                    )
+                )
+
+                async for db in _get_db():
+                    kwargs["db"] = db
+
+    if iscoroutinefunction(job_function):
+        return await job_function(**kwargs)
+    else:
+        return job_function(**kwargs)
 
 
 class Scheduler:
@@ -47,14 +83,14 @@ class Scheduler:
         # Task will contain the asyncio task that runs the worker
         self.task: asyncio.Task | None = None
         # Pointer to the get_db dependency
-        # self._get_db: Callable[[], AsyncGenerator[AsyncSession, None]]
+        # self._dependency_overrides: Callable[[], AsyncGenerator[AsyncSession, None]]
 
     async def start(
         self,
         redis_host: str,
         redis_port: int,
         redis_password: str | None,
-        _get_db: Callable[[], AsyncGenerator[AsyncSession, None]],
+        _dependency_overrides: dict[Callable[..., Any], Callable[..., Any]],
         **kwargs,
     ):
         """
@@ -62,7 +98,7 @@ class Scheduler:
         - redis_host: str
         - redis_port: int
         - redis_password: str
-        - get_db: Callable[[], AsyncGenerator[AsyncSession, None]] a pointer to `get_db` dependency
+        - _dependency_overrides: dict[Callable[..., Any], Callable[..., Any]] a pointer to the app dependency overrides dict
         """
 
         class ArqWorkerSettings(WorkerSettingsBase):
@@ -85,7 +121,7 @@ class Scheduler:
         # We run the worker in an asyncio task
         self.task = asyncio.create_task(self.worker.async_run())
 
-        self._get_db = _get_db
+        self._dependency_overrides = _dependency_overrides
 
         scheduler_logger.info("Scheduler started")
 
@@ -113,7 +149,7 @@ class Scheduler:
             job_function=job_function,
             _job_id=job_id,
             _defer_by=timedelta(seconds=defer_seconds),
-            _get_db=self._get_db,
+            _dependency_overrides=self._dependency_overrides,
             **kwargs,
         )
         scheduler_logger.debug(f"Job {job_id} queued {job}")
@@ -137,7 +173,7 @@ class Scheduler:
             job_function=job_function,
             _job_id=job_id,
             _defer_until=defer_date,
-            _get_db=self._get_db,
+            _dependency_overrides=self._dependency_overrides,
             **kwargs,
         )
         scheduler_logger.debug(f"Job {job_id} queued {job}")
@@ -167,14 +203,13 @@ class OfflineScheduler(Scheduler):
         # Task will contain the asyncio task that runs the worker
         self.task: asyncio.Task | None = None
         # Pointer to the get_db dependency
-        # self._get_db: Callable[[], AsyncGenerator[AsyncSession, None]]
 
     async def start(
         self,
         redis_host: str,
         redis_port: int,
         redis_password: str | None,
-        _get_db: Callable[[], AsyncGenerator[AsyncSession, None]],
+        _dependency_overrides: dict[Callable[..., Any], Callable[..., Any]],
         **kwargs,
     ):
         """
@@ -182,9 +217,9 @@ class OfflineScheduler(Scheduler):
         - redis_host: str
         - redis_port: int
         - redis_password: str
-        - get_db: Callable[[], AsyncGenerator[AsyncSession, None]] a pointer to `get_db` dependency
+        - _dependency_overrides: dict[Callable[..., Any], Callable[..., Any]] a pointer to the app dependency overrides dict
         """
-        self._get_db = _get_db
+        self._dependency_overrides = _dependency_overrides
 
         scheduler_logger.info("OfflineScheduler started")
 
