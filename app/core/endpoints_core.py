@@ -17,7 +17,6 @@ from app.dependencies import (
     is_user_in,
 )
 from app.modules.module_list import module_list
-from app.types.scheduler import Scheduler
 from app.utils.tools import is_group_id_valid
 
 router = APIRouter(tags=["Core"])
@@ -32,7 +31,6 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 )
 async def read_information(
     settings: Settings = Depends(get_settings),
-    scheduler: Scheduler = Depends(get_scheduler),
 ):
     """
     Return information about Hyperion. This endpoint can be used to check if the API is up.
