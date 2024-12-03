@@ -192,21 +192,6 @@ class OfflineScheduler(Scheduler):
         # If the worker was started, we close it
         pass
 
-    async def queue_job_time_defer(
-        self,
-        job_function: Callable[..., Coroutine[Any, Any, Any]],
-        job_id: str,
-        defer_seconds: float,
-        **kwargs,
-    ):
-        """
-        Queue a job to execute job_function in defer_seconds amount of seconds
-        job_id will allow to abort if needed
-        """
-        scheduler_logger.debug(
-            f"Job {job_id} queued in OfflineScheduler with defer {defer_seconds} seconds",
-        )
-
     async def queue_job_defer_to(
         self,
         job_function: Callable[..., Coroutine[Any, Any, Any]],
