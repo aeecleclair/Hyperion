@@ -2,13 +2,11 @@ from pathlib import Path
 
 import pytest
 import pytest_asyncio
-from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
 from app.core import models_core
 from app.core.groups.groups_type import AccountType, GroupType
-from app.dependencies import is_user
 from tests.commons import (
     create_api_access_token,
     create_user_with_groups,
@@ -107,16 +105,6 @@ def test_get_account_types(client: TestClient) -> None:
     assert response.status_code == 200
     data = response.json()
     assert data == list(AccountType)
-
-
-def test_restrict_access_on_group(client: TestClient) -> None:
-    with pytest.raises(
-        HTTPException,
-        match="Unauthorized, user is a member of any of the groups ",
-    ):
-        is_user(
-            excluded_groups=[GroupType.amap],
-        )(user_with_group)
 
 
 def test_read_current_user(client: TestClient) -> None:

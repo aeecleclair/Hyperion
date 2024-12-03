@@ -22,7 +22,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import api
-from app.core import models_core, schemas_core
+from app.core import coredata_core, models_core
 from app.core.config import Settings
 from app.core.google_api.google_api import GoogleAPI
 from app.core.groups.groups_type import GroupType
@@ -36,7 +36,6 @@ from app.dependencies import (
 from app.modules.module_list import module_list
 from app.types.exceptions import (
     ContentHTTPException,
-    CoreDataNotFoundError,
     GoogleAPIInvalidCredentialsError,
 )
 from app.types.sqlalchemy import Base
@@ -196,13 +195,10 @@ def initialize_module_visibility(
     """Add the default module visibilities for Titan"""
 
     with Session(sync_engine) as db:
-        try:
-            module_awareness = initialization.get_core_data_sync(
-                schemas_core.ModuleVisibilityAwareness,
-                db,
-            )
-        except CoreDataNotFoundError:
-            module_awareness = schemas_core.ModuleVisibilityAwareness(roots=[])
+        module_awareness = initialization.get_core_data_sync(
+            coredata_core.ModuleVisibilityAwareness,
+            db,
+        )
 
         new_modules = [
             module
@@ -248,7 +244,7 @@ def initialize_module_visibility(
                                 f"Startup: Could not add module visibility {module.root} in the database: {error}",
                             )
             initialization.set_core_data_sync(
-                schemas_core.ModuleVisibilityAwareness(
+                coredata_core.ModuleVisibilityAwareness(
                     roots=[module.root for module in module_list],
                 ),
                 db,

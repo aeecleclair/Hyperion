@@ -11,14 +11,6 @@ class GroupType(str, Enum):
     Being member of admin only gives rights over admin specific endpoints. For example, an admin won't be able to administrate amap module
     """
 
-    # Account types
-    # student = "39691052-2ae5-4e12-99d0-7a9f5f2b0136"
-    # former_student = "ab4c7503-41b3-11ee-8177-089798f1a4a5"
-    # staff = "703056c4-be9d-475c-aa51-b7fc62a96aaa"
-    # association = "29751438-103c-42f2-b09b-33fbb20758a7"
-    # external = "b1cd979e-ecc1-4bd0-bc2b-4dad2ba8cded"
-    # demo = "ae4d1866-e7d9-4d7f-bee7-e0dda24d8dd8"
-
     # Core groups
     admin = "0a25cb76-4b63-4fd3-b939-da6d9feabf28"
     AE = "45649735-866a-49df-b04b-a13c74fd5886"
