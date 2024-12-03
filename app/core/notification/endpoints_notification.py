@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Path
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -302,10 +302,10 @@ async def send_notification_topic(
         content="Ceci est un test de notification future",
         action_module="test",
     )
-    await notification_tool.send_future_notification_to_users_time_defer(
+    await notification_tool.send_notification_to_users(
         user_ids=[user.id],
         message=message,
-        defer_seconds=10,
+        defer_date=datetime.now(UTC) + timedelta(seconds=10),
         job_id="test25",
         scheduler=scheduler,
     )
@@ -330,10 +330,10 @@ async def send_future_notification_topic(
         content="Ceci est un test de notification future topic",
         action_module="test",
     )
-    await notification_tool.send_future_notification_to_topic_time_defer(
+    await notification_tool.send_notification_to_topic(
         custom_topic=CustomTopic.from_str("test"),
         message=message,
-        defer_seconds=10,
+        defer_date=datetime.now(UTC) + timedelta(seconds=10),
         job_id="test26",
         scheduler=scheduler,
     )
