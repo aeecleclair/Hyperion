@@ -249,10 +249,11 @@ class LogConfig:
                 "arq.worker": {
                     "handlers": [
                         "console",
-                        "files_errors",
+                        "file_errors",
                         "matrix_errors",
                     ],
                     "level": MINIMUM_LOG_LEVEL,
+                    "propagate": False,
                 },
             },
         }
