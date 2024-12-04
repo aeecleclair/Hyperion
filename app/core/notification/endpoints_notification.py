@@ -306,7 +306,7 @@ async def send_notification_topic(
         user_ids=[user.id],
         message=message,
         defer_date=datetime.now(UTC) + timedelta(seconds=10),
-        job_id="test25",
+        job_id="test",
         scheduler=scheduler,
     )
 

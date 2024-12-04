@@ -42,7 +42,6 @@ from app.utils.redis import limiter
 
 if TYPE_CHECKING:
     import redis
-    from sqlalchemy.ext.asyncio import AsyncSession
 
     from app.types.scheduler import Scheduler
     from app.types.websocket import WebsocketConnectionManager
