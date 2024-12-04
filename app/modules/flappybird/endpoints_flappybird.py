@@ -15,6 +15,7 @@ from app.modules.flappybird import (
 )
 from app.types.module import Module
 
+
 def genKey(score: int) -> int:
     """ Generates a key based on the score of the player. """
     data = f"{score}"
