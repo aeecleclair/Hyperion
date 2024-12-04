@@ -1,5 +1,5 @@
-import uuid
 import hashlib
+import uuid
 from datetime import UTC, datetime
 
 from fastapi import Depends, HTTPException
@@ -18,10 +18,10 @@ from app.types.module import Module
 def genKey(score: int) -> int:
     """ Generates a key based on the score of the player. """
     data = f"{score}"
-    
+
     hash_bytes = hashlib.sha256(data.encode()).digest()
     key = int.from_bytes(hash_bytes[:4], byteorder="big")
-    
+
     return key
 
 module = Module(
