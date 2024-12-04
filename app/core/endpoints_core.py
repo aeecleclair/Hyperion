@@ -11,7 +11,6 @@ from app.core.config import Settings
 from app.core.groups.groups_type import AccountType, GroupType
 from app.dependencies import (
     get_db,
-    get_scheduler,
     get_settings,
     is_user,
     is_user_in,
