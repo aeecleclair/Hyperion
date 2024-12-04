@@ -208,7 +208,7 @@ def initialize_module_visibility(
         # Is run to create default module visibilities or when the table is empty
         if new_modules:
             hyperion_error_logger.info(
-                "Startup: Some modules visibility settings are empty, initializing them",
+                f"Startup: Some modules visibility settings are empty, initializing them ({[module.root for module in new_modules]})",
             )
             for module in new_modules:
                 if module.default_allowed_groups_ids is not None:
