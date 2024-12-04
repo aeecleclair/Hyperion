@@ -1,12 +1,13 @@
 import uuid
+import hashlib
 from datetime import UTC, datetime
 
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
-from app.core.groups.groups_type import AccountType, GroupType
-from app.dependencies import get_db, is_user_a_member, is_user_in
+from app.core.groups.groups_type import GroupType
+from app.dependencies import get_db, is_user_a_member, is_user_a_member_of
 from app.modules.flappybird import (
     cruds_flappybird,
     models_flappybird,
@@ -14,10 +15,20 @@ from app.modules.flappybird import (
 )
 from app.types.module import Module
 
+def genKey(score: int) -> int:
+    """ Generates a key based on the score of the player. """
+    data = f"{score}"
+    
+    hash_bytes = hashlib.sha256(data.encode()).digest()
+    key = int.from_bytes(hash_bytes[:4], byteorder="big")
+    
+    return key
+
+
 module = Module(
     root="flappybird",
     tag="Flappy Bird",
-    default_allowed_account_types=[AccountType.student],
+    default_allowed_groups_ids=[GroupType.student],
 )
 
 
@@ -95,25 +106,27 @@ async def create_flappybird_score(
         id=score_id,
         user_id=user.id,
         value=flappybird_score.value,
+        key=flappybird_score.key,
         creation_time=creation_time,
     )
     db_flappybird_best_score = models_flappybird.FlappyBirdBestScore(
         id=score_id,
         user_id=user.id,
         value=flappybird_score.value,
+        key=flappybird_score.key,
         creation_time=creation_time,
     )
     personal_best = await cruds_flappybird.get_flappybird_personal_best_by_user_id(
         user_id=user.id,
         db=db,
     )
-    if personal_best is None:
+    if personal_best is None and genKey(flappybird_score.value) == flappybird_score.key:
         await cruds_flappybird.create_flappybird_best_score(
             flappybird_best_score=db_flappybird_best_score,
             db=db,
         )
     else:
-        if personal_best.value < flappybird_score.value:
+        if personal_best.value < flappybird_score.value and genKey(flappybird_score.value) == flappybird_score.key:
             await cruds_flappybird.update_flappybird_best_score(
                 user_id=user.id,
                 best_score=flappybird_score.value,
@@ -133,6 +146,6 @@ async def create_flappybird_score(
 async def remove_flappybird_score(
     targeted_user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
 ):
     await cruds_flappybird.delete_flappybird_best_score(db=db, user_id=targeted_user_id)

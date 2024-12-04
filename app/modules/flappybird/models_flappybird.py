@@ -14,6 +14,7 @@ class FlappyBirdScore(Base):
     user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"))
     user: Mapped[CoreUser] = relationship("CoreUser", init=False)
     value: Mapped[int]
+    key: Mapped[int]
     creation_time: Mapped[datetime]
 
 
@@ -24,4 +25,5 @@ class FlappyBirdBestScore(Base):
     user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"))
     user: Mapped[CoreUser] = relationship("CoreUser", init=False)
     value: Mapped[int]
+    key: Mapped[int]
     creation_time: Mapped[datetime]
