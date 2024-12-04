@@ -214,7 +214,7 @@ def upgrade() -> None:
         ).values(
             [
                 {
-                    "schema": "module_awareness",
+                    "schema": ModuleVisibilityAwareness.__name__,
                     "data": module_awareness.model_dump_json(),
                 },
             ],
