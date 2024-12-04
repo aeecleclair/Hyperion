@@ -264,7 +264,7 @@ async def send_notification(
     status_code=201,
 )
 async def send_notification_topic(
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
@@ -284,39 +284,11 @@ async def send_notification_topic(
 
 
 @router.post(
-    "/notification/send/topic",
-    status_code=201,
-)
-async def send_notification_topic(
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
-    scheduler: Scheduler = Depends(get_scheduler),
-    notification_tool: NotificationTool = Depends(get_notification_tool),
-):
-    """
-    Send ourself a test notification.
-
-    **Only admins can use this endpoint**
-    """
-    message = schemas_notification.Message(
-        title="Test notification future",
-        content="Ceci est un test de notification future",
-        action_module="test",
-    )
-    await notification_tool.send_notification_to_users(
-        user_ids=[user.id],
-        message=message,
-        defer_date=datetime.now(UTC) + timedelta(seconds=10),
-        job_id="test",
-        scheduler=scheduler,
-    )
-
-
-@router.post(
     "/notification/send/topic/future",
     status_code=201,
 )
 async def send_future_notification_topic(
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
     notification_tool: NotificationTool = Depends(get_notification_tool),
     scheduler: Scheduler = Depends(get_scheduler),
 ):
