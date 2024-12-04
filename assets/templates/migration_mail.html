@@ -5,15 +5,15 @@
 {% block french_message %} 
     <h1 lang="fr">Changement d'adresse mail MyECL</h1>
     <p lang="fr">
-        Pour confirmer ta nouvelle adresse mail, tu peux utiliser ce
-        <a href="{{ migration_link }}">lien unique</a>.
+        Pour confirmer ta nouvelle adresse mail, tu peux utiliser le lien unique suivant : 
+    <a href="{{ migration_link }}">{{ migration_link }}</a>
     </p>
 {% endblock %} 
 
 {% block english_message %} 
     <h1 lang="en">Changing your MyECL e-mail address</h1>
     <p lang="en">
-        To check your new e-mail address, you can use this
-        <a href="{{ migration_link }}">unique link</a>.
+        To verify your new e-mail address, you can use the following one-time link :
+    <a href="{{ migration_link }}">{{ migration_link }}</a>
     </p>
 {% endblock %}

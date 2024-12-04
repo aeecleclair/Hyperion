@@ -4,15 +4,15 @@
 
 {% block french_message %} 
     <h1 lang="fr">Bienvenue sur MyECL !</h1>
-    <p lang="fr">Pour continuer ton inscription, tu peux utiliser ce
-        <a href="{{ calypsso_activate_url }}">lien unique</a>.
+    <p lang="fr">Pour continuer ton inscription, clique sur le lien unique suivant : 
+    <a href="{{ calypsso_activate_url }}">{{ calypsso_activate_url }}</a>
     </p>
 {% endblock %} 
 
 {% block english_message %} 
-    <h1 lang="en">Welcome on MyECL!</h1>
+    <h1 lang="en">Welcome to MyECL !</h1>
     <p lang="en">
-        To pursue your registration, you can use this
-        <a href="{{ calypsso_activate_url }}">unique link</a>.
+        To complete your registration, click on the following one-time link :
+    <a href="{{ calypsso_activate_url }}">{{ calypsso_activate_url }}</a>
     </p>
 {% endblock %}
