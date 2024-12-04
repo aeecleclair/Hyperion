@@ -199,14 +199,18 @@ def initialize_module_visibility(
             coredata_core.ModuleVisibilityAwareness,
             db,
         )
+        hyperion_error_logger.info(module_awareness)
 
         new_modules = [
             module
             for module in module_list
             if module.root not in module_awareness.roots
         ]
+        hyperion_error_logger.info(
+            f"Startup: Checking modules visibility settings for {[module.root for module in new_modules]}",
+        )
         # Is run to create default module visibilities or when the table is empty
-        if new_modules:
+        if len(new_modules) != 0:
             hyperion_error_logger.info(
                 "Startup: Some modules visibility settings are empty, initializing them",
             )
