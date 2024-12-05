@@ -4,9 +4,10 @@ import os
 import re
 import secrets
 import unicodedata
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
+from inspect import iscoroutinefunction
 from pathlib import Path
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 import aiofiles
 import fitz
@@ -493,3 +494,16 @@ async def create_and_send_email_migration(
         hyperion_security_logger.info(
             f"You can confirm your new email address by clicking the following link: {settings.CLIENT_URL}users/migrate-mail-confirm?token={confirmation_token}",
         )
+
+
+async def execute_async_or_sync_method(
+    job_function: Callable[..., Any],
+    **kwargs,
+):
+    """
+    Execute the job_function with the provided kwargs, either as a coroutine or a regular function.
+    """
+    if iscoroutinefunction(job_function):
+        return await job_function(**kwargs)
+    else:
+        return job_function(**kwargs)
