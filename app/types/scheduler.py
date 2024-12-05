@@ -9,6 +9,7 @@ from arq.connections import RedisSettings
 from arq.jobs import Job
 from arq.typing import WorkerSettingsBase
 from arq.worker import create_worker
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import dependencies
 from app.types.exceptions import SchedulerNotStartedError
@@ -16,7 +17,6 @@ from app.utils.tools import execute_async_or_sync_method
 
 if TYPE_CHECKING:
     from arq import Worker
-    from sqlalchemy.ext.asyncio import AsyncSession
 
 scheduler_logger = logging.getLogger("scheduler")
 
