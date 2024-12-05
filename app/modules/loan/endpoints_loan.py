@@ -618,7 +618,7 @@ async def create_loan(
     message = Message(
         title="📦 Nouveau prêt",
         content=f"Un prêt a été enregistré pour l'association {loan.loaner.name}",
-        module="loan",
+        action_module="loan",
     )
     await notification_tool.send_notification_to_user(
         user_id=loan.borrower_id,
@@ -631,7 +631,7 @@ async def create_loan(
     message = Message(
         title="📦 Prêt arrivé à échéance",
         content=f"N'oublie pas de rendre ton prêt à l'association {loan.loaner.name} !",
-        module="loan",
+        action_module="loan",
     )
 
     await notification_tool.send_notification_to_users(
@@ -939,7 +939,7 @@ async def extend_loan(
     message = Message(
         title="📦 Prêt prolongé",
         content=f"Ton prêt à l'association {loan.loaner.name} à bien été renouvellé !",
-        module="loan",
+        action_module="loan",
     )
     await notification_tool.send_notification_to_user(
         user_id=loan.borrower_id,
@@ -952,7 +952,7 @@ async def extend_loan(
     message = Message(
         title="📦 Prêt arrivé à échéance",
         content=f"N'oublie pas de rendre ton prêt à l'association {loan.loaner.name} !",
-        module="loan",
+        action_module="loan",
     )
 
     await notification_tool.send_notification_to_users(

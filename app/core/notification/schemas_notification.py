@@ -5,10 +5,7 @@ class Message(BaseModel):
     title: str | None = None
     content: str | None = None
 
-    action_module: str | None = Field(
-        None,
-        description="An identifier for the module that should be triggered when the notification is clicked",
-    )
+    action_module: str
 
 
 class FirebaseDevice(BaseModel):
