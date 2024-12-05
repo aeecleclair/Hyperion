@@ -43,7 +43,8 @@ async def run_task(
     require_db_for_kwargs: list[str] = []
     sign = signature(job_function)
     for param in sign.parameters.values():
-        if isinstance(param.default, AsyncSession):
+        # See https://docs.python.org/3/library/inspect.html#inspect.Parameter.annotation
+        if param.annotation is AsyncSession:
             # We iterate over the parameters of the job_function
             # If we find a AsyncSession object, we want to inject the dependency
             require_db_for_kwargs.append(param.name)
