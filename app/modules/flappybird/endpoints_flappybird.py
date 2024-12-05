@@ -17,13 +17,14 @@ from app.types.module import Module
 
 
 def genKey(score: int) -> int:
-    """ Generates a key based on the score of the player. """
+    """Generates a key based on the score of the player."""
     data = f"{score}"
 
     hash_bytes = hashlib.sha256(data.encode()).digest()
     key = int.from_bytes(hash_bytes[:4], byteorder="big")
 
     return key
+
 
 module = Module(
     root="flappybird",
@@ -104,7 +105,8 @@ async def create_flappybird_score(
 
     if genKey(flappybird_score.value) != flappybird_score.key:
         raise HTTPException(
-            status_code=400, detail="Invalid key for the provided score"
+            status_code=400,
+            detail="Invalid key for the provided score",
         )
 
     db_flappybird_score = models_flappybird.FlappyBirdScore(
