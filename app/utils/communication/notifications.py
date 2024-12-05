@@ -365,7 +365,6 @@ class NotificationTool:
             self.notification_manager.send_notification_to_users,
             user_ids=user_ids,
             message=message,
-            db=None,
             job_id=job_id,
             defer_date=defer_date,
         )
@@ -416,7 +415,6 @@ class NotificationTool:
             self.notification_manager.send_notification_to_topic,
             custom_topic=custom_topic,
             message=message,
-            db=None,
             job_id=job_id,
             defer_date=defer_date,
         )
