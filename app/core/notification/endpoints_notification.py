@@ -16,7 +16,7 @@ from app.dependencies import (
     get_notification_manager,
     get_notification_tool,
     is_user,
-    is_user_a_member_of,
+    is_user_in,
 )
 from app.utils.communication.notifications import NotificationManager, NotificationTool
 
@@ -30,7 +30,7 @@ router = APIRouter(tags=["Notifications"])
 async def register_firebase_device(
     firebase_token: str = Body(embed=True),
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
     notification_manager: NotificationManager = Depends(get_notification_manager),
 ):
     """
@@ -80,7 +80,7 @@ async def register_firebase_device(
 async def unregister_firebase_device(
     firebase_token: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
     notification_manager: NotificationManager = Depends(get_notification_manager),
 ):
     """
@@ -105,7 +105,7 @@ async def get_messages(
     firebase_token: str,
     db: AsyncSession = Depends(get_db),
     # If we want to enable authentification for /messages/{firebase_token} endpoint, we may to uncomment the following line
-    # user: models_core.CoreUser = Depends(is_user),
+    # user: models_core.CoreUser = Depends(is_user()),
 ):
     """
     Get all messages for a specific device from the user
@@ -146,7 +146,7 @@ async def subscribe_to_topic(
         description="The topic to subscribe to. The Topic may be followed by an additional identifier (ex: cinema_4c029b5f-2bf7-4b70-85d4-340a4bd28653)",
     ),
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
     notification_manager: NotificationManager = Depends(get_notification_manager),
 ):
     """
@@ -177,7 +177,7 @@ async def subscribe_to_topic(
 async def unsubscribe_to_topic(
     topic_str: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
     notification_manager: NotificationManager = Depends(get_notification_manager),
 ):
     """
@@ -202,7 +202,7 @@ async def unsubscribe_to_topic(
 )
 async def get_topic(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
 ):
     """
     Get topics the user is subscribed to
@@ -231,7 +231,7 @@ async def get_topic(
 async def get_topic_identifier(
     topic: Topic,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
 ):
     """
     Get custom topic (with identifiers) the user is subscribed to
@@ -259,7 +259,7 @@ async def get_topic_identifier(
     status_code=201,
 )
 async def send_notification(
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
@@ -286,7 +286,7 @@ async def send_notification(
     status_code=201,
 )
 async def send_future_notification(
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
@@ -315,7 +315,7 @@ async def send_future_notification(
     response_model=list[schemas_notification.FirebaseDevice],
 )
 async def get_devices(
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
     db: AsyncSession = Depends(get_db),
 ):
     """

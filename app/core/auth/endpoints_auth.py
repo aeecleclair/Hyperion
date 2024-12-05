@@ -41,7 +41,7 @@ from app.dependencies import (
 from app.types.exceptions import AuthHTTPException
 from app.types.scopes_type import ScopeType
 from app.utils.auth.providers import BaseAuthClient
-from app.utils.tools import is_user_external, is_user_member_of_an_allowed_group
+from app.utils.tools import is_user_member_of_an_allowed_group
 
 router = APIRouter(tags=["Auth"])
 
@@ -322,19 +322,18 @@ async def authorize_validation(
                 ),
                 status_code=status.HTTP_302_FOUND,
             )
-    if not auth_client.allow_external_users:
-        if is_user_external(user):
+    if auth_client.allowed_account_types is not None:
+        if user.account_type not in auth_client.allowed_account_types:
             hyperion_access_logger.warning(
-                f"Authorize-validation: external users are disabled for this auth provider {auth_client.client_id} ({request_id})",
+                f"Authorize-validation: user account type is not allowed {authorizereq.email} ({request_id})",
             )
             return RedirectResponse(
                 settings.CLIENT_URL
                 + calypsso.get_error_relative_url(
-                    message="External users are not allowed",
+                    message="User account type is not allowed",
                 ),
                 status_code=status.HTTP_302_FOUND,
             )
-
     # We generate a new authorization_code
     # The authorization code MUST expire
     # shortly after it is issued to mitigate the risk of leaks. A

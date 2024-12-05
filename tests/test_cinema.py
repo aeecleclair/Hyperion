@@ -29,7 +29,9 @@ async def init_objects() -> None:
     token_cinema = create_api_access_token(cinema_user_cinema)
 
     global cinema_user_simple
-    cinema_user_simple = await create_user_with_groups([GroupType.student])
+    cinema_user_simple = await create_user_with_groups(
+        [],
+    )
 
     global token_simple
     token_simple = create_api_access_token(cinema_user_simple)

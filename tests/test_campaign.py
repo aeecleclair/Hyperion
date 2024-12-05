@@ -28,7 +28,9 @@ list2id: str
 async def init_objects() -> None:
     global CAA_user, AE_user
 
-    CAA_user = await create_user_with_groups([GroupType.CAA, GroupType.AE])
+    CAA_user = await create_user_with_groups(
+        [GroupType.CAA, GroupType.AE],
+    )
     AE_user = await create_user_with_groups([GroupType.AE])
 
     global section
