@@ -29,4 +29,4 @@ logs/
 .coverage
 
 # Jinja templates test output
-assets/templates/test_outputs
+tests/jinja_test_outputs/
