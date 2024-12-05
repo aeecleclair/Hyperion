@@ -106,7 +106,7 @@ class NotificationManager:
         try:
             message = messaging.MulticastMessage(
                 tokens=tokens,
-                data={"module": message_content.action_module},
+                data={"action_module": message_content.action_module},
                 notification=messaging.Notification(
                     title=message_content.title,
                     body=message_content.content,
@@ -333,7 +333,6 @@ class NotificationTool:
         user_ids: list[str],
         message: Message,
         scheduler: Scheduler | None = None,
-        defer_seconds: int | None = None,
         defer_date: datetime | None = None,
         job_id: str | None = None,
     ):
