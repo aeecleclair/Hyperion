@@ -102,31 +102,34 @@ async def create_flappybird_score(
     # And get the current date and time
     creation_time = datetime.now(UTC)
 
+    if genKey(flappybird_score.value) != flappybird_score.key:
+        raise HTTPException(
+            status_code=400, detail="Invalid key for the provided score"
+        )
+
     db_flappybird_score = models_flappybird.FlappyBirdScore(
         id=score_id,
         user_id=user.id,
         value=flappybird_score.value,
-        key=flappybird_score.key,
         creation_time=creation_time,
     )
     db_flappybird_best_score = models_flappybird.FlappyBirdBestScore(
         id=score_id,
         user_id=user.id,
         value=flappybird_score.value,
-        key=flappybird_score.key,
         creation_time=creation_time,
     )
     personal_best = await cruds_flappybird.get_flappybird_personal_best_by_user_id(
         user_id=user.id,
         db=db,
     )
-    if personal_best is None and genKey(flappybird_score.value) == flappybird_score.key:
+    if personal_best is None:
         await cruds_flappybird.create_flappybird_best_score(
             flappybird_best_score=db_flappybird_best_score,
             db=db,
         )
     else:
-        if personal_best.value < flappybird_score.value and genKey(flappybird_score.value) == flappybird_score.key:
+        if personal_best.value < flappybird_score.value:
             await cruds_flappybird.update_flappybird_best_score(
                 user_id=user.id,
                 best_score=flappybird_score.value,
