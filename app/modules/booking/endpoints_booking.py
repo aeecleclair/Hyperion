@@ -279,7 +279,7 @@ async def create_booking(
         message = Message(
             title="📅 Réservations - Nouvelle réservation",
             content=content,
-            module="booking",
+            action_module="booking",
         )
 
         await notification_tool.send_notification_to_users(
