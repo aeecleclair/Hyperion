@@ -15,9 +15,11 @@ from app.dependencies import (
     get_db,
     get_notification_manager,
     get_notification_tool,
+    get_scheduler,
     is_user,
     is_user_in,
 )
+from app.types.scheduler import Scheduler
 from app.utils.communication.notifications import NotificationManager, NotificationTool
 
 router = APIRouter(tags=["Notifications"])
@@ -61,6 +63,16 @@ async def register_firebase_device(
             db=db,
         )
 
+    user_topics = await cruds_notification.get_topic_memberships_by_user_id(
+        user_id=user.id,
+        db=db,
+    )
+    for topic in user_topics:
+        await notification_manager.subscribe_tokens_to_topic(
+            custom_topic=CustomTopic(topic.topic),
+            tokens=[firebase_token],
+        )
+
     firebase_device = models_notification.FirebaseDevice(
         user_id=user.id,
         firebase_device_token=firebase_token,
@@ -84,7 +96,7 @@ async def unregister_firebase_device(
     notification_manager: NotificationManager = Depends(get_notification_manager),
 ):
     """
-    Unregister a new firebase device for the user
+    Unregister a firebase device for the user
 
     **The user must be authenticated to use this endpoint**
     """
@@ -95,46 +107,15 @@ async def unregister_firebase_device(
         db=db,
     )
 
-
-@router.get(
-    "/notification/messages/{firebase_token}",
-    response_model=list[schemas_notification.Message],
-    status_code=200,
-)
-async def get_messages(
-    firebase_token: str,
-    db: AsyncSession = Depends(get_db),
-    # If we want to enable authentification for /messages/{firebase_token} endpoint, we may to uncomment the following line
-    # user: models_core.CoreUser = Depends(is_user()),
-):
-    """
-    Get all messages for a specific device from the user
-
-    **The user must be authenticated to use this endpoint**
-    """
-    firebase_device = await cruds_notification.get_firebase_devices_by_user_id_and_firebase_token(
-        # If we want to enable authentification for /messages/{firebase_token} endpoint, we may to uncomment the following line
-        firebase_token=firebase_token,
-        db=db,  # user_id=user.id,
+    user_topics = await cruds_notification.get_topic_memberships_by_user_id(
+        user_id=user.id,
+        db=db,
     )
-
-    if firebase_device is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Device not found for user",  # {user.id}"
+    for topic in user_topics:
+        await notification_manager.unsubscribe_tokens_to_topic(
+            custom_topic=CustomTopic(topic.topic),
+            tokens=[firebase_token],
         )
-
-    messages = await cruds_notification.get_messages_by_firebase_token(
-        firebase_token=firebase_token,
-        db=db,
-    )
-
-    await cruds_notification.remove_message_by_firebase_device_token(
-        firebase_device_token=firebase_token,
-        db=db,
-    )
-
-    return messages
 
 
 @router.post(
@@ -268,12 +249,9 @@ async def send_notification(
     **Only admins can use this endpoint**
     """
     message = schemas_notification.Message(
-        context="notification-test",
-        is_visible=True,
         title="Test notification",
         content="Ceci est un test de notification",
-        # The notification will expire in 3 days
-        expire_on=datetime.now(UTC) + timedelta(days=3),
+        action_module="test",
     )
     await notification_tool.send_notification_to_user(
         user_id=user.id,
@@ -288,6 +266,7 @@ async def send_notification(
 async def send_future_notification(
     user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
     notification_tool: NotificationTool = Depends(get_notification_tool),
+    scheduler: Scheduler = Depends(get_scheduler),
 ):
     """
     Send ourself a test notification.
@@ -295,17 +274,68 @@ async def send_future_notification(
     **Only admins can use this endpoint**
     """
     message = schemas_notification.Message(
-        context="future-notification-test",
-        is_visible=True,
         title="Test notification future",
         content="Ceci est un test de notification future",
-        # The notification will expire in 3 days
-        expire_on=datetime.now(UTC) + timedelta(days=3),
-        delivery_datetime=datetime.now(UTC) + timedelta(minutes=3),
+        action_module="test",
     )
-    await notification_tool.send_notification_to_user(
-        user_id=user.id,
+    await notification_tool.send_notification_to_users(
+        user_ids=[user.id],
         message=message,
+        defer_date=datetime.now(UTC) + timedelta(seconds=10),
+        scheduler=scheduler,
+        job_id="testtt",
+    )
+
+
+@router.post(
+    "/notification/send/topic",
+    status_code=201,
+)
+async def send_notification_topic(
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
+    notification_tool: NotificationTool = Depends(get_notification_tool),
+):
+    """
+    Send ourself a test notification.
+
+    **Only admins can use this endpoint**
+    """
+    message = schemas_notification.Message(
+        title="Test notification topic",
+        content="Ceci est un test de notification topic",
+        action_module="test",
+    )
+    await notification_tool.send_notification_to_topic(
+        custom_topic=CustomTopic.from_str("test"),
+        message=message,
+    )
+
+
+@router.post(
+    "/notification/send/topic/future",
+    status_code=201,
+)
+async def send_future_notification_topic(
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
+    notification_tool: NotificationTool = Depends(get_notification_tool),
+    scheduler: Scheduler = Depends(get_scheduler),
+):
+    """
+    Send ourself a test notification.
+
+    **Only admins can use this endpoint**
+    """
+    message = schemas_notification.Message(
+        title="Test notification future topic",
+        content="Ceci est un test de notification future topic",
+        action_module="test",
+    )
+    await notification_tool.send_notification_to_topic(
+        custom_topic=CustomTopic.from_str("test"),
+        message=message,
+        defer_date=datetime.now(UTC) + timedelta(seconds=10),
+        job_id="test26",
+        scheduler=scheduler,
     )
 
 

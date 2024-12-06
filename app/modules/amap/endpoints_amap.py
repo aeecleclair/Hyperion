@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
 from fastapi import Depends, HTTPException, Response
 from redis import Redis
@@ -719,12 +719,9 @@ async def open_ordering_of_delivery(
     await cruds_amap.open_ordering_of_delivery(delivery_id=delivery_id, db=db)
 
     message = Message(
-        context=f"amap-open-ordering-{delivery_id}",
-        is_visible=True,
         title="🛒 AMAP - Nouvelle livraison disponible",
         content="Viens commander !",
-        # The notification will expire in 3 days
-        expire_on=datetime.now(UTC) + timedelta(days=3),
+        action_module="amap",
     )
     await notification_tool.send_notification_to_topic(
         custom_topic=CustomTopic(Topic.amap),
@@ -904,12 +901,9 @@ async def create_cash_of_user(
     )
 
     message = Message(
-        context=f"amap-cash-{user_id}",
-        is_visible=True,
         title="AMAP - Solde mis à jour",
         content=f"Votre nouveau solde est de {cash} €.",
-        # The notification will expire in 3 days
-        expire_on=datetime.now(UTC) + timedelta(days=3),
+        action_module="amap",
     )
     await notification_tool.send_notification_to_user(
         user_id=user_id,
