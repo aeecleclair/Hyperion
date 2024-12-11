@@ -1,14 +1,17 @@
+from datetime import datetime
+
 from pydantic import BaseModel
 
 from app.core import schemas_core
+from app.core.models_core import CoreUser
 from app.modules.sport_competition.types_sport_competition import SportCategory
 
 
 class CompetitionEditionBase(BaseModel):
     name: str
     year: int
-    start_date: str
-    end_date: str
+    start_date: datetime
+    end_date: datetime
     activated: bool = True
 
 
@@ -62,7 +65,7 @@ class Group(GroupBase):
 
 
 class GroupComplete(Group):
-    members: list[GroupMembership]
+    members: list[CoreUser]
 
 
 class GroupEdit(BaseModel):
@@ -105,11 +108,6 @@ class Quota(BaseModel):
     team_quota: int
 
 
-class QuotaComplete(Quota):
-    school: schemas_core.CoreSchool
-    sport: Sport
-
-
 class QuotaEdit(BaseModel):
     participant_quota: int | None
     team_quota: int | None
@@ -141,8 +139,6 @@ class TeamEdit(BaseModel):
 
 
 class TeamComplete(Team):
-    school: schemas_core.CoreSchool
-    sport: Sport
     captain: schemas_core.CoreUser
     users: list[schemas_core.CoreUser]
 
@@ -174,3 +170,22 @@ class ParticipantComplete(Participant):
     user: schemas_core.CoreUser
     sport: Sport
     team: Team | None
+
+
+class MatchBase(BaseModel):
+    edition_id: str
+    name: str
+    sport_id: str
+    team1_id: str
+    team2_id: str
+    date: datetime | None = None
+    location: str | None = None
+    score_team1: int | None = None
+    score_team2: int | None = None
+    winner_id: str | None = None
+
+
+class Match(MatchBase):
+    id: str
+    team1: Team
+    team2: Team
