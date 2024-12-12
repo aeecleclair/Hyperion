@@ -14,7 +14,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       PGTZ: ${POSTGRES_TZ}
     volumes:
-      - ./hyperion_db_data:/var/lib/postgresql/data:Z
+      - postgres_data:/var/lib/postgresql/data
 
   hyperion-redis:
     image: redis
@@ -23,6 +23,8 @@ services:
     command: redis-server --requirepass ${REDIS_PASSWORD}
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
 
   hyperion-app:
     image: hyperion-app
@@ -36,7 +38,12 @@ services:
     ports:
       - 8000:8000
     volumes:
-      - ./logs:/app/logs:Z
-      - ./data:/app/data:Z
-      - ./.env:/app/.env:Z
-      - ./firebase.json:/app/firebase.json:Z
+      - app_logs:/hyperion/logs
+      - app_data:/hyperion/data
+      - ./.env:/hyperion/.env
+
+volumes:
+  postgres_data:
+  redis_data:
+  app_data:
+  app_logs:
