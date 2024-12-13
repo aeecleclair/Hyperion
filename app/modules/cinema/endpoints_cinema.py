@@ -16,6 +16,7 @@ from app.dependencies import (
     get_db,
     get_notification_tool,
     get_request_id,
+    get_scheduler,
     get_settings,
     is_user_a_member,
     is_user_in,
@@ -23,6 +24,7 @@ from app.dependencies import (
 from app.modules.cinema import cruds_cinema, schemas_cinema
 from app.types.content_type import ContentType
 from app.types.module import Module
+from app.types.scheduler import Scheduler
 from app.utils.communication.date_manager import (
     get_date_day,
     get_date_month,
@@ -120,6 +122,7 @@ async def create_session(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_in(GroupType.cinema)),
     notification_tool: NotificationTool = Depends(get_notification_tool),
+    scheduler: Scheduler = Depends(get_scheduler),
 ):
     db_session = schemas_cinema.CineSessionComplete(
         id=str(uuid.uuid4()),
@@ -141,19 +144,22 @@ async def create_session(
         for next_session in next_week_sessions:
             message_content += f"{get_date_day(next_session.start)} {next_session.start.day} {get_date_month(next_session.start)} - {next_session.name}\n"
         message = Message(
-            # We use sunday date as context to avoid sending the recap twice
-            context=f"cinema-recap-{sunday}",
-            is_visible=True,
             title="🎬 Cinéma - Programme de la semaine",
             content=message_content,
-            delivery_datetime=sunday,
-            # The notification will expire the next sunday
-            expire_on=sunday + timedelta(days=7),
+            action_module="cinema",
+        )
+
+        await notification_tool.cancel_notification(
+            scheduler=scheduler,
+            job_id=f"cinema_weekly_{sunday}",
         )
 
         await notification_tool.send_notification_to_topic(
             custom_topic=CustomTopic(topic=Topic.cinema),
             message=message,
+            scheduler=scheduler,
+            defer_date=sunday,
+            job_id=f"cinema_weekly_{sunday}",
         )
     return result
 

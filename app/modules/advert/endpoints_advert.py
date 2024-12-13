@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
 from fastapi import Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
@@ -266,12 +266,9 @@ async def create_advert(
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error))
     message = Message(
-        context=f"advert-new-{id}",
-        is_visible=True,
         title=f"📣 Annonce - {result.title}",
         content=result.content,
-        # The notification will expire in 3 days
-        expire_on=datetime.now(UTC) + timedelta(days=3),
+        action_module=module.root,
     )
 
     await notification_tool.send_notification_to_topic(
