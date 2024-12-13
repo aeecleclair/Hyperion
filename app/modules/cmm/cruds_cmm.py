@@ -13,20 +13,36 @@ n_memes = 10
 n_weeks = 7
 
 
-async def get_newest_memes(db: AsyncSession, n_page: int) -> Sequence[models_cmm.Meme]:
+async def get_memes_by_date(
+    db: AsyncSession,
+    n_page: int,
+    descending: bool,
+) -> Sequence[models_cmm.Meme]:
     result = await db.execute(
         select(models_cmm.Meme)
-        .order_by(models_cmm.Meme.creation_time)
+        .order_by(
+            models_cmm.Meme.creation_time.desc()
+            if descending
+            else models_cmm.Meme.creation_time,
+        )
         .fetch(n_memes)
         .offset((n_page - 1) * n_memes),
     )
     return result.scalars().all()
 
 
-async def get_best_memes(db: AsyncSession, n_page: int) -> Sequence[models_cmm.Meme]:
+async def get_memes_by_votes(
+    db: AsyncSession,
+    n_page: int,
+    descending: bool,
+) -> Sequence[models_cmm.Meme]:
     result = await db.execute(
         select(models_cmm.Meme)
-        .order_by(models_cmm.Meme.vote_score)
+        .order_by(
+            models_cmm.Meme.vote_score.desc()
+            if descending
+            else models_cmm.Meme.vote_score,
+        )
         .fetch(n_memes)
         .offset((n_page - 1) * n_memes),
     )
@@ -34,14 +50,15 @@ async def get_best_memes(db: AsyncSession, n_page: int) -> Sequence[models_cmm.M
 
 
 async def get_trending_memes(
-    db: AsyncSession, n_page: int
+    db: AsyncSession,
+    n_page: int,
 ) -> Sequence[models_cmm.Meme]:
     result = await db.execute(
         select(models_cmm.Meme)
         .order_by(models_cmm.Meme.vote_score)
         .where(
             (models_cmm.Meme.creation_time - datetime.now(tz=UTC))
-            < timedelta(days=n_weeks)
+            < timedelta(days=n_weeks),
         )
         .fetch(n_memes)
         .offset((n_page - 1) * n_memes),

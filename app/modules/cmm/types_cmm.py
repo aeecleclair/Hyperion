@@ -6,3 +6,11 @@ class MemeStatus(str, Enum):
     reported = "reported"
     banned = "banned"
     allowed = "allowed"
+
+
+class MemeSort(str, Enum):
+    best = "best"
+    worst = "worst"
+    trending = "trending"
+    newest = "newest"
+    oldest = "oldest"
