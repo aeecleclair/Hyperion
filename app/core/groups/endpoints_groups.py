@@ -329,7 +329,7 @@ async def synchronize_group_with_association(
         raise HTTPException(status_code=404, detail="Group not found")
 
     hyperion_security_logger.warning(
-        f"Synchronize_group_with_association: Admin user {user.id} ({user.name}) synchronized group {group_db.id} ({group_db.name}) with association membership {association_membership.value} ({request_id})",
+        f"Synchronize_group_with_association: Admin user {user.id} synchronized group {group_db.id} ({group_db.name}) with association membership '{association_membership.value}' ({request_id})",
     )
     await cruds_groups.delete_membership_by_group_id(group_id=group_id, db=db)
 
