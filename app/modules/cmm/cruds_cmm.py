@@ -1,6 +1,7 @@
 from collections.abc import Sequence
 from datetime import UTC, date, datetime, timedelta
 from uuid import UUID
+import uuid
 
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
@@ -78,11 +79,21 @@ async def get_memes_from_user(
     return result.scalars().all()
 
 
-def add_meme_in_DB(db: AsyncSession, meme: models_cmm.Meme):
+async def get_meme_by_id(
+    db: AsyncSession,
+    meme_id: uuid.UUID,
+) -> models_cmm.Meme | None:
+    result = await db.execute(
+        select(models_cmm.Meme).where(models_cmm.Meme.id == meme_id),
+    )
+    return result.unique().scalars().first()
+
+
+def add_meme(db: AsyncSession, meme: models_cmm.Meme):
     db.add(meme)
 
 
-async def delete_meme_in_DB(db: AsyncSession, meme_id: UUID):
+async def delete_meme_by_id(db: AsyncSession, meme_id: UUID):
     await db.execute(
         delete(models_cmm.Meme).where(models_cmm.Meme.id == meme_id),
     )

@@ -23,7 +23,7 @@ class VoteComplete(Vote):
 
 
 class MemeBase(BaseModel):
-    image: UploadFile
+    pass
 
 
 class Meme(MemeBase):
