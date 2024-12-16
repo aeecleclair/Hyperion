@@ -1,11 +1,10 @@
 import uuid
 from datetime import UTC, datetime
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, File, HTTPException
 from fastapi.datastructures import UploadFile
-from fastapi import File
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from starlette.routing import request_response
 
 from app.core import models_core
 from app.core.groups.groups_type import AccountType, GroupType
@@ -13,13 +12,16 @@ from app.dependencies import (
     get_db,
     get_request_id,
     is_user,
-    is_user_a_member,
-    is_user_in,
 )
 from app.modules.cmm import cruds_cmm, models_cmm, schemas_cmm, types_cmm
 from app.types.content_type import ContentType
 from app.types.module import Module
-from app.utils.tools import save_file_as_data
+from app.utils.tools import (
+    delete_file_from_data,
+    get_file_from_data,
+    is_user_member_of_an_allowed_group,
+    save_file_as_data,
+)
 
 module = Module(
     root="cmm",
@@ -29,7 +31,7 @@ module = Module(
 
 
 @module.router.get(
-    "/memes/{n_page}",
+    "/memes",
     response_model=list[schemas_cmm.Meme],
     status_code=200,
 )
@@ -83,6 +85,86 @@ async def get_memes(
     return meme_page
 
 
+@module.router.get(
+    "/memes/{meme_id}",
+    status_code=200,
+    response_model=schemas_cmm.Meme,
+)
+async def get_meme_by_id(
+    meme_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user()),
+):
+    """
+    Get a meme caracteristics using its id
+    """
+    meme = await cruds_cmm.get_meme_by_id(db=db, meme_id=meme_id)
+    if meme is None:
+        raise HTTPException(status_code=204, detail="The meme does not exist")
+
+    return meme
+
+
+@module.router.get(
+    "/memes/{meme_id}/img",
+    status_code=200,
+    response_model=FileResponse,
+)
+async def get_meme_image_by_id(
+    meme_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Get a meme image using its id
+    """
+    meme = await cruds_cmm.get_meme_by_id(db=db, meme_id=meme_id)
+    if meme is None:
+        raise HTTPException(status_code=404, detail="The meme does not exist")
+
+    # TODO: Change default asset
+    return get_file_from_data(
+        default_asset="assets/pdf/default_ph.pdf",
+        directory="memes",
+        filename=str(meme_id),
+    )
+
+
+@module.router.delete(
+    "memes/{meme_id}",
+    status_code=204,
+)
+async def delete_meme_by_id(
+    meme_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user()),
+):
+    """
+    Remove a meme from db
+    Must be admin or author of meme
+    """
+    meme = await cruds_cmm.get_meme_by_id(db=db, meme_id=meme_id)
+    if not meme:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid meme_id",
+        )
+    if not (
+        meme.user_id == user.id
+        or is_user_member_of_an_allowed_group(user, [GroupType.admin])
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="You cannot remove a meme from another user",
+        )
+    try:
+        await cruds_cmm.delete_meme_by_id(db=db, meme_id=meme_id)
+        await delete_file_from_data(directory="meme", filename=str(meme_id))
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+
+
 @module.router.post(
     "/memes",
     response_model=schemas_cmm.Meme,
@@ -107,11 +189,11 @@ async def add_meme(
             votes=[],
             status=types_cmm.MemeStatus.neutral,
         )
-        cruds_cmm.add_meme_in_DB(db=db, meme=meme)
+        cruds_cmm.add_meme(db=db, meme=meme)
         await db.commit()
         await save_file_as_data(
             upload_file=image,
-            directory="profile-pictures",
+            directory="memes",
             filename=str(meme_id),
             request_id=request_id,
             max_file_size=4 * 1024 * 1024,
