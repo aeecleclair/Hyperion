@@ -78,32 +78,13 @@ async def get_memes_from_user(
     return result.scalars().all()
 
 
-async def get_reported_memes(db: AsyncSession) -> Sequence[models_cmm.Meme]:
-    result = await db.execute(
-        select(models_cmm.Meme).where(
-            models_cmm.Meme.status == types_cmm.MemeStatus.reported,
-        ),
-    )
-    return result.scalars().all()
-
-
-async def create_meme(db: AsyncSession, meme: models_cmm.Meme):
+def add_meme_in_DB(db: AsyncSession, meme: models_cmm.Meme):
     db.add(meme)
 
 
-async def delete_meme(db: AsyncSession, meme_id: UUID):
+async def delete_meme_in_DB(db: AsyncSession, meme_id: UUID):
     await db.execute(
         delete(models_cmm.Meme).where(models_cmm.Meme.id == meme_id),
-    )
-
-
-async def create_report(db: AsyncSession, report: models_cmm.Report):
-    db.add(report)
-
-
-async def delete_report(db: AsyncSession, report_id: UUID):
-    await db.execute(
-        delete(models_cmm.Report).where(models_cmm.Meme.id == report_id),
     )
 
 

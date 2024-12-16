@@ -8,22 +8,6 @@ from app.core.schemas_core import CoreUserSimple
 from app.modules.cmm.types_cmm import MemeStatus
 
 
-class ReportBase(BaseModel):
-    # pour la création
-    meme_id: str
-    description: str | None
-
-
-class Report(ReportBase):
-    # pour lire les report
-    user: CoreUserSimple
-    creation_time: datetime
-
-
-class ReportComplete(Report):
-    id: uuid.UUID
-
-
 class VoteBase(BaseModel):
     meme_id: str
     positive: bool
@@ -49,4 +33,3 @@ class Meme(MemeBase):
     vote_score: int
     votes: list[Vote]
     status: MemeStatus
-    reports: list[Report]
