@@ -20,7 +20,7 @@ class CompetitionEdition(CompetitionEditionBase):
 
 
 class SchoolExtension(BaseModel):
-    id: str
+    school_id: str
     from_lyon: bool
     activated: bool = True
 
@@ -29,7 +29,6 @@ class SchoolExtension(BaseModel):
 
 
 class SchoolExtensionEdit(BaseModel):
-    id: str
     from_lyon: bool | None
     activated: bool | None
 
@@ -57,7 +56,6 @@ class UserGroupMembership(BaseModel):
 
 class GroupBase(BaseModel):
     name: str
-    description: str | None
 
 
 class Group(GroupBase):
@@ -69,9 +67,7 @@ class GroupComplete(Group):
 
 
 class GroupEdit(BaseModel):
-    id: str
     name: str | None
-    description: str | None
 
 
 class SportBase(BaseModel):
@@ -87,7 +83,6 @@ class Sport(SportBase):
 
 
 class SportEdit(BaseModel):
-    id: str
     name: str | None
     team_size: int | None
     substitute_max: int | None
@@ -133,7 +128,6 @@ class Team(TeamBase):
 
 
 class TeamEdit(BaseModel):
-    id: str
     name: str | None
     captain_id: str | None
 
@@ -164,6 +158,7 @@ class ParticipantEdit(BaseModel):
     sport_id: str | None
     user_id: str | None
     substitute: bool | None
+    validated: bool | None
 
 
 class ParticipantComplete(Participant):
@@ -189,3 +184,15 @@ class Match(MatchBase):
     id: str
     team1: Team
     team2: Team
+
+
+class MatchEdit(BaseModel):
+    name: str | None
+    sport_id: str | None
+    team1_id: str | None
+    team2_id: str | None
+    date: datetime | None
+    location: str | None
+    score_team1: int | None
+    score_team2: int | None
+    winner_id: str | None

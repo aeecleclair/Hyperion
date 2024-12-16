@@ -41,7 +41,6 @@ def upgrade() -> None:
         "competition_group",
         sa.Column("id", sa.String(), nullable=False),
         sa.Column("name", sa.String(), nullable=False),
-        sa.Column("description", sa.String(), nullable=True),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
