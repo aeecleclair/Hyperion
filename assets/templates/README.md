@@ -9,4 +9,4 @@ To add a new mail template, simply copy the `custom_mail_template.html` and modi
 
 ## Testing your template
 
-To test how the templates render, you can run in the `tests` directory the Python file `tests/template_tester.py`.
+To test how the templates render, you can run the Python file `tests/template_tester.py`.

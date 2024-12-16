@@ -5,10 +5,14 @@ if __name__ == "__main__":
 
     # Please run from tests folder
     # Initialize environnement with templates
-    env = Environment(loader=FileSystemLoader("../assets/templates/"), autoescape=True)
+    path_to_file = Path(__file__)
+    env = Environment(
+        loader=FileSystemLoader(path_to_file.parents[1] / "assets/templates/"),
+        autoescape=True,
+    )
 
     # Create output directory if it doesnt exist
-    directory = Path("jinja_test_outputs")
+    directory = path_to_file.parents[0] / Path("jinja_test_outputs")
     directory.mkdir(exist_ok=True)
 
     # Templates rendering
