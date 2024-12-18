@@ -99,6 +99,20 @@ async def delete_meme_by_id(db: AsyncSession, meme_id: UUID):
     )
 
 
+async def get_vote(
+    db: AsyncSession,
+    meme_id: UUID,
+    user_id: str,
+) -> models_cmm.Vote | None:
+    result = await db.execute(
+        select(models_cmm.Vote).where(
+            models_cmm.Vote.meme_id == meme_id,
+            models_cmm.Vote.user_id == user_id,
+        ),
+    )
+    return result.unique().scalars().first()
+
+
 async def create_vote(db: AsyncSession, vote: models_cmm.Vote):
     db.add(vote)
 
