@@ -35,8 +35,8 @@ from app.dependencies import (
     get_notification_tool,
     get_request_id,
     get_settings,
-    is_user_a_member_of,
     is_user_an_ecl_member,
+    is_user_in,
 )
 from app.utils.communication.notifications import NotificationTool
 from app.utils.mail.mailworker import send_email
@@ -61,7 +61,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 async def create_store(
     store: schemas_myeclpay.StoreBase,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user_a_member_of(GroupType.payment)),
+    user: CoreUser = Depends(is_user_in(GroupType.payment)),
 ):
     """
     Create a store
@@ -101,7 +101,7 @@ async def create_store(
 )
 async def get_stores(
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user_a_member_of(GroupType.payment)),
+    user: CoreUser = Depends(is_user_in(GroupType.payment)),
 ):
     """
     Get all stores.
@@ -123,7 +123,7 @@ async def create_store_admin_seller(
     store_id: UUID,
     seller: schemas_myeclpay.SellerAdminCreation,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user_a_member_of(GroupType.payment)),
+    user: CoreUser = Depends(is_user_in(GroupType.payment)),
 ):
     """
     Create a store admin seller.
@@ -159,7 +159,7 @@ async def create_store_admin_seller(
 async def get_store_admin_seller(
     store_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user_a_member_of(GroupType.payment)),
+    user: CoreUser = Depends(is_user_in(GroupType.payment)),
 ):
     """
     Get all sellers that have the `store_admin` permission for the given store.
@@ -182,7 +182,7 @@ async def delete_store_admin_seller(
     store_id: UUID,
     seller_user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user_a_member_of(GroupType.payment)),
+    user: CoreUser = Depends(is_user_in(GroupType.payment)),
 ):
     """
     Delete a store admin seller.
