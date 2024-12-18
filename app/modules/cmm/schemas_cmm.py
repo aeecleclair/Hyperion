@@ -1,8 +1,7 @@
 import uuid
 from datetime import datetime
 
-from fastapi.datastructures import UploadFile
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from app.core.schemas_core import CoreUserSimple
 from app.modules.cmm.types_cmm import MemeStatus
@@ -22,14 +21,14 @@ class VoteComplete(Vote):
     id: uuid.UUID
 
 
-class MemeBase(BaseModel):
-    pass
-
-
-class Meme(MemeBase):
-    # dans les get
+class Meme(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     user: CoreUserSimple
     creation_time: datetime
     vote_score: int
     votes: list[Vote]
     status: MemeStatus
+
+
+class FullMeme(Meme):
+    my_vote: bool

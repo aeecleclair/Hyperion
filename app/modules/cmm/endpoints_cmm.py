@@ -88,7 +88,7 @@ async def get_memes(
 @module.router.get(
     "/memes/{meme_id}",
     status_code=200,
-    response_model=schemas_cmm.Meme,
+    response_model=schemas_cmm.FullMeme,
 )
 async def get_meme_by_id(
     meme_id: uuid.UUID,
@@ -102,7 +102,12 @@ async def get_meme_by_id(
     if meme is None:
         raise HTTPException(status_code=204, detail="The meme does not exist")
 
-    return meme
+    my_vote = await cruds_cmm.get_vote(db=db, meme_id=meme.id, user_id=user.id)
+    full_meme = schemas_cmm.FullMeme(
+        my_vote=my_vote.positive,
+        **meme.model_dump(),
+    )
+    return full_meme
 
 
 @module.router.get(
