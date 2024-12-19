@@ -7,6 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core import models_core
 from app.core.myeclpay.types_myeclpay import (
     RequestStatus,
+    StoreStructure,
     TransactionStatus,
     TransactionType,
     TransferType,
@@ -81,8 +82,8 @@ class Store(Base):
 
     id: Mapped[PrimaryKey]
     name: Mapped[str] = mapped_column(unique=True)
-
-    membership: Mapped[AvailableAssociationMembership]
+    structure: Mapped[StoreStructure]
+    membership: Mapped[AvailableAssociationMembership | None]
 
     wallet_id: Mapped[UUID] = mapped_column(
         ForeignKey("myeclpay_wallet.id"),

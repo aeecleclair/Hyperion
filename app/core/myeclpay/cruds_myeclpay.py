@@ -8,6 +8,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.myeclpay import models_myeclpay, schemas_myeclpay
 from app.core.myeclpay.types_myeclpay import (
+    StoreStructure,
     TransactionStatus,
     TransactionType,
     WalletDeviceStatus,
@@ -39,6 +40,18 @@ async def get_stores(
     db: AsyncSession,
 ) -> Sequence[models_myeclpay.Store]:
     result = await db.execute(select(models_myeclpay.Store))
+    return result.scalars().all()
+
+
+async def get_stores_by_structure(
+    db: AsyncSession,
+    structure: StoreStructure,
+) -> Sequence[models_myeclpay.Store]:
+    result = await db.execute(
+        select(models_myeclpay.Store).where(
+            models_myeclpay.Store.structure == structure,
+        ),
+    )
     return result.scalars().all()
 
 
@@ -91,6 +104,32 @@ async def get_seller(
         ),
     )
     return result.scalars().first()
+
+
+async def update_seller(
+    seller_user_id: str,
+    store_id: UUID,
+    can_bank: bool,
+    can_see_history: bool,
+    can_cancel: bool,
+    can_manage_sellers: bool,
+    store_admin: bool,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        update(models_myeclpay.Seller)
+        .where(
+            models_myeclpay.Seller.user_id == seller_user_id,
+            models_myeclpay.Seller.store_id == store_id,
+        )
+        .values(
+            can_bank=can_bank,
+            can_see_history=can_see_history,
+            can_cancel=can_cancel,
+            can_manage_sellers=can_manage_sellers,
+            store_admin=store_admin,
+        ),
+    )
 
 
 async def delete_seller(

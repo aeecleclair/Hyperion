@@ -15,7 +15,7 @@ from app.types.membership import AvailableAssociationMembership
 
 class StoreBase(BaseModel):
     name: str
-    membership: AvailableAssociationMembership
+    membership: AvailableAssociationMembership | None = None
 
 
 class Store(StoreBase):
