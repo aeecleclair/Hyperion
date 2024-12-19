@@ -12,6 +12,16 @@ class WalletDeviceStatus(str, Enum):
     REVOKED = "revoked"
 
 
+class StoreStructure(str, Enum):
+    AEECL = "aeecl"
+    USEECL = "useecl"
+    CU = "cu"
+    SOLI = "soli"
+    COSMOS = "cosmos"
+    FORUM = "forum"
+    FANFARE = "fanfare"
+
+
 class TransactionType(str, Enum):
     DIRECT = "direct"
     REQUEST = "request"

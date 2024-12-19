@@ -25,6 +25,7 @@ from app.core import models_core, security
 from app.core.auth import schemas_auth
 from app.core.config import Settings, construct_prod_settings
 from app.core.groups.groups_type import AccountType, GroupType, get_ecl_account_types
+from app.core.myeclpay.coredata_myeclpay import StoreStructuresUser
 from app.core.payment.payment_tool import PaymentTool
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.types.scheduler import OfflineScheduler, Scheduler
@@ -33,7 +34,11 @@ from app.types.websocket import WebsocketConnectionManager
 from app.utils.auth import auth_utils
 from app.utils.communication.notifications import NotificationManager, NotificationTool
 from app.utils.redis import connect
-from app.utils.tools import is_user_external, is_user_member_of_an_allowed_group
+from app.utils.tools import (
+    get_core_data,
+    is_user_external,
+    is_user_member_of_an_allowed_group,
+)
 
 # We could maybe use hyperion.security
 hyperion_access_logger = logging.getLogger("hyperion.access")
@@ -416,3 +421,17 @@ def is_user_in(
         return user
 
     return is_user_in
+
+
+def get_structures_managers() -> Callable[[], Coroutine[Any, Any, StoreStructuresUser]]:
+    """
+    Dependency that returns the store managers for each association
+    """
+
+    async def get_structures_managers(
+        db: AsyncSession = Depends(get_db),
+    ) -> StoreStructuresUser:
+        coredata: StoreStructuresUser = await get_core_data(StoreStructuresUser, db)
+        return coredata
+
+    return get_structures_managers
