@@ -4,7 +4,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 
 from app.core.schemas_core import CoreUserSimple
-from app.modules.cmm.types_cmm import MemeStatus
+from app.modules.cmm.types_cmm import MemeStatus, VoteValue
 
 
 class VoteBase(BaseModel):
@@ -31,4 +31,4 @@ class Meme(BaseModel):
 
 
 class FullMeme(Meme):
-    my_vote: bool
+    my_vote: VoteValue

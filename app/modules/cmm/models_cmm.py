@@ -1,5 +1,5 @@
-from datetime import datetime
 import uuid
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import ForeignKey
@@ -20,7 +20,6 @@ class Vote(Base):
     id: Mapped[PrimaryKey]
     user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"))
     user: Mapped[CoreUser] = relationship("CoreUser", init=False)
-    creation_time: Mapped[datetime]
     meme_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("cmm_meme.id"))
     meme: Mapped[Meme] = relationship("Meme", init=False)
     positive: bool
@@ -35,7 +34,7 @@ class Meme(Base):
     creation_time: Mapped[datetime]
     vote_score: Mapped[int]
     votes: Mapped[list[Vote]] = relationship(
-        "Votes",
+        "Vote",
         secondary="cmm_vote",
         lazy="selectin",
         default_factory=list,
