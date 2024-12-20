@@ -202,7 +202,7 @@ async def get_cover(
         )
 
     return get_file_from_data(
-        default_asset="assets/images/default_cover.jpg",
+        default_asset="assets/images/default_cover.jpeg",
         directory="ph/cover",
         filename=str(paper_id),
     )
