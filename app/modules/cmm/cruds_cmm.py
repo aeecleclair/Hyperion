@@ -1,14 +1,12 @@
-from collections.abc import Sequence
-from datetime import UTC, date, datetime, timedelta
-from uuid import UUID
 import uuid
+from datetime import UTC, datetime, timedelta
+from uuid import UUID
 
-from sqlalchemy import delete, func, select, update
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import noload, selectinload
+from sqlalchemy.orm import selectinload
 
-from app.modules.cmm import models_cmm, types_cmm
+from app.modules.cmm import models_cmm
 
 n_memes = 10
 n_weeks = 7
@@ -18,7 +16,8 @@ async def get_memes_by_date(
     db: AsyncSession,
     n_page: int,
     descending: bool,
-) -> Sequence[models_cmm.Meme]:
+    user_id: str,
+):
     result = await db.execute(
         select(models_cmm.Meme)
         .order_by(
@@ -29,14 +28,20 @@ async def get_memes_by_date(
         .fetch(n_memes)
         .offset((n_page - 1) * n_memes),
     )
-    return result.scalars().all()
+    votes_map = await get_my_votes_from_memes(
+        db=db,
+        user_id=user_id,
+        meme_result=result,
+    )
+    return {"memes": result.scalars().all(), "votes_map": votes_map}
 
 
 async def get_memes_by_votes(
     db: AsyncSession,
     n_page: int,
     descending: bool,
-) -> Sequence[models_cmm.Meme]:
+    user_id: str,
+):
     result = await db.execute(
         select(models_cmm.Meme)
         .order_by(
@@ -47,13 +52,19 @@ async def get_memes_by_votes(
         .fetch(n_memes)
         .offset((n_page - 1) * n_memes),
     )
-    return result.scalars().all()
+    votes_map = await get_my_votes_from_memes(
+        db=db,
+        user_id=user_id,
+        meme_result=result,
+    )
+    return {"memes": result.scalars().all(), "votes_map": votes_map}
 
 
 async def get_trending_memes(
     db: AsyncSession,
     n_page: int,
-) -> Sequence[models_cmm.Meme]:
+    user_id: str,
+):
     result = await db.execute(
         select(models_cmm.Meme)
         .order_by(models_cmm.Meme.vote_score)
@@ -64,19 +75,29 @@ async def get_trending_memes(
         .fetch(n_memes)
         .offset((n_page - 1) * n_memes),
     )
-    return result.scalars().all()
+    votes_map = await get_my_votes_from_memes(
+        db=db,
+        user_id=user_id,
+        meme_result=result,
+    )
+    return {"memes": result.scalars().all(), "votes_map": votes_map}
 
 
 async def get_memes_from_user(
     db: AsyncSession,
     user_id: str,
-) -> Sequence[models_cmm.Meme]:
+):
     result = await db.execute(
         select(models_cmm.Meme)
         .where(models_cmm.Meme.user_id == user_id)
         .order_by(models_cmm.Meme.creation_time),
     )
-    return result.scalars().all()
+    votes_map = await get_my_votes_from_memes(
+        db=db,
+        user_id=user_id,
+        meme_result=result,
+    )
+    return {"memes": result.scalars().all(), "votes_map": votes_map}
 
 
 async def get_meme_by_id(
@@ -84,9 +105,28 @@ async def get_meme_by_id(
     meme_id: uuid.UUID,
 ) -> models_cmm.Meme | None:
     result = await db.execute(
-        select(models_cmm.Meme).where(models_cmm.Meme.id == meme_id),
+        select(models_cmm.Meme)
+        .options(selectinload(models_cmm.Meme.votes))
+        .where(models_cmm.Meme.id == meme_id),
     )
     return result.unique().scalars().first()
+
+
+async def get_my_votes_from_memes(
+    db: AsyncSession,
+    user_id: str,
+    meme_result,
+) -> dict[UUID, models_cmm.Vote]:
+    result = await db.execute(
+        select(models_cmm.Vote)
+        .join(meme_result, meme_result.id == models_cmm.Vote.meme_id)
+        .where(
+            models_cmm.Vote.user_id == user_id,
+        ),
+    )
+    votes = result.scalars().all()
+    votes_map = {vote.meme_id: vote for vote in votes}
+    return votes_map
 
 
 def add_meme(db: AsyncSession, meme: models_cmm.Meme):
@@ -113,7 +153,17 @@ async def get_vote(
     return result.unique().scalars().first()
 
 
-async def create_vote(db: AsyncSession, vote: models_cmm.Vote):
+async def get_vote_by_id(
+    db: AsyncSession,
+    vote_id: UUID,
+) -> models_cmm.Vote | None:
+    result = await db.execute(
+        select(models_cmm.Vote).where(models_cmm.Vote.id == vote_id),
+    )
+    return result.unique().scalars().first()
+
+
+def add_vote(db: AsyncSession, vote: models_cmm.Vote):
     db.add(vote)
 
 
