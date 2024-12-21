@@ -4,7 +4,6 @@ from datetime import UTC, datetime
 from fastapi import Depends, File, HTTPException
 from fastapi.datastructures import UploadFile
 from fastapi.responses import FileResponse
-from pydantic import HttpUrl
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core
@@ -160,7 +159,7 @@ async def delete_meme_by_id(
 ):
     """
     Remove a meme from db
-    Must be admin or author of meme
+    Must author of meme if meme is not banned or admin
     """
     meme = await cruds_cmm.get_meme_by_id(db=db, meme_id=meme_id)
     if not meme:
@@ -168,14 +167,18 @@ async def delete_meme_by_id(
             status_code=404,
             detail="Invalid meme_id",
         )
-    if not (
-        meme.user_id == user.id
-        or is_user_member_of_an_allowed_group(user, [GroupType.admin])
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="You cannot remove a meme from another user",
-        )
+    if not is_user_member_of_an_allowed_group(user, [GroupType.admin]):
+        if meme.user_id != user.id:
+            raise HTTPException(
+                status_code=403,
+                detail="You cannot remove a meme from another user",
+            )
+        elif meme.status != types_cmm.MemeStatus.neutral:
+            raise HTTPException(
+                status_code=403,
+                detail="You cannot remove your meme if it is banned ",
+            )
+
     try:
         await cruds_cmm.delete_meme_by_id(db=db, meme_id=meme_id)
         await delete_file_from_data(directory="meme", filename=str(meme_id))
@@ -248,7 +251,8 @@ async def get_vote(
     vote = await cruds_cmm.get_vote(db=db, meme_id=meme_id, user_id=user_id)
     if vote is None:
         raise HTTPException(
-            status_code=204, detail="The meme has no vote from this user"
+            status_code=204,
+            detail="The meme has no vote from this user",
         )
 
     return vote
@@ -353,3 +357,106 @@ async def update_vote(
     else:
         vote.positive = positive
         return vote
+
+
+@module.router.post(
+    "/users/{user_id}/ban",
+    status_code=201,
+    response_model=models_cmm.Ban,
+)
+async def ban_user(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user()),
+):
+    """
+    Ban a user and hide all of his memes
+    Must be admin
+    """
+    if not is_user_member_of_an_allowed_group(user, [GroupType.admin]):
+        raise HTTPException(
+            status_code=401,
+            detail="Cannot ban another user",
+        )
+
+    current_ban = await cruds_cmm.get_user_current_ban(db=db, user_id=user_id)
+    if current_ban is not None:
+        raise HTTPException(status_code=404, detail="User is already banned")
+
+    ban = models_cmm.Ban(
+        id=uuid.uuid4(),
+        user_id=user_id,
+        admin_id=user.id,
+        end_time=None,
+        creation_time=datetime.now(UTC),
+    )
+    try:
+        cruds_cmm.add_user_ban(db=db, ban=ban)
+        await cruds_cmm.update_ban_status_of_memes_from_user(
+            db=db,
+            user_id=user_id,
+            new_ban_status=types_cmm.MemeStatus.banned,
+        )
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+    else:
+        return ban
+
+
+@module.router.post(
+    "/users/{user_id}/unban",
+    status_code=201,
+)
+async def unban_user(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user()),
+):
+    """
+    Unban a user and unhide all of his memes
+    Must be admin
+    """
+    if not is_user_member_of_an_allowed_group(user, [GroupType.admin]):
+        raise HTTPException(
+            status_code=401,
+            detail="Cannot unban another user",
+        )
+
+    current_ban = await cruds_cmm.get_user_current_ban(db=db, user_id=user_id)
+    if current_ban is None:
+        raise HTTPException(status_code=404, detail="User is not already banned")
+
+    try:
+        await cruds_cmm.update_end_of_ban(
+            db=db,
+            ban_id=current_ban.id,
+            end_time=datetime.now(UTC),
+        )
+        await cruds_cmm.update_ban_status_of_memes_from_user(
+            db=db,
+            user_id=user_id,
+            new_ban_status=types_cmm.MemeStatus.neutral,
+        )
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+
+
+@module.router.get(
+    "/users/{user_id}/ban_history",
+    status_code=200,
+    response_model=list[schemas_cmm.Ban],
+)
+async def get_user_ban_history(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user()),
+):
+    """
+    Get the ban history of an user
+    """
+    ban_history = await cruds_cmm.get_user_ban_history(db=db, user_id=user_id)
+    return ban_history

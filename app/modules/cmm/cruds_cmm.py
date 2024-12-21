@@ -1,4 +1,5 @@
 import uuid
+from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
@@ -6,7 +7,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.modules.cmm import models_cmm
+from app.modules.cmm import models_cmm, types_cmm
 
 n_memes = 10
 n_weeks = 7
@@ -100,6 +101,18 @@ async def get_memes_from_user(
     return {"memes": result.scalars().all(), "votes_map": votes_map}
 
 
+async def update_ban_status_of_memes_from_user(
+    db: AsyncSession,
+    user_id: str,
+    new_ban_status: types_cmm.MemeStatus,
+):
+    await db.execute(
+        update(models_cmm.Meme)
+        .where(models_cmm.Meme.user_id == user_id)
+        .values({models_cmm.Meme.status: new_ban_status}),
+    )
+
+
 async def get_meme_by_id(
     db: AsyncSession,
     meme_id: uuid.UUID,
@@ -131,6 +144,18 @@ async def get_my_votes_from_memes(
 
 def add_meme(db: AsyncSession, meme: models_cmm.Meme):
     db.add(meme)
+
+
+async def update_meme_ban_status(
+    db: AsyncSession,
+    ban_status: types_cmm.MemeStatus,
+    meme_id: UUID,
+):
+    await db.execute(
+        update(models_cmm.Meme)
+        .where(models_cmm.Meme.id == meme_id)
+        .values({models_cmm.Meme.status: ban_status}),
+    )
 
 
 async def delete_meme_by_id(db: AsyncSession, meme_id: UUID):
@@ -178,4 +203,57 @@ async def update_vote(db: AsyncSession, vote_id: UUID, new_positive: bool):
 async def delete_vote(db: AsyncSession, vote_id: UUID):
     await db.execute(
         delete(models_cmm.Vote).where(models_cmm.Vote.id == vote_id),
+    )
+
+
+async def get_ban_by_id(
+    db: AsyncSession,
+    ban_id: UUID,
+) -> models_cmm.Ban | None:
+    result = await db.execute(
+        select(models_cmm.Ban).where(models_cmm.Ban.id == ban_id),
+    )
+    return result.unique().scalars().first()
+
+
+async def get_user_current_ban(
+    db: AsyncSession,
+    user_id: str,
+) -> models_cmm.Ban | None:
+    result = await db.execute(
+        select(models_cmm.Ban).where(
+            models_cmm.Ban.user_id == user_id,
+            models_cmm.Ban.end_time.is_(None),
+        ),
+    )
+    return result.unique().scalars().first()
+
+
+async def get_user_ban_history(
+    db: AsyncSession,
+    user_id: str,
+) -> Sequence[models_cmm.Ban]:
+    result = await db.execute(
+        select(models_cmm.Ban)
+        .where(models_cmm.Ban.user_id == user_id)
+        .order_by(models_cmm.Ban.creation_time),
+    )
+    return result.scalars().all()
+
+
+def add_user_ban(db: AsyncSession, ban: models_cmm.Ban):
+    db.add(ban)
+
+
+async def update_end_of_ban(db: AsyncSession, end_time: datetime, ban_id: UUID):
+    await db.execute(
+        update(models_cmm.Ban)
+        .where(models_cmm.Ban.id == ban_id)
+        .values({models_cmm.Ban.end_time: end_time}),
+    )
+
+
+async def delete_ban(db: AsyncSession, ban_id: UUID):
+    await db.execute(
+        delete(models_cmm.Ban).where(models_cmm.Ban.id == ban_id),
     )

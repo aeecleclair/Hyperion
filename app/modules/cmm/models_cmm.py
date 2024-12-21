@@ -40,3 +40,15 @@ class Meme(Base):
         default_factory=list,
     )
     status: Mapped[MemeStatus]
+
+
+class Ban(Base):
+    __tablename__ = "cmm_ban"
+
+    id: Mapped[PrimaryKey]
+    user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"))
+    user: Mapped[CoreUser] = relationship("CoreUser", init=False)
+    creation_time: Mapped[datetime]
+    end_time: Mapped[datetime | None]
+    admin_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"))
+    admin: Mapped[CoreUser] = relationship("CoreUser", init=False)

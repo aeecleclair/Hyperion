@@ -32,3 +32,10 @@ class Meme(BaseModel):
 
 class FullMeme(Meme):
     my_vote: VoteValue
+
+
+class Ban(BaseModel):
+    creation_time: datetime
+    end_time: datetime | None
+    user: CoreUserSimple
+    admin: CoreUserSimple
