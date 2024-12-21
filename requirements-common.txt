@@ -8,6 +8,7 @@ fastapi==0.115.6
 firebase-admin==6.5.0               # Firebase is used for push notification
 fpdf2==2.7.8
 HelloAssoAPIWrapper==1.0.0
+httpx==0.27.0
 google-auth-oauthlib==1.2.1
 icalendar==5.0.13
 jellyfish==1.0.4                    # String Matching
