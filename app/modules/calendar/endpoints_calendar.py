@@ -11,7 +11,7 @@ from app.dependencies import get_db, is_user_an_ecl_member, is_user_in
 from app.modules.calendar import cruds_calendar, models_calendar, schemas_calendar
 from app.modules.calendar.types_calendar import Decision
 from app.types.module import Module
-from app.utils.tools import is_user_member_of_an_allowed_group
+from app.utils.tools import is_user_member_of_any_group
 
 module = Module(
     root="event",
@@ -69,7 +69,7 @@ async def get_applicant_bookings(
 
     **Usable by the user or admins**
     """
-    if user.id == applicant_id or is_user_member_of_an_allowed_group(
+    if user.id == applicant_id or is_user_member_of_any_group(
         user,
         [GroupType.BDE],
     ):
@@ -163,7 +163,7 @@ async def edit_bookings_id(
 
     if event is not None and not (
         (user.id == event.applicant_id and event.decision == Decision.pending)
-        or is_user_member_of_an_allowed_group(user, [GroupType.BDE])
+        or is_user_member_of_any_group(user, [GroupType.BDE])
     ):
         raise HTTPException(
             status_code=403,
@@ -212,7 +212,7 @@ async def delete_bookings_id(
 
     if event is not None and (
         (user.id == event.applicant_id and event.decision == Decision.pending)
-        or is_user_member_of_an_allowed_group(user, [GroupType.BDE])
+        or is_user_member_of_any_group(user, [GroupType.BDE])
     ):
         await cruds_calendar.delete_event(event_id=event_id, db=db)
 

@@ -36,7 +36,7 @@ from app.utils.tools import (
     get_core_data,
     get_file_from_data,
     get_random_string,
-    is_user_member_of_an_allowed_group,
+    is_user_member_of_any_group,
     save_file_as_data,
     set_core_data,
 )
@@ -65,7 +65,7 @@ async def get_participant_by_id(
     """
     Get a participant by id
     """
-    if participant_id != user.id and not is_user_member_of_an_allowed_group(
+    if participant_id != user.id and not is_user_member_of_any_group(
         user,
         [GroupType.raid_admin],
     ):
@@ -520,7 +520,7 @@ async def read_document(
         user.id,
         participant.id,
         db,
-    ) and not is_user_member_of_an_allowed_group(user, [GroupType.raid_admin]):
+    ) and not is_user_member_of_any_group(user, [GroupType.raid_admin]):
         raise HTTPException(
             status_code=403,
             detail="The owner of this document is not a member of your team.",
