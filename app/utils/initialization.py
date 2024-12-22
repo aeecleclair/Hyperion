@@ -165,6 +165,8 @@ def create_school_sync(
         raise
     else:
         return school
+
+
 def delete_core_data_crud_sync(schema: str, db: Session) -> None:
     """
     Delete core data with schema from database
