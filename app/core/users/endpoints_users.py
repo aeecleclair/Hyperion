@@ -24,6 +24,8 @@ from app.core import models_core, schemas_core, security, standard_responses
 from app.core.config import Settings
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import AccountType, GroupType
+from app.core.schools import cruds_schools
+from app.core.schools.schools_type import SchoolType
 from app.core.users import cruds_users
 from app.dependencies import (
     get_db,
