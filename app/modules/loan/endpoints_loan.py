@@ -23,7 +23,7 @@ from app.utils.communication.notifications import NotificationTool
 from app.utils.tools import (
     is_group_id_valid,
     is_user_id_valid,
-    is_user_member_of_an_allowed_group,
+    is_user_member_of_any_group,
 )
 
 if TYPE_CHECKING:
@@ -186,7 +186,7 @@ async def get_loans_by_loaner(
         )
 
     # The user should be a member of the loaner's manager group
-    if not is_user_member_of_an_allowed_group(user, [loaner.group_manager_id]):
+    if not is_user_member_of_any_group(user, [loaner.group_manager_id]):
         raise HTTPException(
             status_code=403,
             detail=f"Unauthorized to manage {loaner_id} loaner",
@@ -244,7 +244,7 @@ async def get_items_by_loaner(
             detail="Invalid loaner_id",
         )
     # The user should be a member of the loaner's manager group
-    if not is_user_member_of_an_allowed_group(user, [loaner.group_manager_id]):
+    if not is_user_member_of_any_group(user, [loaner.group_manager_id]):
         raise HTTPException(
             status_code=403,
             detail=f"Unauthorized to manage {loaner_id} loaner",
@@ -288,7 +288,7 @@ async def create_items_for_loaner(
             detail="Invalid loaner_id",
         )
     # The user should be a member of the loaner's manager group
-    if not is_user_member_of_an_allowed_group(user, [loaner.group_manager_id]):
+    if not is_user_member_of_any_group(user, [loaner.group_manager_id]):
         raise HTTPException(
             status_code=403,
             detail=f"Unauthorized to manage {loaner_id} loaner",
@@ -366,7 +366,7 @@ async def update_items_for_loaner(
             detail=f"Item {item_id} does not belong to {loaner_id} loaner",
         )
     # The user should be a member of the loaner's manager group
-    if not is_user_member_of_an_allowed_group(user, [loaner.group_manager_id]):
+    if not is_user_member_of_any_group(user, [loaner.group_manager_id]):
         raise HTTPException(
             status_code=403,
             detail=f"Unauthorized to manage {loaner_id} loaner",
@@ -407,7 +407,7 @@ async def delete_loaner_item(
             detail=f"Item {item_id} does not belong to {loaner_id} loaner",
         )
     # The user should be a member of the loaner's manager group
-    if not is_user_member_of_an_allowed_group(user, [item.loaner.group_manager_id]):
+    if not is_user_member_of_any_group(user, [item.loaner.group_manager_id]):
         raise HTTPException(
             status_code=403,
             detail=f"Unauthorized to manage {loaner_id} loaner",
@@ -482,7 +482,7 @@ async def get_current_user_loaners(
     user_loaners: list[models_loan.Loaner] = [
         loaner
         for loaner in existing_loaners
-        if is_user_member_of_an_allowed_group(
+        if is_user_member_of_any_group(
             allowed_groups=[loaner.group_manager_id],
             user=user,
         )
@@ -520,7 +520,7 @@ async def create_loan(
             detail="Invalid loaner_id",
         )
     # The user should be a member of the loaner's manager group
-    if not is_user_member_of_an_allowed_group(user, [loaner.group_manager_id]):
+    if not is_user_member_of_any_group(user, [loaner.group_manager_id]):
         raise HTTPException(
             status_code=403,
             detail=f"Unauthorized to manage {loan_creation.loaner_id} loaner",
@@ -676,7 +676,7 @@ async def update_loan(
         )
 
     # The user should be a member of the loaner's manager group
-    if not is_user_member_of_an_allowed_group(user, [loan.loaner.group_manager_id]):
+    if not is_user_member_of_any_group(user, [loan.loaner.group_manager_id]):
         raise HTTPException(
             status_code=403,
             detail=f"Unauthorized to manage {loan.loaner_id} loaner",
@@ -796,7 +796,7 @@ async def delete_loan(
         )
 
     # The user should be a member of the loaner's manager group
-    if not is_user_member_of_an_allowed_group(user, [loan.loaner.group_manager_id]):
+    if not is_user_member_of_any_group(user, [loan.loaner.group_manager_id]):
         raise HTTPException(
             status_code=403,
             detail=f"Unauthorized to manage {loan.loaner_id} loaner",
@@ -848,7 +848,7 @@ async def return_loan(
         )
 
     # The user should be a member of the loaner's manager group
-    if not is_user_member_of_an_allowed_group(user, [loan.loaner.group_manager_id]):
+    if not is_user_member_of_any_group(user, [loan.loaner.group_manager_id]):
         raise HTTPException(
             status_code=403,
             detail=f"Unauthorized to manage {loan.loaner_id} loaner",
@@ -909,7 +909,7 @@ async def extend_loan(
         )
     end = loan.end
     # The user should be a member of the loaner's manager group
-    if not is_user_member_of_an_allowed_group(user, [loan.loaner.group_manager_id]):
+    if not is_user_member_of_any_group(user, [loan.loaner.group_manager_id]):
         raise HTTPException(
             status_code=403,
             detail=f"Unauthorized to manage {loan.loaner_id} loaner",

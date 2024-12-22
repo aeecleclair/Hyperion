@@ -25,7 +25,7 @@ from app.modules.amap.types_amap import DeliveryStatusType
 from app.types.module import Module
 from app.utils.communication.notifications import NotificationTool
 from app.utils.redis import locker_get, locker_set
-from app.utils.tools import is_user_member_of_an_allowed_group
+from app.utils.tools import is_user_member_of_any_group
 
 module = Module(
     root="amap",
@@ -415,8 +415,7 @@ async def add_order_to_delievery(
         raise HTTPException(status_code=400, detail="Invalid request")
 
     if not (
-        user.id == order.user_id
-        or is_user_member_of_an_allowed_group(user, [GroupType.amap])
+        user.id == order.user_id or is_user_member_of_any_group(user, [GroupType.amap])
     ):
         raise HTTPException(
             status_code=403,
@@ -537,7 +536,7 @@ async def edit_order_from_delivery(
 
     if not (
         user.id == previous_order.user_id
-        or is_user_member_of_an_allowed_group(user, [GroupType.amap])
+        or is_user_member_of_any_group(user, [GroupType.amap])
     ):
         raise HTTPException(
             status_code=403,
@@ -637,7 +636,7 @@ async def remove_order(
 
     **A member of the group AMAP can delete orders of other users**
     """
-    is_user_admin = is_user_member_of_an_allowed_group(user, [GroupType.amap])
+    is_user_admin = is_user_member_of_any_group(user, [GroupType.amap])
     order = await cruds_amap.get_order_by_id(db=db, order_id=order_id)
     if not order:
         raise HTTPException(status_code=404, detail="No order found")
@@ -830,9 +829,7 @@ async def get_cash_by_id(
     if user_db is None:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if not (
-        user_id == user.id or is_user_member_of_an_allowed_group(user, [GroupType.amap])
-    ):
+    if not (user_id == user.id or is_user_member_of_any_group(user, [GroupType.amap])):
         raise HTTPException(
             status_code=403,
             detail="Users that are not member of the group AMAP can only access the endpoint for their own user_id.",
@@ -967,9 +964,7 @@ async def get_orders_of_user(
     if not user_requested:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if not (
-        user_id == user.id or is_user_member_of_an_allowed_group(user, [GroupType.amap])
-    ):
+    if not (user_id == user.id or is_user_member_of_any_group(user, [GroupType.amap])):
         raise HTTPException(
             status_code=403,
             detail="Users that are not member of the group AMAP can only access the endpoint for their own user_id.",
