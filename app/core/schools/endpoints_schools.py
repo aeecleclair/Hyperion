@@ -18,8 +18,8 @@ from app.core.schools.schools_type import SchoolType
 from app.core.users import cruds_users
 from app.dependencies import (
     get_db,
-    is_user_a_member_of,
     is_user_an_ecl_member,
+    is_user_in,
 )
 
 router = APIRouter(tags=["Schools"])
@@ -52,7 +52,7 @@ async def read_schools(
 async def read_school(
     school_id: str,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_a_member_of(GroupType.admin)),
+    user=Depends(is_user_in(GroupType.admin)),
 ):
     """
     Return school with id from database as a dictionary. This includes a list of users being members of the school.
@@ -74,7 +74,7 @@ async def read_school(
 async def create_school(
     school: schemas_core.CoreSchoolBase,
     db: AsyncSession = Depends(get_db),
-    user: schemas_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: schemas_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Create a new school.
@@ -125,7 +125,7 @@ async def update_school(
     school_id: str,
     school_update: schemas_core.CoreSchoolUpdate,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_a_member_of(GroupType.admin)),
+    user=Depends(is_user_in(GroupType.admin)),
 ):
     """
     Update the name or the description of a school.
@@ -165,7 +165,7 @@ async def update_school(
 async def delete_school(
     school_id: str,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_a_member_of(GroupType.admin)),
+    user=Depends(is_user_in(GroupType.admin)),
 ):
     """
     Delete school from database.
