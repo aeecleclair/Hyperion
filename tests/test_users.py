@@ -171,19 +171,35 @@ def test_create_user_by_user_with_email(
 
 
 @pytest.mark.parametrize(
-    ("email", "expected_code", "expected_account_type"),
+    ("email", "expected_code", "expected_account_type", "expected_school_id"),
     [
-        ("fab1@etu.ec-lyon.fr", 201, AccountType.student),
-        ("fab2@ec-lyon.fr", 201, AccountType.staff),
-        ("fab3@centraliens-lyon.net", 201, AccountType.former_student),
-        ("fab4@test.fr", 201, AccountType.external),
-        ("fab5@ecl22.ec-lyon.fr", 201, AccountType.student),
+        (
+            "fab1@etu.ec-lyon.fr",
+            201,
+            AccountType.student,
+            SchoolType.centrale_lyon,
+        ),
+        ("fab2@ec-lyon.fr", 201, AccountType.staff, SchoolType.centrale_lyon),
+        (
+            "fab3@centraliens-lyon.net",
+            201,
+            AccountType.former_student,
+            SchoolType.centrale_lyon,
+        ),
+        ("fab4@test.fr", 201, AccountType.external, SchoolType.no_school),
+        (
+            "fab5@ecl22.ec-lyon.fr",
+            201,
+            AccountType.student,
+            SchoolType.centrale_lyon,
+        ),
     ],
 )
 def test_create_and_activate_user(
     email: str,
     expected_code: int,
     expected_account_type: AccountType,
+    expected_school_id: SchoolType,
     mocker: MockerFixture,
     client: TestClient,
 ) -> None:
@@ -197,7 +213,7 @@ def test_create_and_activate_user(
     response = client.post(
         "/users/create",
         json={
-            "email": "new_user@etu.ec-lyon.fr",
+            "email": email,
         },
     )
     assert response.status_code == expected_code
@@ -224,22 +240,12 @@ def test_create_and_activate_user(
     assert user is not None
     assert user["account_type"] == expected_account_type.value
 
-    users = client.get(
-        "/users/",
-        headers={"Authorization": f"Bearer {token_admin_user}"},
-    )
-    user = next(
-        user
-        for user in users.json()
-        if user["firstname"] == "new_user_firstname" and user["name"] == "new_user_name"
-    )
-
     user_detail = client.get(
         f"/users/{user['id']}",
         headers={"Authorization": f"Bearer {token_admin_user}"},
     )
 
-    assert user_detail.json()["school_id"] == SchoolType.centrale_lyon.value
+    assert user_detail.json()["school_id"] == expected_school_id.value
 
 
 @pytest.mark.parametrize(
