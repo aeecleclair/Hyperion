@@ -41,7 +41,7 @@ from app.dependencies import (
 from app.types.exceptions import AuthHTTPException
 from app.types.scopes_type import ScopeType
 from app.utils.auth.providers import BaseAuthClient
-from app.utils.tools import is_user_member_of_an_allowed_group
+from app.utils.tools import is_user_member_of_any_group
 
 router = APIRouter(tags=["Auth"])
 
@@ -308,9 +308,9 @@ async def authorize_validation(
     # The auth_client may restrict the usage of the client to specific Hyperion groups.
     # For example, only ECLAIR members may be allowed to access the wiki
     if auth_client.allowed_groups is not None:
-        if not is_user_member_of_an_allowed_group(
+        if not is_user_member_of_any_group(
             user=user,
-            allowed_groups=auth_client.allowed_groups,  # type: ignore
+            allowed_groups=auth_client.allowed_groups,
         ):
             hyperion_access_logger.warning(
                 f"Authorize-validation: user is not member of an allowed group {authorizereq.email} ({request_id})",

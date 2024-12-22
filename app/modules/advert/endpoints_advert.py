@@ -24,7 +24,7 @@ from app.utils.communication.notifications import NotificationTool
 from app.utils.tools import (
     get_file_from_data,
     is_group_id_valid,
-    is_user_member_of_an_allowed_group,
+    is_user_member_of_any_group,
     save_file_as_data,
 )
 
@@ -246,7 +246,7 @@ async def create_advert(
             detail="Invalid advertiser_id",
         )
 
-    if not is_user_member_of_an_allowed_group(user, [advertiser.group_manager_id]):
+    if not is_user_member_of_any_group(user, [advertiser.group_manager_id]):
         raise HTTPException(
             status_code=403,
             detail=f"Unauthorized to manage {advertiser.name} adverts",
@@ -301,7 +301,7 @@ async def update_advert(
             detail="Invalid advert_id",
         )
 
-    if not is_user_member_of_an_allowed_group(
+    if not is_user_member_of_any_group(
         user,
         [advert.advertiser.group_manager_id],
     ):
@@ -338,7 +338,7 @@ async def delete_advert(
             detail="Invalid advert_id",
         )
 
-    if not is_user_member_of_an_allowed_group(
+    if not is_user_member_of_any_group(
         user,
         [GroupType.admin, advert.advertiser.group_manager_id],
     ):

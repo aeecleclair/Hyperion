@@ -54,7 +54,7 @@ from app.types.websocket import (
 from app.utils.tools import (
     create_and_send_email_migration,
     get_core_data,
-    is_user_member_of_an_allowed_group,
+    is_user_member_of_any_group,
     set_core_data,
 )
 
@@ -83,7 +83,7 @@ async def get_cdr_users(
     **User must be part of a seller group to use this endpoint**
     """
     if not (
-        is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])
+        is_user_member_of_any_group(user, [GroupType.admin_cdr])
         or await cruds_cdr.get_sellers_by_group_ids(
             db=db,
             group_ids=[g.id for g in user.groups],
@@ -117,7 +117,7 @@ async def get_cdr_users_pending_validation(
     **User must be part of a seller group to use this endpoint**
     """
     if not (
-        is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])
+        is_user_member_of_any_group(user, [GroupType.admin_cdr])
         or await cruds_cdr.get_sellers_by_group_ids(
             db=db,
             group_ids=[g.id for g in user.groups],
@@ -174,7 +174,7 @@ async def get_cdr_user(
     """
     if user.id != user_id:
         if not (
-            is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])
+            is_user_member_of_any_group(user, [GroupType.admin_cdr])
             or await cruds_cdr.get_sellers_by_group_ids(
                 db=db,
                 group_ids=[g.id for g in user.groups],
@@ -354,7 +354,7 @@ async def get_sellers_by_user_id(
     **User must be authenticated to use this endpoint**
     """
 
-    if is_user_member_of_an_allowed_group(
+    if is_user_member_of_any_group(
         user=user,
         allowed_groups=[GroupType.admin_cdr],
     ):
@@ -554,7 +554,7 @@ async def get_all_products(
         db,
         [x.id for x in user.groups],
     )
-    if not (sellers or is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])):
+    if not (sellers or is_user_member_of_any_group(user, [GroupType.admin_cdr])):
         raise HTTPException(
             status_code=403,
             detail="You must be a seller to get all documents.",
@@ -1167,7 +1167,7 @@ async def get_all_sellers_documents(
         db,
         [x.id for x in user.groups],
     )
-    if not (sellers or is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])):
+    if not (sellers or is_user_member_of_any_group(user, [GroupType.admin_cdr])):
         raise HTTPException(
             status_code=403,
             detail="You must be a seller to get all documents.",
@@ -1267,8 +1267,7 @@ async def get_purchases_by_user_id(
     **User must get his own purchases or be CDR Admin to use this endpoint**
     """
     if not (
-        user_id == user.id
-        or is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])
+        user_id == user.id or is_user_member_of_any_group(user, [GroupType.admin_cdr])
     ):
         raise HTTPException(
             status_code=403,
@@ -1842,8 +1841,7 @@ async def get_signatures_by_user_id(
     **User must get his own signatures or be CDR Admin to use this endpoint**
     """
     if not (
-        user_id == user.id
-        or is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])
+        user_id == user.id or is_user_member_of_any_group(user, [GroupType.admin_cdr])
     ):
         raise HTTPException(
             status_code=403,
@@ -1919,7 +1917,7 @@ async def create_signature(
             user_id == user.id
             and signature.signature_type == DocumentSignatureType.numeric
         )
-        or is_user_member_of_an_allowed_group(user=user, allowed_groups=sellers_groups)
+        or is_user_member_of_any_group(user=user, allowed_groups=sellers_groups)
     ):
         raise HTTPException(
             status_code=403,
@@ -2089,8 +2087,7 @@ async def create_curriculum_membership(
     **User must add a curriculum to themself or be CDR Admin to use this endpoint**
     """
     if not (
-        user_id == user.id
-        or is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])
+        user_id == user.id or is_user_member_of_any_group(user, [GroupType.admin_cdr])
     ):
         raise HTTPException(
             status_code=403,
@@ -2191,8 +2188,7 @@ async def update_curriculum_membership(
     **User must add a curriculum to themself or be CDR Admin to use this endpoint**
     """
     if not (
-        user_id == user.id
-        or is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])
+        user_id == user.id or is_user_member_of_any_group(user, [GroupType.admin_cdr])
     ):
         raise HTTPException(
             status_code=403,
@@ -2280,8 +2276,7 @@ async def delete_curriculum_membership(
             detail="Invalid curriculum_id",
         )
     if not (
-        user_id == user.id
-        or is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])
+        user_id == user.id or is_user_member_of_any_group(user, [GroupType.admin_cdr])
     ):
         raise HTTPException(
             status_code=403,
@@ -2347,8 +2342,7 @@ async def get_payments_by_user_id(
     **User must get his own payments or be CDR Admin to use this endpoint**
     """
     if not (
-        user_id == user.id
-        or is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])
+        user_id == user.id or is_user_member_of_any_group(user, [GroupType.admin_cdr])
     ):
         raise HTTPException(
             status_code=403,
@@ -2536,8 +2530,7 @@ async def get_memberships_by_user_id(
     user: models_core.CoreUser = Depends(is_user()),
 ):
     if not (
-        user_id == user.id
-        or is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])
+        user_id == user.id or is_user_member_of_any_group(user, [GroupType.admin_cdr])
     ):
         raise HTTPException(
             status_code=403,
@@ -2710,8 +2703,7 @@ async def get_tickets_of_user(
     user: models_core.CoreUser = Depends(is_user()),
 ):
     if not (
-        is_user_member_of_an_allowed_group(user, [GroupType.admin_cdr])
-        or user_id == user.id
+        is_user_member_of_any_group(user, [GroupType.admin_cdr]) or user_id == user.id
     ):
         raise HTTPException(
             status_code=403,
