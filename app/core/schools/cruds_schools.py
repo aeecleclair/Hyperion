@@ -3,7 +3,6 @@
 from collections.abc import Sequence
 
 from sqlalchemy import delete, select, update
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -38,11 +37,9 @@ async def get_school_by_name(
 ) -> models_core.CoreSchool | None:
     """Return school with name from database"""
     result = await db.execute(
-        select(models_core.CoreSchool)
-        .where(models_core.CoreSchool.name == school_name)
-        .options(
-            selectinload(models_core.CoreSchool.students),
-        ),  # needed to load the members from the relationship
+        select(models_core.CoreSchool).where(
+            models_core.CoreSchool.name == school_name,
+        ),
     )
     return result.scalars().first()
 
@@ -50,17 +47,10 @@ async def get_school_by_name(
 async def create_school(
     school: models_core.CoreSchool,
     db: AsyncSession,
-) -> models_core.CoreSchool:
+) -> None:
     """Create a new school in database and return it"""
 
     db.add(school)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return school
 
 
 async def delete_school(db: AsyncSession, school_id: str):
@@ -69,7 +59,6 @@ async def delete_school(db: AsyncSession, school_id: str):
     await db.execute(
         delete(models_core.CoreSchool).where(models_core.CoreSchool.id == school_id),
     )
-    await db.commit()
 
 
 async def update_school(

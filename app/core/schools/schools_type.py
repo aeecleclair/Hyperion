@@ -4,6 +4,9 @@ from enum import Enum
 class SchoolType(str, Enum):
     """
     In Hyperion, each user must have a school. Belonging to a school gives access to a set of specific endpoints.
+
+    This class defines the basic schools available in Hyperion.
+    Other schools can be added by the administrator using the API.
     """
 
     # Account types

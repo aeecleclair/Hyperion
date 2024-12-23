@@ -145,3 +145,20 @@ def test_create_user_corresponding_to_school(
     )
 
     assert user_detail.json()["school_id"] == school_id
+
+
+def test_delete_school(client: TestClient) -> None:
+    token = create_api_access_token(admin_user)
+
+    response = client.delete(
+        f"/schools/{id_test_ens}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 204
+
+    response = client.get(
+        f"/schools/{id_test_ens}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 404
+    assert response.json() == {"detail": "School not found"}

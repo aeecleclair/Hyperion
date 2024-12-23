@@ -9,6 +9,7 @@ import re
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, schemas_core
@@ -87,7 +88,7 @@ async def create_school(
     ):
         raise HTTPException(
             status_code=400,
-            detail="A school with the name {school.name} already exist",
+            detail=f"A school with the name {school.name} already exist",
         )
 
     try:
@@ -96,7 +97,7 @@ async def create_school(
             name=school.name,
             email_regex=school.email_regex,
         )
-        new_school = await cruds_schools.create_school(school=db_school, db=db)
+        await cruds_schools.create_school(school=db_school, db=db)
         users = await cruds_users.get_users(
             db=db,
             included_account_types=[AccountType.external],
@@ -111,10 +112,18 @@ async def create_school(
                         account_type=AccountType.other_school_student,
                     ),
                 )
+        await db.commit()
     except ValueError as error:
+        await db.rollback()
         raise HTTPException(status_code=422, detail=str(error))
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail="School creation failed due to database integrity error",
+        )
     else:
-        return new_school
+        return db_school
 
 
 @router.patch(
@@ -148,7 +157,7 @@ async def update_school(
         ):
             raise HTTPException(
                 status_code=400,
-                detail="A school with the name {school.name} already exist",
+                detail=f"A school with the name {school.name} already exist",
             )
 
     await cruds_schools.update_school(
@@ -176,10 +185,33 @@ async def delete_school(
     **This endpoint is only usable by administrators**
     """
 
-    if school_id in set(item.value for item in SchoolType):
+    if school_id in (item.value for item in SchoolType):
         raise HTTPException(
             status_code=400,
             detail="SchoolTypes schools can not be deleted",
         )
 
+    school = await cruds_schools.get_school_by_id(db=db, school_id=school_id)
+    if school is None:
+        raise HTTPException(status_code=404, detail="School not found")
+
+    users = await cruds_users.get_users(db=db, schools_ids=[school_id])
+    for db_user in users:
+        await cruds_users.update_user(
+            db,
+            db_user.id,
+            schemas_core.CoreUserUpdateAdmin(
+                school_id=SchoolType.no_school.value,
+                account_type=AccountType.external,
+            ),
+        )
+
     await cruds_schools.delete_school(db=db, school_id=school_id)
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail="School deletion failed due to database integrity error",
+        )

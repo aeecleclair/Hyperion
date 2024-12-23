@@ -25,6 +25,7 @@ async def get_users(
     excluded_account_types: list[AccountType] | None = None,
     included_groups: list[str] | None = None,
     excluded_groups: list[str] | None = None,
+    schools_ids: list[str] | None = None,
 ) -> Sequence[models_core.CoreUser]:
     """
     Return all users from database.
@@ -35,6 +36,7 @@ async def get_users(
     excluded_account_types = excluded_account_types or []
     included_groups = included_groups or []
     excluded_groups = excluded_groups or []
+    schools_ids = schools_ids or None
 
     result = await db.execute(
         select(models_core.CoreUser).where(
@@ -72,6 +74,15 @@ async def get_users(
                     )
                     for group_id in excluded_groups
                 ],
+                or_(
+                    False,
+                    *[
+                        models_core.CoreUser.school_id == school_id
+                        for school_id in schools_ids
+                    ],
+                )
+                if schools_ids
+                else and_(True),
             ),
         ),
     )
@@ -120,7 +131,6 @@ async def update_user(
         .where(models_core.CoreUser.id == user_id)
         .values(**user_update.model_dump(exclude_none=True)),
     )
-    await db.commit()
 
 
 async def create_unconfirmed_user(
