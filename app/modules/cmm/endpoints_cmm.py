@@ -40,20 +40,21 @@ async def verify_ban_status(
 
 
 @module.router.get(
-    "/cmm/memes",
-    response_model=list[schemas_cmm.Meme],
+    "/cmm/memes/",
+    response_model=list[schemas_cmm.ShownMeme],
     status_code=200,
-    dependencies=[Depends(verify_ban_status)],
 )
 async def get_memes(
-    sort_by: str | None,
-    db: AsyncSession = Depends(get_db),
+    sort_by: str = "best",
     n_page: int = 1,
+    db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user()),
 ):
     """
     Get a page of memes according to the asked sort
     """
+    print(sort_by)
+    print(n_page)
     if n_page < 1:
         raise HTTPException(
             status_code=204,
@@ -102,9 +103,9 @@ async def get_memes(
 
 
 @module.router.get(
-    "/cmm/memes/{meme_id}",
+    "/cmm/memes/{meme_id}/",
     status_code=200,
-    response_model=schemas_cmm.FullMeme,
+    response_model=schemas_cmm.ShownMeme,
 )
 async def get_meme_by_id(
     meme_id: uuid.UUID,
@@ -119,7 +120,7 @@ async def get_meme_by_id(
         raise HTTPException(status_code=204, detail="The meme does not exist")
 
     my_vote = await cruds_cmm.get_vote(db=db, meme_id=meme.id, user_id=user.id)
-    full_meme = schemas_cmm.FullMeme(
+    full_meme = schemas_cmm.ShownMeme(
         **meme.model_dump(),
         my_vote=types_cmm.VoteValue(None if my_vote is None else my_vote.positive),
     )
@@ -127,7 +128,7 @@ async def get_meme_by_id(
 
 
 @module.router.get(
-    "/cmm/memes/{meme_id}/img",
+    "/cmm/memes/{meme_id}/img/",
     status_code=200,
     response_class=FileResponse,
 )
@@ -152,7 +153,7 @@ async def get_meme_image_by_id(
 
 
 @module.router.delete(
-    "/cmm/memes/{meme_id}",
+    "/cmm/memes/{meme_id}/",
     status_code=204,
 )
 async def delete_meme_by_id(
@@ -192,7 +193,7 @@ async def delete_meme_by_id(
 
 
 @module.router.post(
-    "/cmm/memes",
+    "/cmm/memes/",
     response_model=schemas_cmm.Meme,
     status_code=201,
 )
@@ -238,7 +239,7 @@ async def add_meme(
 
 
 @module.router.get(
-    "/cmm/memes/{meme_id}/vote",
+    "/cmm/memes/{meme_id}/vote/",
     status_code=200,
     response_model=schemas_cmm.Vote,
 )
@@ -262,7 +263,7 @@ async def get_vote(
 
 
 @module.router.get(
-    "/cmm/memes/votes/{vote_id}",
+    "/cmm/memes/votes/{vote_id}/",
     status_code=200,
     response_model=schemas_cmm.Vote,
 )
@@ -282,7 +283,7 @@ async def get_vote_by_id(
 
 
 @module.router.post(
-    "/cmm/memes/{meme_id}/vote",
+    "/cmm/memes/{meme_id}/vote/",
     response_model=schemas_cmm.Vote,
     status_code=201,
 )
@@ -313,7 +314,7 @@ async def add_vote(
 
 
 @module.router.delete(
-    "/cmm/memes/{meme_id}/vote",
+    "/cmm/memes/{meme_id}/vote/",
     status_code=201,
 )
 async def delete_vote(
@@ -336,7 +337,7 @@ async def delete_vote(
 
 
 @module.router.patch(
-    "/cmm/memes/{meme_id}/vote",
+    "/cmm/memes/{meme_id}/vote/",
     status_code=201,
 )
 async def update_vote(
@@ -363,7 +364,7 @@ async def update_vote(
 
 
 @module.router.post(
-    "/cmm/users/{user_id}/ban",
+    "/cmm/users/{user_id}/ban/",
     status_code=201,
     response_model=models_cmm.Ban,
 )
@@ -409,7 +410,7 @@ async def ban_user(
 
 
 @module.router.post(
-    "/cmm/users/{user_id}/unban",
+    "/cmm/users/{user_id}/unban/",
     status_code=201,
 )
 async def unban_user(
@@ -449,7 +450,7 @@ async def unban_user(
 
 
 @module.router.get(
-    "/cmm/users/{user_id}/ban_history",
+    "/cmm/users/{user_id}/ban_history/",
     status_code=200,
     response_model=list[schemas_cmm.Ban],
 )
