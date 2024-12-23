@@ -120,7 +120,7 @@ def override_get_scheduler(
 async def create_user_with_groups(
     groups: list[GroupType],
     account_type: AccountType = AccountType.student,
-    school_id: SchoolType = SchoolType.centrale_lyon,
+    school_id: SchoolType | str = SchoolType.centrale_lyon,
     user_id: str | None = None,
     email: str | None = None,
     password: str | None = None,

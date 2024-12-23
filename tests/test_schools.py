@@ -4,6 +4,7 @@ from pytest_mock import MockerFixture
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
+from app.core.schools.schools_type import SchoolType
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
@@ -29,6 +30,18 @@ async def init_objects() -> None:
     await add_object_to_db(ens)
 
     admin_user = await create_user_with_groups([GroupType.admin])
+
+    await create_user_with_groups(
+        [],
+        school_id=id_test_ens,
+        email="test@ens.fr",
+    )
+
+    await create_user_with_groups(
+        [],
+        school_id=SchoolType.no_school,
+        email="test@school.fr",
+    )
 
 
 def test_read_schools(client: TestClient) -> None:
