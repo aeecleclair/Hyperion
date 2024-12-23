@@ -12,6 +12,7 @@ from fastapi import (
     WebSocket,
 )
 from fastapi.responses import FileResponse
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, schemas_core
@@ -280,7 +281,11 @@ async def update_cdr_user(
                     floor=user_update.floor,
                 ),
             )
+        await db.commit()
     except Exception:
+        await db.rollback()
+        raise
+    except IntegrityError:
         await db.rollback()
         raise
 
