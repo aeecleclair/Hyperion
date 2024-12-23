@@ -27,3 +27,6 @@ logs/
 
 # Pytest-cov
 .coverage
+
+# Jinja templates test output
+tests/jinja_test_outputs/
