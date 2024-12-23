@@ -14,3 +14,105 @@
 * [ ] Testing edge cases with ban
     * [ ] Call d'une méthode par un user ban
 """
+
+import datetime
+import uuid
+from pathlib import Path
+
+import pytest_asyncio
+from fastapi.testclient import TestClient
+
+from app.core import models_core
+from app.core.groups.groups_type import GroupType
+from app.modules.cmm import models_cmm
+from app.modules.cmm.types_cmm import MemeStatus
+from tests.commons import (
+    add_object_to_db,
+    create_api_access_token,
+    create_user_with_groups,
+)
+
+cmm_user_1: models_core.CoreUser
+cmm_user_2: models_core.CoreUser
+cmm_user_to_ban: models_core.CoreUser
+cmm_admin: models_core.CoreUser
+
+memes_1: list[models_cmm.Meme]
+memes_2: list[models_cmm.Meme]
+memes_to_ban: list[models_cmm.Meme]
+token_user_1: str
+token_user_2: str
+token_user_to_ban: str
+token_admin: str
+
+
+@pytest_asyncio.fixture(scope="module", autouse=True)
+async def init_objects() -> None:
+    global cmm_user_1
+    cmm_user_1 = await create_user_with_groups([])
+    global token_cmm
+    token_cmm = create_api_access_token(cmm_user_1)
+
+    global cmm_user_2
+    cmm_user_2 = await create_user_with_groups([])
+
+    global cmm_user_to_ban
+    cmm_user_to_ban = await create_user_with_groups([])
+    global token_user_to_ban
+    token_user_to_ban = create_api_access_token(cmm_user_1)
+
+    global cmm_admin
+    cmm_admin = await create_user_with_groups([GroupType.admin])
+    global token_admin
+    token_admin = create_api_access_token(cmm_user_1)
+
+    global memes_1
+    memes_1 = [
+        models_cmm.Meme(
+            id=uuid.uuid4(),
+            status=MemeStatus.neutral,
+            user_id=cmm_user_1.id,
+            creation_time=datetime.datetime(24, i, 23, tzinfo=datetime.UTC),
+            vote_score=i,
+        )
+        for i in range(1, 13)
+    ]
+    for meme in memes_1:
+        await add_object_to_db(meme)
+    global memes_2
+    memes_2 = [
+        models_cmm.Meme(
+            id=uuid.uuid4(),
+            status=MemeStatus.neutral,
+            user_id=cmm_user_1.id,
+            creation_time=datetime.datetime(24, i, 23, tzinfo=datetime.UTC),
+            vote_score=i,
+        )
+        for i in range(1, 13)
+    ]
+    for meme in memes_2:
+        await add_object_to_db(meme)
+    global memes_to_ban
+    memes_to_ban = [
+        models_cmm.Meme(
+            id=uuid.uuid4(),
+            status=MemeStatus.neutral,
+            user_id=cmm_user_to_ban.id,
+            creation_time=datetime.datetime(24, i, 23, tzinfo=datetime.UTC),
+            vote_score=i,
+        )
+        for i in range(1, 13)
+    ]
+    for meme in memes_to_ban:
+        await add_object_to_db(meme)
+
+
+def test_get_meme_page(client: TestClient) -> None:
+    response = client.get(
+        "/cmm/memes/",
+        headers={"Authorization": f"Bearer {token_cmm}"},
+    )
+    print(response)
+    print(response.status_code)
+    # print(response.json())
+    assert 1 == 1

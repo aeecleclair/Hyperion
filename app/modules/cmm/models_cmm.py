@@ -16,7 +16,11 @@ class Vote(Base):
     user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"))
     user: Mapped[CoreUser] = relationship("CoreUser", init=False)
     meme_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("cmm_meme.id"))
-    meme: Mapped["Meme"] = relationship("Meme", init=False)
+    meme: Mapped["Meme"] = relationship(
+        "Meme",
+        init=False,
+        back_populates="votes",
+    )
     positive: bool
 
 
@@ -31,8 +35,9 @@ class Meme(Base):
     vote_score: Mapped[int]
     votes: Mapped[list["Vote"]] = relationship(
         "Vote",
-        lazy="selectin",
         default_factory=list,
+        lazy="selectin",
+        back_populates="meme",
     )
 
 

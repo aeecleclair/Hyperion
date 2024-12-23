@@ -30,8 +30,12 @@ class Meme(BaseModel):
     status: MemeStatus
 
 
-class FullMeme(Meme):
+class ShownMeme(BaseModel):
+    user: CoreUserSimple
+    creation_time: datetime
     my_vote: VoteValue
+    vote_score: int
+    status: MemeStatus
 
 
 class Ban(BaseModel):
