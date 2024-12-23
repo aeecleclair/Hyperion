@@ -25,8 +25,6 @@ from app.dependencies import (
 
 router = APIRouter(tags=["Schools"])
 
-hyperion_security_logger = logging.getLogger("hyperion.security")
-
 
 @router.get(
     "/schools/",
