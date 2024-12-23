@@ -13,7 +13,7 @@ n_memes = 10
 n_weeks = 7
 
 
-async def compute_schemas(meme_page, votes_map):
+async def compute_schemas(meme_page, votes_map) -> Sequence[schemas_cmm.FullMeme]:
     full_meme_page = [schemas_cmm.FullMeme(**meme.model_dump()) for meme in meme_page]
     for i, meme in enumerate(meme_page):
         if meme.id in votes_map:
