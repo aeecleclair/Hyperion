@@ -18,13 +18,16 @@ from fastapi import (
 )
 from fastapi.responses import FileResponse
 from fastapi.templating import Jinja2Templates
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, schemas_core, security, standard_responses
 from app.core.config import Settings
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import AccountType, GroupType
+from app.core.schools.schools_type import SchoolType
 from app.core.users import cruds_users
+from app.core.users.tools_users import get_account_type_and_school_id_from_email
 from app.dependencies import (
     get_db,
     get_request_id,
@@ -56,7 +59,7 @@ ECL_FORMER_STUDENT_REGEX = r"^[\w\-.]*@centraliens-lyon\.net$"
 
 
 @router.get(
-    "/users/",
+    "/users",
     response_model=list[schemas_core.CoreUserSimple],
     status_code=200,
 )
@@ -378,29 +381,17 @@ async def activate_user(
 
     # By default we mark the user as external
     # but if it has an ECL email address, we will mark it as member
-    account_type = AccountType.external
-    if re.match(ECL_STAFF_REGEX, unconfirmed_user.email):
-        # Its a staff email address
-        account_type = AccountType.staff
-    elif re.match(
-        ECL_STUDENT_REGEX,
-        unconfirmed_user.email,
-    ):
-        # Its a student email address
-        account_type = AccountType.student
-    elif re.match(
-        ECL_FORMER_STUDENT_REGEX,
-        unconfirmed_user.email,
-    ):
-        # Its a former student email address
-        account_type = AccountType.former_student
-
+    account_type, school_id = await get_account_type_and_school_id_from_email(
+        email=unconfirmed_user.email,
+        db=db,
+    )
     # A password should have been provided
     password_hash = security.get_password_hash(user.password)
 
     confirmed_user = models_core.CoreUser(
         id=unconfirmed_user.id,
         email=unconfirmed_user.email,
+        school_id=school_id,
         account_type=account_type,
         password_hash=password_hash,
         name=user.name,
@@ -692,17 +683,37 @@ async def migrate_mail_confirm(
             detail="User not found",
         )
 
+    account, new_school_id = await get_account_type_and_school_id_from_email(
+        email=migration_object.new_email,
+        db=db,
+    )
+
+    if user.school_id is not SchoolType.no_school and user.school_id != new_school_id:
+        raise HTTPException(
+            status_code=400,
+            detail="User cannot change school",
+        )
     try:
         await cruds_users.update_user(
-            db,
-            migration_object.user_id,
+            db=db,
+            user_id=migration_object.user_id,
             user_update=schemas_core.CoreUserUpdateAdmin(
                 email=migration_object.new_email,
-                account_type=AccountType.student,
+                account_type=account,
+                school_id=new_school_id,
             ),
         )
+        await db.commit()
+
     except Exception as error:
+        await db.rollback()
         raise HTTPException(status_code=400, detail=str(error))
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail="Email migration failed due to database integrity error",
+        )
 
     await cruds_users.delete_email_migration_code_by_token(
         confirmation_token=token,
@@ -824,6 +835,14 @@ async def update_current_user(
     """
 
     await cruds_users.update_user(db=db, user_id=user.id, user_update=user_update)
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail="Update failed due to database integrity error",
+        )
 
 
 @router.post(
@@ -894,6 +913,14 @@ async def update_user(
         raise HTTPException(status_code=404, detail="User not found")
 
     await cruds_users.update_user(db=db, user_id=user_id, user_update=user_update)
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail="Update failed due to database integrity error",
+        )
 
 
 @router.post(

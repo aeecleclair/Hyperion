@@ -42,6 +42,7 @@ class AccountType(str, Enum):
     staff = "staff"
     association = "association"
     external = "external"
+    other_school_student = "other_school_student"
     demo = "demo"
 
     def __str__(self):
@@ -57,7 +58,7 @@ def get_ecl_account_types() -> list[AccountType]:
     ]
 
 
-def get_account_types_except_external() -> list[AccountType]:
+def get_account_types_except_externals() -> list[AccountType]:
     return [
         AccountType.student,
         AccountType.former_student,

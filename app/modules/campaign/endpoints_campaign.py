@@ -24,7 +24,7 @@ from app.types.content_type import ContentType
 from app.types.module import Module
 from app.utils.tools import (
     get_file_from_data,
-    is_user_member_of_an_allowed_group,
+    is_user_member_of_any_group,
     save_file_as_data,
 )
 
@@ -54,7 +54,7 @@ async def get_sections(
     voters = await cruds_campaign.get_voters(db)
     voters_groups = [voter.group_id for voter in voters]
     voters_groups.append(GroupType.CAA)
-    if not is_user_member_of_an_allowed_group(user, voters_groups):
+    if not is_user_member_of_any_group(user, voters_groups):
         raise HTTPException(
             status_code=403,
             detail="Access forbidden : you are not a poll member",
@@ -142,7 +142,7 @@ async def get_lists(
     voters = await cruds_campaign.get_voters(db)
     voters_groups = [voter.group_id for voter in voters]
     voters_groups.append(GroupType.CAA)
-    if not is_user_member_of_an_allowed_group(user, voters_groups):
+    if not is_user_member_of_any_group(user, voters_groups):
         raise HTTPException(
             status_code=403,
             detail="Access forbidden : you are not a poll member",
@@ -607,7 +607,7 @@ async def vote(
     """
     voters = await cruds_campaign.get_voters(db)
     voters_groups = [voter.group_id for voter in voters]
-    if not is_user_member_of_an_allowed_group(user, voters_groups):
+    if not is_user_member_of_any_group(user, voters_groups):
         raise HTTPException(
             status_code=403,
             detail="Access forbidden : you are not a poll member",
@@ -674,7 +674,7 @@ async def get_sections_already_voted(
     """
     voters = await cruds_campaign.get_voters(db)
     voters_groups = [voter.group_id for voter in voters]
-    if not is_user_member_of_an_allowed_group(user, voters_groups):
+    if not is_user_member_of_any_group(user, voters_groups):
         raise HTTPException(
             status_code=403,
             detail="Access forbidden : you are not a poll member",
@@ -709,7 +709,7 @@ async def get_results(
     voters = await cruds_campaign.get_voters(db)
     voters_groups = [voter.group_id for voter in voters]
     voters_groups.append(GroupType.CAA)
-    if not is_user_member_of_an_allowed_group(user, voters_groups):
+    if not is_user_member_of_any_group(user, voters_groups):
         raise HTTPException(
             status_code=403,
             detail="Access forbidden : you are not a poll member",
@@ -719,7 +719,7 @@ async def get_results(
 
     if (
         status == StatusType.counting
-        and is_user_member_of_an_allowed_group(user, [GroupType.CAA])
+        and is_user_member_of_any_group(user, [GroupType.CAA])
     ) or status == StatusType.published:
         votes = await cruds_campaign.get_votes(db=db)
 
@@ -764,7 +764,7 @@ async def get_status_vote(
     voters = await cruds_campaign.get_voters(db)
     voters_groups = [voter.group_id for voter in voters]
     voters_groups.append(GroupType.CAA)
-    if not is_user_member_of_an_allowed_group(user, voters_groups):
+    if not is_user_member_of_any_group(user, voters_groups):
         raise HTTPException(
             status_code=403,
             detail="Access forbidden : you are not a poll member",
@@ -864,7 +864,7 @@ async def read_campaigns_logo(
     voters = await cruds_campaign.get_voters(db)
     voters_groups = [voter.group_id for voter in voters]
     voters_groups.append(GroupType.CAA)
-    if not is_user_member_of_an_allowed_group(user, voters_groups):
+    if not is_user_member_of_any_group(user, voters_groups):
         raise HTTPException(
             status_code=403,
             detail="Access forbidden : you are not a poll member",
