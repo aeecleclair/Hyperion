@@ -129,6 +129,7 @@ class CoreUserFusionRequest(BaseModel):
 
 
 class CoreUserUpdateAdmin(BaseModel):
+    email: str | None = None
     school_id: str | None = None
     account_type: AccountType | None = None
     name: str | None = None
