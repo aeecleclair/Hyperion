@@ -1,6 +1,7 @@
 import uuid
 from pathlib import Path
 
+import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
@@ -8,6 +9,7 @@ from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from app.modules.raffle import models_raffle
 from app.modules.raffle.types_raffle import RaffleStatusType
+from app.types.exceptions import RedisConnectionError
 from tests.commons import (
     add_object_to_db,
     change_redis_client_status,
@@ -316,6 +318,7 @@ def test_get_tickets_by_user_id(client: TestClient) -> None:
     assert len(response.json()) == 2
 
 
+@pytest.mark.xfail(raises=RedisConnectionError)
 def test_buy_tickets(client: TestClient) -> None:
     # Enable Redis client for locker
     change_redis_client_status(activated=True)
