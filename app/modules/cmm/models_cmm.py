@@ -1,27 +1,22 @@
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING
 
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.models_core import CoreUser
-
-if TYPE_CHECKING:
-    from app.modules.cmm.models_cmm import Meme
-
 from app.modules.cmm.types_cmm import MemeStatus
 from app.types.sqlalchemy import Base, PrimaryKey
 
 
 class Vote(Base):
-    ___tablename___ = "cmm_vote"
+    __tablename__ = "cmm_vote"
 
     id: Mapped[PrimaryKey]
     user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"))
     user: Mapped[CoreUser] = relationship("CoreUser", init=False)
     meme_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("cmm_meme.id"))
-    meme: Mapped[Meme] = relationship("Meme", init=False)
+    meme: Mapped["Meme"] = relationship("Meme", init=False)
     positive: bool
 
 
@@ -29,17 +24,16 @@ class Meme(Base):
     __tablename__ = "cmm_meme"
 
     id: Mapped[PrimaryKey]
+    status: Mapped[MemeStatus]
     user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"))
     user: Mapped[CoreUser] = relationship("CoreUser", init=False)
     creation_time: Mapped[datetime]
     vote_score: Mapped[int]
-    votes: Mapped[list[Vote]] = relationship(
+    votes: Mapped[list["Vote"]] = relationship(
         "Vote",
-        secondary="cmm_vote",
         lazy="selectin",
         default_factory=list,
     )
-    status: Mapped[MemeStatus]
 
 
 class Ban(Base):
@@ -47,8 +41,16 @@ class Ban(Base):
 
     id: Mapped[PrimaryKey]
     user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"))
-    user: Mapped[CoreUser] = relationship("CoreUser", init=False)
+    user: Mapped[CoreUser] = relationship(
+        "CoreUser",
+        init=False,
+        foreign_keys=[user_id],
+    )
     creation_time: Mapped[datetime]
     end_time: Mapped[datetime | None]
     admin_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"))
-    admin: Mapped[CoreUser] = relationship("CoreUser", init=False)
+    admin: Mapped[CoreUser] = relationship(
+        "CoreUser",
+        init=False,
+        foreign_keys=[admin_id],
+    )
