@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 import uuid
 from datetime import UTC, datetime
 
@@ -39,6 +40,24 @@ async def verify_ban_status(
         raise HTTPException(status_code=403, detail="You are currently banned")
 
 
+async def compute_full_meme_page(
+    meme_page: Sequence[models_cmm.Meme],
+) -> list[schemas_cmm.ShownMeme]:
+    full_meme_page = [
+        schemas_cmm.ShownMeme(
+            user=meme.user,
+            creation_time=meme.creation_time,
+            vote_score=meme.vote_score,
+            status=meme.status,
+            my_vote=meme.votes[0].positive
+            if meme.votes
+            else types_cmm.VoteValue.neutral,
+        )
+        for meme in meme_page
+    ]
+    return full_meme_page
+
+
 @module.router.get(
     "/cmm/memes/",
     response_model=list[schemas_cmm.ShownMeme],
@@ -53,44 +72,42 @@ async def get_memes(
     """
     Get a page of memes according to the asked sort
     """
-    print(sort_by)
-    print(n_page)
     if n_page < 1:
         raise HTTPException(
-            status_code=204,
+            status_code=404,
             detail="Invalid page number",
         )
 
     match sort_by:
         case types_cmm.MemeSort.best:
-            full_meme_page = await cruds_cmm.get_memes_by_votes(
+            meme_page = await cruds_cmm.get_memes_by_votes(
                 db=db,
                 descending=True,
                 n_page=n_page,
                 user_id=user.id,
             )
         case types_cmm.MemeSort.worst:
-            full_meme_page = await cruds_cmm.get_memes_by_votes(
+            meme_page = await cruds_cmm.get_memes_by_votes(
                 db=db,
                 descending=False,
                 n_page=n_page,
                 user_id=user.id,
             )
         case types_cmm.MemeSort.trending:
-            full_meme_page = await cruds_cmm.get_trending_memes(
+            meme_page = await cruds_cmm.get_trending_memes(
                 db=db,
                 n_page=n_page,
                 user_id=user.id,
             )
         case types_cmm.MemeSort.newest:
-            full_meme_page = await cruds_cmm.get_memes_by_date(
+            meme_page = await cruds_cmm.get_memes_by_date(
                 db=db,
                 descending=True,
                 n_page=n_page,
                 user_id=user.id,
             )
         case types_cmm.MemeSort.oldest:
-            full_meme_page = await cruds_cmm.get_memes_by_date(
+            meme_page = await cruds_cmm.get_memes_by_date(
                 db=db,
                 descending=False,
                 n_page=n_page,
@@ -99,7 +116,7 @@ async def get_memes(
         case _:
             raise HTTPException(status_code=204, detail="Invalid sort method")
 
-    return full_meme_page
+    return await compute_full_meme_page(meme_page)
 
 
 @module.router.get(

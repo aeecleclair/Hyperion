@@ -103,6 +103,7 @@ async def init_objects() -> None:
             votes_memes_1.append(vote2)
             await add_object_to_db(vote2)
 
+    return
     global memes_2
     memes_2 = [
         models_cmm.Meme(
@@ -133,10 +134,10 @@ async def init_objects() -> None:
 
 def test_get_meme_page(client: TestClient) -> None:
     response = client.get(
-        "/cmm/memes/?sort_by=oldest",
+        "/cmm/memes/?sort_by=oldest&n_page=1",
         headers={"Authorization": f"Bearer {token_cmm_2}"},
     )
     print(response)
     print(response.status_code)
-    # print(response.json())
+    print(response.json())
     assert 2 == 1
