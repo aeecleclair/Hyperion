@@ -38,6 +38,7 @@ cmm_user_to_ban: models_core.CoreUser
 cmm_admin: models_core.CoreUser
 
 memes_1: list[models_cmm.Meme]
+votes_memes_1: list[models_cmm.Vote]
 memes_2: list[models_cmm.Meme]
 memes_to_ban: list[models_cmm.Meme]
 token_user_1: str
@@ -50,11 +51,13 @@ token_admin: str
 async def init_objects() -> None:
     global cmm_user_1
     cmm_user_1 = await create_user_with_groups([])
-    global token_cmm
-    token_cmm = create_api_access_token(cmm_user_1)
+    global token_cmm_1
+    token_cmm_1 = create_api_access_token(cmm_user_1)
 
     global cmm_user_2
     cmm_user_2 = await create_user_with_groups([])
+    global token_cmm_2
+    token_cmm_2 = create_api_access_token(cmm_user_2)
 
     global cmm_user_to_ban
     cmm_user_to_ban = await create_user_with_groups([])
@@ -77,8 +80,29 @@ async def init_objects() -> None:
         )
         for i in range(1, 13)
     ]
-    for meme in memes_1:
+    global votes_memes_1
+    votes_memes_1 = []
+    for i, meme in enumerate(memes_1):
         await add_object_to_db(meme)
+        if i % 2 == 0:
+            vote = models_cmm.Vote(
+                id=uuid.uuid4(),
+                user_id=cmm_user_1.id,
+                meme_id=meme.id,
+                positive=True,
+            )
+            votes_memes_1.append(vote)
+            await add_object_to_db(vote)
+        if i % 2 == 1:
+            vote2 = models_cmm.Vote(
+                id=uuid.uuid4(),
+                user_id=cmm_user_2.id,
+                meme_id=meme.id,
+                positive=True,
+            )
+            votes_memes_1.append(vote2)
+            await add_object_to_db(vote2)
+
     global memes_2
     memes_2 = [
         models_cmm.Meme(
@@ -109,10 +133,10 @@ async def init_objects() -> None:
 
 def test_get_meme_page(client: TestClient) -> None:
     response = client.get(
-        "/cmm/memes/",
-        headers={"Authorization": f"Bearer {token_cmm}"},
+        "/cmm/memes/?sort_by=oldest",
+        headers={"Authorization": f"Bearer {token_cmm_2}"},
     )
     print(response)
     print(response.status_code)
     # print(response.json())
-    assert 1 == 1
+    assert 2 == 1

@@ -20,8 +20,9 @@ class Vote(Base):
         "Meme",
         init=False,
         back_populates="votes",
+        lazy="selectin",
     )
-    positive: bool
+    positive: Mapped[bool]
 
 
 class Meme(Base):
