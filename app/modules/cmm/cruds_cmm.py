@@ -15,34 +15,12 @@ n_weeks = 7
 # TODO: Update meme vote_score with votes
 
 
-async def compute_schemas(meme_page) -> list[schemas_cmm.ShownMeme]:
-    full_meme_page = []
-    print(len(meme_page))
-    for meme in meme_page:
-        if len(meme.votes) == 0:
-            my_vote = types_cmm.VoteValue.neutral
-        else:
-            print(meme.creation_time, meme.votes[0].positive)
-            my_vote = meme.votes[0].positive
-        shown_meme = schemas_cmm.ShownMeme(
-            user=meme.user,
-            creation_time=meme.creation_time,
-            vote_score=meme.vote_score,
-            status=meme.status,
-            my_vote=my_vote,
-        )
-        full_meme_page.append(shown_meme)
-
-    return full_meme_page
-
-
 async def get_memes_by_date(
     db: AsyncSession,
     n_page: int,
     descending: bool,
     user_id: str,
-) -> Sequence[schemas_cmm.ShownMeme]:
-    print("get memes by date")
+) -> Sequence[models_cmm.Meme]:
     result = await db.execute(
         select(models_cmm.Meme)
         .options(
@@ -51,6 +29,7 @@ async def get_memes_by_date(
             ).load_only(models_cmm.Vote.positive),
             selectinload(models_cmm.Meme.user),
         )
+        .execution_options(populate_existing=True)
         .where(models_cmm.Meme.status == types_cmm.MemeStatus.neutral)
         .order_by(
             models_cmm.Meme.creation_time.desc()
@@ -61,8 +40,7 @@ async def get_memes_by_date(
         .offset((n_page - 1) * n_memes),
     )
     meme_page = result.scalars().all()
-    print("avant return")
-    return await compute_schemas(meme_page)
+    return meme_page
 
 
 async def get_memes_by_votes(
@@ -70,11 +48,17 @@ async def get_memes_by_votes(
     n_page: int,
     descending: bool,
     user_id: str,
-) -> Sequence[schemas_cmm.ShownMeme]:
+) -> Sequence[models_cmm.Meme]:
     result = await db.execute(
         select(models_cmm.Meme)
         .where(models_cmm.Meme.status == types_cmm.MemeStatus.neutral)
-        .options(selectinload("*"))
+        .options(
+            selectinload(
+                models_cmm.Meme.votes.and_(models_cmm.Vote.user_id == user_id),
+            ).load_only(models_cmm.Vote.positive),
+            selectinload(models_cmm.Meme.user),
+        )
+        .execution_options(populate_existing=True)
         .order_by(
             models_cmm.Meme.vote_score.desc()
             if descending
@@ -84,17 +68,24 @@ async def get_memes_by_votes(
         .offset((n_page - 1) * n_memes),
     )
     meme_page = result.scalars().all()
-    return await compute_schemas(meme_page)
+    return meme_page
 
 
 async def get_trending_memes(
     db: AsyncSession,
     n_page: int,
     user_id: str,
-) -> Sequence[schemas_cmm.ShownMeme]:
+) -> Sequence[models_cmm.Meme]:
     result = await db.execute(
         select(models_cmm.Meme)
         .order_by(models_cmm.Meme.vote_score)
+        .options(
+            selectinload(
+                models_cmm.Meme.votes.and_(models_cmm.Vote.user_id == user_id),
+            ).load_only(models_cmm.Vote.positive),
+            selectinload(models_cmm.Meme.user),
+        )
+        .execution_options(populate_existing=True)
         .where(
             (models_cmm.Meme.creation_time - datetime.now(tz=UTC))
             < timedelta(days=n_weeks),
@@ -104,20 +95,22 @@ async def get_trending_memes(
         .offset((n_page - 1) * n_memes),
     )
     meme_page = result.scalars().all()
-    votes_map = await get_my_votes_from_memes(
-        db=db,
-        user_id=user_id,
-        meme_page=meme_page,
-    )
-    return await compute_schemas(meme_page)
+    return meme_page
 
 
 async def get_memes_from_user(
     db: AsyncSession,
     user_id: str,
-) -> Sequence[schemas_cmm.ShownMeme]:
+) -> Sequence[models_cmm.Meme]:
     result = await db.execute(
         select(models_cmm.Meme)
+        .options(
+            selectinload(
+                models_cmm.Meme.votes.and_(models_cmm.Vote.user_id == user_id),
+            ).load_only(models_cmm.Vote.positive),
+            selectinload(models_cmm.Meme.user),
+        )
+        .execution_options(populate_existing=True)
         .where(
             models_cmm.Meme.user_id == user_id,
             models_cmm.Meme.status == types_cmm.MemeStatus.neutral,
@@ -125,7 +118,7 @@ async def get_memes_from_user(
         .order_by(models_cmm.Meme.creation_time),
     )
     meme_page = result.scalars().all()
-    return await compute_schemas(meme_page)
+    return meme_page
 
 
 async def update_ban_status_of_memes_from_user(
