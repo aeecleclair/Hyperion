@@ -77,7 +77,6 @@ async def load_group_by_id(
         schemas_competition.GroupComplete(
             id=group.id,
             name=group.name,
-            description=group.description,
             members=[
                 schemas_core.CoreUser(**member.__dict__) for member in group.members
             ],
@@ -99,7 +98,6 @@ async def load_group_by_name(
         schemas_competition.GroupComplete(
             id=group.id,
             name=group.name,
-            description=group.description,
             members=[],
         )
         if group
@@ -209,13 +207,13 @@ async def store_school(
     school: schemas_competition.SchoolExtension,
     db: AsyncSession,
 ):
-    stored_school = await load_school_by_id(school.id, "", db)
+    stored_school = await load_school_by_id(school.school_id, "", db)
     if stored_school is None:
         db.add(models_competition.SchoolExtension(**school.model_dump()))
     else:
         await db.execute(
             update(models_competition.SchoolExtension)
-            .where(models_competition.SchoolExtension.school_id == school.id)
+            .where(models_competition.SchoolExtension.school_id == school.school_id)
             .values(**school.model_dump()),
         )
     try:
@@ -269,7 +267,7 @@ async def load_school_by_id(
         **school_dict["general_quota"].__dict__,
     )
     return schemas_competition.SchoolExtension(
-        id=school_id,
+        school_id=school_id,
         from_lyon=school_dict["from_lyon"],
         activated=school_dict["activated"],
         school=school,
@@ -303,7 +301,7 @@ async def load_school_by_name(
     )
     return (
         schemas_competition.SchoolExtension(
-            id=name,
+            school_id=school_extension.school_id,
             from_lyon=school_extension.from_lyon,
             activated=school_extension.activated,
             school=schemas_core.CoreSchool(**school_extension.school.__dict__),
@@ -333,7 +331,7 @@ async def load_all_schools(
 
     return [
         schemas_competition.SchoolExtension(
-            id=school_extension.school_id,
+            school_id=school_extension.school_id,
             from_lyon=school_extension.from_lyon,
             activated=school_extension.activated,
             school=schemas_core.CoreSchool(**school_extension.school.__dict__),
@@ -406,8 +404,6 @@ async def load_participant_by_ids(
                 )
                 .options(
                     selectinload(models_competition.Participant.user),
-                    selectinload(models_competition.Participant.sport),
-                    selectinload(models_competition.Participant.team),
                 ),
             )
         )
@@ -420,12 +416,9 @@ async def load_participant_by_ids(
             sport_id=participant.sport_id,
             edition_id=participant.edition_id,
             team_id=participant.team_id,
-            captain=participant.captain,
             substitute=participant.substitute,
             license=participant.license,
             user=schemas_core.CoreUser(**participant.user.__dict__),
-            sport=schemas_competition.Sport(**participant.sport.__dict__),
-            team=schemas_competition.Team(**participant.team.__dict__),
         )
         if participant
         else None
@@ -443,8 +436,6 @@ async def load_all_participants(
         )
         .options(
             selectinload(models_competition.Participant.user),
-            selectinload(models_competition.Participant.sport),
-            selectinload(models_competition.Participant.team),
         ),
     )
     return [
@@ -453,12 +444,9 @@ async def load_all_participants(
             sport_id=participant.sport_id,
             edition_id=participant.edition_id,
             team_id=participant.team_id,
-            captain=participant.captain,
             substitute=participant.substitute,
             license=participant.license,
             user=schemas_core.CoreUser(**participant.user.__dict__),
-            sport=schemas_competition.Sport(**participant.sport.__dict__),
-            team=schemas_competition.Team(**participant.team.__dict__),
         )
         for participant in participants.scalars().all()
     ]
@@ -483,8 +471,6 @@ async def load_participants_by_school_id(
                 )
                 .options(
                     selectinload(models_competition.Participant.user),
-                    selectinload(models_competition.Participant.sport),
-                    selectinload(models_competition.Participant.team),
                 ),
             )
         )
@@ -497,12 +483,9 @@ async def load_participants_by_school_id(
             sport_id=participant.sport_id,
             edition_id=participant.edition_id,
             team_id=participant.team_id,
-            captain=participant.captain,
             substitute=participant.substitute,
             license=participant.license,
             user=schemas_core.CoreUser(**participant.user.__dict__),
-            sport=schemas_competition.Sport(**participant.sport.__dict__),
-            team=schemas_competition.Team(**participant.team.__dict__),
         )
         for participant in participants
     ]
@@ -523,8 +506,6 @@ async def load_participants_by_sport_id(
                 )
                 .options(
                     selectinload(models_competition.Participant.user),
-                    selectinload(models_competition.Participant.sport),
-                    selectinload(models_competition.Participant.team),
                 ),
             )
         )
@@ -537,12 +518,9 @@ async def load_participants_by_sport_id(
             sport_id=participant.sport_id,
             edition_id=participant.edition_id,
             team_id=participant.team_id,
-            captain=participant.captain,
             substitute=participant.substitute,
             license=participant.license,
             user=schemas_core.CoreUser(**participant.user.__dict__),
-            sport=schemas_competition.Sport(**participant.sport.__dict__),
-            team=schemas_competition.Team(**participant.team.__dict__),
         )
         for participant in participants
     ]
@@ -569,8 +547,6 @@ async def load_participants_by_school_and_sport_ids(
                 )
                 .options(
                     selectinload(models_competition.Participant.user),
-                    selectinload(models_competition.Participant.sport),
-                    selectinload(models_competition.Participant.team),
                 ),
             )
         )
@@ -583,12 +559,9 @@ async def load_participants_by_school_and_sport_ids(
             sport_id=participant.sport_id,
             edition_id=participant.edition_id,
             team_id=participant.team_id,
-            captain=participant.captain,
             substitute=participant.substitute,
             license=participant.license,
             user=schemas_core.CoreUser(**participant.user.__dict__),
-            sport=schemas_competition.Sport(**participant.sport.__dict__),
-            team=schemas_competition.Team(**participant.team.__dict__),
         )
         for participant in participants
     ]
@@ -778,8 +751,7 @@ async def load_team_by_id(
                 select(models_competition.Team)
                 .where(models_competition.Team.id == team_id)
                 .options(
-                    selectinload(models_competition.Team.captain),
-                    selectinload(models_competition.Team.users),
+                    selectinload(models_competition.Team.participants),
                 ),
             )
         )
@@ -794,8 +766,10 @@ async def load_team_by_id(
             edition_id=team.edition_id,
             captain_id=team.captain_id,
             id=team.id,
-            captain=schemas_core.CoreUser(**team.captain.__dict__),
-            users=[schemas_core.CoreUser(**user.__dict__) for user in team.users],
+            participants=[
+                schemas_competition.Participant(**user.__dict__)
+                for user in team.participants
+            ],
         )
         if team
         else None
@@ -810,14 +784,9 @@ async def load_team_by_name(
     team = (
         (
             await db.execute(
-                select(models_competition.Team)
-                .where(
+                select(models_competition.Team).where(
                     models_competition.Team.name == name,
                     models_competition.Team.edition_id == edition_id,
-                )
-                .options(
-                    selectinload(models_competition.Team.captain),
-                    selectinload(models_competition.Team.users),
                 ),
             )
         )
@@ -832,11 +801,35 @@ async def load_team_by_name(
             edition_id=team.edition_id,
             captain_id=team.captain_id,
             id=team.id,
-            captain=schemas_core.CoreUser(**team.captain.__dict__),
-            users=[schemas_core.CoreUser(**user.__dict__) for user in team.users],
+            participants=[],
         )
         if team
         else None
+    )
+
+
+def team_model_to_schemas(
+    team: models_competition.Team,
+) -> schemas_competition.TeamComplete:
+    participants = []
+    for participant in team.participants:
+        participant_dict = participant.__dict__
+        participant_dict.pop("user")
+        user = schemas_core.CoreUser(**participant.user.__dict__)
+        participants.append(
+            schemas_competition.ParticipantComplete(
+                **participant_dict,
+                user=user,
+            ),
+        )
+    return schemas_competition.TeamComplete(
+        name=team.name,
+        school_id=team.school_id,
+        sport_id=team.sport_id,
+        edition_id=team.edition_id,
+        captain_id=team.captain_id,
+        id=team.id,
+        participants=participants,
     )
 
 
@@ -845,30 +838,17 @@ async def load_all_teams_by_sport_id(
     edition_id: str,
     db: AsyncSession,
 ) -> list[schemas_competition.TeamComplete]:
-    teams = await db.execute(
+    db_teams = await db.execute(
         select(models_competition.Team)
         .where(
             models_competition.Team.sport_id == sport_id,
             models_competition.Team.edition_id == edition_id,
         )
         .options(
-            selectinload(models_competition.Team.captain),
-            selectinload(models_competition.Team.users),
+            selectinload(models_competition.Team.participants),
         ),
     )
-    return [
-        schemas_competition.TeamComplete(
-            name=team.name,
-            school_id=team.school_id,
-            sport_id=team.sport_id,
-            edition_id=team.edition_id,
-            captain_id=team.captain_id,
-            id=team.id,
-            captain=schemas_core.CoreUser(**team.captain.__dict__),
-            users=[schemas_core.CoreUser(**user.__dict__) for user in team.users],
-        )
-        for team in teams.scalars().all()
-    ]
+    return [team_model_to_schemas(team) for team in db_teams.scalars().all()]
 
 
 async def load_all_teams_by_school_id(
@@ -883,23 +863,10 @@ async def load_all_teams_by_school_id(
             models_competition.Team.edition_id == edition_id,
         )
         .options(
-            selectinload(models_competition.Team.captain),
-            selectinload(models_competition.Team.users),
+            selectinload(models_competition.Team.participants),
         ),
     )
-    return [
-        schemas_competition.TeamComplete(
-            name=team.name,
-            school_id=team.school_id,
-            sport_id=team.sport_id,
-            edition_id=team.edition_id,
-            captain_id=team.captain_id,
-            id=team.id,
-            captain=schemas_core.CoreUser(**team.captain.__dict__),
-            users=[schemas_core.CoreUser(**user.__dict__) for user in team.users],
-        )
-        for team in teams.scalars().all()
-    ]
+    return [team_model_to_schemas(team) for team in teams.scalars().all()]
 
 
 async def load_all_teams_by_school_and_sport_ids(
@@ -916,23 +883,10 @@ async def load_all_teams_by_school_and_sport_ids(
             models_competition.Team.edition_id == edition_id,
         )
         .options(
-            selectinload(models_competition.Team.captain),
-            selectinload(models_competition.Team.users),
+            selectinload(models_competition.Team.participants),
         ),
     )
-    return [
-        schemas_competition.TeamComplete(
-            name=team.name,
-            school_id=team.school_id,
-            sport_id=team.sport_id,
-            edition_id=team.edition_id,
-            captain_id=team.captain_id,
-            id=team.id,
-            captain=schemas_core.CoreUser(**team.captain.__dict__),
-            users=[schemas_core.CoreUser(**user.__dict__) for user in team.users],
-        )
-        for team in teams.scalars().all()
-    ]
+    return [team_model_to_schemas(team) for team in teams.scalars().all()]
 
 
 async def store_edition(

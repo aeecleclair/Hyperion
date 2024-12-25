@@ -132,9 +132,8 @@ class Team(Base):
     name: Mapped[str]
     captain_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"))
 
-    users: Mapped[list[CoreUser]] = relationship(
-        "CoreUser",
-        secondary="competition_participant",
+    participants: Mapped[list["Participant"]] = relationship(
+        "Participant",
         lazy="selectin",
         viewonly=True,
         init=False,
@@ -160,17 +159,7 @@ class Participant(Base):
 
     user: Mapped[CoreUser] = relationship(
         "CoreUser",
-        lazy="selectin",
-        init=False,
-    )
-    sport: Mapped[Sport] = relationship(
-        "Sport",
-        lazy="selectin",
-        init=False,
-    )
-    team: Mapped[Team] = relationship(
-        "Team",
-        lazy="selectin",
+        lazy="joined",
         init=False,
     )
 

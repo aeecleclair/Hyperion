@@ -456,7 +456,7 @@ async def check_team_consistency(
 
 
 @router.get(
-    "/competition/sports/{sport_id}/teams",
+    "/competition/teams/sports/{sport_id}",
     response_model=list[competition_schemas.Team],
 )
 async def get_teams_for_sport(
@@ -479,10 +479,10 @@ async def get_teams_for_sport(
 
 
 @router.get(
-    "/competition/schools/{school_id}/sports/{sport_id}/teams",
+    "/competition/teams/schools/{school_id}/sports/{sport_id}",
     response_model=list[competition_schemas.Team],
 )
-async def get_sport_teams_for_school(
+async def get_sport_teams_for_school_and_sport(
     school_id: str,
     sport_id: str,
     db=Depends(get_db),
@@ -509,7 +509,7 @@ async def get_sport_teams_for_school(
 
 
 @router.post(
-    "/competition/schools/{school_id}/sports/{sport_id}/teams",
+    "/competition/teams/schools/{school_id}/sports/{sport_id}",
     status_code=201,
     response_model=competition_schemas.Team,
 )
@@ -547,7 +547,7 @@ async def create_team(
         db,
     )
     if quotas is not None:
-        if len(stored) >= quotas.team_quota:
+        if len(stored) == quotas.team_quota:
             raise HTTPException(status_code=400, detail="Team quota reached") from None
     team = competition_schemas.Team(
         id=uuid.uuid4(),
@@ -560,21 +560,98 @@ async def create_team(
     await competition_cruds.store_team(team, db)
 
 
-@router.patch("/competition/schools/{school_id}/sports/{sport_id}/teams/{team_id}")
-async def edit_team(
-    school_id: str,
+@router.post("/competition/sports/{sport_id}/join}")
+async def join_team(
     sport_id: str,
+    participant_info: competition_schemas.ParticipantInfo,
+    db=Depends(get_db),
+    user: schemas_core.CoreUser = Depends(is_user),
+    edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
+):
+    sport = await competition_cruds.load_sport_by_id(sport_id, db)
+    if sport is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Sport not found in the database",
+        ) from None
+    school_quota = await competition_cruds.load_quota_by_ids(
+        user.school_id,
+        sport_id,
+        edition.id,
+        db,
+    )
+    if school_quota is not None:
+        participants = (
+            await competition_cruds.load_participants_by_school_and_sport_ids(
+                user.school_id,
+                sport_id,
+                edition.id,
+                db,
+            )
+        )
+        if len(participants) == school_quota.participant_quota:
+            raise HTTPException(
+                status_code=400,
+                detail="Participant quota reached",
+            ) from None
+    if sport.team_size > 1:
+        if participant_info.team_id is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Sport declared needs to be played in a team",
+            ) from None
+        team = await check_team_consistency(
+            user.school_id,
+            sport_id,
+            participant_info.team_id,
+            db,
+        )
+        if (
+            not participant_info.substitute
+            and len(
+                [user for user in team.participants if not user.substitute],
+            )
+            == sport.team_size
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="Maximum number of players in the team reached",
+            ) from None
+        elif (
+            participant_info.substitute
+            and len(
+                [user for user in team.participants if user.substitute],
+            )
+            == sport.substitute_max
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="Maximum number of substitutes in the team reached",
+            ) from None
+    await competition_cruds.store_participant(
+        competition_schemas.Participant(
+            user_id=user.id,
+            sport_id=sport_id,
+            edition_id=edition.id,
+            **participant_info.__dict__,
+        ),
+        db,
+    )
+
+
+@router.patch("/competition/teams/{team_id}")
+async def edit_team(
     team_id: str,
     team_info: competition_schemas.TeamEdit,
     db=Depends(get_db),
     user: schemas_core.CoreUser = Depends(is_user),
 ):
-    stored = await check_team_consistency(
-        school_id,
-        sport_id,
-        team_id,
-        db,
-    )
+    stored = await competition_cruds.load_team_by_id(team_id, db)
+    if stored is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Team not found in the database",
+        ) from None
     if (
         user.id != stored.captain_id
         and CompetitionGroupType.competition_admin.value
@@ -595,20 +672,18 @@ async def edit_team(
     await competition_cruds.store_team(stored, db)
 
 
-@router.delete("/competition/schools/{school_id}/sports/{sport_id}/teams/{team_id}")
+@router.delete("/competition/teams/{team_id}")
 async def delete_team(
-    school_id: str,
-    sport_id: str,
     team_id: str,
     db=Depends(get_db),
     user: schemas_core.CoreUser = Depends(is_user),
 ):
-    stored = await check_team_consistency(
-        school_id,
-        sport_id,
-        team_id,
-        db,
-    )
+    stored = await competition_cruds.load_team_by_id(team_id, db)
+    if stored is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Team not found in the database",
+        ) from None
     if (
         user.id != stored.captain_id
         and CompetitionGroupType.competition_admin.value

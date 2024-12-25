@@ -108,35 +108,6 @@ class QuotaEdit(BaseModel):
     team_quota: int | None
 
 
-class TeamBase(BaseModel):
-    name: str
-    edition_id: str
-    school_id: str
-    sport_id: str
-    captain_id: str
-
-
-class TeamInfo(BaseModel):
-    name: str
-    school_id: str | None
-    sport_id: str | None
-    captain_id: str | None
-
-
-class Team(TeamBase):
-    id: str
-
-
-class TeamEdit(BaseModel):
-    name: str | None
-    captain_id: str | None
-
-
-class TeamComplete(Team):
-    captain: schemas_core.CoreUser
-    users: list[schemas_core.CoreUser]
-
-
 class ParticipantInfo(BaseModel):
     license: str
     substitute: bool = False
@@ -163,8 +134,34 @@ class ParticipantEdit(BaseModel):
 
 class ParticipantComplete(Participant):
     user: schemas_core.CoreUser
-    sport: Sport
-    team: Team | None
+
+
+class TeamBase(BaseModel):
+    name: str
+    edition_id: str
+    school_id: str
+    sport_id: str
+    captain_id: str
+
+
+class TeamInfo(BaseModel):
+    name: str
+    school_id: str | None
+    sport_id: str | None
+    captain_id: str | None
+
+
+class Team(TeamBase):
+    id: str
+
+
+class TeamEdit(BaseModel):
+    name: str | None
+    captain_id: str | None
+
+
+class TeamComplete(Team):
+    participants: list[ParticipantComplete]
 
 
 class MatchBase(BaseModel):
