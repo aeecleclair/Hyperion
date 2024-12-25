@@ -27,7 +27,7 @@ async def init_objects() -> None:
     ens = models_core.CoreSchool(
         id=id_test_ens,
         name="ENS",
-        email_regex="^.*@ens.fr$",
+        email_regex=r"^.*@ens.fr$",
     )
     await add_object_to_db(ens)
 
@@ -96,9 +96,7 @@ def test_update_school(client: TestClient) -> None:
 
     response = client.patch(
         f"/schools/{id_test_ens}",
-        json={
-            "name": "school ENS",
-        },
+        json={"name": "school ENS", "email_regex": r"^.*@.*ens.fr$"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 204
