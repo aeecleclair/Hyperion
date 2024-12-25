@@ -10,6 +10,7 @@ from sqlalchemy_utils import get_referencing_foreign_keys  # type: ignore
 
 from app.core import models_core, schemas_core
 from app.core.groups.groups_type import AccountType
+from app.core.schools.schools_type import SchoolType
 
 
 async def count_users(db: AsyncSession) -> int:
@@ -285,6 +286,22 @@ async def update_user_password_by_id(
         .values(password_hash=new_password_hash),
     )
     await db.commit()
+
+
+async def remove_users_from_school(
+    db: AsyncSession,
+    school_id: str,
+):
+    await db.execute(
+        update(models_core.CoreUser)
+        .where(
+            models_core.CoreUser.school_id == school_id,
+        )
+        .values(
+            school_id=SchoolType.no_school,
+            account_type=AccountType.external,
+        ),
+    )
 
 
 async def fusion_users(

@@ -4,7 +4,6 @@ File defining the API itself, using fastAPI and schemas, and calling the cruds f
 School management is part of the core of Hyperion. These endpoints allow managing schools.
 """
 
-import logging
 import re
 import uuid
 
@@ -163,6 +162,24 @@ async def update_school(
         school_id=school_id,
         school_update=school_update,
     )
+
+    if (
+        school_update.email_regex is not None
+        and school_update.email_regex != school.email_regex
+    ):
+        await cruds_users.remove_users_from_school(db, school_id=school_id)
+        users = await cruds_users.get_users(db, schools_ids=[SchoolType.no_school])
+        for db_user in users:
+            if re.match(school_update.email_regex, db_user.email):
+                await cruds_users.update_user(
+                    db,
+                    db_user.id,
+                    schemas_core.CoreUserUpdateAdmin(
+                        school_id=school.id,
+                        account_type=AccountType.other_school_student,
+                    ),
+                )
+            await db.commit()
 
 
 @router.delete(
