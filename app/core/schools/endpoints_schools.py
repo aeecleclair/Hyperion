@@ -95,7 +95,7 @@ async def create_school(
         await cruds_schools.create_school(school=db_school, db=db)
         users = await cruds_users.get_users(
             db=db,
-            included_account_types=[AccountType.external],
+            schools_ids=[SchoolType.no_school],
         )
         for db_user in users:
             if re.match(db_school.email_regex, db_user.email):
