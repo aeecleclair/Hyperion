@@ -44,7 +44,7 @@ class CoreSchoolBase(BaseModel):
     _normalize_name = field_validator("name")(validators.trailing_spaces_remover)
 
 
-class CoreSchoolSimple(CoreSchoolBase):
+class CoreSchool(CoreSchoolBase):
     id: str
 
 
@@ -80,12 +80,6 @@ class CoreUserSimple(CoreUserBase):
     account_type: AccountType
 
 
-class CoreSchool(CoreSchoolSimple):
-    """Schema for school's model similar to core_school table in database"""
-
-    students: list[CoreUserSimple] = []
-
-
 class CoreUser(CoreUserSimple):
     """Schema for user's model similar to core_user table in database"""
 
@@ -98,7 +92,7 @@ class CoreUser(CoreUserSimple):
     phone: str | None = None
     created_on: datetime | None = None
     groups: list[CoreGroupSimple] = []
-    school: CoreSchoolSimple | None = None
+    school: CoreSchool | None = None
 
 
 class CoreUserUpdate(BaseModel):

@@ -18,7 +18,6 @@ from app.core.schools.schools_type import SchoolType
 from app.core.users import cruds_users
 from app.dependencies import (
     get_db,
-    is_user_an_ecl_member,
     is_user_in,
 )
 
@@ -27,12 +26,11 @@ router = APIRouter(tags=["Schools"])
 
 @router.get(
     "/schools/",
-    response_model=list[schemas_core.CoreSchoolSimple],
+    response_model=list[schemas_core.CoreSchool],
     status_code=200,
 )
 async def read_schools(
     db: AsyncSession = Depends(get_db),
-    user: schemas_core.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
     Return all schools from database as a list of dictionaries
@@ -53,7 +51,7 @@ async def read_school(
     user: schemas_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
-    Return school with id from database as a dictionary. This includes a list of users being members of the school.
+    Return school with id from database as a dictionary.
 
     **This endpoint is only usable by administrators**
     """
@@ -66,7 +64,7 @@ async def read_school(
 
 @router.post(
     "/schools/",
-    response_model=schemas_core.CoreSchoolSimple,
+    response_model=schemas_core.CoreSchool,
     status_code=201,
 )
 async def create_school(

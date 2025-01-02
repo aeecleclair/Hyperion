@@ -57,7 +57,6 @@ class CoreUser(Base):
     )
     school: Mapped["CoreSchool"] = relationship(
         "CoreSchool",
-        back_populates="students",
         lazy="selectin",
         init=False,
     )
