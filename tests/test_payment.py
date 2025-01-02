@@ -76,7 +76,7 @@ async def init_objects() -> None:
     user = await create_user_with_groups(
         groups=[],
     )
-    school = schemas_core.CoreSchoolSimple(
+    school = schemas_core.CoreSchool(
         id=user.school.id,
         name=user.school.name,
         email_regex=user.school.email_regex,
