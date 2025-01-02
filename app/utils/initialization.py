@@ -4,7 +4,7 @@ from pydantic import ValidationError
 from sqlalchemy import Connection, MetaData, delete, select
 from sqlalchemy.engine import Engine, create_engine
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session
 
 from app.core import models_core
 from app.core.config import Settings
