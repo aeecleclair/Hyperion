@@ -87,10 +87,8 @@ def get_group_by_id_sync(group_id: str, db: Session) -> models_core.CoreGroup | 
     Return group with id from database
     """
     result = db.execute(
-        select(models_core.CoreGroup)
-        .where(models_core.CoreGroup.id == group_id)
-        .options(
-            selectinload(models_core.CoreGroup.members),
+        select(models_core.CoreGroup).where(
+            models_core.CoreGroup.id == group_id,
         ),  # needed to load the members from the relationship
     )
     return result.scalars().first()
