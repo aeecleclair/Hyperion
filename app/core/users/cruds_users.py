@@ -39,51 +39,55 @@ async def get_users(
     excluded_groups = excluded_groups or []
     schools_ids = schools_ids or None
 
+    # We want, for each group that should be included check if
+    # - at least one of the user's groups match the expected group
+    included_group_condition = [
+        models_core.CoreUser.groups.any(
+            models_core.CoreGroup.id == group_id,
+        )
+        for group_id in included_groups
+    ]
+    included_account_type_condition = or_(
+        False,
+        *[
+            models_core.CoreUser.account_type == account_type
+            for account_type in included_account_types
+        ],
+    )
+    # We want, for each group that should not be included
+    # check that the following condition is false :
+    # - at least one of the user's groups match the expected group
+    excluded_group_condition = [
+        not_(
+            models_core.CoreUser.groups.any(
+                models_core.CoreGroup.id == group_id,
+            ),
+        )
+        for group_id in excluded_groups
+    ]
+    excluded_account_type_condition = [
+        not_(
+            models_core.CoreUser.account_type == account_type,
+        )
+        for account_type in excluded_account_types
+    ]
+    school_condition = (
+        or_(
+            *[models_core.CoreUser.school_id == school_id for school_id in schools_ids],
+        )
+        if schools_ids
+        else and_(True)
+    )
+
     result = await db.execute(
         select(models_core.CoreUser).where(
             and_(
                 True,
-                # We want, for each group that should be included check if
-                # - at least one of the user's groups match the expected group
-                *[
-                    models_core.CoreUser.groups.any(
-                        models_core.CoreGroup.id == group_id,
-                    )
-                    for group_id in included_groups
-                ],
-                or_(
-                    False,
-                    *[
-                        models_core.CoreUser.account_type == account_type
-                        for account_type in included_account_types
-                    ],
-                ),
-                *[
-                    not_(
-                        models_core.CoreUser.account_type == account_type,
-                    )
-                    for account_type in excluded_account_types
-                ],
-                # We want, for each group that should not be included
-                # check that the following condition is false :
-                # - at least one of the user's groups match the expected group
-                *[
-                    not_(
-                        models_core.CoreUser.groups.any(
-                            models_core.CoreGroup.id == group_id,
-                        ),
-                    )
-                    for group_id in excluded_groups
-                ],
-                or_(
-                    False,
-                    *[
-                        models_core.CoreUser.school_id == school_id
-                        for school_id in schools_ids
-                    ],
-                )
-                if schools_ids
-                else and_(True),
+                *included_group_condition,
+                included_account_type_condition,
+                *excluded_account_type_condition,
+                *excluded_group_condition,
+                school_condition,
             ),
         ),
     )
