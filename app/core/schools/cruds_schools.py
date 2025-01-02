@@ -4,7 +4,6 @@ from collections.abc import Sequence
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.core import models_core, schemas_core
 
@@ -22,11 +21,7 @@ async def get_school_by_id(
 ) -> models_core.CoreSchool | None:
     """Return school with id from database"""
     result = await db.execute(
-        select(models_core.CoreSchool)
-        .where(models_core.CoreSchool.id == school_id)
-        .options(
-            selectinload(models_core.CoreSchool.students),
-        ),  # needed to load the members from the relationship
+        select(models_core.CoreSchool).where(models_core.CoreSchool.id == school_id),
     )
     return result.scalars().first()
 
