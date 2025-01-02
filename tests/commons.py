@@ -14,16 +14,19 @@ from app.core import models_core, schemas_core, security
 from app.core.auth import schemas_auth
 from app.core.config import Settings
 from app.core.groups import cruds_groups
-from app.core.groups.groups_type import GroupType
+from app.core.groups.groups_type import AccountType, GroupType
 from app.core.payment import cruds_payment, models_payment, schemas_payment
 from app.core.payment.payment_tool import PaymentTool
 from app.core.users import cruds_users
 from app.dependencies import get_settings
 from app.types.exceptions import RedisConnectionError
 from app.types.floors_type import FloorsType
+from app.types.scheduler import OfflineScheduler, Scheduler
 from app.types.sqlalchemy import Base
 from app.utils.redis import connect, disconnect
-from app.utils.tools import get_random_string
+from app.utils.tools import (
+    get_random_string,
+)
 
 
 @lru_cache
@@ -106,15 +109,22 @@ def change_redis_client_status(activated: bool) -> None:
         redis_client = False
 
 
+def override_get_scheduler(
+    settings: Settings = Depends(get_settings),
+) -> Scheduler:  # As we don't want the limiter to be activated, except during the designed test, we add an "activate"/"deactivate" option
+    """Override the get_redis_client function to use the testing session"""
+    return OfflineScheduler()
+
+
 async def create_user_with_groups(
     groups: list[GroupType],
+    account_type: AccountType = AccountType.student,
     user_id: str | None = None,
     email: str | None = None,
     password: str | None = None,
     name: str | None = None,
     firstname: str | None = None,
     floor: FloorsType | None = None,
-    external: bool = False,
 ) -> models_core.CoreUser:
     """
     Add a dummy user to the database
@@ -133,7 +143,7 @@ async def create_user_with_groups(
         name=name or get_random_string(),
         firstname=firstname or get_random_string(),
         floor=floor,
-        external=external,
+        account_type=account_type,
         nickname=None,
         birthday=None,
         promo=None,
@@ -160,8 +170,10 @@ async def create_user_with_groups(
             raise
         finally:
             await db.close()
-
-    return user
+    async with TestingSessionLocal() as db:
+        user_db = await cruds_users.get_user_by_id(db, user_id)
+        await db.close()
+    return user_db  # type: ignore # (user_db can't be None)
 
 
 def create_api_access_token(

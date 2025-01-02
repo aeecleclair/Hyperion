@@ -17,8 +17,8 @@ from app.core.users import cruds_users
 from app.dependencies import (
     get_db,
     get_request_id,
-    is_user_a_member_of,
     is_user_an_ecl_member,
+    is_user_in,
 )
 
 router = APIRouter(tags=["Groups"])
@@ -51,7 +51,7 @@ async def read_groups(
 async def read_group(
     group_id: str,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_a_member_of(GroupType.admin)),
+    user=Depends(is_user_in(GroupType.admin)),
 ):
     """
     Return group with id from database as a dictionary. This includes a list of users being members of the group.
@@ -73,7 +73,7 @@ async def read_group(
 async def create_group(
     group: schemas_core.CoreGroupCreate,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_a_member_of(GroupType.admin)),
+    user=Depends(is_user_in(GroupType.admin)),
 ):
     """
     Create a new group.
@@ -105,7 +105,7 @@ async def update_group(
     group_id: str,
     group_update: schemas_core.CoreGroupUpdate,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_a_member_of(GroupType.admin)),
+    user=Depends(is_user_in(GroupType.admin)),
 ):
     """
     Update the name or the description of a group.
@@ -139,7 +139,7 @@ async def update_group(
 async def create_membership(
     membership: schemas_core.CoreMembership,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_a_member_of(GroupType.admin)),
+    user=Depends(is_user_in(GroupType.admin)),
     request_id: str = Depends(get_request_id),
 ):
     """
@@ -179,7 +179,7 @@ async def create_membership(
 async def create_batch_membership(
     batch_membership: schemas_core.CoreBatchMembership,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_a_member_of(GroupType.admin)),
+    user=Depends(is_user_in(GroupType.admin)),
     request_id: str = Depends(get_request_id),
 ):
     """
@@ -225,7 +225,7 @@ async def create_batch_membership(
 async def delete_membership(
     membership: schemas_core.CoreMembershipDelete,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_a_member_of(GroupType.admin)),
+    user=Depends(is_user_in(GroupType.admin)),
     request_id: str = Depends(get_request_id),
 ):
     """
@@ -252,7 +252,7 @@ async def delete_membership(
 async def delete_batch_membership(
     batch_membership: schemas_core.CoreBatchDeleteMembership,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_a_member_of(GroupType.admin)),
+    user=Depends(is_user_in(GroupType.admin)),
     request_id: str = Depends(get_request_id),
 ):
     """
@@ -285,7 +285,7 @@ async def delete_batch_membership(
 async def delete_group(
     group_id: str,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_a_member_of(GroupType.admin)),
+    user=Depends(is_user_in(GroupType.admin)),
 ):
     """
     Delete group from database.

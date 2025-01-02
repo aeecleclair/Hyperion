@@ -22,7 +22,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import api
-from app.core import models_core
+from app.core import coredata_core, models_core
 from app.core.config import Settings
 from app.core.google_api.google_api import GoogleAPI
 from app.core.groups.groups_type import GroupType
@@ -30,6 +30,7 @@ from app.core.log import LogConfig
 from app.dependencies import (
     get_db,
     get_redis_client,
+    get_scheduler,
     get_websocket_connection_manager,
     init_and_get_db_engine,
 )
@@ -41,6 +42,9 @@ from app.utils.redis import limiter
 
 if TYPE_CHECKING:
     import redis
+
+    from app.types.scheduler import Scheduler
+    from app.types.websocket import WebsocketConnectionManager
 
 # NOTE: We can not get loggers at the top of this file like we do in other files
 # as the loggers are not yet initialized
@@ -192,31 +196,67 @@ def initialize_module_visibility(
     """Add the default module visibilities for Titan"""
 
     with Session(sync_engine) as db:
-        # Is run to create default module visibilities or when the table is empty
-        haveBeenInitialized = (
-            len(initialization.get_all_module_visibility_membership_sync(db)) > 0
+        module_awareness = initialization.get_core_data_sync(
+            coredata_core.ModuleVisibilityAwareness,
+            db,
         )
-        if haveBeenInitialized:
-            hyperion_error_logger.info(
-                "Startup: Modules visibility settings have already been initialized",
-            )
-            return
 
-        hyperion_error_logger.info(
-            "Startup: Modules visibility settings are empty, initializing them",
-        )
-        for module in module_list:
-            for default_group_id in module.default_allowed_groups_ids:
-                module_visibility = models_core.ModuleVisibility(
-                    root=module.root,
-                    allowed_group_id=default_group_id.value,
-                )
-                try:
-                    initialization.create_module_visibility_sync(module_visibility, db)
-                except IntegrityError as error:
-                    hyperion_error_logger.fatal(
-                        f"Startup: Could not add module visibility {module.root}<{default_group_id}> in the database: {error}",
-                    )
+        new_modules = [
+            module
+            for module in module_list
+            if module.root not in module_awareness.roots
+        ]
+        # Is run to create default module visibilities or when the table is empty
+        if new_modules:
+            hyperion_error_logger.info(
+                f"Startup: Some modules visibility settings are empty, initializing them ({[module.root for module in new_modules]})",
+            )
+            for module in new_modules:
+                if module.default_allowed_groups_ids is not None:
+                    for group_id in module.default_allowed_groups_ids:
+                        module_group_visibility = models_core.ModuleGroupVisibility(
+                            root=module.root,
+                            allowed_group_id=group_id,
+                        )
+                        try:
+                            initialization.create_module_group_visibility_sync(
+                                module_visibility=module_group_visibility,
+                                db=db,
+                            )
+                        except ValueError as error:
+                            hyperion_error_logger.fatal(
+                                f"Startup: Could not add module visibility {module.root} in the database: {error}",
+                            )
+                if module.default_allowed_account_types is not None:
+                    for account_type in module.default_allowed_account_types:
+                        module_account_type_visibility = (
+                            models_core.ModuleAccountTypeVisibility(
+                                root=module.root,
+                                allowed_account_type=account_type,
+                            )
+                        )
+                        try:
+                            initialization.create_module_account_type_visibility_sync(
+                                module_visibility=module_account_type_visibility,
+                                db=db,
+                            )
+                        except ValueError as error:
+                            hyperion_error_logger.fatal(
+                                f"Startup: Could not add module visibility {module.root} in the database: {error}",
+                            )
+            initialization.set_core_data_sync(
+                coredata_core.ModuleVisibilityAwareness(
+                    roots=[module.root for module in module_list],
+                ),
+                db,
+            )
+            hyperion_error_logger.info(
+                f"Startup: Modules visibility settings initialized for {[module.root for module in new_modules]}",
+            )
+        else:
+            hyperion_error_logger.info(
+                "Startup: Modules visibility settings already initialized",
+            )
 
 
 def use_route_path_as_operation_ids(app: FastAPI) -> None:
@@ -313,14 +353,27 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
                     # We expect this error to be raised if the credentials were never set before
                     pass
 
-        ws_manager = app.dependency_overrides.get(
+        ws_manager: WebsocketConnectionManager = app.dependency_overrides.get(
             get_websocket_connection_manager,
             get_websocket_connection_manager,
         )(settings=settings)
 
+        arq_scheduler: Scheduler = app.dependency_overrides.get(
+            get_scheduler,
+            get_scheduler,
+        )(settings=settings)
+
         await ws_manager.connect_broadcaster()
+        await arq_scheduler.start(
+            redis_host=settings.REDIS_HOST,
+            redis_port=settings.REDIS_PORT,
+            redis_password=settings.REDIS_PASSWORD,
+            _dependency_overrides=app.dependency_overrides,
+        )
+
         yield
         hyperion_error_logger.info("Shutting down")
+        await arq_scheduler.close()
         await ws_manager.disconnect_broadcaster()
 
     # Initialize app

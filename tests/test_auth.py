@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from app.core import models_core
 from app.core.auth import models_auth
-from app.core.groups.groups_type import GroupType
+from app.core.groups.groups_type import AccountType, GroupType
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
@@ -36,7 +36,7 @@ async def init_objects() -> None:
 
     global ecl_user
     ecl_user = await create_user_with_groups(
-        groups=[GroupType.student],
+        groups=[GroupType.eclair],
         email="email@etu.ec-lyon.fr",
         password="azerty",
     )
@@ -44,9 +44,9 @@ async def init_objects() -> None:
     global external_user
     external_user = await create_user_with_groups(
         groups=[],
+        account_type=AccountType.external,
         email="external@myecl.fr",
         password="azerty",
-        external=True,
     )
 
     global access_token
@@ -474,7 +474,7 @@ def test_authorization_code_flow_with_auth_client_restricting_allowed_groups_and
 ) -> None:
     # For an user that is a member of a required group #
     data_with_invalid_client_id = {
-        "client_id": "AcceptingOnlyECLUsersAuthClient",
+        "client_id": "RestrictingUsersGroupsAuthClient",
         "client_secret": "secret",
         "redirect_uri": "http://127.0.0.1:8000/docs",
         "response_type": "code",
@@ -501,13 +501,13 @@ def test_authorization_code_flow_with_auth_client_restricting_allowed_groups_and
 ) -> None:
     # For an user that is not a member of a required group #
     data_with_invalid_client_id = {
-        "client_id": "AcceptingOnlyECLUsersAuthClient",
+        "client_id": "RestrictingUsersGroupsAuthClient",
         "client_secret": "secret",
         "redirect_uri": "http://127.0.0.1:8000/docs",
         "response_type": "code",
         "scope": "API openid",
         "state": "azerty",
-        "email": "email@myecl.fr",
+        "email": "external@myecl.fr",
         "password": "azerty",
     }
     response = client.post(
@@ -546,7 +546,7 @@ def test_authorization_code_flow_with_auth_client_restricting_external_users_and
 
     assert response.next_request is not None
     assert str(response.next_request.url).endswith(
-        "calypsso/error?message=External+users+are+not+allowed",
+        "calypsso/error?message=User+account+type+is+not+allowed",
     )
 
 

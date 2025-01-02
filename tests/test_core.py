@@ -2,7 +2,7 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 
 from app.core import models_core
-from app.core.groups.groups_type import GroupType
+from app.core.groups.groups_type import AccountType, GroupType
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
@@ -26,7 +26,7 @@ async def init_objects() -> None:
     user_simple = await create_user_with_groups([GroupType.AE])
     global token_simple
     token_simple = create_api_access_token(user_simple)
-    module_visibility = models_core.ModuleVisibility(
+    module_visibility = models_core.ModuleGroupVisibility(
         root=root,
         allowed_group_id=group_id,
     )
@@ -49,7 +49,7 @@ def test_get_my_module_visibility(client: TestClient) -> None:
     assert response.status_code == 200
 
 
-def test_add_module_visibility(client: TestClient) -> None:
+def test_add_group_module_visibility(client: TestClient) -> None:
     response = client.post(
         "/module-visibility/",
         json={
@@ -61,9 +61,29 @@ def test_add_module_visibility(client: TestClient) -> None:
     assert response.status_code == 201
 
 
-def test_delete_loaners(client: TestClient) -> None:
+def test_delete_group_visibility(client: TestClient) -> None:
     response = client.delete(
-        f"/module-visibility/{root}/{group_id}",
+        f"/module-visibility/{root}/groups/{group_id}",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 204
+
+
+def test_add_account_type_module_visibility(client: TestClient) -> None:
+    response = client.post(
+        "/module-visibility/",
+        json={
+            "root": "root",
+            "allowed_account_type": AccountType.demo.value,
+        },
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 201
+
+
+def test_delete_account_type_visibility(client: TestClient) -> None:
+    response = client.delete(
+        f"/module-visibility/{root}/account-types/{AccountType.demo.value}",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 204

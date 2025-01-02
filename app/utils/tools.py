@@ -4,9 +4,10 @@ import os
 import re
 import secrets
 import unicodedata
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
+from inspect import iscoroutinefunction
 from pathlib import Path
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 import aiofiles
 import fitz
@@ -19,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import cruds_core, models_core, security
 from app.core.groups import cruds_groups
-from app.core.groups.groups_type import GroupType
+from app.core.groups.groups_type import AccountType, GroupType
 from app.core.models_core import CoreUser
 from app.core.users import cruds_users
 from app.types import core_data
@@ -43,34 +44,13 @@ uuid_regex = re.compile(
 )
 
 
-def is_user_member_of_an_allowed_group(
-    user: CoreUser,
-    allowed_groups: list[GroupType] | list[str],
-) -> bool:
-    """
-    Test if the provided user is a member of at least one group from `allowed_groups`.
-
-    When required groups can only be determined at runtime a list of strings (group UUIDs) can be provided.
-    This may be useful for modules that can be used multiple times like the loans module.
-    NOTE: if the provided string does not match a valid group, the function will return False
-    """
-    # We can not directly test is group_id is in user.groups
-    # As user.groups is a list of CoreGroup and group_id is an UUID
-    for allowed_group in allowed_groups:
-        for user_group in user.groups:
-            if allowed_group == user_group.id:
-                # We know the user is a member of at least one allowed group
-                return True
-    return False
-
-
 def is_user_external(
     user: CoreUser,
 ):
     """
     Users that are not members won't be able to use all features
     """
-    return user.external is True
+    return user.account_type == AccountType.external
 
 
 def sort_user(
@@ -111,12 +91,22 @@ def sort_user(
     return [user for user, _ in reversed(scored)]
 
 
+def is_user_member_of_an_allowed_group(
+    user: models_core.CoreUser,
+    allowed_groups: list[str] | list[GroupType],
+) -> bool:
+    """
+    Check if the user is a member of the group.
+    """
+    user_groups_id = [group.id for group in user.groups]
+    return any(group_id in user_groups_id for group_id in allowed_groups)
+
+
 async def is_group_id_valid(group_id: str, db: AsyncSession) -> bool:
     """
     Test if the provided group_id is a valid group.
 
     The group may be
-     - an account type
      - a group type
      - a group created at runtime and stored in the database
     """
@@ -504,3 +494,16 @@ async def create_and_send_email_migration(
         hyperion_security_logger.info(
             f"You can confirm your new email address by clicking the following link: {settings.CLIENT_URL}users/migrate-mail-confirm?token={confirmation_token}",
         )
+
+
+async def execute_async_or_sync_method(
+    job_function: Callable[..., Any],
+    **kwargs,
+):
+    """
+    Execute the job_function with the provided kwargs, either as a coroutine or a regular function.
+    """
+    if iscoroutinefunction(job_function):
+        return await job_function(**kwargs)
+    else:
+        return job_function(**kwargs)

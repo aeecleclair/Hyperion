@@ -35,11 +35,11 @@ async def init_objects() -> None:
         [GroupType.admin, GroupType.admin_cdr],
     )
     student_user_to_keep = await create_user_with_groups(
-        [GroupType.student, GroupType.BDE],
+        [GroupType.BDE],
         email=FABRISTPP_EMAIL_1,
     )
     student_user_to_delete = await create_user_with_groups(
-        [GroupType.student, GroupType.BDE, GroupType.CAA],
+        [GroupType.BDE, GroupType.CAA],
         email=FABRISTPP_EMAIL_2,
     )
 

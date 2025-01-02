@@ -40,7 +40,9 @@ async def init_objects() -> None:
         deletable_order_by_admin
 
     amap_user = await create_user_with_groups([GroupType.amap])
-    student_user = await create_user_with_groups([GroupType.student])
+    student_user = await create_user_with_groups(
+        [],
+    )
 
     product = models_amap.Product(
         id=str(uuid.uuid4()),

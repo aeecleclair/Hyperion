@@ -8,6 +8,7 @@ def connect(settings: Settings) -> redis.Redis | bool:
         host=settings.REDIS_HOST,
         port=settings.REDIS_PORT,
         password=settings.REDIS_PASSWORD,
+        socket_keepalive=True,
     )
     redis_client.ping()  # Test the connection
 

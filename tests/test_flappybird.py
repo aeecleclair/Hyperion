@@ -23,7 +23,9 @@ admin_token: str = ""
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
     global user
-    user = await create_user_with_groups([GroupType.student])
+    user = await create_user_with_groups(
+        [],
+    )
 
     global admin_user
     admin_user = await create_user_with_groups([GroupType.admin])

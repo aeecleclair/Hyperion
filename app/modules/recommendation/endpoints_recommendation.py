@@ -6,12 +6,12 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, standard_responses
-from app.core.groups.groups_type import GroupType
+from app.core.groups.groups_type import AccountType, GroupType
 from app.dependencies import (
     get_db,
     get_request_id,
     is_user_a_member,
-    is_user_a_member_of,
+    is_user_in,
 )
 from app.modules.recommendation import (
     cruds_recommendation,
@@ -28,7 +28,7 @@ router = APIRouter()
 module = Module(
     root="recommendation",
     tag="Recommendation",
-    default_allowed_groups_ids=[GroupType.student, GroupType.staff],
+    default_allowed_account_types=[AccountType.student, AccountType.staff],
 )
 
 
@@ -58,7 +58,7 @@ async def get_recommendation(
 async def create_recommendation(
     recommendation: schemas_recommendation.RecommendationBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.BDE)),
 ):
     """
     Create a recommendation.
@@ -86,7 +86,7 @@ async def edit_recommendation(
     recommendation_id: uuid.UUID,
     recommendation: schemas_recommendation.RecommendationEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.BDE)),
 ):
     """
     Edit a recommendation.
@@ -111,7 +111,7 @@ async def edit_recommendation(
 async def delete_recommendation(
     recommendation_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.BDE)),
 ):
     """
     Delete a recommendation.
@@ -166,7 +166,7 @@ async def read_recommendation_image(
 async def create_recommendation_image(
     recommendation_id: uuid.UUID,
     image: UploadFile = File(),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.BDE)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.BDE)),
     request_id: str = Depends(get_request_id),
     db: AsyncSession = Depends(get_db),
 ):

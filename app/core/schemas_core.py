@@ -48,6 +48,7 @@ class CoreUserSimple(CoreUserBase):
     """Simplified schema for user's model, used when getting all users"""
 
     id: str
+    account_type: AccountType
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -62,6 +63,7 @@ class CoreUser(CoreUserSimple):
     """Schema for user's model similar to core_user table in database"""
 
     email: str
+    account_type: AccountType
     birthday: date | None = None
     promo: int | None = None
     floor: FloorsType | None = None
@@ -95,6 +97,7 @@ class CoreUserFusionRequest(BaseModel):
 
 
 class CoreUserUpdateAdmin(BaseModel):
+    account_type: AccountType | None = None
     name: str | None = None
     firstname: str | None = None
     promo: int | None = None
@@ -102,7 +105,6 @@ class CoreUserUpdateAdmin(BaseModel):
     birthday: date | None = None
     phone: str | None = None
     floor: FloorsType | None = None
-    external: bool | None = None
 
     _normalize_name = field_validator("name")(validators.trailing_spaces_remover)
     _normalize_firstname = field_validator("firstname")(
@@ -123,8 +125,9 @@ class CoreUserCreateRequest(BaseModel):
     """
 
     email: str
-    accept_external: bool = Field(
-        False,
+    accept_external: bool | None = Field(
+        None,
+        deprecated=True,
         description="Allow Hyperion to create an external user. Without this, Hyperion will only allow non external students to be created. The email address will be used to determine if the user should be external or not. An external user may not have an ECL email address, he won't be able to access most features.",
     )
 
@@ -139,12 +142,10 @@ class CoreUserCreateRequest(BaseModel):
 
 class CoreBatchUserCreateRequest(BaseModel):
     """
-    The schema is used for batch account creation requests. An account type should be provided
+    The schema is used for batch account creation requests.
     """
 
     email: str
-    account_type: AccountType
-    external: bool = False
 
     # Email normalization, this will modify the email variable
     # https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
@@ -272,10 +273,12 @@ class CoreMembershipDelete(BaseModel):
 class ModuleVisibility(BaseModel):
     root: str
     allowed_group_ids: list[str]
+    allowed_account_types: list[AccountType]
     model_config = ConfigDict(from_attributes=True)
 
 
 class ModuleVisibilityCreate(BaseModel):
     root: str
-    allowed_group_id: str
+    allowed_group_id: str | None = None
+    allowed_account_type: AccountType | None = None
     model_config = ConfigDict(from_attributes=True)

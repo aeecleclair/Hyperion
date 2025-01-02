@@ -20,7 +20,9 @@ recommendation: models_recommendation.Recommendation
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
-    user_simple = await create_user_with_groups([GroupType.student])
+    user_simple = await create_user_with_groups(
+        [],
+    )
 
     global token_simple
     token_simple = create_api_access_token(user_simple)

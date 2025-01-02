@@ -1,13 +1,13 @@
 import logging
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
 from fastapi import Depends, HTTPException, Response
 from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, schemas_core
-from app.core.groups.groups_type import GroupType
+from app.core.groups.groups_type import AccountType, GroupType
 from app.core.notification.notification_types import CustomTopic, Topic
 from app.core.notification.schemas_notification import Message
 from app.core.users import cruds_users
@@ -18,7 +18,7 @@ from app.dependencies import (
     get_redis_client,
     get_request_id,
     is_user_a_member,
-    is_user_a_member_of,
+    is_user_in,
 )
 from app.modules.amap import cruds_amap, models_amap, schemas_amap
 from app.modules.amap.types_amap import DeliveryStatusType
@@ -30,7 +30,7 @@ from app.utils.tools import is_user_member_of_an_allowed_group
 module = Module(
     root="amap",
     tag="AMAP",
-    default_allowed_groups_ids=[GroupType.student, GroupType.staff],
+    default_allowed_account_types=[AccountType.student, AccountType.staff],
 )
 
 hyperion_amap_logger = logging.getLogger("hyperion.amap")
@@ -44,7 +44,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 )
 async def get_products(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.amap)),
 ):
     """
     Return all products
@@ -63,7 +63,7 @@ async def get_products(
 async def create_product(
     product: schemas_amap.ProductSimple,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.amap)),
 ):
     """
     Create a new product
@@ -105,7 +105,7 @@ async def edit_product(
     product_id: str,
     product_update: schemas_amap.ProductEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.amap)),
 ):
     """
     Edit a product
@@ -131,7 +131,7 @@ async def edit_product(
 async def delete_product(
     product_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.amap)),
 ):
     """
     Delete a product. A product can not be deleted if it is already used in a delivery.
@@ -175,7 +175,7 @@ async def get_deliveries(
 async def create_delivery(
     delivery: schemas_amap.DeliveryBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.amap)),
 ):
     """
     Create a new delivery.
@@ -208,7 +208,7 @@ async def create_delivery(
 async def delete_delivery(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.amap)),
 ):
     """
     Delete a delivery.
@@ -237,7 +237,7 @@ async def edit_delivery(
     delivery_id: str,
     delivery: schemas_amap.DeliveryUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.amap)),
 ):
     """
     Edit a delivery.
@@ -266,7 +266,7 @@ async def add_product_to_delivery(
     products_ids: schemas_amap.DeliveryProductsUpdate,
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.amap)),
 ):
     """
     Add `product_id` product to `delivery_id` delivery. This endpoint will only add a membership between the two objects.
@@ -301,7 +301,7 @@ async def remove_product_from_delivery(
     delivery_id: str,
     products_ids: schemas_amap.DeliveryProductsUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.amap)),
 ):
     """
     Remove a given product from a delivery. This won't delete the product nor the delivery.
@@ -333,7 +333,7 @@ async def remove_product_from_delivery(
 async def get_orders_from_delivery(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
-    user_req: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
+    user_req: models_core.CoreUser = Depends(is_user_in(GroupType.amap)),
 ):
     """
     Get orders from a delivery.
@@ -367,7 +367,7 @@ async def get_orders_from_delivery(
 async def get_order_by_id(
     order_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.amap)),
 ):
     """
     Get content of an order.
@@ -703,7 +703,7 @@ async def remove_order(
 async def open_ordering_of_delivery(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.amap)),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
@@ -719,12 +719,9 @@ async def open_ordering_of_delivery(
     await cruds_amap.open_ordering_of_delivery(delivery_id=delivery_id, db=db)
 
     message = Message(
-        context=f"amap-open-ordering-{delivery_id}",
-        is_visible=True,
         title="🛒 AMAP - Nouvelle livraison disponible",
         content="Viens commander !",
-        # The notification will expire in 3 days
-        expire_on=datetime.now(UTC) + timedelta(days=3),
+        action_module="amap",
     )
     await notification_tool.send_notification_to_topic(
         custom_topic=CustomTopic(Topic.amap),
@@ -739,7 +736,7 @@ async def open_ordering_of_delivery(
 async def lock_delivery(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.amap)),
 ):
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
     if delivery is None:
@@ -760,7 +757,7 @@ async def lock_delivery(
 async def mark_delivery_as_delivered(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.amap)),
 ):
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
     if delivery is None:
@@ -781,7 +778,7 @@ async def mark_delivery_as_delivered(
 async def archive_of_delivery(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.amap)),
 ):
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
     if delivery is None:
@@ -803,7 +800,7 @@ async def archive_of_delivery(
 )
 async def get_users_cash(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.amap)),
 ):
     """
     Get cash from all users.
@@ -864,7 +861,7 @@ async def create_cash_of_user(
     user_id: str,
     cash: schemas_amap.CashEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.amap)),
     request_id: str = Depends(get_request_id),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
@@ -904,12 +901,9 @@ async def create_cash_of_user(
     )
 
     message = Message(
-        context=f"amap-cash-{user_id}",
-        is_visible=True,
         title="AMAP - Solde mis à jour",
         content=f"Votre nouveau solde est de {cash} €.",
-        # The notification will expire in 3 days
-        expire_on=datetime.now(UTC) + timedelta(days=3),
+        action_module="amap",
     )
     await notification_tool.send_notification_to_user(
         user_id=user_id,
@@ -927,7 +921,7 @@ async def edit_cash_by_id(
     user_id: str,
     balance: schemas_amap.CashEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.amap)),
     request_id: str = Depends(get_request_id),
 ):
     """
@@ -1022,7 +1016,7 @@ async def get_information(
 async def edit_information(
     edit_information: schemas_amap.InformationEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.amap)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.amap)),
 ):
     """
     Update information

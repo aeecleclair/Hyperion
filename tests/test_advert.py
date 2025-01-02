@@ -41,13 +41,17 @@ async def init_objects() -> None:
     )
     await add_object_to_db(advertiser)
 
-    user_advertiser = await create_user_with_groups([GroupType.student, GroupType.CAA])
+    user_advertiser = await create_user_with_groups(
+        [GroupType.CAA],
+    )
 
     global token_advertiser
     token_advertiser = create_api_access_token(user_advertiser)
 
     global user_simple
-    user_simple = await create_user_with_groups([GroupType.student])
+    user_simple = await create_user_with_groups(
+        [],
+    )
 
     global token_simple
     token_simple = create_api_access_token(user_simple)

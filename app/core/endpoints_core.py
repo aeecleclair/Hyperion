@@ -8,12 +8,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import cruds_core, models_core, schemas_core
 from app.core.config import Settings
-from app.core.groups.groups_type import GroupType
+from app.core.groups.groups_type import AccountType, GroupType
 from app.dependencies import (
     get_db,
     get_settings,
     is_user,
-    is_user_a_member_of,
+    is_user_in,
 )
 from app.modules.module_list import module_list
 from app.utils.tools import is_group_id_valid
@@ -28,7 +28,9 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
     response_model=schemas_core.CoreInformation,
     status_code=200,
 )
-async def read_information(settings: Settings = Depends(get_settings)):
+async def read_information(
+    settings: Settings = Depends(get_settings),
+):
     """
     Return information about Hyperion. This endpoint can be used to check if the API is up.
     """
@@ -160,7 +162,7 @@ async def get_favicon():
 )
 async def get_module_visibility(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Get all existing module_visibility.
@@ -174,10 +176,15 @@ async def get_module_visibility(
             root=module.root,
             db=db,
         )
+        allowed_account_types = await cruds_core.get_allowed_account_types_by_root(
+            root=module.root,
+            db=db,
+        )
         return_module_visibilities.append(
             schemas_core.ModuleVisibility(
                 root=module.root,
                 allowed_group_ids=allowed_group_ids,
+                allowed_account_types=allowed_account_types,
             ),
         )
 
@@ -191,7 +198,7 @@ async def get_module_visibility(
 )
 async def get_user_modules_visibility(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_core.CoreUser = Depends(is_user()),
 ):
     """
     Get group user accessible root
@@ -204,49 +211,86 @@ async def get_user_modules_visibility(
 
 @router.post(
     "/module-visibility/",
-    response_model=schemas_core.ModuleVisibilityCreate,
     status_code=201,
 )
 async def add_module_visibility(
     module_visibility: schemas_core.ModuleVisibilityCreate,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
-    Add a new group to a module
+    Add a new group or account type to a module
 
     **This endpoint is only usable by administrators**
     """
-
-    # We need to check that loaner.group_manager_id is a valid group
-    if not await is_group_id_valid(module_visibility.allowed_group_id, db=db):
+    if (
+        module_visibility.allowed_group_id is None
+        and module_visibility.allowed_account_type is None
+    ):
         raise HTTPException(
             status_code=400,
-            detail="Invalid id, group_id must be a valid group id",
+            detail="allowed_group_id or allowed_account_type must be set",
         )
-    try:
-        module_visibility_db = models_core.ModuleVisibility(
+
+    if module_visibility.allowed_group_id is not None:
+        # We need to check that loaner.group_manager_id is a valid group
+        if not await is_group_id_valid(module_visibility.allowed_group_id, db=db):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid id, group_id must be a valid group id",
+            )
+        module_group_visibility_db = models_core.ModuleGroupVisibility(
             root=module_visibility.root,
             allowed_group_id=module_visibility.allowed_group_id,
         )
+        try:
+            return await cruds_core.create_module_group_visibility(
+                module_visibility=module_group_visibility_db,
+                db=db,
+            )
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail=str(error))
 
-        return await cruds_core.create_module_visibility(
-            module_visibility=module_visibility_db,
-            db=db,
+    if module_visibility.allowed_account_type is not None:
+        module_account_visibility_db = models_core.ModuleAccountTypeVisibility(
+            root=module_visibility.root,
+            allowed_account_type=module_visibility.allowed_account_type,
         )
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+        try:
+            return await cruds_core.create_module_account_type_visibility(
+                module_visibility=module_account_visibility_db,
+                db=db,
+            )
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail=str(error))
 
 
-@router.delete("/module-visibility/{root}/{group_id}", status_code=204)
-async def delete_session(
+@router.delete("/module-visibility/{root}/groups/{group_id}", status_code=204)
+async def delete_module_group_visibility(
     root: str,
     group_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
-    await cruds_core.delete_module_visibility(
+    await cruds_core.delete_module_group_visibility(
         root=root,
         allowed_group_id=group_id,
+        db=db,
+    )
+
+
+@router.delete(
+    "/module-visibility/{root}/account-types/{account_type}",
+    status_code=204,
+)
+async def delete_module_account_type_visibility(
+    root: str,
+    account_type: AccountType,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
+):
+    await cruds_core.delete_module_account_type_visibility(
+        root=root,
+        allowed_account_type=account_type,
         db=db,
     )

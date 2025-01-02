@@ -1,21 +1,21 @@
 import logging
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
 from fastapi import Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, standard_responses
-from app.core.groups.groups_type import GroupType
+from app.core.groups.groups_type import AccountType, GroupType
 from app.core.notification.notification_types import CustomTopic, Topic
 from app.core.notification.schemas_notification import Message
 from app.dependencies import (
     get_db,
     get_notification_tool,
     get_request_id,
-    is_user_a_member_of,
     is_user_an_ecl_member,
+    is_user_in,
 )
 from app.modules.advert import cruds_advert, models_advert, schemas_advert
 from app.types.content_type import ContentType
@@ -31,7 +31,7 @@ from app.utils.tools import (
 module = Module(
     root="advert",
     tag="Advert",
-    default_allowed_groups_ids=[GroupType.student, GroupType.staff],
+    default_allowed_account_types=[AccountType.student, AccountType.staff],
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
@@ -63,7 +63,7 @@ async def read_advertisers(
 async def create_advertiser(
     advertiser: schemas_advert.AdvertiserBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Create a new advertiser.
@@ -99,7 +99,7 @@ async def create_advertiser(
 async def delete_advertiser(
     advertiser_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Delete an advertiser. All adverts associated with the advertiser will also be deleted from the database.
@@ -130,7 +130,7 @@ async def update_advertiser(
     advertiser_id: str,
     advertiser_update: schemas_advert.AdvertiserUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member_of(GroupType.admin)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Update an advertiser
@@ -266,12 +266,9 @@ async def create_advert(
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error))
     message = Message(
-        context=f"advert-new-{id}",
-        is_visible=True,
         title=f"📣 Annonce - {result.title}",
         content=result.content,
-        # The notification will expire in 3 days
-        expire_on=datetime.now(UTC) + timedelta(days=3),
+        action_module=module.root,
     )
 
     await notification_tool.send_notification_to_topic(
