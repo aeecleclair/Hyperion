@@ -76,7 +76,15 @@ async def init_objects() -> None:
     user = await create_user_with_groups(
         groups=[],
     )
-    user_schema = schemas_core.CoreUser(**user.__dict__)
+    school = schemas_core.CoreSchool(
+        id=user.school.id,
+        name=user.school.name,
+        email_regex=user.school.email_regex,
+    )
+    user_dict = user.__dict__
+    user_dict.pop("school")
+
+    user_schema = schemas_core.CoreUser(**user_dict, school=school)
 
 
 # Test endpoints #

@@ -26,7 +26,7 @@ from app.utils.redis import locker_get, locker_set
 from app.utils.tools import (
     get_display_name,
     get_file_from_data,
-    is_user_member_of_an_allowed_group,
+    is_user_member_of_any_group,
     save_file_as_data,
 )
 
@@ -101,7 +101,7 @@ async def edit_raffle(
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
 
-    if not is_user_member_of_an_allowed_group(user, [raffle.group_id]):
+    if not is_user_member_of_any_group(user, [raffle.group_id]):
         raise HTTPException(
             status_code=403,
             detail=f"{user.id} user is unauthorized to manage the raffle {raffle_id}",
@@ -138,7 +138,7 @@ async def delete_raffle(
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
 
-    if not is_user_member_of_an_allowed_group(user, [raffle.group_id]):
+    if not is_user_member_of_any_group(user, [raffle.group_id]):
         raise HTTPException(
             status_code=403,
             detail=f"{user.id} user is unauthorized to manage the raffle {raffle_id}",
@@ -219,7 +219,7 @@ async def create_current_raffle_logo(
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
 
-    if not is_user_member_of_an_allowed_group(user, [raffle.group_id]):
+    if not is_user_member_of_any_group(user, [raffle.group_id]):
         raise HTTPException(
             status_code=403,
             detail=f"{user.id} user is unauthorized to manage the raffle {raffle_id}",
@@ -306,7 +306,7 @@ async def create_packticket(
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
 
-    if not is_user_member_of_an_allowed_group(user, [raffle.group_id]):
+    if not is_user_member_of_any_group(user, [raffle.group_id]):
         raise HTTPException(
             status_code=403,
             detail=f"{user.id} user is unauthorized to manage the raffle {packticket.raffle_id}",
@@ -349,7 +349,7 @@ async def edit_packticket(
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
 
-    if not is_user_member_of_an_allowed_group(user, [raffle.group_id]):
+    if not is_user_member_of_any_group(user, [raffle.group_id]):
         raise HTTPException(
             status_code=403,
             detail=f"{user.id} user is unauthorized to manage the raffle {packticket.raffle_id}",
@@ -394,7 +394,7 @@ async def delete_packticket(
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
 
-    if not is_user_member_of_an_allowed_group(user, [raffle.group_id]):
+    if not is_user_member_of_any_group(user, [raffle.group_id]):
         raise HTTPException(
             status_code=403,
             detail=f"{user.id} user is unauthorized to manage the raffle {packticket.raffle_id}",
@@ -540,10 +540,7 @@ async def get_tickets_by_userid(
     if user_db is None:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if not (
-        user_id == user.id
-        or is_user_member_of_an_allowed_group(user, [GroupType.admin])
-    ):
+    if not (user_id == user.id or is_user_member_of_any_group(user, [GroupType.admin])):
         raise HTTPException(
             status_code=403,
             detail="Users that are not member of the group admin can only access the endpoint for their own user_id.",
@@ -580,7 +577,7 @@ async def get_tickets_by_raffleid(
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
 
-    if not is_user_member_of_an_allowed_group(user, [raffle.group_id]):
+    if not is_user_member_of_any_group(user, [raffle.group_id]):
         raise HTTPException(
             status_code=403,
             detail=f"{user.id} user is unauthorized to manage the raffle {raffle_id}",
@@ -624,7 +621,7 @@ async def create_prize(
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
 
-    if not is_user_member_of_an_allowed_group(user, [raffle.group_id]):
+    if not is_user_member_of_any_group(user, [raffle.group_id]):
         raise HTTPException(
             status_code=403,
             detail=f"{user.id} user is unauthorized to manage the raffle {raffle.id}",
@@ -667,7 +664,7 @@ async def edit_prize(
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
 
-    if not is_user_member_of_an_allowed_group(user, [raffle.group_id]):
+    if not is_user_member_of_any_group(user, [raffle.group_id]):
         raise HTTPException(
             status_code=403,
             detail=f"{user.id} user is unauthorized to manage the raffle {raffle.id}",
@@ -706,7 +703,7 @@ async def delete_prize(
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
 
-    if not is_user_member_of_an_allowed_group(user, [raffle.group_id]):
+    if not is_user_member_of_any_group(user, [raffle.group_id]):
         raise HTTPException(
             status_code=403,
             detail=f"{user.id} user is unauthorized to manage the raffle {raffle.id}",
@@ -760,7 +757,7 @@ async def create_prize_picture(
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
 
-    if not is_user_member_of_an_allowed_group(user, [raffle.group_id]):
+    if not is_user_member_of_any_group(user, [raffle.group_id]):
         raise HTTPException(
             status_code=403,
             detail=f"{user.id} user is unauthorized to manage the raffle {raffle.id}",
@@ -849,7 +846,7 @@ async def get_cash_by_id(
     if user_db is None:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if user_id == user.id or is_user_member_of_an_allowed_group(
+    if user_id == user.id or is_user_member_of_any_group(
         user,
         [GroupType.admin],
     ):
@@ -981,7 +978,7 @@ async def draw_winner(
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
 
-    if not is_user_member_of_an_allowed_group(user, [raffle.group_id]):
+    if not is_user_member_of_any_group(user, [raffle.group_id]):
         raise HTTPException(
             status_code=403,
             detail=f"{user.id} user is unauthorized to manage the raffle {raffle.id}",
@@ -1032,7 +1029,7 @@ async def open_raffle(
             detail=f"You can't mark a raffle as open if it is not in creation mode. The current mode is {raffle.status}.",
         )
 
-    if not is_user_member_of_an_allowed_group(user, [raffle.group_id]):
+    if not is_user_member_of_any_group(user, [raffle.group_id]):
         raise HTTPException(
             status_code=403,
             detail=f"{user.id} user is unauthorized to manage the raffle {raffle_id}",
@@ -1070,7 +1067,7 @@ async def lock_raffle(
             detail=f"You can't mark a raffle as locked if it is not in open mode. The current mode is {raffle.status}.",
         )
 
-    if not is_user_member_of_an_allowed_group(user, [raffle.group_id]):
+    if not is_user_member_of_any_group(user, [raffle.group_id]):
         raise HTTPException(
             status_code=403,
             detail=f"{user.id} user is unauthorized to manage the raffle {raffle_id}",

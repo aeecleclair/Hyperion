@@ -10,6 +10,7 @@ from sqlalchemy_utils import get_referencing_foreign_keys  # type: ignore
 
 from app.core import models_core, schemas_core
 from app.core.groups.groups_type import AccountType
+from app.core.schools.schools_type import SchoolType
 
 
 async def count_users(db: AsyncSession) -> int:
@@ -25,6 +26,7 @@ async def get_users(
     excluded_account_types: list[AccountType] | None = None,
     included_groups: list[str] | None = None,
     excluded_groups: list[str] | None = None,
+    schools_ids: list[str] | None = None,
 ) -> Sequence[models_core.CoreUser]:
     """
     Return all users from database.
@@ -35,43 +37,57 @@ async def get_users(
     excluded_account_types = excluded_account_types or []
     included_groups = included_groups or []
     excluded_groups = excluded_groups or []
+    schools_ids = schools_ids or None
+
+    # We want, for each group that should be included check if
+    # - at least one of the user's groups match the expected group
+    included_group_condition = [
+        models_core.CoreUser.groups.any(
+            models_core.CoreGroup.id == group_id,
+        )
+        for group_id in included_groups
+    ]
+    included_account_type_condition = or_(
+        False,
+        *[
+            models_core.CoreUser.account_type == account_type
+            for account_type in included_account_types
+        ],
+    )
+    # We want, for each group that should not be included
+    # check that the following condition is false :
+    # - at least one of the user's groups match the expected group
+    excluded_group_condition = [
+        not_(
+            models_core.CoreUser.groups.any(
+                models_core.CoreGroup.id == group_id,
+            ),
+        )
+        for group_id in excluded_groups
+    ]
+    excluded_account_type_condition = [
+        not_(
+            models_core.CoreUser.account_type == account_type,
+        )
+        for account_type in excluded_account_types
+    ]
+    school_condition = (
+        or_(
+            *[models_core.CoreUser.school_id == school_id for school_id in schools_ids],
+        )
+        if schools_ids
+        else and_(True)
+    )
 
     result = await db.execute(
         select(models_core.CoreUser).where(
             and_(
                 True,
-                # We want, for each group that should be included check if
-                # - at least one of the user's groups match the expected group
-                *[
-                    models_core.CoreUser.groups.any(
-                        models_core.CoreGroup.id == group_id,
-                    )
-                    for group_id in included_groups
-                ],
-                or_(
-                    False,
-                    *[
-                        models_core.CoreUser.account_type == account_type
-                        for account_type in included_account_types
-                    ],
-                ),
-                *[
-                    not_(
-                        models_core.CoreUser.account_type == account_type,
-                    )
-                    for account_type in excluded_account_types
-                ],
-                # We want, for each group that should not be included
-                # check that the following condition is false :
-                # - at least one of the user's groups match the expected group
-                *[
-                    not_(
-                        models_core.CoreUser.groups.any(
-                            models_core.CoreGroup.id == group_id,
-                        ),
-                    )
-                    for group_id in excluded_groups
-                ],
+                *included_group_condition,
+                included_account_type_condition,
+                *excluded_account_type_condition,
+                *excluded_group_condition,
+                school_condition,
             ),
         ),
     )
@@ -120,7 +136,6 @@ async def update_user(
         .where(models_core.CoreUser.id == user_id)
         .values(**user_update.model_dump(exclude_none=True)),
     )
-    await db.commit()
 
 
 async def create_unconfirmed_user(
@@ -275,6 +290,22 @@ async def update_user_password_by_id(
         .values(password_hash=new_password_hash),
     )
     await db.commit()
+
+
+async def remove_users_from_school(
+    db: AsyncSession,
+    school_id: str,
+):
+    await db.execute(
+        update(models_core.CoreUser)
+        .where(
+            models_core.CoreUser.school_id == school_id,
+        )
+        .values(
+            school_id=SchoolType.no_school,
+            account_type=AccountType.external,
+        ),
+    )
 
 
 async def fusion_users(

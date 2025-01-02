@@ -34,7 +34,7 @@ from app.utils.communication.notifications import NotificationManager, Notificat
 from app.utils.redis import connect
 from app.utils.tools import (
     is_user_external,
-    is_user_member_of_an_allowed_group,
+    is_user_member_of_any_group,
 )
 
 # We could maybe use hyperion.security
@@ -324,12 +324,12 @@ def is_user(
                 status_code=403,
                 detail="Unauthorized, user is an external user",
             )
-        if is_user_member_of_an_allowed_group(user, excluded_groups):
+        if is_user_member_of_any_group(user, excluded_groups):
             raise HTTPException(
                 status_code=403,
                 detail=f"Unauthorized, user is a member of any of the groups {excluded_groups}",
             )
-        if included_groups is not None and not is_user_member_of_an_allowed_group(
+        if included_groups is not None and not is_user_member_of_any_group(
             user,
             included_groups,
         ):
