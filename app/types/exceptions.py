@@ -126,3 +126,8 @@ class UserWithEmailAlreadyExistError(Exception):
         super().__init__(
             f"An account with the email {email} already exist",
         )
+
+
+class SchedulerNotStartedError(Exception):
+    def __init__(self):
+        super().__init__("Scheduler not started")

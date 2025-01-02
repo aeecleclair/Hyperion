@@ -6,6 +6,7 @@ from app.dependencies import (
     get_db,
     get_payment_tool,
     get_redis_client,
+    get_scheduler,
     get_settings,
     get_unsafe_db,
 )
@@ -13,6 +14,7 @@ from tests.commons import (
     override_get_db,
     override_get_payment_tool,
     override_get_redis_client,
+    override_get_scheduler,
     override_get_settings,
     override_get_unsafe_db,
     settings,
@@ -28,5 +30,6 @@ def client() -> TestClient:
     test_app.dependency_overrides[get_settings] = override_get_settings
     test_app.dependency_overrides[get_redis_client] = override_get_redis_client
     test_app.dependency_overrides[get_payment_tool] = override_get_payment_tool
+    test_app.dependency_overrides[get_scheduler] = override_get_scheduler
 
     return TestClient(test_app)  # Create a client to execute tests

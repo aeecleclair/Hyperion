@@ -30,20 +30,21 @@ from app.core.log import LogConfig
 from app.dependencies import (
     get_db,
     get_redis_client,
+    get_scheduler,
     get_websocket_connection_manager,
     init_and_get_db_engine,
 )
 from app.modules.module_list import module_list
-from app.types.exceptions import (
-    ContentHTTPException,
-    GoogleAPIInvalidCredentialsError,
-)
+from app.types.exceptions import ContentHTTPException, GoogleAPIInvalidCredentialsError
 from app.types.sqlalchemy import Base
 from app.utils import initialization
 from app.utils.redis import limiter
 
 if TYPE_CHECKING:
     import redis
+
+    from app.types.scheduler import Scheduler
+    from app.types.websocket import WebsocketConnectionManager
 
 # NOTE: We can not get loggers at the top of this file like we do in other files
 # as the loggers are not yet initialized
@@ -352,14 +353,27 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
                     # We expect this error to be raised if the credentials were never set before
                     pass
 
-        ws_manager = app.dependency_overrides.get(
+        ws_manager: WebsocketConnectionManager = app.dependency_overrides.get(
             get_websocket_connection_manager,
             get_websocket_connection_manager,
         )(settings=settings)
 
+        arq_scheduler: Scheduler = app.dependency_overrides.get(
+            get_scheduler,
+            get_scheduler,
+        )(settings=settings)
+
         await ws_manager.connect_broadcaster()
+        await arq_scheduler.start(
+            redis_host=settings.REDIS_HOST,
+            redis_port=settings.REDIS_PORT,
+            redis_password=settings.REDIS_PASSWORD,
+            _dependency_overrides=app.dependency_overrides,
+        )
+
         yield
         hyperion_error_logger.info("Shutting down")
+        await arq_scheduler.close()
         await ws_manager.disconnect_broadcaster()
 
     # Initialize app

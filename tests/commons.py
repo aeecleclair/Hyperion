@@ -21,6 +21,7 @@ from app.core.users import cruds_users
 from app.dependencies import get_settings
 from app.types.exceptions import RedisConnectionError
 from app.types.floors_type import FloorsType
+from app.types.scheduler import OfflineScheduler, Scheduler
 from app.types.sqlalchemy import Base
 from app.utils.redis import connect, disconnect
 from app.utils.tools import (
@@ -106,6 +107,13 @@ def change_redis_client_status(activated: bool) -> None:
             redis_client.flushdb()
             disconnect(redis_client)
         redis_client = False
+
+
+def override_get_scheduler(
+    settings: Settings = Depends(get_settings),
+) -> Scheduler:  # As we don't want the limiter to be activated, except during the designed test, we add an "activate"/"deactivate" option
+    """Override the get_redis_client function to use the testing session"""
+    return OfflineScheduler()
 
 
 async def create_user_with_groups(

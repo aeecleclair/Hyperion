@@ -90,13 +90,6 @@ def test_get_devices(client: TestClient) -> None:
     assert json[0]["firebase_device_token"] == FIREBASE_TOKEN_1
 
 
-def test_get_messages(client: TestClient) -> None:
-    response = client.get(
-        f"/notification/messages/{FIREBASE_TOKEN_1}",
-    )
-    assert response.status_code == 200
-
-
 def test_subscribe_to_topic(client: TestClient) -> None:
     response = client.post(
         f"/notification/topics/{TOPIC_1}/subscribe",
