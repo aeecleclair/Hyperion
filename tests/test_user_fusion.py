@@ -57,7 +57,7 @@ async def init_objects() -> None:
         user_id=student_user_to_keep.id,
         membership=AvailableAssociationMembership.aeecl,
         start_date=datetime.now(tz=UTC).date() - timedelta(days=565),
-        end_date=datetime.now(tz=UTC).date() + timedelta(days=165),
+        end_date=datetime.now(tz=UTC).date() + timedelta(days=465),
     )
     await add_object_to_db(core_association_membership_user_kept)
 

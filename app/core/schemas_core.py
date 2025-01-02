@@ -78,14 +78,15 @@ class CoreUserSimple(CoreUserBase):
 
     id: str
     account_type: AccountType
+    school_id: str
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CoreUser(CoreUserSimple):
     """Schema for user's model similar to core_user table in database"""
 
     email: str
-    school_id: str
-    account_type: AccountType
     birthday: date | None = None
     promo: int | None = None
     floor: FloorsType | None = None

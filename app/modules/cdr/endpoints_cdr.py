@@ -143,6 +143,7 @@ async def get_cdr_users_pending_validation(
     return [
         schemas_cdr.CdrUser(
             account_type=user.account_type,
+            school_id=user.school_id,
             curriculum=curriculum_memberships_mapping.get(user.id, None),
             promo=user.promo,
             email=user.email,
@@ -196,6 +197,7 @@ async def get_cdr_user(
 
     return schemas_cdr.CdrUser(
         account_type=user_db.account_type,
+        school_id=user_db.school_id,
         name=user_db.name,
         firstname=user_db.firstname,
         nickname=user_db.nickname,
