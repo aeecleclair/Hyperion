@@ -65,4 +65,5 @@ def get_account_types_except_externals() -> list[AccountType]:
         AccountType.staff,
         AccountType.association,
         AccountType.demo,
+        AccountType.other_school_student,
     ]

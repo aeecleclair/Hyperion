@@ -78,13 +78,10 @@ class CoreUserSimple(CoreUserBase):
 
     id: str
     account_type: AccountType
-    model_config = ConfigDict(from_attributes=True)
 
 
 class CoreSchool(CoreSchoolSimple):
     """Schema for school's model similar to core_school table in database"""
-
-    model_config = ConfigDict(from_attributes=True)
 
     students: list[CoreUserSimple] = []
 

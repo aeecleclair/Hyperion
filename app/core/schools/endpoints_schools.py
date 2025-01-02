@@ -32,7 +32,7 @@ router = APIRouter(tags=["Schools"])
 )
 async def read_schools(
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_an_ecl_member),
+    user: schemas_core.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
     Return all schools from database as a list of dictionaries
@@ -50,7 +50,7 @@ async def read_schools(
 async def read_school(
     school_id: str,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_in(GroupType.admin)),
+    user: schemas_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Return school with id from database as a dictionary. This includes a list of users being members of the school.
@@ -75,7 +75,7 @@ async def create_school(
     user: schemas_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
-    Create a new school.
+    Create a new school and add users to it based on the email regex.
 
     **This endpoint is only usable by administrators**
     """
@@ -110,15 +110,9 @@ async def create_school(
                     ),
                 )
         await db.commit()
-    except ValueError as error:
-        await db.rollback()
-        raise HTTPException(status_code=422, detail=str(error))
     except IntegrityError:
         await db.rollback()
-        raise HTTPException(
-            status_code=400,
-            detail="School creation failed due to database integrity error",
-        )
+        raise
     else:
         return db_school
 
@@ -131,7 +125,7 @@ async def update_school(
     school_id: str,
     school_update: schemas_core.CoreSchoolUpdate,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_in(GroupType.admin)),
+    user: schemas_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Update the name or the description of a school.
@@ -180,7 +174,11 @@ async def update_school(
                         account_type=AccountType.other_school_student,
                     ),
                 )
-            await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise
 
 
 @router.delete(
@@ -190,7 +188,7 @@ async def update_school(
 async def delete_school(
     school_id: str,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_in(GroupType.admin)),
+    user: schemas_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Delete school from database.
@@ -211,23 +209,11 @@ async def delete_school(
     if school is None:
         raise HTTPException(status_code=404, detail="School not found")
 
-    users = await cruds_users.get_users(db=db, schools_ids=[school_id])
-    for db_user in users:
-        await cruds_users.update_user(
-            db,
-            db_user.id,
-            schemas_core.CoreUserUpdateAdmin(
-                school_id=SchoolType.no_school.value,
-                account_type=AccountType.external,
-            ),
-        )
+    await cruds_users.remove_users_from_school(db=db, school_id=school_id)
 
     await cruds_schools.delete_school(db=db, school_id=school_id)
     try:
         await db.commit()
     except IntegrityError:
         await db.rollback()
-        raise HTTPException(
-            status_code=400,
-            detail="School deletion failed due to database integrity error",
-        )
+        raise

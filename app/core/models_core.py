@@ -132,13 +132,6 @@ class CoreSchool(Base):
     name: Mapped[str] = mapped_column(String, index=True, nullable=False, unique=True)
     email_regex: Mapped[str] = mapped_column(String, nullable=False)
 
-    students: Mapped[list["CoreUser"]] = relationship(
-        "CoreUser",
-        back_populates="school",
-        lazy="selectin",
-        default_factory=list,
-    )
-
 
 class CoreAssociationMembership(Base):
     __tablename__ = "core_association_membership"
