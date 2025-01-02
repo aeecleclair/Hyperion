@@ -167,10 +167,11 @@ async def update_school(
         school_update.email_regex is not None
         and school_update.email_regex != school.email_regex
     ):
+        safe_email_regex = re.escape(school_update.email_regex)
         await cruds_users.remove_users_from_school(db, school_id=school_id)
         users = await cruds_users.get_users(db, schools_ids=[SchoolType.no_school])
         for db_user in users:
-            if re.match(school_update.email_regex, db_user.email):
+            if re.match(safe_email_regex, db_user.email):
                 await cruds_users.update_user(
                     db,
                     db_user.id,
