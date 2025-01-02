@@ -70,6 +70,20 @@ def test_read_school(client: TestClient) -> None:
     assert data["name"] == "ENS"
 
 
+def test_create_school_with_used_name(client: TestClient) -> None:
+    token = create_api_access_token(admin_user)
+
+    response = client.post(
+        "/schools/",
+        json={
+            "name": "ENS",
+            "email_regex": r"^.*@ens.fr$",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 400
+
+
 def test_create_school(client: TestClient) -> None:
     token = create_api_access_token(admin_user)
 
@@ -89,6 +103,17 @@ def test_create_school(client: TestClient) -> None:
     )
     data = response.json()
     assert data["school_id"] == school.json()["id"]
+
+
+def test_update_school_with_used_name(client: TestClient) -> None:
+    token = create_api_access_token(admin_user)
+
+    response = client.patch(
+        f"/schools/{id_test_ens}",
+        json={"name": "centrale_lyon"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 400
 
 
 def test_update_school(client: TestClient) -> None:
@@ -167,6 +192,16 @@ def test_create_user_corresponding_to_school(
     )
 
     assert user_detail.json()["school_id"] == school_id
+
+
+def test_delete_base_school(client: TestClient) -> None:
+    token = create_api_access_token(admin_user)
+
+    response = client.delete(
+        f"/schools/{SchoolType.centrale_lyon.value}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 400
 
 
 def test_delete_school(client: TestClient) -> None:
