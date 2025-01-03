@@ -7,6 +7,8 @@ from collections.abc import Sequence
 from enum import Enum
 from typing import TYPE_CHECKING
 
+from sqlalchemy.dialects import postgresql
+
 if TYPE_CHECKING:
     from pytest_alembic import MigrationContext
 
@@ -64,7 +66,7 @@ def upgrade() -> None:
         sa.Column("name", sa.String(), nullable=False),
         sa.Column(
             "membership",
-            sa.Enum(
+            postgresql.ENUM(
                 "aeecl",
                 "useecl",
                 name="availableassociationmembership",
