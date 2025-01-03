@@ -5,9 +5,11 @@ import re
 import secrets
 import unicodedata
 from collections.abc import Callable, Sequence
+from datetime import UTC, datetime, timedelta
 from inspect import iscoroutinefunction
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeVar
+from uuid import UUID
 
 import aiofiles
 import fitz
@@ -22,6 +24,7 @@ from app.core import cruds_core, models_core, security
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.models_core import CoreUser
+from app.core.myeclpay import cruds_myeclpay
 from app.core.users import cruds_users
 from app.types import core_data
 from app.types.content_type import ContentType
@@ -493,6 +496,51 @@ async def create_and_send_email_migration(
     else:
         hyperion_security_logger.info(
             f"You can confirm your new email address by clicking the following link: {settings.CLIENT_URL}users/migrate-mail-confirm?token={confirmation_token}",
+        )
+
+
+async def create_and_send_structure_manager_transfert_email(
+    email: str,
+    structure_id: UUID,
+    new_manager_user_id: str,
+    db: AsyncSession,
+    settings: "Settings",
+) -> None:
+    """
+    Create a structure manager transfert token, add it to the database and send an email to the user.
+    """
+    await cruds_myeclpay.delete_structure_manager_transfert_by_structure(
+        structure_id=structure_id,
+        db=db,
+    )
+
+    confirmation_token = security.generate_token()
+
+    await cruds_myeclpay.init_structure_manager_transfert(
+        structure_id=structure_id,
+        user_id=new_manager_user_id,
+        confirmation_token=confirmation_token,
+        valid_until=datetime.now(tz=UTC) + timedelta(minutes=20),
+        db=db,
+    )
+
+    if settings.SMTP_ACTIVE:
+        migration_content = templates.get_template(
+            "structure_manager_transfert.html",
+        ).render(
+            {
+                "transfert_link": f"{settings.CLIENT_URL}myeclpay/structures/manager/confirm-transfert?token={confirmation_token}",
+            },
+        )
+        send_email(
+            recipient=email,
+            subject="MyECL - Confirm the structure manager transfert",
+            content=migration_content,
+            settings=settings,
+        )
+    else:
+        hyperion_security_logger.info(
+            f"You can confirm the transfert by clicking the following link: {settings.CLIENT_URL}myeclpay/structures/manager/confirm-transfert?token={confirmation_token}",
         )
 
 

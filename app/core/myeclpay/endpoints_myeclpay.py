@@ -5,17 +5,17 @@ from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.templating import Jinja2Templates
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import security
 from app.core.config import Settings
+from app.core.groups.groups_type import GroupType
 from app.core.models_core import CoreUser
 from app.core.myeclpay import cruds_myeclpay, schemas_myeclpay
-from app.core.myeclpay.coredata_myeclpay import StoreStructuresUser
 from app.core.myeclpay.models_myeclpay import Store, WalletDevice
 from app.core.myeclpay.types_myeclpay import (
     HistoryType,
-    StoreStructure,
     TransactionStatus,
     TransactionType,
     WalletDeviceStatus,
@@ -37,13 +37,14 @@ from app.dependencies import (
     get_notification_tool,
     get_request_id,
     get_settings,
-    get_structures_managers,
     is_user,
     is_user_an_ecl_member,
+    is_user_in,
 )
+from app.utils import tools
 from app.utils.communication.notifications import NotificationTool
 from app.utils.mail.mailworker import send_email
-from app.utils.tools import get_display_name, set_core_data
+from app.utils.tools import get_display_name
 
 router = APIRouter(tags=["MyECLPay"])
 
@@ -53,49 +54,157 @@ templates = Jinja2Templates(directory="assets/templates")
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
-def is_structure_manager(
-    strutures_managers: StoreStructuresUser,
-    structure: StoreStructure,
-    user: CoreUser,
-    fail_on_none: bool = True,
+@router.get(
+    "/myeclpay/structures",
+    status_code=200,
+    response_model=list[schemas_myeclpay.Structure],
+)
+async def get_structures(
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(is_user()),
 ):
-    if structure not in strutures_managers.managers and fail_on_none:
-        raise HTTPException(
-            status_code=400,
-            detail="Structure has no manager, it must be set first",
-        )
-    elif strutures_managers.managers[structure] != user.id:
-        raise HTTPException(
-            status_code=403,
-            detail="User is not the manager for this association",
-        )
+    """
+    Get all structures.
+
+    **The user must be an admin to use this endpoint**
+    """
+    structures = await cruds_myeclpay.get_structures(
+        db=db,
+    )
+
+    return structures
+
+
+@router.post(
+    "/myeclpay/structures",
+    status_code=201,
+    response_model=schemas_myeclpay.Structure,
+)
+async def create_structure(
+    structure: schemas_myeclpay.StructureBase,
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(is_user_in(GroupType.admin)),
+):
+    """
+    Create a new structure.
+
+    **The user must be an admin to use this endpoint**
+    """
+    structure_db = schemas_myeclpay.Structure(
+        id=uuid.uuid4(),
+        name=structure.name,
+        manager_user_id=structure.manager_user_id,
+    )
+    await cruds_myeclpay.create_structure(
+        structure=structure_db,
+        db=db,
+    )
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise
+
+    return structure_db
 
 
 @router.patch(
-    "/myeclpay/structures/{structure}/{user_id}",
+    "/myeclpay/structures/{structure_id}",
     status_code=204,
 )
-async def update_manager(
-    structure: StoreStructure,
-    user_id: str,
-    managers: StoreStructuresUser = Depends(get_structures_managers),
+async def update_structure(
+    structure_id: UUID,
+    structure_update: schemas_myeclpay.StructureUpdate,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user),
+    user: CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
-    Update a manager for an association
+    Update a structure.
 
-    **The user must be a member of group Payment**
+    **The user must be an admin to use this endpoint**
     """
-    is_structure_manager(
-        strutures_managers=managers,
-        structure=structure,
-        user=user,
-        fail_on_none=False,
+    await cruds_myeclpay.update_structure(
+        structure_id=structure_id,
+        structure_update=structure_update,
+        db=db,
     )
 
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise
+
+
+@router.delete(
+    "/myeclpay/structures/{structure_id}",
+    status_code=204,
+)
+async def delete_structure(
+    structure_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(is_user_in(GroupType.admin)),
+):
+    """
+    Delete a structure.
+
+    **The user must be an admin to use this endpoint**
+    """
+    stores = await cruds_myeclpay.get_stores_by_structure_id(
+        structure_id=structure_id,
+        db=db,
+    )
+    if stores:
+        raise HTTPException(
+            status_code=400,
+            detail="Structure has stores",
+        )
+
+    await cruds_myeclpay.delete_structure(
+        structure_id=structure_id,
+        db=db,
+    )
+
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise
+
+
+@router.post(
+    "/myeclpay/structures/{structure_id}/init-manager-transfert",
+    status_code=201,
+)
+async def init_update_structure_manager(
+    structure_id: UUID,
+    transfert_info: schemas_myeclpay.StructureTranfert,
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(is_user()),
+    settings: Settings = Depends(get_settings),
+):
+    """
+    Initiate the update of a manager for an association
+
+    **The user must be the manager for this structure**
+    """
+    structure = await cruds_myeclpay.get_structure_by_id(
+        structure_id=structure_id,
+        db=db,
+    )
+    if structure is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Structure does not exist",
+        )
+    if structure.manager_user_id != user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="User is not the manager for this structure",
+        )
+
     user_db = await cruds_users.get_user_by_id(
-        user_id=user_id,
+        user_id=transfert_info.new_manager_user_id,
         db=db,
     )
     if user_db is None:
@@ -103,27 +212,64 @@ async def update_manager(
             status_code=404,
             detail="User does not exist",
         )
-
-    managers.managers[structure] = user_id
-
-    await set_core_data(
-        managers,
-        db,
+    await tools.create_and_send_structure_manager_transfert_email(
+        email=user.email,
+        structure_id=structure_id,
+        new_manager_user_id=transfert_info.new_manager_user_id,
+        db=db,
+        settings=settings,
     )
 
-    stores = await cruds_myeclpay.get_stores_by_structure(
-        structure=structure,
+
+@router.get(
+    "/myeclpay/structures/confirm-manager-transfert",
+    status_code=200,
+)
+async def update_structure_manager(
+    token: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Update a manager for an association
+
+    The user must have initiated the update of the manager with `init_update_structure_manager`
+    """
+
+    request = await cruds_myeclpay.get_structure_manager_transfert_by_secret(
+        confirmation_token=token,
+        db=db,
+    )
+    if request is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Request does not exist",
+        )
+
+    if request.valid_until < datetime.now(UTC):
+        raise HTTPException(
+            status_code=400,
+            detail="Request has expired",
+        )
+
+    await cruds_myeclpay.update_structure_manager(
+        structure_id=request.structure_id,
+        manager_user_id=request.user_id,
+        db=db,
+    )
+
+    stores = await cruds_myeclpay.get_stores_by_structure_id(
+        structure_id=request.structure_id,
         db=db,
     )
     sellers = await cruds_myeclpay.get_all_user_sellers(
-        user_id=user_id,
+        user_id=request.user_id,
         db=db,
     )
     sellers_store_ids = [seller.store_id for seller in sellers]
     for store in stores:
         if store.id not in sellers_store_ids:
             await cruds_myeclpay.create_seller(
-                user_id=user_id,
+                user_id=request.user_id,
                 store_id=store.id,
                 can_bank=True,
                 can_see_history=True,
@@ -134,7 +280,7 @@ async def update_manager(
             )
         else:
             await cruds_myeclpay.update_seller(
-                seller_user_id=user_id,
+                seller_user_id=request.user_id,
                 store_id=store.id,
                 can_bank=True,
                 can_see_history=True,
@@ -147,28 +293,37 @@ async def update_manager(
 
 
 @router.post(
-    "/myeclpay/structures/{structure}/stores",
+    "/myeclpay/structures/{structure_id}/stores",
     status_code=201,
     response_model=schemas_myeclpay.Store,
 )
 async def create_store(
-    structure: StoreStructure,
+    structure_id: UUID,
     store: schemas_myeclpay.StoreBase,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user),
-    managers: StoreStructuresUser = Depends(get_structures_managers),
+    user: CoreUser = Depends(is_user()),
 ):
     """
     Create a store
 
     **The user must be the manager for this structure**
     """
-    is_structure_manager(
-        strutures_managers=managers,
-        structure=structure,
-        user=user,
+    structure = await cruds_myeclpay.get_structure_by_id(
+        structure_id=structure_id,
+        db=db,
     )
-    # Create new wallet for user
+    if structure is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Structure does not exist",
+        )
+    if structure.manager_user_id != user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="User is not the manager for this structure",
+        )
+
+    # Create new wallet for store
     wallet_id = uuid.uuid4()
     await cruds_myeclpay.create_wallet(
         wallet_id=wallet_id,
@@ -176,20 +331,19 @@ async def create_store(
         balance=0,
         db=db,
     )
-
+    # Create new store
     store_db = Store(
         id=uuid.uuid4(),
         name=store.name,
-        structure=structure,
-        membership=store.membership,
+        structure_id=structure_id,
         wallet_id=wallet_id,
     )
-    # Check if user is already registered
     await cruds_myeclpay.create_store(
         store=store_db,
         db=db,
     )
-
+    await db.commit()
+    # Add manager as an admin seller for the store
     await cruds_myeclpay.create_seller(
         user_id=user.id,
         store_id=store_db.id,
@@ -201,32 +355,56 @@ async def create_store(
         db=db,
     )
 
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise
 
     return store_db
 
 
-# This function is a duplicate of /myeclpay/users/me/stores
+@router.get(
+    "/myeclpay/users/me/stores",
+    status_code=200,
+    response_model=list[schemas_myeclpay.UserStore],
+)
+async def get_user_stores(
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(is_user()),
+):
+    """
+    Get all stores for the current user.
 
-# @router.get(
-#     "/myeclpay/stores",
-#     status_code=200,
-#     response_model=list[schemas_myeclpay.Store],
-# )
-# async def get_stores(
-#     db: AsyncSession = Depends(get_db),
-#     user: CoreUser = Depends(is_user),
-# ):
-#     """
-#     Get all stores.
+    **The user must be authenticated to use this endpoint**
+    """
+    sellers = await cruds_myeclpay.get_all_user_sellers(
+        user_id=user.id,
+        db=db,
+    )
 
-#     **The user must be a member of group Payment**
-#     """
-#     stores = await cruds_myeclpay.get_stores(
-#         db=db,
-#     )
+    stores: list[schemas_myeclpay.UserStore] = []
+    for seller in sellers:
+        store = await cruds_myeclpay.get_store(
+            store_id=seller.store_id,
+            db=db,
+        )
+        if store is not None:
+            stores.append(
+                schemas_myeclpay.UserStore(
+                    id=store.id,
+                    name=store.name,
+                    structure_id=store.structure_id,
+                    wallet_id=store.wallet_id,
+                    can_bank=seller.can_bank,
+                    can_see_history=seller.can_see_history,
+                    can_cancel=seller.can_cancel,
+                    can_manage_sellers=seller.can_manage_sellers,
+                    store_admin=seller.store_admin,
+                ),
+            )
 
-#     return stores
+    return stores
 
 
 @router.post(
@@ -237,8 +415,7 @@ async def create_store_admin_seller(
     store_id: UUID,
     seller: schemas_myeclpay.SellerAdminCreation,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user),
-    managers: StoreStructuresUser = Depends(get_structures_managers),
+    user: CoreUser = Depends(is_user()),
 ):
     """
     Create a store admin seller.
@@ -261,11 +438,20 @@ async def create_store_admin_seller(
             status_code=404,
             detail="Store does not exist",
         )
-    is_structure_manager(
-        strutures_managers=managers,
-        structure=store.structure,
-        user=user,
+    structure = await cruds_myeclpay.get_structure_by_id(
+        structure_id=store.structure_id,
+        db=db,
     )
+    if structure is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Structure does not exist",
+        )
+    if structure.manager_user_id != user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="User is not the manager for this structure",
+        )
 
     await cruds_myeclpay.create_seller(
         user_id=seller.user_id,
@@ -289,8 +475,7 @@ async def create_store_admin_seller(
 async def get_store_admin_seller(
     store_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user),
-    managers: StoreStructuresUser = Depends(get_structures_managers),
+    user: CoreUser = Depends(is_user()),
 ):
     """
     Get all sellers that have the `store_admin` permission for the given store.
@@ -306,11 +491,20 @@ async def get_store_admin_seller(
             status_code=404,
             detail="Store does not exist",
         )
-    is_structure_manager(
-        strutures_managers=managers,
-        structure=store.structure,
-        user=user,
+    structure = await cruds_myeclpay.get_structure_by_id(
+        structure_id=store.structure_id,
+        db=db,
     )
+    if structure is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Structure does not exist",
+        )
+    if structure.manager_user_id != user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="User is not the manager for this structure",
+        )
 
     sellers = await cruds_myeclpay.get_admin_sellers(
         store_id=store_id,
@@ -328,8 +522,7 @@ async def delete_store_admin_seller(
     store_id: UUID,
     seller_user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user),
-    managers: StoreStructuresUser = Depends(get_structures_managers),
+    user: CoreUser = Depends(is_user()),
 ):
     """
     Delete a store admin seller.
@@ -345,11 +538,20 @@ async def delete_store_admin_seller(
             status_code=404,
             detail="Store does not exist",
         )
-    is_structure_manager(
-        strutures_managers=managers,
-        structure=store.structure,
-        user=user,
+    structure = await cruds_myeclpay.get_structure_by_id(
+        structure_id=store.structure_id,
+        db=db,
     )
+    if structure is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Structure does not exist",
+        )
+    if structure.manager_user_id != user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="User is not the manager for this structure",
+        )
 
     seller = await cruds_myeclpay.get_seller(
         seller_user_id=seller_user_id,
@@ -389,8 +591,7 @@ async def update_store(
     store_id: UUID,
     store_update: schemas_myeclpay.StoreUpdate,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user),
-    managers: StoreStructuresUser = Depends(get_structures_managers),
+    user: CoreUser = Depends(is_user()),
 ):
     """
     Update a store
@@ -407,12 +608,20 @@ async def update_store(
             detail="Store does not exist",
         )
 
-    is_structure_manager(
-        strutures_managers=managers,
-        structure=store.structure,
-        user=user,
-        fail_on_none=False,
+    structure = await cruds_myeclpay.get_structure_by_id(
+        structure_id=store.structure_id,
+        db=db,
     )
+    if structure is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Structure does not exist",
+        )
+    if structure.manager_user_id != user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="User is not the manager for this structure",
+        )
 
     await cruds_myeclpay.update_store(
         store_id=store_id,
@@ -433,7 +642,7 @@ async def update_store(
 )
 async def get_cgu(
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user),
+    user: CoreUser = Depends(is_user()),
 ):
     """
     Get the latest CGU version and the user signed CGU version.
@@ -464,7 +673,7 @@ async def get_cgu(
 )
 async def register_user(
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user),
+    user: CoreUser = Depends(is_user()),
 ):
     """
     Sign MyECL Pay CGU for the given user.
@@ -516,7 +725,7 @@ async def sign_cgu(
     signature: schemas_myeclpay.CGUSignature,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user),
+    user: CoreUser = Depends(is_user()),
     settings: Settings = Depends(get_settings),
 ):
     """
@@ -578,7 +787,7 @@ async def sign_cgu(
 )
 async def get_user_devices(
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user),
+    user: CoreUser = Depends(is_user()),
 ):
     """
     Get user devices.
@@ -612,7 +821,7 @@ async def get_user_devices(
 async def get_user_device(
     wallet_device_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user),
+    user: CoreUser = Depends(is_user()),
 ):
     """
     Get user devices.
@@ -657,7 +866,7 @@ async def get_user_device(
 )
 async def get_user_wallet(
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user),
+    user: CoreUser = Depends(is_user()),
 ):
     """
     Get user wallet.
@@ -698,7 +907,7 @@ async def create_user_devices(
     wallet_device_creation: schemas_myeclpay.WalletDeviceCreation,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user),
+    user: CoreUser = Depends(is_user()),
     settings: Settings = Depends(get_settings),
 ):
     """
@@ -764,7 +973,7 @@ async def create_user_devices(
 async def activate_user_device(
     activation_token: str,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user),
+    user: CoreUser = Depends(is_user()),
 ):
     """
     Activate a wallet device
@@ -807,7 +1016,7 @@ async def activate_user_device(
 async def revoke_user_devices(
     wallet_device_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user),
+    user: CoreUser = Depends(is_user()),
 ):
     """
     Revoke a device for the user.
@@ -857,7 +1066,7 @@ async def revoke_user_devices(
 )
 async def get_user_wallet_history(
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user),
+    user: CoreUser = Depends(is_user()),
 ):
     """
     Get all transactions for the current user's wallet.
@@ -938,49 +1147,6 @@ async def get_user_wallet_history(
 
     return history
     # TODO: limite by datetime
-
-
-@router.get(
-    "/myeclpay/users/me/stores",
-    status_code=200,
-    response_model=list[schemas_myeclpay.UserStore],
-)
-async def get_user_stores(
-    db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user),
-):
-    """
-    Get all stores for the current user.
-
-    **The user must be authenticated to use this endpoint**
-    """
-    sellers = await cruds_myeclpay.get_all_user_sellers(
-        user_id=user.id,
-        db=db,
-    )
-
-    stores: list[schemas_myeclpay.UserStore] = []
-    for seller in sellers:
-        store = await cruds_myeclpay.get_store(
-            store_id=seller.store_id,
-            db=db,
-        )
-        if store is not None:
-            stores.append(
-                schemas_myeclpay.UserStore(
-                    id=store.id,
-                    name=store.name,
-                    membership=store.membership,
-                    wallet_id=store.wallet_id,
-                    can_bank=seller.can_bank,
-                    can_see_history=seller.can_see_history,
-                    can_cancel=seller.can_cancel,
-                    can_manage_sellers=seller.can_manage_sellers,
-                    store_admin=seller.store_admin,
-                ),
-            )
-
-    return stores
 
 
 @router.post(
@@ -1197,6 +1363,7 @@ async def store_scan_qrcode(
         # TODO: convert and add unit
         content=f"Une transaction de {qr_code_content.total} a été effectuée",
         expire_on=datetime.now(UTC) + timedelta(days=3),
+        action_module="myeclpay",
     )
     await notification_tool.send_notification_to_user(
         user_id=debited_wallet.user.id,

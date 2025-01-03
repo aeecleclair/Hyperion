@@ -18,7 +18,7 @@ from app.types.sqlalchemy import TZDateTime
 
 # revision identifiers, used by Alembic.
 revision: str = "e16b58cc6084"
-down_revision: str | None = "c73c7b821728"
+down_revision: str | None = "53c163acf327"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

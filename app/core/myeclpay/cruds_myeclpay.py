@@ -8,12 +8,144 @@ from sqlalchemy.orm import selectinload
 
 from app.core.myeclpay import models_myeclpay, schemas_myeclpay
 from app.core.myeclpay.types_myeclpay import (
-    StoreStructure,
     TransactionStatus,
     TransactionType,
     WalletDeviceStatus,
     WalletType,
 )
+
+
+async def create_structure(
+    structure: schemas_myeclpay.Structure,
+    db: AsyncSession,
+) -> None:
+    db.add(
+        models_myeclpay.Structure(
+            id=structure.id,
+            name=structure.name,
+            membership=structure.membership,
+            manager_user_id=structure.manager_user_id,
+        ),
+    )
+
+
+async def update_structure(
+    structure_id: UUID,
+    structure_update: schemas_myeclpay.StructureUpdate,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        update(models_myeclpay.Structure)
+        .where(models_myeclpay.Structure.id == structure_id)
+        .values(**structure_update.model_dump(exclude_none=True)),
+    )
+
+
+async def delete_structure(
+    structure_id: UUID,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        delete(models_myeclpay.Structure).where(
+            models_myeclpay.Structure.id == structure_id,
+        ),
+    )
+
+
+async def init_structure_manager_transfert(
+    structure_id: UUID,
+    user_id: str,
+    valid_until: datetime,
+    confirmation_token: str,
+    db: AsyncSession,
+) -> None:
+    db.add(
+        models_myeclpay.StructureManagerTransfert(
+            structure_id=structure_id,
+            user_id=user_id,
+            valid_until=valid_until,
+            confirmation_token=confirmation_token,
+        ),
+    )
+    await db.commit()
+
+
+async def get_structure_manager_transfert_by_secret(
+    confirmation_token: str,
+    db: AsyncSession,
+) -> models_myeclpay.StructureManagerTransfert | None:
+    result = await db.execute(
+        select(models_myeclpay.StructureManagerTransfert).where(
+            models_myeclpay.StructureManagerTransfert.confirmation_token
+            == confirmation_token,
+        ),
+    )
+    return result.scalars().first()
+
+
+async def delete_structure_manager_transfert_by_structure(
+    structure_id: UUID,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        delete(models_myeclpay.StructureManagerTransfert).where(
+            models_myeclpay.StructureManagerTransfert.structure_id == structure_id,
+        ),
+    )
+
+
+async def update_structure_manager(
+    structure_id: UUID,
+    manager_user_id: str,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        update(models_myeclpay.Structure)
+        .where(models_myeclpay.Structure.id == structure_id)
+        .values(manager_user_id=manager_user_id),
+    )
+
+
+async def get_structures(
+    db: AsyncSession,
+) -> Sequence[schemas_myeclpay.Structure]:
+    result = await db.execute(select(models_myeclpay.Structure))
+    return [
+        schemas_myeclpay.Structure(
+            name=structure.name,
+            membership=structure.membership,
+            manager_user_id=structure.manager_user_id,
+            id=structure.id,
+        )
+        for structure in result.scalars().all()
+    ]
+
+
+async def get_structure_by_id(
+    structure_id: UUID,
+    db: AsyncSession,
+) -> schemas_myeclpay.Structure | None:
+    structure = (
+        (
+            await db.execute(
+                select(models_myeclpay.Structure).where(
+                    models_myeclpay.Structure.id == structure_id,
+                ),
+            )
+        )
+        .scalars()
+        .first()
+    )
+    return (
+        schemas_myeclpay.Structure(
+            name=structure.name,
+            membership=structure.membership,
+            manager_user_id=structure.manager_user_id,
+            id=structure.id,
+        )
+        if structure
+        else None
+    )
 
 
 async def create_store(
@@ -43,13 +175,13 @@ async def get_stores(
     return result.scalars().all()
 
 
-async def get_stores_by_structure(
+async def get_stores_by_structure_id(
     db: AsyncSession,
-    structure: StoreStructure,
+    structure_id: UUID,
 ) -> Sequence[models_myeclpay.Store]:
     result = await db.execute(
         select(models_myeclpay.Store).where(
-            models_myeclpay.Store.structure == structure,
+            models_myeclpay.Store.structure_id == structure_id,
         ),
     )
     return result.scalars().all()

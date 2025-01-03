@@ -13,13 +13,32 @@ from app.core.myeclpay.types_myeclpay import (
 from app.types.membership import AvailableAssociationMembership
 
 
-class StoreBase(BaseModel):
+class StructureBase(BaseModel):
     name: str
     membership: AvailableAssociationMembership | None = None
+    manager_user_id: str
+
+
+class Structure(StructureBase):
+    id: UUID
+
+
+class StructureUpdate(BaseModel):
+    name: str | None = None
+    membership: AvailableAssociationMembership | None = None
+
+
+class StructureTranfert(BaseModel):
+    new_manager_user_id: str
+
+
+class StoreBase(BaseModel):
+    name: str
 
 
 class Store(StoreBase):
     id: UUID
+    structure_id: UUID
     wallet_id: UUID
 
 
