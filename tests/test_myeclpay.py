@@ -468,6 +468,30 @@ async def test_transfer_structure_manager_as_admin(client: TestClient):
     assert response.json()["detail"] == "User is not the manager for this structure"
 
 
+async def test_transfer_structure_manager_with_wrong_token(client: TestClient):
+    tranfert = models_myeclpay.StructureManagerTransfert(
+        structure_id=structure.id,
+        user_id=ecl_user2.id,
+        confirmation_token="RANDOM_TOKEN",
+        valid_until=datetime.now(UTC),
+    )
+    await add_object_to_db(tranfert)
+
+    response = client.get(
+        "/myeclpay/structures/confirm-manager-transfert",
+        params={"token": "WRONG_TOKEN"},
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Request does not exist"
+
+    response = client.get(
+        "/myeclpay/structures/confirm-manager-transfert",
+        params={"token": "RANDOM_TOKEN"},
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Request has expired"
+
+
 async def test_transfer_structure_manager_as_manager(
     client: TestClient,
     mocker: MockerFixture,
