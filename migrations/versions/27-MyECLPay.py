@@ -12,7 +12,6 @@ if TYPE_CHECKING:
 
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.dialects import postgresql
 
 from app.types.sqlalchemy import TZDateTime
 
