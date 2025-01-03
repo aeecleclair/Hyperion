@@ -64,7 +64,12 @@ def upgrade() -> None:
         sa.Column("name", sa.String(), nullable=False),
         sa.Column(
             "membership",
-            sa.Enum("aeecl", "useecl", name="availableassociationmembership"),
+            sa.Enum(
+                "aeecl",
+                "useecl",
+                name="availableassociationmembership",
+                create_type=False,
+            ),
             nullable=True,
         ),
         sa.Column("manager_user_id", sa.String(), nullable=False),
