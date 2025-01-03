@@ -285,6 +285,8 @@ def downgrade() -> None:
     op.drop_table("myeclpay_wallet_device")
     op.drop_table("myeclpay_store")
     op.drop_table("myeclpay_wallet")
+    op.drop_table("myeclpay_structure_manager_transfert")
+    op.drop_table("myeclpay_structure")
 
     sa.Enum(TransactionType, name="transactiontype").drop(
         op.get_bind(),
