@@ -86,7 +86,7 @@ class Structure(Base):
 
 
 class StructureManagerTransfert(Base):
-    __tablename__ = "myeclpay_structure_manager_transfert"
+    __tablename__ = "myeclpay_structure_manager_transfer"
 
     structure_id: Mapped[UUID] = mapped_column(
         ForeignKey("myeclpay_structure.id"),

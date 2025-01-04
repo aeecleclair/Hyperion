@@ -458,7 +458,7 @@ async def test_delete_structure_as_admin(client: TestClient):
 
 async def test_transfer_structure_manager_as_admin(client: TestClient):
     response = client.post(
-        f"/myeclpay/structures/{structure.id}/init-manager-transfert",
+        f"/myeclpay/structures/{structure.id}/init-manager-transfer",
         headers={"Authorization": f"Bearer {admin_user_token}"},
         json={
             "new_manager_user_id": ecl_user2.id,
@@ -478,14 +478,14 @@ async def test_transfer_structure_manager_with_wrong_token(client: TestClient):
     await add_object_to_db(tranfert)
 
     response = client.get(
-        "/myeclpay/structures/confirm-manager-transfert",
+        "/myeclpay/structures/confirm-manager-transfer",
         params={"token": "WRONG_TOKEN"},
     )
     assert response.status_code == 404
     assert response.json()["detail"] == "Request does not exist"
 
     response = client.get(
-        "/myeclpay/structures/confirm-manager-transfert",
+        "/myeclpay/structures/confirm-manager-transfer",
         params={"token": "RANDOM_TOKEN"},
     )
     assert response.status_code == 400
@@ -523,7 +523,7 @@ async def test_transfer_structure_manager_as_manager(
         return_value=UNIQUE_TOKEN,
     )
     response = client.post(
-        f"/myeclpay/structures/{new_structure.id}/init-manager-transfert",
+        f"/myeclpay/structures/{new_structure.id}/init-manager-transfer",
         headers={"Authorization": f"Bearer {structure_manager_user_token}"},
         json={
             "new_manager_user_id": ecl_user2.id,
@@ -532,7 +532,7 @@ async def test_transfer_structure_manager_as_manager(
     assert response.status_code == 201
 
     response = client.get(
-        "/myeclpay/structures/confirm-manager-transfert",
+        "/myeclpay/structures/confirm-manager-transfer",
         params={"token": UNIQUE_TOKEN},
     )
     assert response.status_code == 200

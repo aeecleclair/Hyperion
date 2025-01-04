@@ -7,6 +7,7 @@ from app.core import schemas_core
 from app.core.myeclpay.types_myeclpay import (
     HistoryType,
     TransactionStatus,
+    TransactionType,
     WalletDeviceStatus,
     WalletType,
 )
@@ -144,3 +145,20 @@ class WalletDevice(WalletDeviceBase):
 
 class WalletDeviceCreation(WalletDeviceBase):
     ed25519_public_key: Base64Bytes
+
+
+class Transaction(BaseModel):
+    __tablename__ = "myeclpay_transaction"
+
+    id: UUID
+    giver_wallet_id: UUID
+    receiver_wallet_id: UUID
+    transaction_type: TransactionType
+
+    # User that scanned the qr code
+    # Will be None if the transaction is a request
+    seller_user_id: str | None
+
+    total: int  # Stored in cents
+    creation: datetime
+    status: TransactionStatus

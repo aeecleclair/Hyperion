@@ -52,7 +52,7 @@ async def delete_structure(
     )
 
 
-async def init_structure_manager_transfert(
+async def init_structure_manager_transfer(
     structure_id: UUID,
     user_id: str,
     valid_until: datetime,
@@ -70,7 +70,7 @@ async def init_structure_manager_transfert(
     await db.commit()
 
 
-async def get_structure_manager_transfert_by_secret(
+async def get_structure_manager_transfer_by_secret(
     confirmation_token: str,
     db: AsyncSession,
 ) -> models_myeclpay.StructureManagerTransfert | None:
@@ -83,7 +83,7 @@ async def get_structure_manager_transfert_by_secret(
     return result.scalars().first()
 
 
-async def delete_structure_manager_transfert_by_structure(
+async def delete_structure_manager_transfer_by_structure(
     structure_id: UUID,
     db: AsyncSession,
 ) -> None:
@@ -291,6 +291,22 @@ async def create_wallet(
     db.add(wallet)
 
 
+async def get_wallets(
+    db: AsyncSession,
+) -> Sequence[schemas_myeclpay.Wallet]:
+    result = await db.execute(select(models_myeclpay.Wallet))
+    return [
+        schemas_myeclpay.Wallet(
+            id=wallet.id,
+            type=wallet.type,
+            balance=wallet.balance,
+            store=wallet.store,
+            user=wallet.user,
+        )
+        for wallet in result.scalars().all()
+    ]
+
+
 async def get_wallet(
     wallet_id: UUID,
     db: AsyncSession,
@@ -443,6 +459,27 @@ async def create_transaction(
         store_note=store_note,
     )
     db.add(transaction)
+
+
+async def get_transactions(
+    db: AsyncSession,
+) -> Sequence[schemas_myeclpay.Transaction]:
+    result = await db.execute(select(models_myeclpay.Transaction))
+    return [
+        schemas_myeclpay.Transaction(
+            id=transaction.id,
+            giver_wallet_id=transaction.giver_wallet_id,
+            giver_wallet_device_id=transaction.giver_wallet_device_id,
+            receiver_wallet_id=transaction.receiver_wallet_id,
+            transaction_type=transaction.transaction_type,
+            seller_user_id=transaction.seller_user_id,
+            total=transaction.total,
+            creation=transaction.creation,
+            status=transaction.status,
+            store_note=transaction.store_note,
+        )
+        for transaction in result.scalars().all()
+    ]
 
 
 async def get_transactions_by_wallet_id(

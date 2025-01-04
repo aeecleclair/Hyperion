@@ -3,7 +3,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,6 +31,7 @@ from app.core.myeclpay.utils_myeclpay import (
     verify_signature,
 )
 from app.core.notification.schemas_notification import Message
+from app.core.payment import cruds_payment, schemas_payment
 from app.core.users import cruds_users
 from app.dependencies import (
     get_db,
@@ -52,6 +53,7 @@ templates = Jinja2Templates(directory="assets/templates")
 
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
+hyperion_security_logger = logging.getLogger("hyperion.security")
 
 
 @router.get(
@@ -173,12 +175,12 @@ async def delete_structure(
 
 
 @router.post(
-    "/myeclpay/structures/{structure_id}/init-manager-transfert",
+    "/myeclpay/structures/{structure_id}/init-manager-transfer",
     status_code=201,
 )
 async def init_update_structure_manager(
     structure_id: UUID,
-    transfert_info: schemas_myeclpay.StructureTranfert,
+    transfer_info: schemas_myeclpay.StructureTranfert,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user()),
     settings: Settings = Depends(get_settings),
@@ -204,7 +206,7 @@ async def init_update_structure_manager(
         )
 
     user_db = await cruds_users.get_user_by_id(
-        user_id=transfert_info.new_manager_user_id,
+        user_id=transfer_info.new_manager_user_id,
         db=db,
     )
     if user_db is None:
@@ -212,17 +214,17 @@ async def init_update_structure_manager(
             status_code=404,
             detail="User does not exist",
         )
-    await tools.create_and_send_structure_manager_transfert_email(
+    await tools.create_and_send_structure_manager_transfer_email(
         email=user.email,
         structure_id=structure_id,
-        new_manager_user_id=transfert_info.new_manager_user_id,
+        new_manager_user_id=transfer_info.new_manager_user_id,
         db=db,
         settings=settings,
     )
 
 
 @router.get(
-    "/myeclpay/structures/confirm-manager-transfert",
+    "/myeclpay/structures/confirm-manager-transfer",
     status_code=200,
 )
 async def update_structure_manager(
@@ -235,7 +237,7 @@ async def update_structure_manager(
     The user must have initiated the update of the manager with `init_update_structure_manager`
     """
 
-    request = await cruds_myeclpay.get_structure_manager_transfert_by_secret(
+    request = await cruds_myeclpay.get_structure_manager_transfer_by_secret(
         confirmation_token=token,
         db=db,
     )
@@ -1363,7 +1365,7 @@ async def store_scan_qrcode(
         # TODO: convert and add unit
         content=f"Une transaction de {qr_code_content.total} a été effectuée",
         expire_on=datetime.now(UTC) + timedelta(days=3),
-        action_module="myeclpay",
+        action_module="MyECLPay",
     )
     await notification_tool.send_notification_to_user(
         user_id=debited_wallet.user.id,
@@ -1371,3 +1373,49 @@ async def store_scan_qrcode(
     )
 
     # TODO: check is the device is revoked or inactive
+
+
+@router.get(
+    "/myeclpay/integrity-check",
+    status_code=200,
+    response_model=tuple[
+        list[schemas_myeclpay.Wallet],
+        list[schemas_myeclpay.Transaction],
+        list[schemas_payment.CheckoutComplete],
+    ],
+)
+async def get_data_for_integrity_check(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+):
+    """
+    Check the integrity of the MyECL Pay database.
+
+    **The header must contain the MYECLPAY_DATA_VERIFIER_ACCESS_TOKEN defined in the settings in the `X-Data-Verifier-Token` header**
+    """
+
+    if (
+        request.headers.get("X-Data-Verifier-Token")
+        != settings.MYECLPAY_DATA_VERIFIER_ACCESS_TOKEN
+    ):
+        hyperion_security_logger.warning(
+            f"A request to /myeclpay/integrity-check has been made with an invalid token, request_content: {request}",
+        )
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied",
+        )
+
+    wallets = await cruds_myeclpay.get_wallets(
+        db=db,
+    )
+    history = await cruds_myeclpay.get_transactions(
+        db=db,
+    )
+    checkouts = await cruds_payment.get_checkouts(
+        module="MyECLPay",
+        db=db,
+    )
+
+    return wallets, history, checkouts

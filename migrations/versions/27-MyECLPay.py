@@ -82,7 +82,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
-        "myeclpay_structure_manager_transfert",
+        "myeclpay_structure_manager_transfer",
         sa.Column("structure_id", sa.Uuid(), nullable=False),
         sa.Column("user_id", sa.String(), nullable=False),
         sa.Column("confirmation_token", sa.String(), nullable=False),
@@ -139,7 +139,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column(
             "type",
-            sa.Enum(TransferType, name="transfertype"),
+            sa.Enum(TransferType, name="transferype"),
             nullable=False,
         ),
         sa.Column("transfer_identifier", sa.String(), nullable=False),
@@ -292,7 +292,7 @@ def downgrade() -> None:
     op.drop_table("myeclpay_wallet_device")
     op.drop_table("myeclpay_store")
     op.drop_table("myeclpay_wallet")
-    op.drop_table("myeclpay_structure_manager_transfert")
+    op.drop_table("myeclpay_structure_manager_transfer")
     op.drop_table("myeclpay_structure")
 
     sa.Enum(TransactionType, name="transactiontype").drop(
@@ -301,7 +301,7 @@ def downgrade() -> None:
     sa.Enum(WalletType, name="wallettype").drop(
         op.get_bind(),
     )
-    sa.Enum(TransferType, name="transfertype").drop(
+    sa.Enum(TransferType, name="transferype").drop(
         op.get_bind(),
     )
     sa.Enum(WalletDeviceStatus, name="walletdevicestatus").drop(

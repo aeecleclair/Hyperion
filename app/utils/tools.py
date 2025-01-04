@@ -499,7 +499,7 @@ async def create_and_send_email_migration(
         )
 
 
-async def create_and_send_structure_manager_transfert_email(
+async def create_and_send_structure_manager_transfer_email(
     email: str,
     structure_id: UUID,
     new_manager_user_id: str,
@@ -507,40 +507,41 @@ async def create_and_send_structure_manager_transfert_email(
     settings: "Settings",
 ) -> None:
     """
-    Create a structure manager transfert token, add it to the database and send an email to the user.
+    Create a structure manager transfer token, add it to the database and send an email to the user.
     """
-    await cruds_myeclpay.delete_structure_manager_transfert_by_structure(
+    await cruds_myeclpay.delete_structure_manager_transfer_by_structure(
         structure_id=structure_id,
         db=db,
     )
 
     confirmation_token = security.generate_token()
 
-    await cruds_myeclpay.init_structure_manager_transfert(
+    await cruds_myeclpay.init_structure_manager_transfer(
         structure_id=structure_id,
         user_id=new_manager_user_id,
         confirmation_token=confirmation_token,
-        valid_until=datetime.now(tz=UTC) + timedelta(minutes=20),
+        valid_until=datetime.now(tz=UTC)
+        + timedelta(minutes=settings.MYECLPAY_MANAGER_TRANSFER_TOKEN_EXPIRES_MINUTES),
         db=db,
     )
 
     if settings.SMTP_ACTIVE:
         migration_content = templates.get_template(
-            "structure_manager_transfert.html",
+            "structure_manager_transfer.html",
         ).render(
             {
-                "transfert_link": f"{settings.CLIENT_URL}myeclpay/structures/manager/confirm-transfert?token={confirmation_token}",
+                "transfer_link": f"{settings.CLIENT_URL}myeclpay/structures/manager/confirm-transfer?token={confirmation_token}",
             },
         )
         send_email(
             recipient=email,
-            subject="MyECL - Confirm the structure manager transfert",
+            subject="MyECL - Confirm the structure manager transfer",
             content=migration_content,
             settings=settings,
         )
     else:
         hyperion_security_logger.info(
-            f"You can confirm the transfert by clicking the following link: {settings.CLIENT_URL}myeclpay/structures/manager/confirm-transfert?token={confirmation_token}",
+            f"You can confirm the transfer by clicking the following link: {settings.CLIENT_URL}myeclpay/structures/manager/confirm-transfer?token={confirmation_token}",
         )
 
 
