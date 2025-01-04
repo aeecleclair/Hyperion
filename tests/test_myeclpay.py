@@ -31,8 +31,10 @@ from tests.commons import (
     create_user_with_groups,
 )
 
-group_payment_user: models_core.CoreUser
-group_payment_user_token: str
+admin_user: models_core.CoreUser
+admin_user_token: str
+structure_manager_user: models_core.CoreUser
+structure_manager_user_token: str
 
 ecl_user: models_core.CoreUser
 ecl_user_access_token: str
@@ -50,6 +52,8 @@ ecl_user2_wallet: models_myeclpay.Wallet
 ecl_user2_wallet_device: models_myeclpay.WalletDevice
 ecl_user2_payment: models_myeclpay.UserPayment
 
+
+structure: models_myeclpay.Structure
 store_wallet: models_myeclpay.Wallet
 store: models_myeclpay.Store
 store_wallet_device_private_key: Ed25519PrivateKey
@@ -75,15 +79,28 @@ UNIQUE_TOKEN = "UNIQUE_TOKEN"
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
-    global group_payment_user, group_payment_user_token
-    group_payment_user = await create_user_with_groups(groups=[GroupType.payment])
-    group_payment_user_token = create_api_access_token(group_payment_user)
+    global admin_user, admin_user_token
+    admin_user = await create_user_with_groups(groups=[GroupType.admin])
+    admin_user_token = create_api_access_token(admin_user)
+
+    global structure_manager_user, structure_manager_user_token, structure
+
+    structure_manager_user = await create_user_with_groups(groups=[])
+    structure_manager_user_token = create_api_access_token(structure_manager_user)
+    structure = models_myeclpay.Structure(
+        id=uuid4(),
+        name="Test Structure",
+        membership=AvailableAssociationMembership.aeecl,
+        manager_user_id=structure_manager_user.id,
+    )
+
+    await add_object_to_db(structure)
 
     # ecl_user
 
     global ecl_user, ecl_user_access_token
     ecl_user = await create_user_with_groups(
-        groups=[GroupType.student],
+        groups=[],
     )
     ecl_user_access_token = create_api_access_token(ecl_user)
 
@@ -141,7 +158,7 @@ async def init_objects() -> None:
         firstname="firstname",
         name="ECL User 2",
         nickname="nickname",
-        groups=[GroupType.student],
+        groups=[],
     )
     ecl_user2_access_token = create_api_access_token(ecl_user2)
 
@@ -188,9 +205,19 @@ async def init_objects() -> None:
         id=uuid4(),
         wallet_id=store_wallet.id,
         name="Test Store",
-        membership=AvailableAssociationMembership.aeecl,
+        structure_id=structure.id,
     )
     await add_object_to_db(store)
+    manager_as_admin = models_myeclpay.Seller(
+        user_id=structure_manager_user.id,
+        store_id=store.id,
+        can_bank=True,
+        can_see_history=True,
+        can_cancel=True,
+        can_manage_sellers=True,
+        store_admin=True,
+    )
+    await add_object_to_db(manager_as_admin)
 
     # NOTE: in practice we won't allow a store to emit transactions and to have a WalletDevice
     global store_wallet_device, store_wallet_device_private_key
@@ -293,7 +320,7 @@ async def init_objects() -> None:
     # Sellers
     global store_seller_no_permission_user_access_token
     store_seller_no_permission_user = await create_user_with_groups(
-        groups=[GroupType.student],
+        groups=[],
     )
     store_seller_no_permission_user_access_token = create_api_access_token(
         store_seller_no_permission_user,
@@ -311,7 +338,7 @@ async def init_objects() -> None:
 
     global store_seller_can_bank_user_access_token
     store_seller_can_bank_user = await create_user_with_groups(
-        groups=[GroupType.student],
+        groups=[],
     )
     store_seller_can_bank_user_access_token = create_api_access_token(
         store_seller_can_bank_user,
@@ -329,7 +356,7 @@ async def init_objects() -> None:
 
     global store_seller_admin_user, store_seller_admin_user_access_token
     store_seller_admin_user = await create_user_with_groups(
-        groups=[GroupType.student],
+        groups=[],
     )
     store_seller_admin_user_access_token = create_api_access_token(
         store_seller_admin_user,
@@ -347,47 +374,230 @@ async def init_objects() -> None:
 
     global unregistered_ecl_user_access_token
     unregistered_ecl_user = await create_user_with_groups(
-        groups=[GroupType.student],
+        groups=[],
     )
     unregistered_ecl_user_access_token = create_api_access_token(unregistered_ecl_user)
 
 
-async def test_create_store(client: TestClient):
+async def test_get_structures(client: TestClient):
+    response = client.get(
+        "/myeclpay/structures",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+    )
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+
+
+async def test_create_structure(client: TestClient):
     response = client.post(
-        "/myeclpay/stores",
-        headers={"Authorization": f"Bearer {group_payment_user_token}"},
+        "/myeclpay/structures",
+        headers={"Authorization": f"Bearer {admin_user_token}"},
         json={
-            "name": "test_create_store Test Store",
-            "membership": AvailableAssociationMembership.aeecl,
+            "name": "Test Structure USEECL",
+            "membership": AvailableAssociationMembership.useecl,
+            "manager_user_id": structure_manager_user.id,
         },
     )
     assert response.status_code == 201
     assert response.json()["id"] is not None
 
 
-async def test_get_stores_not_admin(client: TestClient):
-    response = client.get(
-        "/myeclpay/stores",
+async def test_patch_structure_as_lambda(client: TestClient):
+    response = client.patch(
+        f"/myeclpay/structures/{structure.id}",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+        json={
+            "name": "Test Structure Updated",
+        },
+    )
+    assert response.status_code == 403
+
+
+async def test_patch_structure_as_admin(client: TestClient):
+    response = client.patch(
+        f"/myeclpay/structures/{structure.id}",
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+        json={
+            "name": "Test Structure Updated",
+        },
+    )
+    assert response.status_code == 204
+
+
+async def test_delete_structure_as_lambda(client: TestClient):
+    response = client.delete(
+        f"/myeclpay/structures/{structure.id}",
         headers={"Authorization": f"Bearer {ecl_user_access_token}"},
     )
     assert response.status_code == 403
 
 
-async def test_get_stores(client: TestClient):
+async def test_delete_structure_as_admin_with_stores(client: TestClient):
+    response = client.delete(
+        f"/myeclpay/structures/{structure.id}",
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Structure has stores"
+
+
+async def test_delete_structure_as_admin(client: TestClient):
+    new_structure = models_myeclpay.Structure(
+        id=uuid4(),
+        name="Test Structure 2",
+        membership=AvailableAssociationMembership.aeecl,
+        manager_user_id=structure_manager_user.id,
+    )
+    await add_object_to_db(new_structure)
+    response = client.delete(
+        f"/myeclpay/structures/{new_structure.id}",
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+    )
+    assert response.status_code == 204
+
+
+async def test_transfer_structure_manager_as_admin(client: TestClient):
+    response = client.post(
+        f"/myeclpay/structures/{structure.id}/init-manager-transfer",
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+        json={
+            "new_manager_user_id": ecl_user2.id,
+        },
+    )
+    assert response.status_code == 403
+    assert response.json()["detail"] == "User is not the manager for this structure"
+
+
+async def test_transfer_structure_manager_with_wrong_token(client: TestClient):
+    tranfert = models_myeclpay.StructureManagerTransfert(
+        structure_id=structure.id,
+        user_id=ecl_user2.id,
+        confirmation_token="RANDOM_TOKEN",
+        valid_until=datetime.now(UTC),
+    )
+    await add_object_to_db(tranfert)
+
     response = client.get(
-        "/myeclpay/stores",
-        headers={"Authorization": f"Bearer {group_payment_user_token}"},
+        "/myeclpay/structures/confirm-manager-transfer",
+        params={"token": "WRONG_TOKEN"},
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Request does not exist"
+
+    response = client.get(
+        "/myeclpay/structures/confirm-manager-transfer",
+        params={"token": "RANDOM_TOKEN"},
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Request has expired"
+
+
+async def test_transfer_structure_manager_as_manager(
+    client: TestClient,
+    mocker: MockerFixture,
+):
+    new_structure = models_myeclpay.Structure(
+        id=uuid4(),
+        name="Test Structure 2",
+        membership=AvailableAssociationMembership.aeecl,
+        manager_user_id=structure_manager_user.id,
+    )
+    await add_object_to_db(new_structure)
+    new_wallet = models_myeclpay.Wallet(
+        id=uuid4(),
+        type=WalletType.STORE,
+        balance=5000,
+    )
+    await add_object_to_db(new_wallet)
+    new_store = models_myeclpay.Store(
+        id=uuid4(),
+        wallet_id=new_wallet.id,
+        name="Test Store Structure 2",
+        structure_id=new_structure.id,
+    )
+    await add_object_to_db(new_store)
+
+    await add_object_to_db(new_structure)
+    mocker.patch(
+        "app.core.users.endpoints_users.security.generate_token",
+        return_value=UNIQUE_TOKEN,
+    )
+    response = client.post(
+        f"/myeclpay/structures/{new_structure.id}/init-manager-transfer",
+        headers={"Authorization": f"Bearer {structure_manager_user_token}"},
+        json={
+            "new_manager_user_id": ecl_user2.id,
+        },
+    )
+    assert response.status_code == 201
+
+    response = client.get(
+        "/myeclpay/structures/confirm-manager-transfer",
+        params={"token": UNIQUE_TOKEN},
     )
     assert response.status_code == 200
+
+    stores = client.get(
+        "/myeclpay/users/me/stores",
+        headers={"Authorization": f"Bearer {ecl_user2_access_token}"},
+    )
+    stores_ids = [store["id"] for store in stores.json()]
+    assert str(new_store.id) in stores_ids
+
+
+async def test_create_store(client: TestClient):
+    response = client.post(
+        f"/myeclpay/structures/{structure.id}/stores",
+        headers={"Authorization": f"Bearer {structure_manager_user_token}"},
+        json={
+            "name": "test_create_store Test Store",
+        },
+    )
+    assert response.status_code == 201
+    assert response.json()["id"] is not None
+
+    stores = client.get(
+        "/myeclpay/users/me/stores",
+        headers={"Authorization": f"Bearer {structure_manager_user_token}"},
+    )
+    stores_ids = [store["id"] for store in stores.json()]
+    assert response.json()["id"] in stores_ids
+
+
+async def test_get_stores_as_lambda(client: TestClient):
+    response = client.get(
+        "/myeclpay/users/me/stores",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+    )
+    assert response.status_code == 200
+    assert len(response.json()) == 0
+
+
+async def test_get_stores_as_seller(client: TestClient):
+    response = client.get(
+        "/myeclpay/users/me/stores",
+        headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
+    )
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+
+
+async def test_get_stores_as_manager(client: TestClient):
+    response = client.get(
+        "/myeclpay/users/me/stores",
+        headers={"Authorization": f"Bearer {structure_manager_user_token}"},
+    )
+    assert response.status_code == 200
+    assert len(response.json()) > 1
 
 
 async def test_create_store_admin(client: TestClient):
     user = await create_user_with_groups(
-        groups=[GroupType.student],
+        groups=[],
     )
     response = client.post(
         f"/myeclpay/stores/{store.id}/admins",
-        headers={"Authorization": f"Bearer {group_payment_user_token}"},
+        headers={"Authorization": f"Bearer {structure_manager_user_token}"},
         json={
             "user_id": user.id,
         },
@@ -398,7 +608,7 @@ async def test_create_store_admin(client: TestClient):
 async def test_get_store_admins(client: TestClient):
     response = client.get(
         f"/myeclpay/stores/{store.id}/admins",
-        headers={"Authorization": f"Bearer {group_payment_user_token}"},
+        headers={"Authorization": f"Bearer {structure_manager_user_token}"},
     )
     assert response.status_code == 200
 
@@ -415,7 +625,7 @@ async def test_get_store_admins(client: TestClient):
 async def test_delete_store_admin_seller_does_not_exist(client: TestClient):
     response = client.delete(
         f"/myeclpay/stores/{store.id}/admins/{uuid4()}",
-        headers={"Authorization": f"Bearer {group_payment_user_token}"},
+        headers={"Authorization": f"Bearer {structure_manager_user_token}"},
     )
     assert response.status_code == 404
     assert response.json()["detail"] == "Seller does not exist"
@@ -423,7 +633,7 @@ async def test_delete_store_admin_seller_does_not_exist(client: TestClient):
 
 async def test_delete_store_admin_seller_is_not_admin(client: TestClient):
     user = await create_user_with_groups(
-        groups=[GroupType.student],
+        groups=[],
     )
     seller = models_myeclpay.Seller(
         user_id=user.id,
@@ -438,7 +648,7 @@ async def test_delete_store_admin_seller_is_not_admin(client: TestClient):
 
     response = client.delete(
         f"/myeclpay/stores/{store.id}/admins/{user.id}",
-        headers={"Authorization": f"Bearer {group_payment_user_token}"},
+        headers={"Authorization": f"Bearer {structure_manager_user_token}"},
     )
     assert response.status_code == 400
     assert response.json()["detail"] == "Seller is not a store admin"
@@ -446,7 +656,7 @@ async def test_delete_store_admin_seller_is_not_admin(client: TestClient):
 
 async def test_delete_store_admin_seller(client: TestClient):
     user = await create_user_with_groups(
-        groups=[GroupType.student],
+        groups=[],
     )
     seller = models_myeclpay.Seller(
         user_id=user.id,
@@ -461,13 +671,13 @@ async def test_delete_store_admin_seller(client: TestClient):
 
     response = client.delete(
         f"/myeclpay/stores/{store.id}/admins/{user.id}",
-        headers={"Authorization": f"Bearer {group_payment_user_token}"},
+        headers={"Authorization": f"Bearer {structure_manager_user_token}"},
     )
     assert response.status_code == 204
 
     response = client.delete(
         f"/myeclpay/stores/{store.id}/admins/{user.id}",
-        headers={"Authorization": f"Bearer {group_payment_user_token}"},
+        headers={"Authorization": f"Bearer {structure_manager_user_token}"},
     )
     assert response.status_code == 404
     assert response.json()["detail"] == "Seller does not exist"
@@ -477,7 +687,7 @@ async def test_update_store_non_store_admin(client: TestClient):
     response = client.patch(
         f"/myeclpay/stores/{store.id}",
         headers={
-            "Authorization": f"Bearer {store_seller_no_permission_user_access_token}",
+            "Authorization": f"Bearer {store_seller_admin_user_access_token}",
         },
         json={
             "name": "new name",
@@ -485,18 +695,28 @@ async def test_update_store_non_store_admin(client: TestClient):
         },
     )
     assert response.status_code == 403
-    assert (
-        response.json()["detail"] == "User is not a store admin seller for this store"
-    )
+    assert response.json()["detail"] == "User is not the manager for this structure"
 
 
 async def test_update_store(client: TestClient):
+    new_wallet = models_myeclpay.Wallet(
+        id=uuid4(),
+        type=WalletType.STORE,
+        balance=5000,
+    )
+    await add_object_to_db(new_wallet)
+    new_store = models_myeclpay.Store(
+        id=uuid4(),
+        wallet_id=new_wallet.id,
+        name="Test Store 2",
+        structure_id=structure.id,
+    )
+    await add_object_to_db(new_store)
     response = client.patch(
-        f"/myeclpay/stores/{store.id}",
-        headers={"Authorization": f"Bearer {store_seller_admin_user_access_token}"},
+        f"/myeclpay/stores/{new_store.id}",
+        headers={"Authorization": f"Bearer {structure_manager_user_token}"},
         json={
-            "name": "Test Store",
-            "membership": AvailableAssociationMembership.aeecl,
+            "name": "Test Store 2 Updated",
         },
     )
     assert response.status_code == 204
@@ -534,7 +754,7 @@ async def test_get_cgu(client: TestClient):
 
 async def test_register_new_user(client: TestClient):
     user_to_register = await create_user_with_groups(
-        groups=[GroupType.student],
+        groups=[],
     )
     user_to_register_token = create_api_access_token(user_to_register)
 
@@ -574,7 +794,7 @@ async def test_sign_cgu_for_unregistered_user(client: TestClient):
 
 async def test_sign_cgu(client: TestClient):
     unregistered_user = await create_user_with_groups(
-        groups=[GroupType.student],
+        groups=[],
     )
     unregistered_user_token = create_api_access_token(unregistered_user)
 
@@ -1223,7 +1443,7 @@ def test_store_scan_store_from_store_wallet(client: TestClient):
 
 async def test_store_scan_store_from_wallet_with_old_cgu_version(client: TestClient):
     ecl_user = await create_user_with_groups(
-        groups=[GroupType.student],
+        groups=[],
     )
 
     ecl_user_wallet = models_myeclpay.Wallet(
