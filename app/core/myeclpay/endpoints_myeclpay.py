@@ -582,9 +582,6 @@ async def delete_store_admin_seller(
     await db.commit()
 
 
-# Store admin #
-
-
 @router.patch(
     "/myeclpay/stores/{store_id}",
     status_code=204,
