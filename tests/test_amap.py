@@ -1,6 +1,7 @@
 import uuid
 from datetime import UTC, datetime
 
+import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
@@ -8,6 +9,7 @@ from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from app.modules.amap import models_amap
 from app.modules.amap.types_amap import AmapSlotType, DeliveryStatusType
+from app.types.exceptions import RedisConnectionError
 from tests.commons import (
     add_object_to_db,
     change_redis_client_status,
@@ -264,6 +266,7 @@ def test_make_delivery_orderable(client: TestClient) -> None:
     assert response.status_code == 204
 
 
+@pytest.mark.xfail(raises=RedisConnectionError)
 def test_add_order_to_delivery(client: TestClient) -> None:
     # Enable Redis client for locker
     change_redis_client_status(activated=True)
@@ -289,6 +292,7 @@ def test_add_order_to_delivery(client: TestClient) -> None:
     assert response.status_code == 201
 
 
+@pytest.mark.xfail(raises=RedisConnectionError)
 def test_edit_order(client: TestClient) -> None:
     # Enable Redis client for locker
     change_redis_client_status(activated=True)
@@ -315,6 +319,7 @@ def test_edit_order(client: TestClient) -> None:
     assert response.status_code == 204
 
 
+@pytest.mark.xfail(raises=RedisConnectionError)
 def test_remove_order(client: TestClient) -> None:
     # Enable Redis client for locker
     change_redis_client_status(activated=True)
@@ -332,6 +337,7 @@ def test_remove_order(client: TestClient) -> None:
     assert response.status_code == 204
 
 
+@pytest.mark.xfail(raises=RedisConnectionError)
 def test_remove_order_by_admin(client: TestClient) -> None:
     # Enable Redis client for locker
     change_redis_client_status(activated=True)

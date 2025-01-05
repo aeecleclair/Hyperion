@@ -78,14 +78,16 @@ jobs:
         with:
           path: .pytest_cache
           key: pytest_cache-${{ github.head_ref }}
-      
+
+      # We run the test suite with --runxfail to ensure xfail results will be reported as failures
+
       - name: Run migration unit tests with SQLite
-        run: python -m pytest tests/test_migrations.py
+        run: python -m pytest tests/test_migrations.py --runxfail
 
       - name: Run unit tests with Postgresql
-        run: python -m pytest --cov
+        run: python -m pytest --cov  --runxfail
         env:
-          SQLITE_DB: ""
+          SQLITE_DB: "test.db"
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v4
