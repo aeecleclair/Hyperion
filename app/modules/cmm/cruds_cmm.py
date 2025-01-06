@@ -139,8 +139,16 @@ async def get_meme_by_id(
 ) -> models_cmm.Meme | None:
     result = await db.execute(
         select(models_cmm.Meme)
-        .options(selectinload("*"))
-        .where(models_cmm.Meme.id == meme_id),
+        .options(
+            selectinload(
+                models_cmm.Meme.votes.and_(
+                    models_cmm.Vote.user_id == models_cmm.Meme.user_id,
+                ),
+            ).load_only(models_cmm.Vote.positive),
+            selectinload(models_cmm.Meme.user),
+        )
+        .execution_options(populate_existing=True)
+        .where(models_cmm.Meme.id == meme_id)
     )
     return result.unique().scalars().first()
 
