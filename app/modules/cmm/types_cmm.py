@@ -12,9 +12,3 @@ class MemeSort(str, Enum):
     trending = "trending"
     newest = "newest"
     oldest = "oldest"
-
-
-class VoteValue(Enum):
-    down = False
-    up = True
-    neutral = None

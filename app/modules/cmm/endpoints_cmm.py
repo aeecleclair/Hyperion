@@ -1,4 +1,3 @@
-from collections.abc import Sequence
 import uuid
 from datetime import UTC, datetime
 
@@ -38,24 +37,6 @@ async def verify_ban_status(
     user_current_ban = await cruds_cmm.get_user_current_ban(db=db, user_id=user.id)
     if user_current_ban is not None:
         raise HTTPException(status_code=403, detail="You are currently banned")
-
-
-async def compute_full_meme_page(
-    meme_page: Sequence[models_cmm.Meme],
-) -> list[schemas_cmm.ShownMeme]:
-    full_meme_page = [
-        schemas_cmm.ShownMeme(
-            user=meme.user,
-            creation_time=meme.creation_time,
-            vote_score=meme.vote_score,
-            status=meme.status,
-            my_vote=meme.votes[0].positive
-            if meme.votes
-            else types_cmm.VoteValue.neutral,
-        )
-        for meme in meme_page
-    ]
-    return full_meme_page
 
 
 @module.router.get(
@@ -132,16 +113,11 @@ async def get_meme_by_id(
     """
     Get a meme caracteristics using its id
     """
-    meme = await cruds_cmm.get_meme_by_id(db=db, meme_id=meme_id)
-    if meme is None:
+    shown_meme = await cruds_cmm.get_meme_by_id(db=db, meme_id=meme_id)
+    if shown_meme is None:
         raise HTTPException(status_code=204, detail="The meme does not exist")
 
-    my_vote = await cruds_cmm.get_vote(db=db, meme_id=meme.id, user_id=user.id)
-    full_meme = schemas_cmm.ShownMeme(
-        **meme.model_dump(),
-        my_vote=types_cmm.VoteValue(None if my_vote is None else my_vote.positive),
-    )
-    return full_meme
+    return shown_meme
 
 
 @module.router.get(
@@ -163,7 +139,7 @@ async def get_meme_image_by_id(
 
     # TODO: Change default asset
     return get_file_from_data(
-        default_asset="assets/pdf/default_ph.pdf",
+        default_asset="assets/images/default_meme.png",
         directory="memes",
         filename=str(meme_id),
     )
@@ -180,7 +156,7 @@ async def delete_meme_by_id(
 ):
     """
     Remove a meme from db
-    Must author of meme if meme is not banned or admin
+    Must be author of meme if meme is not banned or admin
     """
     meme = await cruds_cmm.get_meme_by_id(db=db, meme_id=meme_id)
     if not meme:
