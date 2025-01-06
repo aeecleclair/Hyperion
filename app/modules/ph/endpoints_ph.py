@@ -13,12 +13,14 @@ from app.dependencies import (
     get_db,
     get_notification_tool,
     get_request_id,
+    get_scheduler,
     is_user_a_member,
     is_user_in,
 )
 from app.modules.ph import cruds_ph, models_ph, schemas_ph
 from app.types.content_type import ContentType
 from app.types.module import Module
+from app.types.scheduler import Scheduler
 from app.utils.communication.notifications import NotificationTool
 from app.utils.tools import (
     delete_file_from_data,
@@ -105,6 +107,7 @@ async def create_paper(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_in(GroupType.ph)),
     notification_tool: NotificationTool = Depends(get_notification_tool),
+    scheduler: Scheduler = Depends(get_scheduler),
 ):
     """Create a new paper."""
 
@@ -124,21 +127,25 @@ async def create_paper(
         # We only want to send a notification if the paper was released less than a month ago.
         if paper_db.release_date >= now.date() - timedelta(days=30):
             message = Message(
-                context=f"ph-{paper_db.id}",
-                is_visible=True,
                 title=f"📗 PH - {paper_db.name}",
                 content="Un nouveau journal est disponible! 🎉",
-                delivery_datetime=datetime.combine(
-                    paper_db.release_date,
-                    time(hour=8, tzinfo=UTC),
-                ),
-                # The notification will expire in 10 days
-                expire_on=now + timedelta(days=10),
+                action_module="ph",
             )
-            await notification_tool.send_notification_to_topic(
-                custom_topic=CustomTopic(topic=Topic.ph),
-                message=message,
-            )
+            if paper_db.release_date == now.date():
+                await notification_tool.send_notification_to_topic(
+                    custom_topic=CustomTopic(topic=Topic.ph),
+                    message=message,
+                )
+            else:
+                delivery_time = time(11, 00, 00, tzinfo=UTC)
+                release_date = datetime.combine(paper_db.release_date, delivery_time)
+                await notification_tool.send_notification_to_topic(
+                    custom_topic=CustomTopic(topic=Topic.ph),
+                    message=message,
+                    scheduler=scheduler,
+                    defer_date=release_date,
+                    job_id=f"ph_{paper_db.id}",
+                )
         return await cruds_ph.create_paper(paper=paper_db, db=db)
 
     except ValueError as error:
@@ -202,7 +209,7 @@ async def get_cover(
         )
 
     return get_file_from_data(
-        default_asset="assets/images/default_cover.jpg",
+        default_asset="assets/images/default_cover.jpeg",
         directory="ph/cover",
         filename=str(paper_id),
     )

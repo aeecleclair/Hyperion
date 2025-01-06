@@ -27,15 +27,13 @@ from app.core.config import Settings, construct_prod_settings
 from app.core.groups.groups_type import AccountType, GroupType, get_ecl_account_types
 from app.core.payment.payment_tool import PaymentTool
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
+from app.types.scheduler import OfflineScheduler, Scheduler
 from app.types.scopes_type import ScopeType
 from app.types.websocket import WebsocketConnectionManager
 from app.utils.auth import auth_utils
 from app.utils.communication.notifications import NotificationManager, NotificationTool
 from app.utils.redis import connect
-from app.utils.tools import (
-    is_user_external,
-    is_user_member_of_an_allowed_group,
-)
+from app.utils.tools import is_user_external, is_user_member_of_an_allowed_group
 
 # We could maybe use hyperion.security
 hyperion_access_logger = logging.getLogger("hyperion.access")
@@ -45,6 +43,8 @@ redis_client: redis.Redis | bool | None = (
     None  # Create a global variable for the redis client, so that it can be instancied in the startup event
 )
 # Is None if the redis client is not instantiated, is False if the redis client is instancied but not connected, is a redis.Redis object if the redis client is connected
+
+scheduler: Scheduler | None = None
 
 websocket_connection_manager: WebsocketConnectionManager | None = None
 
@@ -164,6 +164,13 @@ def get_redis_client(
     return redis_client
 
 
+def get_scheduler(settings: Settings = Depends(get_settings)) -> Scheduler:
+    global scheduler
+    if scheduler is None:
+        scheduler = Scheduler() if settings.REDIS_HOST != "" else OfflineScheduler()
+    return scheduler
+
+
 def get_websocket_connection_manager(
     settings: Settings = Depends(get_settings),
 ):
@@ -196,6 +203,7 @@ def get_notification_tool(
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     notification_manager: NotificationManager = Depends(get_notification_manager),
+    scheduler: Scheduler = Depends(get_scheduler),
 ) -> NotificationTool:
     """
     Dependency that returns a notification tool, allowing to send push notification as a background tasks.

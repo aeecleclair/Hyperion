@@ -28,7 +28,9 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
     response_model=schemas_core.CoreInformation,
     status_code=200,
 )
-async def read_information(settings: Settings = Depends(get_settings)):
+async def read_information(
+    settings: Settings = Depends(get_settings),
+):
     """
     Return information about Hyperion. This endpoint can be used to check if the API is up.
     """
