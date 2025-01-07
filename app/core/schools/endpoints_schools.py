@@ -4,7 +4,6 @@ File defining the API itself, using fastAPI and schemas, and calling the cruds f
 School management is part of the core of Hyperion. These endpoints allow managing schools.
 """
 
-import logging
 import re
 import uuid
 
@@ -23,8 +22,6 @@ from app.dependencies import (
 )
 
 router = APIRouter(tags=["Schools"])
-
-hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 @router.get(
@@ -136,7 +133,6 @@ async def update_school(
 
     if not school:
         raise HTTPException(status_code=404, detail="School not found")
-
     # If the request ask to update the school name, we need to check it is available
     if school_update.name and school_update.name != school.name:
         if (
@@ -155,12 +151,16 @@ async def update_school(
         school_id=school_id,
         school_update=school_update,
     )
-
     if (
         school_update.email_regex is not None
         and school_update.email_regex != school.email_regex
     ):
         await cruds_users.remove_users_from_school(db, school_id=school_id)
+        try:
+            await db.commit()
+        except IntegrityError:
+            await db.rollback()
+            raise
         users = await cruds_users.get_users(
             db,
             schools_ids=[SchoolType.no_school.value],
@@ -175,11 +175,11 @@ async def update_school(
                         account_type=AccountType.other_school_student,
                     ),
                 )
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
+        try:
+            await db.commit()
+        except IntegrityError:
+            await db.rollback()
+            raise
 
 
 @router.delete(

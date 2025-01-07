@@ -15,6 +15,7 @@ from tests.commons import (
 
 admin_user: models_core.CoreUser
 ens_user: models_core.CoreUser
+fake_ens_user: models_core.CoreUser
 new_school_user: models_core.CoreUser
 
 UNIQUE_TOKEN = "my_unique_token"
@@ -24,12 +25,12 @@ id_test_ens = UUID("4d133de7-24c4-4dbc-be73-4705a2ddd315")
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
-    global admin_user, ens_user, new_school_user
+    global admin_user, ens_user, fake_ens_user, new_school_user
 
     ens = models_core.CoreSchool(
         id=id_test_ens,
         name="ENS",
-        email_regex=r"^.*@ens.fr$",
+        email_regex=r"^.*@.*ens.fr$",
     )
     await add_object_to_db(ens)
 
@@ -39,6 +40,12 @@ async def init_objects() -> None:
         [],
         school_id=id_test_ens,
         email="test@ens.fr",
+        account_type=AccountType.other_school_student,
+    )
+    fake_ens_user = await create_user_with_groups(
+        [],
+        school_id=id_test_ens,
+        email="test@fakeens.fr",
         account_type=AccountType.other_school_student,
     )
 
@@ -123,7 +130,7 @@ def test_update_school(client: TestClient) -> None:
 
     response = client.patch(
         f"/schools/{id_test_ens}",
-        json={"name": "school ENS", "email_regex": r"^.*@.*ens.fr$"},
+        json={"name": "school ENS", "email_regex": r"^.*@ens.fr$"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 204
@@ -134,6 +141,20 @@ def test_update_school(client: TestClient) -> None:
     )
     data = response.json()
     assert data["name"] == "school ENS"
+
+    response = client.get(
+        f"/users/{ens_user.id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    data = response.json()
+    assert data["school_id"] == str(id_test_ens)
+
+    response = client.get(
+        f"/users/{fake_ens_user.id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    data = response.json()
+    assert data["school_id"] == str(SchoolType.no_school.value)
 
 
 def test_create_user_corresponding_to_school(
