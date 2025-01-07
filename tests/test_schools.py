@@ -1,3 +1,5 @@
+from uuid import UUID
+
 import pytest_asyncio
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
@@ -17,7 +19,7 @@ new_school_user: models_core.CoreUser
 
 UNIQUE_TOKEN = "my_unique_token"
 
-id_test_ens = "4d133de7-24c4-4dbc-be73-4705a2ddd315"
+id_test_ens = UUID("4d133de7-24c4-4dbc-be73-4705a2ddd315")
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
@@ -177,7 +179,7 @@ def test_create_user_corresponding_to_school(
     assert response.status_code == 201
 
     users = client.get(
-        "/users/",
+        "/users",
         headers={"Authorization": f"Bearer {token}"},
     )
     user = next(
@@ -225,4 +227,4 @@ def test_delete_school(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
-    assert response.json()["school_id"] == SchoolType.no_school
+    assert response.json()["school_id"] == str(SchoolType.no_school.value)

@@ -4,6 +4,7 @@ File defining the API itself, using fastAPI and schemas, and calling the cruds f
 School management is part of the core of Hyperion. These endpoints allow managing schools.
 """
 
+import logging
 import re
 import uuid
 
@@ -22,6 +23,8 @@ from app.dependencies import (
 )
 
 router = APIRouter(tags=["Schools"])
+
+hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 @router.get(
@@ -94,7 +97,7 @@ async def create_school(
         await cruds_schools.create_school(school=db_school, db=db)
         users = await cruds_users.get_users(
             db=db,
-            schools_ids=[SchoolType.no_school],
+            schools_ids=[SchoolType.no_school.value],
         )
         for db_user in users:
             if re.match(db_school.email_regex, db_user.email):
@@ -158,7 +161,10 @@ async def update_school(
         and school_update.email_regex != school.email_regex
     ):
         await cruds_users.remove_users_from_school(db, school_id=school_id)
-        users = await cruds_users.get_users(db, schools_ids=[SchoolType.no_school])
+        users = await cruds_users.get_users(
+            db,
+            schools_ids=[SchoolType.no_school.value],
+        )
         for db_user in users:
             if re.match(school_update.email_regex, db_user.email):
                 await cruds_users.update_user(
@@ -194,7 +200,7 @@ async def delete_school(
     **This endpoint is only usable by administrators**
     """
 
-    if school_id in (item.value for item in SchoolType):
+    if school_id in (SchoolType.list()):
         raise HTTPException(
             status_code=400,
             detail="SchoolTypes schools can not be deleted",
