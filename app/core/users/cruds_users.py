@@ -1,6 +1,7 @@
 """File defining the functions called by the endpoints, making queries to the table using the models"""
 
 from collections.abc import Sequence
+from uuid import UUID
 
 from sqlalchemy import ForeignKey, and_, delete, not_, or_, select, update
 from sqlalchemy.exc import IntegrityError
@@ -294,7 +295,7 @@ async def update_user_password_by_id(
 
 async def remove_users_from_school(
     db: AsyncSession,
-    school_id: str,
+    school_id: UUID,
 ):
     await db.execute(
         update(models_core.CoreUser)

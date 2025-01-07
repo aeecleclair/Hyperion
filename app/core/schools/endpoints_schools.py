@@ -46,9 +46,8 @@ async def read_schools(
     status_code=200,
 )
 async def read_school(
-    school_id: str,
+    school_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: schemas_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Return school with id from database as a dictionary.
@@ -88,7 +87,7 @@ async def create_school(
 
     try:
         db_school = models_core.CoreSchool(
-            id=str(uuid.uuid4()),
+            id=uuid.uuid4(),
             name=school.name,
             email_regex=school.email_regex,
         )
@@ -120,7 +119,7 @@ async def create_school(
     status_code=204,
 )
 async def update_school(
-    school_id: str,
+    school_id: uuid.UUID,
     school_update: schemas_core.CoreSchoolUpdate,
     db: AsyncSession = Depends(get_db),
     user: schemas_core.CoreUser = Depends(is_user_in(GroupType.admin)),
@@ -182,7 +181,7 @@ async def update_school(
     status_code=204,
 )
 async def delete_school(
-    school_id: str,
+    school_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     user: schemas_core.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):

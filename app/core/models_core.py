@@ -127,7 +127,7 @@ class CoreGroup(Base):
 class CoreSchool(Base):
     __tablename__ = "core_school"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, index=True)
+    id: Mapped[PrimaryKey]
     name: Mapped[str] = mapped_column(String, index=True, nullable=False, unique=True)
     email_regex: Mapped[str] = mapped_column(String, nullable=False)
 

@@ -1,6 +1,7 @@
 """Common schemas file for endpoint /users et /groups because it would cause circular import"""
 
 from datetime import date, datetime
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.functional_validators import field_validator
@@ -45,7 +46,7 @@ class CoreSchoolBase(BaseModel):
 
 
 class CoreSchool(CoreSchoolBase):
-    id: str
+    id: UUID
 
 
 class CoreSchoolUpdate(BaseModel):
