@@ -1,4 +1,5 @@
 import re
+from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,7 +15,7 @@ ECL_FORMER_STUDENT_REGEX = r"^[\w\-.]*@centraliens-lyon\.net$"
 async def get_account_type_and_school_id_from_email(
     email: str,
     db: AsyncSession,
-) -> tuple[AccountType, str]:
+) -> tuple[AccountType, UUID]:
     """Return the account type from the email"""
     if re.match(ECL_STAFF_REGEX, email):
         return AccountType.staff, SchoolType.centrale_lyon.value
@@ -23,11 +24,8 @@ async def get_account_type_and_school_id_from_email(
     if re.match(ECL_FORMER_STUDENT_REGEX, email):
         return AccountType.former_student, SchoolType.centrale_lyon.value
     schools = await cruds_schools.get_schools(db)
-    schools = [
-        school
-        for school in schools
-        if school.id not in (SchoolType.centrale_lyon, SchoolType.no_school)
-    ]
+
+    schools = [school for school in schools if school.id not in SchoolType.list()]
     school = next(
         (school for school in schools if re.match(school.email_regex, email)),
         None,

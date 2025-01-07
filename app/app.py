@@ -199,11 +199,11 @@ def initialize_schools(
     hyperion_error_logger.info("Startup: Adding new groups to the database")
     with Session(sync_engine) as db:
         for school in SchoolType:
-            exists = initialization.get_school_by_id_sync(school_id=school, db=db)
+            exists = initialization.get_school_by_id_sync(school_id=school.value, db=db)
             # We don't want to recreate the groups if they already exist
             if not exists:
                 db_school = models_core.CoreSchool(
-                    id=school,
+                    id=school.value,
                     name=school.name,
                     email_regex=".*",
                 )

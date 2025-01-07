@@ -364,23 +364,7 @@ async def activate_user(
             detail=f"The account with the email {unconfirmed_user.email} is already confirmed",
         )
 
-    # Check the account type
-
-    # For staff and student
-    # ^[\w\-.]*@((etu(-enise)?|enise)\.)?ec-lyon\.fr$
-    # For staff
-    # ^[\w\-.]*@(enise\.)?ec-lyon\.fr$
-    # For student
-    # ^[\w\-.]*@etu(-enise)?\.ec-lyon\.fr$
-
-    # For former students
-    # ^[\w\-.]*@centraliens-lyon\.net$
-
-    # All accepted emails
-    # ^[\w\-.]*@(((etu(-enise)?|enise)\.)?ec-lyon\.fr|centraliens-lyon\.net)$
-
-    # By default we mark the user as external
-    # but if it has an ECL email address, we will mark it as member
+    # Get the account type and school_id from the email
     account_type, school_id = await get_account_type_and_school_id_from_email(
         email=unconfirmed_user.email,
         db=db,

@@ -79,7 +79,7 @@ class CoreUserSimple(CoreUserBase):
 
     id: str
     account_type: AccountType
-    school_id: str
+    school_id: UUID
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -123,7 +123,7 @@ class CoreUserFusionRequest(BaseModel):
 
 class CoreUserUpdateAdmin(BaseModel):
     email: str | None = None
-    school_id: str | None = None
+    school_id: UUID | None = None
     account_type: AccountType | None = None
     name: str | None = None
     firstname: str | None = None

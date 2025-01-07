@@ -27,14 +27,14 @@ async def get_users(
     excluded_account_types: list[AccountType] | None = None,
     included_groups: list[str] | None = None,
     excluded_groups: list[str] | None = None,
-    schools_ids: list[str] | None = None,
+    schools_ids: list[UUID] | None = None,
 ) -> Sequence[models_core.CoreUser]:
     """
     Return all users from database.
 
     Parameters `excluded_account_types` and `excluded_groups` can be used to filter results.
     """
-    included_account_types = included_account_types or list(AccountType)
+    included_account_types = included_account_types or None
     excluded_account_types = excluded_account_types or []
     included_groups = included_groups or []
     excluded_groups = excluded_groups or []
@@ -48,12 +48,16 @@ async def get_users(
         )
         for group_id in included_groups
     ]
-    included_account_type_condition = or_(
-        False,
-        *[
-            models_core.CoreUser.account_type == account_type
-            for account_type in included_account_types
-        ],
+    included_account_type_condition = (
+        or_(
+            False,
+            *[
+                models_core.CoreUser.account_type == account_type
+                for account_type in included_account_types
+            ],
+        )
+        if included_account_types
+        else and_(True)
     )
     # We want, for each group that should not be included
     # check that the following condition is false :
@@ -303,7 +307,7 @@ async def remove_users_from_school(
             models_core.CoreUser.school_id == school_id,
         )
         .values(
-            school_id=SchoolType.no_school,
+            school_id=SchoolType.no_school.value,
             account_type=AccountType.external,
         ),
     )
