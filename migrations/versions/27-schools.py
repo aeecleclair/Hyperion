@@ -81,7 +81,7 @@ def upgrade() -> None:
     op.create_table(
         "core_school",
         sa.Column("id", sa.Uuid(), nullable=False, index=True),
-        sa.Column("name", sa.String(), nullable=False, index=True, unique=True),
+        sa.Column("name", sa.String(), nullable=False, unique=True),
         sa.Column("email_regex", sa.String(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
