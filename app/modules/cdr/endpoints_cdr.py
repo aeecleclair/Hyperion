@@ -309,6 +309,7 @@ async def update_cdr_user(
                         curriculum=schemas_cdr.CurriculumComplete(
                             **curriculum.__dict__,
                         ),
+                        school_id=user_db.school_id,
                         account_type=user_db.account_type,
                         name=user_db.name,
                         firstname=user_db.firstname,
@@ -2155,6 +2156,7 @@ async def create_curriculum_membership(
                 message=schemas_cdr.NewUserWSMessageModel(
                     data=schemas_cdr.CdrUser(
                         account_type=db_user.account_type,
+                        school_id=db_user.school_id,
                         curriculum=schemas_cdr.CurriculumComplete(
                             id=wanted_curriculum.id,
                             name=wanted_curriculum.name,
@@ -2234,6 +2236,7 @@ async def update_curriculum_membership(
                 message=schemas_cdr.UpdateUserWSMessageModel(
                     data=schemas_cdr.CdrUser(
                         account_type=db_user.account_type,
+                        school_id=db_user.school_id,
                         curriculum=schemas_cdr.CurriculumComplete(
                             id=curriculum.id,
                             name=curriculum.name,
@@ -2313,6 +2316,7 @@ async def delete_curriculum_membership(
                 message=schemas_cdr.UpdateUserWSMessageModel(
                     data=schemas_cdr.CdrUser(
                         account_type=db_user.account_type,
+                        school_id=db_user.school_id,
                         curriculum=None,
                         promo=db_user.promo,
                         email=db_user.email,
