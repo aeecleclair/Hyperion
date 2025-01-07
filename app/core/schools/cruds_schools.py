@@ -1,6 +1,7 @@
 """File defining the functions called by the endpoints, making queries to the table using the models"""
 
 from collections.abc import Sequence
+from uuid import UUID
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,7 +18,7 @@ async def get_schools(db: AsyncSession) -> Sequence[models_core.CoreSchool]:
 
 async def get_school_by_id(
     db: AsyncSession,
-    school_id: str,
+    school_id: UUID,
 ) -> models_core.CoreSchool | None:
     """Return school with id from database"""
     result = await db.execute(
@@ -48,7 +49,7 @@ async def create_school(
     db.add(school)
 
 
-async def delete_school(db: AsyncSession, school_id: str):
+async def delete_school(db: AsyncSession, school_id: UUID):
     """Delete a school from database by id"""
 
     await db.execute(
@@ -58,7 +59,7 @@ async def delete_school(db: AsyncSession, school_id: str):
 
 async def update_school(
     db: AsyncSession,
-    school_id: str,
+    school_id: UUID,
     school_update: schemas_core.CoreSchoolUpdate,
 ):
     await db.execute(
