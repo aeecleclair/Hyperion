@@ -19,12 +19,28 @@ async def get_schools(db: AsyncSession) -> Sequence[models_core.CoreSchool]:
 async def get_school_by_id(
     db: AsyncSession,
     school_id: UUID,
-) -> models_core.CoreSchool | None:
+) -> schemas_core.CoreSchool | None:
     """Return school with id from database"""
-    result = await db.execute(
-        select(models_core.CoreSchool).where(models_core.CoreSchool.id == school_id),
+    result = (
+        (
+            await db.execute(
+                select(models_core.CoreSchool).where(
+                    models_core.CoreSchool.id == school_id,
+                ),
+            )
+        )
+        .scalars()
+        .first()
     )
-    return result.scalars().first()
+    return (
+        schemas_core.CoreSchool(
+            name=result.name,
+            email_regex=result.email_regex,
+            id=result.id,
+        )
+        if result
+        else None
+    )
 
 
 async def get_school_by_name(
