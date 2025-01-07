@@ -8,6 +8,7 @@ from app.core.myeclpay.types_myeclpay import (
     HistoryType,
     TransactionStatus,
     TransactionType,
+    TransferType,
     WalletDeviceStatus,
     WalletType,
 )
@@ -162,3 +163,16 @@ class Transaction(BaseModel):
     total: int  # Stored in cents
     creation: datetime
     status: TransactionStatus
+
+
+class Transfer(BaseModel):
+    id: UUID
+    type: TransferType
+    transfer_identifier: str
+
+    # TODO remove if we only accept hello asso
+    approver_user_id: str | None
+
+    wallet_id: UUID
+    total: int  # Stored in cents
+    creation: datetime

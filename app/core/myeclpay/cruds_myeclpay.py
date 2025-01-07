@@ -469,14 +469,12 @@ async def get_transactions(
         schemas_myeclpay.Transaction(
             id=transaction.id,
             giver_wallet_id=transaction.giver_wallet_id,
-            giver_wallet_device_id=transaction.giver_wallet_device_id,
             receiver_wallet_id=transaction.receiver_wallet_id,
             transaction_type=transaction.transaction_type,
             seller_user_id=transaction.seller_user_id,
             total=transaction.total,
             creation=transaction.creation,
             status=transaction.status,
-            store_note=transaction.store_note,
         )
         for transaction in result.scalars().all()
     ]
@@ -500,6 +498,24 @@ async def get_transactions_by_wallet_id(
         ),
     )
     return result.scalars().all()
+
+
+async def get_transfers(
+    db: AsyncSession,
+) -> Sequence[schemas_myeclpay.Transfer]:
+    result = await db.execute(select(models_myeclpay.Transfer))
+    return [
+        schemas_myeclpay.Transfer(
+            id=transfer.id,
+            type=transfer.type,
+            transfer_identifier=transfer.transfer_identifier,
+            approver_user_id=transfer.approver_user_id,
+            wallet_id=transfer.wallet_id,
+            total=transfer.total,
+            creation=transfer.creation,
+        )
+        for transfer in result.scalars().all()
+    ]
 
 
 async def get_transfers_by_wallet_id(

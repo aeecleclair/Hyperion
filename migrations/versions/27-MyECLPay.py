@@ -139,7 +139,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column(
             "type",
-            sa.Enum(TransferType, name="transferype"),
+            sa.Enum(TransferType, name="transfertype"),
             nullable=False,
         ),
         sa.Column("transfer_identifier", sa.String(), nullable=False),
@@ -301,7 +301,7 @@ def downgrade() -> None:
     sa.Enum(WalletType, name="wallettype").drop(
         op.get_bind(),
     )
-    sa.Enum(TransferType, name="transferype").drop(
+    sa.Enum(TransferType, name="transfertype").drop(
         op.get_bind(),
     )
     sa.Enum(WalletDeviceStatus, name="walletdevicestatus").drop(
