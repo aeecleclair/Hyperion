@@ -1,5 +1,4 @@
 import logging
-import re
 import string
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -52,10 +51,6 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 hyperion_security_logger = logging.getLogger("hyperion.security")
 
 templates = Jinja2Templates(directory="assets/templates")
-
-ECL_STAFF_REGEX = r"^[\w\-.]*@(enise\.)?ec-lyon\.fr$"
-ECL_STUDENT_REGEX = r"^[\w\-.]*@((etu(-enise)?)|(ecl\d{2}))\.ec-lyon\.fr$"
-ECL_FORMER_STUDENT_REGEX = r"^[\w\-.]*@centraliens-lyon\.net$"
 
 
 @router.get(
@@ -580,15 +575,8 @@ async def migrate_mail(
     settings: Settings = Depends(get_settings),
 ):
     """
-    Due to a change in the email format, all student users need to migrate their email address.
     This endpoint will send a confirmation code to the user's new email address. He will need to use this code to confirm the change with `/users/confirm-mail-migration` endpoint.
     """
-
-    if not re.match(ECL_STUDENT_REGEX, mail_migration.new_email):
-        raise HTTPException(
-            status_code=400,
-            detail="The new email address must match the new ECL format for student users",
-        )
 
     existing_user = await cruds_users.get_user_by_email(
         db=db,
@@ -610,6 +598,17 @@ async def migrate_mail(
             )
         return
 
+    # We need to make sur the user will keep the same school if he is not a no_school user
+    _, new_school_id = await get_account_type_and_school_id_from_email(
+        email=mail_migration.new_email,
+        db=db,
+    )
+    if user.school_id is not SchoolType.no_school and user.school_id != new_school_id:
+        raise HTTPException(
+            status_code=400,
+            detail="New email address is not compatible with the current school",
+        )
+
     await create_and_send_email_migration(
         user_id=user.id,
         new_email=mail_migration.new_email,
@@ -629,8 +628,8 @@ async def migrate_mail_confirm(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Due to a change in the email format, all student users need to migrate their email address.
     This endpoint will updates the user new email address.
+    The user will need to use the confirmation code sent by the `/users/migrate-mail` endpoint.
     """
 
     migration_object = await cruds_users.get_email_migration_code_by_token(
@@ -671,12 +670,6 @@ async def migrate_mail_confirm(
         email=migration_object.new_email,
         db=db,
     )
-
-    if user.school_id is not SchoolType.no_school and user.school_id != new_school_id:
-        raise HTTPException(
-            status_code=400,
-            detail="User cannot change school",
-        )
     try:
         await cruds_users.update_user(
             db=db,

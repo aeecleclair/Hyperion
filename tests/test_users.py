@@ -245,7 +245,7 @@ def test_create_and_activate_user(
         headers={"Authorization": f"Bearer {token_admin_user}"},
     )
 
-    assert user_detail.json()["school_id"] == expected_school_id.value
+    assert user_detail.json()["school_id"] == str(expected_school_id.value)
 
 
 @pytest.mark.parametrize(
@@ -360,6 +360,18 @@ def test_update_user(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 204
+
+
+async def test_migrate_mail_with_school_change(client: TestClient) -> None:
+    token = create_api_access_token(student_user_with_old_email)
+
+    # Start the migration process
+    response = client.post(
+        "/users/migrate-mail",
+        json={"new_email": "fabristpp.eclair@gmail.com"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 400
 
 
 async def test_migrate_mail(mocker: MockerFixture, client: TestClient) -> None:
