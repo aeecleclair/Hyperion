@@ -125,6 +125,7 @@ class APIToolAuthClient(BaseAuthClient):
     """
 
     allowed_scopes: set[ScopeType | str] = {ScopeType.API}
+    allow_pkce_with_client_secret: bool = True
 
 
 class NextcloudAuthClient(BaseAuthClient):
