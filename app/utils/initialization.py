@@ -4,7 +4,7 @@ from pydantic import ValidationError
 from sqlalchemy import Connection, MetaData, delete, select
 from sqlalchemy.engine import Engine, create_engine
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session
 
 from app.core import models_core
 from app.core.config import Settings
@@ -87,10 +87,8 @@ def get_group_by_id_sync(group_id: str, db: Session) -> models_core.CoreGroup | 
     Return group with id from database
     """
     result = db.execute(
-        select(models_core.CoreGroup)
-        .where(models_core.CoreGroup.id == group_id)
-        .options(
-            selectinload(models_core.CoreGroup.members),
+        select(models_core.CoreGroup).where(
+            models_core.CoreGroup.id == group_id,
         ),  # needed to load the members from the relationship
     )
     return result.scalars().first()
@@ -138,6 +136,33 @@ def set_core_data_crud_sync(
         raise
     else:
         return core_data
+
+
+def get_school_by_id_sync(school_id: str, db: Session) -> models_core.CoreSchool | None:
+    """
+    Return group with id from database
+    """
+    result = db.execute(
+        select(models_core.CoreSchool).where(models_core.CoreSchool.id == school_id),
+    )
+    return result.scalars().first()
+
+
+def create_school_sync(
+    school: models_core.CoreSchool,
+    db: Session,
+) -> models_core.CoreSchool:
+    """
+    Create a new group in database and return it
+    """
+    db.add(school)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise
+    else:
+        return school
 
 
 def delete_core_data_crud_sync(schema: str, db: Session) -> None:

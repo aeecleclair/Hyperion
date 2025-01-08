@@ -20,7 +20,7 @@ from app.modules.booking import cruds_booking, models_booking, schemas_booking
 from app.modules.booking.types_booking import Decision
 from app.types.module import Module
 from app.utils.communication.notifications import NotificationTool
-from app.utils.tools import is_group_id_valid, is_user_member_of_an_allowed_group
+from app.utils.tools import is_group_id_valid, is_user_member_of_any_group
 
 module = Module(
     root="booking",
@@ -312,7 +312,7 @@ async def edit_booking(
 
     if not (
         (user.id == booking.applicant_id and booking.decision == Decision.pending)
-        or is_user_member_of_an_allowed_group(user, [booking.room.manager.group_id])
+        or is_user_member_of_any_group(user, [booking.room.manager.group_id])
     ):
         raise HTTPException(
             status_code=403,
@@ -350,7 +350,7 @@ async def confirm_booking(
         booking_id=booking_id,
     )
 
-    if is_user_member_of_an_allowed_group(user, [booking.room.manager.group_id]):
+    if is_user_member_of_any_group(user, [booking.room.manager.group_id]):
         await cruds_booking.confirm_booking(
             booking_id=booking_id,
             decision=decision,

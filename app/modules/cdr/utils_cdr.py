@@ -20,7 +20,7 @@ from app.modules.cdr.types_cdr import (
     PaymentType,
 )
 from app.utils.tools import (
-    is_user_member_of_an_allowed_group,
+    is_user_member_of_any_group,
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
@@ -81,7 +81,7 @@ async def is_user_in_a_seller_group(
             detail="Seller not found.",
         )
 
-    if is_user_member_of_an_allowed_group(
+    if is_user_member_of_any_group(
         user=user,
         allowed_groups=[str(seller.group_id), GroupType.admin_cdr],
     ):
