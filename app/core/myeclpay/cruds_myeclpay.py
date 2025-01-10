@@ -225,17 +225,41 @@ async def get_admin_sellers(
 
 
 async def get_seller(
-    seller_user_id: str,
+    user_id: str,
     store_id: UUID,
     db: AsyncSession,
 ) -> models_myeclpay.Seller | None:
     result = await db.execute(
         select(models_myeclpay.Seller).where(
-            models_myeclpay.Seller.user_id == seller_user_id,
+            models_myeclpay.Seller.user_id == user_id,
             models_myeclpay.Seller.store_id == store_id,
         ),
     )
     return result.scalars().first()
+
+
+async def get_sellers_by_store_id(
+    store_id: UUID,
+    db: AsyncSession,
+) -> Sequence[models_myeclpay.Seller]:
+    result = await db.execute(
+        select(models_myeclpay.Seller).where(
+            models_myeclpay.Seller.store_id == store_id,
+        ),
+    )
+    return result.scalars().all()
+
+
+async def get_sellers_by_user_id(
+    user_id: str,
+    db: AsyncSession,
+) -> Sequence[models_myeclpay.Seller]:
+    result = await db.execute(
+        select(models_myeclpay.Seller).where(
+            models_myeclpay.Seller.user_id == user_id,
+        ),
+    )
+    return result.scalars().all()
 
 
 async def update_seller(
@@ -528,32 +552,6 @@ async def get_transfers_by_wallet_id(
         ),
     )
     return result.scalars().all()
-
-
-async def get_all_user_sellers(
-    user_id: str,
-    db: AsyncSession,
-) -> Sequence[models_myeclpay.Seller]:
-    result = await db.execute(
-        select(models_myeclpay.Seller).where(
-            models_myeclpay.Seller.user_id == user_id,
-        ),
-    )
-    return result.scalars().all()
-
-
-async def get_seller_by_user_id_and_store_id(
-    store_id: UUID,
-    user_id: str,
-    db: AsyncSession,
-) -> models_myeclpay.Seller | None:
-    result = await db.execute(
-        select(models_myeclpay.Seller).where(
-            models_myeclpay.Seller.user_id == user_id,
-            models_myeclpay.Seller.store_id == store_id,
-        ),
-    )
-    return result.scalars().first()
 
 
 async def get_store(
