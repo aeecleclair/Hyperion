@@ -76,13 +76,33 @@ class Transaction(Base):
     )
 
 
+class Structure(Base):
+    __tablename__ = "myeclpay_structure"
+
+    id: Mapped[PrimaryKey]
+    name: Mapped[str]
+    membership: Mapped[AvailableAssociationMembership | None]
+    manager_user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"))
+
+
+class StructureManagerTransfert(Base):
+    __tablename__ = "myeclpay_structure_manager_transfer"
+
+    structure_id: Mapped[UUID] = mapped_column(
+        ForeignKey("myeclpay_structure.id"),
+        primary_key=True,
+    )
+    user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"))
+    confirmation_token: Mapped[str]
+    valid_until: Mapped[datetime]
+
+
 class Store(Base):
     __tablename__ = "myeclpay_store"
 
     id: Mapped[PrimaryKey]
     name: Mapped[str] = mapped_column(unique=True)
-
-    membership: Mapped[AvailableAssociationMembership]
+    structure_id: Mapped[UUID] = mapped_column(ForeignKey("myeclpay_structure.id"))
 
     wallet_id: Mapped[UUID] = mapped_column(
         ForeignKey("myeclpay_wallet.id"),
