@@ -22,12 +22,12 @@ from app.core.myeclpay.types_myeclpay import (
     WalletType,
 )
 from app.core.myeclpay.utils_myeclpay import (
-    CGU_CONTENT,
-    LATEST_CGU,
+    LATEST_TOS,
     MAX_TRANSACTION_TOTAL,
     QRCODE_EXPIRATION,
+    TOS_CONTENT,
     compute_signable_data,
-    is_user_latest_cgu_signed,
+    is_user_latest_tos_signed,
     verify_signature,
 )
 from app.core.notification.schemas_notification import Message
@@ -67,8 +67,6 @@ async def get_structures(
 ):
     """
     Get all structures.
-
-    **The user must be an admin to use this endpoint**
     """
     structures = await cruds_myeclpay.get_structures(
         db=db,
@@ -635,16 +633,16 @@ async def update_store(
 
 
 @router.get(
-    "/myeclpay/users/me/cgu",
+    "/myeclpay/users/me/tos",
     status_code=200,
-    response_model=schemas_myeclpay.CGUSignatureResponse,
+    response_model=schemas_myeclpay.TOSSignatureResponse,
 )
-async def get_cgu(
+async def get_tos(
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user()),
 ):
     """
-    Get the latest CGU version and the user signed CGU version.
+    Get the latest TOS version and the user signed TOS version.
 
     **The user must be authenticated to use this endpoint**
     """
@@ -659,10 +657,10 @@ async def get_cgu(
             detail="User is not registered for MyECL Pay",
         )
 
-    return schemas_myeclpay.CGUSignatureResponse(
-        accepted_cgu_version=existing_user_payment.accepted_cgu_version,
-        latest_cgu_version=LATEST_CGU,
-        cgu_content=CGU_CONTENT,
+    return schemas_myeclpay.TOSSignatureResponse(
+        accepted_tos_version=existing_user_payment.accepted_tos_version,
+        latest_tos_version=LATEST_TOS,
+        tos_content=TOS_CONTENT,
     )
 
 
@@ -675,9 +673,9 @@ async def register_user(
     user: CoreUser = Depends(is_user()),
 ):
     """
-    Sign MyECL Pay CGU for the given user.
+    Sign MyECL Pay TOS for the given user.
 
-    The user will need to accept the latest CGU version to be able to use MyECL Pay.
+    The user will need to accept the latest TOS version to be able to use MyECL Pay.
 
     **The user must be authenticated to use this endpoint**
     """
@@ -708,8 +706,8 @@ async def register_user(
     await cruds_myeclpay.create_user_payment(
         user_id=user.id,
         wallet_id=wallet_id,
-        accepted_cgu_signature=datetime.now(UTC),
-        accepted_cgu_version=0,
+        accepted_tos_signature=datetime.now(UTC),
+        accepted_tos_version=0,
         db=db,
     )
 
@@ -717,27 +715,27 @@ async def register_user(
 
 
 @router.post(
-    "/myeclpay/users/me/cgu",
+    "/myeclpay/users/me/tos",
     status_code=204,
 )
-async def sign_cgu(
-    signature: schemas_myeclpay.CGUSignature,
+async def sign_tos(
+    signature: schemas_myeclpay.TOSSignature,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user()),
     settings: Settings = Depends(get_settings),
 ):
     """
-    Sign MyECL Pay CGU for the given user.
+    Sign MyECL Pay TOS for the given user.
 
-    If the user is already registered in the MyECLPay system, this will update the CGU version.
+    If the user is already registered in the MyECLPay system, this will update the TOS version.
 
     **The user must be authenticated to use this endpoint**
     """
-    if signature.accepted_cgu_version != LATEST_CGU:
+    if signature.accepted_tos_version != LATEST_TOS:
         raise HTTPException(
             status_code=400,
-            detail=f"Only the latest CGU version {LATEST_CGU} is accepted",
+            detail=f"Only the latest TOS version {LATEST_TOS} is accepted",
         )
 
     # Check if user is already registered
@@ -754,8 +752,8 @@ async def sign_cgu(
     # Update existing user payment
     await cruds_myeclpay.update_user_payment(
         user_id=user.id,
-        accepted_cgu_signature=datetime.now(UTC),
-        accepted_cgu_version=signature.accepted_cgu_version,
+        accepted_tos_signature=datetime.now(UTC),
+        accepted_tos_version=signature.accepted_tos_version,
         db=db,
     )
 
@@ -773,7 +771,7 @@ async def sign_cgu(
         background_tasks.add_task(
             send_email,
             recipient=user.email,
-            subject="MyECL - you have signed CGU",
+            subject="MyECL - you have signed TOS",
             content=account_exists_content,
             settings=settings,
         )
@@ -798,7 +796,7 @@ async def get_user_devices(
         user_id=user.id,
         db=db,
     )
-    if user_payment is None or not is_user_latest_cgu_signed(user_payment):
+    if user_payment is None or not is_user_latest_tos_signed(user_payment):
         raise HTTPException(
             status_code=400,
             detail="User is not registered for MyECL Pay",
@@ -832,7 +830,7 @@ async def get_user_device(
         user_id=user.id,
         db=db,
     )
-    if user_payment is None or not is_user_latest_cgu_signed(user_payment):
+    if user_payment is None or not is_user_latest_tos_signed(user_payment):
         raise HTTPException(
             status_code=400,
             detail="User is not registered for MyECL Pay",
@@ -877,7 +875,7 @@ async def get_user_wallet(
         user_id=user.id,
         db=db,
     )
-    if user_payment is None or not is_user_latest_cgu_signed(user_payment):
+    if user_payment is None or not is_user_latest_tos_signed(user_payment):
         raise HTTPException(
             status_code=400,
             detail="User is not registered for MyECL Pay",
@@ -920,7 +918,7 @@ async def create_user_devices(
         user_id=user.id,
         db=db,
     )
-    if user_payment is None or not is_user_latest_cgu_signed(user_payment):
+    if user_payment is None or not is_user_latest_tos_signed(user_payment):
         raise HTTPException(
             status_code=400,
             detail="User is not registered for MyECL Pay",
@@ -1027,7 +1025,7 @@ async def revoke_user_devices(
         user_id=user.id,
         db=db,
     )
-    if user_payment is None or not is_user_latest_cgu_signed(user_payment):
+    if user_payment is None or not is_user_latest_tos_signed(user_payment):
         raise HTTPException(
             status_code=400,
             detail="User is not registered for MyECL Pay",
@@ -1083,7 +1081,7 @@ async def get_user_wallet_history(
             detail="User is not registered for MyECL Pay",
         )
 
-    is_user_latest_cgu_signed(user_payment)
+    is_user_latest_tos_signed(user_payment)
 
     history: list[schemas_myeclpay.History] = []
 
@@ -1307,12 +1305,12 @@ async def store_scan_qrcode(
         debited_wallet.user.id,
         db=db,
     )
-    if debited_user_payment is None or not is_user_latest_cgu_signed(
+    if debited_user_payment is None or not is_user_latest_tos_signed(
         debited_user_payment,
     ):
         raise HTTPException(
             status_code=400,
-            detail="Debited user has not signed the latest CGU",
+            detail="Debited user has not signed the latest TOS",
         )
 
     if debited_wallet.balance < qr_code_content.total:
