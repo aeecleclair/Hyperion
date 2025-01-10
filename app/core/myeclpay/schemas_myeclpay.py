@@ -73,14 +73,14 @@ class Seller(BaseModel):
     user: schemas_core.CoreUserSimple
 
 
-class CGUSignature(BaseModel):
-    accepted_cgu_version: int
+class TOSSignature(BaseModel):
+    accepted_tos_version: int
 
 
-class CGUSignatureResponse(BaseModel):
-    accepted_cgu_version: int
-    latest_cgu_version: int
-    cgu_content: str
+class TOSSignatureResponse(BaseModel):
+    accepted_tos_version: int
+    latest_tos_version: int
+    tos_content: str
 
 
 class History(BaseModel):

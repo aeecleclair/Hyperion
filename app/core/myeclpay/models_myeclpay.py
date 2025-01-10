@@ -173,8 +173,8 @@ class UserPayment(Base):
         ForeignKey("myeclpay_wallet.id"),
         unique=True,
     )
-    accepted_cgu_signature: Mapped[datetime]
-    accepted_cgu_version: Mapped[int]
+    accepted_tos_signature: Mapped[datetime]
+    accepted_tos_version: Mapped[int]
 
 
 class UsedQRCode(Base):

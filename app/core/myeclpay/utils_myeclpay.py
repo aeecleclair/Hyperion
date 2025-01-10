@@ -12,8 +12,8 @@ from app.core.myeclpay.schemas_myeclpay import (
 hyperion_security_logger = logging.getLogger("hyperion.security")
 
 
-LATEST_CGU = 1
-CGU_CONTENT = "CGU Content"
+LATEST_TOS = 1
+TOS_CONTENT = "TOS Content"
 MAX_TRANSACTION_TOTAL = 2000
 QRCODE_EXPIRATION = 5  # minutes
 
@@ -57,11 +57,11 @@ def verify_signature(
         return True
 
 
-def is_user_latest_cgu_signed(
+def is_user_latest_tos_signed(
     user_payment: UserPayment,
 ) -> bool:
     """
-    Check if the user has signed the latest CGU version.
+    Check if the user has signed the latest TOS version.
     """
 
-    return user_payment.accepted_cgu_version == LATEST_CGU
+    return user_payment.accepted_tos_version == LATEST_TOS
