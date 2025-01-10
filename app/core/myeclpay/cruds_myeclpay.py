@@ -392,31 +392,31 @@ async def increment_wallet_balance(
 async def create_user_payment(
     user_id: str,
     wallet_id: UUID,
-    accepted_cgu_signature: datetime,
-    accepted_cgu_version: int,
+    accepted_tos_signature: datetime,
+    accepted_tos_version: int,
     db: AsyncSession,
 ) -> None:
     user_payment = models_myeclpay.UserPayment(
         user_id=user_id,
         wallet_id=wallet_id,
-        accepted_cgu_signature=accepted_cgu_signature,
-        accepted_cgu_version=accepted_cgu_version,
+        accepted_tos_signature=accepted_tos_signature,
+        accepted_tos_version=accepted_tos_version,
     )
     db.add(user_payment)
 
 
 async def update_user_payment(
     user_id: str,
-    accepted_cgu_signature: datetime,
-    accepted_cgu_version: int,
+    accepted_tos_signature: datetime,
+    accepted_tos_version: int,
     db: AsyncSession,
 ) -> None:
     await db.execute(
         update(models_myeclpay.UserPayment)
         .where(models_myeclpay.UserPayment.user_id == user_id)
         .values(
-            accepted_cgu_signature=accepted_cgu_signature,
-            accepted_cgu_version=accepted_cgu_version,
+            accepted_tos_signature=accepted_tos_signature,
+            accepted_tos_version=accepted_tos_version,
         ),
     )
 
