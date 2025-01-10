@@ -261,7 +261,7 @@ async def update_structure_manager(
         structure_id=request.structure_id,
         db=db,
     )
-    sellers = await cruds_myeclpay.get_all_user_sellers(
+    sellers = await cruds_myeclpay.get_sellers_by_user_id(
         user_id=request.user_id,
         db=db,
     )
@@ -378,7 +378,7 @@ async def get_user_stores(
 
     **The user must be authenticated to use this endpoint**
     """
-    sellers = await cruds_myeclpay.get_all_user_sellers(
+    sellers = await cruds_myeclpay.get_sellers_by_user_id(
         user_id=user.id,
         db=db,
     )
@@ -554,7 +554,7 @@ async def delete_store_admin_seller(
         )
 
     seller = await cruds_myeclpay.get_seller(
-        seller_user_id=seller_user_id,
+        user_id=seller_user_id,
         store_id=store_id,
         db=db,
     )
@@ -629,7 +629,162 @@ async def update_store(
     await db.commit()
 
 
-# User registration #
+@router.post(
+    "/myeclpay/stores/{store_id}/sellers",
+    status_code=204,
+)
+async def create_store_seller(
+    store_id: UUID,
+    seller: schemas_myeclpay.SellerCreation,
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(is_user()),
+):
+    """
+    Create a store seller.
+
+    This admin will have autorized permissions among:
+    - can_bank
+    - can_see_history
+    - can_cancel
+    - can_manage_sellers
+    - store_admin
+
+    **The user must have the `can_manage_sellers` permission for this store**
+    """
+    store = await cruds_myeclpay.get_store(
+        store_id=store_id,
+        db=db,
+    )
+    if store is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Store does not exist",
+        )
+
+    seller_admin = await cruds_myeclpay.get_seller(
+        user_id=user.id,
+        store_id=store_id,
+        db=db,
+    )
+    if seller_admin is None or not seller_admin.can_manage_sellers:
+        raise HTTPException(
+            status_code=403,
+            detail="User is not a store admin",
+        )
+
+    await cruds_myeclpay.create_seller(
+        user_id=seller.user_id,
+        store_id=store_id,
+        can_bank=seller.can_bank,
+        can_see_history=seller.can_see_history,
+        can_cancel=seller.can_cancel,
+        can_manage_sellers=seller.can_manage_sellers,
+        store_admin=False,
+        db=db,
+    )
+
+    await db.commit()
+
+
+@router.get(
+    "/myeclpay/stores/{store_id}/sellers",
+    status_code=200,
+    response_model=list[schemas_myeclpay.Seller],
+)
+async def get_store_sellers(
+    store_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(is_user()),
+):
+    """
+    Get all sellers for the given store.
+
+    **The user must have the `can_manage_sellers` permission for this store**
+    """
+    store = await cruds_myeclpay.get_store(
+        store_id=store_id,
+        db=db,
+    )
+    if store is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Store does not exist",
+        )
+
+    seller_admin = await cruds_myeclpay.get_seller(
+        user_id=user.id,
+        store_id=store_id,
+        db=db,
+    )
+    if seller_admin is None or not seller_admin.can_manage_sellers:
+        raise HTTPException(
+            status_code=403,
+            detail="User is not a store admin",
+        )
+
+    sellers = await cruds_myeclpay.get_sellers_by_store_id(
+        store_id=store_id,
+        db=db,
+    )
+
+    return sellers
+
+
+@router.delete(
+    "/myeclpay/stores/{store_id}/sellers/{seller_user_id}",
+    status_code=204,
+)
+async def delete_store_seller(
+    store_id: UUID,
+    seller_user_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(is_user()),
+):
+    """
+    Delete a store seller.
+
+    **The user must have the `can_manage_sellers` permission for this store**
+    """
+    store = await cruds_myeclpay.get_store(
+        store_id=store_id,
+        db=db,
+    )
+    if store is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Store does not exist",
+        )
+
+    seller_admin = await cruds_myeclpay.get_seller(
+        user_id=user.id,
+        store_id=store_id,
+        db=db,
+    )
+    if seller_admin is None or not seller_admin.can_manage_sellers:
+        raise HTTPException(
+            status_code=403,
+            detail="User is not a store admin",
+        )
+
+    seller = await cruds_myeclpay.get_seller(
+        user_id=seller_user_id,
+        store_id=store_id,
+        db=db,
+    )
+
+    if seller is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Seller does not exist",
+        )
+
+    await cruds_myeclpay.delete_seller(
+        seller_user_id=seller_user_id,
+        store_id=store_id,
+        db=db,
+    )
+
+    await db.commit()
 
 
 @router.get(
@@ -1213,7 +1368,7 @@ async def store_scan_qrcode(
             detail="Store does not exist",
         )
 
-    seller = await cruds_myeclpay.get_seller_by_user_id_and_store_id(
+    seller = await cruds_myeclpay.get_seller(
         store_id=store_id,
         user_id=user.id,
         db=db,

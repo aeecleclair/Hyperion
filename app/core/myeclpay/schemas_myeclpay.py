@@ -61,6 +61,14 @@ class SellerAdminCreation(BaseModel):
     user_id: str
 
 
+class SellerCreation(SellerAdminCreation):
+    store_id: UUID
+    can_bank: bool
+    can_see_history: bool
+    can_cancel: bool
+    can_manage_sellers: bool
+
+
 class Seller(BaseModel):
     user_id: str
     store_id: UUID
