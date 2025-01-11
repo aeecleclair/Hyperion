@@ -317,7 +317,7 @@ async def add_vote(
         await cruds_cmm.update_meme_vote_score(
             db=db,
             meme_id=meme_id,
-            old_positive=meme.votes[0].positive if meme.votes else None,
+            old_positive=None,
             new_positive=positive,
         )
         cruds_cmm.add_vote(db=db, vote=vote)
