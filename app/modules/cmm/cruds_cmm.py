@@ -11,7 +11,6 @@ from app.modules.cmm import models_cmm, types_cmm
 
 n_memes = 10
 n_weeks = 7
-# TODO: Update meme vote_score with votes
 
 
 async def get_memes_by_date(
@@ -135,13 +134,14 @@ async def update_ban_status_of_memes_from_user(
 async def get_meme_by_id(
     db: AsyncSession,
     meme_id: uuid.UUID,
+    user_id: str,
 ) -> models_cmm.Meme | None:
     result = await db.execute(
         select(models_cmm.Meme)
         .options(
             selectinload(
                 models_cmm.Meme.votes.and_(
-                    models_cmm.Vote.user_id == models_cmm.Meme.user_id,
+                    models_cmm.Vote.user_id == user_id,
                 ),
             ).load_only(models_cmm.Vote.positive),
             selectinload(models_cmm.Meme.user),
@@ -165,6 +165,28 @@ async def update_meme_ban_status(
         update(models_cmm.Meme)
         .where(models_cmm.Meme.id == meme_id)
         .values({models_cmm.Meme.status: ban_status}),
+    )
+
+
+async def update_meme_vote_score(
+    db: AsyncSession,
+    old_positive: bool | None,
+    new_positive: bool | None,
+    meme_id: UUID,
+):
+    if old_positive == new_positive:
+        score_diff = 0
+    elif old_positive is None:
+        score_diff = 1 if new_positive else -1
+    elif not old_positive:
+        score_diff = 1 if new_positive is None else 2
+    else:
+        score_diff = 0 if new_positive is None else -1
+
+    await db.execute(
+        update(models_cmm.Meme)
+        .where(models_cmm.Meme.id == meme_id)
+        .values({models_cmm.Meme.vote_score: models_cmm.Meme.vote_score + score_diff}),
     )
 
 
