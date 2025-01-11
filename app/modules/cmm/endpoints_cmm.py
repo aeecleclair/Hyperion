@@ -388,7 +388,7 @@ async def update_vote(
         await cruds_cmm.update_meme_vote_score(
             db=db,
             meme_id=meme_id,
-            old_positive=meme.votes[0].positive if meme.votes else None,
+            old_positive=meme.votes[0].positive,  # should exist
             new_positive=vote.positive,
         )
         await cruds_cmm.update_vote(db=db, vote_id=vote.id, new_positive=positive)
@@ -400,7 +400,7 @@ async def update_vote(
         return schemas_cmm.Vote(
             meme_id=str(vote.meme_id),
             positive=positive,
-            user=vote.user,
+            user=user,
         )
 
 
