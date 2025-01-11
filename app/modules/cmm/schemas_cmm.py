@@ -31,6 +31,7 @@ class Meme(BaseModel):
 
 
 class ShownMeme(BaseModel):
+    id: str
     user: CoreUserSimple
     creation_time: datetime
     my_vote: bool | None
