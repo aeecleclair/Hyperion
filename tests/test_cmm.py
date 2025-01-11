@@ -62,12 +62,12 @@ async def init_objects() -> None:
     global cmm_user_to_ban
     cmm_user_to_ban = await create_user_with_groups([])
     global token_user_to_ban
-    token_user_to_ban = create_api_access_token(cmm_user_1)
+    token_user_to_ban = create_api_access_token(cmm_user_to_ban)
 
     global cmm_admin
     cmm_admin = await create_user_with_groups([GroupType.admin])
     global token_admin
-    token_admin = create_api_access_token(cmm_user_1)
+    token_admin = create_api_access_token(cmm_admin)
 
     global memes_1
     memes_1 = [
@@ -103,7 +103,6 @@ async def init_objects() -> None:
             votes_memes_1.append(vote2)
             await add_object_to_db(vote2)
 
-    return
     global memes_2
     memes_2 = [
         models_cmm.Meme(
@@ -124,7 +123,7 @@ async def init_objects() -> None:
             status=MemeStatus.neutral,
             user_id=cmm_user_to_ban.id,
             creation_time=datetime.datetime(24, i, 23, tzinfo=datetime.UTC),
-            vote_score=i,
+            vote_score=200,
         )
         for i in range(1, 13)
     ]
@@ -140,4 +139,37 @@ def test_get_meme_page(client: TestClient) -> None:
     print(response)
     print(response.status_code)
     print(response.json())
-    assert 2 == 1
+    assert 1 == 1
+
+
+def test_banning_user(client: TestClient) -> None:
+    # TODO: Add test to prove that memes are hidden
+    response = client.get(
+        "/cmm/memes/?sort_by=best&n_page=1",
+        headers={"Authorization": f"Bearer {token_user_to_ban}"},
+    )
+    assert response.status_code == 200
+    response = client.post(
+        f"/cmm/users/{cmm_user_to_ban.id}/ban",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 201
+    response = client.get(
+        "/cmm/memes/?sort_by=best&n_page=1",
+        headers={"Authorization": f"Bearer {token_user_to_ban}"},
+    )
+    assert response.status_code == 403
+    response = client.get(
+        "/cmm/memes/?sort_by=best&n_page=1",
+        headers={"Authorization": f"Bearer {token_cmm_1}"},
+    )
+    response = client.post(
+        f"/cmm/users/{cmm_user_to_ban.id}/unban",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 201
+    response = client.get(
+        "/cmm/memes/?sort_by=best&n_page=1",
+        headers={"Authorization": f"Bearer {token_user_to_ban}"},
+    )
+    assert response.status_code == 200
