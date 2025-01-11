@@ -147,28 +147,9 @@ async def get_meme_by_id(
             selectinload(models_cmm.Meme.user),
         )
         .execution_options(populate_existing=True)
-        .where(models_cmm.Meme.id == meme_id)
+        .where(models_cmm.Meme.id == meme_id),
     )
     return result.unique().scalars().first()
-
-
-async def get_my_votes_from_memes(
-    db: AsyncSession,
-    user_id: str,
-    meme_page,
-) -> dict[UUID, bool]:
-    meme_ids = [meme.id for meme in meme_page]
-    print(meme_ids)
-    result = await db.execute(
-        select(models_cmm.Vote).where(
-            models_cmm.Vote.user_id == user_id,
-            models_cmm.Vote.meme_id.in_(meme_ids),
-        ),
-    )
-    votes = result.scalars().all()
-    votes_map = {vote.meme_id: vote.positive for vote in votes}
-    print("votes_map", votes_map)
-    return votes_map
 
 
 def add_meme(db: AsyncSession, meme: models_cmm.Meme):
