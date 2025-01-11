@@ -389,7 +389,7 @@ async def update_vote(
             db=db,
             meme_id=meme_id,
             old_positive=meme.votes[0].positive,  # should exist
-            new_positive=vote.positive,
+            new_positive=positive,
         )
         await cruds_cmm.update_vote(db=db, vote_id=vote.id, new_positive=positive)
         await db.commit()
