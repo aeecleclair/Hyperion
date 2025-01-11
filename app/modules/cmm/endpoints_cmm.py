@@ -95,7 +95,7 @@ async def get_memes(
                 user_id=user.id,
             )
         case _:
-            raise HTTPException(status_code=204, detail="Invalid sort method")
+            raise HTTPException(status_code=404, detail="Invalid sort method")
 
     return [
         schemas_cmm.ShownMeme(
@@ -123,9 +123,9 @@ async def get_meme_by_id(
     """
     Get a meme caracteristics using its id
     """
-    shown_meme = await cruds_cmm.get_meme_by_id(db=db, meme_id=meme_id)
+    shown_meme = await cruds_cmm.get_meme_by_id(db=db, meme_id=meme_id, user_id=user.id)
     if shown_meme is None:
-        raise HTTPException(status_code=204, detail="The meme does not exist")
+        raise HTTPException(status_code=404, detail="The meme does not exist")
 
     return shown_meme
 
@@ -143,7 +143,7 @@ async def get_meme_image_by_id(
     """
     Get a meme image using its id
     """
-    meme = await cruds_cmm.get_meme_by_id(db=db, meme_id=meme_id)
+    meme = await cruds_cmm.get_meme_by_id(db=db, meme_id=meme_id, user_id=user.id)
     if meme is None:
         raise HTTPException(status_code=404, detail="The meme does not exist")
 
@@ -167,7 +167,7 @@ async def delete_meme_by_id(
     Remove a meme from db
     Must be author of meme if meme is not banned or admin
     """
-    meme = await cruds_cmm.get_meme_by_id(db=db, meme_id=meme_id)
+    meme = await cruds_cmm.get_meme_by_id(db=db, meme_id=meme_id, user_id=user.id)
     if not meme:
         raise HTTPException(
             status_code=404,
@@ -257,7 +257,7 @@ async def get_vote(
     vote = await cruds_cmm.get_vote(db=db, meme_id=meme_id, user_id=user_id)
     if vote is None:
         raise HTTPException(
-            status_code=204,
+            status_code=404,
             detail="The meme has no vote from this user",
         )
 
@@ -279,7 +279,7 @@ async def get_vote_by_id(
     """
     vote = await cruds_cmm.get_vote_by_id(db=db, vote_id=vote_id)
     if vote is None:
-        raise HTTPException(status_code=204, detail="The vote does not exist")
+        raise HTTPException(status_code=404, detail="The vote does not exist")
 
     return vote
 
@@ -298,6 +298,9 @@ async def add_vote(
     """
     Add a new vote for the user to a meme from its id
     """
+    meme = await cruds_cmm.get_meme_by_id(db=db, meme_id=meme_id, user_id=user.id)
+    if meme is None:
+        raise HTTPException(status_code=404, detail="The meme does not exist")
     try:
         vote_id = uuid.uuid4()
         vote = models_cmm.Vote(
@@ -305,6 +308,12 @@ async def add_vote(
             meme_id=meme_id,
             user_id=user.id,
             positive=positive,
+        )
+        await cruds_cmm.update_meme_vote_score(
+            db=db,
+            meme_id=meme_id,
+            old_positive=meme.votes[0].positive if meme.votes else None,
+            new_positive=positive,
         )
         cruds_cmm.add_vote(db=db, vote=vote)
         await db.commit()
@@ -327,10 +336,19 @@ async def delete_vote(
     """
     Remove the vote from the user if it exists
     """
+    meme = await cruds_cmm.get_meme_by_id(db=db, meme_id=meme_id, user_id=user.id)
+    if meme is None:
+        raise HTTPException(status_code=404, detail="The meme does not exist")
     vote = await cruds_cmm.get_vote(db=db, meme_id=meme_id, user_id=user.id)
     if vote is None:
         raise HTTPException(status_code=404, detail="The vote does not exist")
     try:
+        await cruds_cmm.update_meme_vote_score(
+            db=db,
+            meme_id=meme_id,
+            old_positive=meme.votes[0].positive if meme.votes else None,
+            new_positive=vote.positive,
+        )
         await cruds_cmm.delete_vote(db=db, vote_id=vote.id)
         await db.commit()
     except Exception:
@@ -351,10 +369,19 @@ async def update_vote(
     """
     Update a vote from the user if it exists even if vote is already at the right positivity
     """
+    meme = await cruds_cmm.get_meme_by_id(db=db, meme_id=meme_id, user_id=user.id)
+    if meme is None:
+        raise HTTPException(status_code=404, detail="The meme does not exist")
     vote = await cruds_cmm.get_vote(db=db, meme_id=meme_id, user_id=user.id)
     if vote is None:
         raise HTTPException(status_code=404, detail="The vote does not exist")
     try:
+        await cruds_cmm.update_meme_vote_score(
+            db=db,
+            meme_id=meme_id,
+            old_positive=meme.votes[0].positive if meme.votes else None,
+            new_positive=vote.positive,
+        )
         await cruds_cmm.update_vote(db=db, vote_id=vote.id, new_positive=positive)
         await db.commit()
     except Exception:
