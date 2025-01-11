@@ -1,4 +1,3 @@
-from mmap import mmap
 import uuid
 from datetime import UTC, datetime
 
@@ -31,13 +30,17 @@ module = Module(
 )
 
 
-async def verify_ban_status(
-    db,
-    user,
-):
+async def is_allowed_meme_user(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user()),
+) -> models_core.CoreUser:
+    """
+    Overloads the is_user() dependency injection to verify if the user is in the banned table
+    """
     user_current_ban = await cruds_cmm.get_user_current_ban(db=db, user_id=user.id)
     if user_current_ban is not None:
         raise HTTPException(status_code=403, detail="You are currently banned")
+    return user
 
 
 @module.router.get(
@@ -49,7 +52,7 @@ async def get_memes(
     sort_by: str = "best",
     n_page: int = 1,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_core.CoreUser = Depends(is_allowed_meme_user),
 ):
     """
     Get a page of memes according to the asked sort
@@ -119,7 +122,7 @@ async def get_memes(
 async def get_meme_by_id(
     meme_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_core.CoreUser = Depends(is_allowed_meme_user),
 ):
     """
     Get a meme caracteristics using its id
@@ -139,7 +142,7 @@ async def get_meme_by_id(
 async def get_meme_image_by_id(
     meme_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_core.CoreUser = Depends(is_allowed_meme_user),
 ):
     """
     Get a meme image using its id
@@ -162,7 +165,7 @@ async def get_meme_image_by_id(
 async def delete_meme_by_id(
     meme_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_core.CoreUser = Depends(is_allowed_meme_user),
 ):
     """
     Remove a meme from db
@@ -202,7 +205,7 @@ async def delete_meme_by_id(
 )
 async def add_meme(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_core.CoreUser = Depends(is_allowed_meme_user),
     image: UploadFile = File(...),
     request_id: str = Depends(get_request_id),
 ):
@@ -250,7 +253,7 @@ async def get_vote(
     meme_id: uuid.UUID,
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_core.CoreUser = Depends(is_allowed_meme_user),
 ):
     """
     Get a meme caracteristics using its id
@@ -273,7 +276,7 @@ async def get_vote(
 async def get_vote_by_id(
     vote_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_core.CoreUser = Depends(is_allowed_meme_user),
 ):
     """
     Get a meme caracteristics using its id
@@ -294,7 +297,7 @@ async def add_vote(
     meme_id: uuid.UUID,
     positive: bool,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_core.CoreUser = Depends(is_allowed_meme_user),
 ):
     """
     Add a new vote for the user to a meme from its id
@@ -340,7 +343,7 @@ async def add_vote(
 async def delete_vote(
     meme_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_core.CoreUser = Depends(is_allowed_meme_user),
 ):
     """
     Remove the vote from the user if it exists
@@ -373,7 +376,7 @@ async def update_vote(
     meme_id: uuid.UUID,
     positive: bool,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_core.CoreUser = Depends(is_allowed_meme_user),
 ):
     """
     Update a vote from the user if it exists even if vote is already at the right positivity
@@ -407,12 +410,11 @@ async def update_vote(
 @module.router.post(
     "/cmm/users/{user_id}/ban/",
     status_code=201,
-    response_model=models_cmm.Ban,
 )
 async def ban_user(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_core.CoreUser = Depends(is_allowed_meme_user),
 ):
     """
     Ban a user and hide all of his memes
@@ -446,8 +448,6 @@ async def ban_user(
     except Exception:
         await db.rollback()
         raise
-    else:
-        return ban
 
 
 @module.router.post(
@@ -457,7 +457,7 @@ async def ban_user(
 async def unban_user(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_core.CoreUser = Depends(is_allowed_meme_user),
 ):
     """
     Unban a user and unhide all of his memes
@@ -498,10 +498,11 @@ async def unban_user(
 async def get_user_ban_history(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_core.CoreUser = Depends(is_allowed_meme_user),
 ):
     """
     Get the ban history of an user
     """
+    # TODO: Return a schema
     ban_history = await cruds_cmm.get_user_ban_history(db=db, user_id=user_id)
     return ban_history
