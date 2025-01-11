@@ -14,7 +14,6 @@ class VoteBase(BaseModel):
 
 class Vote(VoteBase):
     user: CoreUserSimple
-    creation_time: datetime
 
 
 class VoteComplete(Vote):
