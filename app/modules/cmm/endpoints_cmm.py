@@ -1,3 +1,4 @@
+from mmap import mmap
 import uuid
 from datetime import UTC, datetime
 
@@ -321,7 +322,11 @@ async def add_vote(
         await db.rollback()
         raise
     else:
-        return vote
+        return schemas_cmm.Vote(
+            meme_id=str(vote.meme_id),
+            positive=vote.positive,
+            user=vote.user,
+        )
 
 
 @module.router.delete(
@@ -388,8 +393,11 @@ async def update_vote(
         await db.rollback()
         raise
     else:
-        vote.positive = positive
-        return vote
+        return schemas_cmm.Vote(
+            meme_id=str(vote.meme_id),
+            positive=positive,
+            user=vote.user,
+        )
 
 
 @module.router.post(
