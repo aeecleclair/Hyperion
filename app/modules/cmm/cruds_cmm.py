@@ -181,7 +181,8 @@ async def update_meme_vote_score(
     elif not old_positive:
         score_diff = 1 if new_positive is None else 2
     else:
-        score_diff = 0 if new_positive is None else -1
+        # old_positve == True
+        score_diff = -1 if new_positive is None else -2
 
     await db.execute(
         update(models_cmm.Meme)

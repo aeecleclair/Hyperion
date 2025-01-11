@@ -352,7 +352,7 @@ async def delete_vote(
             db=db,
             meme_id=meme_id,
             old_positive=meme.votes[0].positive if meme.votes else None,
-            new_positive=vote.positive,
+            new_positive=None,
         )
         await cruds_cmm.delete_vote(db=db, vote_id=vote.id)
         await db.commit()
