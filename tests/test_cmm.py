@@ -134,7 +134,7 @@ async def init_objects() -> None:
 
 def test_get_meme_page(client: TestClient) -> None:
     response = client.get(
-        "/cmm/memes/?sort_by=oldest&n_page=1",
+        "/cmm/memes/?sort_by=best&n_page=1",
         headers={"Authorization": f"Bearer {token_cmm_2}"},
     )
     print(response)
