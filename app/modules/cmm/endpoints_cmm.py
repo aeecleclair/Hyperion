@@ -97,7 +97,16 @@ async def get_memes(
         case _:
             raise HTTPException(status_code=204, detail="Invalid sort method")
 
-    return await compute_full_meme_page(meme_page)
+    return [
+        schemas_cmm.ShownMeme(
+            user=meme.user,
+            creation_time=meme.creation_time,
+            vote_score=meme.vote_score,
+            status=meme.status,
+            my_vote=meme.votes[0].positive if meme.votes else None,
+        )
+        for meme in meme_page
+    ]
 
 
 @module.router.get(

@@ -5,10 +5,9 @@ from uuid import UUID
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload, lazyload, selectinload
-from sqlalchemy.sql.coercions import SelectStatementImpl
+from sqlalchemy.orm import selectinload
 
-from app.modules.cmm import models_cmm, schemas_cmm, types_cmm
+from app.modules.cmm import models_cmm, types_cmm
 
 n_memes = 10
 n_weeks = 7
