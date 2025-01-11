@@ -26,7 +26,7 @@ from app.utils.tools import (
 module = Module(
     root="cmm",
     tag="Centrale Mega Meme",
-    default_allowed_account_types=[AccountType.student],
+    default_allowed_account_types=[AccountType.student, AccountType.staff],
 )
 
 
@@ -146,7 +146,6 @@ async def get_meme_image_by_id(
     if meme is None:
         raise HTTPException(status_code=404, detail="The meme does not exist")
 
-    # TODO: Change default asset
     return get_file_from_data(
         default_asset="assets/images/default_meme.png",
         directory="memes",
