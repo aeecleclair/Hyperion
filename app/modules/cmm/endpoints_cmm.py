@@ -302,6 +302,10 @@ async def add_vote(
     meme = await cruds_cmm.get_meme_by_id(db=db, meme_id=meme_id, user_id=user.id)
     if meme is None:
         raise HTTPException(status_code=404, detail="The meme does not exist")
+    vote = await cruds_cmm.get_vote(db=db, meme_id=meme_id, user_id=user.id)
+    if vote is not None:
+        raise HTTPException(status_code=404, detail="Vote already created")
+
     try:
         vote_id = uuid.uuid4()
         vote = models_cmm.Vote(
