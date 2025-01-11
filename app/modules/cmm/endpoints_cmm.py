@@ -99,6 +99,7 @@ async def get_memes(
 
     return [
         schemas_cmm.ShownMeme(
+            id=str(meme.id),
             user=meme.user,
             creation_time=meme.creation_time,
             vote_score=meme.vote_score,
