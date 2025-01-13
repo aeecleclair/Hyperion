@@ -129,8 +129,8 @@ class CoreSchool(Base):
     __tablename__ = "core_school"
 
     id: Mapped[PrimaryKey]
-    name: Mapped[str] = mapped_column(String, unique=True)
-    email_regex: Mapped[str] = mapped_column(String)
+    name: Mapped[str] = mapped_column(unique=True)
+    email_regex: Mapped[str]
 
 
 class CoreAssociationMembership(Base):

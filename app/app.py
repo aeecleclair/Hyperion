@@ -205,14 +205,14 @@ def initialize_schools(
                 db_school = models_core.CoreSchool(
                     id=school.value,
                     name=school.name,
-                    email_regex=".*",
+                    email_regex="null",
                 )
 
                 try:
                     initialization.create_school_sync(school=db_school, db=db)
                 except IntegrityError as error:
                     hyperion_error_logger.fatal(
-                        f"Startup: Could not add group {db_school.name}<{db_school.id}> in the database: {error}",
+                        f"Startup: Could not add school {db_school.name}<{db_school.id}> in the database: {error}",
                     )
 
 
