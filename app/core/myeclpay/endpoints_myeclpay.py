@@ -365,6 +365,50 @@ async def create_store(
 
 
 @router.get(
+    "/myeclpay/stores/{store_id}/history",
+    status_code=200,
+    response_model=list[schemas_myeclpay.Transaction],
+)
+async def get_store_history(
+    store_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(is_user()),
+):
+    """
+    Get all transactions for the store.
+
+    **The user must be authorized to see the store history**
+    """
+    store = await cruds_myeclpay.get_store(
+        store_id=store_id,
+        db=db,
+    )
+    if store is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Store does not exist",
+        )
+
+    seller = await cruds_myeclpay.get_seller(
+        user_id=user.id,
+        store_id=store_id,
+        db=db,
+    )
+    if seller is None or not seller.can_see_history:
+        raise HTTPException(
+            status_code=403,
+            detail="User is not authorized to see the store history",
+        )
+
+    transactions = await cruds_myeclpay.get_transactions_by_wallet_id(
+        wallet_id=store.wallet_id,
+        db=db,
+    )
+
+    return transactions
+
+
+@router.get(
     "/myeclpay/users/me/stores",
     status_code=200,
     response_model=list[schemas_myeclpay.UserStore],
@@ -623,6 +667,74 @@ async def update_store(
     await cruds_myeclpay.update_store(
         store_id=store_id,
         store_update=store_update,
+        db=db,
+    )
+
+    await db.commit()
+
+
+@router.delete(
+    "/myeclpay/stores/{store_id}",
+    status_code=204,
+)
+async def delete_store(
+    store_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(is_user()),
+):
+    """
+    Delete a store
+
+    **The user must be the manager for this store's structure**
+    """
+    store = await cruds_myeclpay.get_store(
+        store_id=store_id,
+        db=db,
+    )
+    if store is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Store does not exist",
+        )
+
+    structure = await cruds_myeclpay.get_structure_by_id(
+        structure_id=store.structure_id,
+        db=db,
+    )
+    if structure is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Structure does not exist",
+        )
+    if structure.manager_user_id != user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="User is not the manager for this structure",
+        )
+
+    transactions = await cruds_myeclpay.get_transactions_by_wallet_id(
+        wallet_id=store.wallet_id,
+        db=db,
+    )
+    if transactions:
+        raise HTTPException(
+            status_code=400,
+            detail="Store has transactions and cannot be deleted anymore",
+        )
+
+    sellers = await cruds_myeclpay.get_sellers_by_store_id(
+        store_id=store_id,
+        db=db,
+    )
+    for seller in sellers:
+        await cruds_myeclpay.delete_seller(
+            seller_user_id=seller.user_id,
+            store_id=store_id,
+            db=db,
+        )
+
+    await cruds_myeclpay.delete_store(
+        store_id=store_id,
         db=db,
     )
 

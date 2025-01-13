@@ -109,6 +109,8 @@ class Store(Base):
         unique=True,
     )
 
+    structure: Mapped[Structure] = relationship(init=False, lazy="joined")
+
 
 class Request(Base):
     __tablename__ = "myeclpay_request"
