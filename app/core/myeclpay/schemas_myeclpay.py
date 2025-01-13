@@ -42,6 +42,7 @@ class Store(StoreBase):
     id: UUID
     structure_id: UUID
     wallet_id: UUID
+    structure: Structure
 
 
 class UserStore(Store):
