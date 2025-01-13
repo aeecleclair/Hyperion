@@ -168,6 +168,15 @@ async def update_store(
     await db.commit()
 
 
+async def delete_store(
+    store_id: UUID,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        delete(models_myeclpay.Store).where(models_myeclpay.Store.id == store_id),
+    )
+
+
 async def get_stores(
     db: AsyncSession,
 ) -> Sequence[models_myeclpay.Store]:
