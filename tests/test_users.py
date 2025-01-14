@@ -2,11 +2,14 @@ from pathlib import Path
 
 import pytest
 import pytest_asyncio
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
 from app.core import models_core
 from app.core.groups.groups_type import AccountType, GroupType
+from app.core.schools.schools_type import SchoolType
+from app.dependencies import is_user
 from tests.commons import (
     create_api_access_token,
     create_user_with_groups,
@@ -107,6 +110,16 @@ def test_get_account_types(client: TestClient) -> None:
     assert data == list(AccountType)
 
 
+def test_restrict_access_on_group(client: TestClient) -> None:
+    with pytest.raises(
+        HTTPException,
+        match="Unauthorized, user is a member of any of the groups ",
+    ):
+        is_user(
+            excluded_groups=[GroupType.amap],
+        )(user_with_group)
+
+
 def test_read_current_user(client: TestClient) -> None:
     token = create_api_access_token(student_user)
     response = client.get(
@@ -158,19 +171,35 @@ def test_create_user_by_user_with_email(
 
 
 @pytest.mark.parametrize(
-    ("email", "expected_code", "expected_account_type"),
+    ("email", "expected_code", "expected_account_type", "expected_school_id"),
     [
-        ("fab1@etu.ec-lyon.fr", 201, AccountType.student),
-        ("fab2@ec-lyon.fr", 201, AccountType.staff),
-        ("fab3@centraliens-lyon.net", 201, AccountType.former_student),
-        ("fab4@test.fr", 201, AccountType.external),
-        ("fab5@ecl22.ec-lyon.fr", 201, AccountType.student),
+        (
+            "fab1@etu.ec-lyon.fr",
+            201,
+            AccountType.student,
+            SchoolType.centrale_lyon,
+        ),
+        ("fab2@ec-lyon.fr", 201, AccountType.staff, SchoolType.centrale_lyon),
+        (
+            "fab3@centraliens-lyon.net",
+            201,
+            AccountType.former_student,
+            SchoolType.centrale_lyon,
+        ),
+        ("fab4@test.fr", 201, AccountType.external, SchoolType.no_school),
+        (
+            "fab5@ecl22.ec-lyon.fr",
+            201,
+            AccountType.student,
+            SchoolType.centrale_lyon,
+        ),
     ],
 )
 def test_create_and_activate_user(
     email: str,
     expected_code: int,
     expected_account_type: AccountType,
+    expected_school_id: SchoolType,
     mocker: MockerFixture,
     client: TestClient,
 ) -> None:
@@ -210,6 +239,13 @@ def test_create_and_activate_user(
     user = next(user for user in users.json() if user["name"] == email.split("@")[0])
     assert user is not None
     assert user["account_type"] == expected_account_type.value
+
+    user_detail = client.get(
+        f"/users/{user['id']}",
+        headers={"Authorization": f"Bearer {token_admin_user}"},
+    )
+
+    assert user_detail.json()["school_id"] == str(expected_school_id.value)
 
 
 @pytest.mark.parametrize(
@@ -324,6 +360,18 @@ def test_update_user(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 204
+
+
+async def test_migrate_mail_with_school_change(client: TestClient) -> None:
+    token = create_api_access_token(student_user_with_old_email)
+
+    # Start the migration process
+    response = client.post(
+        "/users/migrate-mail",
+        json={"new_email": "fabristpp.eclair@gmail.com"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 400
 
 
 async def test_migrate_mail(mocker: MockerFixture, client: TestClient) -> None:

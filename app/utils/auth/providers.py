@@ -7,12 +7,12 @@ from app.core import models_core
 from app.core.groups.groups_type import (
     AccountType,
     GroupType,
-    get_account_types_except_external,
+    get_account_types_except_externals,
     get_ecl_account_types,
 )
 from app.types.floors_type import FloorsType
 from app.types.scopes_type import ScopeType
-from app.utils.tools import get_display_name, is_user_member_of_an_allowed_group
+from app.utils.tools import get_display_name, is_user_member_of_any_group
 
 
 class BaseAuthClient:
@@ -39,7 +39,7 @@ class BaseAuthClient:
     # Restrict the authentication to this client to specific Hyperion account types.
     # When set to `None`, users from any account type can use the auth client
     allowed_account_types: list[AccountType] | None = (
-        get_account_types_except_external()
+        get_account_types_except_externals()
     )
     # redirect_uri should alway match the one provided by the client
     redirect_uri: list[str]
@@ -152,7 +152,7 @@ class NextcloudAuthClient(BaseAuthClient):
             "groups": [group.name for group in user.groups] + [user.account_type.value],
             "email": user.email,
             "picture": f"https://hyperion.myecl.fr/users/{user.id}/profile-picture",
-            "is_admin": is_user_member_of_an_allowed_group(user, [GroupType.admin]),
+            "is_admin": is_user_member_of_any_group(user, [GroupType.admin]),
         }
 
 
@@ -398,5 +398,5 @@ class OverleafAuthClient(BaseAuthClient):
             "firstname": user.firstname,
             "lastname": user.name,
             "email": user.email,
-            "is_admin": is_user_member_of_an_allowed_group(user, [GroupType.admin]),
+            "is_admin": is_user_member_of_any_group(user, [GroupType.admin]),
         }

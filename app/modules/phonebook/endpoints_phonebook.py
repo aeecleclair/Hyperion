@@ -21,7 +21,7 @@ from app.types.content_type import ContentType
 from app.types.module import Module
 from app.utils.tools import (
     get_file_from_data,
-    is_user_member_of_an_allowed_group,
+    is_user_member_of_any_group,
     save_file_as_data,
 )
 
@@ -115,7 +115,7 @@ async def create_association(
     **This endpoint is only usable by CAA, BDE**
     """
 
-    if not is_user_member_of_an_allowed_group(
+    if not is_user_member_of_any_group(
         user=user,
         allowed_groups=[GroupType.CAA, GroupType.BDE],
     ):
@@ -164,7 +164,7 @@ async def update_association(
     **This endpoint is only usable by CAA, BDE and association's president**
     """
     if not (
-        is_user_member_of_an_allowed_group(
+        is_user_member_of_any_group(
             user=user,
             allowed_groups=[GroupType.CAA, GroupType.BDE],
         )
@@ -225,7 +225,7 @@ async def deactivate_association(
 
     **This endpoint is only usable by CAA and BDE**
     """
-    if not is_user_member_of_an_allowed_group(
+    if not is_user_member_of_any_group(
         user=user,
         allowed_groups=[GroupType.CAA, GroupType.BDE],
     ):
@@ -253,7 +253,7 @@ async def delete_association(
     **This endpoint is only usable by CAA and BDE**
     """
 
-    if not is_user_member_of_an_allowed_group(
+    if not is_user_member_of_any_group(
         user=user,
         allowed_groups=[GroupType.CAA, GroupType.BDE],
     ):
@@ -405,7 +405,7 @@ async def create_membership(
         )
 
     if not (
-        is_user_member_of_an_allowed_group(
+        is_user_member_of_any_group(
             user=user,
             allowed_groups=[GroupType.CAA, GroupType.BDE],
         )
@@ -423,7 +423,7 @@ async def create_membership(
     if membership.role_tags is not None:
         if RoleTags.president.value in membership.role_tags.split(
             ";",
-        ) and not is_user_member_of_an_allowed_group(
+        ) and not is_user_member_of_any_group(
             user=user,
             allowed_groups=[GroupType.CAA, GroupType.BDE],
         ):
@@ -510,7 +510,7 @@ async def update_membership(
         )
 
     if not (
-        is_user_member_of_an_allowed_group(
+        is_user_member_of_any_group(
             user=user,
             allowed_groups=[GroupType.CAA, GroupType.BDE],
         )
@@ -528,7 +528,7 @@ async def update_membership(
     if updated_membership.role_tags is not None:
         if RoleTags.president.value in updated_membership.role_tags.split(
             ";",
-        ) and not is_user_member_of_an_allowed_group(
+        ) and not is_user_member_of_any_group(
             user=user,
             allowed_groups=[GroupType.CAA, GroupType.BDE],
         ):
@@ -573,7 +573,7 @@ async def delete_membership(
         )
 
     if not (
-        is_user_member_of_an_allowed_group(
+        is_user_member_of_any_group(
             user=user,
             allowed_groups=[GroupType.CAA, GroupType.BDE],
         )
@@ -618,7 +618,7 @@ async def create_association_logo(
     **The user must be a member of the group CAA or BDE to use this endpoint**
     """
 
-    if not is_user_member_of_an_allowed_group(
+    if not is_user_member_of_any_group(
         user=user,
         allowed_groups=[GroupType.CAA, GroupType.BDE],
     ) and not await cruds_phonebook.is_user_president(

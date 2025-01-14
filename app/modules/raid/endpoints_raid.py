@@ -36,7 +36,7 @@ from app.utils.tools import (
     get_core_data,
     get_file_from_data,
     get_random_string,
-    is_user_member_of_an_allowed_group,
+    is_user_member_of_any_group,
     save_file_as_data,
     set_core_data,
 )
@@ -65,7 +65,7 @@ async def get_participant_by_id(
     """
     Get a participant by id
     """
-    if participant_id != user.id and not is_user_member_of_an_allowed_group(
+    if participant_id != user.id and not is_user_member_of_any_group(
         user,
         [GroupType.raid_admin],
     ):
@@ -520,7 +520,7 @@ async def read_document(
         user.id,
         participant.id,
         db,
-    ) and not is_user_member_of_an_allowed_group(user, [GroupType.raid_admin]):
+    ) and not is_user_member_of_any_group(user, [GroupType.raid_admin]):
         raise HTTPException(
             status_code=403,
             detail="The owner of this document is not a member of your team.",
@@ -1087,13 +1087,15 @@ async def get_payment_url(
             if not participant.payment:
                 checkout_name += " + "
             checkout_name += "T Shirt taille" + participant.t_shirt_size.value
+    user_dict = user.__dict__
+    user_dict.pop("school", None)
     checkout = await payment_tool.init_checkout(
         module=module.root,
         helloasso_slug="AEECL",
         checkout_amount=price,
         checkout_name=checkout_name,
         redirection_uri=settings.RAID_PAYMENT_REDIRECTION_URL or "",
-        payer_user=schemas_core.CoreUser(**user.__dict__),
+        payer_user=schemas_core.CoreUser(**user_dict),
         db=db,
     )
     hyperion_error_logger.info(f"RAID: Logging Checkout id {checkout.id}")

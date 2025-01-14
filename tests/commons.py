@@ -17,6 +17,7 @@ from app.core.groups import cruds_groups
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.payment import cruds_payment, models_payment, schemas_payment
 from app.core.payment.payment_tool import PaymentTool
+from app.core.schools.schools_type import SchoolType
 from app.core.users import cruds_users
 from app.dependencies import get_settings
 from app.types.exceptions import RedisConnectionError
@@ -119,6 +120,7 @@ def override_get_scheduler(
 async def create_user_with_groups(
     groups: list[GroupType],
     account_type: AccountType = AccountType.student,
+    school_id: SchoolType | uuid.UUID = SchoolType.centrale_lyon,
     user_id: str | None = None,
     email: str | None = None,
     password: str | None = None,
@@ -135,10 +137,12 @@ async def create_user_with_groups(
 
     user_id = user_id or str(uuid.uuid4())
     password_hash = security.get_password_hash(password or get_random_string())
+    school_id = school_id.value if isinstance(school_id, SchoolType) else school_id
 
     user = models_core.CoreUser(
         id=user_id,
         email=email or (get_random_string() + "@etu.ec-lyon.fr"),
+        school_id=school_id,
         password_hash=password_hash,
         name=name or get_random_string(),
         firstname=firstname or get_random_string(),

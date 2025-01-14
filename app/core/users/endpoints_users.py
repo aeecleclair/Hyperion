@@ -1,5 +1,4 @@
 import logging
-import re
 import string
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -18,13 +17,16 @@ from fastapi import (
 )
 from fastapi.responses import FileResponse
 from fastapi.templating import Jinja2Templates
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, schemas_core, security, standard_responses
 from app.core.config import Settings
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import AccountType, GroupType
+from app.core.schools.schools_type import SchoolType
 from app.core.users import cruds_users
+from app.core.users.tools_users import get_account_type_and_school_id_from_email
 from app.dependencies import (
     get_db,
     get_request_id,
@@ -50,13 +52,9 @@ hyperion_security_logger = logging.getLogger("hyperion.security")
 
 templates = Jinja2Templates(directory="assets/templates")
 
-ECL_STAFF_REGEX = r"^[\w\-.]*@(enise\.)?ec-lyon\.fr$"
-ECL_STUDENT_REGEX = r"^[\w\-.]*@((etu(-enise)?)|(ecl\d{2}))\.ec-lyon\.fr$"
-ECL_FORMER_STUDENT_REGEX = r"^[\w\-.]*@centraliens-lyon\.net$"
-
 
 @router.get(
-    "/users/",
+    "/users",
     response_model=list[schemas_core.CoreUserSimple],
     status_code=200,
 )
@@ -361,46 +359,18 @@ async def activate_user(
             detail=f"The account with the email {unconfirmed_user.email} is already confirmed",
         )
 
-    # Check the account type
-
-    # For staff and student
-    # ^[\w\-.]*@((etu(-enise)?|enise)\.)?ec-lyon\.fr$
-    # For staff
-    # ^[\w\-.]*@(enise\.)?ec-lyon\.fr$
-    # For student
-    # ^[\w\-.]*@etu(-enise)?\.ec-lyon\.fr$
-
-    # For former students
-    # ^[\w\-.]*@centraliens-lyon\.net$
-
-    # All accepted emails
-    # ^[\w\-.]*@(((etu(-enise)?|enise)\.)?ec-lyon\.fr|centraliens-lyon\.net)$
-
-    # By default we mark the user as external
-    # but if it has an ECL email address, we will mark it as member
-    account_type = AccountType.external
-    if re.match(ECL_STAFF_REGEX, unconfirmed_user.email):
-        # Its a staff email address
-        account_type = AccountType.staff
-    elif re.match(
-        ECL_STUDENT_REGEX,
-        unconfirmed_user.email,
-    ):
-        # Its a student email address
-        account_type = AccountType.student
-    elif re.match(
-        ECL_FORMER_STUDENT_REGEX,
-        unconfirmed_user.email,
-    ):
-        # Its a former student email address
-        account_type = AccountType.former_student
-
+    # Get the account type and school_id from the email
+    account_type, school_id = await get_account_type_and_school_id_from_email(
+        email=unconfirmed_user.email,
+        db=db,
+    )
     # A password should have been provided
     password_hash = security.get_password_hash(user.password)
 
     confirmed_user = models_core.CoreUser(
         id=unconfirmed_user.id,
         email=unconfirmed_user.email,
+        school_id=school_id,
         account_type=account_type,
         password_hash=password_hash,
         name=user.name,
@@ -605,15 +575,8 @@ async def migrate_mail(
     settings: Settings = Depends(get_settings),
 ):
     """
-    Due to a change in the email format, all student users need to migrate their email address.
     This endpoint will send a confirmation code to the user's new email address. He will need to use this code to confirm the change with `/users/confirm-mail-migration` endpoint.
     """
-
-    if not re.match(ECL_STUDENT_REGEX, mail_migration.new_email):
-        raise HTTPException(
-            status_code=400,
-            detail="The new email address must match the new ECL format for student users",
-        )
 
     existing_user = await cruds_users.get_user_by_email(
         db=db,
@@ -635,6 +598,17 @@ async def migrate_mail(
             )
         return
 
+    # We need to make sur the user will keep the same school if he is not a no_school user
+    _, new_school_id = await get_account_type_and_school_id_from_email(
+        email=mail_migration.new_email,
+        db=db,
+    )
+    if user.school_id is not SchoolType.no_school and user.school_id != new_school_id:
+        raise HTTPException(
+            status_code=400,
+            detail="New email address is not compatible with the current school",
+        )
+
     await create_and_send_email_migration(
         user_id=user.id,
         new_email=mail_migration.new_email,
@@ -654,8 +628,8 @@ async def migrate_mail_confirm(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Due to a change in the email format, all student users need to migrate their email address.
     This endpoint will updates the user new email address.
+    The user will need to use the confirmation code sent by the `/users/migrate-mail` endpoint.
     """
 
     migration_object = await cruds_users.get_email_migration_code_by_token(
@@ -692,17 +666,31 @@ async def migrate_mail_confirm(
             detail="User not found",
         )
 
+    account, new_school_id = await get_account_type_and_school_id_from_email(
+        email=migration_object.new_email,
+        db=db,
+    )
     try:
         await cruds_users.update_user(
-            db,
-            migration_object.user_id,
+            db=db,
+            user_id=migration_object.user_id,
             user_update=schemas_core.CoreUserUpdateAdmin(
                 email=migration_object.new_email,
-                account_type=AccountType.student,
+                account_type=account,
+                school_id=new_school_id,
             ),
         )
+        await db.commit()
+
     except Exception as error:
+        await db.rollback()
         raise HTTPException(status_code=400, detail=str(error))
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail="Email migration failed due to database integrity error",
+        )
 
     await cruds_users.delete_email_migration_code_by_token(
         confirmation_token=token,
@@ -824,6 +812,14 @@ async def update_current_user(
     """
 
     await cruds_users.update_user(db=db, user_id=user.id, user_update=user_update)
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail="Update failed due to database integrity error",
+        )
 
 
 @router.post(
@@ -894,6 +890,14 @@ async def update_user(
         raise HTTPException(status_code=404, detail="User not found")
 
     await cruds_users.update_user(db=db, user_id=user_id, user_update=user_update)
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail="Update failed due to database integrity error",
+        )
 
 
 @router.post(

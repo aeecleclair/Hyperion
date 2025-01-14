@@ -1,6 +1,7 @@
 """Common model files for all core in order to avoid circular import due to bidirectional relationship"""
 
 from datetime import date, datetime
+from uuid import UUID
 
 from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -29,6 +30,7 @@ class CoreUser(Base):
         index=True,
     )  # Use UUID later
     email: Mapped[str] = mapped_column(unique=True, index=True)
+    school_id: Mapped[UUID] = mapped_column(ForeignKey("core_school.id"))
     password_hash: Mapped[str]
     # Depending on the account type, the user may have different rights and access to different features
     # External users may exist for:
@@ -53,6 +55,11 @@ class CoreUser(Base):
         back_populates="members",
         lazy="selectin",
         default_factory=list,
+    )
+    school: Mapped["CoreSchool"] = relationship(
+        "CoreSchool",
+        lazy="selectin",
+        init=False,
     )
 
 
@@ -116,6 +123,14 @@ class CoreGroup(Base):
         back_populates="groups",
         default_factory=list,
     )
+
+
+class CoreSchool(Base):
+    __tablename__ = "core_school"
+
+    id: Mapped[PrimaryKey]
+    name: Mapped[str] = mapped_column(unique=True)
+    email_regex: Mapped[str]
 
 
 class CoreAssociationMembership(Base):

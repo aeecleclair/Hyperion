@@ -91,7 +91,7 @@ def sort_user(
     return [user for user, _ in reversed(scored)]
 
 
-def is_user_member_of_an_allowed_group(
+def is_user_member_of_any_group(
     user: models_core.CoreUser,
     allowed_groups: list[str] | list[GroupType],
 ) -> bool:
