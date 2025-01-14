@@ -418,12 +418,6 @@ class PlankaAuthClient(BaseAuthClient):
 
     @classmethod
     def get_userinfo(cls, user: models_core.CoreUser):
-        # Must match ^[a-zA-Z0-9]+((_|\.)?[a-zA-Z0-9])*$
-        username = unidecode.unidecode(
-            f"{user.firstname.strip()}.{user.name.strip()}",
-        ).replace(" ", "_")
-        username = re.sub(r"[^a-zA-Z0-9._]", "", username)
-
         return {
             "sub": user.id,
             "name": get_display_name(
@@ -431,7 +425,6 @@ class PlankaAuthClient(BaseAuthClient):
                 name=user.name,
                 nickname=user.nickname,
             ),
-            "preferred_username": username,
             "groups": [group.name for group in user.groups] + [user.account_type.value],
             "email": user.email,
         }
