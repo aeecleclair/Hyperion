@@ -1265,7 +1265,7 @@ async def create_user_devices(
             "activate_myeclpay_device_mail.html",
         ).render(
             {
-                "activation_link": f"{settings.CLIENT_URL}myeclpay/users/me/wallet/devices/activate?token={activation_token}",
+                "activation_link": f"{settings.CLIENT_URL}myeclpay/devices/activate?token={activation_token}",
             },
         )
         background_tasks.add_task(
@@ -1284,7 +1284,7 @@ async def create_user_devices(
 
 
 @router.get(
-    "/myeclpay/users/me/wallet/devices/activate",
+    "/myeclpay/devices/activate",
     status_code=200,
 )
 async def activate_user_device(
