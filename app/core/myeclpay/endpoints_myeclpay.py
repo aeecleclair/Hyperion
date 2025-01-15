@@ -361,7 +361,13 @@ async def create_store(
         await db.rollback()
         raise
 
-    return store_db
+    return schemas_myeclpay.Store(
+        id=store_db.id,
+        name=store_db.name,
+        structure_id=store_db.structure_id,
+        wallet_id=store_db.wallet_id,
+        structure=structure,
+    )
 
 
 @router.get(
@@ -439,6 +445,11 @@ async def get_user_stores(
                     id=store.id,
                     name=store.name,
                     structure_id=store.structure_id,
+                    structure=schemas_myeclpay.Structure(
+                        id=store.structure.id,
+                        name=store.structure.name,
+                        manager_user_id=store.structure.manager_user_id,
+                    ),
                     wallet_id=store.wallet_id,
                     can_bank=seller.can_bank,
                     can_see_history=seller.can_see_history,

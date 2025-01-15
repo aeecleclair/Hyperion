@@ -22,7 +22,7 @@ from app.core.myeclpay.types_myeclpay import (
     WalletDeviceStatus,
     WalletType,
 )
-from app.core.myeclpay.utils_myeclpay import LATEST_CGU, compute_signable_data
+from app.core.myeclpay.utils_myeclpay import LATEST_TOS, compute_signable_data
 from app.types.membership import AvailableAssociationMembership
 from tests.commons import (
     TestingSessionLocal,
@@ -116,8 +116,8 @@ async def init_objects() -> None:
     ecl_user_payment = models_myeclpay.UserPayment(
         user_id=ecl_user.id,
         wallet_id=ecl_user_wallet.id,
-        accepted_cgu_signature=datetime.now(UTC),
-        accepted_cgu_version=LATEST_CGU,
+        accepted_tos_signature=datetime.now(UTC),
+        accepted_tos_version=LATEST_TOS,
     )
     await add_object_to_db(ecl_user_payment)
 
@@ -174,8 +174,8 @@ async def init_objects() -> None:
     ecl_user2_payment = models_myeclpay.UserPayment(
         user_id=ecl_user2.id,
         wallet_id=ecl_user2_wallet.id,
-        accepted_cgu_signature=datetime.now(UTC),
-        accepted_cgu_version=LATEST_CGU,
+        accepted_tos_signature=datetime.now(UTC),
+        accepted_tos_version=LATEST_TOS,
     )
     await add_object_to_db(ecl_user2_payment)
 
@@ -733,23 +733,23 @@ async def test_get_user_stores(client: TestClient):
     assert len(response.json()) > 0
 
 
-async def test_get_cgu_for_unregistered_user(client: TestClient):
+async def test_get_tos_for_unregistered_user(client: TestClient):
     response = client.get(
-        "/myeclpay/users/me/cgu",
+        "/myeclpay/users/me/tos",
         headers={"Authorization": f"Bearer {unregistered_ecl_user_access_token}"},
     )
     assert response.status_code == 400
     assert response.json()["detail"] == "User is not registered for MyECL Pay"
 
 
-async def test_get_cgu(client: TestClient):
+async def test_get_tos(client: TestClient):
     response = client.get(
-        "/myeclpay/users/me/cgu",
+        "/myeclpay/users/me/tos",
         headers={"Authorization": f"Bearer {ecl_user_access_token}"},
     )
     assert response.status_code == 200
-    assert response.json()["latest_cgu_version"] == LATEST_CGU
-    assert response.json()["accepted_cgu_version"] == LATEST_CGU
+    assert response.json()["latest_tos_version"] == LATEST_TOS
+    assert response.json()["accepted_tos_version"] == LATEST_TOS
 
 
 async def test_register_new_user(client: TestClient):
@@ -772,27 +772,27 @@ async def test_register_new_user(client: TestClient):
     assert response.json()["detail"] == "User is already registered for MyECL Pay"
 
 
-async def test_sign_cgu_for_old_cgu_version(client: TestClient):
+async def test_sign_tos_for_old_tos_version(client: TestClient):
     response = client.post(
-        "/myeclpay/users/me/cgu",
+        "/myeclpay/users/me/tos",
         headers={"Authorization": f"Bearer {unregistered_ecl_user_access_token}"},
-        json={"accepted_cgu_version": 0},
+        json={"accepted_tos_version": 0},
     )
     assert response.status_code == 400
-    assert response.json()["detail"][:27] == "Only the latest CGU version"
+    assert response.json()["detail"][:27] == "Only the latest TOS version"
 
 
-async def test_sign_cgu_for_unregistered_user(client: TestClient):
+async def test_sign_tos_for_unregistered_user(client: TestClient):
     response = client.post(
-        "/myeclpay/users/me/cgu",
+        "/myeclpay/users/me/tos",
         headers={"Authorization": f"Bearer {unregistered_ecl_user_access_token}"},
-        json={"accepted_cgu_version": 1},
+        json={"accepted_tos_version": 1},
     )
     assert response.status_code == 400
     assert response.json()["detail"] == "User is not registered for MyECL Pay"
 
 
-async def test_sign_cgu(client: TestClient):
+async def test_sign_tos(client: TestClient):
     unregistered_user = await create_user_with_groups(
         groups=[],
     )
@@ -805,9 +805,9 @@ async def test_sign_cgu(client: TestClient):
     assert response.status_code == 204
 
     response = client.post(
-        "/myeclpay/users/me/cgu",
+        "/myeclpay/users/me/tos",
         headers={"Authorization": f"Bearer {unregistered_user_token}"},
-        json={"accepted_cgu_version": LATEST_CGU},
+        json={"accepted_tos_version": LATEST_TOS},
     )
     assert response.status_code == 204
 
@@ -1441,7 +1441,7 @@ def test_store_scan_store_from_store_wallet(client: TestClient):
     ensure_qr_code_id_is_already_used(qr_code_id=qr_code_id, client=client)
 
 
-async def test_store_scan_store_from_wallet_with_old_cgu_version(client: TestClient):
+async def test_store_scan_store_from_wallet_with_old_tos_version(client: TestClient):
     ecl_user = await create_user_with_groups(
         groups=[],
     )
@@ -1456,8 +1456,8 @@ async def test_store_scan_store_from_wallet_with_old_cgu_version(client: TestCli
     ecl_user_payment = models_myeclpay.UserPayment(
         user_id=ecl_user.id,
         wallet_id=ecl_user_wallet.id,
-        accepted_cgu_signature=datetime.now(UTC),
-        accepted_cgu_version=0,
+        accepted_tos_signature=datetime.now(UTC),
+        accepted_tos_version=0,
     )
     await add_object_to_db(ecl_user_payment)
 
@@ -1503,7 +1503,7 @@ async def test_store_scan_store_from_wallet_with_old_cgu_version(client: TestCli
         },
     )
     assert response.status_code == 400
-    assert response.json()["detail"] == "Debited user has not signed the latest CGU"
+    assert response.json()["detail"] == "Debited user has not signed the latest TOS"
 
     ensure_qr_code_id_is_already_used(qr_code_id=qr_code_id, client=client)
 
