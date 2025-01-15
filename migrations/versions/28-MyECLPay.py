@@ -19,7 +19,7 @@ from app.types.sqlalchemy import TZDateTime
 
 # revision identifiers, used by Alembic.
 revision: str = "e16b58cc6084"
-down_revision: str | None = "53c163acf327"
+down_revision: str | None = "a1e6e8b52103"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -161,8 +161,8 @@ def upgrade() -> None:
         "myeclpay_user_payment",
         sa.Column("user_id", sa.String(), nullable=False),
         sa.Column("wallet_id", sa.Uuid(), nullable=False, unique=True),
-        sa.Column("accepted_cgu_signature", TZDateTime(), nullable=False),
-        sa.Column("accepted_cgu_version", sa.Integer(), nullable=False),
+        sa.Column("accepted_tos_signature", TZDateTime(), nullable=False),
+        sa.Column("accepted_tos_version", sa.Integer(), nullable=False),
         sa.ForeignKeyConstraint(
             ["user_id"],
             ["core_user.id"],
