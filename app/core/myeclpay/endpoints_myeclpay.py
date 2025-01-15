@@ -940,11 +940,22 @@ async def delete_store_seller(
 
 
 @router.get(
+    "/myeclpay/tos",
+    status_code=200,
+)
+async def get_tos():
+    """
+    Get the latest TOS version and the TOS content.
+    """
+    return TOS_CONTENT
+
+
+@router.get(
     "/myeclpay/users/me/tos",
     status_code=200,
     response_model=schemas_myeclpay.TOSSignatureResponse,
 )
-async def get_tos(
+async def get_user_tos(
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user()),
 ):
@@ -1070,15 +1081,14 @@ async def sign_tos(
     # hyperion_security_logger.warning(
     #     f"Create_user: an user with email {user_create.email} already exists ({request_id})",
     # )
-    # TODO: change template
     if settings.SMTP_ACTIVE:
         account_exists_content = templates.get_template(
-            "account_exists_mail.html",
+            "myeclpay_signed_tos_mail.html",
         ).render()
         background_tasks.add_task(
             send_email,
             recipient=user.email,
-            subject="MyECL - you have signed TOS",
+            subject="MyECL - You signed the Terms of Service for MyECLPay",
             content=account_exists_content,
             settings=settings,
         )
