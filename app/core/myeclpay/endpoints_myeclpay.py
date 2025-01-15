@@ -1265,7 +1265,7 @@ async def create_user_devices(
             "activate_myeclpay_device_mail.html",
         ).render(
             {
-                "activation_link": f"{settings.CLIENT_URL}myeclpay/users/me/wallet/devices/activate/{activation_token}",
+                "activation_link": f"{settings.CLIENT_URL}myeclpay/users/me/wallet/devices/activate?token={activation_token}",
             },
         )
         background_tasks.add_task(
@@ -1284,20 +1284,19 @@ async def create_user_devices(
 
 
 @router.get(
-    "/myeclpay/users/me/wallet/devices/activate/{activation_token}",
+    "/myeclpay/users/me/wallet/devices/activate",
     status_code=200,
 )
 async def activate_user_device(
-    activation_token: str,
+    token: str,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user()),
 ):
     """
     Activate a wallet device
     """
 
     wallet_device = await cruds_myeclpay.get_wallet_device_by_activation_token(
-        activation_token=activation_token,
+        activation_token=token,
         db=db,
     )
 
@@ -1319,8 +1318,20 @@ async def activate_user_device(
         db=db,
     )
 
+    await db.commit()
+
+    wallet = await cruds_myeclpay.get_wallet(
+        wallet_id=wallet_device.wallet_id,
+        db=db,
+    )
+    if wallet is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Wallet does not exist",
+        )
+
     hyperion_error_logger.info(
-        f"Wallet device {wallet_device.id} activated by user {user.id}",
+        f"Wallet device {wallet_device.id} activated by user {wallet.user}",
     )
 
     return "Wallet device activated"
