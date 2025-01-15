@@ -1330,9 +1330,11 @@ async def activate_user_device(
             detail="Wallet does not exist",
         )
 
-    hyperion_error_logger.info(
-        f"Wallet device {wallet_device.id} activated by user {wallet.user}",
-    )
+    user = wallet.user
+    if user is not None:
+        hyperion_error_logger.info(
+            f"Wallet device {wallet_device.id} activated by user {user.id}",
+        )
 
     return "Wallet device activated"
 
