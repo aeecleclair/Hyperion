@@ -1262,7 +1262,7 @@ async def create_user_devices(
 
     if settings.SMTP_ACTIVE:
         account_exists_content = templates.get_template(
-            "activate_myeclpay_device.html",
+            "activate_myeclpay_device_mail.html",
         ).render(
             {
                 "activation_link": f"{settings.CLIENT_URL}myeclpay/users/me/wallet/devices/activate/{activation_token}",
