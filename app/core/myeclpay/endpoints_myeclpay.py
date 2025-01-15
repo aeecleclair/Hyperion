@@ -42,7 +42,6 @@ from app.dependencies import (
     is_user_an_ecl_member,
     is_user_in,
 )
-from app.utils import tools
 from app.utils.communication.notifications import NotificationTool
 from app.utils.mail.mailworker import send_email
 from app.utils.tools import get_display_name
@@ -179,6 +178,7 @@ async def delete_structure(
 async def init_update_structure_manager(
     structure_id: UUID,
     transfer_info: schemas_myeclpay.StructureTranfert,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user()),
     settings: Settings = Depends(get_settings),
@@ -212,13 +212,42 @@ async def init_update_structure_manager(
             status_code=404,
             detail="User does not exist",
         )
-    await tools.create_and_send_structure_manager_transfer_email(
-        email=user.email,
+
+    await cruds_myeclpay.delete_structure_manager_transfer_by_structure(
         structure_id=structure_id,
-        new_manager_user_id=transfer_info.new_manager_user_id,
         db=db,
-        settings=settings,
     )
+
+    confirmation_token = security.generate_token()
+
+    await cruds_myeclpay.init_structure_manager_transfer(
+        structure_id=structure_id,
+        user_id=transfer_info.new_manager_user_id,
+        confirmation_token=confirmation_token,
+        valid_until=datetime.now(tz=UTC)
+        + timedelta(minutes=settings.MYECLPAY_MANAGER_TRANSFER_TOKEN_EXPIRES_MINUTES),
+        db=db,
+    )
+
+    if settings.SMTP_ACTIVE:
+        migration_content = templates.get_template(
+            "structure_manager_transfer.html",
+        ).render(
+            {
+                "transfer_link": f"{settings.CLIENT_URL}myeclpay/structures/manager/confirm-transfer?token={confirmation_token}",
+            },
+        )
+        background_tasks.add_task(
+            send_email,
+            recipient=user_db.email,
+            subject="MyECL - Confirm the structure manager transfer",
+            content=migration_content,
+            settings=settings,
+        )
+    else:
+        hyperion_security_logger.info(
+            f"You can confirm the transfer by clicking the following link: {settings.CLIENT_URL}myeclpay/structures/manager/confirm-transfer?token={confirmation_token}",
+        )
 
 
 @router.get(
@@ -1221,11 +1250,14 @@ async def create_user_devices(
 
     await db.commit()
 
-    # TODO: use the correct template content
     if settings.SMTP_ACTIVE:
         account_exists_content = templates.get_template(
-            "account_exists_mail.html",
-        ).render()
+            "activate_myeclpay_device.html",
+        ).render(
+            {
+                "activation_link": f"{settings.CLIENT_URL}myeclpay/users/me/wallet/devices/activate/{activation_token}",
+            },
+        )
         background_tasks.add_task(
             send_email,
             recipient=user.email,
