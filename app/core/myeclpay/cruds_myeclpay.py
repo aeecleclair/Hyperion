@@ -6,6 +6,7 @@ from sqlalchemy import delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core import schemas_core
 from app.core.myeclpay import models_myeclpay, schemas_myeclpay
 from app.core.myeclpay.types_myeclpay import (
     TransactionStatus,
@@ -116,6 +117,14 @@ async def get_structures(
             membership=structure.membership,
             manager_user_id=structure.manager_user_id,
             id=structure.id,
+            manager_user=schemas_core.CoreUserSimple(
+                id=structure.manager_user.id,
+                firstname=structure.manager_user.firstname,
+                name=structure.manager_user.name,
+                nickname=structure.manager_user.nickname,
+                account_type=structure.manager_user.account_type,
+                school_id=structure.manager_user.school_id,
+            ),
         )
         for structure in result.scalars().all()
     ]
@@ -142,6 +151,14 @@ async def get_structure_by_id(
             membership=structure.membership,
             manager_user_id=structure.manager_user_id,
             id=structure.id,
+            manager_user=schemas_core.CoreUserSimple(
+                id=structure.manager_user.id,
+                firstname=structure.manager_user.firstname,
+                name=structure.manager_user.name,
+                nickname=structure.manager_user.nickname,
+                account_type=structure.manager_user.account_type,
+                school_id=structure.manager_user.school_id,
+            ),
         )
         if structure
         else None
