@@ -23,6 +23,7 @@ class StructureBase(BaseModel):
 
 class Structure(StructureBase):
     id: UUID
+    manager_user: schemas_core.CoreUserSimple
 
 
 class StructureUpdate(BaseModel):
