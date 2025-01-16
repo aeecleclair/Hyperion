@@ -10,7 +10,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core, schemas_core
+from app.core import cruds_core, models_core, schemas_core
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
 from app.core.users import cruds_users
@@ -20,6 +20,7 @@ from app.dependencies import (
     is_user_an_ecl_member,
     is_user_in,
 )
+from app.types.membership import AvailableAssociationMembership
 
 router = APIRouter(tags=["Groups"])
 
@@ -304,3 +305,43 @@ async def delete_group(
 
     await cruds_groups.delete_membership_by_group_id(group_id=group_id, db=db)
     await cruds_groups.delete_group(db=db, group_id=group_id)
+
+
+@router.patch(
+    "/groups/{group_id}/sync/{association_membership}",
+    status_code=204,
+)
+async def synchronize_group_with_association(
+    group_id: str,
+    association_membership: AvailableAssociationMembership,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
+    request_id: str = Depends(get_request_id),
+):
+    """
+    Synchronize a group with an association membership.
+
+    **This endpoint is only usable by administrators**
+    """
+
+    group_db = await cruds_groups.get_group_by_id(group_id=group_id, db=db)
+    if group_db is None:
+        raise HTTPException(status_code=404, detail="Group not found")
+
+    hyperion_security_logger.warning(
+        f"Synchronize_group_with_association: Admin user {user.id} synchronized group {group_db.id} ({group_db.name}) with association membership '{association_membership.value}' ({request_id})",
+    )
+    await cruds_groups.delete_membership_by_group_id(group_id=group_id, db=db)
+
+    members = await cruds_core.get_curents_memberships_by_name(
+        db=db,
+        membership=association_membership,
+    )
+
+    for member in members:
+        membership_db = models_core.CoreMembership(
+            user_id=member.user_id,
+            group_id=group_id,
+            description="",
+        )
+        await cruds_groups.create_membership(db=db, membership=membership_db)
