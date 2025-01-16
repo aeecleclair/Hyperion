@@ -84,6 +84,8 @@ class Structure(Base):
     membership: Mapped[AvailableAssociationMembership | None]
     manager_user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"))
 
+    manager_user: Mapped[models_core.CoreUser] = relationship(init=False, lazy="joined")
+
 
 class StructureManagerTransfert(Base):
     __tablename__ = "myeclpay_structure_manager_transfer"
