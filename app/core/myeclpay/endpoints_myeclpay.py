@@ -8,7 +8,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import security
+from app.core import schemas_core, security
 from app.core.config import Settings
 from app.core.groups.groups_type import GroupType
 from app.core.models_core import CoreUser
@@ -89,10 +89,27 @@ async def create_structure(
 
     **The user must be an admin to use this endpoint**
     """
+    db_user = await cruds_users.get_user_by_id(
+        user_id=structure.manager_user_id,
+        db=db,
+    )
+    if db_user is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Manager user does not exist",
+        )
     structure_db = schemas_myeclpay.Structure(
         id=uuid.uuid4(),
         name=structure.name,
         manager_user_id=structure.manager_user_id,
+        manager_user=schemas_core.CoreUserSimple(
+            id=db_user.id,
+            name=db_user.name,
+            firstname=db_user.firstname,
+            nickname=db_user.nickname,
+            account_type=db_user.account_type,
+            school_id=db_user.school_id,
+        ),
     )
     await cruds_myeclpay.create_structure(
         structure=structure_db,
@@ -478,6 +495,14 @@ async def get_user_stores(
                         id=store.structure.id,
                         name=store.structure.name,
                         manager_user_id=store.structure.manager_user_id,
+                        manager_user=schemas_core.CoreUserSimple(
+                            id=store.structure.manager_user.id,
+                            name=store.structure.manager_user.name,
+                            firstname=store.structure.manager_user.firstname,
+                            nickname=store.structure.manager_user.nickname,
+                            account_type=store.structure.manager_user.account_type,
+                            school_id=store.structure.manager_user.school_id,
+                        ),
                     ),
                     wallet_id=store.wallet_id,
                     can_bank=seller.can_bank,
@@ -1687,12 +1712,12 @@ async def store_scan_qrcode(
     # TODO: log the transaction
 
     message = Message(
-        context=f"payment-{qr_code_content.qr_code_id}",
-        is_visible=True,
+        # context=f"payment-{qr_code_content.qr_code_id}",
+        # is_visible=True,
         title=f"💳 Paiement - {store.name}",
         # TODO: convert and add unit
         content=f"Une transaction de {qr_code_content.total} a été effectuée",
-        expire_on=datetime.now(UTC) + timedelta(days=3),
+        # expire_on=datetime.now(UTC) + timedelta(days=3),
         action_module="MyECLPay",
     )
     await notification_tool.send_notification_to_user(
