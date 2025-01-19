@@ -350,8 +350,39 @@ async def get_wallets(
             id=wallet.id,
             type=wallet.type,
             balance=wallet.balance,
-            store=wallet.store,
-            user=wallet.user,
+            store=schemas_myeclpay.Store(
+                id=wallet.store.id,
+                name=wallet.store.name,
+                structure_id=wallet.store.structure_id,
+                structure=schemas_myeclpay.Structure(
+                    id=wallet.store.structure.id,
+                    name=wallet.store.structure.name,
+                    membership=wallet.store.structure.membership,
+                    manager_user_id=wallet.store.structure.manager_user_id,
+                    manager_user=schemas_core.CoreUserSimple(
+                        id=wallet.store.structure.manager_user.id,
+                        firstname=wallet.store.structure.manager_user.firstname,
+                        name=wallet.store.structure.manager_user.name,
+                        nickname=wallet.store.structure.manager_user.nickname,
+                        account_type=wallet.store.structure.manager_user.account_type,
+                        school_id=wallet.store.structure.manager_user.school_id,
+                    ),
+                ),
+                wallet_id=wallet.id,
+            )
+            if wallet.store
+            else None,
+            user=schemas_core.CoreUser(
+                id=wallet.user.id,
+                firstname=wallet.user.firstname,
+                name=wallet.user.name,
+                nickname=wallet.user.nickname,
+                account_type=wallet.user.account_type,
+                school_id=wallet.user.school_id,
+                email=wallet.user.email,
+            )
+            if wallet.user
+            else None,
         )
         for wallet in result.scalars().all()
     ]
