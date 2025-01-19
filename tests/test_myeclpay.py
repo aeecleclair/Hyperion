@@ -930,7 +930,7 @@ async def test_create_and_activate_user_device(
     assert response.json()["id"] is not None
 
     response = client.get(
-        f"/myeclpay/users/me/wallet/devices/activate/{UNIQUE_TOKEN}",
+        f"/myeclpay/devices/activate?token={UNIQUE_TOKEN}",
         headers={"Authorization": f"Bearer {ecl_user_access_token}"},
     )
     assert response.status_code == 200
@@ -941,7 +941,7 @@ async def test_activate_non_existing_device(
     client: TestClient,
 ) -> None:
     response = client.get(
-        "/myeclpay/users/me/wallet/devices/activate/invalidtoken",
+        "/myeclpay/devices/activate?token=invalid_token",
         headers={"Authorization": f"Bearer {ecl_user_access_token}"},
     )
     assert response.status_code == 404
@@ -952,7 +952,7 @@ async def test_activate_already_activated_device(
     client: TestClient,
 ) -> None:
     response = client.get(
-        "/myeclpay/users/me/wallet/devices/activate/activation_token_ecl_user_wallet_device",
+        "/myeclpay/devices/activate?token=activation_token_ecl_user_wallet_device",
         headers={"Authorization": f"Bearer {ecl_user_access_token}"},
     )
     assert response.status_code == 400
@@ -1260,7 +1260,7 @@ def test_store_scan_store_invalid_signature(client: TestClient):
 
 
 def test_store_scan_store_with_non_store_qr_code(client: TestClient):
-    qr_code_id = str(uuid4())
+    qr_code_id = uuid4()
 
     qr_code_content = QRCodeContentBase(
         qr_code_id=qr_code_id,
@@ -1295,7 +1295,7 @@ def test_store_scan_store_with_non_store_qr_code(client: TestClient):
 
 
 def test_store_scan_store_negative_total(client: TestClient):
-    qr_code_id = str(uuid4())
+    qr_code_id = uuid4()
 
     qr_code_content = QRCodeContentBase(
         qr_code_id=qr_code_id,
@@ -1328,7 +1328,7 @@ def test_store_scan_store_negative_total(client: TestClient):
 
 
 def test_store_scan_store_total_greater_than_max(client: TestClient):
-    qr_code_id = str(uuid4())
+    qr_code_id = uuid4()
 
     qr_code_content = QRCodeContentBase(
         qr_code_id=qr_code_id,
@@ -1370,7 +1370,7 @@ def test_store_scan_store_missing_wallet(
         return_value=None,
     )
 
-    qr_code_id = str(uuid4())
+    qr_code_id = uuid4()
 
     qr_code_content = QRCodeContentBase(
         qr_code_id=qr_code_id,
@@ -1406,7 +1406,7 @@ def test_store_scan_store_missing_wallet(
 
 
 def test_store_scan_store_from_store_wallet(client: TestClient):
-    qr_code_id = str(uuid4())
+    qr_code_id = uuid4()
 
     qr_code_content = QRCodeContentBase(
         qr_code_id=qr_code_id,
@@ -1476,7 +1476,7 @@ async def test_store_scan_store_from_wallet_with_old_tos_version(client: TestCli
     )
     await add_object_to_db(ecl_user_wallet_device)
 
-    qr_code_id = str(uuid4())
+    qr_code_id = uuid4()
 
     qr_code_content = QRCodeContentBase(
         qr_code_id=qr_code_id,
@@ -1509,7 +1509,7 @@ async def test_store_scan_store_from_wallet_with_old_tos_version(client: TestCli
 
 
 def test_store_scan_store_insufficient_ballance(client: TestClient):
-    qr_code_id = str(uuid4())
+    qr_code_id = uuid4()
 
     qr_code_content = QRCodeContentBase(
         qr_code_id=qr_code_id,
@@ -1542,7 +1542,7 @@ def test_store_scan_store_insufficient_ballance(client: TestClient):
 
 
 async def test_store_scan_store_successful_scan(client: TestClient):
-    qr_code_id = str(uuid4())
+    qr_code_id = uuid4()
 
     qr_code_content = QRCodeContentBase(
         qr_code_id=qr_code_id,
