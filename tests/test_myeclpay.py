@@ -307,6 +307,7 @@ async def init_objects() -> None:
         wallet_id=ecl_user_wallet.id,
         total=1000,  # 10€
         creation=datetime.now(UTC),
+        confirmed=True,
     )
     await add_object_to_db(ecl_user_transfer)
 

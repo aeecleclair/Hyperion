@@ -2,15 +2,19 @@ import logging
 from uuid import UUID
 
 from cryptography.hazmat.primitives.asymmetric import ed25519
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.myeclpay import cruds_myeclpay
 from app.core.myeclpay.models_myeclpay import UserPayment
 from app.core.myeclpay.schemas_myeclpay import (
     QRCodeContentBase,
     QRCodeContentData,
 )
+from app.core.payment import schemas_payment
 
 hyperion_security_logger = logging.getLogger("hyperion.security")
 
+hyperion_error_logger = logging.getLogger("hyperion.error")
 
 LATEST_TOS = 1
 TOS_CONTENT = "TOS Content"
@@ -65,3 +69,35 @@ def is_user_latest_tos_signed(
     """
 
     return user_payment.accepted_tos_version == LATEST_TOS
+
+
+async def validate_transfer(
+    checkout_payment: schemas_payment.CheckoutPayment,
+    db: AsyncSession,
+):
+    paid_amount = checkout_payment.paid_amount
+    checkout_id = checkout_payment.checkout_id
+
+    transfer = await cruds_myeclpay.get_transfer_by_transfer_identifier(
+        db=db,
+        transfer_identifier=str(checkout_id),
+    )
+    if not transfer:
+        hyperion_error_logger.error(
+            f"MyECLPay payment callback: user transfer {checkout_id} not found.",
+        )
+        raise ValueError(f"User transfer {checkout_id} not found.")  # noqa: TRY003
+    try:
+        await cruds_myeclpay.confirm_transfer(
+            db=db,
+            transfer_id=transfer.id,
+        )
+        await cruds_myeclpay.increment_wallet_balance(
+            db=db,
+            wallet_id=transfer.wallet_id,
+            amount=paid_amount,
+        )
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise

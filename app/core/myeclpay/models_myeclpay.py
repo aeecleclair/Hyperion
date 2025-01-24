@@ -144,6 +144,7 @@ class Transfer(Base):
     wallet_id: Mapped[UUID] = mapped_column(ForeignKey("myeclpay_wallet.id"))
     total: Mapped[int]  # Stored in cents
     creation: Mapped[datetime]
+    confirmed: Mapped[bool]
 
 
 class Seller(Base):
