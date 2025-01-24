@@ -1536,29 +1536,15 @@ async def get_payment_url(
         )
 
     if transfer_info.transfer_type is not TransferType.HELLO_ASSO:
-        if transfer_info.approver_user_id is None:
-            raise HTTPException(
-                status_code=403,
-                detail="Please provide an approver user id for this transfer type",
-            )
         if transfer_info.receiver_user_id is None:
             raise HTTPException(
                 status_code=403,
                 detail="Please provide a receiver user id for this transfer type",
             )
-        approver_user = await cruds_users.get_user_by_id(
-            user_id=transfer_info.approver_user_id,
-            db=db,
-        )
-        if approver_user is None:
-            raise HTTPException(
-                status_code=404,
-                detail="Approver user does not exist",
-            )
-        if GroupType.BDE not in [group.id for group in approver_user.groups]:
+        if GroupType.BDE not in [group.id for group in user.groups]:
             raise HTTPException(
                 status_code=403,
-                detail="Approver user is not allowed to approve this transfer",
+                detail="User is not allowed to approve this transfer",
             )
         receiver_user = await cruds_users.get_user_by_id(
             user_id=transfer_info.receiver_user_id,
@@ -1569,10 +1555,11 @@ async def get_payment_url(
                 status_code=404,
                 detail="Receiver user does not exist",
             )
-        user = receiver_user
+
+    receiver_user = receiver_user or user
 
     user_payment = await cruds_myeclpay.get_user_payment(
-        user_id=user.id,
+        user_id=receiver_user.id,
         db=db,
     )
     if user_payment is None:
@@ -1598,19 +1585,19 @@ async def get_payment_url(
 
     if transfer_info.transfer_type is TransferType.HELLO_ASSO:
         user_schema = schemas_core.CoreUser(
-            account_type=user.account_type,
-            school_id=user.school_id,
-            email=user.email,
-            birthday=user.birthday,
-            promo=user.promo,
-            floor=user.floor,
-            phone=user.phone,
-            created_on=user.created_on,
+            account_type=receiver_user.account_type,
+            school_id=receiver_user.school_id,
+            email=receiver_user.email,
+            birthday=receiver_user.birthday,
+            promo=receiver_user.promo,
+            floor=receiver_user.floor,
+            phone=receiver_user.phone,
+            created_on=receiver_user.created_on,
             groups=[],
-            id=user.id,
-            name=user.name,
-            firstname=user.firstname,
-            nickname=user.nickname,
+            id=receiver_user.id,
+            name=receiver_user.name,
+            firstname=receiver_user.firstname,
+            nickname=receiver_user.nickname,
         )
         checkout = await payment_tool.init_checkout(
             module="myeclpay",
@@ -1648,7 +1635,7 @@ async def get_payment_url(
             transfer=schemas_myeclpay.Transfer(
                 id=uuid.uuid4(),
                 type=transfer_info.transfer_type,
-                approver_user_id=transfer_info.approver_user_id,
+                approver_user_id=user.id,
                 total=transfer_info.amount,
                 transfer_identifier="",
                 wallet_id=user_payment.wallet_id,

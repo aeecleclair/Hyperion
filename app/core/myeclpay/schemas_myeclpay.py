@@ -96,7 +96,6 @@ class TOSSignatureResponse(BaseModel):
 class TransferInfo(BaseModel):
     amount: int
     transfer_type: TransferType
-    approver_user_id: str | None
     receiver_user_id: str | None
 
 
