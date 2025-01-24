@@ -410,7 +410,8 @@ class PlankaAuthClient(BaseAuthClient):
     https://docs.planka.cloud/docs/Configuration/OIDC/
     """
 
-    allow_pkce_with_client_secret: bool = True  # required to exchange OIDC code
+    # required in practice, as Planka uses PKCE as well as the client secret
+    allow_pkce_with_client_secret: bool = True
     allowed_scopes: set[ScopeType | str] = {
         ScopeType.openid,
         ScopeType.profile,
