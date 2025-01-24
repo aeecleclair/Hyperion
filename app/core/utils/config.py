@@ -111,6 +111,7 @@ class Settings(BaseSettings):
     HELLOASSO_CLIENT_SECRET: str | None = None
 
     CDR_PAYMENT_REDIRECTION_URL: str | None = None
+    MYECLPAY_PAYMENT_REDIRECTION_URL: str | None = None
 
     # Drive configuration for the raid registering app
     RAID_DRIVE_REFRESH_TOKEN: str | None = None
@@ -200,6 +201,9 @@ class Settings(BaseSettings):
     # https://semver.org/
     HYPERION_VERSION: str = "4.1.0"
     MINIMAL_TITAN_VERSION_CODE: int = 139
+
+    # Maximum wallet balance for MyECLPay in cents, we will prevent user from adding more money to their wallet if it will make their balance exceed this value
+    MYECLPAY_MAXIMUM_WALLET_BALANCE: int = 1000
 
     ######################################
     # Automatically generated parameters #

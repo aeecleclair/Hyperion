@@ -594,9 +594,38 @@ async def get_transfers(
             wallet_id=transfer.wallet_id,
             total=transfer.total,
             creation=transfer.creation,
+            confirmed=transfer.confirmed,
         )
         for transfer in result.scalars().all()
     ]
+
+
+async def create_transfer(
+    transfer: schemas_myeclpay.Transfer,
+    db: AsyncSession,
+) -> None:
+    transfer_db = models_myeclpay.Transfer(
+        id=transfer.id,
+        type=transfer.type,
+        transfer_identifier=transfer.transfer_identifier,
+        approver_user_id=transfer.approver_user_id,
+        wallet_id=transfer.wallet_id,
+        total=transfer.total,
+        creation=transfer.creation,
+        confirmed=transfer.confirmed,
+    )
+    db.add(transfer_db)
+
+
+async def confirm_transfer(
+    transfer_id: UUID,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        update(models_myeclpay.Transfer)
+        .where(models_myeclpay.Transfer.id == transfer_id)
+        .values(confirmed=True),
+    )
 
 
 async def get_transfers_by_wallet_id(
@@ -609,6 +638,18 @@ async def get_transfers_by_wallet_id(
         ),
     )
     return result.scalars().all()
+
+
+async def get_transfer_by_transfer_identifier(
+    db: AsyncSession,
+    transfer_identifier: str,
+) -> models_myeclpay.Transfer | None:
+    result = await db.execute(
+        select(models_myeclpay.Transfer).where(
+            models_myeclpay.Transfer.transfer_identifier == transfer_identifier,
+        ),
+    )
+    return result.scalars().first()
 
 
 async def get_store(

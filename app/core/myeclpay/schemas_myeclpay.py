@@ -93,6 +93,13 @@ class TOSSignatureResponse(BaseModel):
     tos_content: str
 
 
+class TransferInfo(BaseModel):
+    amount: int
+    transfer_type: TransferType
+    approver_user_id: str | None
+    receiver_user_id: str | None
+
+
 class History(BaseModel):
     id: UUID
     type: HistoryType
@@ -186,3 +193,4 @@ class Transfer(BaseModel):
     wallet_id: UUID
     total: int  # Stored in cents
     creation: datetime
+    confirmed: bool
