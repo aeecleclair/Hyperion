@@ -147,6 +147,7 @@ def upgrade() -> None:
         sa.Column("wallet_id", sa.Uuid(), nullable=False),
         sa.Column("total", sa.Integer(), nullable=False),
         sa.Column("creation", TZDateTime(), nullable=False),
+        sa.Column("confirmed", sa.Boolean(), nullable=False),
         sa.ForeignKeyConstraint(
             ["wallet_id"],
             ["myeclpay_wallet.id"],
