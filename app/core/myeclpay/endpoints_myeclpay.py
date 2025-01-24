@@ -1515,7 +1515,7 @@ async def get_user_wallet_history(
 
 
 @module.router.post(
-    "/cdr/transfer/",
+    "/myeclpay/transfer/",
     response_model=schemas_payment.PaymentUrl,
     status_code=200,
 )
