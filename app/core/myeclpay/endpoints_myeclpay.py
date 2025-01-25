@@ -528,7 +528,8 @@ async def get_user_stores(
 
 @module.router.post(
     "/myeclpay/stores/{store_id}/admins",
-    status_code=204,
+    status_code=201,
+    response_model=schemas_myeclpay.Seller,
 )
 async def create_store_admin_seller(
     store_id: UUID,
@@ -584,6 +585,11 @@ async def create_store_admin_seller(
     )
 
     await db.commit()
+    return await cruds_myeclpay.get_seller(
+        user_id=seller.user_id,
+        store_id=store_id,
+        db=db,
+    )
 
 
 @module.router.get(
@@ -818,7 +824,8 @@ async def delete_store(
 
 @module.router.post(
     "/myeclpay/stores/{store_id}/sellers",
-    status_code=204,
+    status_code=201,
+    response_model=schemas_myeclpay.Seller,
 )
 async def create_store_seller(
     store_id: UUID,
@@ -871,6 +878,11 @@ async def create_store_seller(
     )
 
     await db.commit()
+    return await cruds_myeclpay.get_seller(
+        user_id=seller.user_id,
+        store_id=store_id,
+        db=db,
+    )
 
 
 @module.router.get(
@@ -1517,7 +1529,7 @@ async def get_user_wallet_history(
 @module.router.post(
     "/myeclpay/transfer/",
     response_model=schemas_payment.PaymentUrl,
-    status_code=200,
+    status_code=201,
 )
 async def get_payment_url(
     transfer_info: schemas_myeclpay.TransferInfo,
