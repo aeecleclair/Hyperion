@@ -1555,8 +1555,8 @@ async def get_payment_url(
                 status_code=404,
                 detail="Receiver user does not exist",
             )
-
-    receiver_user = receiver_user or user
+    else:
+        receiver_user = user
 
     user_payment = await cruds_myeclpay.get_user_payment(
         user_id=receiver_user.id,
