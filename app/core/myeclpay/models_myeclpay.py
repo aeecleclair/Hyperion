@@ -164,7 +164,7 @@ class Seller(Base):
     can_manage_sellers: Mapped[bool]
     store_admin: Mapped[bool]
 
-    user: Mapped[models_core.CoreUser] = relationship(init=False)
+    user: Mapped[models_core.CoreUser] = relationship(init=False, lazy="joined")
 
 
 class UserPayment(Base):
