@@ -58,12 +58,8 @@ class StoreUpdate(BaseModel):
     membership: AvailableAssociationMembership | None = None
 
 
-class SellerAdminCreation(BaseModel):
+class SellerCreation(BaseModel):
     user_id: str
-
-
-class SellerCreation(SellerAdminCreation):
-    store_id: UUID
     can_bank: bool
     can_see_history: bool
     can_cancel: bool

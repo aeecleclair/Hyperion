@@ -770,6 +770,22 @@ async def update_store_seller(
             detail="Store does not exist",
         )
 
+    structure = await cruds_myeclpay.get_structure_by_id(
+        structure_id=store.structure_id,
+        db=db,
+    )
+    if structure is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Structure does not exist",
+        )
+
+    if structure.manager_user_id == seller_user_id:
+        raise HTTPException(
+            status_code=403,
+            detail="User is the manager for this structure and cannot be updated as a seller",
+        )
+
     seller_admin = await cruds_myeclpay.get_seller(
         user_id=user.id,
         store_id=store_id,
