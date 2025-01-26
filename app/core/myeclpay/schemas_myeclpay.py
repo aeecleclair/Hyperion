@@ -51,7 +51,6 @@ class UserStore(Store):
     can_see_history: bool
     can_cancel: bool
     can_manage_sellers: bool
-    store_admin: bool
 
 
 class StoreUpdate(BaseModel):
@@ -71,6 +70,13 @@ class SellerCreation(SellerAdminCreation):
     can_manage_sellers: bool
 
 
+class SellerUpdate(BaseModel):
+    can_bank: bool | None = None
+    can_see_history: bool | None = None
+    can_cancel: bool | None = None
+    can_manage_sellers: bool | None = None
+
+
 class Seller(BaseModel):
     user_id: str
     store_id: UUID
@@ -78,7 +84,6 @@ class Seller(BaseModel):
     can_see_history: bool
     can_cancel: bool
     can_manage_sellers: bool
-    store_admin: bool
 
     user: schemas_core.CoreUserSimple
 
