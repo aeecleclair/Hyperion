@@ -201,7 +201,6 @@ def upgrade() -> None:
         sa.Column("can_see_history", sa.Boolean(), nullable=False),
         sa.Column("can_cancel", sa.Boolean(), nullable=False),
         sa.Column("can_manage_sellers", sa.Boolean(), nullable=False),
-        sa.Column("store_admin", sa.Boolean(), nullable=False),
         sa.ForeignKeyConstraint(
             ["store_id"],
             ["myeclpay_store.id"],
