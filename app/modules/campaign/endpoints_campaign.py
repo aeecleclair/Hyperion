@@ -9,7 +9,8 @@ from fastapi.responses import FileResponse
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core, standard_responses
+from app.core import standard_responses
+from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import GroupType
 from app.core.users import cruds_users
 from app.dependencies import (

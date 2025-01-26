@@ -10,7 +10,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core, schemas_core
+from app.core.core_endpoints import models_core, schemas_core
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
 from app.core.users import cruds_users

@@ -3,7 +3,7 @@ from datetime import UTC, datetime, timedelta
 from fastapi import APIRouter, Body, Depends, HTTPException, Path
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core
+from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import GroupType
 from app.core.notification import (
     cruds_notification,

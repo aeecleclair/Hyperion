@@ -20,9 +20,10 @@ from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core, security
+from app.core import security
 from app.core.auth import cruds_auth, models_auth, schemas_auth
 from app.core.config import Settings
+from app.core.core_endpoints import models_core
 from app.core.security import (
     authenticate_user,
     create_access_token,

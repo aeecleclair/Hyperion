@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 
 import pytest_asyncio
 
-from app.core import models_core
+from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import GroupType
 from app.modules.cdr import models_cdr
 from app.modules.cdr.utils_cdr import construct_dataframe_from_users_purchases

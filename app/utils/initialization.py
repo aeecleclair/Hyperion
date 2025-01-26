@@ -6,8 +6,8 @@ from sqlalchemy.engine import Engine, create_engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core import models_core
 from app.core.config import Settings
+from app.core.core_endpoints import models_core
 from app.types import core_data
 from app.types.exceptions import CoreDataNotFoundError
 from app.types.sqlalchemy import Base

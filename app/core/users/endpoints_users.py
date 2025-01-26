@@ -20,8 +20,9 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core, schemas_core, security, standard_responses
+from app.core import security, standard_responses
 from app.core.config import Settings
+from app.core.core_endpoints import models_core, schemas_core
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.schools.schools_type import SchoolType

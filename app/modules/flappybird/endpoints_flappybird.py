@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core
+from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import AccountType, GroupType
 from app.dependencies import get_db, is_user_a_member, is_user_in
 from app.modules.flappybird import (

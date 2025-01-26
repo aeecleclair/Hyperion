@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core, schemas_core
+from app.core.core_endpoints import models_core, schemas_core
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.schools import cruds_schools
 from app.core.schools.schools_type import SchoolType

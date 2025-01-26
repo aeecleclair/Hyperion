@@ -3,7 +3,7 @@
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.models_core import CoreGroup, CoreUser
+from app.core.core_endpoints.models_core import CoreGroup, CoreUser
 from app.modules.raffle.types_raffle import RaffleStatusType
 from app.types.sqlalchemy import Base
 
