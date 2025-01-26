@@ -220,7 +220,6 @@ async def create_seller(
     can_see_history: bool,
     can_cancel: bool,
     can_manage_sellers: bool,
-    store_admin: bool,
     db: AsyncSession,
 ) -> None:
     wallet = models_myeclpay.Seller(
@@ -230,24 +229,8 @@ async def create_seller(
         can_see_history=can_see_history,
         can_cancel=can_cancel,
         can_manage_sellers=can_manage_sellers,
-        store_admin=store_admin,
     )
     db.add(wallet)
-
-
-async def get_admin_sellers(
-    store_id: UUID,
-    db: AsyncSession,
-) -> Sequence[models_myeclpay.Seller]:
-    result = await db.execute(
-        select(models_myeclpay.Seller)
-        .where(
-            models_myeclpay.Seller.store_id == store_id,
-            models_myeclpay.Seller.store_admin.is_(True),
-        )
-        .options(selectinload(models_myeclpay.Seller.user)),
-    )
-    return result.scalars().all()
 
 
 async def get_seller(
@@ -275,7 +258,6 @@ async def get_seller(
             can_see_history=result.can_see_history,
             can_cancel=result.can_cancel,
             can_manage_sellers=result.can_manage_sellers,
-            store_admin=result.store_admin,
             user=schemas_core.CoreUserSimple(
                 id=result.user.id,
                 firstname=result.user.firstname,
@@ -307,7 +289,6 @@ async def get_sellers_by_store_id(
             can_see_history=seller.can_see_history,
             can_cancel=seller.can_cancel,
             can_manage_sellers=seller.can_manage_sellers,
-            store_admin=seller.store_admin,
             user=schemas_core.CoreUserSimple(
                 id=seller.user.id,
                 firstname=seller.user.firstname,
@@ -340,7 +321,6 @@ async def update_seller(
     can_see_history: bool,
     can_cancel: bool,
     can_manage_sellers: bool,
-    store_admin: bool,
     db: AsyncSession,
 ) -> None:
     await db.execute(
@@ -354,7 +334,6 @@ async def update_seller(
             can_see_history=can_see_history,
             can_cancel=can_cancel,
             can_manage_sellers=can_manage_sellers,
-            store_admin=store_admin,
         ),
     )
 

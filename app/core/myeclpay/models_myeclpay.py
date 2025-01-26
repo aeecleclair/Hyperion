@@ -162,7 +162,6 @@ class Seller(Base):
     can_see_history: Mapped[bool]
     can_cancel: Mapped[bool]
     can_manage_sellers: Mapped[bool]
-    store_admin: Mapped[bool]
 
     user: Mapped[models_core.CoreUser] = relationship(init=False, lazy="joined")
 
