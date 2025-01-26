@@ -20,9 +20,10 @@ from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core, security
+from app.core import security
 from app.core.auth import cruds_auth, models_auth, schemas_auth
 from app.core.config import Settings
+from app.core.core_endpoints import models_core
 from app.core.security import (
     authenticate_user,
     create_access_token,
@@ -39,11 +40,18 @@ from app.dependencies import (
     get_user_from_token_with_scopes,
 )
 from app.types.exceptions import AuthHTTPException
+from app.types.module import CoreModule
 from app.types.scopes_type import ScopeType
 from app.utils.auth.providers import BaseAuthClient
 from app.utils.tools import is_user_member_of_any_group
 
 router = APIRouter(tags=["Auth"])
+
+core_module = CoreModule(
+    root="auth",
+    tag="Auth",
+    router=router,
+)
 
 templates = Jinja2Templates(directory="assets/templates")
 

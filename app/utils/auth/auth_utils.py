@@ -6,9 +6,10 @@ from jwt.exceptions import DecodeError, ExpiredSignatureError, InvalidTokenError
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core, security
+from app.core import security
 from app.core.auth import schemas_auth
 from app.core.config import Settings
+from app.core.core_endpoints import models_core
 from app.core.users import cruds_users
 from app.types.scopes_type import ScopeType
 

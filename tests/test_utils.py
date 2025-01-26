@@ -7,7 +7,7 @@ import pytest_asyncio
 from fastapi import HTTPException, UploadFile
 from starlette.datastructures import Headers
 
-from app.core import models_core
+from app.core.core_endpoints import models_core
 from app.types.core_data import BaseCoreData
 from app.types.exceptions import CoreDataNotFoundError, FileNameIsNotAnUUIDError
 from app.utils.tools import (

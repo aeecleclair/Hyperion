@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core, standard_responses
+from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import AccountType, GroupType
 from app.dependencies import (
     get_db,
@@ -18,6 +18,7 @@ from app.modules.recommendation import (
     models_recommendation,
     schemas_recommendation,
 )
+from app.types import standard_responses
 from app.types.content_type import ContentType
 from app.types.module import Module
 from app.utils.tools import get_file_from_data, save_file_as_data

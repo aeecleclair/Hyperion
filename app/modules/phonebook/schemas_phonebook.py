@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 
-from app.core import schemas_core
+from app.core.core_endpoints import schemas_core
 from app.modules.phonebook.types_phonebook import Kinds
 
 

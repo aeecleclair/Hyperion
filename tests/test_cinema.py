@@ -4,7 +4,7 @@ import uuid
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from app.core import models_core
+from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import GroupType
 from app.modules.cinema import models_cinema
 from tests.commons import (

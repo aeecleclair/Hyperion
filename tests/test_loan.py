@@ -5,7 +5,7 @@ from datetime import timedelta
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from app.core import models_core
+from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import GroupType
 from app.modules.loan import models_loan
 from tests.commons import (

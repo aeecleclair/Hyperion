@@ -3,7 +3,7 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-from app.core.schemas_core import CoreUserSimple
+from app.core.core_endpoints.schemas_core import CoreUserSimple
 
 
 class FlappyBirdScoreBase(BaseModel):

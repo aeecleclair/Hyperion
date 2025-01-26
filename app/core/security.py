@@ -7,8 +7,8 @@ import jwt
 from fastapi.security import OAuth2AuthorizationCodeBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core
 from app.core.auth import schemas_auth
+from app.core.core_endpoints import models_core
 from app.core.users import cruds_users
 
 if TYPE_CHECKING:

@@ -6,8 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import cruds_core, models_core, schemas_core
 from app.core.config import Settings
+from app.core.core_endpoints import cruds_core, models_core, schemas_core
 from app.core.groups.groups_type import AccountType, GroupType
 from app.dependencies import (
     get_db,
@@ -16,9 +16,16 @@ from app.dependencies import (
     is_user_in,
 )
 from app.modules.module_list import module_list
+from app.types.module import CoreModule
 from app.utils.tools import is_group_id_valid
 
 router = APIRouter(tags=["Core"])
+
+core_module = CoreModule(
+    root="",
+    tag="Core",
+    router=router,
+)
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 

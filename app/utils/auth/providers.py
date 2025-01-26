@@ -3,7 +3,7 @@ from typing import Any
 
 import unidecode
 
-from app.core import models_core
+from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import (
     AccountType,
     GroupType,
