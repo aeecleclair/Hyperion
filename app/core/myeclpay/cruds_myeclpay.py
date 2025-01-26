@@ -254,26 +254,71 @@ async def get_seller(
     user_id: str,
     store_id: UUID,
     db: AsyncSession,
-) -> models_myeclpay.Seller | None:
-    result = await db.execute(
-        select(models_myeclpay.Seller).where(
-            models_myeclpay.Seller.user_id == user_id,
-            models_myeclpay.Seller.store_id == store_id,
-        ),
+) -> schemas_myeclpay.Seller | None:
+    result = (
+        (
+            await db.execute(
+                select(models_myeclpay.Seller).where(
+                    models_myeclpay.Seller.user_id == user_id,
+                    models_myeclpay.Seller.store_id == store_id,
+                ),
+            )
+        )
+        .scalars()
+        .first()
     )
-    return result.scalars().first()
+    return (
+        schemas_myeclpay.Seller(
+            user_id=result.user_id,
+            store_id=result.store_id,
+            can_bank=result.can_bank,
+            can_see_history=result.can_see_history,
+            can_cancel=result.can_cancel,
+            can_manage_sellers=result.can_manage_sellers,
+            store_admin=result.store_admin,
+            user=schemas_core.CoreUserSimple(
+                id=result.user.id,
+                firstname=result.user.firstname,
+                name=result.user.name,
+                nickname=result.user.nickname,
+                account_type=result.user.account_type,
+                school_id=result.user.school_id,
+            ),
+        )
+        if result
+        else None
+    )
 
 
 async def get_sellers_by_store_id(
     store_id: UUID,
     db: AsyncSession,
-) -> Sequence[models_myeclpay.Seller]:
+) -> list[schemas_myeclpay.Seller]:
     result = await db.execute(
         select(models_myeclpay.Seller).where(
             models_myeclpay.Seller.store_id == store_id,
         ),
     )
-    return result.scalars().all()
+    return [
+        schemas_myeclpay.Seller(
+            user_id=seller.user_id,
+            store_id=seller.store_id,
+            can_bank=seller.can_bank,
+            can_see_history=seller.can_see_history,
+            can_cancel=seller.can_cancel,
+            can_manage_sellers=seller.can_manage_sellers,
+            store_admin=seller.store_admin,
+            user=schemas_core.CoreUserSimple(
+                id=seller.user.id,
+                firstname=seller.user.firstname,
+                name=seller.user.name,
+                nickname=seller.user.nickname,
+                account_type=seller.user.account_type,
+                school_id=seller.user.school_id,
+            ),
+        )
+        for seller in result.scalars().all()
+    ]
 
 
 async def get_sellers_by_user_id(

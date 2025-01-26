@@ -111,15 +111,15 @@ class Settings(BaseSettings):
     HELLOASSO_CLIENT_SECRET: str | None = None
 
     CDR_PAYMENT_REDIRECTION_URL: str | None = None
+    RAID_PAYMENT_REDIRECTION_URL: str | None = None
     MYECLPAY_PAYMENT_REDIRECTION_URL: str | None = None
+    MYECLPAY_MAXIMUM_WALLET_BALANCE: int = 1000
 
     # Drive configuration for the raid registering app
     RAID_DRIVE_REFRESH_TOKEN: str | None = None
     RAID_DRIVE_API_KEY: str | None = None
     RAID_DRIVE_CLIENT_ID: str | None = None
     RAID_DRIVE_CLIENT_SECRET: str | None = None
-
-    RAID_PAYMENT_REDIRECTION_URL: str | None = None
 
     ############################
     # PostgreSQL configuration #
@@ -203,7 +203,6 @@ class Settings(BaseSettings):
     MINIMAL_TITAN_VERSION_CODE: int = 139
 
     # Maximum wallet balance for MyECLPay in cents, we will prevent user from adding more money to their wallet if it will make their balance exceed this value
-    MYECLPAY_MAXIMUM_WALLET_BALANCE: int = 1000
 
     ######################################
     # Automatically generated parameters #
