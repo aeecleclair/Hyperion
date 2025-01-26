@@ -20,7 +20,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import security, standard_responses
+from app.core import security
 from app.core.config import Settings
 from app.core.core_endpoints import models_core, schemas_core
 from app.core.groups import cruds_groups
@@ -36,6 +36,7 @@ from app.dependencies import (
     is_user_an_ecl_member,
     is_user_in,
 )
+from app.types import standard_responses
 from app.types.content_type import ContentType
 from app.types.exceptions import UserWithEmailAlreadyExistError
 from app.types.module import CoreModule

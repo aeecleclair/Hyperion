@@ -6,7 +6,6 @@ from fastapi.responses import FileResponse
 from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import standard_responses
 from app.core.core_endpoints import models_core
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import AccountType, GroupType
@@ -21,6 +20,7 @@ from app.dependencies import (
 )
 from app.modules.raffle import cruds_raffle, models_raffle, schemas_raffle
 from app.modules.raffle.types_raffle import RaffleStatusType
+from app.types import standard_responses
 from app.types.content_type import ContentType
 from app.types.module import Module
 from app.utils.redis import locker_get, locker_set

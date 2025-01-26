@@ -6,7 +6,6 @@ from fastapi import Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import standard_responses
 from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.notification.notification_types import CustomTopic, Topic
@@ -19,6 +18,7 @@ from app.dependencies import (
     is_user_in,
 )
 from app.modules.advert import cruds_advert, models_advert, schemas_advert
+from app.types import standard_responses
 from app.types.content_type import ContentType
 from app.types.module import Module
 from app.utils.communication.notifications import NotificationTool

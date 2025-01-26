@@ -9,7 +9,6 @@ from fastapi.responses import FileResponse
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import standard_responses
 from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import GroupType
 from app.core.users import cruds_users
@@ -21,6 +20,7 @@ from app.dependencies import (
 )
 from app.modules.campaign import cruds_campaign, models_campaign, schemas_campaign
 from app.modules.campaign.types_campaign import ListType, StatusType
+from app.types import standard_responses
 from app.types.content_type import ContentType
 from app.types.module import Module
 from app.utils.tools import (
