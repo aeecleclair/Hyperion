@@ -20,8 +20,15 @@ from app.dependencies import (
     get_db,
     is_user_in,
 )
+from app.types.module import CoreModule
 
 router = APIRouter(tags=["Schools"])
+
+core_module = CoreModule(
+    root="schools",
+    tag="Schools",
+    router=router,
+)
 
 
 @router.get(

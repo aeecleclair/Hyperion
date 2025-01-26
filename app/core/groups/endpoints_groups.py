@@ -20,8 +20,15 @@ from app.dependencies import (
     is_user_an_ecl_member,
     is_user_in,
 )
+from app.types.module import CoreModule
 
 router = APIRouter(tags=["Groups"])
+
+core_module = CoreModule(
+    root="groups",
+    tag="Groups",
+    router=router,
+)
 
 hyperion_security_logger = logging.getLogger("hyperion.security")
 

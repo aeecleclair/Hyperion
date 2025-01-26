@@ -16,9 +16,16 @@ from app.dependencies import (
     is_user_in,
 )
 from app.modules.module_list import module_list
+from app.types.module import CoreModule
 from app.utils.tools import is_group_id_valid
 
 router = APIRouter(tags=["Core"])
+
+core_module = CoreModule(
+    root="",
+    tag="Core",
+    router=router,
+)
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 

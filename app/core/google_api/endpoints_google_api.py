@@ -9,8 +9,15 @@ from app.dependencies import (
     get_db,
     get_settings,
 )
+from app.types.module import CoreModule
 
 router = APIRouter(tags=["GoogleAPI"])
+
+core_module = CoreModule(
+    root="google-api",
+    tag="GoogleAPI",
+    router=router,
+)
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 

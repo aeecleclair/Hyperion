@@ -37,6 +37,7 @@ from app.dependencies import (
 )
 from app.types.content_type import ContentType
 from app.types.exceptions import UserWithEmailAlreadyExistError
+from app.types.module import CoreModule
 from app.utils.mail.mailworker import send_email
 from app.utils.tools import (
     create_and_send_email_migration,
@@ -46,6 +47,12 @@ from app.utils.tools import (
 )
 
 router = APIRouter(tags=["Users"])
+
+core_module = CoreModule(
+    root="users",
+    tag="Users",
+    router=router,
+)
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 hyperion_security_logger = logging.getLogger("hyperion.security")

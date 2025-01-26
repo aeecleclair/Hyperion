@@ -19,10 +19,17 @@ from app.dependencies import (
     is_user,
     is_user_in,
 )
+from app.types.module import CoreModule
 from app.types.scheduler import Scheduler
 from app.utils.communication.notifications import NotificationManager, NotificationTool
 
 router = APIRouter(tags=["Notifications"])
+
+core_module = CoreModule(
+    root="notification",
+    tag="Notifications",
+    router=router,
+)
 
 
 @router.post(

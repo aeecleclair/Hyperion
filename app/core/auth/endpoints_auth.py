@@ -39,11 +39,18 @@ from app.dependencies import (
     get_user_from_token_with_scopes,
 )
 from app.types.exceptions import AuthHTTPException
+from app.types.module import CoreModule
 from app.types.scopes_type import ScopeType
 from app.utils.auth.providers import BaseAuthClient
 from app.utils.tools import is_user_member_of_any_group
 
 router = APIRouter(tags=["Auth"])
+
+core_module = CoreModule(
+    root="auth",
+    tag="Auth",
+    router=router,
+)
 
 templates = Jinja2Templates(directory="assets/templates")
 
