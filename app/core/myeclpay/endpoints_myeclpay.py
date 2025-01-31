@@ -1381,14 +1381,14 @@ async def get_user_wallet_history(
     )
 
     for transaction in transactions:
-        if transaction.receiver_wallet_id == user_payment.wallet_id:
+        if transaction.credited_wallet_id == user_payment.wallet_id:
             # The user received the transaction
             transaction_type = HistoryType.RECEIVED
-            other_wallet = transaction.giver_wallet
+            other_wallet = transaction.debited_wallet
         else:
             # The user sent the transaction
             transaction_type = HistoryType.GIVEN
-            other_wallet = transaction.receiver_wallet
+            other_wallet = transaction.credited_wallet
 
         # We need to find if the other wallet correspond to a store or a user to get its display name
         if other_wallet.store is not None:
@@ -1457,30 +1457,30 @@ async def get_payment_url(
         )
 
     if transfer_info.transfer_type is not TransferType.HELLO_ASSO:
-        if transfer_info.receiver_user_id is None:
+        if transfer_info.credited_user_id is None:
             raise HTTPException(
                 status_code=403,
-                detail="Please provide a receiver user id for this transfer type",
+                detail="Please provide a credited user id for this transfer type",
             )
         if GroupType.BDE not in [group.id for group in user.groups]:
             raise HTTPException(
                 status_code=403,
                 detail="User is not allowed to approve this transfer",
             )
-        receiver_user = await cruds_users.get_user_by_id(
-            user_id=transfer_info.receiver_user_id,
+        credited_user = await cruds_users.get_user_by_id(
+            user_id=transfer_info.credited_user_id,
             db=db,
         )
-        if receiver_user is None:
+        if credited_user is None:
             raise HTTPException(
                 status_code=404,
                 detail="Receiver user does not exist",
             )
     else:
-        receiver_user = user
+        credited_user = user
 
     user_payment = await cruds_myeclpay.get_user_payment(
-        user_id=receiver_user.id,
+        user_id=credited_user.id,
         db=db,
     )
     if user_payment is None:
@@ -1506,19 +1506,19 @@ async def get_payment_url(
 
     if transfer_info.transfer_type is TransferType.HELLO_ASSO:
         user_schema = schemas_core.CoreUser(
-            account_type=receiver_user.account_type,
-            school_id=receiver_user.school_id,
-            email=receiver_user.email,
-            birthday=receiver_user.birthday,
-            promo=receiver_user.promo,
-            floor=receiver_user.floor,
-            phone=receiver_user.phone,
-            created_on=receiver_user.created_on,
+            account_type=credited_user.account_type,
+            school_id=credited_user.school_id,
+            email=credited_user.email,
+            birthday=credited_user.birthday,
+            promo=credited_user.promo,
+            floor=credited_user.floor,
+            phone=credited_user.phone,
+            created_on=credited_user.created_on,
             groups=[],
-            id=receiver_user.id,
-            name=receiver_user.name,
-            firstname=receiver_user.firstname,
-            nickname=receiver_user.nickname,
+            id=credited_user.id,
+            name=credited_user.name,
+            firstname=credited_user.firstname,
+            nickname=credited_user.nickname,
         )
         checkout = await payment_tool.init_checkout(
             module="myeclpay",
@@ -1611,8 +1611,8 @@ async def store_scan_qrcode(
         - the QR Code is not expired
         - the QR Code is intended to be scanned for a store `qr_code_content.store`
         - the signature is valid and correspond to `walled_device_id` public key
-        - the giver's wallet device is active
-        - the giver's Wallet balance greater than the QR Code total
+        - the debited's wallet device is active
+        - the debited's Wallet balance greater than the QR Code total
 
     **The user must be authenticated to use this endpoint**
     **The user must have the `can_bank` permission for this store**
@@ -1767,12 +1767,11 @@ async def store_scan_qrcode(
     )
 
     # We create a transaction
-    # TODO: rename giver by debited
     await cruds_myeclpay.create_transaction(
         transaction_id=uuid.uuid4(),
-        giver_wallet_id=debited_wallet_device.wallet_id,
-        giver_wallet_device_id=debited_wallet_device.id,
-        receiver_wallet_id=store.wallet_id,
+        debited_wallet_id=debited_wallet_device.wallet_id,
+        debited_wallet_device_id=debited_wallet_device.id,
+        credited_wallet_id=store.wallet_id,
         transaction_type=TransactionType.DIRECT,
         seller_user_id=user.id,
         total=qr_code_content.total,
@@ -1801,6 +1800,279 @@ async def store_scan_qrcode(
     )
 
     # TODO: check is the device is revoked or inactive
+
+
+@module.router.post(
+    "/myeclpay/transaction/{transaction_id}/refund",
+    status_code=204,
+)
+async def refund_transaction(
+    transaction_id: UUID,
+    refund_info: schemas_myeclpay.RefundInfo,
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(is_user_an_ecl_member),
+    request_id: str = Depends(get_request_id),
+    notification_tool: NotificationTool = Depends(get_notification_tool),
+):
+    """
+    Refund a transaction
+
+    **The user must either be the debited user or the seller of the transaction**
+    """
+    transaction = await cruds_myeclpay.get_transaction(
+        transaction_id=transaction_id,
+        db=db,
+    )
+
+    if transaction is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Transaction does not exist",
+        )
+
+    if transaction.status != TransactionStatus.CONFIRMED:
+        raise HTTPException(
+            status_code=400,
+            detail="Transaction is not available for refund",
+        )
+
+    refunder_wallet = await cruds_myeclpay.get_wallet(
+        wallet_id=transaction.credited_wallet_id,
+        db=db,
+    )
+    if refunder_wallet is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Debited wallet does not exist",
+        )
+
+    if refunder_wallet.type == WalletType.STORE:
+        if refunder_wallet.store is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Store does not exist",
+            )
+        seller = await cruds_myeclpay.get_seller(
+            store_id=refunder_wallet.store.id,
+            user_id=user.id,
+            db=db,
+        )
+        if seller is None:
+            raise HTTPException(
+                status_code=403,
+                detail="User does not have the permission to refund this transaction",
+            )
+        if seller.can_cancel:
+            raise HTTPException(
+                status_code=403,
+                detail="User does not have the permission to refund this transaction",
+            )
+    else:
+        if refunder_wallet.user is None:
+            raise HTTPException(
+                status_code=404,
+                detail="User does not exist",
+            )
+        if refunder_wallet.user.id != user.id:
+            raise HTTPException(
+                status_code=403,
+                detail="User is not allowed to refund this transaction",
+            )
+
+    if refund_info.complete_refund:
+        refund_amount = transaction.total
+    else:
+        if refund_info.amount is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Please provide an amount for the refund if it is not a complete refund",
+            )
+        if refund_info.amount > transaction.total:
+            raise HTTPException(
+                status_code=400,
+                detail="Refund amount is greater than the transaction total",
+            )
+        refund_amount = refund_info.amount
+
+    debited_wallet = await cruds_myeclpay.get_wallet(
+        wallet_id=transaction.credited_wallet_id,
+        db=db,
+    )
+    if debited_wallet is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Credited wallet does not exist",
+        )
+
+    await cruds_myeclpay.update_transaction_status(
+        transaction_id=transaction_id,
+        status=TransactionStatus.REFUNDED,
+        db=db,
+    )
+
+    await cruds_myeclpay.create_transaction(
+        transaction_id=uuid.uuid4(),
+        debited_wallet_id=transaction.credited_wallet_id,
+        debited_wallet_device_id=refund_info.wallet_device_id,
+        credited_wallet_id=transaction.debited_wallet_id,
+        transaction_type=TransactionType.REFUND,
+        seller_user_id=user.id if refunder_wallet.type == WalletType.STORE else None,
+        total=refund_amount,
+        creation=datetime.now(UTC),
+        status=TransactionStatus.CONFIRMED,
+        store_note=f"Remboursement {"total" if refund_info.complete_refund else "partiel"} de la transaction du {transaction.creation} de {transaction.total} {f"({refund_amount} remboursés)" if not refund_info.complete_refund else ""}",
+        db=db,
+    )
+
+    await cruds_myeclpay.increment_wallet_balance(
+        wallet_id=transaction.debited_wallet_id,
+        amount=refund_amount,
+        db=db,
+    )
+
+    await cruds_myeclpay.increment_wallet_balance(
+        wallet_id=transaction.credited_wallet_id,
+        amount=-refund_amount,
+        db=db,
+    )
+
+    await db.commit()
+
+    if debited_wallet.user is not None:
+        message = Message(
+            # context=f"payment-{qr_code_content.qr_code_id}",
+            # is_visible=True,
+            title="💳 Remboursement",
+            content=f"La transaction de {transaction.total} a été remboursée",
+            # expire_on=datetime.now(UTC) + timedelta(days=3),
+            action_module="MyECLPay",
+        )
+        await notification_tool.send_notification_to_user(
+            user_id=debited_wallet.user.id,
+            message=message,
+        )
+
+
+@module.router.post(
+    "/myeclpay/transaction/{transaction_id}/cancel",
+    status_code=204,
+)
+async def cancel_transaction(
+    transaction_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(is_user_an_ecl_member),
+    request_id: str = Depends(get_request_id),
+    notification_tool: NotificationTool = Depends(get_notification_tool),
+):
+    """
+    Cancel a transaction
+
+    **The user must either be the credited user or the seller of the transaction**
+    """
+    transaction = await cruds_myeclpay.get_transaction(
+        transaction_id=transaction_id,
+        db=db,
+    )
+
+    if transaction is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Transaction does not exist",
+        )
+
+    canceller_wallet = await cruds_myeclpay.get_wallet(
+        wallet_id=transaction.credited_wallet_id,
+        db=db,
+    )
+    if canceller_wallet is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Credited wallet does not exist",
+        )
+
+    if canceller_wallet.type == WalletType.STORE:
+        if canceller_wallet.store is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Store does not exist",
+            )
+        seller = await cruds_myeclpay.get_seller(
+            store_id=canceller_wallet.store.id,
+            user_id=user.id,
+            db=db,
+        )
+        if seller is None:
+            raise HTTPException(
+                status_code=403,
+                detail="User does not have the permission to cancel this transaction",
+            )
+        if datetime.now(UTC) - transaction.creation > timedelta(seconds=30):
+            if not seller.can_cancel:
+                raise HTTPException(
+                    status_code=403,
+                    detail="User does not have the permission to cancel this transaction",
+                )
+
+    else:
+        if canceller_wallet.user is None:
+            raise HTTPException(
+                status_code=404,
+                detail="User does not exist",
+            )
+        if canceller_wallet.user.id != user.id:
+            raise HTTPException(
+                status_code=403,
+                detail="User is not allowed to cancel this transaction",
+            )
+
+    if transaction.status == TransactionStatus.CANCELED:
+        raise HTTPException(
+            status_code=400,
+            detail="Transaction is already canceled",
+        )
+
+    debited_wallet = await cruds_myeclpay.get_wallet(
+        wallet_id=transaction.debited_wallet_id,
+        db=db,
+    )
+    if debited_wallet is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Debited wallet does not exist",
+        )
+
+    await cruds_myeclpay.update_transaction_status(
+        transaction_id=transaction_id,
+        status=TransactionStatus.CANCELED,
+        db=db,
+    )
+
+    await cruds_myeclpay.increment_wallet_balance(
+        wallet_id=transaction.debited_wallet_id,
+        amount=transaction.total,
+        db=db,
+    )
+
+    await cruds_myeclpay.increment_wallet_balance(
+        wallet_id=transaction.credited_wallet_id,
+        amount=-transaction.total,
+        db=db,
+    )
+
+    await db.commit()
+    if debited_wallet.user is not None:
+        message = Message(
+            # context=f"payment-{qr_code_content.qr_code_id}",
+            # is_visible=True,
+            title="💳 Paiement annulé",
+            content=f"La transaction de {transaction.total} a été annulée",
+            # expire_on=datetime.now(UTC) + timedelta(days=3),
+            action_module="MyECLPay",
+        )
+        await notification_tool.send_notification_to_user(
+            user_id=debited_wallet.user.id,
+            message=message,
+        )
 
 
 @module.router.get(

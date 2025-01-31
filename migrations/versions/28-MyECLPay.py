@@ -27,6 +27,7 @@ depends_on: str | Sequence[str] | None = None
 class TransactionType(str, Enum):
     DIRECT = "direct"
     REQUEST = "request"
+    REFUND = "refund"
 
 
 class WalletType(str, Enum):
@@ -50,6 +51,7 @@ class WalletDeviceStatus(str, Enum):
 class TransactionStatus(str, Enum):
     CONFIRMED = "confirmed"
     CANCELED = "canceled"
+    REFUNDED = "refunded"
 
 
 class RequestStatus(str, Enum):
@@ -214,9 +216,9 @@ def upgrade() -> None:
     op.create_table(
         "myeclpay_transaction",
         sa.Column("id", sa.Uuid(), nullable=False),
-        sa.Column("giver_wallet_id", sa.Uuid(), nullable=False),
-        sa.Column("giver_wallet_device_id", sa.Uuid(), nullable=False),
-        sa.Column("receiver_wallet_id", sa.Uuid(), nullable=False),
+        sa.Column("debited_wallet_id", sa.Uuid(), nullable=False),
+        sa.Column("debited_wallet_device_id", sa.Uuid(), nullable=False),
+        sa.Column("credited_wallet_id", sa.Uuid(), nullable=False),
         sa.Column(
             "transaction_type",
             sa.Enum(TransactionType, name="transactiontype"),
@@ -232,15 +234,15 @@ def upgrade() -> None:
         ),
         sa.Column("store_note", sa.String(), nullable=True),
         sa.ForeignKeyConstraint(
-            ["giver_wallet_device_id"],
+            ["debited_wallet_device_id"],
             ["myeclpay_wallet_device.id"],
         ),
         sa.ForeignKeyConstraint(
-            ["giver_wallet_id"],
+            ["debited_wallet_id"],
             ["myeclpay_wallet.id"],
         ),
         sa.ForeignKeyConstraint(
-            ["receiver_wallet_id"],
+            ["credited_wallet_id"],
             ["myeclpay_wallet.id"],
         ),
         sa.ForeignKeyConstraint(

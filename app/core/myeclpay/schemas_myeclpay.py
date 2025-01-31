@@ -97,7 +97,13 @@ class TOSSignatureResponse(BaseModel):
 class TransferInfo(BaseModel):
     amount: int
     transfer_type: TransferType
-    receiver_user_id: str | None = None
+    credited_user_id: str | None = None
+
+
+class RefundInfo(BaseModel):
+    wallet_device_id: UUID
+    complete_refund: bool
+    amount: int | None = None
 
 
 class History(BaseModel):
@@ -169,8 +175,8 @@ class Transaction(BaseModel):
     __tablename__ = "myeclpay_transaction"
 
     id: UUID
-    giver_wallet_id: UUID
-    receiver_wallet_id: UUID
+    debited_wallet_id: UUID
+    credited_wallet_id: UUID
     transaction_type: TransactionType
 
     # User that scanned the qr code
