@@ -48,11 +48,11 @@ class Transaction(Base):
     __tablename__ = "myeclpay_transaction"
 
     id: Mapped[PrimaryKey]
-    giver_wallet_id: Mapped[UUID] = mapped_column(ForeignKey("myeclpay_wallet.id"))
-    giver_wallet_device_id: Mapped[UUID] = mapped_column(
+    debited_wallet_id: Mapped[UUID] = mapped_column(ForeignKey("myeclpay_wallet.id"))
+    debited_wallet_device_id: Mapped[UUID] = mapped_column(
         ForeignKey("myeclpay_wallet_device.id"),
     )
-    receiver_wallet_id: Mapped[UUID] = mapped_column(ForeignKey("myeclpay_wallet.id"))
+    credited_wallet_id: Mapped[UUID] = mapped_column(ForeignKey("myeclpay_wallet.id"))
     transaction_type: Mapped[TransactionType]
 
     # User that scanned the qr code
@@ -66,13 +66,13 @@ class Transaction(Base):
     # The Seller may add a note to the transaction, for example to specify the product that was buyed
     store_note: Mapped[str | None]
 
-    giver_wallet: Mapped[Wallet] = relationship(
+    debited_wallet: Mapped[Wallet] = relationship(
         init=False,
-        foreign_keys=[giver_wallet_id],
+        foreign_keys=[debited_wallet_id],
     )
-    receiver_wallet: Mapped[Wallet] = relationship(
+    credited_wallet: Mapped[Wallet] = relationship(
         init=False,
-        foreign_keys=[receiver_wallet_id],
+        foreign_keys=[credited_wallet_id],
     )
 
 

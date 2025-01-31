@@ -240,9 +240,9 @@ async def init_objects() -> None:
     global transaction_from_ecl_user_to_store
     transaction_from_ecl_user_to_store = models_myeclpay.Transaction(
         id=uuid4(),
-        giver_wallet_id=ecl_user_wallet.id,
-        giver_wallet_device_id=ecl_user_wallet_device.id,
-        receiver_wallet_id=store_wallet.id,
+        debited_wallet_id=ecl_user_wallet.id,
+        debited_wallet_device_id=ecl_user_wallet_device.id,
+        credited_wallet_id=store_wallet.id,
         transaction_type=TransactionType.DIRECT,
         seller_user_id=ecl_user2.id,
         total=500,  # 5€
@@ -255,9 +255,9 @@ async def init_objects() -> None:
     global transaction_from_ecl_user_to_ecl_user2
     transaction_from_ecl_user_to_ecl_user2 = models_myeclpay.Transaction(
         id=uuid4(),
-        giver_wallet_id=ecl_user_wallet.id,
-        giver_wallet_device_id=ecl_user_wallet_device.id,
-        receiver_wallet_id=ecl_user2_wallet.id,
+        debited_wallet_id=ecl_user_wallet.id,
+        debited_wallet_device_id=ecl_user_wallet_device.id,
+        credited_wallet_id=ecl_user2_wallet.id,
         transaction_type=TransactionType.DIRECT,
         seller_user_id=ecl_user2.id,
         total=600,
@@ -270,9 +270,9 @@ async def init_objects() -> None:
     global transaction_from_store_to_ecl_user
     transaction_from_store_to_ecl_user = models_myeclpay.Transaction(
         id=uuid4(),
-        giver_wallet_id=store_wallet.id,
-        giver_wallet_device_id=store_wallet_device.id,
-        receiver_wallet_id=ecl_user_wallet.id,
+        debited_wallet_id=store_wallet.id,
+        debited_wallet_device_id=store_wallet_device.id,
+        credited_wallet_id=ecl_user_wallet.id,
         transaction_type=TransactionType.DIRECT,
         seller_user_id=ecl_user2.id,
         total=700,
@@ -285,9 +285,9 @@ async def init_objects() -> None:
     global transaction_from_ecl_user2_to_ecl_user
     transaction_from_ecl_user2_to_ecl_user = models_myeclpay.Transaction(
         id=uuid4(),
-        giver_wallet_id=ecl_user2_wallet.id,
-        giver_wallet_device_id=ecl_user2_wallet_device.id,
-        receiver_wallet_id=ecl_user_wallet.id,
+        debited_wallet_id=ecl_user2_wallet.id,
+        debited_wallet_device_id=ecl_user2_wallet_device.id,
+        credited_wallet_id=ecl_user_wallet.id,
         transaction_type=TransactionType.DIRECT,
         seller_user_id=ecl_user2.id,
         total=800,
@@ -791,12 +791,26 @@ async def test_update_seller_as_seller_with_permission(client: TestClient):
         },
         json={
             "can_bank": True,
-            "can_see_history": False,
-            "can_cancel": False,
-            "can_manage_sellers": False,
+            "can_see_history": True,
         },
     )
     assert response.status_code == 204
+
+    response = client.get(
+        f"/myeclpay/stores/{store.id}/sellers",
+        headers={
+            "Authorization": f"Bearer {store_seller_can_manage_sellers_user_access_token}",
+        },
+    )
+    assert response.status_code == 200
+    assert len(response.json()) > 1
+    seller_json = next(
+        seller for seller in response.json() if seller["user_id"] == user.id
+    )
+    assert seller_json["can_bank"] is True
+    assert seller_json["can_see_history"] is True
+    assert seller_json["can_cancel"] is False
+    assert seller_json["can_manage_sellers"] is False
 
 
 async def test_update_manager_seller(client: TestClient):
@@ -1328,7 +1342,7 @@ def test_hello_asso_transfer(
     assert response.status_code == 204
 
 
-def test_non_hello_asso_transfer_without_receiver(client: TestClient):
+def test_non_hello_asso_transfer_without_credited(client: TestClient):
     """Test transferring with a non-hello_asso transfer type as a non-BDE user"""
     response = client.post(
         "/myeclpay/transfer",
@@ -1341,7 +1355,7 @@ def test_non_hello_asso_transfer_without_receiver(client: TestClient):
     assert response.status_code == 403
     assert (
         response.json()["detail"]
-        == "Please provide a receiver user id for this transfer type"
+        == "Please provide a credited user id for this transfer type"
     )
 
 
@@ -1353,7 +1367,7 @@ def test_non_hello_asso_transfer_as_non_bde(client: TestClient):
         json={
             "amount": 1000,
             "transfer_type": "cash",
-            "receiver_user_id": ecl_user2.id,
+            "credited_user_id": ecl_user2.id,
         },
     )
     assert response.status_code == 403
@@ -1368,7 +1382,7 @@ def test_non_hello_asso_transfer_as_bde(client: TestClient):
         json={
             "amount": 1000,
             "transfer_type": "cash",
-            "receiver_user_id": ecl_user.id,
+            "credited_user_id": ecl_user.id,
         },
     )
     assert response.status_code == 201
