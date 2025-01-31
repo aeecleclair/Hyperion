@@ -1581,11 +1581,12 @@ async def get_payment_url(
 
 @module.router.post(
     "/myeclpay/store/{store_id}/scan",
-    status_code=204,
+    status_code=201,
+    response_model=schemas_myeclpay.Transaction,
 )
 async def store_scan_qrcode(
     store_id: UUID,
-    qr_code_content: schemas_myeclpay.QRCodeContent,
+    scan_info: schemas_myeclpay.ScanInfo,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user_an_ecl_member),
     request_id: str = Depends(get_request_id),
@@ -1609,7 +1610,7 @@ async def store_scan_qrcode(
     The provided content is checked to ensure:
         - the QR Code is not already used
         - the QR Code is not expired
-        - the QR Code is intended to be scanned for a store `qr_code_content.store`
+        - the QR Code is intended to be scanned for a store `scan_info.store`
         - the signature is valid and correspond to `walled_device_id` public key
         - the debited's wallet device is active
         - the debited's Wallet balance greater than the QR Code total
@@ -1619,7 +1620,7 @@ async def store_scan_qrcode(
     """
     # If the QR Code is already used, we return an error
     already_existing_used_qrcode = await cruds_myeclpay.get_used_qrcode(
-        qr_code_id=qr_code_content.qr_code_id,
+        qr_code_id=scan_info.qr_code_id,
         db=db,
     )
     if already_existing_used_qrcode is not None:
@@ -1631,7 +1632,7 @@ async def store_scan_qrcode(
     # After scanning a QR Code, we want to add it to the list of already scanned QR Code
     # even if it fail to be banked
     await cruds_myeclpay.create_used_qrcode(
-        qr_code_id=qr_code_content.qr_code_id,
+        qr_code_id=scan_info.qr_code_id,
         db=db,
     )
     await db.commit()
@@ -1660,7 +1661,7 @@ async def store_scan_qrcode(
 
     # We verify the signature
     debited_wallet_device = await cruds_myeclpay.get_wallet_device(
-        wallet_device_id=qr_code_content.walled_device_id,
+        wallet_device_id=scan_info.walled_device_id,
         db=db,
     )
 
@@ -1678,9 +1679,9 @@ async def store_scan_qrcode(
 
     if not verify_signature(
         public_key_bytes=debited_wallet_device.ed25519_public_key,
-        signature=qr_code_content.signature,
-        data=compute_signable_data(qr_code_content),
-        wallet_device_id=qr_code_content.walled_device_id,
+        signature=scan_info.signature,
+        data=compute_signable_data(scan_info),
+        wallet_device_id=scan_info.walled_device_id,
         request_id=request_id,
     ):
         raise HTTPException(
@@ -1688,26 +1689,26 @@ async def store_scan_qrcode(
             detail="Invalid signature",
         )
 
-    if not qr_code_content.store:
+    if not scan_info.store:
         raise HTTPException(
             status_code=400,
             detail="QR Code is not intended to be scanned for a store",
         )
 
     # We verify the content respect some rules
-    if qr_code_content.total <= 0:
+    if scan_info.total <= 0:
         raise HTTPException(
             status_code=400,
             detail="Total must be greater than 0",
         )
 
-    if qr_code_content.total > MAX_TRANSACTION_TOTAL:
+    if scan_info.total > MAX_TRANSACTION_TOTAL:
         raise HTTPException(
             status_code=400,
             detail=f"Total can not exceed {MAX_TRANSACTION_TOTAL}",
         )
 
-    if qr_code_content.creation < datetime.now(UTC) - timedelta(
+    if scan_info.creation < datetime.now(UTC) - timedelta(
         minutes=QRCODE_EXPIRATION,
     ):
         raise HTTPException(
@@ -1746,7 +1747,7 @@ async def store_scan_qrcode(
             detail="Debited user has not signed the latest TOS",
         )
 
-    if debited_wallet.balance < qr_code_content.total:
+    if debited_wallet.balance < scan_info.total:
         raise HTTPException(
             status_code=400,
             detail="Insufficient balance in the debited wallet",
@@ -1755,26 +1756,26 @@ async def store_scan_qrcode(
     # We increment the receiving wallet balance
     await cruds_myeclpay.increment_wallet_balance(
         wallet_id=store.wallet_id,
-        amount=qr_code_content.total,
+        amount=scan_info.total,
         db=db,
     )
 
     # We decrement the debited wallet balance
     await cruds_myeclpay.increment_wallet_balance(
         wallet_id=debited_wallet.id,
-        amount=-qr_code_content.total,
+        amount=-scan_info.total,
         db=db,
     )
-
+    transaction_id = uuid.uuid4()
     # We create a transaction
     await cruds_myeclpay.create_transaction(
-        transaction_id=uuid.uuid4(),
+        transaction_id=transaction_id,
         debited_wallet_id=debited_wallet_device.wallet_id,
         debited_wallet_device_id=debited_wallet_device.id,
         credited_wallet_id=store.wallet_id,
         transaction_type=TransactionType.DIRECT,
         seller_user_id=user.id,
-        total=qr_code_content.total,
+        total=scan_info.total,
         creation=datetime.now(UTC),
         status=TransactionStatus.CONFIRMED,
         store_note=None,
@@ -1786,11 +1787,11 @@ async def store_scan_qrcode(
     # TODO: log the transaction
 
     message = Message(
-        # context=f"payment-{qr_code_content.qr_code_id}",
+        # context=f"payment-{scan_info.qr_code_id}",
         # is_visible=True,
         title=f"💳 Paiement - {store.name}",
         # TODO: convert and add unit
-        content=f"Une transaction de {qr_code_content.total} a été effectuée",
+        content=f"Une transaction de {scan_info.total} a été effectuée",
         # expire_on=datetime.now(UTC) + timedelta(days=3),
         action_module="MyECLPay",
     )
@@ -1800,6 +1801,17 @@ async def store_scan_qrcode(
     )
 
     # TODO: check is the device is revoked or inactive
+
+    return schemas_myeclpay.Transaction(
+        id=transaction_id,
+        debited_wallet_id=debited_wallet_device.wallet_id,
+        credited_wallet_id=store.wallet_id,
+        transaction_type=TransactionType.DIRECT,
+        seller_user_id=user.id,
+        total=scan_info.total,
+        creation=datetime.now(UTC),
+        status=TransactionStatus.CONFIRMED,
+    )
 
 
 @module.router.post(
@@ -1940,11 +1952,8 @@ async def refund_transaction(
 
     if debited_wallet.user is not None:
         message = Message(
-            # context=f"payment-{qr_code_content.qr_code_id}",
-            # is_visible=True,
             title="💳 Remboursement",
             content=f"La transaction de {transaction.total} a été remboursée",
-            # expire_on=datetime.now(UTC) + timedelta(days=3),
             action_module="MyECLPay",
         )
         await notification_tool.send_notification_to_user(
@@ -2062,11 +2071,8 @@ async def cancel_transaction(
     await db.commit()
     if debited_wallet.user is not None:
         message = Message(
-            # context=f"payment-{qr_code_content.qr_code_id}",
-            # is_visible=True,
             title="💳 Paiement annulé",
             content=f"La transaction de {transaction.total} a été annulée",
-            # expire_on=datetime.now(UTC) + timedelta(days=3),
             action_module="MyECLPay",
         )
         await notification_tool.send_notification_to_user(
