@@ -540,9 +540,9 @@ async def get_user_payment(
 
 async def create_transaction(
     transaction_id: UUID,
-    giver_wallet_id: UUID,
-    giver_wallet_device_id: UUID,
-    receiver_wallet_id: UUID,
+    debited_wallet_id: UUID,
+    debited_wallet_device_id: UUID,
+    credited_wallet_id: UUID,
     transaction_type: TransactionType,
     seller_user_id: str | None,
     total: int,
@@ -553,9 +553,9 @@ async def create_transaction(
 ) -> None:
     transaction = models_myeclpay.Transaction(
         id=transaction_id,
-        giver_wallet_id=giver_wallet_id,
-        giver_wallet_device_id=giver_wallet_device_id,
-        receiver_wallet_id=receiver_wallet_id,
+        debited_wallet_id=debited_wallet_id,
+        debited_wallet_device_id=debited_wallet_device_id,
+        credited_wallet_id=credited_wallet_id,
         transaction_type=transaction_type,
         seller_user_id=seller_user_id,
         total=total,
@@ -566,6 +566,49 @@ async def create_transaction(
     db.add(transaction)
 
 
+async def update_transaction_status(
+    transaction_id: UUID,
+    status: TransactionStatus,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        update(models_myeclpay.Transaction)
+        .where(models_myeclpay.Transaction.id == transaction_id)
+        .values(status=status),
+    )
+
+
+async def get_transaction(
+    transaction_id: UUID,
+    db: AsyncSession,
+) -> schemas_myeclpay.Transaction | None:
+    result = (
+        (
+            await db.execute(
+                select(models_myeclpay.Transaction).where(
+                    models_myeclpay.Transaction.id == transaction_id,
+                ),
+            )
+        )
+        .scalars()
+        .first()
+    )
+    return (
+        schemas_myeclpay.Transaction(
+            id=result.id,
+            debited_wallet_id=result.debited_wallet_id,
+            credited_wallet_id=result.credited_wallet_id,
+            transaction_type=result.transaction_type,
+            seller_user_id=result.seller_user_id,
+            total=result.total,
+            creation=result.creation,
+            status=result.status,
+        )
+        if result
+        else None
+    )
+
+
 async def get_transactions(
     db: AsyncSession,
 ) -> Sequence[schemas_myeclpay.Transaction]:
@@ -573,8 +616,8 @@ async def get_transactions(
     return [
         schemas_myeclpay.Transaction(
             id=transaction.id,
-            giver_wallet_id=transaction.giver_wallet_id,
-            receiver_wallet_id=transaction.receiver_wallet_id,
+            debited_wallet_id=transaction.debited_wallet_id,
+            credited_wallet_id=transaction.credited_wallet_id,
             transaction_type=transaction.transaction_type,
             seller_user_id=transaction.seller_user_id,
             total=transaction.total,
@@ -593,13 +636,13 @@ async def get_transactions_by_wallet_id(
         select(models_myeclpay.Transaction)
         .where(
             or_(
-                models_myeclpay.Transaction.giver_wallet_id == wallet_id,
-                models_myeclpay.Transaction.receiver_wallet_id == wallet_id,
+                models_myeclpay.Transaction.debited_wallet_id == wallet_id,
+                models_myeclpay.Transaction.credited_wallet_id == wallet_id,
             ),
         )
         .options(
-            selectinload(models_myeclpay.Transaction.giver_wallet),
-            selectinload(models_myeclpay.Transaction.receiver_wallet),
+            selectinload(models_myeclpay.Transaction.debited_wallet),
+            selectinload(models_myeclpay.Transaction.credited_wallet),
         ),
     )
     return result.scalars().all()

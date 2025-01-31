@@ -15,6 +15,7 @@ class WalletDeviceStatus(str, Enum):
 class TransactionType(str, Enum):
     DIRECT = "direct"
     REQUEST = "request"
+    REFUND = "refund"
 
 
 class HistoryType(str, Enum):
@@ -26,6 +27,7 @@ class HistoryType(str, Enum):
 class TransactionStatus(str, Enum):
     CONFIRMED = "confirmed"
     CANCELED = "canceled"
+    REFUNDED = "refunded"
 
 
 class RequestStatus(str, Enum):
