@@ -1,31 +1,31 @@
 aiofiles==24.1.0                    # Asynchronous file manipulation
 alembic==1.13.2                     # database migrations
-arq==0.26.1                         # Scheduler 
+arq==0.26.3                         # Scheduler 
 asyncpg==0.29.0                     # PostgreSQL adapter for asynchronous operations
 bcrypt==4.1.3                       # password hashing
 broadcaster==0.3.1                  # Working with websockets with multiple workers.
 calypsso==1.2.0
-fastapi[standard]==0.115.6
+fastapi[standard]==0.115.8
 firebase-admin==6.5.0               # Firebase is used for push notification
 fpdf2==2.7.8
 google-auth-oauthlib==1.2.1
 HelloAssoAPIWrapper==1.0.0
 icalendar==5.0.13
 jellyfish==1.0.4                    # String Matching
-Jinja2==3.1.4                       # template engine for html files
-pandas==2.2.2
-phonenumbers==8.13.43               # Used for phone number validation
+Jinja2==3.1.5                       # template engine for html files
+pandas==2.2.3
+phonenumbers==8.13.54               # Used for phone number validation
 pydantic-settings==2.3.4
 pydantic==2.7.4
 pyjwt[crypto]==2.8.0                # generate and verify the JWT tokens, imported as `jwt`
 PyMuPDF==1.24.9                     # PDF processing
 pypdf==4.3.1
 python-dotenv==1.0.1                # load environment variables from .env file
-python-multipart==0.0.18             # a form data parser, as oauth flow requires form-data parameters
+python-multipart==0.0.20             # a form data parser, as oauth flow requires form-data parameters
 redis==5.0.8
 requests==2.32.3
 sqlalchemy-utils == 0.41.2
-SQLAlchemy[asyncio]==2.0.32         # [asyncio] allows greenlet to be installed on Apple M1 devices.
+SQLAlchemy[asyncio]==2.0.37         # [asyncio] allows greenlet to be installed on Apple M1 devices.
 unidecode==1.3.8
 uvicorn[standard]==0.30.6
-xlsxwriter==3.2.0
+xlsxwriter==3.2.2
