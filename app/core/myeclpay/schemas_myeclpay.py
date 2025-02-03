@@ -124,8 +124,9 @@ class QRCodeContentBase(BaseModel):
     store: bool
 
 
-class QRCodeContent(QRCodeContentBase):
+class ScanInfo(QRCodeContentBase):
     signature: Base64Bytes
+    bypass_membership: bool = False
 
 
 class QRCodeContentData(BaseModel):
