@@ -6,6 +6,7 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.groups.groups_type import AccountType
+from app.types.floors_type import FloorsType
 from app.types.membership import AvailableAssociationMembership
 from app.types.sqlalchemy import Base, PrimaryKey
 
@@ -14,10 +15,25 @@ class CoreAssociationMembership(Base):
     __tablename__ = "core_association_membership"
 
     id: Mapped[PrimaryKey]
+    name: Mapped[str]
+
+    members: Mapped[list[CoreUser]] = relationship(
+        "CoreUser",
+        secondary="core_association_user_membership",
+        lazy="selectin",
+        default_factory=list,
+    )
+
+
+class CoreAssociationUserMembership(Base):
+    __tablename__ = "core_association_user_membership"
+
+    id: Mapped[PrimaryKey]
     user_id: Mapped[str] = mapped_column(
         ForeignKey("core_user.id"),
     )
-    membership: Mapped[AvailableAssociationMembership] = mapped_column(
+    association_membership_id: Mapped[UUID] = mapped_column(
+        ForeignKey("core_association_membership.id"),
         index=True,
     )
     start_date: Mapped[date]
