@@ -14,7 +14,6 @@ from app.modules.cdr.types_cdr import (
     DocumentSignatureType,
     PaymentType,
 )
-from app.types.membership import AvailableAssociationMembership
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
@@ -62,7 +61,9 @@ signature_admin: models_cdr.Signature
 
 payment: models_cdr.Payment
 
-membership: models_core.CoreAssociationMembership
+
+association_membership: models_core.CoreAssociationMembership
+user_membership: models_core.CoreAssociationUserMembership
 
 ticket: models_cdr.Ticket
 ticket_generator: models_cdr.TicketGenerator
@@ -305,15 +306,22 @@ async def init_objects():
     )
     await add_object_to_db(payment)
 
-    global membership
-    membership = models_core.CoreAssociationMembership(
+    global association_membership
+    association_membership = models_core.CoreAssociationMembership(
+        id=uuid.uuid4(),
+        name="AEECL",
+    )
+    await add_object_to_db(association_membership)
+
+    global user_membership
+    user_membership = models_core.CoreAssociationUserMembership(
         id=uuid.uuid4(),
         user_id=cdr_user.id,
-        membership=AvailableAssociationMembership.aeecl,
+        association_membership_id=association_membership.id,
         start_date=date(2022, 9, 1),
         end_date=date(2026, 9, 1),
     )
-    await add_object_to_db(membership)
+    await add_object_to_db(user_membership)
 
     global ticket_product
     ticket_product = models_cdr.CdrProduct(
@@ -2062,104 +2070,6 @@ def test_delete_payment_admin(client: TestClient):
     assert str(payment.id) not in [x["id"] for x in response.json()]
 
 
-def test_get_memberships_by_user_id_user(client: TestClient):
-    response = client.get(
-        f"/cdr/users/{cdr_user.id}/memberships/",
-        headers={"Authorization": f"Bearer {token_user}"},
-    )
-    assert response.status_code == 200
-    assert str(membership.id) in [x["id"] for x in response.json()]
-
-
-def test_get_memberships_by_user_id_other_user(client: TestClient):
-    response = client.get(
-        f"/cdr/users/{cdr_bde.id}/memberships/",
-        headers={"Authorization": f"Bearer {token_user}"},
-    )
-    assert response.status_code == 403
-
-
-def test_get_memberships_by_user_id_admin(client: TestClient):
-    response = client.get(
-        f"/cdr/users/{cdr_user.id}/memberships/",
-        headers={"Authorization": f"Bearer {token_admin}"},
-    )
-    assert response.status_code == 200
-    assert str(membership.id) in [x["id"] for x in response.json()]
-
-
-def test_create_membership_user(client: TestClient):
-    response = client.post(
-        f"/cdr/users/{cdr_user.id}/memberships/",
-        json={
-            "membership": AvailableAssociationMembership.useecl,
-            "start_date": str(date(2024, 6, 1)),
-            "end_date": str(date(2028, 6, 1)),
-        },
-        headers={"Authorization": f"Bearer {token_user}"},
-    )
-    assert response.status_code == 403
-
-
-def test_create_membership_admin(client: TestClient):
-    response = client.post(
-        f"/cdr/users/{cdr_user.id}/memberships/",
-        json={
-            "membership": AvailableAssociationMembership.useecl,
-            "start_date": str(date(2024, 6, 1)),
-            "end_date": str(date(2028, 6, 1)),
-        },
-        headers={"Authorization": f"Bearer {token_admin}"},
-    )
-    assert response.status_code == 201
-    membership_id = uuid.UUID(response.json()["id"])
-
-    response = client.get(
-        f"/cdr/users/{cdr_user.id}/memberships/",
-        headers={"Authorization": f"Bearer {token_admin}"},
-    )
-    assert response.status_code == 200
-    assert str(membership_id) in [x["id"] for x in response.json()]
-
-
-def test_delete_membership_user(client: TestClient):
-    response = client.delete(
-        f"/cdr/users/{cdr_user.id}/memberships/{membership.id}",
-        headers={"Authorization": f"Bearer {token_user}"},
-    )
-    assert response.status_code == 403
-
-    response = client.get(
-        f"/cdr/users/{cdr_user.id}/memberships/",
-        headers={"Authorization": f"Bearer {token_admin}"},
-    )
-    assert response.status_code == 200
-    assert str(membership.id) in [x["id"] for x in response.json()]
-
-
-def test_delete_membership_wrong_id(client: TestClient):
-    response = client.delete(
-        f"/cdr/users/{cdr_user.id}/memberships/{uuid.uuid4()}",
-        headers={"Authorization": f"Bearer {token_admin}"},
-    )
-    assert response.status_code == 404
-
-
-def test_delete_membership_admin(client: TestClient):
-    response = client.delete(
-        f"/cdr/users/{cdr_user.id}/memberships/{membership.id}",
-        headers={"Authorization": f"Bearer {token_admin}"},
-    )
-    assert response.status_code == 204
-
-    response = client.get(
-        f"/cdr/users/{cdr_user.id}/memberships/",
-        headers={"Authorization": f"Bearer {token_admin}"},
-    )
-    assert response.status_code == 200
-    assert str(membership.id) not in [x["id"] for x in response.json()]
-
-
 def test_change_status_admin_closed(client: TestClient):
     response = client.patch(
         "/cdr/status/",
@@ -2532,7 +2442,7 @@ async def test_validate_purchase(client: TestClient):
         name_fr="Produit à adhésion",
         name_en="Product",
         available_online=False,
-        related_membership=AvailableAssociationMembership.useecl,
+        related_membership_id=association_membership.id,
     )
     await add_object_to_db(product_membership)
     product_membership_to_purchase = models_cdr.CdrProduct(
@@ -2541,7 +2451,7 @@ async def test_validate_purchase(client: TestClient):
         name_fr="Produit à adhésion",
         name_en="Product",
         available_online=False,
-        related_membership=AvailableAssociationMembership.aeecl,
+        related_membership_id=association_membership.id,
     )
     await add_object_to_db(product_membership_to_purchase)
     product_2 = models_cdr.CdrProduct(
@@ -2593,10 +2503,10 @@ async def test_validate_purchase(client: TestClient):
         purchased_on=datetime.now(UTC),
     )
     await add_object_to_db(purchase_to_validate)
-    membership = models_core.CoreAssociationMembership(
+    membership = models_core.CoreAssociationUserMembership(
         id=uuid.uuid4(),
         user_id=cdr_user.id,
-        membership=AvailableAssociationMembership.useecl,
+        association_membership_id=association_membership.id,
         start_date=date(2022, 9, 1),
         end_date=datetime.now(UTC).date() + timedelta(days=100),
     )
