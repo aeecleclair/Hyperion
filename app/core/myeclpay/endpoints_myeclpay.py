@@ -1753,6 +1753,12 @@ async def store_scan_qrcode(
             detail="Insufficient balance in the debited wallet",
         )
 
+    # if not scan_info.bypass_membership:
+    #     membership = await cruds_memberships.get_actual_user_memberships_by_user_id(
+    #         user_id=debited_wallet.user.id,
+    #         db=db,
+    #     )
+
     # We increment the receiving wallet balance
     await cruds_myeclpay.increment_wallet_balance(
         wallet_id=store.wallet_id,
@@ -1932,7 +1938,7 @@ async def refund_transaction(
         total=refund_amount,
         creation=datetime.now(UTC),
         status=TransactionStatus.CONFIRMED,
-        store_note=f"Remboursement {"total" if refund_info.complete_refund else "partiel"} de la transaction du {transaction.creation} de {transaction.total} {f"({refund_amount} remboursés)" if not refund_info.complete_refund else ""}",
+        store_note=f"Remboursement {'total' if refund_info.complete_refund else 'partiel'} de la transaction du {transaction.creation} de {transaction.total} {f'({refund_amount} remboursés)' if not refund_info.complete_refund else ''}",
         db=db,
     )
 
