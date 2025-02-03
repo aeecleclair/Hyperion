@@ -12,7 +12,6 @@ from app.modules.cdr.types_cdr import (
     DocumentSignatureType,
     PaymentType,
 )
-from app.types.membership import AvailableAssociationMembership
 from app.types.sqlalchemy import Base, PrimaryKey
 
 
@@ -78,6 +77,11 @@ class CdrProduct(Base):
 
     description_fr: Mapped[str | None] = mapped_column(default=None)
     description_en: Mapped[str | None] = mapped_column(default=None)
+    related_membership_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("core_association_membership.id"),
+        nullable=True,
+        default=None,
+    )
 
     product_constraints: Mapped[list["CdrProduct"]] = relationship(
         "CdrProduct",
@@ -104,9 +108,10 @@ class CdrProduct(Base):
         lazy="selectin",
         default_factory=list,
     )
-
-    related_membership: Mapped[AvailableAssociationMembership | None] = mapped_column(
-        default=None,
+    related_membership: Mapped[CoreAssociationMembership | None] = relationship(
+        "CoreAssociationMembership",
+        lazy="joined",
+        init=False,
     )
 
 
