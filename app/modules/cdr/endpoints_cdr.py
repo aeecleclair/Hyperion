@@ -12,12 +12,12 @@ from fastapi import (
     WebSocket,
 )
 from fastapi.responses import FileResponse
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.core_endpoints import models_core
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
+from app.core.memberships import cruds_memberships, schemas_memberships
 from app.core.payment.payment_tool import PaymentTool
 from app.core.users import cruds_users, models_users, schemas_users
 from app.core.users.cruds_users import get_user_by_id, get_users
@@ -44,7 +44,6 @@ from app.modules.cdr.utils_cdr import (
     is_user_in_a_seller_group,
     validate_payment,
 )
-from app.types.membership import AvailableAssociationMembership
 from app.types.module import Module
 from app.types.websocket import (
     HyperionWebsocketsRoom,
@@ -144,7 +143,12 @@ async def get_cdr_users_pending_validation(
         schemas_cdr.CdrUser(
             account_type=user.account_type,
             school_id=user.school_id,
-            curriculum=curriculum_memberships_mapping.get(user.id, None),
+            curriculum=schemas_cdr.CurriculumComplete(
+                name=curriculum_memberships_mapping[user.id].name,
+                id=curriculum_memberships_mapping[user.id].id,
+            )
+            if user.id in curriculum_memberships_mapping
+            else None,
             promo=user.promo,
             email=user.email,
             birthday=user.birthday,
@@ -201,7 +205,10 @@ async def get_cdr_user(
         name=user_db.name,
         firstname=user_db.firstname,
         nickname=user_db.nickname,
-        curriculum=curriculum_complete[curriculum.curriculum_id]
+        curriculum=schemas_cdr.CurriculumComplete(
+            name=curriculum_complete[curriculum.curriculum_id].name,
+            id=curriculum.curriculum_id,
+        )
         if curriculum
         else None,
         id=user_db.id,
@@ -285,9 +292,6 @@ async def update_cdr_user(
             )
         await db.commit()
     except Exception:
-        await db.rollback()
-        raise
-    except IntegrityError:
         await db.rollback()
         raise
 
@@ -749,7 +753,9 @@ async def create_product(
         available_online=product.available_online,
         description_fr=product.description_fr,
         description_en=product.description_en,
-        related_membership=product.related_membership,
+        related_membership_id=product.related_membership.id
+        if product.related_membership
+        else None,
     )
     try:
         cruds_cdr.create_product(db, db_product)
@@ -1307,8 +1313,27 @@ async def get_purchases_by_user_id(
                             purchased_on=purchase.purchased_on,
                             quantity=purchase.quantity,
                             price=product_variant.price,
-                            product=product,
-                            seller=seller,
+                            product=schemas_cdr.ProductComplete(
+                                id=product.id,
+                                seller_id=product.seller_id,
+                                name_fr=product.name_fr,
+                                name_en=product.name_en,
+                                available_online=product.available_online,
+                                description_fr=product.description_fr,
+                                description_en=product.description_en,
+                                related_membership=schemas_memberships.MembershipComplete(
+                                    id=product.related_membership.id,
+                                    name=product.related_membership.name,
+                                )
+                                if product.related_membership
+                                else None,
+                            ),
+                            seller=schemas_cdr.SellerComplete(
+                                id=seller.id,
+                                name=seller.name,
+                                group_id=seller.group_id,
+                                order=seller.order,
+                            ),
                         ),
                     )
     return result
@@ -1375,8 +1400,27 @@ async def get_purchases_by_user_id_by_seller_id(
                             purchased_on=purchase.purchased_on,
                             quantity=purchase.quantity,
                             price=product_variant.price,
-                            product=product,
-                            seller=seller,
+                            product=schemas_cdr.ProductComplete(
+                                id=product.id,
+                                seller_id=product.seller_id,
+                                name_fr=product.name_fr,
+                                name_en=product.name_en,
+                                available_online=product.available_online,
+                                description_fr=product.description_fr,
+                                description_en=product.description_en,
+                                related_membership=schemas_memberships.MembershipComplete(
+                                    id=product.related_membership.id,
+                                    name=product.related_membership.name,
+                                )
+                                if product.related_membership
+                                else None,
+                            ),
+                            seller=schemas_cdr.SellerComplete(
+                                id=seller.id,
+                                name=seller.name,
+                                group_id=seller.group_id,
+                                order=seller.order,
+                            ),
                         ),
                     )
     return result
@@ -1475,7 +1519,7 @@ async def create_purchase(
 
 
 async def remove_existing_membership(
-    existing_membership: models_core.CoreAssociationMembership,
+    existing_membership: schemas_memberships.UserMembershipComplete,
     product_variant: models_cdr.ProductVariant,
     db: AsyncSession,
 ):
@@ -1485,15 +1529,15 @@ async def remove_existing_membership(
             - product_variant.related_membership_added_duration
             <= existing_membership.start_date
         ):
-            await cruds_cdr.delete_membership(
+            await cruds_memberships.delete_user_membership(
                 db=db,
-                membership_id=existing_membership.id,
+                user_membership_id=existing_membership.id,
             )
         else:
-            await cruds_cdr.update_membership(
+            await cruds_memberships.update_user_membership(
                 db=db,
-                membership_id=existing_membership.id,
-                membership=schemas_cdr.MembershipEdit(
+                user_membership_id=existing_membership.id,
+                user_membership_edit=schemas_memberships.UserMembershipEdit(
                     end_date=existing_membership.end_date
                     - product_variant.related_membership_added_duration,
                 ),
@@ -1501,36 +1545,42 @@ async def remove_existing_membership(
 
 
 async def add_membership(
-    memberships: Sequence[models_core.CoreAssociationMembership],
+    memberships: Sequence[schemas_memberships.UserMembershipComplete],
     user_id: str,
-    product_related_membership: AvailableAssociationMembership,
+    product_related_membership_id: UUID,
     product_variant: models_cdr.ProductVariant,
     db: AsyncSession,
 ):
     if product_variant.related_membership_added_duration:
         existing_membership = next(
-            (m for m in memberships if m.membership == product_related_membership),
+            (
+                m
+                for m in memberships
+                if m.association_membership_id == product_related_membership_id
+            ),
             None,
         )
         if existing_membership:
-            await cruds_cdr.update_membership(
+            await cruds_memberships.update_user_membership(
                 db=db,
-                membership_id=existing_membership.id,
-                membership=schemas_cdr.MembershipEdit(
+                user_membership_id=existing_membership.id,
+                user_membership_edit=schemas_memberships.UserMembershipEdit(
                     end_date=existing_membership.end_date
                     + product_variant.related_membership_added_duration,
                 ),
             )
         else:
-            added_membership = models_core.CoreAssociationMembership(
-                id=uuid4(),
-                user_id=user_id,
-                membership=product_related_membership,
-                start_date=date(datetime.now(tz=UTC).date().year, 9, 1),
-                end_date=date(datetime.now(tz=UTC).date().year, 9, 1)
-                + product_variant.related_membership_added_duration,
+            cruds_memberships.create_user_membership(
+                db=db,
+                user_membership=schemas_memberships.UserMembershipComplete(
+                    id=uuid4(),
+                    user_id=user_id,
+                    association_membership_id=product_related_membership_id,
+                    start_date=date(datetime.now(tz=UTC).date().year, 9, 1),
+                    end_date=date(datetime.now(tz=UTC).date().year, 9, 1)
+                    + product_variant.related_membership_added_duration,
+                ),
             )
-            cruds_cdr.create_membership(db=db, membership=added_membership)
 
 
 @module.router.patch(
@@ -1579,9 +1629,10 @@ async def mark_purchase_as_validated(
             detail="Invalid product.",
         )
     if validated:
-        memberships = await cruds_cdr.get_actual_memberships_by_user_id(
+        memberships = await cruds_memberships.get_user_memberships_by_user_id(
             db=db,
             user_id=user_id,
+            minimal_date=date(datetime.now(UTC).year, 9, 5),
         )
         for product_constraint in product.product_constraints:
             purchases = await cruds_cdr.get_purchases_by_ids(
@@ -1594,7 +1645,7 @@ async def mark_purchase_as_validated(
             if not purchases:
                 if product_constraint.related_membership:
                     if product_constraint.related_membership not in [
-                        m.membership for m in memberships
+                        m.association_membership_id for m in memberships
                     ]:
                         raise HTTPException(
                             status_code=403,
@@ -1620,7 +1671,7 @@ async def mark_purchase_as_validated(
             await add_membership(
                 memberships=memberships,
                 user_id=user_id,
-                product_related_membership=product.related_membership,
+                product_related_membership_id=product.related_membership.id,
                 product_variant=product_variant,
                 db=db,
             )
@@ -1639,12 +1690,17 @@ async def mark_purchase_as_validated(
             cruds_cdr.create_ticket(db=db, ticket=ticket)
     else:
         if product.related_membership:
-            memberships = await cruds_cdr.get_actual_memberships_by_user_id(
+            memberships = await cruds_memberships.get_user_memberships_by_user_id(
                 db=db,
                 user_id=user_id,
+                minimal_date=date(datetime.now(UTC).year, 9, 5),
             )
             existing_membership = next(
-                (m for m in memberships if m.membership == product.related_membership),
+                (
+                    m
+                    for m in memberships
+                    if m.association_membership_id == product.related_membership
+                ),
                 None,
             )
             if existing_membership:
@@ -1673,53 +1729,6 @@ async def mark_purchase_as_validated(
         raise
     else:
         return db_purchase
-
-
-@module.router.post(
-    "/cdr/memberships/{membership_id}/add-batch/",
-    status_code=201,
-    response_model=list[schemas_cdr.MembershipUserMappingEmail],
-)
-async def add_batch_membership(
-    membership_id: AvailableAssociationMembership,
-    memberships: list[schemas_cdr.MembershipUserMappingEmail],
-    db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
-):
-    """
-    Add a batch of user to a membership.
-
-    Return the list of unknown users whose email is not in the database.
-
-    **User must be CDR Admin to use this endpoint**
-    """
-    unknown_users: list[schemas_cdr.MembershipUserMappingEmail] = []
-    for m in memberships:
-        m_user = await cruds_users.get_user_by_email(db=db, email=m.user_email)
-        if not m_user:
-            unknown_users.append(m)
-            continue
-        stored = await cruds_cdr.get_actual_memberships_by_user_id(
-            db=db,
-            user_id=m_user.id,
-        )
-        if membership_id not in [m.membership for m in stored]:
-            cruds_cdr.create_membership(
-                db=db,
-                membership=models_core.CoreAssociationMembership(
-                    id=uuid4(),
-                    user_id=m_user.id,
-                    membership=membership_id,
-                    start_date=m.start_date,
-                    end_date=m.end_date,
-                ),
-            )
-    try:
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
-    return unknown_users
 
 
 @module.router.delete(
@@ -1784,9 +1793,12 @@ async def delete_purchase(
             )
             if purchased_product:
                 if product in purchased_product.product_constraints:
-                    memberships = await cruds_cdr.get_actual_memberships_by_user_id(
-                        db=db,
-                        user_id=user_id,
+                    memberships = (
+                        await cruds_memberships.get_user_memberships_by_user_id(
+                            db=db,
+                            user_id=user_id,
+                            minimal_date=date(datetime.now(UTC).year, 9, 5),
+                        )
                     )
                     all_possible_purchases = await cruds_cdr.get_purchases_by_ids(
                         db=db,
@@ -1799,7 +1811,7 @@ async def delete_purchase(
                         if not all_possible_purchases:
                             if product.related_membership:
                                 if product.related_membership not in [
-                                    m.membership for m in memberships
+                                    m.association_membership_id for m in memberships
                                 ]:
                                     raise HTTPException(
                                         status_code=403,
@@ -2496,7 +2508,14 @@ async def get_payment_url(
         floor=user.floor,
         phone=user.phone,
         created_on=user.created_on,
-        groups=user.groups,
+        groups=[
+            schemas_core.CoreGroupSimple(
+                id=group.id,
+                name=group.name,
+                description=group.description,
+            )
+            for group in user.groups
+        ],
         id=user.id,
         name=user.name,
         firstname=user.firstname,
@@ -2528,117 +2547,6 @@ async def get_payment_url(
     return schemas_cdr.PaymentUrl(
         url=checkout.payment_url,
     )
-
-
-@module.router.get(
-    "/cdr/users/{user_id}/memberships/",
-    response_model=list[schemas_cdr.MembershipComplete],
-    status_code=200,
-)
-async def get_memberships_by_user_id(
-    user_id: str,
-    db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
-):
-    if not (
-        user_id == user.id or is_user_member_of_any_group(user, [GroupType.admin_cdr])
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="You're not allowed to see other users memberships.",
-        )
-    return await cruds_cdr.get_actual_memberships_by_user_id(db=db, user_id=user_id)
-
-
-@module.router.post(
-    "/cdr/users/{user_id}/memberships/",
-    response_model=schemas_cdr.MembershipComplete,
-    status_code=201,
-)
-async def create_membership(
-    user_id: str,
-    membership: schemas_cdr.MembershipBase,
-    db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
-):
-    db_membership = models_core.CoreAssociationMembership(
-        id=uuid4(),
-        user_id=user_id,
-        membership=membership.membership,
-        start_date=membership.start_date,
-        end_date=membership.end_date,
-    )
-    try:
-        cruds_cdr.create_membership(db, db_membership)
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
-    else:
-        return db_membership
-
-
-@module.router.patch(
-    "/cdr/users/{user_id}/memberships/{membership}/",
-    status_code=204,
-)
-async def update_membership(
-    user_id: str,
-    membership: AvailableAssociationMembership,
-    membership_edit: schemas_cdr.MembershipEdit,
-    db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
-):
-    db_membership = await cruds_cdr.get_membership_by_user_id_and_membership_name(
-        user_id=user_id,
-        membership=membership,
-        db=db,
-    )
-    if db_membership is None:
-        raise HTTPException(
-            status_code=404,
-            detail="This user doesn't have this membership",
-        )
-    try:
-        await cruds_cdr.update_membership(
-            membership_id=db_membership.id,
-            membership=membership_edit,
-            db=db,
-        )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
-
-
-@module.router.delete(
-    "/cdr/users/{user_id}/memberships/{membership_id}/",
-    status_code=204,
-)
-async def delete_membership(
-    user_id: str,
-    membership_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
-):
-    db_membership = await cruds_cdr.get_membership_by_id(
-        membership_id=membership_id,
-        db=db,
-    )
-    if not db_membership or db_membership.user_id != user_id:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid membership_id",
-        )
-    try:
-        await cruds_cdr.delete_membership(
-            membership_id=membership_id,
-            db=db,
-        )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
 
 
 @module.router.get(
