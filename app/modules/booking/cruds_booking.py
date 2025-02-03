@@ -89,13 +89,51 @@ async def get_user_managers(
 
 async def get_bookings(
     db: AsyncSession,
-) -> Sequence[models_booking.Booking]:
-    result = await db.execute(
-        select(models_booking.Booking).options(
-            selectinload(models_booking.Booking.applicant),
-        ),
+) -> Sequence[schemas_booking.BookingReturnApplicant]:
+    result = (
+        (
+            await db.execute(
+                select(models_booking.Booking).options(
+                    selectinload(models_booking.Booking.applicant),
+                ),
+            )
+        )
+        .scalars()
+        .all()
     )
-    return result.scalars().all()
+    return [
+        schemas_booking.BookingReturnApplicant(
+            reason=booking.reason,
+            start=booking.start,
+            end=booking.end,
+            creation=booking.creation,
+            note=booking.note,
+            room_id=booking.room_id,
+            key=booking.key,
+            recurrence_rule=booking.recurrence_rule,
+            entity=booking.entity,
+            decision=booking.decision,
+            applicant=schemas_booking.Applicant(
+                id=booking.applicant.id,
+                firstname=booking.applicant.firstname,
+                name=booking.applicant.name,
+                nickname=booking.applicant.nickname,
+                email=booking.applicant.email,
+                promo=booking.applicant.promo,
+                account_type=booking.applicant.account_type,
+                school_id=booking.applicant.school_id,
+                phone=booking.applicant.phone,
+            ),
+            applicant_id=booking.applicant_id,
+            id=booking.id,
+            room=schemas_booking.RoomComplete(
+                id=booking.room.id,
+                name=booking.room.name,
+                manager_id=booking.room.manager_id,
+            ),
+        )
+        for booking in result
+    ]
 
 
 async def get_confirmed_bookings(
@@ -123,7 +161,7 @@ async def get_confirmed_bookings(
             key=booking.key,
             recurrence_rule=booking.recurrence_rule,
             entity=booking.entity,
-            decision=Decision.approved,
+            decision=booking.decision,
             applicant=schemas_booking.Applicant(
                 id=booking.applicant.id,
                 firstname=booking.applicant.firstname,
