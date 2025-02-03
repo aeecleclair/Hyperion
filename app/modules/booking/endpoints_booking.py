@@ -176,10 +176,11 @@ async def get_bookings_for_manager(
     """
 
     user_managers = await cruds_booking.get_user_managers(user=user, db=db)
+    managers_id = [manager.id for manager in user_managers]
 
     bookings = await cruds_booking.get_bookings(db=db)
 
-    return [booking for booking in bookings if booking.room.manager in user_managers]
+    return [booking for booking in bookings if booking.room.manager_id in managers_id]
 
 
 @module.router.get(
@@ -197,10 +198,11 @@ async def get_confirmed_bookings_for_manager(
     """
 
     user_managers = await cruds_booking.get_user_managers(user=user, db=db)
+    managers_id = [manager.id for manager in user_managers]
 
     bookings = await cruds_booking.get_confirmed_bookings(db=db)
 
-    return [booking for booking in bookings if booking.room.manager in user_managers]
+    return [booking for booking in bookings if booking.room.manager_id in managers_id]
 
 
 @module.router.get(
