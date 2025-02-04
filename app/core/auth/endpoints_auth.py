@@ -517,22 +517,24 @@ async def authorization_code_grant(
         )
 
     if auth_client.secret is not None:
+        pass
         # As PKCE is not used, we need to make sure that PKCE related parameters were not used
-        if (
-            db_authorization_code.code_challenge is not None
-            or tokenreq.code_verifier is not None
-        ):
-            # We allow some auth clients to bypass this verification
-            # because some auth providers may use PKCE with a client secret event if it's forbidden by the specifications
-            if not auth_client.allow_pkce_with_client_secret:
-                hyperion_access_logger.warning(
-                    f"Token authorization_code_grant: PKCE related parameters should not be used when using a client secret ({request_id})",
-                )
-                raise AuthHTTPException(
-                    status_code=400,
-                    error="invalid_request",
-                    error_description="PKCE related parameters should not be used",
-                )
+        # 04/02/2025: As a hotfix, we allow all clients to use PKCE with a client secret
+        # if (
+        #     db_authorization_code.code_challenge is not None
+        #     or tokenreq.code_verifier is not None
+        # ):
+        # We allow some auth clients to bypass this verification
+        # because some auth providers may use PKCE with a client secret event if it's forbidden by the specifications
+        # if not auth_client.allow_pkce_with_client_secret:
+        #     hyperion_access_logger.warning(
+        #         f"Token authorization_code_grant: PKCE related parameters should not be used when using a client secret ({request_id})",
+        #     )
+        #     raise AuthHTTPException(
+        #         status_code=400,
+        #         error="invalid_request",
+        #         error_description="PKCE related parameters should not be used",
+        #     )
     elif (
         db_authorization_code.code_challenge is not None
         and tokenreq.code_verifier is not None
