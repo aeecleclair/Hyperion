@@ -17,13 +17,6 @@ class CoreAssociationMembership(Base):
     id: Mapped[PrimaryKey]
     name: Mapped[str]
 
-    users_memberships: Mapped[list["CoreAssociationUserMembership"]] = relationship(
-        "CoreAssociationUserMembership",
-        primaryjoin="CoreAssociationUserMembership.association_membership_id == CoreAssociationMembership.id",
-        lazy="selectin",
-        default_factory=list,
-    )
-
 
 class CoreAssociationUserMembership(Base):
     __tablename__ = "core_association_user_membership"

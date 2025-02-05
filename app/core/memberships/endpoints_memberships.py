@@ -40,12 +40,12 @@ async def read_associations_memberships(
 
 
 @router.get(
-    "/memberships/{membership_id}",
-    response_model=schemas_memberships.MembershipComplete,
+    "/memberships/{association_membership_id}/members",
+    response_model=list[schemas_memberships.UserMembershipComplete],
     status_code=200,
 )
 async def read_association_membership(
-    membership_id: uuid.UUID,
+    association_membership_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_an_ecl_member),
 ):
@@ -55,19 +55,28 @@ async def read_association_membership(
     **This endpoint is only usable by ECL members**
     """
 
-    db_membership = await cruds_memberships.get_association_membership_by_id(
-        db=db,
-        membership_id=membership_id,
+    db_association_membership = (
+        await cruds_memberships.get_association_membership_by_id(
+            db=db,
+            membership_id=association_membership_id,
+        )
     )
-    if db_membership is None:
+    if db_association_membership is None:
         raise HTTPException(status_code=404, detail="Membership not found")
 
-    return db_membership
+    db_user_memberships = (
+        await cruds_memberships.get_user_memberships_by_association_membership_id(
+            db=db,
+            association_membership_id=association_membership_id,
+        )
+    )
+
+    return db_user_memberships
 
 
 @router.post(
     "/memberships/",
-    response_model=schemas_memberships.MembershipComplete,
+    response_model=schemas_memberships.MembershipSimple,
     status_code=201,
 )
 async def create_association_membership(
@@ -89,12 +98,15 @@ async def create_association_membership(
             detail=f"A membership with the name {membership.name} already exists",
         )
 
-    db_membership = schemas_memberships.MembershipComplete(
+    db_association_membership = schemas_memberships.MembershipSimple(
         name=membership.name,
         id=uuid.uuid4(),
     )
 
-    cruds_memberships.create_association_membership(db=db, membership=db_membership)
+    cruds_memberships.create_association_membership(
+        db=db,
+        membership=db_association_membership,
+    )
     try:
         await db.commit()
     except Exception:
@@ -102,7 +114,7 @@ async def create_association_membership(
             status_code=500,
             detail="Failed to create membership",
         )
-    return db_membership
+    return db_association_membership
 
 
 @router.patch(
@@ -120,11 +132,13 @@ async def update_association_membership(
 
     **This endpoint is only usable by administrators**
     """
-    db_membership = await cruds_memberships.get_association_membership_by_id(
-        db=db,
-        membership_id=association_membership_id,
+    db_association_membership = (
+        await cruds_memberships.get_association_membership_by_id(
+            db=db,
+            membership_id=association_membership_id,
+        )
     )
-    if db_membership is None:
+    if db_association_membership is None:
         raise HTTPException(status_code=404, detail="Membership not found")
 
     await cruds_memberships.update_association_membership(
@@ -156,17 +170,25 @@ async def delete_association_membership(
 
     **This endpoint is only usable by administrators**
     """
-    db_membership = await cruds_memberships.get_association_membership_by_id(
-        db=db,
-        membership_id=association_membership_id,
+    db_association_membership = (
+        await cruds_memberships.get_association_membership_by_id(
+            db=db,
+            membership_id=association_membership_id,
+        )
     )
-    if db_membership is None:
+    if db_association_membership is None:
         raise HTTPException(status_code=404, detail="Membership not found")
 
-    if db_membership.users_memberships:
+    db_user_memberships = (
+        await cruds_memberships.get_user_memberships_by_association_membership_id(
+            db=db,
+            association_membership_id=association_membership_id,
+        )
+    )
+    if len(db_user_memberships) > 0:
         raise HTTPException(
             status_code=400,
-            detail="Membership still has members",
+            detail="Membership still has associated users",
         )
 
     await cruds_memberships.delete_association_membership(
@@ -271,6 +293,18 @@ async def create_user_membership(
     **This endpoint is only usable by administrators**
     """
 
+    db_association_membership = (
+        await cruds_memberships.get_association_membership_by_id(
+            db=db,
+            membership_id=user_membership.association_membership_id,
+        )
+    )
+    if db_association_membership is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Association membership not found",
+        )
+
     db_user = await cruds_users.get_user_by_id(db=db, user_id=user_id)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -312,6 +346,18 @@ async def add_batch_membership(
 
     **User must be an administrator to use this endpoint.**
     """
+    db_association_membership = (
+        await cruds_memberships.get_association_membership_by_id(
+            db=db,
+            membership_id=association_membership_id,
+        )
+    )
+    if db_association_membership is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Association membership not found",
+        )
+
     unknown_users: list[schemas_memberships.MembershipUserMappingEmail] = []
     for detail in memberships_details:
         detail_user = await cruds_users.get_user_by_email(

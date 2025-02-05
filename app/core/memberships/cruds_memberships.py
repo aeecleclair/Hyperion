@@ -4,7 +4,6 @@ from uuid import UUID
 
 from sqlalchemy import and_, delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.core import models_core, schemas_core
 from app.core.memberships import schemas_memberships
@@ -55,18 +54,12 @@ async def get_association_membership_by_name(
 async def get_association_membership_by_id(
     db: AsyncSession,
     membership_id: UUID,
-) -> schemas_memberships.MembershipComplete | None:
+) -> schemas_memberships.MembershipSimple | None:
     result = (
         (
             await db.execute(
-                select(models_core.CoreAssociationMembership)
-                .where(
+                select(models_core.CoreAssociationMembership).where(
                     models_core.CoreAssociationMembership.id == membership_id,
-                )
-                .options(
-                    selectinload(
-                        models_core.CoreAssociationMembership.users_memberships,
-                    ),
                 ),
             )
         )
@@ -74,27 +67,9 @@ async def get_association_membership_by_id(
         .first()
     )
     return (
-        schemas_memberships.MembershipComplete(
+        schemas_memberships.MembershipSimple(
             name=result.name,
             id=result.id,
-            users_memberships=[
-                schemas_memberships.UserMembershipComplete(
-                    id=membership.id,
-                    user_id=membership.user_id,
-                    association_membership_id=membership.association_membership_id,
-                    start_date=membership.start_date,
-                    end_date=membership.end_date,
-                    user=schemas_core.CoreUserSimple(
-                        id=membership.user.id,
-                        account_type=membership.user.account_type,
-                        school_id=membership.user.school_id,
-                        nickname=membership.user.nickname,
-                        firstname=membership.user.firstname,
-                        name=membership.user.name,
-                    ),
-                )
-                for membership in result.users_memberships
-            ],
         )
         if result
         else None
@@ -103,7 +78,7 @@ async def get_association_membership_by_id(
 
 def create_association_membership(
     db: AsyncSession,
-    membership: schemas_memberships.MembershipComplete,
+    membership: schemas_memberships.MembershipSimple,
 ):
     membership_db = models_core.CoreAssociationMembership(
         id=membership.id,
@@ -148,6 +123,42 @@ async def get_user_memberships_by_user_id(
                     models_core.CoreAssociationUserMembership.end_date > minimal_date
                     if minimal_date
                     else and_(True),
+                ),
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return [
+        schemas_memberships.UserMembershipComplete(
+            id=membership.id,
+            user_id=membership.user_id,
+            association_membership_id=membership.association_membership_id,
+            start_date=membership.start_date,
+            end_date=membership.end_date,
+            user=schemas_core.CoreUserSimple(
+                id=membership.user.id,
+                account_type=membership.user.account_type,
+                school_id=membership.user.school_id,
+                nickname=membership.user.nickname,
+                firstname=membership.user.firstname,
+                name=membership.user.name,
+            ),
+        )
+        for membership in result
+    ]
+
+
+async def get_user_memberships_by_association_membership_id(
+    db: AsyncSession,
+    association_membership_id: UUID,
+) -> Sequence[schemas_memberships.UserMembershipComplete]:
+    result = (
+        (
+            await db.execute(
+                select(models_core.CoreAssociationUserMembership).where(
+                    models_core.CoreAssociationUserMembership.association_membership_id
+                    == association_membership_id,
                 ),
             )
         )
