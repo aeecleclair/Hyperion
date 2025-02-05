@@ -16,10 +16,6 @@ class MembershipSimple(MembershipBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class MembershipComplete(MembershipSimple):
-    users_memberships: list["UserMembershipComplete"] = []
-
-
 class MembershipDateFilter(BaseModel):
     minimal_date: date | None = None
 
