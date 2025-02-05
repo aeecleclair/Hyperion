@@ -76,7 +76,7 @@ def test_get_association_membership_by_id(client: TestClient):
     assert response.status_code == 200
     assert response.json()["id"] == str(aeecl_association_membership.id)
     assert response.json()["name"] == "AEECL"
-    assert len(response.json()["members"]) == 1
+    assert len(response.json()["users_memberships"]) == 1
 
 
 def test_get_association_membership_by_id_wrong_id(client: TestClient):
