@@ -17,7 +17,7 @@ class MembershipSimple(MembershipBase):
 
 
 class MembershipComplete(MembershipSimple):
-    members: list[schemas_core.CoreUserSimple] = []
+    users_memberships: list["UserMembershipComplete"] = []
 
 
 class MembershipDateFilter(BaseModel):
@@ -30,9 +30,15 @@ class UserMembershipBase(BaseModel):
     end_date: date
 
 
-class UserMembershipComplete(UserMembershipBase):
+class UserMembershipSimple(UserMembershipBase):
     id: UUID
     user_id: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class UserMembershipComplete(UserMembershipSimple):
+    user: schemas_core.CoreUserSimple
 
     model_config = ConfigDict(from_attributes=True)
 

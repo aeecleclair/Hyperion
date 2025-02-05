@@ -64,7 +64,9 @@ async def get_association_membership_by_id(
                     models_core.CoreAssociationMembership.id == membership_id,
                 )
                 .options(
-                    selectinload(models_core.CoreAssociationMembership.members),
+                    selectinload(
+                        models_core.CoreAssociationMembership.users_memberships,
+                    ),
                 ),
             )
         )
@@ -75,16 +77,23 @@ async def get_association_membership_by_id(
         schemas_memberships.MembershipComplete(
             name=result.name,
             id=result.id,
-            members=[
-                schemas_core.CoreUserSimple(
-                    id=member.id,
-                    account_type=member.account_type,
-                    school_id=member.school_id,
-                    nickname=member.nickname,
-                    firstname=member.firstname,
-                    name=member.name,
+            users_memberships=[
+                schemas_memberships.UserMembershipComplete(
+                    id=membership.id,
+                    user_id=membership.user_id,
+                    association_membership_id=membership.association_membership_id,
+                    start_date=membership.start_date,
+                    end_date=membership.end_date,
+                    user=schemas_core.CoreUserSimple(
+                        id=membership.user.id,
+                        account_type=membership.user.account_type,
+                        school_id=membership.user.school_id,
+                        nickname=membership.user.nickname,
+                        firstname=membership.user.firstname,
+                        name=membership.user.name,
+                    ),
                 )
-                for member in result.members
+                for membership in result.users_memberships
             ],
         )
         if result
@@ -152,6 +161,14 @@ async def get_user_memberships_by_user_id(
             association_membership_id=membership.association_membership_id,
             start_date=membership.start_date,
             end_date=membership.end_date,
+            user=schemas_core.CoreUserSimple(
+                id=membership.user.id,
+                account_type=membership.user.account_type,
+                school_id=membership.user.school_id,
+                nickname=membership.user.nickname,
+                firstname=membership.user.firstname,
+                name=membership.user.name,
+            ),
         )
         for membership in result
     ]
@@ -182,6 +199,14 @@ async def get_user_memberships_by_user_id_and_association_membership_id(
             association_membership_id=membership.association_membership_id,
             start_date=membership.start_date,
             end_date=membership.end_date,
+            user=schemas_core.CoreUserSimple(
+                id=membership.user.id,
+                account_type=membership.user.account_type,
+                school_id=membership.user.school_id,
+                nickname=membership.user.nickname,
+                firstname=membership.user.firstname,
+                name=membership.user.name,
+            ),
         )
         for membership in result
     ]
@@ -209,6 +234,14 @@ async def get_user_membership_by_id(
             association_membership_id=result.association_membership_id,
             start_date=result.start_date,
             end_date=result.end_date,
+            user=schemas_core.CoreUserSimple(
+                id=result.user.id,
+                account_type=result.user.account_type,
+                school_id=result.user.school_id,
+                nickname=result.user.nickname,
+                firstname=result.user.firstname,
+                name=result.user.name,
+            ),
         )
         if result
         else None
@@ -217,7 +250,7 @@ async def get_user_membership_by_id(
 
 def create_user_membership(
     db: AsyncSession,
-    user_membership: schemas_memberships.UserMembershipComplete,
+    user_membership: schemas_memberships.UserMembershipSimple,
 ):
     membership_db = models_core.CoreAssociationUserMembership(
         id=user_membership.id,

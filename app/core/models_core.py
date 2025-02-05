@@ -138,9 +138,9 @@ class CoreAssociationMembership(Base):
     id: Mapped[PrimaryKey]
     name: Mapped[str]
 
-    members: Mapped[list[CoreUser]] = relationship(
-        "CoreUser",
-        secondary="core_association_user_membership",
+    users_memberships: Mapped[list["CoreAssociationUserMembership"]] = relationship(
+        "CoreAssociationUserMembership",
+        primaryjoin="CoreAssociationUserMembership.association_membership_id == CoreAssociationMembership.id",
         lazy="selectin",
         default_factory=list,
     )
@@ -159,6 +159,12 @@ class CoreAssociationUserMembership(Base):
     )
     start_date: Mapped[date]
     end_date: Mapped[date]
+
+    user: Mapped["CoreUser"] = relationship(
+        "CoreUser",
+        lazy="joined",
+        init=False,
+    )
 
 
 class CoreData(Base):
