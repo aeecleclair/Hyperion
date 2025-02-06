@@ -1321,7 +1321,7 @@ async def get_purchases_by_user_id(
                                 available_online=product.available_online,
                                 description_fr=product.description_fr,
                                 description_en=product.description_en,
-                                related_membership=schemas_memberships.MembershipComplete(
+                                related_membership=schemas_memberships.MembershipSimple(
                                     id=product.related_membership.id,
                                     name=product.related_membership.name,
                                 )
@@ -1408,7 +1408,7 @@ async def get_purchases_by_user_id_by_seller_id(
                                 available_online=product.available_online,
                                 description_fr=product.description_fr,
                                 description_en=product.description_en,
-                                related_membership=schemas_memberships.MembershipComplete(
+                                related_membership=schemas_memberships.MembershipSimple(
                                     id=product.related_membership.id,
                                     name=product.related_membership.name,
                                 )
@@ -1572,7 +1572,7 @@ async def add_membership(
         else:
             cruds_memberships.create_user_membership(
                 db=db,
-                user_membership=schemas_memberships.UserMembershipComplete(
+                user_membership=schemas_memberships.UserMembershipSimple(
                     id=uuid4(),
                     user_id=user_id,
                     association_membership_id=product_related_membership_id,

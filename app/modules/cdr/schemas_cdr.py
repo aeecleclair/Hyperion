@@ -130,7 +130,7 @@ class ProductBase(BaseModel):
     description_fr: str | None = None
     description_en: str | None = None
     available_online: bool
-    related_membership: schemas_memberships.MembershipComplete | None = None
+    related_membership: schemas_memberships.MembershipSimple | None = None
     tickets: list[GenerateTicketBase] = []
     product_constraints: list[UUID]
     document_constraints: list[UUID]
@@ -145,7 +145,7 @@ class ProductCompleteNoConstraint(BaseModel):
     id: UUID
     seller_id: UUID
     variants: list[ProductVariantComplete] = []
-    related_membership: schemas_memberships.MembershipComplete | None = None
+    related_membership: schemas_memberships.MembershipSimple | None = None
     tickets: list[GenerateTicketComplete]
 
     model_config = ConfigDict(from_attributes=True)
@@ -160,7 +160,7 @@ class ProductComplete(BaseModel):
     id: UUID
     seller_id: UUID
     variants: list[ProductVariantComplete] = []
-    related_membership: schemas_memberships.MembershipComplete | None = None
+    related_membership: schemas_memberships.MembershipSimple | None = None
     product_constraints: list[ProductCompleteNoConstraint] = []
     document_constraints: list[DocumentComplete] = []
     tickets: list[GenerateTicketComplete] = []
@@ -175,7 +175,7 @@ class ProductEdit(BaseModel):
     description_en: str | None = None
     description: str | None = None
     available_online: bool | None = None
-    related_membership: schemas_memberships.MembershipComplete | None = None
+    related_membership: schemas_memberships.MembershipSimple | None = None
     product_constraints: list[UUID] | None = None
     document_constraints: list[UUID] | None = None
 
