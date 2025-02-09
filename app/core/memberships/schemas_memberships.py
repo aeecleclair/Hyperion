@@ -8,6 +8,7 @@ from app.core import schemas_core
 
 class MembershipBase(BaseModel):
     name: str
+    group_id: str
 
 
 class MembershipSimple(MembershipBase):
