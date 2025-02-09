@@ -6,7 +6,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core
+from app.core import models_core, schemas_core
 from app.core.groups.groups_type import GroupType
 from app.core.memberships import cruds_memberships, schemas_memberships
 from app.core.users import cruds_users
@@ -278,7 +278,7 @@ async def read_user_association_membership_history(
 
 @router.post(
     "/memberships/users/{user_id}",
-    response_model=schemas_memberships.UserMembershipSimple,
+    response_model=schemas_memberships.UserMembershipComplete,
     status_code=201,
 )
 async def create_user_membership(
@@ -325,7 +325,17 @@ async def create_user_membership(
             status_code=500,
             detail="Failed to create user membership",
         )
-    return db_user_membership
+    return schemas_memberships.UserMembershipComplete(
+        **db_user_membership.__dict__,
+        user=schemas_core.CoreUserSimple(
+            name=db_user.name,
+            id=db_user.id,
+            firstname=db_user.firstname,
+            nickname=db_user.nickname,
+            account_type=db_user.account_type,
+            school_id=db_user.school_id,
+        ),
+    )
 
 
 @router.post(
