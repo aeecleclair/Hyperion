@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, schemas_core
+from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
 from app.core.memberships import cruds_memberships, schemas_memberships
 from app.core.users import cruds_users
@@ -98,8 +99,16 @@ async def create_association_membership(
             detail=f"A membership with the name {membership.name} already exists",
         )
 
+    group = await cruds_groups.get_group_by_id(db, membership.group_id)
+    if group is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Group not found",
+        )
+
     db_association_membership = schemas_memberships.MembershipSimple(
         name=membership.name,
+        group_id=membership.group_id,
         id=uuid.uuid4(),
     )
 

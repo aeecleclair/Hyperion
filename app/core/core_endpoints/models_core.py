@@ -15,7 +15,8 @@ class CoreAssociationMembership(Base):
     __tablename__ = "core_association_membership"
 
     id: Mapped[PrimaryKey]
-    name: Mapped[str]
+    name: Mapped[str] = mapped_column(unique=True)
+    group_id: Mapped[str] = mapped_column(ForeignKey("core_group.id"))
 
 
 class CoreAssociationUserMembership(Base):

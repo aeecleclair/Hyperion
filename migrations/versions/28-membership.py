@@ -8,6 +8,8 @@ from collections.abc import Sequence
 from enum import Enum
 from typing import TYPE_CHECKING
 
+from app.core.groups.groups_type import GroupType
+
 if TYPE_CHECKING:
     from pytest_alembic import MigrationContext
 
@@ -45,6 +47,7 @@ association_membership_table = sa.Table(
     sa.MetaData(),
     sa.Column("id", sa.UUID(), primary_key=True),
     sa.Column("name", sa.String(), nullable=False),
+    sa.Column("group_id", sa.String(), nullable=False),
 )
 
 old_product_table = sa.Table(
@@ -82,15 +85,21 @@ def upgrade() -> None:
         "core_association_membership",
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("name", sa.String(), nullable=False),
+        sa.Column("group_id", sa.String(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("name"),
+        sa.ForeignKeyConstraint(
+            ["group_id"],
+            ["core_group.id"],
+        ),
     )
     conn.execute(
         sa.insert(
             association_membership_table,
         ).values(
             [
-                {"id": AEECL_ID, "name": "AEECL"},
-                {"id": USEECL_ID, "name": "USEECL"},
+                {"id": AEECL_ID, "name": "AEECL", "group_id": GroupType.BDE},
+                {"id": USEECL_ID, "name": "USEECL", "group_id": GroupType.BDS},
             ],
         ),
     )
