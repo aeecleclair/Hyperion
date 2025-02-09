@@ -9,6 +9,7 @@ from enum import Enum
 from typing import TYPE_CHECKING
 
 from app.core.groups.groups_type import GroupType
+from app.core.schools.schools_type import SchoolType
 
 if TYPE_CHECKING:
     from pytest_alembic import MigrationContext
@@ -27,6 +28,13 @@ class AvailableAssociationMembership(str, Enum):
     aeecl = "AEECL"
     useecl = "USEECL"
 
+
+group_table = sa.Table(
+    "core_group",
+    sa.MetaData(),
+    sa.Column("id", sa.String(), primary_key=True),
+    sa.Column("name", sa.String(), nullable=False),
+)
 
 old_user_membership_table = sa.Table(
     "core_association_user_membership",
@@ -93,6 +101,24 @@ def upgrade() -> None:
             ["core_group.id"],
         ),
     )
+    ids = [group[0] for group in conn.execute(sa.select(group_table)).fetchall()]
+    if GroupType.BDE.value not in ids:
+        conn.execute(
+            sa.insert(
+                group_table,
+            ).values(
+                {"id": GroupType.BDE, "name": "BDE"},
+            ),
+        )
+    if GroupType.BDS.value not in ids:
+        conn.execute(
+            sa.insert(
+                group_table,
+            ).values(
+                {"id": GroupType.BDS, "name": "BDS"},
+            ),
+        )
+
     conn.execute(
         sa.insert(
             association_membership_table,
@@ -306,7 +332,7 @@ def pre_test_upgrade(
             "floor": "Autre",
             "created_on": None,
             "account_type": "student",
-            "school_id": "dce19aa2-8863-4c93-861e-fb7be8f610ed",
+            "school_id": SchoolType.no_school,
         },
     )
     alembic_runner.insert_into(
@@ -333,7 +359,7 @@ def pre_test_upgrade(
         "core_group",
         {
             "id": "e6d03fb7-2195-40a3-82e4-9f9e59f06b50",
-            "name": "name",
+            "name": "name654",
         },
     )
     alembic_runner.insert_into(
