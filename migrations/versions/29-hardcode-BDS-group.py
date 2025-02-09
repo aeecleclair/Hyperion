@@ -5,6 +5,7 @@ Create Date: 2024-08-22 09:02:59.887161
 
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
+from uuid import uuid4
 
 from app.core.groups.groups_type import GroupType
 
@@ -134,13 +135,13 @@ def downgrade() -> None:
     pass
 
 
-test_user_id = "7a3ed1bb-c46c-486e-a439-f77ed5c8a7f9"
-test_booking_manager_id = "76a2d7fd-a782-4c12-8e4d-33205c55a574"
-test_cdr_seller_id = "2965a535-deb3-44ba-9f6c-f9d8f8cb5aea"
-test_phonebook_association_id = "9304ac6b-a455-4811-bc7a-13b2d7002073"
-test_raffle_id = "4cd0d369-9b11-456d-a70e-0e9be4591b75"
+test_user_id = uuid4()
+test_booking_manager_id = uuid4()
+test_cdr_seller_id = uuid4()
+test_phonebook_association_id = uuid4()
+test_raffle_id = uuid4()
 
-test_old_eclair_id = "33cd5e2b-49e6-4d65-a652-474466a5dcde"
+test_old_eclair_id = uuid4()
 
 
 def pre_test_upgrade(
@@ -151,7 +152,7 @@ def pre_test_upgrade(
         "core_user",
         {
             "id": test_user_id,
-            "email": "email@email.fr",
+            "email": "email8465@email.fr",
             "password_hash": "password_hash",
             "name": "name",
             "firstname": "firstname",
@@ -161,7 +162,8 @@ def pre_test_upgrade(
             "phone": "phone",
             "floor": "Autre",
             "created_on": None,
-            "external": False,
+            "account_type": "student",
+            "school_id": "dce19aa2-8863-4c93-861e-fb7be8f610ed",
         },
     )
     alembic_runner.insert_into(
@@ -175,7 +177,7 @@ def pre_test_upgrade(
     alembic_runner.insert_into(
         "core_membership",
         {
-            "user_id": "7a3ed1bb-c46c-486e-a439-f77ed5c8a7f9",
+            "user_id": test_user_id,
             "group_id": test_old_eclair_id,
             "description": "",
         },
@@ -185,7 +187,7 @@ def pre_test_upgrade(
         "booking_manager",
         {
             "id": test_booking_manager_id,
-            "name": "TestBookingManager",
+            "name": "TestBookingManager2",
             "group_id": test_old_eclair_id,
         },
     )
