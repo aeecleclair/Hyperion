@@ -7,11 +7,11 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import models_core, schemas_core
-from app.core.groups.groups_type import AccountType, GroupType
+from app.core.groups.groups_type import GroupType
 from app.dependencies import (
     get_db,
     get_request_id,
-    is_user,
+    is_user_a_member,
     is_user_in,
 )
 from app.modules.cmm import cruds_cmm, models_cmm, schemas_cmm, types_cmm
@@ -26,13 +26,12 @@ from app.utils.tools import (
 module = Module(
     root="cmm",
     tag="Centrale Mega Meme",
-    default_allowed_account_types=[AccountType.student, AccountType.staff],
 )
 
 
 async def is_allowed_meme_user(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ) -> models_core.CoreUser:
     """
     Overloads the is_user() dependency injection to verify if the user is in the banned table
@@ -52,7 +51,7 @@ async def get_memes(
     sort_by: str = "best",
     n_page: int = 1,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_allowed_meme_user),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Get a page of memes according to the asked sort
@@ -115,26 +114,6 @@ async def get_memes(
 
 
 @module.router.get(
-    "/cmm/memes/{meme_id}/",
-    status_code=200,
-    response_model=schemas_cmm.ShownMeme,
-)
-async def get_meme_by_id(
-    meme_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_allowed_meme_user),
-):
-    """
-    Get a meme caracteristics using its id
-    """
-    shown_meme = await cruds_cmm.get_meme_by_id(db=db, meme_id=meme_id, user_id=user.id)
-    if shown_meme is None:
-        raise HTTPException(status_code=404, detail="The meme does not exist")
-
-    return shown_meme
-
-
-@module.router.get(
     "/cmm/memes/{meme_id}/img/",
     status_code=200,
     response_class=FileResponse,
@@ -158,6 +137,64 @@ async def get_meme_image_by_id(
     )
 
 
+@module.router.post(
+    "/cmm/memes/{meme_id}/hide/",
+    status_code=201,
+)
+async def hide_meme_by_id(
+    meme_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.CMM)),
+):
+    """
+    Hide a meme from db
+    Must be admin
+    """
+    meme = await cruds_cmm.get_meme_by_id(db=db, meme_id=meme_id, user_id=user.id)
+    if meme is None:
+        raise HTTPException(status_code=404, detail="The meme does not exist")
+
+    try:
+        await cruds_cmm.update_meme_ban_status(
+            db=db,
+            ban_status=types_cmm.MemeStatus.banned,
+            meme_id=meme_id,
+        )
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+
+
+@module.router.post(
+    "/cmm/memes/{meme_id}/show/",
+    status_code=201,
+)
+async def show_meme_by_id(
+    meme_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.CMM)),
+):
+    """
+    Show a meme from db
+    Must be admin
+    """
+    meme = await cruds_cmm.get_meme_by_id(db=db, meme_id=meme_id, user_id=user.id)
+    if meme is None:
+        raise HTTPException(status_code=404, detail="The meme does not exist")
+
+    try:
+        await cruds_cmm.update_meme_ban_status(
+            db=db,
+            ban_status=types_cmm.MemeStatus.neutral,
+            meme_id=meme_id,
+        )
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+
+
 @module.router.delete(
     "/cmm/memes/{meme_id}/",
     status_code=204,
@@ -165,11 +202,11 @@ async def get_meme_image_by_id(
 async def delete_meme_by_id(
     meme_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.CMM)),
+    user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
     Remove a meme from db
-    Must be author of meme if meme is not banned or admin
+    Must be author of meme if meme is not banned
     """
     meme = await cruds_cmm.get_meme_by_id(db=db, meme_id=meme_id, user_id=user.id)
     if not meme:
@@ -177,7 +214,16 @@ async def delete_meme_by_id(
             status_code=404,
             detail="Invalid meme_id",
         )
-
+    if meme.status == types_cmm.MemeStatus.banned:
+        raise HTTPException(
+            status_code=403,
+            detail="You can't delete a banned meme",
+        )
+    if meme.user_id != user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="You are not the author of this meme",
+        )
     try:
         await cruds_cmm.delete_meme_by_id(db=db, meme_id=meme_id)
         await delete_file_from_data(directory="meme", filename=str(meme_id))
