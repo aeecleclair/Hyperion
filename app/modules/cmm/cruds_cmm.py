@@ -7,6 +7,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core import models_core
 from app.modules.cmm import models_cmm, types_cmm
 
 n_memes = 10
@@ -290,3 +291,12 @@ async def delete_ban(db: AsyncSession, ban_id: UUID):
     await db.execute(
         delete(models_cmm.Ban).where(models_cmm.Ban.id == ban_id),
     )
+
+
+async def get_banned_users(db: AsyncSession) -> Sequence[models_core.CoreUser]:
+    result = await db.execute(
+        select(models_core.CoreUser)
+        .join(models_cmm.Ban, models_core.CoreUser.id == models_cmm.Ban.user_id)
+        .order_by(models_cmm.Ban.creation_time)
+    )
+    return result.scalars().all()

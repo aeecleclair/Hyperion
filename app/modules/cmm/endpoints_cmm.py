@@ -6,12 +6,13 @@ from fastapi.datastructures import UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core
+from app.core import models_core, schemas_core
 from app.core.groups.groups_type import AccountType, GroupType
 from app.dependencies import (
     get_db,
     get_request_id,
     is_user,
+    is_user_in,
 )
 from app.modules.cmm import cruds_cmm, models_cmm, schemas_cmm, types_cmm
 from app.types.content_type import ContentType
@@ -19,7 +20,6 @@ from app.types.module import Module
 from app.utils.tools import (
     delete_file_from_data,
     get_file_from_data,
-    is_user_member_of_an_allowed_group,
     save_file_as_data,
 )
 
@@ -165,7 +165,7 @@ async def get_meme_image_by_id(
 async def delete_meme_by_id(
     meme_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_allowed_meme_user),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.CMM)),
 ):
     """
     Remove a meme from db
@@ -177,17 +177,6 @@ async def delete_meme_by_id(
             status_code=404,
             detail="Invalid meme_id",
         )
-    if not is_user_member_of_an_allowed_group(user, [GroupType.admin]):
-        if meme.user_id != user.id:
-            raise HTTPException(
-                status_code=403,
-                detail="You cannot remove a meme from another user",
-            )
-        elif meme.status != types_cmm.MemeStatus.neutral:
-            raise HTTPException(
-                status_code=403,
-                detail="You cannot remove your meme if it is banned ",
-            )
 
     try:
         await cruds_cmm.delete_meme_by_id(db=db, meme_id=meme_id)
@@ -414,17 +403,12 @@ async def update_vote(
 async def ban_user(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_allowed_meme_user),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.CMM)),
 ):
     """
     Ban a user and hide all of his memes
     Must be admin
     """
-    if not is_user_member_of_an_allowed_group(user, [GroupType.admin]):
-        raise HTTPException(
-            status_code=401,
-            detail="Cannot ban another user",
-        )
 
     current_ban = await cruds_cmm.get_user_current_ban(db=db, user_id=user_id)
     if current_ban is not None:
@@ -457,17 +441,12 @@ async def ban_user(
 async def unban_user(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_allowed_meme_user),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.CMM)),
 ):
     """
     Unban a user and unhide all of his memes
     Must be admin
     """
-    if not is_user_member_of_an_allowed_group(user, [GroupType.admin]):
-        raise HTTPException(
-            status_code=401,
-            detail="Cannot unban another user",
-        )
 
     current_ban = await cruds_cmm.get_user_current_ban(db=db, user_id=user_id)
     if current_ban is None:
@@ -503,6 +482,18 @@ async def get_user_ban_history(
     """
     Get the ban history of an user
     """
-    # TODO: Return a schema
     ban_history = await cruds_cmm.get_user_ban_history(db=db, user_id=user_id)
     return ban_history
+
+
+@module.router.get(
+    "/cmm/users/banned/",
+    status_code=200,
+    response_model=list[schemas_core.CoreUserSimple],
+)
+async def get_banned_users(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_allowed_meme_user),
+):
+    banned_users = await cruds_cmm.get_banned_users(db=db)
+    return banned_users
