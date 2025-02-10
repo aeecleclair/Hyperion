@@ -1,4 +1,3 @@
-import logging
 import uuid
 from datetime import UTC, datetime
 
@@ -23,8 +22,6 @@ from app.utils.tools import (
     get_file_from_data,
     save_file_as_data,
 )
-
-hyperion_error_logger = logging.getLogger("hyperion.error")
 
 module = Module(
     root="cmm",
@@ -580,7 +577,6 @@ async def get_banned_users(
     user: models_core.CoreUser = Depends(is_user_in(GroupType.CMM)),
 ):
     banned_users = await cruds_cmm.get_banned_users(db=db)
-    # hyperion_error_logger.error(banned_users)
     return banned_users
 
 
@@ -591,9 +587,20 @@ async def get_banned_users(
 )
 async def get_hidden_memes(
     db: AsyncSession = Depends(get_db),
+    n_page: int = 1,
     user: models_core.CoreUser = Depends(is_user_in(GroupType.CMM)),
 ):
-    hidden_memes = await cruds_cmm.get_hidden_memes(db=db)
+    if n_page < 1:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid page number",
+        )
+    hidden_memes = await cruds_cmm.get_hidden_memes(
+        db=db,
+        descending=True,
+        n_page=n_page,
+        user_id=user.id,
+    )
     return [
         schemas_cmm.ShownMeme(
             id=str(meme.id),

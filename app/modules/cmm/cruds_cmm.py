@@ -1,4 +1,3 @@
-import logging
 import uuid
 from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
@@ -324,13 +323,29 @@ async def get_banned_users(db: AsyncSession) -> Sequence[models_core.CoreUser]:
     return result.scalars().all()
 
 
-async def get_hidden_memes(db: AsyncSession) -> Sequence[models_cmm.Meme]:
+async def get_hidden_memes(
+    db: AsyncSession,
+    n_page: int,
+    descending: bool,
+    user_id: str,
+) -> Sequence[models_cmm.Meme]:
     result = await db.execute(
         select(models_cmm.Meme)
-        .where(
-            models_cmm.Meme.status == types_cmm.MemeStatus.banned,
+        .options(
+            selectinload(
+                models_cmm.Meme.votes.and_(models_cmm.Vote.user_id == user_id),
+            ).load_only(models_cmm.Vote.positive),
+            selectinload(models_cmm.Meme.user),
         )
-        .options(selectinload(models_cmm.Meme.user)),
+        .execution_options(populate_existing=True)
+        .where(models_cmm.Meme.status == types_cmm.MemeStatus.banned)
+        .order_by(
+            models_cmm.Meme.creation_time.desc()
+            if descending
+            else models_cmm.Meme.creation_time,
+        )
+        .limit(n_memes)
+        .offset((n_page - 1) * n_memes),
     )
     return result.scalars().all()
 
