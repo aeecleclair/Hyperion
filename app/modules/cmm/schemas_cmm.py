@@ -43,3 +43,7 @@ class Ban(BaseModel):
     end_time: datetime | None
     user: CoreUserSimple
     admin: CoreUserSimple
+
+class Score(BaseModel):
+    user_id: str
+    score: int

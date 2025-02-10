@@ -117,6 +117,41 @@ async def get_memes(
 
 
 @module.router.get(
+    "/cmm/memes/me",
+    response_model=list[schemas_cmm.ShownMeme],
+    status_code=200,
+)
+async def get_memes(
+    n_page: int = 1,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    if n_page < 1:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid page number",
+        )
+
+    meme_page = await cruds_cmm.get_my_memes(
+        db=db,
+        n_page=n_page,
+        user_id=user.id,
+    )
+
+    return [
+        schemas_cmm.ShownMeme(
+            id=str(meme.id),
+            user=meme.user,
+            creation_time=meme.creation_time,
+            vote_score=meme.vote_score,
+            status=meme.status,
+            my_vote=meme.votes[0].positive if meme.votes else None,
+        )
+        for meme in meme_page
+    ]
+
+
+@module.router.get(
     "/cmm/memes/{meme_id}/img/",
     status_code=200,
     response_class=FileResponse,
@@ -569,4 +604,75 @@ async def get_hidden_memes(
             my_vote=meme.votes[0].positive if meme.votes else None,
         )
         for meme in hidden_memes
+    ]
+
+
+@module.router.get(
+    "/cmm/leaderbord/",
+    status_code=200,
+    response_model=list[schemas_cmm.Score],
+)
+async def get_leaderbord(
+    period: types_cmm.PeriodLeaderboard,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    match period:
+        case types_cmm.PeriodLeaderboard.week:
+            n_jours = 7
+        case types_cmm.PeriodLeaderboard.month:
+            n_jours = 30
+        case types_cmm.PeriodLeaderboard.year:
+            n_jours = 365
+        case types_cmm.PeriodLeaderboard.always:
+            n_jours = -1
+        case _:
+            raise HTTPException(status_code=404, detail="Invalid period")
+
+    votes = await cruds_cmm.get_votes(db=db, n_jours=n_jours)
+    
+    d = {}
+
+    for v in votes:
+        if v.user_id in d:
+            d[v.user_id] += 1 if v.positive else -1
+        else:
+            d[v.user_id] = 1 if v.positive else -1
+    
+    result = [schemas_cmm.Score(user_id = k, score = d[k]) for k in d]
+
+    return sorted(result,key = lambda s: s.score, reverse = True)
+
+
+@module.router.get(
+    "/cmm/all_votes/",
+    status_code=200,
+    response_model=list[schemas_cmm.Vote],
+)
+async def get_all_votes(
+    period: types_cmm.PeriodLeaderboard,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    match period:
+        case types_cmm.PeriodLeaderboard.week:
+            n_jours = 7
+        case types_cmm.PeriodLeaderboard.month:
+            n_jours = 30
+        case types_cmm.PeriodLeaderboard.year:
+            n_jours = 365
+        case types_cmm.PeriodLeaderboard.always:
+            n_jours = -1
+        case _:
+            raise HTTPException(status_code=404, detail="Invalid period")
+
+    votes = await cruds_cmm.get_votes(db=db, n_jours=n_jours)
+
+    return [
+        schemas_cmm.Vote(
+            meme_id = str(vote.meme_id),
+            positive = vote.positive,
+            user = vote.user,
+        )
+        for vote in votes
     ]

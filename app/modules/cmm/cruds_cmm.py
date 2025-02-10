@@ -1,3 +1,4 @@
+import logging
 import uuid
 from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
@@ -41,6 +42,27 @@ async def get_memes_by_date(
     meme_page = result.scalars().all()
     return meme_page
 
+async def get_my_memes(
+    db: AsyncSession,
+    n_page: int,
+    user_id: str,
+) -> Sequence[models_cmm.Meme]:
+    result = await db.execute(
+        select(models_cmm.Meme)
+        .options(
+            selectinload(
+                models_cmm.Meme.votes.and_(models_cmm.Vote.user_id == user_id),
+            ).load_only(models_cmm.Vote.positive),
+            selectinload(models_cmm.Meme.user),
+        )
+        .execution_options(populate_existing=True)
+        .where(models_cmm.Meme.user_id == user_id)
+        .order_by(models_cmm.Meme.creation_time.desc())
+        .limit(n_memes)
+        .offset((n_page - 1) * n_memes),
+    )
+    meme_page = result.scalars().all()
+    return meme_page
 
 async def get_memes_by_votes(
     db: AsyncSession,
@@ -310,4 +332,31 @@ async def get_hidden_memes(db: AsyncSession) -> Sequence[models_cmm.Meme]:
         )
         .options(selectinload(models_cmm.Meme.user)),
     )
+    return result.scalars().all()
+
+
+async def get_votes(db: AsyncSession, n_jours) -> Sequence[models_cmm.Vote]:
+    hyperion_error_logger = logging.getLogger("hyperion_error")
+    hyperion_error_logger.error(n_jours)
+
+    if n_jours == -1:
+        result = await db.execute(
+            select(models_cmm.Vote)
+            .options(
+                selectinload(models_cmm.Vote.user)
+            )
+        )
+
+    else:
+        threshold_date = datetime.now(tz=UTC) - timedelta(days=n_jours)
+
+        result = await db.execute(
+            select(models_cmm.Vote)
+            
+            .join(models_cmm.Meme)
+            .where(models_cmm.Meme.creation_time >= threshold_date)
+            .options(
+                selectinload(models_cmm.Vote.user)
+            )
+        )
     return result.scalars().all()

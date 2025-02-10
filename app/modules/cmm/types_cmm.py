@@ -12,3 +12,10 @@ class MemeSort(str, Enum):
     trending = "trending"
     newest = "newest"
     oldest = "oldest"
+
+
+class PeriodLeaderboard(str, Enum):
+    week = "week"
+    month = "month"
+    year = "year"
+    always = "always"
