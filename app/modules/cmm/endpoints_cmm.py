@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import UTC, datetime
 
@@ -22,6 +23,8 @@ from app.utils.tools import (
     get_file_from_data,
     save_file_as_data,
 )
+
+hyperion_error_logger = logging.getLogger("hyperion.error")
 
 module = Module(
     root="cmm",
@@ -523,7 +526,7 @@ async def unban_user(
 async def get_user_ban_history(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_allowed_meme_user),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.CMM)),
 ):
     """
     Get the ban history of an user
@@ -539,7 +542,31 @@ async def get_user_ban_history(
 )
 async def get_banned_users(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_allowed_meme_user),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.CMM)),
 ):
     banned_users = await cruds_cmm.get_banned_users(db=db)
+    # hyperion_error_logger.error(banned_users)
     return banned_users
+
+
+@module.router.get(
+    "/cmm/memes/hidden/",
+    status_code=200,
+    response_model=list[schemas_cmm.ShownMeme],
+)
+async def get_hidden_memes(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.CMM)),
+):
+    hidden_memes = await cruds_cmm.get_hidden_memes(db=db)
+    return [
+        schemas_cmm.ShownMeme(
+            id=str(meme.id),
+            user=meme.user,
+            creation_time=meme.creation_time,
+            vote_score=meme.vote_score,
+            status=meme.status,
+            my_vote=meme.votes[0].positive if meme.votes else None,
+        )
+        for meme in hidden_memes
+    ]

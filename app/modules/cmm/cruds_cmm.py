@@ -297,6 +297,17 @@ async def get_banned_users(db: AsyncSession) -> Sequence[models_core.CoreUser]:
     result = await db.execute(
         select(models_core.CoreUser)
         .join(models_cmm.Ban, models_core.CoreUser.id == models_cmm.Ban.user_id)
-        .order_by(models_cmm.Ban.creation_time)
+        .order_by(models_cmm.Ban.creation_time),
+    )
+    return result.scalars().all()
+
+
+async def get_hidden_memes(db: AsyncSession) -> Sequence[models_cmm.Meme]:
+    result = await db.execute(
+        select(models_cmm.Meme)
+        .where(
+            models_cmm.Meme.status == types_cmm.MemeStatus.banned,
+        )
+        .options(selectinload(models_cmm.Meme.user)),
     )
     return result.scalars().all()
