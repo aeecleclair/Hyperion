@@ -44,6 +44,7 @@ class Ban(BaseModel):
     user: CoreUserSimple
     admin: CoreUserSimple
 
+
 class Score(BaseModel):
     user_id: str
     score: int

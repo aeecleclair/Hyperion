@@ -41,6 +41,7 @@ async def get_memes_by_date(
     meme_page = result.scalars().all()
     return meme_page
 
+
 async def get_my_memes(
     db: AsyncSession,
     n_page: int,
@@ -62,6 +63,7 @@ async def get_my_memes(
     )
     meme_page = result.scalars().all()
     return meme_page
+
 
 async def get_memes_by_votes(
     db: AsyncSession,
@@ -351,15 +353,9 @@ async def get_hidden_memes(
 
 
 async def get_votes(db: AsyncSession, n_jours) -> Sequence[models_cmm.Vote]:
-    hyperion_error_logger = logging.getLogger("hyperion_error")
-    hyperion_error_logger.error(n_jours)
-
     if n_jours == -1:
         result = await db.execute(
-            select(models_cmm.Vote)
-            .options(
-                selectinload(models_cmm.Vote.user)
-            )
+            select(models_cmm.Vote).options(selectinload(models_cmm.Vote.user))
         )
 
     else:
@@ -367,11 +363,9 @@ async def get_votes(db: AsyncSession, n_jours) -> Sequence[models_cmm.Vote]:
 
         result = await db.execute(
             select(models_cmm.Vote)
-            
             .join(models_cmm.Meme)
             .where(models_cmm.Meme.creation_time >= threshold_date)
-            .options(
-                selectinload(models_cmm.Vote.user)
-            )
+            .group_by(models_cmm.Meme.id)
+            .options(selectinload(models_cmm.Vote.user)),
         )
     return result.scalars().all()

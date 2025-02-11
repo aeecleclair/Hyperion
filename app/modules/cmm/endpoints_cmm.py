@@ -118,7 +118,7 @@ async def get_memes(
     response_model=list[schemas_cmm.ShownMeme],
     status_code=200,
 )
-async def get_memes(
+async def get_my_memes(
     n_page: int = 1,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
@@ -637,18 +637,15 @@ async def get_leaderbord(
             raise HTTPException(status_code=404, detail="Invalid period")
 
     votes = await cruds_cmm.get_votes(db=db, n_jours=n_jours)
-    
-    d = {}
-
+    d: dict = {}
     for v in votes:
         if v.user_id in d:
             d[v.user_id] += 1 if v.positive else -1
         else:
             d[v.user_id] = 1 if v.positive else -1
-    
-    result = [schemas_cmm.Score(user_id = k, score = d[k]) for k in d]
+    result = [schemas_cmm.Score(user_id=k, score=d[k]) for k in d]
 
-    return sorted(result,key = lambda s: s.score, reverse = True)
+    return sorted(result, key=lambda s: s.score, reverse=True)
 
 
 @module.router.get(
@@ -677,9 +674,9 @@ async def get_all_votes(
 
     return [
         schemas_cmm.Vote(
-            meme_id = str(vote.meme_id),
-            positive = vote.positive,
-            user = vote.user,
+            meme_id=str(vote.meme_id),
+            positive=vote.positive,
+            user=vote.user,
         )
         for vote in votes
     ]
