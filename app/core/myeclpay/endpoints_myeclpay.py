@@ -49,7 +49,6 @@ from app.dependencies import (
 from app.types.module import Module
 from app.utils.communication.notifications import NotificationTool
 from app.utils.mail.mailworker import send_email
-from app.utils.tools import get_display_name
 
 module = Module(
     root="myeclpay",
@@ -426,7 +425,7 @@ async def create_store(
 @module.router.get(
     "/myeclpay/stores/{store_id}/history",
     status_code=200,
-    response_model=list[schemas_myeclpay.Transaction],
+    response_model=list[schemas_myeclpay.History],
 )
 async def get_store_history(
     store_id: UUID,
@@ -463,8 +462,36 @@ async def get_store_history(
         wallet_id=store.wallet_id,
         db=db,
     )
+    history = []
+    for transaction in transactions:
+        if transaction.debited_wallet_id == store.wallet_id:
+            history.append(
+                schemas_myeclpay.History(
+                    id=transaction.id,
+                    type=HistoryType.GIVEN,
+                    total=transaction.total,
+                    status=transaction.status,
+                    creation=transaction.creation,
+                    other_wallet_name=transaction.credited_wallet.user.full_name
+                    if transaction.credited_wallet.user is not None
+                    else "",
+                ),
+            )
+        else:
+            history.append(
+                schemas_myeclpay.History(
+                    id=transaction.id,
+                    type=HistoryType.RECEIVED,
+                    total=transaction.total,
+                    status=transaction.status,
+                    creation=transaction.creation,
+                    other_wallet_name=transaction.debited_wallet.user.full_name
+                    if transaction.debited_wallet.user is not None
+                    else "",
+                ),
+            )
 
-    return transactions
+    return history
 
 
 @module.router.get(
@@ -1394,11 +1421,7 @@ async def get_user_wallet_history(
         if other_wallet.store is not None:
             other_wallet_name = other_wallet.store.name
         elif other_wallet.user is not None:
-            other_wallet_name = get_display_name(
-                firstname=other_wallet.user.firstname,
-                name=other_wallet.user.name,
-                nickname=other_wallet.user.nickname,
-            )
+            other_wallet_name = other_wallet.user.full_name
         else:
             other_wallet_name = "Unknown"
 
