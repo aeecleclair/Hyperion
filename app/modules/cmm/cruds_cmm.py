@@ -355,7 +355,7 @@ async def get_hidden_memes(
 async def get_votes(db: AsyncSession, n_jours) -> Sequence[models_cmm.Vote]:
     if n_jours == -1:
         result = await db.execute(
-            select(models_cmm.Vote).options(selectinload(models_cmm.Vote.user))
+            select(models_cmm.Vote).options(selectinload(models_cmm.Vote.user)),
         )
 
     else:
