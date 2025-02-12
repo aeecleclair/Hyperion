@@ -1,5 +1,6 @@
 import uuid
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from fastapi import Depends, File, HTTPException
 from fastapi.datastructures import UploadFile
@@ -16,6 +17,7 @@ from app.dependencies import (
 )
 from app.modules.cmm import cruds_cmm, models_cmm, schemas_cmm, types_cmm
 from app.types.content_type import ContentType
+from app.types.floors_type import FloorsType
 from app.types.module import Module
 from app.utils.tools import (
     delete_file_from_data,
@@ -617,10 +619,13 @@ async def get_hidden_memes(
 @module.router.get(
     "/cmm/leaderboard/",
     status_code=200,
-    response_model=list[schemas_cmm.Score],
+    response_model=list[schemas_cmm.UserScore]
+    | list[schemas_cmm.FloorScore]
+    | list[schemas_cmm.PromoScore],
 )
-async def get_leaderbord(
+async def get_user_leaderbord(
     period: types_cmm.PeriodLeaderboard,
+    entity: types_cmm.EntityLeaderboard,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
@@ -636,55 +641,86 @@ async def get_leaderbord(
         case _:
             raise HTTPException(status_code=404, detail="Invalid period")
 
-    votes = await cruds_cmm.get_votes(db=db, n_jours=n_jours)
-    d: dict[str, int] = {}
-    users: dict[str, models_core.CoreUser] = {}
+    memes = await cruds_cmm.get_all_memes(db=db, n_jours=n_jours)
 
-    for v in votes:
-        d[v.user_id] = d.get(v.user_id, 0) + (1 if v.positive else -1)
-        users[v.user_id] = v.user
+    match entity:
+        case types_cmm.EntityLeaderboard.promo:
+            promo_scores: dict[int, int] = {}
 
-    sorted_scores = sorted(d.items(), key=lambda item: item[1], reverse=True)
+            for meme in memes:
+                meme_author = meme.user
+                meme_author_promo = meme_author.promo
+                if meme_author_promo:
+                    if meme_author_promo not in promo_scores:
+                        promo_scores[meme_author_promo] = 0
 
-    return [
-        schemas_cmm.Score(
-            user=users[user_id],
-            score=score,
-            position=i + 1,
-        )
-        for i, (user_id, score) in enumerate(sorted_scores)
-    ]
+                    promo_scores[meme_author_promo] += meme.vote_score
 
+            sorted_promo_scores = sorted(
+                promo_scores.items(),
+                key=lambda item: item[1],
+                reverse=True,
+            )
 
-@module.router.get(
-    "/cmm/all_votes/",
-    status_code=200,
-    response_model=list[schemas_cmm.Vote],
-)
-async def get_all_votes(
-    period: types_cmm.PeriodLeaderboard,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
-):
-    match period:
-        case types_cmm.PeriodLeaderboard.week:
-            n_jours = 7
-        case types_cmm.PeriodLeaderboard.month:
-            n_jours = 30
-        case types_cmm.PeriodLeaderboard.year:
-            n_jours = 365
-        case types_cmm.PeriodLeaderboard.always:
-            n_jours = -1
+            return [
+                {
+                    "promo": promo,
+                    "score": total_score,
+                    "position": i + 1,
+                }
+                for i, (promo, total_score) in enumerate(sorted_promo_scores)
+            ]
+
+        case types_cmm.EntityLeaderboard.floor:
+            floor_scores: dict[FloorsType, int] = {}
+
+            for meme in memes:
+                meme_author = meme.user
+                meme_author_floor = meme_author.floor
+                if meme_author_floor:
+                    if meme_author_floor not in floor_scores:
+                        floor_scores[meme_author_floor] = 0
+
+                    floor_scores[meme_author_floor] += meme.vote_score
+
+            sorted_floor_scores = sorted(
+                floor_scores.items(),
+                key=lambda item: item[1],
+                reverse=True,
+            )
+
+            return [
+                {
+                    "floor": floor,
+                    "score": total_score,
+                    "position": i + 1,
+                }
+                for i, (floor, total_score) in enumerate(sorted_floor_scores)
+            ]
+
+        case types_cmm.EntityLeaderboard.user:
+            user_scores: dict[str, int] = {}
+            users: dict[str, models_core.CoreUser] = {}
+
+            for meme in memes:
+                meme_author = meme.user
+                meme_author_id = meme_author.id
+
+                user_scores[meme_author_id] = (
+                    user_scores.get(meme_author_id, 0) + meme.vote_score
+                )
+                users[meme_author_id] = meme_author
+
+            sorted_user_scores = sorted(
+                user_scores.items(),
+                key=lambda item: item[1],
+                reverse=True,
+            )
+
+            return [
+                {"user": users[user_id], "score": score, "position": i + 1}
+                for i, (user_id, score) in enumerate(sorted_user_scores)
+            ]
+
         case _:
             raise HTTPException(status_code=404, detail="Invalid period")
-
-    votes = await cruds_cmm.get_votes(db=db, n_jours=n_jours)
-
-    return [
-        schemas_cmm.Vote(
-            meme_id=str(vote.meme_id),
-            positive=vote.positive,
-            user=vote.user,
-        )
-        for vote in votes
-    ]

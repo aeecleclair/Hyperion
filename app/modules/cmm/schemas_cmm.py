@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict
 
 from app.core.schemas_core import CoreUserSimple
 from app.modules.cmm.types_cmm import MemeStatus
+from app.types.floors_type import FloorsType
 
 
 class VoteBase(BaseModel):
@@ -45,7 +46,19 @@ class Ban(BaseModel):
     admin: CoreUserSimple
 
 
-class Score(BaseModel):
+class UserScore(BaseModel):
     user: CoreUserSimple
+    score: int
+    position: int
+
+
+class PromoScore(BaseModel):
+    promo: int
+    score: int
+    position: int
+
+
+class FloorScore(BaseModel):
+    floor: FloorsType
     score: int
     position: int

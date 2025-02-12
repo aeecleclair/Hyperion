@@ -352,20 +352,39 @@ async def get_hidden_memes(
     return result.scalars().all()
 
 
-async def get_votes(db: AsyncSession, n_jours) -> Sequence[models_cmm.Vote]:
+# async def get_votes(db: AsyncSession, n_jours) -> Sequence[models_cmm.Vote]:
+#     if n_jours == -1:
+#         result = await db.execute(
+#             select(models_cmm.Vote).options(selectinload(models_cmm.Vote.user)),
+#         )
+
+#     else:
+#         threshold_date = datetime.now(tz=UTC) - timedelta(days=n_jours)
+
+#         result = await db.execute(
+#             select(models_cmm.Vote)
+#             .join(models_cmm.Meme)
+#             .where(models_cmm.Meme.creation_time >= threshold_date)
+#             .group_by(models_cmm.Meme.id)
+#             .options(selectinload(models_cmm.Vote.user)),
+#         )
+#     return result.scalars().all()
+
+
+async def get_all_memes(db: AsyncSession, n_jours) -> Sequence[models_cmm.Meme]:
     if n_jours == -1:
         result = await db.execute(
-            select(models_cmm.Vote).options(selectinload(models_cmm.Vote.user)),
+            select(models_cmm.Meme).options(selectinload(models_cmm.Meme.user)),
         )
 
     else:
         threshold_date = datetime.now(tz=UTC) - timedelta(days=n_jours)
 
         result = await db.execute(
-            select(models_cmm.Vote)
-            .join(models_cmm.Meme)
-            .where(models_cmm.Meme.creation_time >= threshold_date)
-            .group_by(models_cmm.Meme.id)
-            .options(selectinload(models_cmm.Vote.user)),
+            select(models_cmm.Meme)
+            .where(
+                models_cmm.Meme.creation_time >= threshold_date,
+            )
+            .options(selectinload(models_cmm.Meme.user)),
         )
     return result.scalars().all()

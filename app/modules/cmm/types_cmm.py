@@ -19,3 +19,9 @@ class PeriodLeaderboard(str, Enum):
     month = "month"
     year = "year"
     always = "always"
+
+
+class EntityLeaderboard(str, Enum):
+    promo = "promo"
+    floor = "floor"
+    user = "user"
