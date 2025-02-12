@@ -46,5 +46,6 @@ class Ban(BaseModel):
 
 
 class Score(BaseModel):
-    user_id: str
+    user: CoreUserSimple
     score: int
+    position: int

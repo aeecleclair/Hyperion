@@ -615,7 +615,7 @@ async def get_hidden_memes(
 
 
 @module.router.get(
-    "/cmm/leaderbord/",
+    "/cmm/leaderboard/",
     status_code=200,
     response_model=list[schemas_cmm.Score],
 )
@@ -637,15 +637,23 @@ async def get_leaderbord(
             raise HTTPException(status_code=404, detail="Invalid period")
 
     votes = await cruds_cmm.get_votes(db=db, n_jours=n_jours)
-    d: dict = {}
-    for v in votes:
-        if v.user_id in d:
-            d[v.user_id] += 1 if v.positive else -1
-        else:
-            d[v.user_id] = 1 if v.positive else -1
-    result = [schemas_cmm.Score(user_id=k, score=d[k]) for k in d]
+    d: dict[str, int] = {}
+    users: dict[str, models_core.CoreUser] = {}
 
-    return sorted(result, key=lambda s: s.score, reverse=True)
+    for v in votes:
+        d[v.user_id] = d.get(v.user_id, 0) + (1 if v.positive else -1)
+        users[v.user_id] = v.user
+
+    sorted_scores = sorted(d.items(), key=lambda item: item[1], reverse=True)
+
+    return [
+        schemas_cmm.Score(
+            user=users[user_id],
+            score=score,
+            position=i + 1,
+        )
+        for i, (user_id, score) in enumerate(sorted_scores)
+    ]
 
 
 @module.router.get(
