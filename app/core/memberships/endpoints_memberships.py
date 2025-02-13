@@ -1,7 +1,6 @@
 import logging
-import re
 import uuid
-from datetime import date, datetime
+from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -229,7 +228,6 @@ async def delete_association_membership(
 )
 async def read_user_memberships(
     user_id: str,
-    minimalDate: str = Query(None),
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user()),
 ):
@@ -248,22 +246,9 @@ async def read_user_memberships(
             detail="User is not allowed to access other users' memberships",
         )
 
-    if minimalDate is not None and not re.match(r"^\d{8}$", minimalDate):
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid date format. Please use YYYYMMDD",
-        )
-
-    minimal_date = (
-        datetime.strptime(minimalDate + "+0000", "%Y%m%d%z").date()
-        if minimalDate
-        else None
-    )
-
     memberships = await cruds_memberships.get_user_memberships_by_user_id(
         db,
         user_id,
-        minimal_date,
     )
     return memberships
 
