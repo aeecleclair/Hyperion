@@ -101,7 +101,6 @@ class TransferInfo(BaseModel):
 
 
 class RefundInfo(BaseModel):
-    wallet_device_id: UUID
     complete_refund: bool
     amount: int | None = None
 
@@ -157,6 +156,12 @@ class Wallet(BaseModel):
     user: schemas_core.CoreUser | None
 
 
+class WalletInfo(BaseModel):
+    id: UUID
+    type: WalletType
+    owner_name: str | None
+
+
 class WalletDeviceBase(BaseModel):
     name: str
 
@@ -201,3 +206,19 @@ class Transfer(BaseModel):
     total: int  # Stored in cents
     creation: datetime
     confirmed: bool
+
+
+class RefundBase(BaseModel):
+    id: UUID
+    total: int  # Stored in cents
+    creation: datetime
+    transaction_id: UUID
+    seller_user_id: str | None = None
+    credited_wallet_id: UUID
+    debited_wallet_id: UUID
+
+
+class Refund(RefundBase):
+    transaction: Transaction
+    credited_wallet: WalletInfo
+    debited_wallet: WalletInfo

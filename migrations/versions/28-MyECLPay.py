@@ -281,6 +281,33 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id"),
     )
+    op.create_table(
+        "myeclpay_refund",
+        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("transaction_id", sa.Uuid(), nullable=False),
+        sa.Column("total", sa.Integer(), nullable=False),
+        sa.Column("creation", TZDateTime(), nullable=False),
+        sa.Column("credited_wallet_id", sa.Uuid(), nullable=False),
+        sa.Column("debited_wallet_id", sa.Uuid(), nullable=False),
+        sa.Column("seller_user_id", sa.String(), nullable=True),
+        sa.ForeignKeyConstraint(
+            ["transaction_id"],
+            ["myeclpay_transaction.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["credited_wallet_id"],
+            ["myeclpay_wallet.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["debited_wallet_id"],
+            ["myeclpay_wallet.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["seller_user_id"],
+            ["core_user.id"],
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
     # ### end Alembic commands ###
 
 
@@ -289,6 +316,7 @@ def downgrade() -> None:
     op.drop_table("myeclpay_transfer")
     op.drop_table("myeclpay_user_payment")
     op.drop_table("myeclpay_seller")
+    op.drop_table("myeclpay_refund")
     op.drop_table("myeclpay_request")
     op.drop_table("myeclpay_transaction")
     op.drop_table("myeclpay_wallet_device")
