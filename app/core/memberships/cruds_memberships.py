@@ -117,15 +117,31 @@ async def update_association_membership(
 async def get_user_memberships_by_user_id(
     db: AsyncSession,
     user_id: str,
-    minimal_date: date | None = None,
+    minimal_start_date: date | None = None,
+    maximal_start_date: date | None = None,
+    minimal_end_date: date | None = None,
+    maximal_end_date: date | None = None,
 ) -> Sequence[schemas_memberships.UserMembershipComplete]:
     result = (
         (
             await db.execute(
                 select(models_core.CoreAssociationUserMembership).where(
                     models_core.CoreAssociationUserMembership.user_id == user_id,
-                    models_core.CoreAssociationUserMembership.end_date > minimal_date
-                    if minimal_date
+                    models_core.CoreAssociationUserMembership.end_date
+                    >= minimal_end_date
+                    if minimal_end_date
+                    else and_(True),
+                    models_core.CoreAssociationUserMembership.end_date
+                    <= maximal_end_date
+                    if maximal_end_date
+                    else and_(True),
+                    models_core.CoreAssociationUserMembership.start_date
+                    >= minimal_start_date
+                    if minimal_start_date
+                    else and_(True),
+                    models_core.CoreAssociationUserMembership.start_date
+                    <= maximal_start_date
+                    if maximal_start_date
                     else and_(True),
                 ),
             )
@@ -156,6 +172,10 @@ async def get_user_memberships_by_user_id(
 async def get_user_memberships_by_association_membership_id(
     db: AsyncSession,
     association_membership_id: UUID,
+    minimal_start_date: date | None = None,
+    maximal_start_date: date | None = None,
+    minimal_end_date: date | None = None,
+    maximal_end_date: date | None = None,
 ) -> Sequence[schemas_memberships.UserMembershipComplete]:
     result = (
         (
@@ -163,6 +183,22 @@ async def get_user_memberships_by_association_membership_id(
                 select(models_core.CoreAssociationUserMembership).where(
                     models_core.CoreAssociationUserMembership.association_membership_id
                     == association_membership_id,
+                    models_core.CoreAssociationUserMembership.end_date
+                    >= minimal_end_date
+                    if minimal_end_date
+                    else and_(True),
+                    models_core.CoreAssociationUserMembership.end_date
+                    <= maximal_end_date
+                    if maximal_end_date
+                    else and_(True),
+                    models_core.CoreAssociationUserMembership.start_date
+                    >= minimal_start_date
+                    if minimal_start_date
+                    else and_(True),
+                    models_core.CoreAssociationUserMembership.start_date
+                    <= maximal_start_date
+                    if maximal_start_date
+                    else and_(True),
                 ),
             )
         )
