@@ -1224,7 +1224,7 @@ def test_get_transactions_success(client: TestClient):
         transactions_dict[transaction_from_ecl_user_to_ecl_user2.id][
             "other_wallet_name"
         ]
-        == "firstname ECL User 2 (nickname)"
+        == "nickname (firstname ECL User 2)"
     )
     assert (
         transactions_dict[transaction_from_ecl_user_to_ecl_user2.id]["type"] == "given"
@@ -1252,7 +1252,7 @@ def test_get_transactions_success(client: TestClient):
         transactions_dict[transaction_from_ecl_user2_to_ecl_user.id][
             "other_wallet_name"
         ]
-        == "firstname ECL User 2 (nickname)"
+        == "nickname (firstname ECL User 2)"
     )
     assert (
         transactions_dict[transaction_from_ecl_user2_to_ecl_user.id]["type"]
@@ -1866,7 +1866,7 @@ async def test_store_scan_store_successful_scan(client: TestClient):
             "signature": base64.b64encode(signature).decode("utf-8"),
         },
     )
-    assert response.status_code == 204
+    assert response.status_code == 201
 
     ensure_qr_code_id_is_already_used(qr_code_id=qr_code_id, client=client)
 
@@ -1894,3 +1894,232 @@ async def test_store_scan_store_successful_scan(client: TestClient):
 
     # We check that a transaction was created
     # TODO: verify that a transaction was created
+
+
+async def test_unknown_transaction_refund(client: TestClient):
+    response = client.post(
+        f"/myeclpay/transaction/{uuid4()}/refund",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+        json={"complete_refund": True},
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Transaction does not exist"
+
+
+async def test_transaction_refund_unconfirmed_transaction(client: TestClient):
+    transaction_canceled = models_myeclpay.Transaction(
+        id=uuid4(),
+        debited_wallet_id=ecl_user_wallet.id,
+        credited_wallet_id=store_wallet.id,
+        total=100,
+        status=TransactionStatus.CANCELED,
+        creation=datetime.now(UTC),
+        transaction_type=TransactionType.DIRECT,
+        seller_user_id=store_seller_can_bank_user.id,
+        debited_wallet_device_id=ecl_user_wallet_device.id,
+        store_note="",
+    )
+    await add_object_to_db(transaction_canceled)
+
+    response = client.post(
+        f"/myeclpay/transaction/{transaction_canceled.id}/refund",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+        json={"complete_refund": True},
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Transaction is not available for refund"
+
+
+async def test_transaction_refund_unauthorized_user(client: TestClient):
+    response = client.post(
+        f"/myeclpay/transaction/{transaction_from_ecl_user_to_store.id}/refund",
+        headers={"Authorization": f"Bearer {ecl_user2_access_token}"},
+        json={"complete_refund": True},
+    )
+    assert response.status_code == 403
+    assert (
+        response.json()["detail"]
+        == "User does not have the permission to refund this transaction"
+    )
+
+
+async def test_transaction_refund_complete(client: TestClient):
+    async with TestingSessionLocal() as db:
+        debited_wallet_before_refund = await cruds_myeclpay.get_wallet(
+            db=db,
+            wallet_id=ecl_user_wallet.id,
+        )
+        credited_wallet_before_refund = await cruds_myeclpay.get_wallet(
+            db=db,
+            wallet_id=store_wallet.id,
+        )
+    assert debited_wallet_before_refund is not None
+    assert credited_wallet_before_refund is not None
+
+    transaction = models_myeclpay.Transaction(
+        id=uuid4(),
+        debited_wallet_id=ecl_user_wallet.id,
+        credited_wallet_id=store_wallet.id,
+        total=100,
+        status=TransactionStatus.CONFIRMED,
+        creation=datetime.now(UTC),
+        transaction_type=TransactionType.DIRECT,
+        seller_user_id=store_seller_can_bank_user.id,
+        debited_wallet_device_id=ecl_user_wallet_device.id,
+        store_note="",
+    )
+    await add_object_to_db(transaction)
+    response = client.post(
+        f"/myeclpay/transaction/{transaction.id}/refund",
+        headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
+        json={"complete_refund": True},
+    )
+    assert response.status_code == 204
+
+    async with TestingSessionLocal() as db:
+        transaction_after_refund = await cruds_myeclpay.get_transaction(
+            db=db,
+            transaction_id=transaction.id,
+        )
+        refund = await cruds_myeclpay.get_refund_by_transaction_id(
+            db=db,
+            transaction_id=transaction.id,
+        )
+        debited_wallet_after_refund = await cruds_myeclpay.get_wallet(
+            db=db,
+            wallet_id=ecl_user_wallet.id,
+        )
+        credited_wallet_after_refund = await cruds_myeclpay.get_wallet(
+            db=db,
+            wallet_id=store_wallet.id,
+        )
+
+    assert transaction_after_refund is not None
+    assert refund is not None
+    assert debited_wallet_after_refund is not None
+    assert credited_wallet_after_refund is not None
+
+    assert transaction_after_refund.status == TransactionStatus.REFUNDED
+    assert refund.total == transaction.total
+    assert refund.transaction_id == transaction.id
+    assert (
+        debited_wallet_after_refund.balance
+        == debited_wallet_before_refund.balance + transaction.total
+    )
+    assert (
+        credited_wallet_after_refund.balance
+        == credited_wallet_before_refund.balance - transaction.total
+    )
+
+
+async def test_transaction_refund_partial_incomplete_amount(client: TestClient):
+    response = client.post(
+        f"/myeclpay/transaction/{transaction_from_ecl_user_to_store.id}/refund",
+        headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
+        json={
+            "complete_refund": False,
+        },
+    )
+    assert response.status_code == 400
+    assert (
+        response.json()["detail"]
+        == "Please provide an amount for the refund if it is not a complete refund"
+    )
+
+
+async def test_transaction_refund_partial_invalid_amount(client: TestClient):
+    response = client.post(
+        f"/myeclpay/transaction/{transaction_from_ecl_user_to_store.id}/refund",
+        headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
+        json={
+            "complete_refund": False,
+            "amount": transaction_from_ecl_user_to_store.total + 1,
+        },
+    )
+    assert response.status_code == 400
+    assert (
+        response.json()["detail"]
+        == "Refund amount is greater than the transaction total"
+    )
+
+    response = client.post(
+        f"/myeclpay/transaction/{transaction_from_ecl_user_to_store.id}/refund",
+        headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
+        json={
+            "complete_refund": False,
+            "amount": 0,
+        },
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Refund amount must be greater than 0"
+
+
+async def test_transaction_refund_partial(client: TestClient):
+    async with TestingSessionLocal() as db:
+        debited_wallet_before_refund = await cruds_myeclpay.get_wallet(
+            db=db,
+            wallet_id=ecl_user_wallet.id,
+        )
+        credited_wallet_before_refund = await cruds_myeclpay.get_wallet(
+            db=db,
+            wallet_id=store_wallet.id,
+        )
+    assert debited_wallet_before_refund is not None
+    assert credited_wallet_before_refund is not None
+
+    transaction = models_myeclpay.Transaction(
+        id=uuid4(),
+        debited_wallet_id=ecl_user_wallet.id,
+        credited_wallet_id=store_wallet.id,
+        total=100,
+        status=TransactionStatus.CONFIRMED,
+        creation=datetime.now(UTC),
+        transaction_type=TransactionType.DIRECT,
+        seller_user_id=store_seller_can_bank_user.id,
+        debited_wallet_device_id=ecl_user_wallet_device.id,
+        store_note="",
+    )
+    await add_object_to_db(transaction)
+    response = client.post(
+        f"/myeclpay/transaction/{transaction.id}/refund",
+        headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
+        json={
+            "complete_refund": False,
+            "amount": 50,
+        },
+    )
+    assert response.status_code == 204
+
+    async with TestingSessionLocal() as db:
+        transaction_after_refund = await cruds_myeclpay.get_transaction(
+            db=db,
+            transaction_id=transaction.id,
+        )
+        refund = await cruds_myeclpay.get_refund_by_transaction_id(
+            db=db,
+            transaction_id=transaction.id,
+        )
+        debited_wallet_after_refund = await cruds_myeclpay.get_wallet(
+            db=db,
+            wallet_id=ecl_user_wallet.id,
+        )
+        credited_wallet_after_refund = await cruds_myeclpay.get_wallet(
+            db=db,
+            wallet_id=store_wallet.id,
+        )
+
+    assert transaction_after_refund is not None
+    assert refund is not None
+    assert debited_wallet_after_refund is not None
+    assert credited_wallet_after_refund is not None
+
+    assert transaction_after_refund.status == TransactionStatus.REFUNDED
+    assert refund.total == 50
+    assert refund.transaction_id == transaction.id
+    assert (
+        debited_wallet_after_refund.balance == debited_wallet_before_refund.balance + 50
+    )
+    assert (
+        credited_wallet_after_refund.balance
+        == credited_wallet_before_refund.balance - 50
+    )
