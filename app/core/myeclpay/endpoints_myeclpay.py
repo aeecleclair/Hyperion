@@ -1454,6 +1454,30 @@ async def get_user_wallet_history(
         for transfer in transfers
     )
 
+    # We add refunds
+    refunds = await cruds_myeclpay.get_refunds_by_wallet_id(
+        wallet_id=user_payment.wallet_id,
+        db=db,
+    )
+    for refund in refunds:
+        if refund.debited_wallet_id == user_payment.wallet_id:
+            transaction_type = HistoryType.GIVEN
+            other_wallet_info = refund.credited_wallet
+        else:
+            transaction_type = HistoryType.RECEIVED
+            other_wallet_info = refund.debited_wallet
+
+        history.append(
+            schemas_myeclpay.History(
+                id=refund.id,
+                type=transaction_type,
+                other_wallet_name=other_wallet_info.owner_name or "Unknown",
+                total=refund.total,
+                creation=refund.creation,
+                status=TransactionStatus.CONFIRMED,
+            ),
+        )
+
     return history
     # TODO: limite by datetime
 
@@ -1909,16 +1933,20 @@ async def refund_transaction(
                 detail="User does not have the permission to refund this transaction",
             )
     else:
-        if refunder_wallet.user is None:
-            raise HTTPException(
-                status_code=404,
-                detail="User does not exist",
-            )
-        if refunder_wallet.user.id != user.id:
-            raise HTTPException(
-                status_code=403,
-                detail="User is not allowed to refund this transaction",
-            )
+        raise HTTPException(
+            status_code=403,
+            detail="User is not allowed to refund this transaction",
+        )
+        # if refunder_wallet.user is None:
+        #     raise HTTPException(
+        #         status_code=404,
+        #         detail="User does not exist",
+        #     )
+        # if refunder_wallet.user.id != user.id:
+        #     raise HTTPException(
+        #         status_code=403,
+        #         detail="User is not allowed to refund this transaction",
+        #     )
 
     if refund_info.complete_refund:
         refund_amount = transaction.total
@@ -1932,6 +1960,11 @@ async def refund_transaction(
             raise HTTPException(
                 status_code=400,
                 detail="Refund amount is greater than the transaction total",
+            )
+        if refund_info.amount <= 0:
+            raise HTTPException(
+                status_code=400,
+                detail="Refund amount must be greater than 0",
             )
         refund_amount = refund_info.amount
 
@@ -1951,17 +1984,18 @@ async def refund_transaction(
         db=db,
     )
 
-    await cruds_myeclpay.create_transaction(
-        transaction_id=uuid.uuid4(),
-        debited_wallet_id=transaction.credited_wallet_id,
-        debited_wallet_device_id=refund_info.wallet_device_id,
-        credited_wallet_id=transaction.debited_wallet_id,
-        transaction_type=TransactionType.REFUND,
-        seller_user_id=user.id if refunder_wallet.type == WalletType.STORE else None,
-        total=refund_amount,
-        creation=datetime.now(UTC),
-        status=TransactionStatus.CONFIRMED,
-        store_note=f"Remboursement {'total' if refund_info.complete_refund else 'partiel'} de la transaction du {transaction.creation} de {transaction.total} {f'({refund_amount} remboursés)' if not refund_info.complete_refund else ''}",
+    await cruds_myeclpay.create_refund(
+        refund=schemas_myeclpay.RefundBase(
+            id=uuid.uuid4(),
+            transaction_id=transaction_id,
+            total=refund_amount,
+            seller_user_id=user.id
+            if refunder_wallet.type == WalletType.STORE
+            else None,
+            credited_wallet_id=transaction.debited_wallet_id,
+            debited_wallet_id=transaction.credited_wallet_id,
+            creation=datetime.now(UTC),
+        ),
         db=db,
     )
 
@@ -1982,7 +2016,7 @@ async def refund_transaction(
     if debited_wallet.user is not None:
         message = Message(
             title="💳 Remboursement",
-            content=f"La transaction de {transaction.total} a été remboursée",
+            content=f"La transaction de {transaction.total} a été remboursée de {refund_amount}",
             action_module="MyECLPay",
         )
         await notification_tool.send_notification_to_user(
@@ -2117,6 +2151,8 @@ async def cancel_transaction(
         list[schemas_myeclpay.Wallet],
         list[schemas_myeclpay.Transaction],
         list[schemas_payment.CheckoutComplete],
+        list[schemas_myeclpay.Transfer],
+        list[schemas_myeclpay.Refund],
     ],
 )
 async def get_data_for_integrity_check(
@@ -2145,12 +2181,18 @@ async def get_data_for_integrity_check(
     wallets = await cruds_myeclpay.get_wallets(
         db=db,
     )
-    history = await cruds_myeclpay.get_transactions(
+    transactions = await cruds_myeclpay.get_transactions(
         db=db,
     )
     checkouts = await cruds_payment.get_checkouts(
         module="MyECLPay",
         db=db,
     )
+    transfers = await cruds_myeclpay.get_transfers(
+        db=db,
+    )
+    refunds = await cruds_myeclpay.get_refunds(
+        db=db,
+    )
 
-    return wallets, history, checkouts
+    return wallets, transactions, checkouts, transfers, refunds

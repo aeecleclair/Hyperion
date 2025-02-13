@@ -76,6 +76,28 @@ class Transaction(Base):
     )
 
 
+class Refund(Base):
+    __tablename__ = "myeclpay_refund"
+
+    id: Mapped[PrimaryKey]
+    transaction_id: Mapped[UUID] = mapped_column(ForeignKey("myeclpay_transaction.id"))
+    debited_wallet_id: Mapped[UUID] = mapped_column(ForeignKey("myeclpay_wallet.id"))
+    credited_wallet_id: Mapped[UUID] = mapped_column(ForeignKey("myeclpay_wallet.id"))
+    total: Mapped[int]  # Stored in cents
+    creation: Mapped[datetime]
+    seller_user_id: Mapped[str | None] = mapped_column(ForeignKey("core_user.id"))
+
+    transaction: Mapped[Transaction] = relationship(init=False, lazy="joined")
+    debited_wallet: Mapped[Wallet] = relationship(
+        init=False,
+        foreign_keys=[debited_wallet_id],
+    )
+    credited_wallet: Mapped[Wallet] = relationship(
+        init=False,
+        foreign_keys=[credited_wallet_id],
+    )
+
+
 class Structure(Base):
     __tablename__ = "myeclpay_structure"
 

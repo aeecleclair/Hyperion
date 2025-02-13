@@ -719,6 +719,191 @@ async def get_transfer_by_transfer_identifier(
     return result.scalars().first()
 
 
+async def get_refunds(
+    db: AsyncSession,
+) -> Sequence[schemas_myeclpay.Refund]:
+    result = await db.execute(select(models_myeclpay.Refund))
+    return [
+        schemas_myeclpay.Refund(
+            id=refund.id,
+            transaction_id=refund.transaction_id,
+            credited_wallet_id=refund.credited_wallet_id,
+            debited_wallet_id=refund.debited_wallet_id,
+            total=refund.total,
+            creation=refund.creation,
+            seller_user_id=refund.seller_user_id,
+            transaction=schemas_myeclpay.Transaction(
+                id=refund.transaction.id,
+                debited_wallet_id=refund.transaction.debited_wallet_id,
+                credited_wallet_id=refund.transaction.credited_wallet_id,
+                transaction_type=refund.transaction.transaction_type,
+                seller_user_id=refund.transaction.seller_user_id,
+                total=refund.transaction.total,
+                creation=refund.transaction.creation,
+                status=refund.transaction.status,
+            ),
+            debited_wallet=schemas_myeclpay.WalletInfo(
+                id=refund.debited_wallet.id,
+                type=refund.debited_wallet.type,
+                owner_name=refund.debited_wallet.store.name
+                if refund.debited_wallet.store
+                else refund.debited_wallet.user.full_name
+                if refund.debited_wallet.user
+                else None,
+            ),
+            credited_wallet=schemas_myeclpay.WalletInfo(
+                id=refund.credited_wallet.id,
+                type=refund.credited_wallet.type,
+                owner_name=refund.credited_wallet.store.name
+                if refund.credited_wallet.store
+                else refund.credited_wallet.user.full_name
+                if refund.credited_wallet.user
+                else None,
+            ),
+        )
+        for refund in result.scalars().all()
+    ]
+
+
+async def create_refund(
+    refund: schemas_myeclpay.RefundBase,
+    db: AsyncSession,
+) -> None:
+    refund_db = models_myeclpay.Refund(
+        id=refund.id,
+        transaction_id=refund.transaction_id,
+        credited_wallet_id=refund.credited_wallet_id,
+        debited_wallet_id=refund.debited_wallet_id,
+        total=refund.total,
+        creation=refund.creation,
+        seller_user_id=refund.seller_user_id,
+    )
+    db.add(refund_db)
+
+
+async def get_refund_by_transaction_id(
+    transaction_id: UUID,
+    db: AsyncSession,
+) -> schemas_myeclpay.Refund | None:
+    result = (
+        (
+            await db.execute(
+                select(models_myeclpay.Refund)
+                .where(
+                    models_myeclpay.Refund.transaction_id == transaction_id,
+                )
+                .options(
+                    selectinload(models_myeclpay.Refund.debited_wallet),
+                    selectinload(models_myeclpay.Refund.credited_wallet),
+                ),
+            )
+        )
+        .scalars()
+        .first()
+    )
+    return (
+        schemas_myeclpay.Refund(
+            id=result.id,
+            transaction_id=result.transaction_id,
+            credited_wallet_id=result.credited_wallet_id,
+            debited_wallet_id=result.debited_wallet_id,
+            total=result.total,
+            creation=result.creation,
+            seller_user_id=result.seller_user_id,
+            transaction=schemas_myeclpay.Transaction(
+                id=result.transaction.id,
+                debited_wallet_id=result.transaction.debited_wallet_id,
+                credited_wallet_id=result.transaction.credited_wallet_id,
+                transaction_type=result.transaction.transaction_type,
+                seller_user_id=result.transaction.seller_user_id,
+                total=result.transaction.total,
+                creation=result.transaction.creation,
+                status=result.transaction.status,
+            ),
+            debited_wallet=schemas_myeclpay.WalletInfo(
+                id=result.debited_wallet.id,
+                type=result.debited_wallet.type,
+                owner_name=result.debited_wallet.store.name
+                if result.debited_wallet.store
+                else result.debited_wallet.user.full_name
+                if result.debited_wallet.user
+                else None,
+            ),
+            credited_wallet=schemas_myeclpay.WalletInfo(
+                id=result.credited_wallet.id,
+                type=result.credited_wallet.type,
+                owner_name=result.credited_wallet.store.name
+                if result.credited_wallet.store
+                else result.credited_wallet.user.full_name
+                if result.credited_wallet.user
+                else None,
+            ),
+        )
+        if result
+        else None
+    )
+
+
+async def get_refunds_by_wallet_id(
+    wallet_id: UUID,
+    db: AsyncSession,
+) -> Sequence[schemas_myeclpay.Refund]:
+    result = (
+        (
+            await db.execute(
+                select(models_myeclpay.Refund).where(
+                    or_(
+                        models_myeclpay.Refund.debited_wallet_id == wallet_id,
+                        models_myeclpay.Refund.credited_wallet_id == wallet_id,
+                    ),
+                ),
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return [
+        schemas_myeclpay.Refund(
+            id=refund.id,
+            transaction_id=refund.transaction_id,
+            credited_wallet_id=refund.credited_wallet_id,
+            debited_wallet_id=refund.debited_wallet_id,
+            total=refund.total,
+            creation=refund.creation,
+            seller_user_id=refund.seller_user_id,
+            transaction=schemas_myeclpay.Transaction(
+                id=refund.transaction.id,
+                debited_wallet_id=refund.transaction.debited_wallet_id,
+                credited_wallet_id=refund.transaction.credited_wallet_id,
+                transaction_type=refund.transaction.transaction_type,
+                seller_user_id=refund.transaction.seller_user_id,
+                total=refund.transaction.total,
+                creation=refund.transaction.creation,
+                status=refund.transaction.status,
+            ),
+            debited_wallet=schemas_myeclpay.WalletInfo(
+                id=refund.debited_wallet.id,
+                type=refund.debited_wallet.type,
+                owner_name=refund.debited_wallet.store.name
+                if refund.debited_wallet.store
+                else refund.debited_wallet.user.full_name
+                if refund.debited_wallet.user
+                else None,
+            ),
+            credited_wallet=schemas_myeclpay.WalletInfo(
+                id=refund.credited_wallet.id,
+                type=refund.credited_wallet.type,
+                owner_name=refund.credited_wallet.store.name
+                if refund.credited_wallet.store
+                else refund.credited_wallet.user.full_name
+                if refund.credited_wallet.user
+                else None,
+            ),
+        )
+        for refund in result
+    ]
+
+
 async def get_store(
     store_id: UUID,
     db: AsyncSession,
@@ -751,3 +936,14 @@ async def get_used_qrcode(
         ),
     )
     return result.scalars().first()
+
+
+async def delete_used_qrcode(
+    qr_code_id: UUID,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        delete(models_myeclpay.UsedQRCode).where(
+            models_myeclpay.UsedQRCode.qr_code_id == qr_code_id,
+        ),
+    )
