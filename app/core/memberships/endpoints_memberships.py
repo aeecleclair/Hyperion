@@ -1,7 +1,7 @@
 import logging
 import re
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -47,6 +47,10 @@ async def read_associations_memberships(
 )
 async def read_association_membership(
     association_membership_id: uuid.UUID,
+    minimalStartDate: date = Query(None),
+    maximalStartDate: date = Query(None),
+    minimalEndDate: date = Query(None),
+    maximalEndDate: date = Query(None),
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_an_ecl_member),
 ):
@@ -69,6 +73,10 @@ async def read_association_membership(
         await cruds_memberships.get_user_memberships_by_association_membership_id(
             db=db,
             association_membership_id=association_membership_id,
+            minimal_start_date=minimalStartDate,
+            maximal_start_date=maximalStartDate,
+            minimal_end_date=minimalEndDate,
+            maximal_end_date=maximalEndDate,
         )
     )
 
