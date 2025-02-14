@@ -5,6 +5,7 @@ Create Date: 2025-02-02 04:01:15.306205
 
 import uuid
 from collections.abc import Sequence
+from datetime import date
 from enum import Enum
 from typing import TYPE_CHECKING
 
@@ -352,8 +353,8 @@ def pre_test_upgrade(
             "id": membership_id1,
             "user_id": user_id,
             "membership": "aeecl",
-            "start_date": "2025-02-02",
-            "end_date": "2026-02-02",
+            "start_date": date(2025, 2, 2),
+            "end_date": date(2026, 2, 2),
         },
     )
     alembic_runner.insert_into(
@@ -362,8 +363,8 @@ def pre_test_upgrade(
             "id": membership_id2,
             "user_id": user_id,
             "membership": "useecl",
-            "start_date": "2025-02-02",
-            "end_date": "2026-02-02",
+            "start_date": date(2025, 2, 2),
+            "end_date": date(2026, 2, 2),
         },
     )
     alembic_runner.insert_into(
