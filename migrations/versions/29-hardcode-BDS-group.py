@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from app.core.groups.groups_type import GroupType
+from app.core.schools.schools_type import SchoolType
 
 if TYPE_CHECKING:
     from pytest_alembic import MigrationContext
@@ -135,7 +136,7 @@ def downgrade() -> None:
     pass
 
 
-test_user_id = uuid4()
+test_user_id = str(uuid4())
 test_booking_manager_id = uuid4()
 test_cdr_seller_id = uuid4()
 test_phonebook_association_id = uuid4()
@@ -163,7 +164,7 @@ def pre_test_upgrade(
             "floor": "Autre",
             "created_on": None,
             "account_type": "student",
-            "school_id": "dce19aa2-8863-4c93-861e-fb7be8f610ed",
+            "school_id": SchoolType.no_school.value,
         },
     )
     alembic_runner.insert_into(
