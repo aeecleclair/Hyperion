@@ -129,13 +129,14 @@ def upgrade() -> None:
             ],
         ),
     )
+
     membership_content = conn.execute(sa.select(old_user_membership_table))
     op.drop_index(
         op.f("ix_core_association_membership_membership"),
         table_name="core_association_user_membership",
     )
-    op.drop_column("core_association_user_membership", "membership")
     with op.batch_alter_table("core_association_user_membership") as batch_op:
+        batch_op.drop_column("membership")
         batch_op.add_column(
             sa.Column(
                 "association_membership_id",
@@ -165,7 +166,6 @@ def upgrade() -> None:
             )
 
     product_content = conn.execute(sa.select(old_product_table))
-    op.drop_column("cdr_product", "related_membership")
     with op.batch_alter_table("cdr_product") as batch_op:
         batch_op.add_column(
             sa.Column("related_membership_id", sa.Uuid(), nullable=True),
@@ -176,6 +176,8 @@ def upgrade() -> None:
             ["related_membership_id"],
             ["id"],
         )
+        batch_op.drop_column("related_membership")
+
     for product in product_content:
         if product[1] == AvailableAssociationMembership.useecl:
             conn.execute(
@@ -224,12 +226,12 @@ def downgrade() -> None:
     )
 
     product_content = conn.execute(sa.select(new_product_table))
-    op.drop_column("cdr_product", "related_membership_id")
     with op.batch_alter_table("cdr_product") as batch_op:
         batch_op.drop_constraint(
             "fk_related_membership_id_core_association_membership_id",
             type_="foreignkey",
         )
+        batch_op.drop_column("related_membership_id")
         batch_op.add_column(
             sa.Column(
                 "related_membership",
@@ -267,12 +269,12 @@ def downgrade() -> None:
                 ),
             )
     membership_content = conn.execute(sa.select(new_user_membership_table))
-    op.drop_column("core_association_user_membership", "association_membership_id")
     with op.batch_alter_table("core_association_user_membership") as batch_op:
         batch_op.drop_constraint(
             "fk_association_membership_id_core_association_membership_id",
             type_="foreignkey",
         )
+        batch_op.drop_column("association_membership_id")
         batch_op.add_column(
             sa.Column(
                 "membership",
@@ -315,11 +317,11 @@ def downgrade() -> None:
 
 
 user_id = str(uuid.uuid4())
-membership_id1 = uuid.uuid4()
-membership_id2 = uuid.uuid4()
+membership_id1 = str(uuid.uuid4())
+membership_id2 = str(uuid.uuid4())
 group_id = str(uuid.uuid4())
-seller_id = uuid.uuid4()
-product_id = uuid.uuid4()
+seller_id = str(uuid.uuid4())
+product_id = str(uuid.uuid4())
 
 
 def pre_test_upgrade(
