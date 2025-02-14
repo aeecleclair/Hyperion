@@ -137,12 +137,12 @@ def downgrade() -> None:
 
 
 test_user_id = str(uuid4())
-test_booking_manager_id = uuid4()
-test_cdr_seller_id = uuid4()
-test_phonebook_association_id = uuid4()
-test_raffle_id = uuid4()
+test_booking_manager_id = str(uuid4())
+test_cdr_seller_id = str(uuid4())
+test_phonebook_association_id = str(uuid4())
+test_raffle_id = str(uuid4())
 
-test_old_eclair_id = uuid4()
+test_old_eclair_id = str(uuid4())
 
 
 def pre_test_upgrade(
