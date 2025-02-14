@@ -49,6 +49,7 @@ async def init_objects() -> None:
     core_association_membership = models_core.CoreAssociationMembership(
         id=uuid4(),
         name="AEECL",
+        group_id=GroupType.BDE,
     )
     await add_object_to_db(core_association_membership)
 
