@@ -320,6 +320,7 @@ async def get_banned_users(db: AsyncSession) -> Sequence[models_core.CoreUser]:
     result = await db.execute(
         select(models_core.CoreUser)
         .join(models_cmm.Ban, models_core.CoreUser.id == models_cmm.Ban.user_id)
+        .where(models_cmm.Ban.end_time.is_(None))
         .order_by(models_cmm.Ban.creation_time),
     )
     return result.scalars().all()
