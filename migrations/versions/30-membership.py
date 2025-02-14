@@ -223,14 +223,13 @@ def downgrade() -> None:
         table_name="core_association_user_membership",
     )
 
-    op.drop_constraint(
-        "fk_related_membership_id_core_association_membership_id",
-        "cdr_product",
-        type_="foreignkey",
-    )
     product_content = conn.execute(sa.select(new_product_table))
     op.drop_column("cdr_product", "related_membership_id")
     with op.batch_alter_table("cdr_product") as batch_op:
+        batch_op.drop_constraint(
+            "fk_related_membership_id_core_association_membership_id",
+            type_="foreignkey",
+        )
         batch_op.add_column(
             sa.Column(
                 "related_membership",
@@ -267,14 +266,13 @@ def downgrade() -> None:
                     {"related_membership": AvailableAssociationMembership.aeecl},
                 ),
             )
-    op.drop_constraint(
-        "fk_association_membership_id_core_association_membership_id",
-        "core_association_user_membership",
-        type_="foreignkey",
-    )
     membership_content = conn.execute(sa.select(new_user_membership_table))
     op.drop_column("core_association_user_membership", "association_membership_id")
     with op.batch_alter_table("core_association_user_membership") as batch_op:
+        batch_op.drop_constraint(
+            "fk_association_membership_id_core_association_membership_id",
+            type_="foreignkey",
+        )
         batch_op.add_column(
             sa.Column(
                 "membership",
