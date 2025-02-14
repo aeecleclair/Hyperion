@@ -135,15 +135,21 @@ def upgrade() -> None:
         table_name="core_association_user_membership",
     )
     op.drop_column("core_association_user_membership", "membership")
-    op.add_column(
-        "core_association_user_membership",
-        sa.Column(
-            "association_membership_id",
-            sa.UUID(),
-            nullable=False,
-            server_default=str(AEECL_ID),
-        ),
-    )
+    with op.batch_alter_table("core_association_user_membership") as batch_op:
+        batch_op.add_column(
+            sa.Column(
+                "association_membership_id",
+                sa.UUID(),
+                nullable=False,
+                server_default=str(AEECL_ID),
+            ),
+        )
+        batch_op.create_foreign_key(
+            "fk_association_membership_id_core_association_membership_id",
+            "core_association_membership",
+            ["association_membership_id"],
+            ["id"],
+        )
     for membership in membership_content:
         if membership[1] == AvailableAssociationMembership.useecl:
             conn.execute(
@@ -158,20 +164,18 @@ def upgrade() -> None:
                 ),
             )
 
-    op.create_foreign_key(
-        "fk_association_membership_id_core_association_membership_id",
-        "core_association_user_membership",
-        "core_association_membership",
-        ["association_membership_id"],
-        ["id"],
-    )
-
     product_content = conn.execute(sa.select(old_product_table))
     op.drop_column("cdr_product", "related_membership")
-    op.add_column(
-        "cdr_product",
-        sa.Column("related_membership_id", sa.UUID(), nullable=True),
-    )
+    with op.batch_alter_table("cdr_product") as batch_op:
+        batch_op.add_column(
+            sa.Column("related_membership_id", sa.UUID(), nullable=True),
+        )
+        batch_op.create_foreign_key(
+            "fk_related_membership_id_core_association_membership_id",
+            "core_association_membership",
+            ["related_membership_id"],
+            ["id"],
+        )
     for product in product_content:
         if product[1] == AvailableAssociationMembership.useecl:
             conn.execute(
@@ -198,13 +202,6 @@ def upgrade() -> None:
                 ),
             )
 
-    op.create_foreign_key(
-        "fk_related_membership_id_core_association_membership_id",
-        "cdr_product",
-        "core_association_membership",
-        ["related_membership_id"],
-        ["id"],
-    )
     op.create_index(
         op.f("ix_core_association_user_membership_association_membership_id"),
         "core_association_user_membership",
