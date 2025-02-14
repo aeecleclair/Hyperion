@@ -136,7 +136,6 @@ def upgrade() -> None:
     with op.batch_alter_table("core_association_user_membership") as batch_op:
         batch_op.drop_index(
             op.f("ix_core_association_membership_membership"),
-            table_name="core_association_user_membership",
         )
         batch_op.drop_column("membership")
         batch_op.add_column(
