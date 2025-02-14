@@ -130,6 +130,10 @@ def upgrade() -> None:
         ),
     )
     membership_content = conn.execute(sa.select(old_user_membership_table))
+    op.drop_index(
+        op.f("ix_core_association_membership_membership"),
+        table_name="core_association_user_membership",
+    )
     op.drop_column("core_association_user_membership", "membership")
     op.add_column(
         "core_association_user_membership",
@@ -332,7 +336,7 @@ def pre_test_upgrade(
             "floor": "Autre",
             "created_on": None,
             "account_type": "student",
-            "school_id": SchoolType.no_school,
+            "school_id": SchoolType.no_school.value,
         },
     )
     alembic_runner.insert_into(

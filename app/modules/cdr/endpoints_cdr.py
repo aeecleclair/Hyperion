@@ -1324,6 +1324,7 @@ async def get_purchases_by_user_id(
                                 related_membership=schemas_memberships.MembershipSimple(
                                     id=product.related_membership.id,
                                     name=product.related_membership.name,
+                                    group_id=product.related_membership.group_id,
                                 )
                                 if product.related_membership
                                 else None,
@@ -1411,6 +1412,7 @@ async def get_purchases_by_user_id_by_seller_id(
                                 related_membership=schemas_memberships.MembershipSimple(
                                     id=product.related_membership.id,
                                     name=product.related_membership.name,
+                                    group_id=product.related_membership.group_id,
                                 )
                                 if product.related_membership
                                 else None,
@@ -1632,7 +1634,7 @@ async def mark_purchase_as_validated(
         memberships = await cruds_memberships.get_user_memberships_by_user_id(
             db=db,
             user_id=user_id,
-            minimal_date=date(datetime.now(UTC).year, 9, 5),
+            minimal_end_date=date(datetime.now(UTC).year, 9, 5),
         )
         for product_constraint in product.product_constraints:
             purchases = await cruds_cdr.get_purchases_by_ids(
@@ -1693,7 +1695,7 @@ async def mark_purchase_as_validated(
             memberships = await cruds_memberships.get_user_memberships_by_user_id(
                 db=db,
                 user_id=user_id,
-                minimal_date=date(datetime.now(UTC).year, 9, 5),
+                minimal_end_date=date(datetime.now(UTC).year, 9, 5),
             )
             existing_membership = next(
                 (
@@ -1797,7 +1799,7 @@ async def delete_purchase(
                         await cruds_memberships.get_user_memberships_by_user_id(
                             db=db,
                             user_id=user_id,
-                            minimal_date=date(datetime.now(UTC).year, 9, 5),
+                            minimal_end_date=date(datetime.now(UTC).year, 9, 5),
                         )
                     )
                     all_possible_purchases = await cruds_cdr.get_purchases_by_ids(

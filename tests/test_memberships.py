@@ -39,11 +39,13 @@ async def init_objects():
     aeecl_association_membership = models_core.CoreAssociationMembership(
         id=uuid.uuid4(),
         name="AEECL",
+        group_id=GroupType.BDE,
     )
     await add_object_to_db(aeecl_association_membership)
     useecl_association_membership = models_core.CoreAssociationMembership(
         id=uuid.uuid4(),
         name="USEECL",
+        group_id=GroupType.BDS,
     )
     await add_object_to_db(useecl_association_membership)
 
@@ -155,6 +157,7 @@ async def test_delete_association_membership_admin(client: TestClient):
     new_membership = models_core.CoreAssociationMembership(
         id=uuid.uuid4(),
         name="Random Association",
+        group_id=GroupType.AE,
     )
     await add_object_to_db(new_membership)
 
@@ -191,6 +194,7 @@ async def test_patch_association_membership_admin(client: TestClient):
     new_membership = models_core.CoreAssociationMembership(
         id=uuid.uuid4(),
         name="Random Association",
+        group_id=GroupType.AE,
     )
     await add_object_to_db(new_membership)
 
