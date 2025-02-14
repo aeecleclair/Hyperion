@@ -164,7 +164,7 @@ def pre_test_upgrade(
             "floor": "Autre",
             "created_on": None,
             "account_type": "student",
-            "school_id": SchoolType.no_school.value,
+            "school_id": str(SchoolType.no_school.value),
         },
     )
     alembic_runner.insert_into(
