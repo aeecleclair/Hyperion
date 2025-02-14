@@ -91,7 +91,7 @@ def upgrade() -> None:
     )
     op.create_table(
         "core_association_membership",
-        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("group_id", sa.String(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
@@ -139,7 +139,7 @@ def upgrade() -> None:
         batch_op.add_column(
             sa.Column(
                 "association_membership_id",
-                sa.UUID(),
+                sa.Uuid(),
                 nullable=False,
                 server_default=str(AEECL_ID),
             ),
@@ -168,7 +168,7 @@ def upgrade() -> None:
     op.drop_column("cdr_product", "related_membership")
     with op.batch_alter_table("cdr_product") as batch_op:
         batch_op.add_column(
-            sa.Column("related_membership_id", sa.UUID(), nullable=True),
+            sa.Column("related_membership_id", sa.Uuid(), nullable=True),
         )
         batch_op.create_foreign_key(
             "fk_related_membership_id_core_association_membership_id",
@@ -230,17 +230,18 @@ def downgrade() -> None:
     )
     product_content = conn.execute(sa.select(new_product_table))
     op.drop_column("cdr_product", "related_membership_id")
-    op.add_column(
-        "cdr_product",
-        sa.Column(
-            "related_membership",
-            sa.Enum(
-                AvailableAssociationMembership,
-                name="availableassociationmembership",
+    with op.batch_alter_table("cdr_product") as batch_op:
+        batch_op.add_column(
+            sa.Column(
+                "related_membership",
+                sa.Enum(
+                    AvailableAssociationMembership,
+                    name="availableassociationmembership",
+                ),
+                nullable=True,
             ),
-            nullable=True,
-        ),
-    )
+        )
+
     for product in product_content:
         if product[1] == USEECL_ID:
             conn.execute(
@@ -273,19 +274,20 @@ def downgrade() -> None:
     )
     membership_content = conn.execute(sa.select(new_user_membership_table))
     op.drop_column("core_association_user_membership", "association_membership_id")
-    op.add_column(
-        "core_association_user_membership",
-        sa.Column(
-            "membership",
-            sa.Enum(
-                AvailableAssociationMembership,
-                name="availableassociationmembership",
-                extend_existing=True,
+    with op.batch_alter_table("core_association_user_membership") as batch_op:
+        batch_op.add_column(
+            sa.Column(
+                "membership",
+                sa.Enum(
+                    AvailableAssociationMembership,
+                    name="availableassociationmembership",
+                    extend_existing=True,
+                ),
+                nullable=False,
+                server_default="aeecl",
             ),
-            nullable=False,
-            server_default="aeecl",
-        ),
-    )
+        )
+
     for membership in membership_content:
         if membership[1] == USEECL_ID:
             conn.execute(
@@ -314,6 +316,14 @@ def downgrade() -> None:
     # ### end Alembic commands ###
 
 
+user_id = str(uuid.uuid4())
+membership_id1 = uuid.uuid4()
+membership_id2 = uuid.uuid4()
+group_id = str(uuid.uuid4())
+seller_id = uuid.uuid4()
+product_id = uuid.uuid4()
+
+
 def pre_test_upgrade(
     alembic_runner: "MigrationContext",
     alembic_connection: sa.Connection,
@@ -321,7 +331,7 @@ def pre_test_upgrade(
     alembic_runner.insert_into(
         "core_user",
         {
-            "id": "8edbd718-ef2b-44b9-a883-f56fcf0bdc17",
+            "id": user_id,
             "email": "email546",
             "password_hash": "password_hash",
             "name": "name",
@@ -339,8 +349,8 @@ def pre_test_upgrade(
     alembic_runner.insert_into(
         "core_association_membership",
         {
-            "id": "c410b4ba-fd51-42c9-a127-f7e154f869db",
-            "user_id": "8edbd718-ef2b-44b9-a883-f56fcf0bdc17",
+            "id": membership_id1,
+            "user_id": user_id,
             "membership": "aeecl",
             "start_date": "2025-02-02",
             "end_date": "2026-02-02",
@@ -349,8 +359,8 @@ def pre_test_upgrade(
     alembic_runner.insert_into(
         "core_association_membership",
         {
-            "id": "469d68ed-849a-4c56-a117-2724621f9311",
-            "user_id": "8edbd718-ef2b-44b9-a883-f56fcf0bdc17",
+            "id": membership_id2,
+            "user_id": user_id,
             "membership": "useecl",
             "start_date": "2025-02-02",
             "end_date": "2026-02-02",
@@ -359,15 +369,15 @@ def pre_test_upgrade(
     alembic_runner.insert_into(
         "core_group",
         {
-            "id": "e6d03fb7-2195-40a3-82e4-9f9e59f06b50",
+            "id": group_id,
             "name": "name654",
         },
     )
     alembic_runner.insert_into(
         "cdr_seller",
         {
-            "id": "6b8b4aa8-cccc-48f0-859b-3b5102e81566",
-            "group_id": "e6d03fb7-2195-40a3-82e4-9f9e59f06b50",
+            "id": seller_id,
+            "group_id": group_id,
             "name": "name",
             "order": 1,
         },
@@ -376,8 +386,8 @@ def pre_test_upgrade(
     alembic_runner.insert_into(
         "cdr_product",
         {
-            "id": "87883f3b-5638-4958-a745-f22f07ed267a",
-            "seller_id": "6b8b4aa8-cccc-48f0-859b-3b5102e81566",
+            "id": product_id,
+            "seller_id": seller_id,
             "name_fr": "name_fr",
             "available_online": True,
             "related_membership": "aeecl",
