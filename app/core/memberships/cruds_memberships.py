@@ -110,7 +110,10 @@ async def update_association_membership(
     await db.execute(
         update(models_core.CoreAssociationMembership)
         .where(models_core.CoreAssociationMembership.id == membership_id)
-        .values(name=membership.name),
+        .values(
+            name=membership.name,
+            group_id=membership.group_id,
+        ),
     )
 
 
