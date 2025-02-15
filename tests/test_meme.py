@@ -24,23 +24,23 @@ from fastapi.testclient import TestClient
 
 from app.core import models_core
 from app.core.groups.groups_type import GroupType
-from app.modules.cmm import models_cmm
-from app.modules.cmm.types_cmm import MemeStatus
+from app.modules.meme import models_meme
+from app.modules.meme.types_meme import MemeStatus
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
     create_user_with_groups,
 )
 
-cmm_user_1: models_core.CoreUser
-cmm_user_2: models_core.CoreUser
-cmm_user_to_ban: models_core.CoreUser
-cmm_admin: models_core.CoreUser
+meme_user_1: models_core.CoreUser
+meme_user_2: models_core.CoreUser
+meme_user_to_ban: models_core.CoreUser
+meme_admin: models_core.CoreUser
 
-memes_1: list[models_cmm.Meme]
-votes_memes_1: list[models_cmm.Vote]
-memes_2: list[models_cmm.Meme]
-memes_to_ban: list[models_cmm.Meme]
+memes_1: list[models_meme.Meme]
+votes_memes_1: list[models_meme.Vote]
+memes_2: list[models_meme.Meme]
+memes_to_ban: list[models_meme.Meme]
 token_user_1: str
 token_user_2: str
 token_user_to_ban: str
@@ -49,32 +49,32 @@ token_admin: str
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
-    global cmm_user_1
-    cmm_user_1 = await create_user_with_groups([])
-    global token_cmm_1
-    token_cmm_1 = create_api_access_token(cmm_user_1)
+    global meme_user_1
+    meme_user_1 = await create_user_with_groups([])
+    global token_meme_1
+    token_meme_1 = create_api_access_token(meme_user_1)
 
-    global cmm_user_2
-    cmm_user_2 = await create_user_with_groups([])
-    global token_cmm_2
-    token_cmm_2 = create_api_access_token(cmm_user_2)
+    global meme_user_2
+    meme_user_2 = await create_user_with_groups([])
+    global token_meme_2
+    token_meme_2 = create_api_access_token(meme_user_2)
 
-    global cmm_user_to_ban
-    cmm_user_to_ban = await create_user_with_groups([])
+    global meme_user_to_ban
+    meme_user_to_ban = await create_user_with_groups([])
     global token_user_to_ban
-    token_user_to_ban = create_api_access_token(cmm_user_to_ban)
+    token_user_to_ban = create_api_access_token(meme_user_to_ban)
 
-    global cmm_admin
-    cmm_admin = await create_user_with_groups([GroupType.admin])
+    global meme_admin
+    meme_admin = await create_user_with_groups([GroupType.admin])
     global token_admin
-    token_admin = create_api_access_token(cmm_admin)
+    token_admin = create_api_access_token(meme_admin)
 
     global memes_1
     memes_1 = [
-        models_cmm.Meme(
+        models_meme.Meme(
             id=uuid.uuid4(),
             status=MemeStatus.neutral,
-            user_id=cmm_user_1.id,
+            user_id=meme_user_1.id,
             creation_time=datetime.datetime(24, i, 23, tzinfo=datetime.UTC),
             vote_score=i,
         )
@@ -85,18 +85,18 @@ async def init_objects() -> None:
     for i, meme in enumerate(memes_1):
         await add_object_to_db(meme)
         if i % 2 == 0:
-            vote = models_cmm.Vote(
+            vote = models_meme.Vote(
                 id=uuid.uuid4(),
-                user_id=cmm_user_1.id,
+                user_id=meme_user_1.id,
                 meme_id=meme.id,
                 positive=True,
             )
             votes_memes_1.append(vote)
             await add_object_to_db(vote)
         if i % 2 == 1:
-            vote2 = models_cmm.Vote(
+            vote2 = models_meme.Vote(
                 id=uuid.uuid4(),
-                user_id=cmm_user_2.id,
+                user_id=meme_user_2.id,
                 meme_id=meme.id,
                 positive=True,
             )
@@ -105,10 +105,10 @@ async def init_objects() -> None:
 
     global memes_2
     memes_2 = [
-        models_cmm.Meme(
+        models_meme.Meme(
             id=uuid.uuid4(),
             status=MemeStatus.neutral,
-            user_id=cmm_user_1.id,
+            user_id=meme_user_1.id,
             creation_time=datetime.datetime(24, i, 23, tzinfo=datetime.UTC),
             vote_score=i,
         )
@@ -118,10 +118,10 @@ async def init_objects() -> None:
         await add_object_to_db(meme)
     global memes_to_ban
     memes_to_ban = [
-        models_cmm.Meme(
+        models_meme.Meme(
             id=uuid.uuid4(),
             status=MemeStatus.neutral,
-            user_id=cmm_user_to_ban.id,
+            user_id=meme_user_to_ban.id,
             creation_time=datetime.datetime(24, i, 23, tzinfo=datetime.UTC),
             vote_score=200,
         )
@@ -133,8 +133,8 @@ async def init_objects() -> None:
 
 def test_get_meme_page(client: TestClient) -> None:
     response = client.get(
-        "/cmm/memes/?sort_by=best&n_page=1",
-        headers={"Authorization": f"Bearer {token_cmm_2}"},
+        "/meme/memes/?sort_by=best&n_page=1",
+        headers={"Authorization": f"Bearer {token_meme_2}"},
     )
     print(response)
     print(response.status_code)
@@ -145,31 +145,31 @@ def test_get_meme_page(client: TestClient) -> None:
 def test_banning_user(client: TestClient) -> None:
     # TODO: Add test to prove that memes are hidden
     response = client.get(
-        "/cmm/memes/?sort_by=best&n_page=1",
+        "/meme/memes/?sort_by=best&n_page=1",
         headers={"Authorization": f"Bearer {token_user_to_ban}"},
     )
     assert response.status_code == 200
     response = client.post(
-        f"/cmm/users/{cmm_user_to_ban.id}/ban",
+        f"/meme/users/{meme_user_to_ban.id}/ban",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 201
     response = client.get(
-        "/cmm/memes/?sort_by=best&n_page=1",
+        "/meme/memes/?sort_by=best&n_page=1",
         headers={"Authorization": f"Bearer {token_user_to_ban}"},
     )
     assert response.status_code == 403
     response = client.get(
-        "/cmm/memes/?sort_by=best&n_page=1",
-        headers={"Authorization": f"Bearer {token_cmm_1}"},
+        "/meme/memes/?sort_by=best&n_page=1",
+        headers={"Authorization": f"Bearer {token_meme_1}"},
     )
     response = client.post(
-        f"/cmm/users/{cmm_user_to_ban.id}/unban",
+        f"/meme/users/{meme_user_to_ban.id}/unban",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 201
     response = client.get(
-        "/cmm/memes/?sort_by=best&n_page=1",
+        "/meme/memes/?sort_by=best&n_page=1",
         headers={"Authorization": f"Bearer {token_user_to_ban}"},
     )
     assert response.status_code == 200

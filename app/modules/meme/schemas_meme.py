@@ -4,7 +4,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 
 from app.core.schemas_core import CoreUserSimple
-from app.modules.cmm.types_cmm import MemeStatus
+from app.modules.meme.types_meme import MemeStatus
 from app.types.floors_type import FloorsType
 
 

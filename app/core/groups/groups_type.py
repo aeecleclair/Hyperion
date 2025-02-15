@@ -24,7 +24,7 @@ class GroupType(str, Enum):
     ph = "4ec5ae77-f955-4309-96a5-19cc3c8be71c"
     admin_cdr = "c1275229-46b2-4e53-a7c4-305513bb1a2a"
     eclair = "1f841bd9-00be-41a7-96e1-860a18a46105"
-    CMM = "3e5b04e5-5b19-4950-8e6a-143bdf559290"
+    meme = "3e5b04e5-5b19-4950-8e6a-143bdf559290"
 
     # Auth related groups
 

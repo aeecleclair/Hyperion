@@ -15,7 +15,7 @@ from app.dependencies import (
     is_user_a_member,
     is_user_in,
 )
-from app.modules.cmm import cruds_cmm, models_cmm, schemas_cmm, types_cmm
+from app.modules.meme import cruds_meme, models_meme, schemas_meme, types_meme
 from app.types.content_type import ContentType
 from app.types.module import Module
 from app.utils.tools import (
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from app.types.floors_type import FloorsType
 
 module = Module(
-    root="cmm",
+    root="meme",
     tag="Centrale Mega Meme",
 )
 
@@ -40,15 +40,15 @@ async def is_allowed_meme_user(
     """
     Overloads the is_user() dependency injection to verify if the user is in the banned table
     """
-    user_current_ban = await cruds_cmm.get_user_current_ban(db=db, user_id=user.id)
+    user_current_ban = await cruds_meme.get_user_current_ban(db=db, user_id=user.id)
     if user_current_ban is not None:
         raise HTTPException(status_code=403, detail="You are currently banned")
     return user
 
 
 @module.router.get(
-    "/cmm/memes/",
-    response_model=list[schemas_cmm.ShownMeme],
+    "/meme/memes/",
+    response_model=list[schemas_meme.ShownMeme],
     status_code=200,
 )
 async def get_memes(
@@ -67,35 +67,35 @@ async def get_memes(
         )
 
     match sort_by:
-        case types_cmm.MemeSort.best:
-            meme_page = await cruds_cmm.get_memes_by_votes(
+        case types_meme.MemeSort.best:
+            meme_page = await cruds_meme.get_memes_by_votes(
                 db=db,
                 descending=True,
                 n_page=n_page,
                 user_id=user.id,
             )
-        case types_cmm.MemeSort.worst:
-            meme_page = await cruds_cmm.get_memes_by_votes(
+        case types_meme.MemeSort.worst:
+            meme_page = await cruds_meme.get_memes_by_votes(
                 db=db,
                 descending=False,
                 n_page=n_page,
                 user_id=user.id,
             )
-        case types_cmm.MemeSort.trending:
-            meme_page = await cruds_cmm.get_trending_memes(
+        case types_meme.MemeSort.trending:
+            meme_page = await cruds_meme.get_trending_memes(
                 db=db,
                 n_page=n_page,
                 user_id=user.id,
             )
-        case types_cmm.MemeSort.newest:
-            meme_page = await cruds_cmm.get_memes_by_date(
+        case types_meme.MemeSort.newest:
+            meme_page = await cruds_meme.get_memes_by_date(
                 db=db,
                 descending=True,
                 n_page=n_page,
                 user_id=user.id,
             )
-        case types_cmm.MemeSort.oldest:
-            meme_page = await cruds_cmm.get_memes_by_date(
+        case types_meme.MemeSort.oldest:
+            meme_page = await cruds_meme.get_memes_by_date(
                 db=db,
                 descending=False,
                 n_page=n_page,
@@ -105,7 +105,7 @@ async def get_memes(
             raise HTTPException(status_code=404, detail="Invalid sort method")
 
     return [
-        schemas_cmm.ShownMeme(
+        schemas_meme.ShownMeme(
             id=str(meme.id),
             user=meme.user,
             creation_time=meme.creation_time,
@@ -118,8 +118,8 @@ async def get_memes(
 
 
 @module.router.get(
-    "/cmm/memes/me",
-    response_model=list[schemas_cmm.ShownMeme],
+    "/meme/memes/me",
+    response_model=list[schemas_meme.ShownMeme],
     status_code=200,
 )
 async def get_my_memes(
@@ -133,14 +133,14 @@ async def get_my_memes(
             detail="Invalid page number",
         )
 
-    meme_page = await cruds_cmm.get_my_memes(
+    meme_page = await cruds_meme.get_my_memes(
         db=db,
         n_page=n_page,
         user_id=user.id,
     )
 
     return [
-        schemas_cmm.ShownMeme(
+        schemas_meme.ShownMeme(
             id=str(meme.id),
             user=meme.user,
             creation_time=meme.creation_time,
@@ -153,7 +153,7 @@ async def get_my_memes(
 
 
 @module.router.get(
-    "/cmm/memes/{meme_id}/img/",
+    "/meme/memes/{meme_id}/img/",
     status_code=200,
     response_class=FileResponse,
 )
@@ -165,7 +165,7 @@ async def get_meme_image_by_id(
     """
     Get a meme image using its id
     """
-    meme = await cruds_cmm.get_meme_by_id(db=db, meme_id=meme_id, user_id=user.id)
+    meme = await cruds_meme.get_meme_by_id(db=db, meme_id=meme_id, user_id=user.id)
     if meme is None:
         raise HTTPException(status_code=404, detail="The meme does not exist")
 
@@ -177,26 +177,26 @@ async def get_meme_image_by_id(
 
 
 @module.router.post(
-    "/cmm/memes/{meme_id}/hide/",
+    "/meme/memes/{meme_id}/hide/",
     status_code=201,
 )
 async def hide_meme_by_id(
     meme_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.CMM)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.meme)),
 ):
     """
     Hide a meme from db
     Must be admin
     """
-    meme = await cruds_cmm.get_meme_by_id(db=db, meme_id=meme_id, user_id=user.id)
+    meme = await cruds_meme.get_meme_by_id(db=db, meme_id=meme_id, user_id=user.id)
     if meme is None:
         raise HTTPException(status_code=404, detail="The meme does not exist")
 
     try:
-        await cruds_cmm.update_meme_ban_status(
+        await cruds_meme.update_meme_ban_status(
             db=db,
-            ban_status=types_cmm.MemeStatus.banned,
+            ban_status=types_meme.MemeStatus.banned,
             meme_id=meme_id,
         )
         await db.commit()
@@ -206,26 +206,26 @@ async def hide_meme_by_id(
 
 
 @module.router.post(
-    "/cmm/memes/{meme_id}/show/",
+    "/meme/memes/{meme_id}/show/",
     status_code=201,
 )
 async def show_meme_by_id(
     meme_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.CMM)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.meme)),
 ):
     """
     Show a meme from db
     Must be admin
     """
-    meme = await cruds_cmm.get_meme_by_id(db=db, meme_id=meme_id, user_id=user.id)
+    meme = await cruds_meme.get_meme_by_id(db=db, meme_id=meme_id, user_id=user.id)
     if meme is None:
         raise HTTPException(status_code=404, detail="The meme does not exist")
 
     try:
-        await cruds_cmm.update_meme_ban_status(
+        await cruds_meme.update_meme_ban_status(
             db=db,
-            ban_status=types_cmm.MemeStatus.neutral,
+            ban_status=types_meme.MemeStatus.neutral,
             meme_id=meme_id,
         )
         await db.commit()
@@ -235,7 +235,7 @@ async def show_meme_by_id(
 
 
 @module.router.delete(
-    "/cmm/memes/{meme_id}/",
+    "/meme/memes/{meme_id}/",
     status_code=204,
 )
 async def delete_meme_by_id(
@@ -247,13 +247,13 @@ async def delete_meme_by_id(
     Remove a meme from db
     Must be author of meme if meme is not banned
     """
-    meme = await cruds_cmm.get_meme_by_id(db=db, meme_id=meme_id, user_id=user.id)
+    meme = await cruds_meme.get_meme_by_id(db=db, meme_id=meme_id, user_id=user.id)
     if not meme:
         raise HTTPException(
             status_code=404,
             detail="Invalid meme_id",
         )
-    if meme.status == types_cmm.MemeStatus.banned:
+    if meme.status == types_meme.MemeStatus.banned:
         raise HTTPException(
             status_code=403,
             detail="You can't delete a banned meme",
@@ -264,7 +264,7 @@ async def delete_meme_by_id(
             detail="You are not the author of this meme",
         )
     try:
-        await cruds_cmm.delete_meme_by_id(db=db, meme_id=meme_id)
+        await cruds_meme.delete_meme_by_id(db=db, meme_id=meme_id)
         await delete_file_from_data(directory="meme", filename=str(meme_id))
         await db.commit()
     except Exception:
@@ -273,8 +273,8 @@ async def delete_meme_by_id(
 
 
 @module.router.post(
-    "/cmm/memes/",
-    response_model=schemas_cmm.Meme,
+    "/meme/memes/",
+    response_model=schemas_meme.Meme,
     status_code=201,
 )
 async def add_meme(
@@ -288,15 +288,15 @@ async def add_meme(
     """
     try:
         meme_id = uuid.uuid4()
-        meme = models_cmm.Meme(
+        meme = models_meme.Meme(
             id=meme_id,
             user_id=user.id,
             creation_time=datetime.now(UTC),
             vote_score=0,
             votes=[],
-            status=types_cmm.MemeStatus.neutral,
+            status=types_meme.MemeStatus.neutral,
         )
-        cruds_cmm.add_meme(db=db, meme=meme)
+        cruds_meme.add_meme(db=db, meme=meme)
         await db.commit()
         await save_file_as_data(
             upload_file=image,
@@ -319,9 +319,9 @@ async def add_meme(
 
 
 @module.router.get(
-    "/cmm/memes/{meme_id}/vote/",
+    "/meme/memes/{meme_id}/vote/",
     status_code=200,
-    response_model=schemas_cmm.Vote,
+    response_model=schemas_meme.Vote,
 )
 async def get_vote(
     meme_id: uuid.UUID,
@@ -332,7 +332,7 @@ async def get_vote(
     """
     Get a meme caracteristics using its id
     """
-    vote = await cruds_cmm.get_vote(db=db, meme_id=meme_id, user_id=user_id)
+    vote = await cruds_meme.get_vote(db=db, meme_id=meme_id, user_id=user_id)
     if vote is None:
         raise HTTPException(
             status_code=404,
@@ -343,9 +343,9 @@ async def get_vote(
 
 
 @module.router.get(
-    "/cmm/memes/votes/{vote_id}/",
+    "/meme/memes/votes/{vote_id}/",
     status_code=200,
-    response_model=schemas_cmm.Vote,
+    response_model=schemas_meme.Vote,
 )
 async def get_vote_by_id(
     vote_id: uuid.UUID,
@@ -355,7 +355,7 @@ async def get_vote_by_id(
     """
     Get a meme caracteristics using its id
     """
-    vote = await cruds_cmm.get_vote_by_id(db=db, vote_id=vote_id)
+    vote = await cruds_meme.get_vote_by_id(db=db, vote_id=vote_id)
     if vote is None:
         raise HTTPException(status_code=404, detail="The vote does not exist")
 
@@ -363,8 +363,8 @@ async def get_vote_by_id(
 
 
 @module.router.post(
-    "/cmm/memes/{meme_id}/vote/",
-    response_model=schemas_cmm.Vote,
+    "/meme/memes/{meme_id}/vote/",
+    response_model=schemas_meme.Vote,
     status_code=201,
 )
 async def add_vote(
@@ -376,34 +376,34 @@ async def add_vote(
     """
     Add a new vote for the user to a meme from its id
     """
-    meme = await cruds_cmm.get_meme_by_id(db=db, meme_id=meme_id, user_id=user.id)
+    meme = await cruds_meme.get_meme_by_id(db=db, meme_id=meme_id, user_id=user.id)
     if meme is None:
         raise HTTPException(status_code=404, detail="The meme does not exist")
-    vote = await cruds_cmm.get_vote(db=db, meme_id=meme_id, user_id=user.id)
+    vote = await cruds_meme.get_vote(db=db, meme_id=meme_id, user_id=user.id)
     if vote is not None:
         raise HTTPException(status_code=404, detail="Vote already created")
 
     try:
         vote_id = uuid.uuid4()
-        vote = models_cmm.Vote(
+        vote = models_meme.Vote(
             id=vote_id,
             meme_id=meme_id,
             user_id=user.id,
             positive=positive,
         )
-        await cruds_cmm.update_meme_vote_score(
+        await cruds_meme.update_meme_vote_score(
             db=db,
             meme_id=meme_id,
             old_positive=None,
             new_positive=positive,
         )
-        cruds_cmm.add_vote(db=db, vote=vote)
+        cruds_meme.add_vote(db=db, vote=vote)
         await db.commit()
     except Exception:
         await db.rollback()
         raise
     else:
-        return schemas_cmm.Vote(
+        return schemas_meme.Vote(
             meme_id=str(vote.meme_id),
             positive=vote.positive,
             user=vote.user,
@@ -411,7 +411,7 @@ async def add_vote(
 
 
 @module.router.delete(
-    "/cmm/memes/{meme_id}/vote/",
+    "/meme/memes/{meme_id}/vote/",
     status_code=201,
 )
 async def delete_vote(
@@ -422,20 +422,20 @@ async def delete_vote(
     """
     Remove the vote from the user if it exists
     """
-    meme = await cruds_cmm.get_meme_by_id(db=db, meme_id=meme_id, user_id=user.id)
+    meme = await cruds_meme.get_meme_by_id(db=db, meme_id=meme_id, user_id=user.id)
     if meme is None:
         raise HTTPException(status_code=404, detail="The meme does not exist")
-    vote = await cruds_cmm.get_vote(db=db, meme_id=meme_id, user_id=user.id)
+    vote = await cruds_meme.get_vote(db=db, meme_id=meme_id, user_id=user.id)
     if vote is None:
         raise HTTPException(status_code=404, detail="The vote does not exist")
     try:
-        await cruds_cmm.update_meme_vote_score(
+        await cruds_meme.update_meme_vote_score(
             db=db,
             meme_id=meme_id,
             old_positive=meme.votes[0].positive if meme.votes else None,
             new_positive=None,
         )
-        await cruds_cmm.delete_vote(db=db, vote_id=vote.id)
+        await cruds_meme.delete_vote(db=db, vote_id=vote.id)
         await db.commit()
     except Exception:
         await db.rollback()
@@ -443,7 +443,7 @@ async def delete_vote(
 
 
 @module.router.patch(
-    "/cmm/memes/{meme_id}/vote/",
+    "/meme/memes/{meme_id}/vote/",
     status_code=201,
 )
 async def update_vote(
@@ -455,26 +455,26 @@ async def update_vote(
     """
     Update a vote from the user if it exists even if vote is already at the right positivity
     """
-    meme = await cruds_cmm.get_meme_by_id(db=db, meme_id=meme_id, user_id=user.id)
+    meme = await cruds_meme.get_meme_by_id(db=db, meme_id=meme_id, user_id=user.id)
     if meme is None:
         raise HTTPException(status_code=404, detail="The meme does not exist")
-    vote = await cruds_cmm.get_vote(db=db, meme_id=meme_id, user_id=user.id)
+    vote = await cruds_meme.get_vote(db=db, meme_id=meme_id, user_id=user.id)
     if vote is None:
         raise HTTPException(status_code=404, detail="The vote does not exist")
     try:
-        await cruds_cmm.update_meme_vote_score(
+        await cruds_meme.update_meme_vote_score(
             db=db,
             meme_id=meme_id,
             old_positive=meme.votes[0].positive,  # should exist
             new_positive=positive,
         )
-        await cruds_cmm.update_vote(db=db, vote_id=vote.id, new_positive=positive)
+        await cruds_meme.update_vote(db=db, vote_id=vote.id, new_positive=positive)
         await db.commit()
     except Exception:
         await db.rollback()
         raise
     else:
-        return schemas_cmm.Vote(
+        return schemas_meme.Vote(
             meme_id=str(vote.meme_id),
             positive=positive,
             user=user,
@@ -482,24 +482,24 @@ async def update_vote(
 
 
 @module.router.post(
-    "/cmm/users/{user_id}/ban/",
+    "/meme/users/{user_id}/ban/",
     status_code=201,
 )
 async def ban_user(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.CMM)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.meme)),
 ):
     """
     Ban a user and hide all of his memes
     Must be admin
     """
 
-    current_ban = await cruds_cmm.get_user_current_ban(db=db, user_id=user_id)
+    current_ban = await cruds_meme.get_user_current_ban(db=db, user_id=user_id)
     if current_ban is not None:
         raise HTTPException(status_code=404, detail="User is already banned")
 
-    ban = models_cmm.Ban(
+    ban = models_meme.Ban(
         id=uuid.uuid4(),
         user_id=user_id,
         admin_id=user.id,
@@ -507,11 +507,11 @@ async def ban_user(
         creation_time=datetime.now(UTC),
     )
     try:
-        cruds_cmm.add_user_ban(db=db, ban=ban)
-        await cruds_cmm.update_ban_status_of_memes_from_user(
+        cruds_meme.add_user_ban(db=db, ban=ban)
+        await cruds_meme.update_ban_status_of_memes_from_user(
             db=db,
             user_id=user_id,
-            new_ban_status=types_cmm.MemeStatus.banned,
+            new_ban_status=types_meme.MemeStatus.banned,
         )
         await db.commit()
     except Exception:
@@ -520,33 +520,33 @@ async def ban_user(
 
 
 @module.router.post(
-    "/cmm/users/{user_id}/unban/",
+    "/meme/users/{user_id}/unban/",
     status_code=201,
 )
 async def unban_user(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.CMM)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.meme)),
 ):
     """
     Unban a user and unhide all of his memes
     Must be admin
     """
 
-    current_ban = await cruds_cmm.get_user_current_ban(db=db, user_id=user_id)
+    current_ban = await cruds_meme.get_user_current_ban(db=db, user_id=user_id)
     if current_ban is None:
         raise HTTPException(status_code=404, detail="User is not already banned")
 
     try:
-        await cruds_cmm.update_end_of_ban(
+        await cruds_meme.update_end_of_ban(
             db=db,
             ban_id=current_ban.id,
             end_time=datetime.now(UTC),
         )
-        await cruds_cmm.update_ban_status_of_memes_from_user(
+        await cruds_meme.update_ban_status_of_memes_from_user(
             db=db,
             user_id=user_id,
-            new_ban_status=types_cmm.MemeStatus.neutral,
+            new_ban_status=types_meme.MemeStatus.neutral,
         )
         await db.commit()
     except Exception:
@@ -555,58 +555,58 @@ async def unban_user(
 
 
 @module.router.get(
-    "/cmm/users/{user_id}/ban_history/",
+    "/meme/users/{user_id}/ban_history/",
     status_code=200,
-    response_model=list[schemas_cmm.Ban],
+    response_model=list[schemas_meme.Ban],
 )
 async def get_user_ban_history(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.CMM)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.meme)),
 ):
     """
     Get the ban history of an user
     """
-    ban_history = await cruds_cmm.get_user_ban_history(db=db, user_id=user_id)
+    ban_history = await cruds_meme.get_user_ban_history(db=db, user_id=user_id)
     return ban_history
 
 
 @module.router.get(
-    "/cmm/users/banned/",
+    "/meme/users/banned/",
     status_code=200,
     response_model=list[schemas_core.CoreUserSimple],
 )
 async def get_banned_users(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.CMM)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.meme)),
 ):
-    banned_users = await cruds_cmm.get_banned_users(db=db)
+    banned_users = await cruds_meme.get_banned_users(db=db)
     return banned_users
 
 
 @module.router.get(
-    "/cmm/memes/hidden/",
+    "/meme/memes/hidden/",
     status_code=200,
-    response_model=list[schemas_cmm.ShownMeme],
+    response_model=list[schemas_meme.ShownMeme],
 )
 async def get_hidden_memes(
     db: AsyncSession = Depends(get_db),
     n_page: int = 1,
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.CMM)),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.meme)),
 ):
     if n_page < 1:
         raise HTTPException(
             status_code=404,
             detail="Invalid page number",
         )
-    hidden_memes = await cruds_cmm.get_hidden_memes(
+    hidden_memes = await cruds_meme.get_hidden_memes(
         db=db,
         descending=True,
         n_page=n_page,
         user_id=user.id,
     )
     return [
-        schemas_cmm.ShownMeme(
+        schemas_meme.ShownMeme(
             id=str(meme.id),
             user=meme.user,
             creation_time=meme.creation_time,
@@ -619,34 +619,34 @@ async def get_hidden_memes(
 
 
 @module.router.get(
-    "/cmm/leaderboard/",
+    "/meme/leaderboard/",
     status_code=200,
-    response_model=list[schemas_cmm.UserScore]
-    | list[schemas_cmm.FloorScore]
-    | list[schemas_cmm.PromoScore],
+    response_model=list[schemas_meme.UserScore]
+    | list[schemas_meme.FloorScore]
+    | list[schemas_meme.PromoScore],
 )
 async def get_user_leaderbord(
-    period: types_cmm.PeriodLeaderboard,
-    entity: types_cmm.EntityLeaderboard,
+    period: types_meme.PeriodLeaderboard,
+    entity: types_meme.EntityLeaderboard,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     match period:
-        case types_cmm.PeriodLeaderboard.week:
+        case types_meme.PeriodLeaderboard.week:
             n_jours = 7
-        case types_cmm.PeriodLeaderboard.month:
+        case types_meme.PeriodLeaderboard.month:
             n_jours = 30
-        case types_cmm.PeriodLeaderboard.year:
+        case types_meme.PeriodLeaderboard.year:
             n_jours = 365
-        case types_cmm.PeriodLeaderboard.always:
+        case types_meme.PeriodLeaderboard.always:
             n_jours = -1
         case _:
             raise HTTPException(status_code=404, detail="Invalid period")
 
-    memes = await cruds_cmm.get_all_memes(db=db, n_jours=n_jours)
+    memes = await cruds_meme.get_all_memes(db=db, n_jours=n_jours)
 
     match entity:
-        case types_cmm.EntityLeaderboard.promo:
+        case types_meme.EntityLeaderboard.promo:
             promo_scores: dict[int, int] = {}
 
             for meme in memes:
@@ -673,7 +673,7 @@ async def get_user_leaderbord(
                 for i, (promo, total_score) in enumerate(sorted_promo_scores)
             ]
 
-        case types_cmm.EntityLeaderboard.floor:
+        case types_meme.EntityLeaderboard.floor:
             floor_scores: dict[FloorsType, int] = {}
 
             for meme in memes:
@@ -700,7 +700,7 @@ async def get_user_leaderbord(
                 for i, (floor, total_score) in enumerate(sorted_floor_scores)
             ]
 
-        case types_cmm.EntityLeaderboard.user:
+        case types_meme.EntityLeaderboard.user:
             user_scores: dict[str, int] = {}
             users: dict[str, models_core.CoreUser] = {}
 
@@ -729,28 +729,28 @@ async def get_user_leaderbord(
 
 
 @module.router.get(
-    "/cmm/leaderboard/me",
+    "/meme/leaderboard/me",
     status_code=200,
-    response_model=schemas_cmm.Score,
+    response_model=schemas_meme.Score,
 )
 async def get_my_leaderbord(
-    period: types_cmm.PeriodLeaderboard,
+    period: types_meme.PeriodLeaderboard,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     match period:
-        case types_cmm.PeriodLeaderboard.week:
+        case types_meme.PeriodLeaderboard.week:
             n_jours = 7
-        case types_cmm.PeriodLeaderboard.month:
+        case types_meme.PeriodLeaderboard.month:
             n_jours = 30
-        case types_cmm.PeriodLeaderboard.year:
+        case types_meme.PeriodLeaderboard.year:
             n_jours = 365
-        case types_cmm.PeriodLeaderboard.always:
+        case types_meme.PeriodLeaderboard.always:
             n_jours = -1
         case _:
             raise HTTPException(status_code=404, detail="Invalid period")
 
-    memes = await cruds_cmm.get_all_memes(db=db, n_jours=n_jours)
+    memes = await cruds_meme.get_all_memes(db=db, n_jours=n_jours)
 
     my_score = sum(meme.vote_score for meme in memes if meme.user.id == user.id)
 

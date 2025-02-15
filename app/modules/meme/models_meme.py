@@ -5,17 +5,17 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.models_core import CoreUser
-from app.modules.cmm.types_cmm import MemeStatus
+from app.modules.meme.types_meme import MemeStatus
 from app.types.sqlalchemy import Base, PrimaryKey
 
 
 class Vote(Base):
-    __tablename__ = "cmm_vote"
+    __tablename__ = "meme_vote"
 
     id: Mapped[PrimaryKey]
     user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"))
     user: Mapped[CoreUser] = relationship("CoreUser", init=False)
-    meme_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("cmm_meme.id"))
+    meme_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("meme_meme.id"))
     meme: Mapped["Meme"] = relationship(
         "Meme",
         init=False,
@@ -26,7 +26,7 @@ class Vote(Base):
 
 
 class Meme(Base):
-    __tablename__ = "cmm_meme"
+    __tablename__ = "meme_meme"
 
     id: Mapped[PrimaryKey]
     status: Mapped[MemeStatus]
@@ -43,7 +43,7 @@ class Meme(Base):
 
 
 class Ban(Base):
-    __tablename__ = "cmm_ban"
+    __tablename__ = "meme_ban"
 
     id: Mapped[PrimaryKey]
     user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"))
