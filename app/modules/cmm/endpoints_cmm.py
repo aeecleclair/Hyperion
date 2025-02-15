@@ -17,13 +17,15 @@ from app.dependencies import (
 )
 from app.modules.cmm import cruds_cmm, models_cmm, schemas_cmm, types_cmm
 from app.types.content_type import ContentType
-from app.types.floors_type import FloorsType
 from app.types.module import Module
 from app.utils.tools import (
     delete_file_from_data,
     get_file_from_data,
     save_file_as_data,
 )
+
+if TYPE_CHECKING:
+    from app.types.floors_type import FloorsType
 
 module = Module(
     root="cmm",
