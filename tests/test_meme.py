@@ -17,7 +17,6 @@
 
 import datetime
 import uuid
-from pathlib import Path
 
 import pytest_asyncio
 from fastapi.testclient import TestClient

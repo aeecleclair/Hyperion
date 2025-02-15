@@ -265,7 +265,7 @@ async def delete_meme_by_id(
         )
     try:
         await cruds_meme.delete_meme_by_id(db=db, meme_id=meme_id)
-        await delete_file_from_data(directory="meme", filename=str(meme_id))
+        delete_file_from_data(directory="meme", filename=str(meme_id))
         await db.commit()
     except Exception:
         await db.rollback()
