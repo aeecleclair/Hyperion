@@ -20,22 +20,22 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    with op.batch_alter_table("ph_papers") as batch_op:
-        batch_op.alter_column(
-            "id",
-            type_=sa.Uuid(),
-            postgresql_using="id::uuid",
-        )
+    op.alter_column(
+        "ph_papers",
+        "id",
+        type_=sa.Uuid(),
+        postgresql_using="id::uuid",
+    )
     op.drop_index("ix_ph_papers_id", table_name="ph_papers")
 
 
 def downgrade() -> None:
     op.create_index("ix_ph_papers_id", "ph_papers", ["id"], unique=False)
-    with op.batch_alter_table("ph_papers") as batch_op:
-        batch_op.alter_column(
-            "id",
-            type_=sa.String(),
-        )
+    op.alter_column(
+        "ph_papers",
+        "id",
+        type_=sa.String(),
+    )
 
 
 def pre_test_upgrade(

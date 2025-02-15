@@ -79,8 +79,6 @@ jobs:
           path: .pytest_cache
           key: pytest_cache-${{ github.head_ref }}
       
-      - name: Run migration unit tests with SQLite
-        run: python -m pytest tests/test_migrations.py
 
       - name: Run unit tests with Postgresql
         run: python -m pytest --cov

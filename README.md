@@ -122,6 +122,8 @@ fastapi dev app/main.py
 
 See [migrations README](./migrations/README)
 
+Warning : on SQLite databases, you have to drop the database and recreate it to apply the new DDL.
+
 ## OpenAPI specification
 
 API endpoints are parsed following the OpenAPI specifications at `http://127.0.0.1:8000/openapi.json`.
