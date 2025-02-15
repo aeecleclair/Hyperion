@@ -70,29 +70,13 @@ def test_get_association_memberships(client: TestClient):
     assert str(useecl_association_membership.id) in [x["id"] for x in response.json()]
 
 
-def test_get_association_membership_by_id(client: TestClient):
-    response = client.get(
-        f"/memberships/{aeecl_association_membership.id}",
-        headers={"Authorization": f"Bearer {token_user}"},
-    )
-    assert response.status_code == 200
-    assert response.json()["id"] == str(aeecl_association_membership.id)
-    assert response.json()["name"] == "AEECL"
-    assert len(response.json()["users_memberships"]) == 1
-
-
-def test_get_association_membership_by_id_wrong_id(client: TestClient):
-    response = client.get(
-        f"/memberships/{uuid.uuid4()}",
-        headers={"Authorization": f"Bearer {token_user}"},
-    )
-    assert response.status_code == 404
-
-
 def test_create_association_membership_user(client: TestClient):
     response = client.post(
         "/memberships",
-        json={"name": "Random Association"},
+        json={
+            "name": "Random Association",
+            "group_id": GroupType.AE,
+        },
         headers={"Authorization": f"Bearer {token_user}"},
     )
     assert response.status_code == 403
@@ -101,19 +85,25 @@ def test_create_association_membership_user(client: TestClient):
 def test_create_association_membership_admin(client: TestClient):
     response = client.post(
         "/memberships",
-        json={"name": "Random Association"},
+        json={
+            "name": "Random Association",
+            "group_id": GroupType.AE,
+        },
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 201
     membership_id = uuid.UUID(response.json()["id"])
+    membership_name = response.json()["name"]
+    membership_group_id = response.json()["group_id"]
 
     response = client.get(
-        f"/memberships/{membership_id}",
+        "/memberships",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 200
-    assert response.json()["id"] == str(membership_id)
-    assert response.json()["name"] == "Random Association"
+    assert str(membership_id) in [x["id"] for x in response.json()]
+    assert membership_name in [x["name"] for x in response.json()]
+    assert membership_group_id in [x["group_id"] for x in response.json()]
 
 
 def test_delete_association_membership_user(client: TestClient):
@@ -124,10 +114,11 @@ def test_delete_association_membership_user(client: TestClient):
     assert response.status_code == 403
 
     response = client.get(
-        f"/memberships/{aeecl_association_membership.id}",
+        "/memberships",
         headers={"Authorization": f"Bearer {token_user}"},
     )
     assert response.status_code == 200
+    assert str(aeecl_association_membership.id) in [x["id"] for x in response.json()]
 
 
 def test_delete_association_membership_wrong_id(client: TestClient):
@@ -146,17 +137,17 @@ def test_delete_association_membership_with_users(client: TestClient):
     assert response.status_code == 400
 
     response = client.get(
-        f"/memberships/{aeecl_association_membership.id}",
+        "/memberships",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 200
-    assert response.json()["name"] == "AEECL"
+    assert str(aeecl_association_membership.id) in [x["id"] for x in response.json()]
 
 
 async def test_delete_association_membership_admin(client: TestClient):
     new_membership = models_core.CoreAssociationMembership(
         id=uuid.uuid4(),
-        name="Random Association",
+        name="Random Association1",
         group_id=GroupType.AE,
     )
     await add_object_to_db(new_membership)
@@ -168,48 +159,62 @@ async def test_delete_association_membership_admin(client: TestClient):
     assert response.status_code == 204
 
     response = client.get(
-        f"/memberships/{new_membership.id}",
+        "/memberships",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
-    assert response.status_code == 404
+    assert response.status_code == 200
+    assert str(new_membership.id) not in [x["id"] for x in response.json()]
 
 
 def test_patch_association_membership_user(client: TestClient):
     response = client.patch(
         f"/memberships/{aeecl_association_membership.id}",
-        json={"name": "New Name"},
+        json={
+            "name": "Random Association",
+            "group_id": GroupType.eclair.value,
+        },
         headers={"Authorization": f"Bearer {token_user}"},
     )
     assert response.status_code == 403
 
     response = client.get(
-        f"/memberships/{aeecl_association_membership.id}",
+        "/memberships",
         headers={"Authorization": f"Bearer {token_user}"},
     )
     assert response.status_code == 200
-    assert response.json()["name"] == "AEECL"
+    assert aeecl_association_membership.name in [x["name"] for x in response.json()]
+    assert aeecl_association_membership.group_id in [
+        x["group_id"] for x in response.json()
+    ]
 
 
 async def test_patch_association_membership_admin(client: TestClient):
     new_membership = models_core.CoreAssociationMembership(
         id=uuid.uuid4(),
-        name="Random Association",
+        name="Random Association2",
         group_id=GroupType.AE,
     )
     await add_object_to_db(new_membership)
 
+    new_name = "Random Association3"
+    new_group_id = GroupType.eclair.value
     response = client.patch(
         f"/memberships/{new_membership.id}",
-        json={"name": "New Name"},
+        json={
+            "name": new_name,
+            "group_id": new_group_id,
+        },
         headers={"Authorization": f"Bearer {token_admin}"},
     )
+    assert response.status_code == 204
 
     response = client.get(
-        f"/memberships/{new_membership.id}",
+        "/memberships",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 200
-    assert response.json()["name"] == "New Name"
+    assert new_name in [x["name"] for x in response.json()]
+    assert new_group_id in [x["group_id"] for x in response.json()]
 
 
 def test_get_memberships_by_user_id_user(client: TestClient):
@@ -230,22 +235,72 @@ def test_get_memberships_by_user_id_admin(client: TestClient):
     assert str(user_membership.id) in [x["id"] for x in response.json()]
 
 
-def test_get_membership_with_date_filter(client: TestClient):
+async def test_get_membership_with_date_filter(client: TestClient):
     today = datetime.now(tz=UTC).date()
-    response = client.get(
-        f"/memberships/users/{user.id}?minimalDate={today.strftime('%Y%m%d')}",
-        headers={"Authorization": f"Bearer {token_admin}"},
+    new_membership1 = models_core.CoreAssociationUserMembership(
+        id=uuid.uuid4(),
+        user_id=user.id,
+        association_membership_id=useecl_association_membership.id,
+        start_date=today - timedelta(days=10),
+        end_date=today + timedelta(days=10),
     )
-    assert response.status_code == 200
-    assert str(user_membership.id) in [x["id"] for x in response.json()]
+    new_membership2 = models_core.CoreAssociationUserMembership(
+        id=uuid.uuid4(),
+        user_id=user.id,
+        association_membership_id=useecl_association_membership.id,
+        start_date=today - timedelta(days=20),
+        end_date=today + timedelta(days=20),
+    )
 
-    five_years_later = today + timedelta(days=365 * 5)
+    await add_object_to_db(new_membership1)
+    await add_object_to_db(new_membership2)
+    membership_ids = [
+        new_membership1.id,
+        new_membership2.id,
+    ]
+
     response = client.get(
-        f"/memberships/users/{user.id}?minimalDate={five_years_later.strftime('%Y%m%d')}",
+        f"/memberships/{useecl_association_membership.id}/members",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 200
-    assert str(user_membership.id) not in [x["id"] for x in response.json()]
+    for membership_id in membership_ids:
+        assert str(membership_id) in [x["id"] for x in response.json()]
+
+    minus_fifteen_days = today - timedelta(days=15)
+    plus_fifteen_days = today + timedelta(days=15)
+
+    response = client.get(
+        f"/memberships/{useecl_association_membership.id}/members?minimalStartDate={minus_fifteen_days.strftime('%Y-%m-%d')}",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 200
+    assert str(new_membership1.id) in [x["id"] for x in response.json()]
+    assert str(new_membership2.id) not in [x["id"] for x in response.json()]
+
+    response = client.get(
+        f"/memberships/{useecl_association_membership.id}/members?maximalStartDate={minus_fifteen_days.strftime('%Y-%m-%d')}",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 200
+    assert str(new_membership1.id) not in [x["id"] for x in response.json()]
+    assert str(new_membership2.id) in [x["id"] for x in response.json()]
+
+    response = client.get(
+        f"/memberships/{useecl_association_membership.id}/members?minimalEndDate={plus_fifteen_days.strftime('%Y-%m-%d')}",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 200
+    assert str(new_membership1.id) not in [x["id"] for x in response.json()]
+    assert str(new_membership2.id) in [x["id"] for x in response.json()]
+
+    response = client.get(
+        f"/memberships/{useecl_association_membership.id}/members?maximalEndDate={plus_fifteen_days.strftime('%Y-%m-%d')}",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 200
+    assert str(new_membership1.id) in [x["id"] for x in response.json()]
+    assert str(new_membership2.id) not in [x["id"] for x in response.json()]
 
 
 def test_create_user_membership_user(client: TestClient):
