@@ -726,3 +726,45 @@ async def get_user_leaderbord(
 
         case _:
             raise HTTPException(status_code=404, detail="Invalid period")
+
+
+@module.router.get(
+    "/cmm/leaderboard/me",
+    status_code=200,
+    response_model=schemas_cmm.Score,
+)
+async def get_my_leaderbord(
+    period: types_cmm.PeriodLeaderboard,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    match period:
+        case types_cmm.PeriodLeaderboard.week:
+            n_jours = 7
+        case types_cmm.PeriodLeaderboard.month:
+            n_jours = 30
+        case types_cmm.PeriodLeaderboard.year:
+            n_jours = 365
+        case types_cmm.PeriodLeaderboard.always:
+            n_jours = -1
+        case _:
+            raise HTTPException(status_code=404, detail="Invalid period")
+
+    memes = await cruds_cmm.get_all_memes(db=db, n_jours=n_jours)
+
+    my_score = sum(meme.vote_score for meme in memes if meme.user.id == user.id)
+
+    user_scores: dict[str, int] = {}
+
+    for meme in memes:
+        user_id = meme.user.id
+        user_scores[user_id] = user_scores.get(user_id, 0) + meme.vote_score
+
+    sorted_scores = sorted(user_scores.items(), key=lambda item: item[1], reverse=True)
+
+    my_position = next(
+        (i + 1 for i, (user_id, _) in enumerate(sorted_scores) if user_id == user.id),
+        None,
+    )
+
+    return {"score": my_score, "position": my_position}

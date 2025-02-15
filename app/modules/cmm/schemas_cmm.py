@@ -46,19 +46,18 @@ class Ban(BaseModel):
     admin: CoreUserSimple
 
 
-class UserScore(BaseModel):
+class Score(BaseModel):
+    score: int
+    position: int
+
+
+class UserScore(Score):
     user: CoreUserSimple
-    score: int
-    position: int
 
 
-class PromoScore(BaseModel):
+class PromoScore(Score):
     promo: int
-    score: int
-    position: int
 
 
-class FloorScore(BaseModel):
+class FloorScore(Score):
     floor: FloorsType
-    score: int
-    position: int
