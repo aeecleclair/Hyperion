@@ -382,3 +382,129 @@ async def test_delete_user_membership_admin(client: TestClient):
     )
     assert response.status_code == 200
     assert str(new_membership.id) not in [x["id"] for x in response.json()]
+
+
+def test_patch_user_membership_user(client: TestClient):
+    response = client.patch(
+        f"/memberships/users/{user_membership.id}",
+        json={
+            "association_membership_id": str(useecl_association_membership.id),
+            "start_date": str(date(2024, 6, 1)),
+            "end_date": str(date(2028, 6, 1)),
+        },
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 403
+
+
+async def test_patch_user_membership_admin(client: TestClient):
+    new_membership = models_core.CoreAssociationUserMembership(
+        id=uuid.uuid4(),
+        user_id=user.id,
+        association_membership_id=useecl_association_membership.id,
+        start_date=datetime.now(tz=UTC).date() - timedelta(days=365),
+        end_date=datetime.now(tz=UTC).date() + timedelta(days=365),
+    )
+    await add_object_to_db(new_membership)
+
+    new_start_date = str(date(2024, 6, 1))
+    new_end_date = str(date(2028, 6, 1))
+    response = client.patch(
+        f"/memberships/users/{new_membership.id}",
+        json={
+            "start_date": new_start_date,
+            "end_date": new_end_date,
+        },
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 204
+
+    response = client.get(
+        f"/memberships/users/{user.id}",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 200
+    membership = next(x for x in response.json() if x["id"] == str(new_membership.id))
+    assert new_start_date == membership["start_date"]
+    assert new_end_date == membership["end_date"]
+    assert user.id == membership["user_id"]
+    assert new_membership.id == uuid.UUID(membership["id"])
+
+
+def test_post_batch_user_memberships_user(client: TestClient):
+    response = client.post(
+        f"/memberships/{aeecl_association_membership.id}/add-batch/",
+        json=[
+            {
+                "email": user.email,
+                "start_date": str(date(2024, 6, 1)),
+                "end_date": str(date(2028, 6, 1)),
+            },
+            {
+                "email": user.email,
+                "start_date": str(date(2024, 6, 1)),
+                "end_date": str(date(2028, 6, 1)),
+            },
+        ],
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 403
+
+
+async def test_post_batch_user_memberships_admin(client: TestClient):
+    today = datetime.now(tz=UTC).date()
+    new_membership = models_core.CoreAssociationUserMembership(
+        id=uuid.uuid4(),
+        user_id=user.id,
+        association_membership_id=aeecl_association_membership.id,
+        start_date=today - timedelta(days=1000),
+        end_date=today + timedelta(days=365),
+    )
+    await add_object_to_db(new_membership)
+
+    response = client.post(
+        f"/memberships/{aeecl_association_membership.id}/add-batch/",
+        json=[
+            {
+                "user_email": user.email,
+                "start_date": str(today - timedelta(days=1000)),
+                "end_date": str(today + timedelta(days=365)),
+            },
+            {
+                "user_email": user.email,
+                "start_date": str(date(2018, 6, 1)),
+                "end_date": str(date(2019, 6, 1)),
+            },
+        ],
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 201
+
+    response = client.get(
+        f"/memberships/users/{user.id}",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 200
+    aeecl_memberships = [
+        x
+        for x in response.json()
+        if x["association_membership_id"] == str(aeecl_association_membership.id)
+    ]
+    seen = False
+    for membership in aeecl_memberships:
+        if membership["start_date"] == str(today - timedelta(days=1000)) and membership[
+            "end_date"
+        ] == str(today + timedelta(days=365)):
+            assert not seen
+            seen = True
+    assert seen
+    membership = next(
+        (
+            x
+            for x in aeecl_memberships
+            if x["start_date"] == str(date(2018, 6, 1))
+            and x["end_date"] == str(date(2019, 6, 1))
+        ),
+        None,
+    )
+    assert membership is not None
