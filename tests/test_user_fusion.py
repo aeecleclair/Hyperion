@@ -128,16 +128,20 @@ def test_fusion_users(client: TestClient) -> None:
     user_kept_membership_aeecl_json = {
         "id": str(core_association_membership_user_kept.id),
         "user_id": str(student_user_to_keep.id),
-        "membership_id": str(core_association_membership.id),
+        "association_membership_id": str(core_association_membership.id),
         "start_date": core_association_membership_user_kept.start_date.isoformat(),
         "end_date": core_association_membership_user_kept.end_date.isoformat(),
     }
     user_del_membership_aeecl_json = {
         "id": str(core_association_membership_user_del.id),
         "user_id": str(student_user_to_keep.id),
-        "membership_id": str(core_association_membership.id),
+        "association_membership_id": str(core_association_membership.id),
         "start_date": core_association_membership_user_del.start_date.isoformat(),
         "end_date": core_association_membership_user_del.end_date.isoformat(),
     }
-    assert user_kept_membership_aeecl_json in memberships
-    assert user_del_membership_aeecl_json in memberships
+    simple_memberships = []
+    for membership in memberships:
+        membership.pop("user")
+        simple_memberships.append(membership)
+    assert user_kept_membership_aeecl_json in simple_memberships
+    assert user_del_membership_aeecl_json in simple_memberships
