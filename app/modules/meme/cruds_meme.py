@@ -10,13 +10,11 @@ from sqlalchemy.orm import selectinload
 from app.core import models_core
 from app.modules.meme import models_meme, types_meme
 
-n_memes = 10
 n_weeks = 7
 
 
 async def get_memes_by_date(
     db: AsyncSession,
-    n_page: int,
     descending: bool,
     user_id: str,
 ) -> Sequence[models_meme.Meme]:
@@ -34,9 +32,7 @@ async def get_memes_by_date(
             models_meme.Meme.creation_time.desc()
             if descending
             else models_meme.Meme.creation_time,
-        )
-        .limit(n_memes)
-        .offset((n_page - 1) * n_memes),
+        ),
     )
     meme_page = result.scalars().all()
     return meme_page
@@ -44,7 +40,6 @@ async def get_memes_by_date(
 
 async def get_my_memes(
     db: AsyncSession,
-    n_page: int,
     user_id: str,
 ) -> Sequence[models_meme.Meme]:
     result = await db.execute(
@@ -58,8 +53,6 @@ async def get_my_memes(
         .execution_options(populate_existing=True)
         .where(models_meme.Meme.user_id == user_id)
         .order_by(models_meme.Meme.creation_time.desc())
-        .limit(n_memes)
-        .offset((n_page - 1) * n_memes),
     )
     meme_page = result.scalars().all()
     return meme_page
@@ -67,7 +60,6 @@ async def get_my_memes(
 
 async def get_memes_by_votes(
     db: AsyncSession,
-    n_page: int,
     descending: bool,
     user_id: str,
 ) -> Sequence[models_meme.Meme]:
@@ -85,9 +77,7 @@ async def get_memes_by_votes(
             models_meme.Meme.vote_score.desc()
             if descending
             else models_meme.Meme.vote_score,
-        )
-        .limit(n_memes)
-        .offset((n_page - 1) * n_memes),
+        ),
     )
     meme_page = result.scalars().all()
     return meme_page
@@ -95,7 +85,6 @@ async def get_memes_by_votes(
 
 async def get_trending_memes(
     db: AsyncSession,
-    n_page: int,
     user_id: str,
 ) -> Sequence[models_meme.Meme]:
     result = await db.execute(
@@ -112,9 +101,7 @@ async def get_trending_memes(
             (models_meme.Meme.creation_time - datetime.now(tz=UTC))
             < timedelta(days=n_weeks),
             models_meme.Meme.status == types_meme.MemeStatus.neutral,
-        )
-        .limit(n_memes)
-        .offset((n_page - 1) * n_memes),
+        ),
     )
     meme_page = result.scalars().all()
     return meme_page
@@ -330,7 +317,6 @@ async def get_banned_users(db: AsyncSession) -> Sequence[models_core.CoreUser]:
 
 async def get_hidden_memes(
     db: AsyncSession,
-    n_page: int,
     descending: bool,
     user_id: str,
 ) -> Sequence[models_meme.Meme]:
@@ -348,9 +334,7 @@ async def get_hidden_memes(
             models_meme.Meme.creation_time.desc()
             if descending
             else models_meme.Meme.creation_time,
-        )
-        .limit(n_memes)
-        .offset((n_page - 1) * n_memes),
+        ),
     )
     return result.scalars().all()
 

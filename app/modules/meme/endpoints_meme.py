@@ -53,52 +53,41 @@ async def is_allowed_meme_user(
 )
 async def get_memes(
     sort_by: str = "best",
-    n_page: int = 1,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
     """
-    Get a page of memes according to the asked sort
+    Get memes according to the asked sort
     """
-    if n_page < 1:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid page number",
-        )
 
     match sort_by:
         case types_meme.MemeSort.best:
             meme_page = await cruds_meme.get_memes_by_votes(
                 db=db,
                 descending=True,
-                n_page=n_page,
                 user_id=user.id,
             )
         case types_meme.MemeSort.worst:
             meme_page = await cruds_meme.get_memes_by_votes(
                 db=db,
                 descending=False,
-                n_page=n_page,
                 user_id=user.id,
             )
         case types_meme.MemeSort.trending:
             meme_page = await cruds_meme.get_trending_memes(
                 db=db,
-                n_page=n_page,
                 user_id=user.id,
             )
         case types_meme.MemeSort.newest:
             meme_page = await cruds_meme.get_memes_by_date(
                 db=db,
                 descending=True,
-                n_page=n_page,
                 user_id=user.id,
             )
         case types_meme.MemeSort.oldest:
             meme_page = await cruds_meme.get_memes_by_date(
                 db=db,
                 descending=False,
-                n_page=n_page,
                 user_id=user.id,
             )
         case _:
@@ -123,19 +112,11 @@ async def get_memes(
     status_code=200,
 )
 async def get_my_memes(
-    n_page: int = 1,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    if n_page < 1:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid page number",
-        )
-
     meme_page = await cruds_meme.get_my_memes(
         db=db,
-        n_page=n_page,
         user_id=user.id,
     )
 
@@ -591,18 +572,11 @@ async def get_banned_users(
 )
 async def get_hidden_memes(
     db: AsyncSession = Depends(get_db),
-    n_page: int = 1,
     user: models_core.CoreUser = Depends(is_user_in(GroupType.meme)),
 ):
-    if n_page < 1:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid page number",
-        )
     hidden_memes = await cruds_meme.get_hidden_memes(
         db=db,
         descending=True,
-        n_page=n_page,
         user_id=user.id,
     )
     return [
