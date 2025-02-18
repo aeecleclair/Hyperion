@@ -36,8 +36,10 @@ async def validate_user_membership(
 
     for membership in memberships:
         if (
-            user_membership.start_date < membership.end_date
-            and user_membership.end_date > membership.start_date
+            user_membership.start_date < membership.end_date < user_membership.end_date
+            or user_membership.start_date
+            < membership.start_date
+            < user_membership.end_date
         ):
             raise HTTPException(
                 status_code=400,
