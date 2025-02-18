@@ -316,6 +316,32 @@ def test_create_user_membership_user(client: TestClient):
     assert response.status_code == 403
 
 
+def test_create_user_membership_wrong_association_id(client: TestClient):
+    response = client.post(
+        f"/memberships/users/{user.id}",
+        json={
+            "association_membership_id": str(uuid.uuid4()),
+            "start_date": str(date(2024, 6, 1)),
+            "end_date": str(date(2028, 6, 1)),
+        },
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 404
+
+
+def test_create_user_membership_with_wrong_dates(client: TestClient):
+    response = client.post(
+        f"/memberships/users/{user.id}",
+        json={
+            "association_membership_id": str(useecl_association_membership.id),
+            "start_date": str(date(2028, 6, 1)),
+            "end_date": str(date(2024, 6, 1)),
+        },
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 400
+
+
 def test_create_user_membership_admin(client: TestClient):
     response = client.post(
         f"/memberships/users/{user.id}",
@@ -397,18 +423,66 @@ def test_patch_user_membership_user(client: TestClient):
     assert response.status_code == 403
 
 
-async def test_patch_user_membership_admin(client: TestClient):
+def test_patch_user_membership_wrong_id(client: TestClient):
+    response = client.patch(
+        f"/memberships/users/{uuid.uuid4()}",
+        json={
+            "start_date": str(date(2024, 6, 1)),
+            "end_date": str(date(2028, 6, 1)),
+        },
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 404
+
+
+def test_patch_user_membership_with_wrong_dates(client: TestClient):
+    response = client.patch(
+        f"/memberships/users/{user_membership.id}",
+        json={
+            "start_date": str(date(2028, 6, 1)),
+            "end_date": str(date(2024, 6, 1)),
+        },
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 400
+
+
+async def test_patch_user_membership_admin_overlapping_dates(client: TestClient):
     new_membership = models_core.CoreAssociationUserMembership(
         id=uuid.uuid4(),
         user_id=user.id,
         association_membership_id=useecl_association_membership.id,
-        start_date=datetime.now(tz=UTC).date() - timedelta(days=365),
-        end_date=datetime.now(tz=UTC).date() + timedelta(days=365),
+        start_date=user_membership.end_date + timedelta(days=20),
+        end_date=user_membership.end_date + timedelta(days=70),
     )
     await add_object_to_db(new_membership)
 
-    new_start_date = str(date(2024, 6, 1))
-    new_end_date = str(date(2028, 6, 1))
+    new_start_date = str(user_membership.end_date - timedelta(days=50))
+    new_end_date = str(user_membership.end_date + timedelta(days=50))
+
+    response = client.patch(
+        f"/memberships/users/{new_membership.id}",
+        json={
+            "start_date": new_start_date,
+            "end_date": new_end_date,
+        },
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 400
+
+
+async def test_patch_user_membership_admin(client: TestClient):
+    new_membership = models_core.CoreAssociationUserMembership(
+        id=uuid.uuid4(),
+        user_id=user.id,
+        association_membership_id=aeecl_association_membership.id,
+        start_date=user_membership.end_date + timedelta(days=90),
+        end_date=user_membership.end_date + timedelta(days=500),
+    )
+    await add_object_to_db(new_membership)
+
+    new_start_date = str(user_membership.end_date + timedelta(days=100))
+    new_end_date = str(user_membership.end_date + timedelta(days=1000))
     response = client.patch(
         f"/memberships/users/{new_membership.id}",
         json={
