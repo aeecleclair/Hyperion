@@ -8,6 +8,7 @@ from app.core import endpoints_core
 from app.core.auth import endpoints_auth
 from app.core.google_api import endpoints_google_api
 from app.core.groups import endpoints_groups
+from app.core.memberships import endpoints_memberships
 from app.core.notification import endpoints_notification
 from app.core.payment import endpoints_payment
 from app.core.schools import endpoints_schools
@@ -26,6 +27,7 @@ api_router.include_router(endpoints_notification.router)
 api_router.include_router(endpoints_payment.router)
 api_router.include_router(endpoints_users.router)
 api_router.include_router(endpoints_schools.router)
+api_router.include_router(endpoints_memberships.router)
 
 for module in module_list:
     api_router.include_router(module.router)
