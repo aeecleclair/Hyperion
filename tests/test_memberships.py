@@ -342,13 +342,29 @@ def test_create_user_membership_with_wrong_dates(client: TestClient):
     assert response.status_code == 400
 
 
+def test_create_user_membership_with_overlapping_dates(client: TestClient):
+    today = datetime.now(tz=UTC).date()
+
+    response = client.post(
+        f"/memberships/users/{user.id}",
+        json={
+            "association_membership_id": str(aeecl_association_membership.id),
+            "start_date": str(today),
+            "end_date": str(today + timedelta(days=365)),
+        },
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 400
+
+
 def test_create_user_membership_admin(client: TestClient):
+    today = datetime.now(tz=UTC).date()
     response = client.post(
         f"/memberships/users/{user.id}",
         json={
             "association_membership_id": str(useecl_association_membership.id),
-            "start_date": str(date(2000, 6, 1)),
-            "end_date": str(date(2001, 6, 1)),
+            "start_date": str(today - timedelta(days=1000)),
+            "end_date": str(today - timedelta(days=750)),
         },
         headers={"Authorization": f"Bearer {token_admin}"},
     )
