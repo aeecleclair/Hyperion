@@ -237,8 +237,8 @@ async def get_user_memberships_by_user_id_and_association_membership_id(
         (
             await db.execute(
                 select(models_core.CoreAssociationUserMembership).where(
-                    models_core.CoreAssociationUserMembership.user_id == user_id
-                    and models_core.CoreAssociationUserMembership.association_membership_id
+                    models_core.CoreAssociationUserMembership.user_id == user_id,
+                    models_core.CoreAssociationUserMembership.association_membership_id
                     == association_membership_id,
                 ),
             )
