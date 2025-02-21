@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import schemas_core, security
 from app.core.config import Settings
 from app.core.groups.groups_type import AccountType, GroupType
+from app.core.memberships import cruds_memberships, schemas_memberships
 from app.core.models_core import CoreUser
 from app.core.myeclpay import cruds_myeclpay, schemas_myeclpay
 from app.core.myeclpay.models_myeclpay import Store, WalletDevice
@@ -110,6 +111,8 @@ async def create_structure(
     structure_db = schemas_myeclpay.Structure(
         id=uuid.uuid4(),
         name=structure.name,
+        association_membership_id=structure.association_membership_id,
+        association_membership=None,
         manager_user_id=structure.manager_user_id,
         manager_user=schemas_core.CoreUserSimple(
             id=db_user.id,
@@ -528,6 +531,14 @@ async def get_user_stores(
                     structure=schemas_myeclpay.Structure(
                         id=store.structure.id,
                         name=store.structure.name,
+                        association_membership_id=store.structure.association_membership_id,
+                        association_membership=schemas_memberships.MembershipSimple(
+                            id=store.structure.association_membership.id,
+                            name=store.structure.association_membership.name,
+                            group_id=store.structure.association_membership.group_id,
+                        )
+                        if store.structure.association_membership is not None
+                        else None,
                         manager_user_id=store.structure.manager_user_id,
                         manager_user=schemas_core.CoreUserSimple(
                             id=store.structure.manager_user.id,
@@ -1800,11 +1811,27 @@ async def store_scan_qrcode(
             detail="Insufficient balance in the debited wallet",
         )
 
-    # if not scan_info.bypass_membership:
-    #     membership = await cruds_memberships.get_actual_user_memberships_by_user_id(
-    #         user_id=debited_wallet.user.id,
-    #         db=db,
-    #     )
+    if not scan_info.bypass_membership:
+        if store.structure.association_membership_id is not None:
+            memberships = await cruds_memberships.get_user_memberships_by_user_id_and_association_membership_id(
+                user_id=debited_wallet.user.id,
+                association_membership_id=store.structure.association_membership_id,
+                db=db,
+            )
+            today = datetime.now(UTC).date()
+            if not any(
+                membership.start_date <= today <= membership.end_date
+                for membership in memberships
+            ):
+                # We remove the QR Code from the list of used QR Code since we want to allow the seller to scan it again whith a bypass_membership flag if the transaction must be done without a membership
+                await cruds_myeclpay.delete_used_qrcode(
+                    qr_code_id=scan_info.qr_code_id,
+                    db=db,
+                )
+                raise HTTPException(
+                    status_code=400,
+                    detail="User does not have the required membership",
+                )
 
     # We increment the receiving wallet balance
     await cruds_myeclpay.increment_wallet_balance(

@@ -4,6 +4,7 @@ from uuid import UUID
 from pydantic import Base64Bytes, BaseModel
 
 from app.core import schemas_core
+from app.core.memberships import schemas_memberships
 from app.core.myeclpay.types_myeclpay import (
     HistoryType,
     TransactionStatus,
@@ -12,23 +13,23 @@ from app.core.myeclpay.types_myeclpay import (
     WalletDeviceStatus,
     WalletType,
 )
-from app.types.membership import AvailableAssociationMembership
 
 
 class StructureBase(BaseModel):
     name: str
-    membership: AvailableAssociationMembership | None = None
+    association_membership_id: UUID | None = None
     manager_user_id: str
 
 
 class Structure(StructureBase):
     id: UUID
     manager_user: schemas_core.CoreUserSimple
+    association_membership: schemas_memberships.MembershipSimple | None
 
 
 class StructureUpdate(BaseModel):
     name: str | None = None
-    membership: AvailableAssociationMembership | None = None
+    association_membership_id: UUID | None = None
 
 
 class StructureTranfert(BaseModel):
@@ -55,7 +56,6 @@ class UserStore(Store):
 
 class StoreUpdate(BaseModel):
     name: str | None = None
-    membership: AvailableAssociationMembership | None = None
 
 
 class SellerCreation(BaseModel):
