@@ -1,5 +1,5 @@
 import base64
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 import pytest_asyncio
@@ -23,7 +23,6 @@ from app.core.myeclpay.types_myeclpay import (
     WalletType,
 )
 from app.core.myeclpay.utils_myeclpay import LATEST_TOS, compute_signable_data
-from app.types.membership import AvailableAssociationMembership
 from tests.commons import (
     TestingSessionLocal,
     add_object_to_db,
@@ -52,7 +51,8 @@ ecl_user2_wallet: models_myeclpay.Wallet
 ecl_user2_wallet_device: models_myeclpay.WalletDevice
 ecl_user2_payment: models_myeclpay.UserPayment
 
-
+association_membership: models_core.CoreAssociationMembership
+association_membership_user: models_core.CoreAssociationUserMembership
 structure: models_myeclpay.Structure
 store_wallet: models_myeclpay.Wallet
 store: models_myeclpay.Store
@@ -84,14 +84,23 @@ async def init_objects() -> None:
     admin_user = await create_user_with_groups(groups=[GroupType.admin])
     admin_user_token = create_api_access_token(admin_user)
 
+    global association_membership
+    association_membership = models_core.CoreAssociationMembership(
+        id=uuid4(),
+        name="Test Association Membership",
+        group_id=GroupType.BDE,
+    )
+    await add_object_to_db(association_membership)
+
     global structure_manager_user, structure_manager_user_token, structure
 
     structure_manager_user = await create_user_with_groups(groups=[])
     structure_manager_user_token = create_api_access_token(structure_manager_user)
+
     structure = models_myeclpay.Structure(
         id=uuid4(),
         name="Test Structure",
-        membership=AvailableAssociationMembership.aeecl,
+        association_membership_id=association_membership.id,
         manager_user_id=structure_manager_user.id,
     )
 
@@ -99,11 +108,20 @@ async def init_objects() -> None:
 
     # ecl_user
 
-    global ecl_user, ecl_user_access_token
+    global ecl_user, ecl_user_access_token, association_membership_user
     ecl_user = await create_user_with_groups(
         groups=[],
     )
     ecl_user_access_token = create_api_access_token(ecl_user)
+
+    association_membership_user = models_core.CoreAssociationUserMembership(
+        id=uuid4(),
+        user_id=ecl_user.id,
+        association_membership_id=association_membership.id,
+        start_date=datetime.now(UTC) - timedelta(days=1),
+        end_date=datetime.now(UTC) + timedelta(days=1),
+    )
+    await add_object_to_db(association_membership_user)
 
     global ecl_user_wallet
     ecl_user_wallet = models_myeclpay.Wallet(
@@ -392,7 +410,7 @@ async def test_create_structure(client: TestClient):
         headers={"Authorization": f"Bearer {admin_user_token}"},
         json={
             "name": "Test Structure USEECL",
-            "membership": AvailableAssociationMembership.useecl,
+            "association_membership_id": str(association_membership.id),
             "manager_user_id": structure_manager_user.id,
         },
     )
@@ -443,7 +461,6 @@ async def test_delete_structure_as_admin(client: TestClient):
     new_structure = models_myeclpay.Structure(
         id=uuid4(),
         name="Test Structure 2",
-        membership=AvailableAssociationMembership.aeecl,
         manager_user_id=structure_manager_user.id,
     )
     await add_object_to_db(new_structure)
@@ -497,7 +514,6 @@ async def test_transfer_structure_manager_as_manager(
     new_structure = models_myeclpay.Structure(
         id=uuid4(),
         name="Test Structure 2",
-        membership=AvailableAssociationMembership.aeecl,
         manager_user_id=structure_manager_user.id,
     )
     await add_object_to_db(new_structure)
@@ -597,7 +613,6 @@ async def test_update_store_non_store_admin(client: TestClient):
         },
         json={
             "name": "new name",
-            "membership": AvailableAssociationMembership.aeecl,
         },
     )
     assert response.status_code == 403

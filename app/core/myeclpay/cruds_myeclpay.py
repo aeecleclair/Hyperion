@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core import schemas_core
+from app.core.memberships import schemas_memberships
 from app.core.myeclpay import models_myeclpay, schemas_myeclpay
 from app.core.myeclpay.types_myeclpay import (
     TransactionStatus,
@@ -24,7 +25,7 @@ async def create_structure(
         models_myeclpay.Structure(
             id=structure.id,
             name=structure.name,
-            membership=structure.membership,
+            association_membership_id=structure.association_membership_id,
             manager_user_id=structure.manager_user_id,
         ),
     )
@@ -114,7 +115,14 @@ async def get_structures(
     return [
         schemas_myeclpay.Structure(
             name=structure.name,
-            membership=structure.membership,
+            association_membership_id=structure.association_membership_id,
+            association_membership=schemas_memberships.MembershipSimple(
+                id=structure.association_membership.id,
+                name=structure.association_membership.name,
+                group_id=structure.association_membership.group_id,
+            )
+            if structure.association_membership
+            else None,
             manager_user_id=structure.manager_user_id,
             id=structure.id,
             manager_user=schemas_core.CoreUserSimple(
@@ -148,7 +156,14 @@ async def get_structure_by_id(
     return (
         schemas_myeclpay.Structure(
             name=structure.name,
-            membership=structure.membership,
+            association_membership_id=structure.association_membership_id,
+            association_membership=schemas_memberships.MembershipSimple(
+                id=structure.association_membership.id,
+                name=structure.association_membership.name,
+                group_id=structure.association_membership.group_id,
+            )
+            if structure.association_membership
+            else None,
             manager_user_id=structure.manager_user_id,
             id=structure.id,
             manager_user=schemas_core.CoreUserSimple(
@@ -381,7 +396,14 @@ async def get_wallets(
                 structure=schemas_myeclpay.Structure(
                     id=wallet.store.structure.id,
                     name=wallet.store.structure.name,
-                    membership=wallet.store.structure.membership,
+                    association_membership_id=wallet.store.structure.association_membership_id,
+                    association_membership=schemas_memberships.MembershipSimple(
+                        id=wallet.store.structure.association_membership.id,
+                        name=wallet.store.structure.association_membership.name,
+                        group_id=wallet.store.structure.association_membership.group_id,
+                    )
+                    if wallet.store.structure.association_membership
+                    else None,
                     manager_user_id=wallet.store.structure.manager_user_id,
                     manager_user=schemas_core.CoreUserSimple(
                         id=wallet.store.structure.manager_user.id,

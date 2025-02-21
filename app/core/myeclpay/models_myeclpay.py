@@ -13,7 +13,6 @@ from app.core.myeclpay.types_myeclpay import (
     WalletDeviceStatus,
     WalletType,
 )
-from app.types.membership import AvailableAssociationMembership
 from app.types.sqlalchemy import Base, PrimaryKey
 
 
@@ -102,11 +101,17 @@ class Structure(Base):
     __tablename__ = "myeclpay_structure"
 
     id: Mapped[PrimaryKey]
-    name: Mapped[str]
-    membership: Mapped[AvailableAssociationMembership | None]
+    name: Mapped[str] = mapped_column(unique=True)
     manager_user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"))
+    association_membership_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("core_association_membership.id"),
+        default=None,
+    )
 
     manager_user: Mapped[models_core.CoreUser] = relationship(init=False, lazy="joined")
+    association_membership: Mapped[models_core.CoreAssociationMembership | None] = (
+        relationship(init=False, lazy="joined")
+    )
 
 
 class StructureManagerTransfert(Base):

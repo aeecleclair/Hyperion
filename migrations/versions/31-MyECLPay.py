@@ -7,8 +7,6 @@ from collections.abc import Sequence
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from sqlalchemy.dialects import postgresql
-
 if TYPE_CHECKING:
     from pytest_alembic import MigrationContext
 
@@ -19,7 +17,7 @@ from app.types.sqlalchemy import TZDateTime
 
 # revision identifiers, used by Alembic.
 revision: str = "e16b58cc6084"
-down_revision: str | None = "c778706af06f"
+down_revision: str | None = "ea30ad00bb01"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -67,13 +65,8 @@ def upgrade() -> None:
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("name", sa.String(), nullable=False),
         sa.Column(
-            "membership",
-            postgresql.ENUM(
-                "aeecl",
-                "useecl",
-                name="availableassociationmembership",
-                create_type=False,
-            ),
+            "association_membership_id",
+            sa.Uuid(),
             nullable=True,
         ),
         sa.Column("manager_user_id", sa.String(), nullable=False),
@@ -82,6 +75,11 @@ def upgrade() -> None:
             ["core_user.id"],
         ),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("name"),
+        sa.ForeignKeyConstraint(
+            ["association_membership_id"],
+            ["core_association_membership.id"],
+        ),
     )
     op.create_table(
         "myeclpay_structure_manager_transfer",
