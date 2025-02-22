@@ -20,6 +20,14 @@ from app.types.module import CoreModule
 
 router = APIRouter(tags=["Memberships"])
 
+
+core_module = CoreModule(
+    root="memberships",
+    tag="Memberships",
+    router=router,
+)
+
+
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 core_module = CoreModule(
