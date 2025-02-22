@@ -75,15 +75,12 @@ class LoanFactory(Factory):
             ),
         )
 
-        user = await cruds_users.get_user_by_email(db, "demo.test@myecl.fr")
-        if user is None:
-            return
         loan_id_1 = str(uuid.uuid4())
         await cruds_loan.create_loan(
             db=db,
             loan=models_loan.Loan(
                 id=loan_id_1,
-                borrower_id=user.id,
+                borrower_id=CoreFactory.demo_user_id,
                 loaner_id=loaner_id_1,
                 start=date(2025, 2, 22),
                 end=date(2025, 2, 25),
@@ -100,7 +97,7 @@ class LoanFactory(Factory):
             db=db,
             loan=models_loan.Loan(
                 id=loan_id_2,
-                borrower_id=user.id,
+                borrower_id=CoreFactory.demo_user_id,
                 loaner_id=loaner_id_2,
                 start=date(2025, 2, 22),
                 end=date(2025, 2, 25),
