@@ -37,7 +37,7 @@ class AdvertFactory(Factory):
             db=db,
             db_advert=models_advert.Advert(
                 title="Info M16",
-                content="Ne casser pas les tables svp !",
+                content="Ne cassez pas les tables svp !",
                 id=str(uuid.uuid4()),
                 date=datetime.now(UTC) - timedelta(days=1),
                 tags="important",
