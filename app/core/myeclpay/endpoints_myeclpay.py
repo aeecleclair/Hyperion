@@ -957,6 +957,7 @@ async def get_tos():
 async def get_user_tos(
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user()),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Get the latest TOS version and the user signed TOS version.
@@ -978,6 +979,8 @@ async def get_user_tos(
         accepted_tos_version=existing_user_payment.accepted_tos_version,
         latest_tos_version=LATEST_TOS,
         tos_content=TOS_CONTENT,
+        max_transaction_total=MAX_TRANSACTION_TOTAL,
+        max_wallet_balance=settings.MYECLPAY_MAXIMUM_WALLET_BALANCE,
     )
 
 
