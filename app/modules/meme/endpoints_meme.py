@@ -393,7 +393,7 @@ async def add_vote(
 
 @module.router.delete(
     "/meme/memes/{meme_id}/vote/",
-    status_code=201,
+    status_code=204,
 )
 async def delete_vote(
     meme_id: uuid.UUID,
@@ -425,7 +425,7 @@ async def delete_vote(
 
 @module.router.patch(
     "/meme/memes/{meme_id}/vote/",
-    status_code=201,
+    status_code=204,
 )
 async def update_vote(
     meme_id: uuid.UUID,
