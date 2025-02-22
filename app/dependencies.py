@@ -24,9 +24,9 @@ from sqlalchemy.ext.asyncio import (
 from app.core import security
 from app.core.auth import schemas_auth
 from app.core.config import Settings, construct_prod_settings
-from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import AccountType, GroupType, get_ecl_account_types
 from app.core.payment.payment_tool import PaymentTool
+from app.core.users import models_users
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.types.scheduler import OfflineScheduler, Scheduler
 from app.types.scopes_type import ScopeType
@@ -267,13 +267,13 @@ def get_user_from_token_with_scopes(
     scopes: list[list[ScopeType]],
 ) -> Callable[
     [AsyncSession, schemas_auth.TokenData],
-    Coroutine[Any, Any, models_core.CoreUser],
+    Coroutine[Any, Any, models_users.CoreUser],
 ]:
     """
     Generate a dependency which will:
      * check the request header contain a valid JWT token
      * make sure the token contain the given scopes
-     * return the corresponding user `models_core.CoreUser` object
+     * return the corresponding user `models_users.CoreUser` object
 
     This endpoint allows to require scopes other than the API scope. This should only be used by the auth endpoints.
     To restrict an endpoint from the API, use `is_user_in`.
@@ -282,7 +282,7 @@ def get_user_from_token_with_scopes(
     async def get_current_user(
         db: AsyncSession = Depends(get_db),
         token_data: schemas_auth.TokenData = Depends(get_token_data),
-    ) -> models_core.CoreUser:
+    ) -> models_users.CoreUser:
         """
         Dependency that makes sure the token is valid, contains the expected scopes and returns the corresponding user.
         The expected scopes are passed as list of list of scopes, each list of scopes is an "AND" condition, and the list of list of scopes is an "OR" condition.
@@ -303,7 +303,7 @@ def is_user(
     excluded_account_types: list[AccountType] | None = None,
     included_account_types: list[AccountType] | None = None,
     exclude_external: bool = False,
-) -> Callable[[models_core.CoreUser], models_core.CoreUser]:
+) -> Callable[[models_users.CoreUser], models_users.CoreUser]:
     """
     A dependency that will:
         * check if the request header contains a valid API JWT token (a token that can be used to call endpoints from the API)
@@ -319,10 +319,10 @@ def is_user(
     included_account_types = included_account_types or list(AccountType)
 
     def is_user(
-        user: models_core.CoreUser = Depends(
+        user: models_users.CoreUser = Depends(
             get_user_from_token_with_scopes([[ScopeType.API]]),
         ),
-    ) -> models_core.CoreUser:
+    ) -> models_users.CoreUser:
         groups_id: list[str] = [group.id for group in user.groups]
         if GroupType.admin in groups_id:
             return user
@@ -360,11 +360,11 @@ def is_user(
 
 
 def is_user_a_member(
-    user: models_core.CoreUser = Depends(
+    user: models_users.CoreUser = Depends(
         is_user(exclude_external=True),
     ),
     request_id: str = Depends(get_request_id),
-) -> models_core.CoreUser:
+) -> models_users.CoreUser:
     """
     A dependency that will:
         * check if the request header contains a valid API JWT token (a token that can be used to call endpoints from the API)
@@ -377,11 +377,11 @@ def is_user_a_member(
 
 
 def is_user_an_ecl_member(
-    user: models_core.CoreUser = Depends(
+    user: models_users.CoreUser = Depends(
         is_user(included_account_types=get_ecl_account_types()),
     ),
     request_id: str = Depends(get_request_id),
-) -> models_core.CoreUser:
+) -> models_users.CoreUser:
     """
     A dependency that will:
         * check if the request header contains a valid API JWT token (a token that can be used to call endpoints from the API)
@@ -398,21 +398,21 @@ def is_user_an_ecl_member(
 def is_user_in(
     group_id: GroupType,
     exclude_external: bool = False,
-) -> Callable[[models_core.CoreUser], Coroutine[Any, Any, models_core.CoreUser]]:
+) -> Callable[[models_users.CoreUser], Coroutine[Any, Any, models_users.CoreUser]]:
     """
     Generate a dependency which will:
         * check if the request header contains a valid API JWT token (a token that can be used to call endpoints from the API)
         * make sure the user making the request exists and is a member of the group with the given id
         * make sure the user is not an external user if `exclude_external` is True
-        * return the corresponding user `models_core.CoreUser` object
+        * return the corresponding user `models_users.CoreUser` object
     """
 
     async def is_user_in(
-        user: models_core.CoreUser = Depends(
+        user: models_users.CoreUser = Depends(
             is_user(included_groups=[group_id], exclude_external=exclude_external),
         ),
         request_id: str = Depends(get_request_id),
-    ) -> models_core.CoreUser:
+    ) -> models_users.CoreUser:
         """
         A dependency that checks that user is a member of the group with the given id then returns the corresponding user.
         """

@@ -13,13 +13,13 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.core import security
 from app.core.auth import schemas_auth
 from app.core.config import Settings
-from app.core.core_endpoints import models_core, schemas_core
-from app.core.groups import cruds_groups
+from app.core.core_endpoints import schemas_core
+from app.core.groups import cruds_groups, models_groups
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.payment import cruds_payment, models_payment, schemas_payment
 from app.core.payment.payment_tool import PaymentTool
 from app.core.schools.schools_type import SchoolType
-from app.core.users import cruds_users
+from app.core.users import cruds_users, models_users
 from app.dependencies import get_settings
 from app.types.exceptions import RedisConnectionError
 from app.types.floors_type import FloorsType
@@ -128,7 +128,7 @@ async def create_user_with_groups(
     name: str | None = None,
     firstname: str | None = None,
     floor: FloorsType | None = None,
-) -> models_core.CoreUser:
+) -> models_users.CoreUser:
     """
     Add a dummy user to the database
     User property will be randomly generated if not provided
@@ -140,7 +140,7 @@ async def create_user_with_groups(
     password_hash = security.get_password_hash(password or get_random_string())
     school_id = school_id.value if isinstance(school_id, SchoolType) else school_id
 
-    user = models_core.CoreUser(
+    user = models_users.CoreUser(
         id=user_id,
         email=email or (get_random_string() + "@etu.ec-lyon.fr"),
         school_id=school_id,
@@ -163,7 +163,7 @@ async def create_user_with_groups(
             for group in groups:
                 await cruds_groups.create_membership(
                     db=db,
-                    membership=models_core.CoreMembership(
+                    membership=models_groups.CoreMembership(
                         group_id=group.value,
                         user_id=user_id,
                         description=None,
@@ -182,7 +182,7 @@ async def create_user_with_groups(
 
 
 def create_api_access_token(
-    user: models_core.CoreUser,
+    user: models_users.CoreUser,
     expires_delta: timedelta | None = None,
 ):
     """

@@ -4,8 +4,8 @@ import uuid
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import GroupType
+from app.core.users import models_users
 from app.modules.booking.types_booking import Decision
 from app.modules.calendar import models_calendar
 from app.modules.calendar.types_calendar import CalendarEventType
@@ -17,8 +17,8 @@ from tests.commons import (
 
 calendar_event: models_calendar.Event
 calendar_event_to_delete: models_calendar.Event
-calendar_user_bde: models_core.CoreUser
-calendar_user_simple: models_core.CoreUser
+calendar_user_bde: models_users.CoreUser
+calendar_user_simple: models_users.CoreUser
 token_bde: str
 token_simple: str
 

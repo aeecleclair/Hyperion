@@ -3,7 +3,6 @@ from datetime import UTC, datetime, timedelta
 from fastapi import APIRouter, Body, Depends, HTTPException, Path
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import GroupType
 from app.core.notification import (
     cruds_notification,
@@ -11,6 +10,7 @@ from app.core.notification import (
     schemas_notification,
 )
 from app.core.notification.notification_types import CustomTopic, Topic
+from app.core.users import models_users
 from app.dependencies import (
     get_db,
     get_notification_manager,
@@ -39,7 +39,7 @@ core_module = CoreModule(
 async def register_firebase_device(
     firebase_token: str = Body(embed=True),
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(is_user()),
     notification_manager: NotificationManager = Depends(get_notification_manager),
 ):
     """
@@ -99,7 +99,7 @@ async def register_firebase_device(
 async def unregister_firebase_device(
     firebase_token: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(is_user()),
     notification_manager: NotificationManager = Depends(get_notification_manager),
 ):
     """
@@ -134,7 +134,7 @@ async def subscribe_to_topic(
         description="The topic to subscribe to. The Topic may be followed by an additional identifier (ex: cinema_4c029b5f-2bf7-4b70-85d4-340a4bd28653)",
     ),
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(is_user()),
     notification_manager: NotificationManager = Depends(get_notification_manager),
 ):
     """
@@ -165,7 +165,7 @@ async def subscribe_to_topic(
 async def unsubscribe_to_topic(
     topic_str: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(is_user()),
     notification_manager: NotificationManager = Depends(get_notification_manager),
 ):
     """
@@ -190,7 +190,7 @@ async def unsubscribe_to_topic(
 )
 async def get_topic(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     """
     Get topics the user is subscribed to
@@ -219,7 +219,7 @@ async def get_topic(
 async def get_topic_identifier(
     topic: Topic,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     """
     Get custom topic (with identifiers) the user is subscribed to
@@ -247,7 +247,7 @@ async def get_topic_identifier(
     status_code=201,
 )
 async def send_notification(
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
@@ -271,7 +271,7 @@ async def send_notification(
     status_code=201,
 )
 async def send_future_notification(
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
     notification_tool: NotificationTool = Depends(get_notification_tool),
     scheduler: Scheduler = Depends(get_scheduler),
 ):
@@ -299,7 +299,7 @@ async def send_future_notification(
     status_code=201,
 )
 async def send_notification_topic(
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
@@ -323,7 +323,7 @@ async def send_notification_topic(
     status_code=201,
 )
 async def send_future_notification_topic(
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
     notification_tool: NotificationTool = Depends(get_notification_tool),
     scheduler: Scheduler = Depends(get_scheduler),
 ):
@@ -352,7 +352,7 @@ async def send_future_notification_topic(
     response_model=list[schemas_notification.FirebaseDevice],
 )
 async def get_devices(
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
     db: AsyncSession = Depends(get_db),
 ):
     """
