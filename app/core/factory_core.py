@@ -1,8 +1,11 @@
 import uuid
+from datetime import UTC, datetime
 
 from app.core import models_core, security
 from app.core.groups import cruds_groups, groups_type
+from app.core.schools.schools_type import SchoolType
 from app.core.users import cruds_users
+from app.types.floors_type import FloorsType
 from app.utils.factory import Factory
 
 
@@ -57,11 +60,9 @@ class CoreFactory(Factory):
             "Juju",
         ]
 
-        floor = ["T1", "U1", "U2", "U4", "U56", "U56", "X1", "X2", "X3", "X4"]
-
         password = "password"
 
-        groups = [[groups_type.GroupType.student] for _ in range(10)]
+        groups: list[list[groups_type.GroupType]] = [[], [], [], []]
         groups[0].append(groups_type.GroupType.admin)
         groups[1].append(groups_type.GroupType.amap)
         groups[2].append(groups_type.GroupType.BDE)
@@ -90,17 +91,22 @@ class CoreFactory(Factory):
                 nickname=nickname[i],
                 name=name[i],
                 email=email[i],
-                floor=floor[i],
+                floor=FloorsType.Adoma,
                 phone=phone[i],
                 promo=promos[i],
+                school_id=SchoolType.no_school.value,
+                account_type=groups_type.AccountType.student,
+                birthday=None,
+                created_on=datetime.now(tz=UTC),
             )
             await cruds_users.create_user(db=db, user=user)
-            for group in groups[i]:
+            for group in groups[i%4]:
                 await cruds_groups.create_membership(
                     db=db,
                     membership=models_core.CoreMembership(
                         group_id=group.value,
                         user_id=user.id,
+                        description="Groupe de test",
                     ),
                 )
 
@@ -118,8 +124,8 @@ class CoreFactory(Factory):
             )
 
     async def run(self, db):
-        await CoreFactory.create_core_users(db)
-        await CoreFactory.create_core_groups(db)
+        await self.create_core_users(db)
+        await self.create_core_groups(db)
 
     async def should_run(self, db):
         user = await cruds_users.get_users(db=db)
