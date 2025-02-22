@@ -1,26 +1,21 @@
-from fastapi import FastAPI
+from abc import ABC, abstractmethod
 
-from app.dependencies import get_db
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
-class Factory:
+class Factory(ABC):
     def __init__(
         self,
         name: str,
-        depends_on: list[str],
-        sub_factories: list,
-        should_run,
+        depends_on: list["Factory"],
     ) -> None:
         self.name = name
         self.depends_on = depends_on
-        self.sub_factories = sub_factories
-        self.should_run_test = should_run
 
-    async def should_run(self, app: FastAPI) -> bool:
-        async for db in app.dependency_overrides.get(get_db, get_db)():
-            return await self.should_run_test(db)
+    @abstractmethod
+    async def should_run(self, db: AsyncSession) -> bool:
+        pass
 
-    async def run(self, app: FastAPI):
-        async for db in app.dependency_overrides.get(get_db, get_db)():
-            for sub_factory in self.sub_factories:
-                return await sub_factory(db)
+    @abstractmethod
+    async def run(self, db: AsyncSession):
+        pass
