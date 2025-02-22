@@ -177,7 +177,7 @@ async def hide_meme_by_id(
     try:
         await cruds_meme.update_meme_ban_status(
             db=db,
-            ban_status=types_meme.MemeStatus.banned,
+            ban_status=types_meme.MemeStatus.hidden,
             meme_id=meme_id,
         )
         await db.commit()
@@ -234,7 +234,7 @@ async def delete_meme_by_id(
             status_code=404,
             detail="Invalid meme_id",
         )
-    if meme.status == types_meme.MemeStatus.banned:
+    if meme.status == types_meme.MemeStatus.hidden:
         raise HTTPException(
             status_code=403,
             detail="You can't delete a banned meme",
@@ -492,7 +492,7 @@ async def ban_user(
         await cruds_meme.update_ban_status_of_memes_from_user(
             db=db,
             user_id=user_id,
-            new_ban_status=types_meme.MemeStatus.banned,
+            new_ban_status=types_meme.MemeStatus.hidden,
         )
         await db.commit()
     except Exception:

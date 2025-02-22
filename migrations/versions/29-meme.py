@@ -24,7 +24,7 @@ depends_on: str | Sequence[str] | None = None
 
 class MemeStatus(Enum):
     neutral = "neutral"
-    banned = "banned"
+    hidden = "hidden"
 
 
 def upgrade() -> None:

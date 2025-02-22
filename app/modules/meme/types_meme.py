@@ -3,7 +3,7 @@ from enum import Enum
 
 class MemeStatus(str, Enum):
     neutral = "neutral"
-    banned = "banned"
+    hidden = "hidden"
 
 
 class MemeSort(str, Enum):

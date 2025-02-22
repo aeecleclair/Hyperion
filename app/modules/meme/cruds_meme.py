@@ -329,7 +329,7 @@ async def get_hidden_memes(
             selectinload(models_meme.Meme.user),
         )
         .execution_options(populate_existing=True)
-        .where(models_meme.Meme.status == types_meme.MemeStatus.banned)
+        .where(models_meme.Meme.status == types_meme.MemeStatus.hidden)
         .order_by(
             models_meme.Meme.creation_time.desc()
             if descending
