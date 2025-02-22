@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import Settings
 from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.notification.schemas_notification import Message
@@ -13,6 +14,7 @@ from app.dependencies import (
     get_db,
     get_notification_tool,
     get_scheduler,
+    get_settings,
     is_user_a_member,
     is_user_in,
 )
@@ -20,6 +22,7 @@ from app.modules.loan import cruds_loan, models_loan, schemas_loan
 from app.types.module import Module
 from app.types.scheduler import Scheduler
 from app.utils.communication.notifications import NotificationTool
+from app.utils.mail.mailworker import send_email
 from app.utils.tools import (
     is_group_id_valid,
     is_user_id_valid,
@@ -502,6 +505,7 @@ async def create_loan(
     user: models_core.CoreUser = Depends(is_user_a_member),
     notification_tool: NotificationTool = Depends(get_notification_tool),
     scheduler: Scheduler = Depends(get_scheduler),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Create a new loan in database and add the requested items
@@ -642,6 +646,16 @@ async def create_loan(
         job_id=f"loan_start_{loan.id}",
     )
 
+    scheduler.queue_job_defer_to(
+        send_email(
+            recipient=loan.borrower.email,
+            subject="📦 Prêt à rendre bientôt !",
+            content=f"Salut, c'est Ohkaÿe, la respo matos Éclair, t'as emprunté {', '.join([item.total_quantity + ' ' + item.name for item in loan.items])} à {loan.loaner.name}. Il va falloir que tu passes le rendre rapidement si possible car ton prêt finit dans une semaine. Attention pour les emprunts de pc, des pénalités peuvent être appliquées. Merci ! ⚡",
+        ),
+        job_id=f"loan_end_{loan.id}",
+        defer_date=loan.end - timedelta(days=7),
+    )
+
     return schemas_loan.Loan(items_qty=items_qty_ret, **loan.__dict__)
 
 
@@ -654,6 +668,8 @@ async def update_loan(
     loan_update: schemas_loan.LoanUpdate,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
+    scheduler: Scheduler = Depends(get_scheduler),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Update a loan and its items.
@@ -768,6 +784,18 @@ async def update_loan(
         )
         await cruds_loan.create_loan_content(loan_content=loan_content, db=db)
 
+        scheduler.cancel_job(job_id=f"loan_end_{loan.id}")
+        scheduler.queue_job_defer_to(
+            send_email(
+                recipient=loan.borrower.email,
+                subject="📦 Prêt à rendre bientôt !",
+                content=f"Salut, c'est Ohkaÿe, la respo matos Éclair, t'as emprunté {', '.join([item.total_quantity + ' ' + item.name for item in loan.items])} à {loan.loaner.name}. Il va falloir que tu passes le rendre rapidement si possible car ton prêt finit dans une semaine. Attention pour les emprunts de pc, des pénalités peuvent être appliquées. Merci ! ⚡",
+                settings=settings,
+            ),
+            job_id=f"loan_end_{loan.id}",
+            defer_date=loan.end - timedelta(days=7),
+        )
+
 
 @module.router.delete(
     "/loans/{loan_id}",
@@ -777,6 +805,7 @@ async def delete_loan(
     loan_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
+    scheduler: Scheduler = Depends(get_scheduler),
 ):
     """
     Delete a loan
@@ -817,6 +846,8 @@ async def delete_loan(
 
     await cruds_loan.delete_loan_content_by_loan_id(loan_id=loan_id, db=db)
     await cruds_loan.delete_loan_by_id(loan_id=loan_id, db=db)
+
+    scheduler.cancel_job(job_id=f"loan_end_{loan.id}")
 
 
 @module.router.post(
@@ -877,6 +908,8 @@ async def return_loan(
         scheduler=scheduler,
         job_id=f"loan_end_{loan.id}",
     )
+
+    scheduler.cancel_job(job_id=f"loan_end_{loan.id}")
 
 
 @module.router.post(
