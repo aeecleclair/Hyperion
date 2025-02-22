@@ -7,7 +7,7 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 from PIL import Image
 
-from app.core import models_core
+from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import GroupType
 from app.modules.raid import coredata_raid, models_raid
 from app.modules.raid.models_raid import Document, Participant, SecurityFile, Team

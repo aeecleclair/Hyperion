@@ -6,8 +6,8 @@ from urllib.parse import parse_qs, urlparse
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from app.core import models_core
 from app.core.auth import models_auth
+from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import AccountType, GroupType
 from tests.commons import (
     add_object_to_db,

@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from app.core import models_core
+from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import GroupType
 from app.modules.amap import models_amap
 from app.modules.amap.types_amap import AmapSlotType, DeliveryStatusType

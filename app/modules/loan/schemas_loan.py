@@ -2,7 +2,7 @@ from datetime import date
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.core import schemas_core
+from app.core.core_endpoints import schemas_core
 
 
 class LoanerBase(BaseModel):

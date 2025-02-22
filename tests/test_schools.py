@@ -4,7 +4,7 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
-from app.core import models_core
+from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.schools.schools_type import SchoolType
 from tests.commons import (

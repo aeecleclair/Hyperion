@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from app.core import models_core
+from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import GroupType
 from app.modules.raffle import models_raffle
 from app.modules.raffle.types_raffle import RaffleStatusType

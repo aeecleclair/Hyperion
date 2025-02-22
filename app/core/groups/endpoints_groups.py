@@ -10,7 +10,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core, schemas_core
+from app.core.core_endpoints import models_core, schemas_core
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
 from app.core.users import cruds_users
@@ -20,8 +20,15 @@ from app.dependencies import (
     is_user_an_ecl_member,
     is_user_in,
 )
+from app.types.module import CoreModule
 
 router = APIRouter(tags=["Groups"])
+
+core_module = CoreModule(
+    root="groups",
+    tag="Groups",
+    router=router,
+)
 
 hyperion_security_logger = logging.getLogger("hyperion.security")
 

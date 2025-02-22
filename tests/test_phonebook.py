@@ -3,7 +3,7 @@ import uuid
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from app.core import models_core
+from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import GroupType
 from app.modules.phonebook import models_phonebook
 from app.modules.phonebook.types_phonebook import Kinds, RoleTags

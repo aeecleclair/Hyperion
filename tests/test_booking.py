@@ -4,7 +4,7 @@ import uuid
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from app.core import models_core
+from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import GroupType
 from app.modules.booking import models_booking
 from app.modules.booking.types_booking import Decision
