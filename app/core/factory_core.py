@@ -10,6 +10,7 @@ from app.utils.factory import Factory
 
 
 class CoreFactory(Factory):
+    demo_user_id = str(uuid.uuid4())
     def __init__(self):
         super().__init__(
             name="core",
@@ -85,7 +86,7 @@ class CoreFactory(Factory):
 
         for i in range(10):
             user = models_core.CoreUser(
-                id=str(uuid.uuid4()),
+                id=str(uuid.uuid4()) if i != 0 else self.demo_user_id,
                 password_hash=security.get_password_hash(password),
                 firstname=firstname[i],
                 nickname=nickname[i],
