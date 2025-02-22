@@ -4,7 +4,7 @@ from typing import Any
 import jwt
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
-from pydantic import computed_field, model_validator
+from pydantic import HttpUrl, computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.types.exceptions import (
@@ -110,6 +110,9 @@ class Settings(BaseSettings):
     HELLOASSO_CLIENT_ID: str | None = None
     HELLOASSO_CLIENT_SECRET: str | None = None
 
+    HELLOASSO_SLUG: str | None = None
+    HELLOASSO_MYECLPAY_SLUG: str | None = None
+
     CDR_PAYMENT_REDIRECTION_URL: str | None = None
     RAID_PAYMENT_REDIRECTION_URL: str | None = None
     MYECLPAY_PAYMENT_REDIRECTION_URL: str | None = None
@@ -120,6 +123,10 @@ class Settings(BaseSettings):
     RAID_DRIVE_API_KEY: str | None = None
     RAID_DRIVE_CLIENT_ID: str | None = None
     RAID_DRIVE_CLIENT_SECRET: str | None = None
+
+    # Trusted urls is a list of redirect payment url that can be trusted by Hyperion.
+    # These urls will be used to validate the redirect url provided by the front
+    TRUSTED_PAYMENT_REDIRECT_URLS: list[HttpUrl] = []
 
     ############################
     # PostgreSQL configuration #

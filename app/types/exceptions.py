@@ -131,3 +131,10 @@ class UserWithEmailAlreadyExistError(Exception):
 class SchedulerNotStartedError(Exception):
     def __init__(self):
         super().__init__("Scheduler not started")
+
+
+class MissingHelloAssoSlugError(Exception):
+    def __init__(self, slug_type: str):
+        super().__init__(
+            f"HelloAsso slug {slug_type} is missing in dotenv",
+        )

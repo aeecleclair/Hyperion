@@ -3,16 +3,17 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
-from fastapi import BackgroundTasks, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import schemas_core, security
+from app.core import security
 from app.core.config import Settings
-from app.core.groups.groups_type import AccountType, GroupType
+from app.core.core_endpoints import schemas_core
+from app.core.core_endpoints.models_core import CoreUser
+from app.core.groups.groups_type import GroupType
 from app.core.memberships import cruds_memberships, schemas_memberships
-from app.core.models_core import CoreUser
 from app.core.myeclpay import cruds_myeclpay, schemas_myeclpay
 from app.core.myeclpay.models_myeclpay import Store, WalletDevice
 from app.core.myeclpay.types_myeclpay import (
@@ -20,6 +21,7 @@ from app.core.myeclpay.types_myeclpay import (
     TransactionStatus,
     TransactionType,
     TransferType,
+    UnexpectedError,
     WalletDeviceStatus,
     WalletType,
 )
@@ -30,7 +32,7 @@ from app.core.myeclpay.utils_myeclpay import (
     TOS_CONTENT,
     compute_signable_data,
     is_user_latest_tos_signed,
-    validate_transfer,
+    validate_transfer_callback,
     verify_signature,
 )
 from app.core.notification.schemas_notification import Message
@@ -47,15 +49,18 @@ from app.dependencies import (
     is_user_an_ecl_member,
     is_user_in,
 )
-from app.types.module import Module
+from app.types.exceptions import MissingHelloAssoSlugError
+from app.types.module import CoreModule
 from app.utils.communication.notifications import NotificationTool
 from app.utils.mail.mailworker import send_email
 
-module = Module(
+router = APIRouter(tags=["Groups"])
+
+core_module = CoreModule(
     root="myeclpay",
     tag="MyECLPay",
-    payment_callback=validate_transfer,
-    default_allowed_account_types=list(AccountType),
+    router=router,
+    payment_callback=validate_transfer_callback,
 )
 
 templates = Jinja2Templates(directory="assets/templates")
@@ -65,7 +70,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 hyperion_security_logger = logging.getLogger("hyperion.security")
 
 
-@module.router.get(
+@router.get(
     "/myeclpay/structures",
     status_code=200,
     response_model=list[schemas_myeclpay.Structure],
@@ -84,7 +89,7 @@ async def get_structures(
     return structures
 
 
-@module.router.post(
+@router.post(
     "/myeclpay/structures",
     status_code=201,
     response_model=schemas_myeclpay.Structure,
@@ -136,7 +141,7 @@ async def create_structure(
     return structure_db
 
 
-@module.router.patch(
+@router.patch(
     "/myeclpay/structures/{structure_id}",
     status_code=204,
 )
@@ -164,7 +169,7 @@ async def update_structure(
         raise
 
 
-@module.router.delete(
+@router.delete(
     "/myeclpay/structures/{structure_id}",
     status_code=204,
 )
@@ -200,7 +205,7 @@ async def delete_structure(
         raise
 
 
-@module.router.post(
+@router.post(
     "/myeclpay/structures/{structure_id}/init-manager-transfer",
     status_code=201,
 )
@@ -279,7 +284,7 @@ async def init_update_structure_manager(
         )
 
 
-@module.router.get(
+@router.get(
     "/myeclpay/structures/confirm-manager-transfer",
     status_code=200,
 )
@@ -348,7 +353,7 @@ async def update_structure_manager(
     await db.commit()
 
 
-@module.router.post(
+@router.post(
     "/myeclpay/structures/{structure_id}/stores",
     status_code=201,
     response_model=schemas_myeclpay.Store,
@@ -425,7 +430,7 @@ async def create_store(
     )
 
 
-@module.router.get(
+@router.get(
     "/myeclpay/stores/{store_id}/history",
     status_code=200,
     response_model=list[schemas_myeclpay.History],
@@ -497,7 +502,7 @@ async def get_store_history(
     return history
 
 
-@module.router.get(
+@router.get(
     "/myeclpay/users/me/stores",
     status_code=200,
     response_model=list[schemas_myeclpay.UserStore],
@@ -560,7 +565,7 @@ async def get_user_stores(
     return stores
 
 
-@module.router.patch(
+@router.patch(
     "/myeclpay/stores/{store_id}",
     status_code=204,
 )
@@ -609,7 +614,7 @@ async def update_store(
     await db.commit()
 
 
-@module.router.delete(
+@router.delete(
     "/myeclpay/stores/{store_id}",
     status_code=204,
 )
@@ -677,7 +682,7 @@ async def delete_store(
     await db.commit()
 
 
-@module.router.post(
+@router.post(
     "/myeclpay/stores/{store_id}/sellers",
     status_code=201,
     response_model=schemas_myeclpay.Seller,
@@ -738,7 +743,7 @@ async def create_store_seller(
     )
 
 
-@module.router.get(
+@router.get(
     "/myeclpay/stores/{store_id}/sellers",
     status_code=200,
     response_model=list[schemas_myeclpay.Seller],
@@ -782,7 +787,7 @@ async def get_store_sellers(
     return sellers
 
 
-@module.router.patch(
+@router.patch(
     "/myeclpay/stores/{store_id}/sellers/{seller_user_id}",
     status_code=204,
 )
@@ -861,7 +866,7 @@ async def update_store_seller(
     await db.commit()
 
 
-@module.router.delete(
+@router.delete(
     "/myeclpay/stores/{store_id}/sellers/{seller_user_id}",
     status_code=204,
 )
@@ -933,7 +938,7 @@ async def delete_store_seller(
     await db.commit()
 
 
-@module.router.get(
+@router.get(
     "/myeclpay/tos",
     status_code=200,
 )
@@ -944,7 +949,7 @@ async def get_tos():
     return TOS_CONTENT
 
 
-@module.router.get(
+@router.get(
     "/myeclpay/users/me/tos",
     status_code=200,
     response_model=schemas_myeclpay.TOSSignatureResponse,
@@ -976,7 +981,7 @@ async def get_user_tos(
     )
 
 
-@module.router.post(
+@router.post(
     "/myeclpay/users/me/register",
     status_code=204,
 )
@@ -1026,7 +1031,7 @@ async def register_user(
     await db.commit()
 
 
-@module.router.post(
+@router.post(
     "/myeclpay/users/me/tos",
     status_code=204,
 )
@@ -1088,7 +1093,7 @@ async def sign_tos(
         )
 
 
-@module.router.get(
+@router.get(
     "/myeclpay/users/me/wallet/devices",
     status_code=200,
     response_model=list[schemas_myeclpay.WalletDevice],
@@ -1121,7 +1126,7 @@ async def get_user_devices(
     return wallet_devices
 
 
-@module.router.get(
+@router.get(
     "/myeclpay/users/me/wallet/devices/{wallet_device_id}",
     status_code=200,
     response_model=schemas_myeclpay.WalletDevice,
@@ -1167,7 +1172,7 @@ async def get_user_device(
     return wallet_devices
 
 
-@module.router.get(
+@router.get(
     "/myeclpay/users/me/wallet",
     status_code=200,
     response_model=schemas_myeclpay.Wallet,
@@ -1206,7 +1211,7 @@ async def get_user_wallet(
     return wallet
 
 
-@module.router.post(
+@router.post(
     "/myeclpay/users/me/wallet/devices",
     status_code=201,
     response_model=schemas_myeclpay.WalletDevice,
@@ -1277,7 +1282,7 @@ async def create_user_devices(
     return wallet_device_db
 
 
-@module.router.get(
+@router.get(
     "/myeclpay/devices/activate",
     status_code=200,
 )
@@ -1333,7 +1338,7 @@ async def activate_user_device(
     return "Wallet device activated"
 
 
-@module.router.post(
+@router.post(
     "/myeclpay/users/me/wallet/devices/{wallet_device_id}/revoke",
     status_code=204,
 )
@@ -1384,7 +1389,7 @@ async def revoke_user_devices(
     await db.commit()
 
 
-@module.router.get(
+@router.get(
     "/myeclpay/users/me/wallet/history",
     response_model=list[schemas_myeclpay.History],
 )
@@ -1434,7 +1439,7 @@ async def get_user_wallet_history(
         elif other_wallet.user is not None:
             other_wallet_name = other_wallet.user.full_name
         else:
-            other_wallet_name = "Unknown"
+            raise UnexpectedError("Transaction has no credited or debited wallet")  # noqa: TRY003
 
         history.append(
             schemas_myeclpay.History(
@@ -1493,49 +1498,50 @@ async def get_user_wallet_history(
     # TODO: limite by datetime
 
 
-@module.router.post(
-    "/myeclpay/transfer/",
-    response_model=schemas_payment.PaymentUrl,
-    status_code=201,
+@router.post(
+    "/myeclpay/transfer/admin",
+    response_model=None,
+    status_code=204,
 )
-async def get_payment_url(
-    transfer_info: schemas_myeclpay.TransferInfo,
+async def add_transfer_by_admin(
+    transfer_info: schemas_myeclpay.AdminTransferInfo,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user()),
     settings: Settings = Depends(get_settings),
     payment_tool: PaymentTool = Depends(get_payment_tool),
 ):
-    """
-    Get payment url
-    """
+    if transfer_info.transfer_type == TransferType.HELLO_ASSO:
+        raise HTTPException(
+            status_code=400,
+            detail="Admin cannot create a HelloAsso transfer",
+        )
+
     if transfer_info.amount < 100:
         raise HTTPException(
-            status_code=403,
+            status_code=400,
             detail="Please give an amount in cents, greater than 1€.",
         )
 
-    if transfer_info.transfer_type is not TransferType.HELLO_ASSO:
-        if transfer_info.credited_user_id is None:
-            raise HTTPException(
-                status_code=403,
-                detail="Please provide a credited user id for this transfer type",
-            )
-        if GroupType.BDE not in [group.id for group in user.groups]:
-            raise HTTPException(
-                status_code=403,
-                detail="User is not allowed to approve this transfer",
-            )
-        credited_user = await cruds_users.get_user_by_id(
-            user_id=transfer_info.credited_user_id,
-            db=db,
+    if transfer_info.credited_user_id is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Please provide a credited user id for this transfer type",
         )
-        if credited_user is None:
-            raise HTTPException(
-                status_code=404,
-                detail="Receiver user does not exist",
-            )
-    else:
-        credited_user = user
+    # TODO: do not let all BDE do this
+    if GroupType.BDE not in [group.id for group in user.groups]:
+        raise HTTPException(
+            status_code=403,
+            detail="User is not allowed to approve this transfer",
+        )
+    credited_user = await cruds_users.get_user_by_id(
+        user_id=transfer_info.credited_user_id,
+        db=db,
+    )
+    if credited_user is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Receiver user does not exist",
+        )
 
     user_payment = await cruds_myeclpay.get_user_payment(
         user_id=credited_user.id,
@@ -1545,6 +1551,12 @@ async def get_payment_url(
         raise HTTPException(
             status_code=404,
             detail="User is not registered for MyECL Pay",
+        )
+
+    if not is_user_latest_tos_signed(user_payment):
+        raise HTTPException(
+            status_code=400,
+            detail="User has not signed the latest TOS",
         )
 
     wallet = await cruds_myeclpay.get_wallet(
@@ -1562,82 +1574,144 @@ async def get_payment_url(
             detail="Wallet balance would exceed the maximum allowed balance",
         )
 
-    if transfer_info.transfer_type is TransferType.HELLO_ASSO:
-        user_schema = schemas_core.CoreUser(
-            account_type=credited_user.account_type,
-            school_id=credited_user.school_id,
-            email=credited_user.email,
-            birthday=credited_user.birthday,
-            promo=credited_user.promo,
-            floor=credited_user.floor,
-            phone=credited_user.phone,
-            created_on=credited_user.created_on,
-            groups=[],
-            id=credited_user.id,
-            name=credited_user.name,
-            firstname=credited_user.firstname,
-            nickname=credited_user.nickname,
-        )
-        checkout = await payment_tool.init_checkout(
-            module="myeclpay",
-            helloasso_slug="AEECL",
-            checkout_amount=transfer_info.amount,
-            checkout_name="Recharge MyECL Pay",
-            redirection_uri=settings.MYECLPAY_PAYMENT_REDIRECTION_URL or "",
-            payer_user=user_schema,
-            db=db,
-        )
-        await cruds_myeclpay.create_transfer(
-            db=db,
-            transfer=schemas_myeclpay.Transfer(
-                id=uuid.uuid4(),
-                type=transfer_info.transfer_type,
-                approver_user_id=None,
-                total=transfer_info.amount,
-                transfer_identifier=str(checkout.id),
-                wallet_id=user_payment.wallet_id,
-                creation=datetime.now(UTC),
-                confirmed=False,
-            ),
-        )
-        try:
-            await db.commit()
-        except Exception:
-            await db.rollback()
-            raise
-        return schemas_payment.PaymentUrl(
-            url=checkout.payment_url,
-        )
-    else:
-        await cruds_myeclpay.create_transfer(
-            db=db,
-            transfer=schemas_myeclpay.Transfer(
-                id=uuid.uuid4(),
-                type=transfer_info.transfer_type,
-                approver_user_id=user.id,
-                total=transfer_info.amount,
-                transfer_identifier="",
-                wallet_id=user_payment.wallet_id,
-                creation=datetime.now(UTC),
-                confirmed=True,
-            ),
-        )
-        await cruds_myeclpay.increment_wallet_balance(
+    await cruds_myeclpay.create_transfer(
+        db=db,
+        transfer=schemas_myeclpay.Transfer(
+            id=uuid.uuid4(),
+            type=transfer_info.transfer_type,
+            approver_user_id=user.id,
+            total=transfer_info.amount,
+            transfer_identifier="",  # TODO: require to provide an identifier
             wallet_id=user_payment.wallet_id,
-            amount=transfer_info.amount,
-            db=db,
-        )
-        try:
-            await db.commit()
-        except Exception:
-            await db.rollback()
-            raise
-        return schemas_payment.PaymentUrl(
-            url="",
-        )
+            creation=datetime.now(UTC),
+            confirmed=True,
+        ),
+    )
+    await cruds_myeclpay.increment_wallet_balance(
+        wallet_id=user_payment.wallet_id,
+        amount=transfer_info.amount,
+        db=db,
+    )
+    try:
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
 
 
-@module.router.post(
+@router.post(
+    "/myeclpay/transfer/init",
+    response_model=schemas_payment.PaymentUrl,
+    status_code=201,
+)
+async def init_ha_transfer(
+    transfer_info: schemas_myeclpay.TransferInfo,
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(is_user()),
+    settings: Settings = Depends(get_settings),
+    payment_tool: PaymentTool = Depends(get_payment_tool),
+):
+    """
+    Get payment url
+    """
+    if settings.HELLOASSO_MYECLPAY_SLUG is None:
+        raise MissingHelloAssoSlugError("HELLOASSO_MYECLPAY_SLUG")
+
+    # TODO
+    if transfer_info.redirect_url not in settings.TRUSTED_PAYMENT_REDIRECT_URLS:
+        hyperion_error_logger.warning(
+            f"User {user.id} tried to redirect to an untrusted URL: {transfer_info.redirect_url}",
+        )
+        raise HTTPException(
+            status_code=400,
+            detail="Redirect URL is not trusted by hyperion",
+        )
+
+    if transfer_info.amount < 100:
+        raise HTTPException(
+            status_code=400,
+            detail="Please give an amount in cents, greater than 1€.",
+        )
+
+    user_payment = await cruds_myeclpay.get_user_payment(
+        user_id=user.id,
+        db=db,
+    )
+    if user_payment is None:
+        raise HTTPException(
+            status_code=404,
+            detail="User is not registered for MyECL Pay",
+        )
+
+    if not is_user_latest_tos_signed(user_payment):
+        raise HTTPException(
+            status_code=400,
+            detail="User has not signed the latest TOS",
+        )
+
+    wallet = await cruds_myeclpay.get_wallet(
+        wallet_id=user_payment.wallet_id,
+        db=db,
+    )
+    if wallet is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Wallet does not exist",
+        )
+    if wallet.balance + transfer_info.amount > settings.MYECLPAY_MAXIMUM_WALLET_BALANCE:
+        raise HTTPException(
+            status_code=403,
+            detail="Wallet balance would exceed the maximum allowed balance",
+        )
+
+    user_schema = schemas_core.CoreUser(
+        account_type=user.account_type,
+        school_id=user.school_id,
+        email=user.email,
+        birthday=user.birthday,
+        promo=user.promo,
+        floor=user.floor,
+        phone=user.phone,
+        created_on=user.created_on,
+        groups=[],
+        id=user.id,
+        name=user.name,
+        firstname=user.firstname,
+        nickname=user.nickname,
+    )
+    checkout = await payment_tool.init_checkout(
+        module="myeclpay",
+        helloasso_slug=settings.HELLOASSO_MYECLPAY_SLUG,
+        checkout_amount=transfer_info.amount,
+        checkout_name="Recharge MyECL Pay",
+        redirection_uri=str(transfer_info.redirect_url),
+        payer_user=user_schema,
+        db=db,
+    )
+    await cruds_myeclpay.create_transfer(
+        db=db,
+        transfer=schemas_myeclpay.Transfer(
+            id=uuid.uuid4(),
+            type=TransferType.HELLO_ASSO,
+            approver_user_id=None,
+            total=transfer_info.amount,
+            transfer_identifier=str(checkout.id),
+            wallet_id=user_payment.wallet_id,
+            creation=datetime.now(UTC),
+            confirmed=False,
+        ),
+    )
+    try:
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+    return schemas_payment.PaymentUrl(
+        url=checkout.payment_url,
+    )
+
+
+@router.post(
     "/myeclpay/store/{store_id}/scan",
     status_code=201,
     response_model=schemas_myeclpay.Transaction,
@@ -1894,7 +1968,7 @@ async def store_scan_qrcode(
     )
 
 
-@module.router.post(
+@router.post(
     "/myeclpay/transaction/{transaction_id}/refund",
     status_code=204,
 )
@@ -2052,7 +2126,7 @@ async def refund_transaction(
         )
 
 
-@module.router.post(
+@router.post(
     "/myeclpay/transaction/{transaction_id}/cancel",
     status_code=204,
 )
@@ -2171,7 +2245,7 @@ async def cancel_transaction(
         )
 
 
-@module.router.get(
+@router.get(
     "/myeclpay/integrity-check",
     status_code=200,
     response_model=tuple[

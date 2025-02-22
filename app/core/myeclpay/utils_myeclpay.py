@@ -10,6 +10,10 @@ from app.core.myeclpay.schemas_myeclpay import (
     QRCodeContentBase,
     QRCodeContentData,
 )
+from app.core.myeclpay.types_myeclpay import (
+    TransferNotFoundByCallbackError,
+    TransferTotalDontMatchInCallbackError,
+)
 from app.core.payment import schemas_payment
 
 hyperion_security_logger = logging.getLogger("hyperion.security")
@@ -71,7 +75,7 @@ def is_user_latest_tos_signed(
     return user_payment.accepted_tos_version == LATEST_TOS
 
 
-async def validate_transfer(
+async def validate_transfer_callback(
     checkout_payment: schemas_payment.CheckoutPayment,
     db: AsyncSession,
 ):
@@ -86,7 +90,14 @@ async def validate_transfer(
         hyperion_error_logger.error(
             f"MyECLPay payment callback: user transfer {checkout_id} not found.",
         )
-        raise ValueError(f"User transfer {checkout_id} not found.")  # noqa: TRY003
+        raise TransferNotFoundByCallbackError(checkout_id)
+
+    if transfer.total != paid_amount:
+        hyperion_error_logger.error(
+            f"MyECLPay payment callback: user transfer {checkout_id} amount does not match the paid amount.",
+        )
+        raise TransferTotalDontMatchInCallbackError(checkout_id)
+
     try:
         await cruds_myeclpay.confirm_transfer(
             db=db,

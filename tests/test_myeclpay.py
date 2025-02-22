@@ -11,7 +11,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import (
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
-from app.core import models_core
+from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import GroupType
 from app.core.myeclpay import cruds_myeclpay, models_myeclpay
 from app.core.myeclpay.schemas_myeclpay import QRCodeContentBase
@@ -1280,16 +1280,32 @@ def test_get_transactions_success(client: TestClient):
     )
 
 
-def test_transfer_with_unregistered_user(client: TestClient):
+def test_transfer_with_redirect_url_not_trusted(client: TestClient):
     """Test transferring with an unregistered user"""
     response = client.post(
-        "/myeclpay/transfer",
+        "/myeclpay/transfer/init",
         headers={"Authorization": f"Bearer {unregistered_ecl_user_access_token}"},
         json={
             "amount": 1000,
-            "transfer_type": "hello_asso",
+            "redirect_url": "http://localhost:3000/nottrusted",
         },
     )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Redirect URL is not trusted by hyperion"
+
+
+def test_transfer_with_unregistered_user(client: TestClient):
+    """Test transferring with an unregistered user"""
+    response = client.post(
+        "/myeclpay/transfer/init",
+        headers={"Authorization": f"Bearer {unregistered_ecl_user_access_token}"},
+        json={
+            "amount": 1000,
+            "redirect_url": "http://localhost:3000/payment_callback",
+        },
+    )
+
     assert response.status_code == 404
     assert response.json()["detail"] == "User is not registered for MyECL Pay"
 
@@ -1297,14 +1313,14 @@ def test_transfer_with_unregistered_user(client: TestClient):
 def test_transfer_with_too_small_amount(client: TestClient):
     """Test transferring with an amount that is too small"""
     response = client.post(
-        "/myeclpay/transfer",
+        "/myeclpay/transfer/init",
         headers={"Authorization": f"Bearer {ecl_user_access_token}"},
         json={
             "amount": 99,
-            "transfer_type": "hello_asso",
+            "redirect_url": "http://localhost:3000/payment_callback",
         },
     )
-    assert response.status_code == 403
+    assert response.status_code == 400
     assert (
         response.json()["detail"] == "Please give an amount in cents, greater than 1€."
     )
@@ -1313,11 +1329,11 @@ def test_transfer_with_too_small_amount(client: TestClient):
 def test_transfer_with_too_big_amount(client: TestClient):
     """Test transferring with an amount that is too big"""
     response = client.post(
-        "/myeclpay/transfer",
+        "/myeclpay/transfer/init",
         headers={"Authorization": f"Bearer {ecl_user_access_token}"},
         json={
             "amount": 8001,
-            "transfer_type": "hello_asso",
+            "redirect_url": "http://localhost:3000/payment_callback",
         },
     )
     assert response.status_code == 403
@@ -1333,11 +1349,11 @@ def test_hello_asso_transfer(
 ):
     """Test transferring with the hello_asso transfer type"""
     response = client.post(
-        "/myeclpay/transfer",
+        "/myeclpay/transfer/init",
         headers={"Authorization": f"Bearer {ecl_user_access_token}"},
         json={
             "amount": 1000,
-            "transfer_type": "hello_asso",
+            "redirect_url": "http://localhost:3000/payment_callback",
         },
     )
     assert response.status_code == 201
@@ -1360,14 +1376,14 @@ def test_hello_asso_transfer(
 def test_non_hello_asso_transfer_without_credited(client: TestClient):
     """Test transferring with a non-hello_asso transfer type as a non-BDE user"""
     response = client.post(
-        "/myeclpay/transfer",
+        "/myeclpay/transfer/admin",
         headers={"Authorization": f"Bearer {ecl_user_access_token}"},
         json={
             "amount": 1000,
             "transfer_type": "cash",
         },
     )
-    assert response.status_code == 403
+    assert response.status_code == 400
     assert (
         response.json()["detail"]
         == "Please provide a credited user id for this transfer type"
@@ -1377,7 +1393,7 @@ def test_non_hello_asso_transfer_without_credited(client: TestClient):
 def test_non_hello_asso_transfer_as_non_bde(client: TestClient):
     """Test transferring with a non-hello_asso transfer type as a non-BDE user"""
     response = client.post(
-        "/myeclpay/transfer",
+        "/myeclpay/transfer/admin",
         headers={"Authorization": f"Bearer {ecl_user_access_token}"},
         json={
             "amount": 1000,
@@ -1392,16 +1408,15 @@ def test_non_hello_asso_transfer_as_non_bde(client: TestClient):
 def test_non_hello_asso_transfer_as_bde(client: TestClient):
     """Test transferring with a non-hello_asso transfer type as a BDE user"""
     response = client.post(
-        "/myeclpay/transfer",
+        "/myeclpay/transfer/admin",
         headers={"Authorization": f"Bearer {ecl_user2_access_token}"},
         json={
-            "amount": 1000,
+            "amount": 100,
             "transfer_type": "cash",
             "credited_user_id": ecl_user.id,
         },
     )
-    assert response.status_code == 201
-    assert response.json()["url"] == ""
+    assert response.status_code == 204
 
 
 def ensure_qr_code_id_is_already_used(qr_code_id: str | UUID, client: TestClient):
@@ -1814,7 +1829,7 @@ def test_store_scan_store_insufficient_ballance(client: TestClient):
 
     qr_code_content = QRCodeContentBase(
         qr_code_id=qr_code_id,
-        total=1100,
+        total=2000,
         creation=datetime.now(UTC),
         store=True,
         walled_device_id=ecl_user_wallet_device.id,

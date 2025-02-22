@@ -393,11 +393,7 @@ class PlankaAuthClient(BaseAuthClient):
     def get_userinfo(cls, user: models_users.CoreUser):
         return {
             "sub": user.id,
-            "name": get_display_name(
-                firstname=user.firstname,
-                name=user.name,
-                nickname=user.nickname,
-            ),
+            "name": user.full_name,
             "groups": [group.name for group in user.groups] + [user.account_type.value],
             "email": user.email,
         }

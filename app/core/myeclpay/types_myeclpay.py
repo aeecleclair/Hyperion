@@ -41,3 +41,19 @@ class TransferType(str, Enum):
     CHECK = "check"
     CASH = "cash"
     BANK_TRANSFER = "bank_transfer"
+
+
+class UnexpectedError(Exception):
+    pass
+
+
+class TransferNotFoundByCallbackError(Exception):
+    def __init__(self, checkout_id: str):
+        super().__init__(f"User transfer {checkout_id} not found.")
+
+
+class TransferTotalDontMatchInCallbackError(Exception):
+    def __init__(self, checkout_id: str):
+        super().__init__(
+            f"User transfer {checkout_id} amount does not match the paid amount",
+        )
