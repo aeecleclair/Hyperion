@@ -268,16 +268,19 @@ async def create_booking(
     await cruds_booking.create_booking(booking=db_booking, db=db)
     result = await cruds_booking.get_booking_by_id(db=db, booking_id=db_booking.id)
     manager_group_id = result.room.manager_id
-    manager_group = await cruds_groups.get_group_by_id(
+    manager = await cruds_booking.get_manager_by_id(
         db=db,
-        group_id=manager_group_id,
+        manager_id=manager_group_id,
     )
+    group = await cruds_groups.get_group_by_id(group_id=manager.group_id, db=db)
+
     local_start = result.start.astimezone(ZoneInfo("Europe/Paris"))
     applicant_nickname = user.nickname if user.nickname else user.firstname
     content = f"{applicant_nickname} - {result.room.name} {local_start.strftime('%m/%d/%Y, %H:%M')} - {result.reason}"
     # Setting time to Paris timezone in order to have the correct time in the notification
 
-    if manager_group:
+    if group:
+
         message = Message(
             title="📅 Réservations - Nouvelle réservation",
             content=content,
@@ -285,10 +288,10 @@ async def create_booking(
         )
 
         await notification_tool.send_notification_to_users(
-            user_ids=[user.id for user in manager_group.members],
+            user_ids=[user.id  for user in group.members],
             message=message,
         )
-
+        
     return result
 
 
