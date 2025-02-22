@@ -22,8 +22,10 @@ class CalendarFactory(Factory):
     async def run(self, db):
         await self.create_event(db)
 
-    async def create_event(db):
+    async def create_event(self, db):
         user = await cruds_users.get_user_by_email(db, "demo.test@myecl.fr")
+        if user is None:
+            return
         event = models_calendar.Event(
             id=str(uuid.uuid4()),
             name="Test event",

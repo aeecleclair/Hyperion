@@ -20,6 +20,7 @@ from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from app import api
@@ -37,6 +38,7 @@ from app.dependencies import (
     get_db,
     get_redis_client,
     get_scheduler,
+    get_settings,
     get_websocket_connection_manager,
     init_and_get_db_engine,
 )
@@ -222,10 +224,9 @@ def initialize_schools(
                     )
 
 
-async def run_factories(app: FastAPI) -> None:
+async def run_factories(db: AsyncSession, settings: Settings) -> None:
     """Run the factories to create default data in the database"""
     hyperion_error_logger = logging.getLogger("hyperion.error")
-    settings = app.dependency_overrides.get(get_settings, get_settings)()
     if not settings.FACTORIES:
         hyperion_error_logger.info("Startup: Factories are disabled")
         return
@@ -238,7 +239,10 @@ async def run_factories(app: FastAPI) -> None:
         factory_module = importlib.import_module(
             ".".join(factories_file.with_suffix("").parts),
         )
-        if hasattr(factory_module, "factory") and isinstance(factory_module.factory, Factory) : # Verify that the module has a factory class object
+        if hasattr(factory_module, "factory") and isinstance(
+            factory_module.factory,
+            Factory,
+        ):  # Verify that the module has a factory class object
             factory = factory_module.factory
             factories_list.append(factory)
         else:
@@ -256,12 +260,12 @@ async def run_factories(app: FastAPI) -> None:
             if factory.depends_on == []:
                 action = True
                 # Check if the factory should be run
-                if await factory.should_run(app):
+                if await factory.should_run(db):
                     hyperion_error_logger.info(
                         f"Startup: Running factory {factory.name}",
                     )
                     try:
-                        await factory.run(app)
+                        await factory.run(db)
                     except Exception as error:
                         hyperion_error_logger.fatal(
                             f"Startup: Could not run factories: {error}",
@@ -272,8 +276,8 @@ async def run_factories(app: FastAPI) -> None:
                         f"Startup: Factory {factory.name} is not necessary, skipping it",
                     )
                 for other_factory in factories_list:
-                    if factory.name in other_factory.depends_on:
-                        other_factory.depends_on.remove(factory)
+                    if type(factory) in other_factory.depends_on:
+                        other_factory.depends_on.remove(type(factory))
                 factories_list.remove(factory)
                 break
         if not action:
@@ -282,6 +286,8 @@ async def run_factories(app: FastAPI) -> None:
             )
             break
     hyperion_error_logger.info("Startup: Factories have been run")
+
+
 def initialize_module_visibility(
     sync_engine: Engine,
     hyperion_error_logger: logging.Logger,
@@ -437,7 +443,11 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     # https://fastapi.tiangolo.com/advanced/events/
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator:
-        await run_factories(app)
+        async for db in app.dependency_overrides.get(
+            get_db,
+            get_db,
+        )():
+            await run_factories(db, settings)
         # Init Google API credentials
         google_api = GoogleAPI()
         if google_api.is_google_api_configured(settings):
