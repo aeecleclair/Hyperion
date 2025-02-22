@@ -4,6 +4,7 @@ from datetime import UTC, datetime, time, timedelta
 from typing import TYPE_CHECKING
 
 from fastapi import Depends, HTTPException
+from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
@@ -41,6 +42,7 @@ module = Module(
 
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
+templates = Jinja2Templates(directory="assets/templates")
 
 
 @module.router.get(
@@ -645,15 +647,24 @@ async def create_loan(
         defer_date=delivery_datetime,
         job_id=f"loan_start_{loan.id}",
     )
+    end_loan_template = templates.get_template("activation_mail.html").render(
+        {
+            "loan_detail": ", ".join(
+                [str(item.total_quantity) + " " + item.name for item in loan.items],
+            ),
+            "loaner": loan.loaner.name,
+        },
+    )
 
-    scheduler.queue_job_defer_to(
+    await scheduler.queue_job_defer_to(
         send_email(
             recipient=loan.borrower.email,
             subject="📦 Prêt à rendre bientôt !",
-            content=f"Salut, c'est Ohkaÿe, la respo matos Éclair, t'as emprunté {', '.join([item.total_quantity + ' ' + item.name for item in loan.items])} à {loan.loaner.name}. Il va falloir que tu passes le rendre rapidement si possible car ton prêt finit dans une semaine. Attention pour les emprunts de pc, des pénalités peuvent être appliquées. Merci ! ⚡",
+            content=end_loan_template,
+            settings=settings,
         ),
         job_id=f"loan_end_{loan.id}",
-        defer_date=loan.end - timedelta(days=7),
+        defer_date=datetime.fromisoformat((loan.end - timedelta(days=7)).isoformat()),
     )
 
     return schemas_loan.Loan(items_qty=items_qty_ret, **loan.__dict__)
@@ -783,17 +794,26 @@ async def update_loan(
             quantity=quantity,
         )
         await cruds_loan.create_loan_content(loan_content=loan_content, db=db)
-
-        scheduler.cancel_job(job_id=f"loan_end_{loan.id}")
-        scheduler.queue_job_defer_to(
+        end_loan_template = templates.get_template("activation_mail.html").render(
+            {
+                "loan_detail": ", ".join(
+                    [str(item.total_quantity) + " " + item.name for item in loan.items],
+                ),
+                "loaner": loan.loaner.name,
+            },
+        )
+        await scheduler.cancel_job(job_id=f"loan_end_{loan.id}")
+        await scheduler.queue_job_defer_to(
             send_email(
                 recipient=loan.borrower.email,
                 subject="📦 Prêt à rendre bientôt !",
-                content=f"Salut, c'est Ohkaÿe, la respo matos Éclair, t'as emprunté {', '.join([item.total_quantity + ' ' + item.name for item in loan.items])} à {loan.loaner.name}. Il va falloir que tu passes le rendre rapidement si possible car ton prêt finit dans une semaine. Attention pour les emprunts de pc, des pénalités peuvent être appliquées. Merci ! ⚡",
+                content=end_loan_template,
                 settings=settings,
             ),
             job_id=f"loan_end_{loan.id}",
-            defer_date=loan.end - timedelta(days=7),
+            defer_date=datetime.fromisoformat(
+                (loan.end - timedelta(days=7)).isoformat(),
+            ),
         )
 
 
@@ -847,7 +867,7 @@ async def delete_loan(
     await cruds_loan.delete_loan_content_by_loan_id(loan_id=loan_id, db=db)
     await cruds_loan.delete_loan_by_id(loan_id=loan_id, db=db)
 
-    scheduler.cancel_job(job_id=f"loan_end_{loan.id}")
+    await scheduler.cancel_job(job_id=f"loan_end_{loan.id}")
 
 
 @module.router.post(
@@ -909,7 +929,7 @@ async def return_loan(
         job_id=f"loan_end_{loan.id}",
     )
 
-    scheduler.cancel_job(job_id=f"loan_end_{loan.id}")
+    await scheduler.cancel_job(job_id=f"loan_end_{loan.id}")
 
 
 @module.router.post(
