@@ -10,8 +10,8 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.core_endpoints import models_core, schemas_core
-from app.core.groups import cruds_groups
+from app.core.core_endpoints import schemas_core
+from app.core.groups import cruds_groups, models_groups
 from app.core.groups.groups_type import GroupType
 from app.core.users import cruds_users
 from app.dependencies import (
@@ -94,7 +94,7 @@ async def create_group(
         )
 
     try:
-        db_group = models_core.CoreGroup(
+        db_group = models_groups.CoreGroup(
             id=str(uuid.uuid4()),
             name=group.name,
             description=group.description,
@@ -169,7 +169,7 @@ async def create_membership(
     )
 
     try:
-        membership_db = models_core.CoreMembership(
+        membership_db = models_groups.CoreMembership(
             user_id=membership.user_id,
             group_id=membership.group_id,
             description=membership.description,
@@ -212,7 +212,7 @@ async def create_batch_membership(
 
         # We only want to add existing users to the group
         if user_db is not None:
-            membership_db = models_core.CoreMembership(
+            membership_db = models_groups.CoreMembership(
                 user_id=user_db.id,
                 group_id=batch_membership.group_id,
                 description=batch_membership.description,

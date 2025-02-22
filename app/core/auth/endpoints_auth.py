@@ -23,7 +23,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import security
 from app.core.auth import cruds_auth, models_auth, schemas_auth
 from app.core.config import Settings
-from app.core.core_endpoints import models_core
 from app.core.security import (
     authenticate_user,
     create_access_token,
@@ -31,7 +30,7 @@ from app.core.security import (
     generate_token,
     jws_algorithm,
 )
-from app.core.users import cruds_users
+from app.core.users import cruds_users, models_users
 from app.dependencies import (
     get_db,
     get_request_id,
@@ -1060,7 +1059,7 @@ async def introspect_refresh_token(
     status_code=200,
 )
 async def auth_get_userinfo(
-    user: models_core.CoreUser = Depends(
+    user: models_users.CoreUser = Depends(
         get_user_from_token_with_scopes([[ScopeType.openid], [ScopeType.profile]]),
     ),
     token_data: schemas_auth.TokenData = Depends(get_token_data),

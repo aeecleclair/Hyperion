@@ -3,19 +3,19 @@ import pytest_asyncio
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
-from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import AccountType, GroupType
+from app.core.users import models_users
 from app.dependencies import is_user
 from tests.commons import (
     create_user_with_groups,
 )
 
-admin_user: models_core.CoreUser
-user_with_needed_account_type: models_core.CoreUser
-user_with_restricted_account_type: models_core.CoreUser
-user_external: models_core.CoreUser
-user_with_restricted_group: models_core.CoreUser
-user_with_needed_group: models_core.CoreUser
+admin_user: models_users.CoreUser
+user_with_needed_account_type: models_users.CoreUser
+user_with_restricted_account_type: models_users.CoreUser
+user_external: models_users.CoreUser
+user_with_restricted_group: models_users.CoreUser
+user_with_needed_group: models_users.CoreUser
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)

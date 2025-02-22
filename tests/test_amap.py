@@ -4,8 +4,8 @@ from datetime import UTC, datetime
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import GroupType
+from app.core.users import models_users
 from app.modules.amap import models_amap
 from app.modules.amap.types_amap import AmapSlotType, DeliveryStatusType
 from tests.commons import (
@@ -15,8 +15,8 @@ from tests.commons import (
     create_user_with_groups,
 )
 
-amap_user: models_core.CoreUser
-student_user: models_core.CoreUser
+amap_user: models_users.CoreUser
+student_user: models_users.CoreUser
 product: models_amap.Product
 deletable_product: models_amap.Product
 delivery: models_amap.Delivery

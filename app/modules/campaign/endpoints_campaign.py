@@ -9,9 +9,8 @@ from fastapi.responses import FileResponse
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import GroupType
-from app.core.users import cruds_users
+from app.core.users import cruds_users, models_users
 from app.dependencies import (
     get_db,
     get_request_id,
@@ -45,7 +44,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 )
 async def get_sections(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(is_user_a_member),
 ):
     """
     Return sections in the database as a list of `schemas_campaign.SectionBase`
@@ -73,7 +72,7 @@ async def get_sections(
 async def add_section(
     section: schemas_campaign.SectionBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.CAA)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.CAA)),
 ):
     """
     Add a section.
@@ -106,7 +105,7 @@ async def add_section(
 async def delete_section(
     section_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.CAA)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.CAA)),
 ):
     """
     Delete a section.
@@ -133,7 +132,7 @@ async def delete_section(
 )
 async def get_lists(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(is_user_a_member),
 ):
     """
     Return campaign lists registered for the vote.
@@ -161,7 +160,7 @@ async def get_lists(
 async def add_list(
     campaign_list: schemas_campaign.ListBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.CAA)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.CAA)),
 ):
     """
     Add a campaign list to a section.
@@ -234,7 +233,7 @@ async def add_list(
 async def delete_list(
     list_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.CAA)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.CAA)),
 ):
     """
     Delete the campaign list with the given id.
@@ -264,7 +263,7 @@ async def delete_list(
 async def delete_lists_by_type(
     list_type: ListType | None = None,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.CAA)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.CAA)),
 ):
     """
     Delete the all lists by type.
@@ -299,7 +298,7 @@ async def update_list(
     list_id: str,
     campaign_list: schemas_campaign.ListEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.CAA)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.CAA)),
 ):
     """
     Update the campaign list with the given id.
@@ -344,7 +343,7 @@ async def update_list(
     status_code=200,
 )
 async def get_voters(
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(is_user_a_member),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -361,7 +360,7 @@ async def get_voters(
 )
 async def add_voter(
     voter: schemas_campaign.VoterGroup,
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.CAA)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.CAA)),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -391,7 +390,7 @@ async def add_voter(
 async def delete_voter_by_group_id(
     group_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.CAA)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.CAA)),
 ):
     """
     Remove a voter by its group id
@@ -414,7 +413,7 @@ async def delete_voter_by_group_id(
 )
 async def delete_voters(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.CAA)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.CAA)),
 ):
     """
     Remove voters (groups allowed to vote)
@@ -437,7 +436,7 @@ async def delete_voters(
 )
 async def open_vote(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.CAA)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.CAA)),
 ):
     """
     If the status is 'waiting', change it to 'voting' and create the blank lists.
@@ -474,7 +473,7 @@ async def open_vote(
 )
 async def close_vote(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.CAA)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.CAA)),
 ):
     """
     If the status is 'open', change it to 'closed'.
@@ -500,7 +499,7 @@ async def close_vote(
 )
 async def count_voting(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.CAA)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.CAA)),
 ):
     """
     If the status is 'closed', change it to 'counting'.
@@ -526,7 +525,7 @@ async def count_voting(
 )
 async def publish_vote(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.CAA)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.CAA)),
 ):
     """
     If the status is 'counting', change it to 'published'.
@@ -552,7 +551,7 @@ async def publish_vote(
 )
 async def reset_vote(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.CAA)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.CAA)),
 ):
     """
     Reset the vote. Can only be used if the current status is counting ou published.
@@ -597,7 +596,7 @@ async def reset_vote(
 async def vote(
     vote: schemas_campaign.VoteBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(is_user_a_member),
 ):
     """
     Add a vote for a given campaign list.
@@ -666,7 +665,7 @@ async def vote(
 )
 async def get_sections_already_voted(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(is_user_a_member),
 ):
     """
     Return the list of id of sections an user has already voted for.
@@ -700,7 +699,7 @@ async def get_sections_already_voted(
 )
 async def get_results(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(is_user_a_member),
 ):
     """
     Return the results of the vote.
@@ -755,7 +754,7 @@ async def get_results(
 )
 async def get_status_vote(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(is_user_a_member),
 ):
     """
     Get the current status of the vote.
@@ -783,7 +782,7 @@ async def get_status_vote(
 async def get_stats_for_section(
     section_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.CAA)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.CAA)),
 ):
     """
     Get stats about a given section.
@@ -808,7 +807,7 @@ async def get_stats_for_section(
 async def create_campaigns_logo(
     list_id: str,
     image: UploadFile = File(...),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.CAA)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.CAA)),
     request_id: str = Depends(get_request_id),
     db: AsyncSession = Depends(get_db),
 ):
@@ -855,7 +854,7 @@ async def create_campaigns_logo(
 )
 async def read_campaigns_logo(
     list_id: str,
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(is_user_a_member),
     db: AsyncSession = Depends(get_db),
 ):
     """

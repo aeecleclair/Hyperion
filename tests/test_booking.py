@@ -4,8 +4,8 @@ import uuid
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import GroupType
+from app.core.users import models_users
 from app.modules.booking import models_booking
 from app.modules.booking.types_booking import Decision
 from tests.commons import (
@@ -22,9 +22,9 @@ room: models_booking.Room
 room_to_delete: models_booking.Room
 manager: models_booking.Manager
 manager_to_delete: models_booking.Manager
-admin_user: models_core.CoreUser
-manager_user: models_core.CoreUser
-simple_user: models_core.CoreUser
+admin_user: models_users.CoreUser
+manager_user: models_users.CoreUser
+simple_user: models_users.CoreUser
 
 token_admin: str
 token_manager: str

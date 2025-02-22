@@ -8,8 +8,7 @@ from fastapi.security import OAuth2AuthorizationCodeBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import schemas_auth
-from app.core.core_endpoints import models_core
-from app.core.users import cruds_users
+from app.core.users import cruds_users, models_users
 
 if TYPE_CHECKING:
     from app.core.config import Settings
@@ -83,7 +82,7 @@ async def authenticate_user(
     db: AsyncSession,
     email: str,
     password: str,
-) -> models_core.CoreUser | None:
+) -> models_users.CoreUser | None:
     """
     Try to authenticate the user.
     If the user is unknown or the password is invalid return `None`. Else return the user's *CoreUser* representation.

@@ -8,9 +8,9 @@ from fastapi import (
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import GroupType
 from app.core.payment import schemas_payment
+from app.core.users import models_users
 from app.dependencies import (
     hyperion_access_logger,
 )
@@ -67,7 +67,7 @@ async def validate_payment(
 
 async def is_user_in_a_seller_group(
     seller_id: UUID,
-    user: models_core.CoreUser,
+    user: models_users.CoreUser,
     db: AsyncSession,
 ):
     """
@@ -160,7 +160,7 @@ async def check_request_consistency(
 def construct_dataframe_from_users_purchases(
     users_purchases: dict[str, list[models_cdr.Purchase]],
     users_answers: dict[str, list[models_cdr.CustomData]],
-    users: list[models_core.CoreUser],
+    users: list[models_users.CoreUser],
     products: list[models_cdr.CdrProduct],
     variants: list[models_cdr.ProductVariant],
     data_fields: dict[UUID, list[models_cdr.CustomDataField]],

@@ -11,9 +11,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.core_endpoints import models_core, schemas_core
+from app.core.core_endpoints import schemas_core
 from app.core.groups.groups_type import AccountType, GroupType
-from app.core.schools import cruds_schools
+from app.core.schools import cruds_schools, models_schools
 from app.core.schools.schools_type import SchoolType
 from app.core.users import cruds_users
 from app.dependencies import (
@@ -93,7 +93,7 @@ async def create_school(
         )
 
     try:
-        db_school = models_core.CoreSchool(
+        db_school = models_schools.CoreSchool(
             id=uuid.uuid4(),
             name=school.name,
             email_regex=school.email_regex,

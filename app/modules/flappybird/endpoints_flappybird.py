@@ -4,8 +4,8 @@ from datetime import UTC, datetime
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import AccountType, GroupType
+from app.core.users import models_users
 from app.dependencies import get_db, is_user_a_member, is_user_in
 from app.modules.flappybird import (
     cruds_flappybird,
@@ -39,7 +39,7 @@ async def get_flappybird_score(db: AsyncSession = Depends(get_db)):
 )
 async def get_current_user_flappybird_personal_best(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(is_user_a_member),
 ):
     user_personal_best_table = (
         await cruds_flappybird.get_flappybird_personal_best_by_user_id(
@@ -80,7 +80,7 @@ async def get_current_user_flappybird_personal_best(
 )
 async def create_flappybird_score(
     flappybird_score: schemas_flappybird.FlappyBirdScoreBase,
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(is_user_a_member),
     db: AsyncSession = Depends(get_db),
 ):
     # Currently, flappybird_score is a schema instance
@@ -133,6 +133,6 @@ async def create_flappybird_score(
 async def remove_flappybird_score(
     targeted_user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     await cruds_flappybird.delete_flappybird_best_score(db=db, user_id=targeted_user_id)

@@ -22,11 +22,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import security
 from app.core.config import Settings
-from app.core.core_endpoints import models_core, schemas_core
-from app.core.groups import cruds_groups
+from app.core.core_endpoints import schemas_core
+from app.core.groups import cruds_groups, models_groups
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.schools.schools_type import SchoolType
-from app.core.users import cruds_users
+from app.core.users import cruds_users, models_users
 from app.core.users.tools_users import get_account_type_and_school_id_from_email
 from app.dependencies import (
     get_db,
@@ -70,7 +70,7 @@ templates = Jinja2Templates(directory="assets/templates")
 async def read_users(
     accountTypes: list[AccountType] = Query(default=[]),
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Return all users from database as a list of `CoreUserSimple`
@@ -90,7 +90,7 @@ async def read_users(
 )
 async def count_users(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Return the number of users in the database
@@ -114,7 +114,7 @@ async def search_users(
     includedGroups: list[str] = Query(default=[]),
     excludedGroups: list[str] = Query(default=[]),
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
     Search for a user using Jaro_Winkler distance algorithm.
@@ -142,7 +142,7 @@ async def search_users(
 )
 async def get_account_types(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Return all account types hardcoded in the system
@@ -157,7 +157,7 @@ async def get_account_types(
     status_code=200,
 )
 async def read_current_user(
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     """
     Return `CoreUser` representation of current user
@@ -236,7 +236,7 @@ async def batch_create_users(
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
     request_id: str = Depends(get_request_id),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Batch user account creation process. All users will be sent an email with a link to activate their account.
@@ -288,7 +288,7 @@ async def create_user(
 
     # Add the unconfirmed user to the unconfirmed_user table
 
-    user_unconfirmed = models_core.CoreUserUnconfirmed(
+    user_unconfirmed = models_users.CoreUserUnconfirmed(
         id=str(uuid.uuid4()),
         email=email,
         activation_token=activation_token,
@@ -376,7 +376,7 @@ async def activate_user(
     # A password should have been provided
     password_hash = security.get_password_hash(user.password)
 
-    confirmed_user = models_core.CoreUser(
+    confirmed_user = models_users.CoreUser(
         id=unconfirmed_user.id,
         email=unconfirmed_user.email,
         school_id=school_id,
@@ -430,7 +430,7 @@ async def make_admin(
     try:
         await cruds_groups.create_membership(
             db=db,
-            membership=models_core.CoreMembership(
+            membership=models_groups.CoreMembership(
                 user_id=users[0].id,
                 group_id=GroupType.admin,
                 description=None,
@@ -495,7 +495,7 @@ async def recover_user(
         # The user exists, we can send a password reset invitation
         reset_token = security.generate_token()
 
-        recover_request = models_core.CoreUserRecoverRequest(
+        recover_request = models_users.CoreUserRecoverRequest(
             email=email,
             user_id=db_user.id,
             reset_token=reset_token,
@@ -580,7 +580,7 @@ async def reset_password(
 async def migrate_mail(
     mail_migration: schemas_core.MailMigrationRequest,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(is_user()),
     settings: Settings = Depends(get_settings),
 ):
     """
@@ -763,7 +763,7 @@ async def change_password(
 async def read_user(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Return `CoreUser` representation of user with id `user_id`
@@ -782,7 +782,7 @@ async def read_user(
 #    "/users/{user_id}",
 #    status_code=204,
 ## )
-# async def delete_user(user_id: str, db: AsyncSession = Depends(get_db), user: models_core.CoreUser = Depends(is_user_in(GroupType.admin))):
+# async def delete_user(user_id: str, db: AsyncSession = Depends(get_db), user: models_users.CoreUser = Depends(is_user_in(GroupType.admin))):
 #    """Delete user from database by id"""
 #    # TODO: WARNING - deleting an user without removing its relations ship in other tables will have unexpected consequences
 #
@@ -794,7 +794,7 @@ async def read_user(
     status_code=204,
 )
 async def delete_user(
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     """
     This endpoint will ask administrators to process to the user deletion.
@@ -812,7 +812,7 @@ async def delete_user(
 async def update_current_user(
     user_update: schemas_core.CoreUserUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     """
     Update the current user, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value
@@ -839,7 +839,7 @@ async def merge_users(
     user_fusion: schemas_core.CoreUserFusionRequest,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
     settings: Settings = Depends(get_settings),
 ):
     """
@@ -887,7 +887,7 @@ async def update_user(
     user_id: str,
     user_update: schemas_core.CoreUserUpdateAdmin,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Update an user, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value
@@ -916,7 +916,7 @@ async def update_user(
 )
 async def create_current_user_profile_picture(
     image: UploadFile = File(...),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(is_user()),
     request_id: str = Depends(get_request_id),
 ):
     """
@@ -947,7 +947,7 @@ async def create_current_user_profile_picture(
     status_code=200,
 )
 async def read_own_profile_picture(
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     """
     Get the profile picture of the authenticated user.

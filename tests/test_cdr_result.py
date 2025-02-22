@@ -3,8 +3,8 @@ from datetime import UTC, datetime
 
 import pytest_asyncio
 
-from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import GroupType
+from app.core.users import models_users
 from app.modules.cdr import models_cdr
 from app.modules.cdr.utils_cdr import construct_dataframe_from_users_purchases
 from tests.commons import (
@@ -12,10 +12,10 @@ from tests.commons import (
     create_user_with_groups,
 )
 
-cdr_admin: models_core.CoreUser
-cdr_user1: models_core.CoreUser
-cdr_user2: models_core.CoreUser
-cdr_user3: models_core.CoreUser
+cdr_admin: models_users.CoreUser
+cdr_user1: models_users.CoreUser
+cdr_user2: models_users.CoreUser
+cdr_user3: models_users.CoreUser
 
 token_admin: str
 token_user: str

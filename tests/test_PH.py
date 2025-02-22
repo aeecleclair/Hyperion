@@ -5,8 +5,8 @@ from pathlib import Path
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import GroupType
+from app.core.users import models_users
 from app.modules.ph import models_ph
 from tests.commons import (
     add_object_to_db,
@@ -14,8 +14,8 @@ from tests.commons import (
     create_user_with_groups,
 )
 
-ph_user_ph: models_core.CoreUser
-ph_user_simple: models_core.CoreUser
+ph_user_ph: models_users.CoreUser
+ph_user_simple: models_users.CoreUser
 
 token_ph: str
 token_simple: str
