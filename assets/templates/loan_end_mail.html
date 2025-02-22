@@ -1,0 +1,15 @@
+{% extends "base_mail.html" %}
+
+{% block title %}Ton prêt arrive bientôt à échéance{% endblock %}
+
+{% block french_message %}
+<h1>Fin du prêt dans 7 jours</h1>
+<p>Ton prêt de {{loan_detail}} à {{loaner}} arrive bientôt à échéance. N'oublie pas de le rendre à temps !</p>
+<p> Pour les ordinateurs, une pénalité peut être appliquée si le prêt n'est pas rendu avant la date d'échéance.</p>
+{% endblock %}
+
+{% block english_message %}
+<h1>End of loan in 7 days</h1>
+<p>Your loan of {{loan_detail}} to {{loaner}} is coming to an end soon. Don't forget to return it on time!</p>
+<p>For computers, a penalty may be applied if the loan is not returned before the due date.</p>
+{% endblock %}
