@@ -92,6 +92,8 @@ class TOSSignatureResponse(BaseModel):
     accepted_tos_version: int
     latest_tos_version: int
     tos_content: str
+    max_transaction_total: int
+    max_wallet_balance: int
 
 
 class AdminTransferInfo(BaseModel):
