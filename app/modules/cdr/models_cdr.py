@@ -7,6 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 if TYPE_CHECKING:
     from app.core.core_endpoints.models_core import CoreUser
+from app.core.core_endpoints.models_core import CoreAssociationMembership
 from app.modules.cdr.types_cdr import (
     CdrLogActionType,
     DocumentSignatureType,

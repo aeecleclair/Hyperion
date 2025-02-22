@@ -31,6 +31,7 @@ from app.modules.raid.utils.utils_raid import (
     will_participant_be_minor_on,
 )
 from app.types.content_type import ContentType
+from app.types.exceptions import MissingHelloAssoSlugError
 from app.types.module import Module
 from app.utils.tools import (
     get_core_data,
@@ -1068,6 +1069,9 @@ async def get_payment_url(
     """
     Get payment url
     """
+    if settings.HELLOASSO_SLUG is None:
+        raise MissingHelloAssoSlugError("HELLOASSO_SLUG")
+
     raid_prices = await get_core_data(coredata_raid.RaidPrice, db)
     if not raid_prices.student_price or not raid_prices.t_shirt_price:
         raise HTTPException(status_code=404, detail="Prices not set.")
@@ -1091,7 +1095,7 @@ async def get_payment_url(
     user_dict.pop("school", None)
     checkout = await payment_tool.init_checkout(
         module=module.root,
-        helloasso_slug="AEECL",
+        helloasso_slug=settings.HELLOASSO_SLUG,
         checkout_amount=price,
         checkout_name=checkout_name,
         redirection_uri=settings.RAID_PAYMENT_REDIRECTION_URL or "",

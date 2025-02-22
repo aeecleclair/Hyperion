@@ -23,7 +23,6 @@ from app.core.core_endpoints import cruds_core, models_core
 from app.core.core_endpoints.models_core import CoreUser
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import AccountType, GroupType
-from app.core.models_core import CoreUser
 from app.core.users import cruds_users
 from app.types import core_data
 from app.types.content_type import ContentType

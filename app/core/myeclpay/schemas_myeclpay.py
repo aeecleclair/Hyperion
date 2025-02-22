@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import Base64Bytes, BaseModel
+from pydantic import Base64Bytes, BaseModel, HttpUrl
 
 from app.core.core_endpoints import schemas_core
 from app.core.memberships import schemas_memberships
@@ -94,10 +94,15 @@ class TOSSignatureResponse(BaseModel):
     tos_content: str
 
 
-class TransferInfo(BaseModel):
+class AdminTransferInfo(BaseModel):
     amount: int
     transfer_type: TransferType
     credited_user_id: str | None = None
+
+
+class TransferInfo(BaseModel):
+    amount: int
+    redirect_url: HttpUrl
 
 
 class RefundInfo(BaseModel):
