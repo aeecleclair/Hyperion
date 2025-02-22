@@ -29,7 +29,7 @@ class CampaignFactory(Factory):
             campaign_list=models_campaign.Lists(
                 description="Go to hawaii",
                 name="Haweii",
-                program="T'inquiete frère",
+                program="Plein de trucs trop cool",
                 section_id=section_id,
                 type=ListType.pipo,
                 members=[],
@@ -39,9 +39,9 @@ class CampaignFactory(Factory):
         await cruds_campaign.add_list(
             db=db,
             campaign_list=models_campaign.Lists(
-                description="Ok les escaliers c'est cool",
+                description="On vous emmène au paradis",
                 name="StairWEI to HEAVEN",
-                program="T'inquiete frère ++",
+                program="Programme chargé",
                 section_id=section_id,
                 type=ListType.serio,
                 members=[],
@@ -49,6 +49,15 @@ class CampaignFactory(Factory):
             ),
         )
 
+        await cruds_campaign.add_section(
+            db=db,
+            section=models_campaign.Sections(
+                description="BDE",
+                name="BDE",
+                id=str(uuid.uuid4()),
+                lists=[],
+            ),
+        )
 
     async def run(self, db):
         await self.create_campaign(db)
