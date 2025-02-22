@@ -4,7 +4,7 @@ from uuid import UUID
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core import models_core
+from app.core.core_endpoints import models_core
 from app.core.myeclpay.types_myeclpay import (
     RequestStatus,
     TransactionStatus,

@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
-from app.core import schemas_core
+from app.core.core_endpoints import schemas_core
 
 
 class MembershipBase(BaseModel):

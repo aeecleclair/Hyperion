@@ -6,7 +6,7 @@ from sqlalchemy import delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core import schemas_core
+from app.core.core_endpoints import schemas_core
 from app.core.memberships import schemas_memberships
 from app.core.myeclpay import models_myeclpay, schemas_myeclpay
 from app.core.myeclpay.types_myeclpay import (

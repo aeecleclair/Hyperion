@@ -5,7 +5,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core, schemas_core
+from app.core.core_endpoints import models_core, schemas_core
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
 from app.core.memberships import cruds_memberships, schemas_memberships
@@ -17,8 +17,17 @@ from app.dependencies import (
     is_user_an_ecl_member,
     is_user_in,
 )
+from app.types.module import CoreModule
 
 router = APIRouter(tags=["Memberships"])
+
+
+core_module = CoreModule(
+    root="memberships",
+    tag="Memberships",
+    router=router,
+)
+
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
