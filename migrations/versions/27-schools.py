@@ -28,7 +28,7 @@ class SchoolType(enum.Enum):
     centrale_lyon = UUID("d9772da7-1142-4002-8b86-b694b431dfed")
 
 
-class AccountType(enum.Enum):
+class AccountTypeOld(enum.Enum):
     student = "student"
     former_student = "former_student"
     staff = "staff"
@@ -37,7 +37,7 @@ class AccountType(enum.Enum):
     demo = "demo"
 
 
-class AccountType2(enum.Enum):
+class AccountTypeNew(enum.Enum):
     student = "student"
     former_student = "former_student"
     staff = "staff"
@@ -66,7 +66,11 @@ user_table = sa.Table(
     sa.MetaData(),
     sa.Column("id", sa.String(), nullable=False),
     sa.Column("email", sa.String(), nullable=False),
-    sa.Column("account_type", sa.Enum(AccountType, name="accounttype"), nullable=False),
+    sa.Column(
+        "account_type",
+        sa.Enum(AccountTypeOld, name="accounttype"),
+        nullable=False,
+    ),
     sa.Column("school_id", sa.Uuid(), nullable=False),
 )
 
@@ -76,7 +80,7 @@ visibility_table = sa.Table(
     sa.Column("root", sa.String(), nullable=False),
     sa.Column(
         "allowed_account_type",
-        sa.Enum(AccountType, name="accounttype"),
+        sa.Enum(AccountTypeOld, name="accounttype"),
         nullable=False,
     ),
 )
@@ -103,80 +107,37 @@ def upgrade() -> None:
             ),
         )
 
-    users = conn.execute(
-        sa.select(user_table.c.id, user_table.c.account_type),
-    ).fetchall()
-
-    visibilities = conn.execute(
-        sa.select(visibility_table.c.root, visibility_table.c.allowed_account_type),
-    ).fetchall()
-
-    with op.batch_alter_table("core_user") as batch_op:
-        batch_op.add_column(
-            sa.Column(
-                "school_id",
-                sa.Uuid(),
-                nullable=False,
-                server_default=str(SchoolType.no_school.value),
-            ),
-        )
-        batch_op.create_foreign_key(
-            "core_user_school_id",
-            "core_school",
-            ["school_id"],
-            ["id"],
-        )
-        batch_op.drop_column("account_type")
-
-    op.drop_table("module_account_type_visibility")
-
-    sa.Enum(AccountType, name="accounttype").drop(
-        conn,
-    )
-
-    op.create_table(
-        "module_account_type_visibility",
-        sa.Column("root", sa.String(), nullable=False),
+    op.add_column(
+        "core_user",
         sa.Column(
-            "allowed_account_type",
-            sa.Enum(
-                AccountType2,
-                name="accounttype",
-            ),
+            "school_id",
+            sa.Uuid(),
             nullable=False,
+            server_default=str(SchoolType.no_school.value),
         ),
-        sa.PrimaryKeyConstraint("root", "allowed_account_type"),
+    )
+    op.create_foreign_key(
+        "core_user_school_id",
+        "core_user",
+        "core_school",
+        ["school_id"],
+        ["id"],
     )
 
-    with op.batch_alter_table("core_user") as batch_op:
-        batch_op.add_column(
-            sa.Column(
-                "account_type",
-                sa.Enum(AccountType2, name="accounttype"),
-                nullable=False,
-                server_default="external",
-            ),
-        )
-
-    for user in users:
-        conn.execute(
-            sa.update(user_table)
-            .where(user_table.c.id == user.id)
-            .values(
-                account_type=user.account_type,
-                school_id=SchoolType.centrale_lyon.value
-                if user.account_type != AccountType.external
-                else SchoolType.no_school.value,
-            ),
-        )
-
-    for visibility in visibilities:
-        conn.execute(
-            sa.insert(visibility_table).values(
-                root=visibility.root,
-                allowed_account_type=visibility.allowed_account_type,
-            ),
-        )
+    op.alter_column(
+        "core_user",
+        "account_type",
+        existing_type=sa.Enum(AccountTypeOld, name="accounttype"),
+        type_=sa.Enum(AccountTypeNew, name="accounttype", extend_existing=True),
+        postgresql_using="account_type::text::accounttype",
+    )
+    op.alter_column(
+        "module_account_type_visibility",
+        "allowed_account_type",
+        existing_type=sa.Enum(AccountTypeOld, name="accounttype"),
+        type_=sa.Enum(AccountTypeNew, name="accounttype", extend_existing=True),
+        postgresql_using="allowed_account_type::text::accounttype",
+    )
 
     # ### end Alembic commands ###
 
@@ -194,14 +155,13 @@ def downgrade() -> None:
         sa.select(visibility_table.c.root, visibility_table.c.allowed_account_type),
     ).fetchall()
 
-    with op.batch_alter_table("core_user") as batch_op:
-        batch_op.drop_constraint("core_user_school_id", type_="foreignkey")
-        batch_op.drop_column("school_id")
-        batch_op.drop_column("account_type")
+    op.drop_constraint("core_user_school_id", "core_user", type_="foreignkey")
+    op.drop_column("core_user", "school_id")
+    op.drop_column("core_user", "account_type")
 
     op.drop_table("module_account_type_visibility")
 
-    sa.Enum(AccountType2, name="accounttype").drop(
+    sa.Enum(AccountTypeNew, name="accounttype").drop(
         op.get_bind(),
     )
 
@@ -210,21 +170,21 @@ def downgrade() -> None:
         sa.Column("root", sa.String(), nullable=False),
         sa.Column(
             "allowed_account_type",
-            sa.Enum(AccountType, name="accounttype"),
+            sa.Enum(AccountTypeOld, name="accounttype"),
             nullable=False,
         ),
         sa.PrimaryKeyConstraint("root", "allowed_account_type"),
     )
 
-    with op.batch_alter_table("core_user") as batch_op:
-        batch_op.add_column(
-            sa.Column(
-                "account_type",
-                sa.Enum(AccountType, name="accounttype"),
-                nullable=False,
-                server_default="external",
-            ),
-        )
+    op.add_column(
+        "core_user",
+        sa.Column(
+            "account_type",
+            sa.Enum(AccountTypeOld, name="accounttype"),
+            nullable=False,
+            server_default="external",
+        ),
+    )
 
     op.drop_table("core_school")
 
@@ -234,8 +194,8 @@ def downgrade() -> None:
             .where(user_table.c.id == user.id)
             .values(
                 account_type=user.account_type
-                if user.account_type != AccountType2.other_school_student
-                else AccountType.external,
+                if user.account_type != AccountTypeNew.other_school_student
+                else AccountTypeOld.external,
             ),
         )
 

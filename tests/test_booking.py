@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import GroupType
 from app.modules.booking import models_booking
+from app.modules.booking.types_booking import Decision
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
@@ -96,7 +97,7 @@ async def init_objects() -> None:
         creation=datetime.datetime.fromisoformat("2023-09-10T10:00:00Z"),
         room_id=room.id,
         key=True,
-        decision="approved",
+        decision=Decision.approved,
         applicant_id=simple_user.id,
         entity="dbs",
         note=None,
@@ -113,7 +114,7 @@ async def init_objects() -> None:
         creation=datetime.datetime.fromisoformat("2023-09-10T10:00:00Z"),
         room_id=room.id,
         key=True,
-        decision="pending",
+        decision=Decision.pending,
         applicant_id=simple_user.id,
         entity="Test",
         note=None,
@@ -189,6 +190,8 @@ def test_get_user_bookings_manage_confirmed(client: TestClient) -> None:
     )
     assert response.status_code == 200
     assert booking_id in [booking["id"] for booking in response.json()]
+    assert response.json()[0]["applicant"].get("name", None) == simple_user.name
+    assert response.json()[0]["applicant"].get("email", None) == simple_user.email
 
 
 def test_get_bookings_confirmed(client: TestClient) -> None:
@@ -197,6 +200,8 @@ def test_get_bookings_confirmed(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token_manager}"},
     )
     assert response.status_code == 200
+    assert response.json()[0]["applicant"].get("name", None) == simple_user.name
+    assert response.json()[0]["applicant"].get("email", None) is None
 
 
 def test_get_user_bookings(client: TestClient) -> None:

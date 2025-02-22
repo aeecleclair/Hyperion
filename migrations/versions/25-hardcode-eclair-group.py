@@ -20,53 +20,53 @@ down_revision: str | None = "d24003cffdcd"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
+t_group = sa.Table(
+    "core_group",
+    sa.MetaData(),
+    sa.Column("id", sa.String(), nullable=False),
+    sa.Column("name", sa.String(), nullable=False),
+    sa.Column("description", sa.String(), nullable=True),
+    sa.PrimaryKeyConstraint("id"),
+)
+
+t_membership = sa.Table(
+    "core_membership",
+    sa.MetaData(),
+    sa.Column("user_id", sa.String(), nullable=False),
+    sa.Column("group_id", sa.String(), nullable=False),
+    sa.Column("description", sa.String(), nullable=True),
+)
+
+t_booking_manager = sa.Table(
+    "booking_manager",
+    sa.MetaData(),
+    sa.Column("id", sa.String(), nullable=False),
+    sa.Column("name", sa.String(), nullable=False),
+    sa.Column("group_id", sa.String(), nullable=False),
+)
+t_cdr_seller = sa.Table(
+    "cdr_seller",
+    sa.MetaData(),
+    sa.Column("id", sa.String(), nullable=False),
+    sa.Column("name", sa.String(), nullable=False),
+    sa.Column("group_id", sa.String(), nullable=False),
+    sa.Column("order", sa.Integer(), nullable=False),
+)
+t_phonebook_association_associated_groups = sa.Table(
+    "phonebook_association_associated_groups",
+    sa.MetaData(),
+    sa.Column("association_id", sa.String(), nullable=False),
+    sa.Column("group_id", sa.String(), nullable=False),
+)
+t_raffle = sa.Table(
+    "raffle",
+    sa.MetaData(),
+    sa.Column("id", sa.String(), nullable=False),
+    sa.Column("group_id", sa.String(), nullable=False),
+)
+
 
 def upgrade() -> None:
-    t_group = sa.Table(
-        "core_group",
-        sa.MetaData(),
-        sa.Column("id", sa.String(), nullable=False),
-        sa.Column("name", sa.String(), nullable=False),
-        sa.Column("description", sa.String(), nullable=True),
-        sa.PrimaryKeyConstraint("id"),
-    )
-
-    t_membership = sa.Table(
-        "core_membership",
-        sa.MetaData(),
-        sa.Column("user_id", sa.String(), nullable=False),
-        sa.Column("group_id", sa.String(), nullable=False),
-        sa.Column("description", sa.String(), nullable=True),
-    )
-
-    t_booking_manager = sa.Table(
-        "booking_manager",
-        sa.MetaData(),
-        sa.Column("id", sa.String(), nullable=False),
-        sa.Column("name", sa.String(), nullable=False),
-        sa.Column("group_id", sa.String(), nullable=False),
-    )
-    t_cdr_seller = sa.Table(
-        "cdr_seller",
-        sa.MetaData(),
-        sa.Column("id", sa.String(), nullable=False),
-        sa.Column("name", sa.String(), nullable=False),
-        sa.Column("group_id", sa.String(), nullable=False),
-        sa.Column("order", sa.Integer(), nullable=False),
-    )
-    t_phonebook_association_associated_groups = sa.Table(
-        "phonebook_association_associated_groups",
-        sa.MetaData(),
-        sa.Column("association_id", sa.String(), nullable=False),
-        sa.Column("group_id", sa.String(), nullable=False),
-    )
-    t_raffle = sa.Table(
-        "raffle",
-        sa.MetaData(),
-        sa.Column("id", sa.String(), nullable=False),
-        sa.Column("group_id", sa.String(), nullable=False),
-    )
-
     conn = op.get_bind()
     res = conn.execute(
         sa.select(

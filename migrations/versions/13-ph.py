@@ -29,46 +29,46 @@ def upgrade() -> None:
     )
     op.create_index(op.f("ix_ph_papers_id"), "ph_papers", ["id"], unique=False)
 
-    with op.batch_alter_table("notification_topic_membership") as batch_op:
-        batch_op.alter_column(
-            "topic",
-            existing_type=sa.VARCHAR(length=23),
-            type_=sa.Enum(
-                "cinema",
-                "advert",
-                "amap",
-                "booking",
-                "event",
-                "loan",
-                "raffle",
-                "vote",
-                "ph",
-                name="topic",
-            ),
-            existing_nullable=False,
-        )
+    op.alter_column(
+        "notification_topic_membership",
+        "topic",
+        existing_type=sa.VARCHAR(length=23),
+        type_=sa.Enum(
+            "cinema",
+            "advert",
+            "amap",
+            "booking",
+            "event",
+            "loan",
+            "raffle",
+            "vote",
+            "ph",
+            name="topic",
+        ),
+        existing_nullable=False,
+    )
 
 
 def downgrade() -> None:
     op.drop_index(op.f("ix_ph_papers_id"), table_name="ph_papers")
     op.drop_table("ph_papers")
-    with op.batch_alter_table("notification_topic_membership") as batch_op:
-        batch_op.alter_column(
-            "topic",
-            existing_type=sa.VARCHAR(length=23),
-            type_=sa.Enum(
-                "cinema",
-                "advert",
-                "amap",
-                "booking",
-                "event",
-                "loan",
-                "raffle",
-                "vote",
-                name="topic",
-            ),
-            existing_nullable=False,
-        )
+    op.alter_column(
+        "notification_topic_membership",
+        "topic",
+        existing_type=sa.VARCHAR(length=23),
+        type_=sa.Enum(
+            "cinema",
+            "advert",
+            "amap",
+            "booking",
+            "event",
+            "loan",
+            "raffle",
+            "vote",
+            name="topic",
+        ),
+        existing_nullable=False,
+    )
 
 
 def pre_test_upgrade(

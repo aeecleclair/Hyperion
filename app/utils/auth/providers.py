@@ -400,3 +400,32 @@ class OverleafAuthClient(BaseAuthClient):
             "email": user.email,
             "is_admin": is_user_member_of_any_group(user, [GroupType.admin]),
         }
+
+
+class PlankaAuthClient(BaseAuthClient):
+    """
+    An auth client for Planka, a Trello alternative for kanban boards
+
+    Docs for OIDC integration:
+    https://docs.planka.cloud/docs/Configuration/OIDC/
+    """
+
+    # required in practice, as Planka uses PKCE as well as the client secret
+    allow_pkce_with_client_secret: bool = True
+    allowed_scopes: set[ScopeType | str] = {
+        ScopeType.openid,
+        ScopeType.profile,
+    }
+
+    @classmethod
+    def get_userinfo(cls, user: models_core.CoreUser):
+        return {
+            "sub": user.id,
+            "name": get_display_name(
+                firstname=user.firstname,
+                name=user.name,
+                nickname=user.nickname,
+            ),
+            "groups": [group.name for group in user.groups] + [user.account_type.value],
+            "email": user.email,
+        }

@@ -23,19 +23,19 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    with op.batch_alter_table("notification_message") as batch_op:
-        batch_op.alter_column(
-            column_name="expire_on",
-            type_=sa.DateTime(timezone=False),
-        )
+    op.alter_column(
+        table_name="notification_message",
+        column_name="expire_on",
+        type_=sa.DateTime(timezone=False),
+    )
 
 
 def downgrade() -> None:
-    with op.batch_alter_table("notification_message") as batch_op:
-        batch_op.alter_column(
-            column_name="expire_on",
-            type_=sa.Date(),
-        )
+    op.alter_column(
+        table_name="notification_message",
+        column_name="expire_on",
+        type_=sa.Date(),
+    )
 
 
 def pre_test_upgrade(

@@ -20,44 +20,44 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    with op.batch_alter_table("notification_topic_membership") as batch_op:
-        batch_op.alter_column(
-            "topic",
-            existing_type=sa.VARCHAR(length=12),
-            type_=sa.Enum(
-                "cinema",
-                "advert",
-                "amap",
-                "booking",
-                "event",
-                "loan",
-                "raffle",
-                "vote",
-                name="topic",
-            ),
-            existing_nullable=False,
-        )
+    op.alter_column(
+        "notification_topic_membership",
+        "topic",
+        existing_type=sa.VARCHAR(length=12),
+        type_=sa.Enum(
+            "cinema",
+            "advert",
+            "amap",
+            "booking",
+            "event",
+            "loan",
+            "raffle",
+            "vote",
+            name="topic",
+        ),
+        existing_nullable=False,
+    )
 
 
 def downgrade() -> None:
-    with op.batch_alter_table("notification_topic_membership") as batch_op:
-        batch_op.alter_column(
-            "topic",
-            existing_type=sa.VARCHAR(length=12),
-            type_=sa.Enum(
-                "cinema",
-                "advert",
-                "bookingadmin",
-                "amap",
-                "booking",
-                "event",
-                "loan",
-                "raffle",
-                "vote",
-                name="topic",
-            ),
-            existing_nullable=False,
-        )
+    op.alter_column(
+        "notification_topic_membership",
+        "topic",
+        existing_type=sa.VARCHAR(length=12),
+        type_=sa.Enum(
+            "cinema",
+            "advert",
+            "bookingadmin",
+            "amap",
+            "booking",
+            "event",
+            "loan",
+            "raffle",
+            "vote",
+            name="topic",
+        ),
+        existing_nullable=False,
+    )
 
 
 def pre_test_upgrade(

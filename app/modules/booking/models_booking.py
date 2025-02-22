@@ -5,7 +5,10 @@ from datetime import datetime
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+
 from app.core.core_endpoints.models_core import CoreUser
+
+from app.modules.booking.types_booking import Decision
 from app.types.sqlalchemy import Base
 
 
@@ -54,7 +57,7 @@ class Booking(Base):
         index=True,
     )
     key: Mapped[bool]
-    decision: Mapped[str]
+    decision: Mapped[Decision]
     recurrence_rule: Mapped[str | None]
     applicant_id: Mapped[str] = mapped_column(
         ForeignKey("core_user.id"),
