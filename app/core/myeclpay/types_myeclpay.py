@@ -1,4 +1,5 @@
 from enum import Enum
+from uuid import UUID
 
 
 class WalletType(str, Enum):
@@ -48,12 +49,12 @@ class UnexpectedError(Exception):
 
 
 class TransferNotFoundByCallbackError(Exception):
-    def __init__(self, checkout_id: str):
+    def __init__(self, checkout_id: UUID):
         super().__init__(f"User transfer {checkout_id} not found.")
 
 
 class TransferTotalDontMatchInCallbackError(Exception):
-    def __init__(self, checkout_id: str):
+    def __init__(self, checkout_id: UUID):
         super().__init__(
             f"User transfer {checkout_id} amount does not match the paid amount",
         )
