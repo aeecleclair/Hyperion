@@ -227,7 +227,7 @@ def initialize_schools(
 async def run_factories(db: AsyncSession, settings: Settings) -> None:
     """Run the factories to create default data in the database"""
     hyperion_error_logger = logging.getLogger("hyperion.error")
-    if not settings.FACTORIES:
+    if not settings.USE_FACTORIES:
         hyperion_error_logger.info("Startup: Factories are disabled")
         return
 
