@@ -16,27 +16,27 @@ class CinemaFactory(Factory):
     async def create_films(self, db):
         films = {
             "The Matrix": {
-                "overview": "Le basique",
+                "overview": "Le premier film de la trilogie",
                 "genre": "Action",
                 "tagline": "Test tagline",
             },
             "The Matrix Reloaded": {
-                "overview": "Ok tier",
+                "overview": "Le deuxième film de la trilogie",
                 "genre": "Action",
                 "tagline": "Test tagline",
             },
             "The Matrix Revolutions": {
-                "overview": "Mouais",
+                "overview": "Le troisième film de la trilogie",
                 "genre": "Action",
                 "tagline": "Test tagline",
             },
             "The Matrix Resurrections": {
-                "overview": "La grosse merde",
+                "overview": "Le film de trop",
                 "genre": "Action",
                 "tagline": "Test tagline",
             },
             "Captain America Civil War": {
-                "overview": "Captain il a déconné",
+                "overview": "Film marvel plutôt pas mal",
                 "genre": "Superheros",
                 "tagline": "Test tagline",
             },
