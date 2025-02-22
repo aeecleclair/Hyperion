@@ -183,8 +183,6 @@ class WalletDeviceCreation(WalletDeviceBase):
 
 
 class Transaction(BaseModel):
-    __tablename__ = "myeclpay_transaction"
-
     id: UUID
     debited_wallet_id: UUID
     credited_wallet_id: UUID
