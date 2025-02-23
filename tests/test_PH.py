@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from app.core import models_core
+from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import GroupType
 from app.modules.ph import models_ph
 from tests.commons import (

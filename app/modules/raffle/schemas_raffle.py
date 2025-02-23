@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 
-from app.core.schemas_core import CoreUserSimple
+from app.core.core_endpoints.schemas_core import CoreUserSimple
 from app.modules.raffle.types_raffle import RaffleStatusType
 
 

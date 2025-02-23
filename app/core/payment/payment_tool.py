@@ -10,8 +10,9 @@ from helloasso_api_wrapper.models.carts import (
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import schemas_core, security
+from app.core import security
 from app.core.config import Settings
+from app.core.core_endpoints import schemas_core
 from app.core.payment import cruds_payment, models_payment, schemas_payment
 from app.types.exceptions import PaymentToolCredentialsNotSetException
 

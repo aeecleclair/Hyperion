@@ -10,9 +10,10 @@ from sqlalchemy import NullPool
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.core import models_core, schemas_core, security
+from app.core import security
 from app.core.auth import schemas_auth
 from app.core.config import Settings
+from app.core.core_endpoints import models_core, schemas_core
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.payment import cruds_payment, models_payment, schemas_payment

@@ -22,8 +22,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import api
-from app.core import coredata_core, models_core
 from app.core.config import Settings
+from app.core.core_endpoints import coredata_core, models_core
 from app.core.google_api.google_api import GoogleAPI
 from app.core.groups.groups_type import GroupType
 from app.core.log import LogConfig

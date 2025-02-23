@@ -21,9 +21,10 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from app.core import models_core, security
+from app.core import security
 from app.core.auth import schemas_auth
 from app.core.config import Settings, construct_prod_settings
+from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import AccountType, GroupType, get_ecl_account_types
 from app.core.payment.payment_tool import PaymentTool
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager

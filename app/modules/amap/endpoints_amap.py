@@ -6,7 +6,7 @@ from fastapi import Depends, HTTPException, Response
 from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core, schemas_core
+from app.core.core_endpoints import models_core, schemas_core
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.notification.notification_types import CustomTopic, Topic
 from app.core.notification.schemas_notification import Message

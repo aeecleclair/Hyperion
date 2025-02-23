@@ -30,3 +30,6 @@ logs/
 
 # Jinja templates test output
 tests/jinja_test_outputs/
+
+# Local testing
+scripts/

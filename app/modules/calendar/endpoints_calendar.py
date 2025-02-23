@@ -5,7 +5,7 @@ from fastapi import Depends, HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core
+from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import AccountType, GroupType
 from app.dependencies import get_db, is_user_an_ecl_member, is_user_in
 from app.modules.calendar import cruds_calendar, models_calendar, schemas_calendar

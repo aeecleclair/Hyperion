@@ -3,7 +3,7 @@ import pytest_asyncio
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
-from app.core import models_core
+from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import AccountType, GroupType
 from app.dependencies import is_user
 from tests.commons import (

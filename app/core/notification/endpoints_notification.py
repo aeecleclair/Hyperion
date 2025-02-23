@@ -3,7 +3,7 @@ from datetime import UTC, datetime, timedelta
 from fastapi import APIRouter, Body, Depends, HTTPException, Path
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core
+from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import GroupType
 from app.core.notification import (
     cruds_notification,
@@ -19,10 +19,17 @@ from app.dependencies import (
     is_user,
     is_user_in,
 )
+from app.types.module import CoreModule
 from app.types.scheduler import Scheduler
 from app.utils.communication.notifications import NotificationManager, NotificationTool
 
 router = APIRouter(tags=["Notifications"])
+
+core_module = CoreModule(
+    root="notification",
+    tag="Notifications",
+    router=router,
+)
 
 
 @router.post(

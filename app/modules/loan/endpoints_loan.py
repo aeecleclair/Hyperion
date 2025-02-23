@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core
+from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.notification.schemas_notification import Message
 from app.dependencies import (

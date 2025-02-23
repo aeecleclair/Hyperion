@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core import models_core, schemas_core
+from app.core.core_endpoints import models_core, schemas_core
 
 
 async def get_groups(db: AsyncSession) -> Sequence[models_core.CoreGroup]:
