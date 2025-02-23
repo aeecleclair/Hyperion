@@ -125,7 +125,7 @@ class QRCodeContentBase(BaseModel):
     qr_code_id: UUID
     total: int
     creation: datetime
-    walled_device_id: UUID
+    wallet_device_id: UUID
     # If the QR Code is intended to be scanned for a Store Wallet, or for an other user Wallet
     store: bool
 
