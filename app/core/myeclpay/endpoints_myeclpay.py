@@ -1746,7 +1746,7 @@ async def store_scan_qrcode(
         - the QR Code is not already used
         - the QR Code is not expired
         - the QR Code is intended to be scanned for a store `scan_info.store`
-        - the signature is valid and correspond to `walled_device_id` public key
+        - the signature is valid and correspond to `wallet_device_id` public key
         - the debited's wallet device is active
         - the debited's Wallet balance greater than the QR Code total
 
@@ -1796,7 +1796,7 @@ async def store_scan_qrcode(
 
     # We verify the signature
     debited_wallet_device = await cruds_myeclpay.get_wallet_device(
-        wallet_device_id=scan_info.walled_device_id,
+        wallet_device_id=scan_info.wallet_device_id,
         db=db,
     )
 
@@ -1816,7 +1816,7 @@ async def store_scan_qrcode(
         public_key_bytes=debited_wallet_device.ed25519_public_key,
         signature=scan_info.signature,
         data=compute_signable_data(scan_info),
-        wallet_device_id=scan_info.walled_device_id,
+        wallet_device_id=scan_info.wallet_device_id,
         request_id=request_id,
     ):
         raise HTTPException(

@@ -1425,7 +1425,7 @@ def ensure_qr_code_id_is_already_used(qr_code_id: str | UUID, client: TestClient
         headers={"Authorization": f"Bearer {ecl_user_access_token}"},
         json={
             "qr_code_id": str(qr_code_id),
-            "walled_device_id": str(ecl_user_wallet_device.id),
+            "wallet_device_id": str(ecl_user_wallet_device.id),
             "total": 100,
             "creation": (datetime.now(UTC)).isoformat(),
             "store": True,
@@ -1449,7 +1449,7 @@ def test_store_scan_invalid_store_id(client: TestClient):
         headers={"Authorization": f"Bearer {ecl_user_access_token}"},
         json={
             "qr_code_id": qr_code_id,
-            "walled_device_id": str(ecl_user_wallet_device.id),
+            "wallet_device_id": str(ecl_user_wallet_device.id),
             "total": 100,
             "creation": datetime.now(UTC).isoformat(),
             "store": True,
@@ -1470,7 +1470,7 @@ def test_store_scan_store_when_not_seller(client: TestClient):
         headers={"Authorization": f"Bearer {ecl_user_access_token}"},
         json={
             "qr_code_id": qr_code_id,
-            "walled_device_id": str(ecl_user_wallet_device.id),
+            "wallet_device_id": str(ecl_user_wallet_device.id),
             "total": 100,
             "creation": datetime.now(UTC).isoformat(),
             "store": True,
@@ -1496,7 +1496,7 @@ def test_store_scan_store_when_seller_but_can_not_bank(client: TestClient):
         },
         json={
             "qr_code_id": qr_code_id,
-            "walled_device_id": str(ecl_user_wallet_device.id),
+            "wallet_device_id": str(ecl_user_wallet_device.id),
             "total": 100,
             "creation": datetime.now(UTC).isoformat(),
             "store": True,
@@ -1520,7 +1520,7 @@ def test_store_scan_store_invalid_wallet_device_id(client: TestClient):
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={
             "qr_code_id": qr_code_id,
-            "walled_device_id": str(uuid4()),
+            "wallet_device_id": str(uuid4()),
             "total": 100,
             "creation": datetime.now(UTC).isoformat(),
             "store": True,
@@ -1541,7 +1541,7 @@ def test_store_scan_store_non_active_wallet_device_id(client: TestClient):
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={
             "qr_code_id": qr_code_id,
-            "walled_device_id": str(ecl_user_wallet_device_inactive.id),
+            "wallet_device_id": str(ecl_user_wallet_device_inactive.id),
             "total": 100,
             "creation": datetime.now(UTC).isoformat(),
             "store": True,
@@ -1562,7 +1562,7 @@ def test_store_scan_store_invalid_signature(client: TestClient):
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={
             "qr_code_id": qr_code_id,
-            "walled_device_id": str(ecl_user_wallet_device.id),
+            "wallet_device_id": str(ecl_user_wallet_device.id),
             "total": 100,
             "creation": datetime.now(UTC).isoformat(),
             "store": True,
@@ -1583,7 +1583,7 @@ def test_store_scan_store_with_non_store_qr_code(client: TestClient):
         total=-1,
         creation=datetime.now(UTC),
         store=False,
-        walled_device_id=ecl_user_wallet_device.id,
+        wallet_device_id=ecl_user_wallet_device.id,
     )
 
     signature = ecl_user_wallet_device_private_key.sign(
@@ -1595,7 +1595,7 @@ def test_store_scan_store_with_non_store_qr_code(client: TestClient):
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={
             "qr_code_id": str(qr_code_content.qr_code_id),
-            "walled_device_id": str(qr_code_content.walled_device_id),
+            "wallet_device_id": str(qr_code_content.wallet_device_id),
             "total": qr_code_content.total,
             "creation": qr_code_content.creation.isoformat(),
             "store": qr_code_content.store,
@@ -1618,7 +1618,7 @@ def test_store_scan_store_negative_total(client: TestClient):
         total=-1,
         creation=datetime.now(UTC),
         store=True,
-        walled_device_id=ecl_user_wallet_device.id,
+        wallet_device_id=ecl_user_wallet_device.id,
     )
 
     signature = ecl_user_wallet_device_private_key.sign(
@@ -1630,7 +1630,7 @@ def test_store_scan_store_negative_total(client: TestClient):
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={
             "qr_code_id": str(qr_code_content.qr_code_id),
-            "walled_device_id": str(qr_code_content.walled_device_id),
+            "wallet_device_id": str(qr_code_content.wallet_device_id),
             "total": qr_code_content.total,
             "creation": qr_code_content.creation.isoformat(),
             "store": qr_code_content.store,
@@ -1651,7 +1651,7 @@ def test_store_scan_store_total_greater_than_max(client: TestClient):
         total=4000,
         creation=datetime.now(UTC),
         store=True,
-        walled_device_id=ecl_user_wallet_device.id,
+        wallet_device_id=ecl_user_wallet_device.id,
     )
 
     signature = ecl_user_wallet_device_private_key.sign(
@@ -1663,7 +1663,7 @@ def test_store_scan_store_total_greater_than_max(client: TestClient):
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={
             "qr_code_id": str(qr_code_content.qr_code_id),
-            "walled_device_id": str(qr_code_content.walled_device_id),
+            "wallet_device_id": str(qr_code_content.wallet_device_id),
             "total": qr_code_content.total,
             "creation": qr_code_content.creation.isoformat(),
             "store": qr_code_content.store,
@@ -1693,7 +1693,7 @@ def test_store_scan_store_missing_wallet(
         total=100,
         creation=datetime.now(UTC),
         store=True,
-        walled_device_id=ecl_user_wallet_device.id,
+        wallet_device_id=ecl_user_wallet_device.id,
     )
 
     signature = ecl_user_wallet_device_private_key.sign(
@@ -1705,7 +1705,7 @@ def test_store_scan_store_missing_wallet(
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={
             "qr_code_id": str(qr_code_content.qr_code_id),
-            "walled_device_id": str(qr_code_content.walled_device_id),
+            "wallet_device_id": str(qr_code_content.wallet_device_id),
             "total": qr_code_content.total,
             "creation": qr_code_content.creation.isoformat(),
             "store": qr_code_content.store,
@@ -1729,7 +1729,7 @@ def test_store_scan_store_from_store_wallet(client: TestClient):
         total=1100,
         creation=datetime.now(UTC),
         store=True,
-        walled_device_id=store_wallet_device.id,
+        wallet_device_id=store_wallet_device.id,
     )
 
     signature = store_wallet_device_private_key.sign(
@@ -1741,7 +1741,7 @@ def test_store_scan_store_from_store_wallet(client: TestClient):
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={
             "qr_code_id": str(qr_code_content.qr_code_id),
-            "walled_device_id": str(qr_code_content.walled_device_id),
+            "wallet_device_id": str(qr_code_content.wallet_device_id),
             "total": qr_code_content.total,
             "creation": qr_code_content.creation.isoformat(),
             "store": qr_code_content.store,
@@ -1799,7 +1799,7 @@ async def test_store_scan_store_from_wallet_with_old_tos_version(client: TestCli
         total=1100,
         creation=datetime.now(UTC),
         store=True,
-        walled_device_id=ecl_user_wallet_device.id,
+        wallet_device_id=ecl_user_wallet_device.id,
     )
 
     signature = ecl_user_wallet_device_private_key.sign(
@@ -1811,7 +1811,7 @@ async def test_store_scan_store_from_wallet_with_old_tos_version(client: TestCli
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={
             "qr_code_id": str(qr_code_content.qr_code_id),
-            "walled_device_id": str(qr_code_content.walled_device_id),
+            "wallet_device_id": str(qr_code_content.wallet_device_id),
             "total": qr_code_content.total,
             "creation": qr_code_content.creation.isoformat(),
             "store": qr_code_content.store,
@@ -1832,7 +1832,7 @@ def test_store_scan_store_insufficient_ballance(client: TestClient):
         total=2000,
         creation=datetime.now(UTC),
         store=True,
-        walled_device_id=ecl_user_wallet_device.id,
+        wallet_device_id=ecl_user_wallet_device.id,
     )
 
     signature = ecl_user_wallet_device_private_key.sign(
@@ -1844,7 +1844,7 @@ def test_store_scan_store_insufficient_ballance(client: TestClient):
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={
             "qr_code_id": str(qr_code_content.qr_code_id),
-            "walled_device_id": str(qr_code_content.walled_device_id),
+            "wallet_device_id": str(qr_code_content.wallet_device_id),
             "total": qr_code_content.total,
             "creation": qr_code_content.creation.isoformat(),
             "store": qr_code_content.store,
@@ -1865,7 +1865,7 @@ async def test_store_scan_store_successful_scan(client: TestClient):
         total=500,
         creation=datetime.now(UTC),
         store=True,
-        walled_device_id=ecl_user_wallet_device.id,
+        wallet_device_id=ecl_user_wallet_device.id,
     )
 
     signature = ecl_user_wallet_device_private_key.sign(
@@ -1889,7 +1889,7 @@ async def test_store_scan_store_successful_scan(client: TestClient):
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={
             "qr_code_id": str(qr_code_content.qr_code_id),
-            "walled_device_id": str(qr_code_content.walled_device_id),
+            "wallet_device_id": str(qr_code_content.wallet_device_id),
             "total": qr_code_content.total,
             "creation": qr_code_content.creation.isoformat(),
             "store": qr_code_content.store,
