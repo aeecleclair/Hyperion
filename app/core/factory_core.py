@@ -62,8 +62,6 @@ class CoreFactory(Factory):
             "Juju",
         ]
 
-        password = "password"
-
         groups: list[list[groups_type.GroupType]] = [[], [], [], []]
         groups[0].append(groups_type.GroupType.admin)
         groups[1].append(groups_type.GroupType.amap)
@@ -88,7 +86,7 @@ class CoreFactory(Factory):
         for i in range(10):
             user = models_core.CoreUser(
                 id=str(uuid.uuid4()) if i != 0 else self.demo_user_id,
-                password_hash=security.get_password_hash(password),
+                password_hash=security.get_password_hash("password"),
                 firstname=firstname[i],
                 nickname=nickname[i],
                 name=name[i],
