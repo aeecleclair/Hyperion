@@ -655,17 +655,19 @@ async def create_loan(
             "loaner": loan.loaner.name,
         },
     )
-
-    await scheduler.queue_job_defer_to(
-        send_email(
-            recipient=loan.borrower.email,
-            subject="📦 Prêt à rendre bientôt !",
-            content=end_loan_template,
-            settings=settings,
-        ),
-        job_id=f"loan_end_{loan.id}",
-        defer_date=datetime.fromisoformat((loan.end - timedelta(days=7)).isoformat()),
-    )
+    if settings.SMTP_ACTIVE:
+        await scheduler.queue_job_defer_to(
+            send_email(
+                recipient=loan.borrower.email,
+                subject="📦 Prêt à rendre bientôt !",
+                content=end_loan_template,
+                settings=settings,
+            ),
+            job_id=f"loan_end_{loan.id}",
+            defer_date=datetime.fromisoformat(
+                (loan.end - timedelta(days=7)).isoformat()
+            ),
+        )
 
     return schemas_loan.Loan(items_qty=items_qty_ret, **loan.__dict__)
 
@@ -803,18 +805,19 @@ async def update_loan(
             },
         )
         await scheduler.cancel_job(job_id=f"loan_end_{loan.id}")
-        await scheduler.queue_job_defer_to(
-            send_email(
-                recipient=loan.borrower.email,
-                subject="📦 Prêt à rendre bientôt !",
-                content=end_loan_template,
-                settings=settings,
-            ),
-            job_id=f"loan_end_{loan.id}",
-            defer_date=datetime.fromisoformat(
-                (loan.end - timedelta(days=7)).isoformat(),
-            ),
-        )
+        if settings.SMTP_ACTIVE:
+            await scheduler.queue_job_defer_to(
+                send_email(
+                    recipient=loan.borrower.email,
+                    subject="📦 Prêt à rendre bientôt !",
+                    content=end_loan_template,
+                    settings=settings,
+                ),
+                job_id=f"loan_end_{loan.id}",
+                defer_date=datetime.fromisoformat(
+                    (loan.end - timedelta(days=7)).isoformat(),
+                ),
+            )
 
 
 @module.router.delete(
