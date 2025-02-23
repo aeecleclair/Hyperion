@@ -2,7 +2,6 @@ import uuid
 from datetime import date
 
 from app.core.factory_core import CoreFactory
-from app.core.users import cruds_users
 from app.modules.loan import cruds_loan, models_loan
 from app.utils.factory import Factory
 
@@ -10,7 +9,7 @@ from app.utils.factory import Factory
 class LoanFactory(Factory):
     def __init__(self):
         super().__init__(
-            name="Loan",
+            name="loan",
             depends_on=[CoreFactory],
         )
 
