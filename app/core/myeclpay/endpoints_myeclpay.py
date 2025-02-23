@@ -2012,7 +2012,7 @@ async def refund_transaction(
     if refunder_wallet is None:
         raise HTTPException(
             status_code=404,
-            detail="Debited wallet does not exist",
+            detail="Credited wallet does not exist",
         )
 
     if refunder_wallet.type == WalletType.STORE:
@@ -2031,7 +2031,7 @@ async def refund_transaction(
                 status_code=403,
                 detail="User does not have the permission to refund this transaction",
             )
-        if seller.can_cancel:
+        if not seller.can_cancel:
             raise HTTPException(
                 status_code=403,
                 detail="User does not have the permission to refund this transaction",
