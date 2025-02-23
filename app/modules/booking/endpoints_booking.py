@@ -280,7 +280,6 @@ async def create_booking(
     # Setting time to Paris timezone in order to have the correct time in the notification
 
     if group:
-
         message = Message(
             title="📅 Réservations - Nouvelle réservation",
             content=content,
@@ -288,10 +287,10 @@ async def create_booking(
         )
 
         await notification_tool.send_notification_to_users(
-            user_ids=[user.id  for user in group.members],
+            user_ids=[user.id for user in group.members],
             message=message,
         )
-        
+
     return result
 
 
