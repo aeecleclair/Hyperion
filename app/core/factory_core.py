@@ -43,7 +43,7 @@ class CoreFactory(Factory):
             "Petit",
         ]
 
-        email = ["demo.test@myecl.fr"] + [
+        email = ["demo.test@etu.ec-lyon.fr"] + [
             f"{firstname[i].lower()}.{name[i].lower()}@etu.ec-lyon.fr"
             for i in range(1, 10)
         ]
