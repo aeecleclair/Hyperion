@@ -22,11 +22,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import security
 from app.core.config import Settings
-from app.core.core_endpoints import schemas_core
 from app.core.groups import cruds_groups, models_groups
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.schools.schools_type import SchoolType
-from app.core.users import cruds_users, models_users
+from app.core.users import cruds_users, models_users, schemas_users
 from app.core.users.tools_users import get_account_type_and_school_id_from_email
 from app.dependencies import (
     get_db,
@@ -64,7 +63,7 @@ templates = Jinja2Templates(directory="assets/templates")
 
 @router.get(
     "/users",
-    response_model=list[schemas_core.CoreUserSimple],
+    response_model=list[schemas_users.CoreUserSimple],
     status_code=200,
 )
 async def read_users(
@@ -104,7 +103,7 @@ async def count_users(
 
 @router.get(
     "/users/search",
-    response_model=list[schemas_core.CoreUserSimple],
+    response_model=list[schemas_users.CoreUserSimple],
     status_code=200,
 )
 async def search_users(
@@ -153,7 +152,7 @@ async def get_account_types(
 
 @router.get(
     "/users/me",
-    response_model=schemas_core.CoreUser,
+    response_model=schemas_users.CoreUser,
     status_code=200,
 )
 async def read_current_user(
@@ -174,7 +173,7 @@ async def read_current_user(
     status_code=201,
 )
 async def create_user_by_user(
-    user_create: schemas_core.CoreUserCreateRequest,
+    user_create: schemas_users.CoreUserCreateRequest,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
@@ -231,7 +230,7 @@ async def create_user_by_user(
     status_code=201,
 )
 async def batch_create_users(
-    user_creates: list[schemas_core.CoreBatchUserCreateRequest],
+    user_creates: list[schemas_users.CoreBatchUserCreateRequest],
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
@@ -333,7 +332,7 @@ async def create_user(
     status_code=201,
 )
 async def activate_user(
-    user: schemas_core.CoreUserActivateRequest,
+    user: schemas_users.CoreUserActivateRequest,
     db: AsyncSession = Depends(get_db),
     request_id: str = Depends(get_request_id),
 ):
@@ -540,7 +539,7 @@ async def recover_user(
     status_code=201,
 )
 async def reset_password(
-    reset_password_request: schemas_core.ResetPasswordRequest,
+    reset_password_request: schemas_users.ResetPasswordRequest,
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -578,7 +577,7 @@ async def reset_password(
     status_code=204,
 )
 async def migrate_mail(
-    mail_migration: schemas_core.MailMigrationRequest,
+    mail_migration: schemas_users.MailMigrationRequest,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
     settings: Settings = Depends(get_settings),
@@ -683,7 +682,7 @@ async def migrate_mail_confirm(
         await cruds_users.update_user(
             db=db,
             user_id=migration_object.user_id,
-            user_update=schemas_core.CoreUserUpdateAdmin(
+            user_update=schemas_users.CoreUserUpdateAdmin(
                 email=migration_object.new_email,
                 account_type=account,
                 school_id=new_school_id,
@@ -723,7 +722,7 @@ async def migrate_mail_confirm(
     status_code=201,
 )
 async def change_password(
-    change_password_request: schemas_core.ChangePasswordRequest,
+    change_password_request: schemas_users.ChangePasswordRequest,
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -757,7 +756,7 @@ async def change_password(
 
 @router.get(
     "/users/{user_id}",
-    response_model=schemas_core.CoreUser,
+    response_model=schemas_users.CoreUser,
     status_code=200,
 )
 async def read_user(
@@ -810,7 +809,7 @@ async def delete_user(
     status_code=204,
 )
 async def update_current_user(
-    user_update: schemas_core.CoreUserUpdate,
+    user_update: schemas_users.CoreUserUpdate,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
 ):
@@ -836,7 +835,7 @@ async def update_current_user(
     status_code=204,
 )
 async def merge_users(
-    user_fusion: schemas_core.CoreUserFusionRequest,
+    user_fusion: schemas_users.CoreUserFusionRequest,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
@@ -885,7 +884,7 @@ async def merge_users(
 )
 async def update_user(
     user_id: str,
-    user_update: schemas_core.CoreUserUpdateAdmin,
+    user_update: schemas_users.CoreUserUpdateAdmin,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):

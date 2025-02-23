@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 
-from app.core.core_endpoints import schemas_core
+from app.core.users.schemas_users import CoreUserSimple
 from app.modules.campaign.types_campaign import ListType, StatusType
 
 
@@ -23,7 +23,7 @@ class ListMemberBase(BaseModel):
 
 
 class ListMemberComplete(ListMemberBase):
-    user: schemas_core.CoreUserSimple
+    user: CoreUserSimple
     model_config = ConfigDict(from_attributes=True)
 
 

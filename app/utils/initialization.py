@@ -141,14 +141,15 @@ def set_core_data_crud_sync(
 
 
 def get_school_by_id_sync(
-    school_id: str, db: Session
+    school_id: str,
+    db: Session,
 ) -> models_schools.CoreSchool | None:
     """
     Return group with id from database
     """
     result = db.execute(
         select(models_schools.CoreSchool).where(
-            models_schools.CoreSchool.id == school_id
+            models_schools.CoreSchool.id == school_id,
         ),
     )
     return result.scalars().first()

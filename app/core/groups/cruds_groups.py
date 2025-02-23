@@ -7,8 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.core_endpoints import schemas_core
-from app.core.groups import models_groups
+from app.core.groups import models_groups, schemas_groups
 
 
 async def get_groups(db: AsyncSession) -> Sequence[models_groups.CoreGroup]:
@@ -117,7 +116,7 @@ async def delete_membership_by_group_and_user_id(
 async def update_group(
     db: AsyncSession,
     group_id: str,
-    group_update: schemas_core.CoreGroupUpdate,
+    group_update: schemas_groups.CoreGroupUpdate,
 ):
     await db.execute(
         update(models_groups.CoreGroup)

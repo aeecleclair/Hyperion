@@ -6,8 +6,7 @@ from uuid import UUID
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.core_endpoints import schemas_core
-from app.core.schools import models_schools
+from app.core.schools import models_schools, schemas_schools
 
 
 async def get_schools(db: AsyncSession) -> Sequence[models_schools.CoreSchool]:
@@ -20,7 +19,7 @@ async def get_schools(db: AsyncSession) -> Sequence[models_schools.CoreSchool]:
 async def get_school_by_id(
     db: AsyncSession,
     school_id: UUID,
-) -> schemas_core.CoreSchool | None:
+) -> schemas_schools.CoreSchool | None:
     """Return school with id from database"""
     result = (
         (
@@ -34,7 +33,7 @@ async def get_school_by_id(
         .first()
     )
     return (
-        schemas_core.CoreSchool(
+        schemas_schools.CoreSchool(
             name=result.name,
             email_regex=result.email_regex,
             id=result.id,
@@ -79,7 +78,7 @@ async def delete_school(db: AsyncSession, school_id: UUID):
 async def update_school(
     db: AsyncSession,
     school_id: UUID,
-    school_update: schemas_core.CoreSchoolUpdate,
+    school_update: schemas_schools.CoreSchoolUpdate,
 ):
     await db.execute(
         update(models_schools.CoreSchool)
