@@ -3,7 +3,6 @@ from datetime import datetime, timedelta, timezone
 
 from app.core.factory_core import CoreFactory
 from app.core.groups.groups_type import GroupType
-from app.core.users import cruds_users
 from app.modules.booking import (
     cruds_booking,
     models_booking,
@@ -16,7 +15,7 @@ from app.utils.factory import Factory
 class BookingFactory(Factory):
     def __init__(self):
         super().__init__(
-            name="Booking",
+            name="booking",
             depends_on=[],
         )
 
