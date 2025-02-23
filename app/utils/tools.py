@@ -360,16 +360,6 @@ async def save_pdf_first_page_as_image(
         )
 
 
-def get_display_name(
-    firstname: str,
-    name: str,
-    nickname: str | None,
-) -> str:
-    if nickname:
-        return f"{firstname} {name} ({nickname})"
-    return f"{firstname} {name}"
-
-
 def get_random_string(length: int = 5) -> str:
     return "".join(
         secrets.choice("abcdefghijklmnopqrstuvwxyz0123456789") for _ in range(length)

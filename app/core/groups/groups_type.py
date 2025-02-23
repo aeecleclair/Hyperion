@@ -14,6 +14,7 @@ class GroupType(str, Enum):
     # Core groups
     admin = "0a25cb76-4b63-4fd3-b939-da6d9feabf28"
     AE = "45649735-866a-49df-b04b-a13c74fd5886"
+    # payment = "5571adfd-47fc-4dde-a44b-6e1289476499"
 
     # Module related groups
     amap = "70db65ee-d533-4f6b-9ffa-a4d70a17b7ef"
@@ -24,6 +25,7 @@ class GroupType(str, Enum):
     ph = "4ec5ae77-f955-4309-96a5-19cc3c8be71c"
     admin_cdr = "c1275229-46b2-4e53-a7c4-305513bb1a2a"
     eclair = "1f841bd9-00be-41a7-96e1-860a18a46105"
+    BDS = "61af3e52-7ef9-4608-823a-39d51e83d1db"
 
     # Auth related groups
 
