@@ -1,8 +1,8 @@
 import uuid
 
+from app.core.core_endpoints.models_core import CoreGroup
 from app.core.factory_core import CoreFactory
 from app.core.groups.groups_type import GroupType
-from app.core.models_core import CoreGroup
 from app.core.users import cruds_users
 from app.modules.phonebook import cruds_phonebook, models_phonebook
 from app.modules.phonebook.types_phonebook import Kinds
