@@ -32,7 +32,7 @@ def compute_signable_data(content: QRCodeContentBase) -> bytes:
             id=content.qr_code_id,
             tot=content.total,
             iat=content.creation,
-            key=content.walled_device_id,
+            key=content.wallet_device_id,
             store=content.store,
         )
         .model_dump_json()
