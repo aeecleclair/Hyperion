@@ -12,6 +12,7 @@ from app.utils.factory import Factory
 
 class CoreFactory(Factory):
     demo_user_id = str(uuid.uuid4())
+
     def __init__(self):
         super().__init__(
             name="core",
@@ -100,7 +101,7 @@ class CoreFactory(Factory):
                 created_on=datetime.now(tz=UTC),
             )
             await cruds_users.create_user(db=db, user=user)
-            for group in groups[i%4]:
+            for group in groups[i % 4]:
                 await cruds_groups.create_membership(
                     db=db,
                     membership=models_core.CoreMembership(
