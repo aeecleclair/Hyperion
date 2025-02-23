@@ -665,7 +665,7 @@ async def create_loan(
             ),
             job_id=f"loan_end_{loan.id}",
             defer_date=datetime.fromisoformat(
-                (loan.end - timedelta(days=7)).isoformat()
+                (loan.end - timedelta(days=7)).isoformat(),
             ),
         )
 
