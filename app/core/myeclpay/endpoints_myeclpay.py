@@ -1715,7 +1715,7 @@ async def init_ha_transfer(
 
 
 @router.post(
-    "/myeclpay/store/{store_id}/scan",
+    "/myeclpay/stores/{store_id}/scan",
     status_code=201,
     response_model=schemas_myeclpay.Transaction,
 )
@@ -1972,7 +1972,7 @@ async def store_scan_qrcode(
 
 
 @router.post(
-    "/myeclpay/transaction/{transaction_id}/refund",
+    "/myeclpay/transactions/{transaction_id}/refund",
     status_code=204,
 )
 async def refund_transaction(
@@ -2130,7 +2130,7 @@ async def refund_transaction(
 
 
 @router.post(
-    "/myeclpay/transaction/{transaction_id}/cancel",
+    "/myeclpay/transactions/{transaction_id}/cancel",
     status_code=204,
 )
 async def cancel_transaction(
