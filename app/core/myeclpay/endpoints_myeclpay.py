@@ -1948,7 +1948,7 @@ async def store_scan_qrcode(
         # is_visible=True,
         title=f"💳 Paiement - {store.name}",
         # TODO: convert and add unit
-        content=f"Une transaction de {scan_info.total} a été effectuée",
+        content=f"Une transaction de {scan_info.total/100} € a été effectuée",
         # expire_on=datetime.now(UTC) + timedelta(days=3),
         action_module="MyECLPay",
     )
@@ -2120,7 +2120,7 @@ async def refund_transaction(
     if debited_wallet.user is not None:
         message = Message(
             title="💳 Remboursement",
-            content=f"La transaction de {transaction.total} a été remboursée de {refund_amount}",
+            content=f"La transaction de {transaction.total} a été remboursée de {refund_amount/100} €",
             action_module="MyECLPay",
         )
         await notification_tool.send_notification_to_user(
@@ -2239,7 +2239,7 @@ async def cancel_transaction(
     if debited_wallet.user is not None:
         message = Message(
             title="💳 Paiement annulé",
-            content=f"La transaction de {transaction.total} a été annulée",
+            content=f"La transaction de {transaction.total/100} € a été annulée",
             action_module="MyECLPay",
         )
         await notification_tool.send_notification_to_user(
