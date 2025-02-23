@@ -46,7 +46,7 @@ class CinemaFactory(Factory):
             await cruds_cinema.create_session(
                 session=schemas_cinema.CineSessionComplete(
                     start=datetime.now(UTC),
-                    duration=random.randint(90, 180),
+                    duration=random.randint(90, 180),  # noqa: S311
                     name=key,
                     overview=value["overview"],
                     genre=value["genre"],
