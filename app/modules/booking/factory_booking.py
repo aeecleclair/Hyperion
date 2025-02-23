@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from app.core.factory_core import CoreFactory
 from app.core.groups.groups_type import GroupType
@@ -49,9 +49,9 @@ class BookingFactory(Factory):
                 decision=types_booking.Decision.approved,
                 applicant_id=CoreFactory.demo_user_id,
                 reason="Test",
-                start=datetime.now(timezone.utc),
-                end=datetime.now(timezone.max) + timedelta(days=1),
-                creation=datetime.now() - timedelta(days=10),
+                start=datetime.now(UTC),
+                end=datetime.now(UTC) + timedelta(days=1),
+                creation=datetime.now(UTC) - timedelta(days=10),
                 note="",
                 room_id=room_id_1,
                 key=True,
