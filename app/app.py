@@ -38,7 +38,6 @@ from app.dependencies import (
     get_db,
     get_redis_client,
     get_scheduler,
-    get_settings,
     get_websocket_connection_manager,
     init_and_get_db_engine,
 )

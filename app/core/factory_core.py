@@ -1,7 +1,8 @@
 import uuid
 from datetime import UTC, datetime
 
-from app.core import models_core, security
+from app.core import security
+from app.core.core_endpoints import models_core
 from app.core.groups import cruds_groups, groups_type
 from app.core.schools.schools_type import SchoolType
 from app.core.users import cruds_users
