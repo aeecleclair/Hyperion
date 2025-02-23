@@ -19,7 +19,7 @@ from app.types.module import Module
 from app.types.websocket import HyperionWebsocketsRoom, WebsocketConnectionManager
 
 module = Module(
-    root="rpalce",
+    root="rplace",
     tag="rplace",
 )
 
