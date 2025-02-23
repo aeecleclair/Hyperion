@@ -11,7 +11,7 @@ class Pixel(Base):
 
     id: Mapped[PrimaryKey]
     user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"))
-    color: Mapped[str] = mapped_column(String, nullable=False)
-    date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    x: Mapped[int] = mapped_column(Integer, nullable=False)
-    y: Mapped[int] = mapped_column(Integer, nullable=False)
+    color: Mapped[str]
+    date: Mapped[datetime]
+    x: Mapped[int]
+    y: Mapped[int]

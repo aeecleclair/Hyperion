@@ -53,7 +53,7 @@ async def create_pixel(
 
     db_item = models_rplace.Pixel(
         id=pixel_id,
-        date=datetime.now(UTC),
+        date=datetime.now(tz=UTC),
         user_id=user.id,
         x=pixel.x,
         y=pixel.y,
