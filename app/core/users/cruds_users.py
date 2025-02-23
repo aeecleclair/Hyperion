@@ -9,11 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy_utils import get_referencing_foreign_keys  # type: ignore
 
-from app.core.core_endpoints import schemas_core
 from app.core.groups import models_groups
 from app.core.groups.groups_type import AccountType
 from app.core.schools.schools_type import SchoolType
-from app.core.users import models_users
+from app.core.users import models_users, schemas_users
 
 
 async def count_users(db: AsyncSession) -> int:
@@ -142,7 +141,7 @@ async def get_user_by_email(
 async def update_user(
     db: AsyncSession,
     user_id: str,
-    user_update: schemas_core.CoreUserUpdateAdmin | schemas_core.CoreUserUpdate,
+    user_update: schemas_users.CoreUserUpdateAdmin | schemas_users.CoreUserUpdate,
 ):
     await db.execute(
         update(models_users.CoreUser)

@@ -7,11 +7,10 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
-from app.core.core_endpoints import schemas_core
 from app.core.google_api.google_api import DriveGoogleAPI
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.payment.payment_tool import PaymentTool
-from app.core.users import models_users
+from app.core.users import models_users, schemas_users
 from app.dependencies import (
     get_db,
     get_drive_file_manager,
@@ -1096,7 +1095,7 @@ async def get_payment_url(
         checkout_amount=price,
         checkout_name=checkout_name,
         redirection_uri=settings.RAID_PAYMENT_REDIRECTION_URL or "",
-        payer_user=schemas_core.CoreUser(**user_dict),
+        payer_user=schemas_users.CoreUser(**user_dict),
         db=db,
     )
     hyperion_error_logger.info(f"RAID: Logging Checkout id {checkout.id}")

@@ -16,11 +16,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
-from app.core.core_endpoints import models_core, schemas_core
+from app.core.core_endpoints import models_core
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
 from app.core.payment.payment_tool import PaymentTool
-from app.core.users import cruds_users, models_users
+from app.core.users import cruds_users, models_users, schemas_users
 from app.core.users.cruds_users import get_user_by_id, get_users
 from app.dependencies import (
     get_db,
@@ -278,7 +278,7 @@ async def update_cdr_user(
             await cruds_users.update_user(
                 db=db,
                 user_id=user_id,
-                user_update=schemas_core.CoreUserUpdate(
+                user_update=schemas_users.CoreUserUpdate(
                     nickname=user_update.nickname,
                     floor=user_update.floor,
                 ),
@@ -2487,7 +2487,7 @@ async def get_payment_url(
             status_code=403,
             detail="Please give an amount in cents, greater than 1€.",
         )
-    user_schema = schemas_core.CoreUser(
+    user_schema = schemas_users.CoreUser(
         account_type=user.account_type,
         school_id=user.school_id,
         email=user.email,
@@ -2875,7 +2875,7 @@ async def scan_ticket(
 
 @module.router.get(
     "/cdr/sellers/{seller_id}/products/{product_id}/tickets/{generator_id}/lists/{tag}/",
-    response_model=list[schemas_core.CoreUserSimple],
+    response_model=list[schemas_users.CoreUserSimple],
     status_code=200,
 )
 async def get_users_by_tag(

@@ -5,7 +5,7 @@ from datetime import date, datetime
 from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.core_endpoints.schemas_core import CoreUser
+from app.core.users.models_users import CoreUser
 from app.modules.amap.types_amap import AmapSlotType, DeliveryStatusType
 from app.types.sqlalchemy import Base
 

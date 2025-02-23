@@ -13,13 +13,12 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.core import security
 from app.core.auth import schemas_auth
 from app.core.config import Settings
-from app.core.core_endpoints import schemas_core
 from app.core.groups import cruds_groups, models_groups
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.payment import cruds_payment, models_payment, schemas_payment
 from app.core.payment.payment_tool import PaymentTool
 from app.core.schools.schools_type import SchoolType
-from app.core.users import cruds_users, models_users
+from app.core.users import cruds_users, models_users, schemas_users
 from app.dependencies import get_settings
 from app.types.exceptions import RedisConnectionError
 from app.types.floors_type import FloorsType
@@ -231,7 +230,7 @@ class MockedPaymentTool:
         checkout_name: str,
         redirection_uri: str,
         db: AsyncSession,
-        payer_user: schemas_core.CoreUser | None = None,
+        payer_user: schemas_users.CoreUser | None = None,
     ) -> schemas_payment.Checkout:
         checkout_id = uuid.UUID("81c9ad91-f415-494a-96ad-87bf647df82c")
 

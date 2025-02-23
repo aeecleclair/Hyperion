@@ -6,11 +6,10 @@ from fastapi import Depends, HTTPException, Response
 from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.core_endpoints import schemas_core
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.notification.notification_types import CustomTopic, Topic
 from app.core.notification.schemas_notification import Message
-from app.core.users import cruds_users, models_users
+from app.core.users import cruds_users, models_users, schemas_users
 from app.core.users.endpoints_users import read_user
 from app.dependencies import (
     get_db,
@@ -843,7 +842,7 @@ async def get_cash_by_id(
         return schemas_amap.CashComplete(
             balance=0,
             user_id=user_id,
-            user=schemas_core.CoreUserSimple(**user_db.__dict__),
+            user=schemas_users.CoreUserSimple(**user_db.__dict__),
         )
 
     return cash
