@@ -1,5 +1,6 @@
 """File defining the Metadata. And the basic functions creating the database tables and calling the router"""
 
+import importlib
 import logging
 import uuid
 from collections.abc import AsyncGenerator, Awaitable, Callable
@@ -19,9 +20,11 @@ from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from app import api
+from app.core import factory_core
 from app.core.config import Settings
 from app.core.core_endpoints import coredata_core, models_core
 from app.core.google_api.google_api import GoogleAPI
@@ -39,6 +42,7 @@ from app.modules.module_list import module_list
 from app.types.exceptions import ContentHTTPException, GoogleAPIInvalidCredentialsError
 from app.types.sqlalchemy import Base
 from app.utils import initialization
+from app.utils.factory import Factory
 from app.utils.redis import limiter
 
 if TYPE_CHECKING:
@@ -216,6 +220,70 @@ def initialize_schools(
                     )
 
 
+async def run_factories(db: AsyncSession, settings: Settings) -> None:
+    """Run the factories to create default data in the database"""
+    hyperion_error_logger = logging.getLogger("hyperion.error")
+    if not settings.USE_FACTORIES:
+        hyperion_error_logger.info("Startup: Factories are disabled")
+        return
+
+    # Importing the core_factory at the beginning of the factories.
+    factories_list: list[Factory] = [
+        factory_core.factory,
+    ]
+    for factories_file in Path().glob("app/modules/*/factory_*.py"):
+        factory_module = importlib.import_module(
+            ".".join(factories_file.with_suffix("").parts),
+        )
+        if hasattr(factory_module, "factory") and isinstance(
+            factory_module.factory,
+            Factory,
+        ):  # Verify that the module has a factory class object
+            factory = factory_module.factory
+            factories_list.append(factory)
+        else:
+            hyperion_error_logger.error(
+                f"Module {factories_file} does not declare a module. It won't be enabled.",
+            )
+
+    # We have to run the factories in a specific order to make sure the dependencies are met
+    # For that reason, we will run the first factory that has no dependencies, after that we remove it from the list of the dependencies from the other factories
+    # And we loop until there are no more factories to run and we use a boolean to avoid infinite loops with circular dependencies
+    action = True
+    while len(factories_list) > 0 and action:
+        action = False
+        for factory in factories_list:
+            if factory.depends_on == []:
+                action = True
+                # Check if the factory should be run
+                if await factory.should_run(db):
+                    hyperion_error_logger.info(
+                        f"Startup: Running factory {factory.name}",
+                    )
+                    try:
+                        await factory.run(db)
+                    except Exception as error:
+                        hyperion_error_logger.fatal(
+                            f"Startup: Could not run factories: {error}",
+                        )
+                        raise
+                else:
+                    hyperion_error_logger.info(
+                        f"Startup: Factory {factory.name} is not necessary, skipping it",
+                    )
+                for other_factory in factories_list:
+                    if type(factory) in other_factory.depends_on:
+                        other_factory.depends_on.remove(type(factory))
+                factories_list.remove(factory)
+                break
+        if not action:
+            hyperion_error_logger.error(
+                "Factories are not correctly configured, some factories are not running.",
+            )
+            break
+    hyperion_error_logger.info("Startup: Factories have been run")
+
+
 def initialize_module_visibility(
     sync_engine: Engine,
     hyperion_error_logger: logging.Logger,
@@ -371,6 +439,11 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     # https://fastapi.tiangolo.com/advanced/events/
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator:
+        async for db in app.dependency_overrides.get(
+            get_db,
+            get_db,
+        )():
+            await run_factories(db, settings)
         # Init Google API credentials
         google_api = GoogleAPI()
         if google_api.is_google_api_configured(settings):
@@ -435,6 +508,8 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         )
     else:
         hyperion_error_logger.info("Database initialization skipped")
+
+    # Run factories
 
     # Initialize Redis
     if not app.dependency_overrides.get(get_redis_client, get_redis_client)(
