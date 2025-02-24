@@ -4,8 +4,8 @@ from pathlib import Path
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import GroupType
+from app.core.users import models_users
 from app.modules.raffle import models_raffle
 from app.modules.raffle.types_raffle import RaffleStatusType
 from tests.commons import (
@@ -15,9 +15,9 @@ from tests.commons import (
     create_user_with_groups,
 )
 
-BDE_user: models_core.CoreUser
-admin_user: models_core.CoreUser
-student_user: models_core.CoreUser
+BDE_user: models_users.CoreUser
+admin_user: models_users.CoreUser
+student_user: models_users.CoreUser
 raffle: models_raffle.Raffle
 raffle_to_draw: models_raffle.Raffle
 raffle_to_delete: models_raffle.Raffle

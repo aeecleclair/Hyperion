@@ -10,8 +10,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.core_endpoints import models_core, schemas_core
-from app.core.groups import cruds_groups
+from app.core.groups import cruds_groups, models_groups, schemas_groups
 from app.core.groups.groups_type import GroupType
 from app.core.users import cruds_users
 from app.dependencies import (
@@ -35,7 +34,7 @@ hyperion_security_logger = logging.getLogger("hyperion.security")
 
 @router.get(
     "/groups/",
-    response_model=list[schemas_core.CoreGroupSimple],
+    response_model=list[schemas_groups.CoreGroupSimple],
     status_code=200,
 )
 async def read_groups(
@@ -52,7 +51,7 @@ async def read_groups(
 
 @router.get(
     "/groups/{group_id}",
-    response_model=schemas_core.CoreGroup,
+    response_model=schemas_groups.CoreGroup,
     status_code=200,
 )
 async def read_group(
@@ -74,11 +73,11 @@ async def read_group(
 
 @router.post(
     "/groups/",
-    response_model=schemas_core.CoreGroupSimple,
+    response_model=schemas_groups.CoreGroupSimple,
     status_code=201,
 )
 async def create_group(
-    group: schemas_core.CoreGroupCreate,
+    group: schemas_groups.CoreGroupCreate,
     db: AsyncSession = Depends(get_db),
     user=Depends(is_user_in(GroupType.admin)),
 ):
@@ -94,7 +93,7 @@ async def create_group(
         )
 
     try:
-        db_group = models_core.CoreGroup(
+        db_group = models_groups.CoreGroup(
             id=str(uuid.uuid4()),
             name=group.name,
             description=group.description,
@@ -110,7 +109,7 @@ async def create_group(
 )
 async def update_group(
     group_id: str,
-    group_update: schemas_core.CoreGroupUpdate,
+    group_update: schemas_groups.CoreGroupUpdate,
     db: AsyncSession = Depends(get_db),
     user=Depends(is_user_in(GroupType.admin)),
 ):
@@ -140,11 +139,11 @@ async def update_group(
 
 @router.post(
     "/groups/membership",
-    response_model=schemas_core.CoreGroup,
+    response_model=schemas_groups.CoreGroup,
     status_code=201,
 )
 async def create_membership(
-    membership: schemas_core.CoreMembership,
+    membership: schemas_groups.CoreMembership,
     db: AsyncSession = Depends(get_db),
     user=Depends(is_user_in(GroupType.admin)),
     request_id: str = Depends(get_request_id),
@@ -169,7 +168,7 @@ async def create_membership(
     )
 
     try:
-        membership_db = models_core.CoreMembership(
+        membership_db = models_groups.CoreMembership(
             user_id=membership.user_id,
             group_id=membership.group_id,
             description=membership.description,
@@ -184,7 +183,7 @@ async def create_membership(
     status_code=204,
 )
 async def create_batch_membership(
-    batch_membership: schemas_core.CoreBatchMembership,
+    batch_membership: schemas_groups.CoreBatchMembership,
     db: AsyncSession = Depends(get_db),
     user=Depends(is_user_in(GroupType.admin)),
     request_id: str = Depends(get_request_id),
@@ -212,7 +211,7 @@ async def create_batch_membership(
 
         # We only want to add existing users to the group
         if user_db is not None:
-            membership_db = models_core.CoreMembership(
+            membership_db = models_groups.CoreMembership(
                 user_id=user_db.id,
                 group_id=batch_membership.group_id,
                 description=batch_membership.description,
@@ -230,7 +229,7 @@ async def create_batch_membership(
     status_code=204,
 )
 async def delete_membership(
-    membership: schemas_core.CoreMembershipDelete,
+    membership: schemas_groups.CoreMembershipDelete,
     db: AsyncSession = Depends(get_db),
     user=Depends(is_user_in(GroupType.admin)),
     request_id: str = Depends(get_request_id),
@@ -257,7 +256,7 @@ async def delete_membership(
     status_code=204,
 )
 async def delete_batch_membership(
-    batch_membership: schemas_core.CoreBatchDeleteMembership,
+    batch_membership: schemas_groups.CoreBatchDeleteMembership,
     db: AsyncSession = Depends(get_db),
     user=Depends(is_user_in(GroupType.admin)),
     request_id: str = Depends(get_request_id),

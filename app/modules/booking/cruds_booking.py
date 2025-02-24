@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.core_endpoints import models_core
+from app.core.users import models_users
 from app.modules.booking import models_booking, schemas_booking
 from app.modules.booking.types_booking import Decision
 
@@ -75,7 +75,7 @@ async def get_manager_by_id(
 
 
 async def get_user_managers(
-    user: models_core.CoreUser,
+    user: models_users.CoreUser,
     db: AsyncSession,
 ) -> Sequence[models_booking.Manager]:
     groups_id = [group.id for group in user.groups]

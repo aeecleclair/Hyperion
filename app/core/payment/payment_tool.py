@@ -10,10 +10,10 @@ from helloasso_api_wrapper.models.carts import (
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import security
-from app.core.config import Settings
-from app.core.core_endpoints import schemas_core
 from app.core.payment import cruds_payment, models_payment, schemas_payment
+from app.core.users import schemas_users
+from app.core.utils import security
+from app.core.utils.config import Settings
 from app.types.exceptions import PaymentToolCredentialsNotSetException
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
@@ -57,7 +57,7 @@ class PaymentTool:
         checkout_name: str,
         redirection_uri: str,
         db: AsyncSession,
-        payer_user: schemas_core.CoreUser | None = None,
+        payer_user: schemas_users.CoreUser | None = None,
     ) -> schemas_payment.Checkout:
         """
         Init an HelloAsso checkout

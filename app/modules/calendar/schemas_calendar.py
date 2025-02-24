@@ -2,7 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
-from app.core.core_endpoints.schemas_core import CoreUserSimple
+from app.core.users.schemas_users import CoreUserSimple
 from app.modules.calendar.types_calendar import CalendarEventType, Decision
 
 

@@ -6,7 +6,8 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import noload, selectinload
 
-from app.core.core_endpoints.models_core import CoreAssociationMembership, CoreUser
+from app.core.core_endpoints.models_core import CoreAssociationMembership
+from app.core.users.models_users import CoreUser
 from app.modules.cdr import models_cdr, schemas_cdr
 from app.types.membership import AvailableAssociationMembership
 

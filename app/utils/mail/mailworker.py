@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 if TYPE_CHECKING:
-    from app.core.config import Settings
+    from app.core.utils.config import Settings
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 

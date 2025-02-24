@@ -5,8 +5,8 @@ from fastapi import Depends, HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import AccountType, GroupType
+from app.core.users import models_users
 from app.dependencies import get_db, is_user_an_ecl_member, is_user_in
 from app.modules.calendar import cruds_calendar, models_calendar, schemas_calendar
 from app.modules.calendar.types_calendar import Decision
@@ -29,7 +29,7 @@ ical_file_path = "data/ics/ae_calendar.ics"
 )
 async def get_events(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.BDE)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.BDE)),
 ):
     """Get all events from the database."""
     events = await cruds_calendar.get_all_events(db=db)
@@ -43,7 +43,7 @@ async def get_events(
 )
 async def get_confirmed_events(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
     Get all confirmed events.
@@ -62,7 +62,7 @@ async def get_confirmed_events(
 async def get_applicant_bookings(
     applicant_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
     Get one user bookings.
@@ -90,7 +90,7 @@ async def get_applicant_bookings(
 async def get_event_by_id(
     event_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """Get an event's information by its id."""
 
@@ -109,7 +109,7 @@ async def get_event_by_id(
 async def get_event_applicant(
     event_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.BDE)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.BDE)),
 ):
     event = await cruds_calendar.get_event(db=db, event_id=event_id)
     if event is not None:
@@ -126,7 +126,7 @@ async def get_event_applicant(
 async def add_event(
     event: schemas_calendar.EventBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """Add an event to the calendar."""
 
@@ -152,7 +152,7 @@ async def edit_bookings_id(
     event_id: str,
     event_edit: schemas_calendar.EventEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
     Edit an event.
@@ -184,7 +184,7 @@ async def confirm_booking(
     event_id: str,
     decision: Decision,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.BDE)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.BDE)),
 ):
     """
     Give a decision to an event.
@@ -201,7 +201,7 @@ async def confirm_booking(
 async def delete_bookings_id(
     event_id,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
     Remove an event.
@@ -229,7 +229,7 @@ async def delete_bookings_id(
 )
 async def recreate_ical_file(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Create manually the icalendar file

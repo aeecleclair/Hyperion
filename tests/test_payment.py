@@ -13,9 +13,10 @@ from pytest_mock import MockerFixture
 from requests import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.core_endpoints import schemas_core
 from app.core.payment import cruds_payment, models_payment, schemas_payment
 from app.core.payment.payment_tool import PaymentTool
+from app.core.schools import schemas_schools
+from app.core.users import schemas_users
 from app.dependencies import get_payment_tool
 from app.types.exceptions import PaymentToolCredentialsNotSetException
 from app.types.module import Module
@@ -27,13 +28,13 @@ from tests.commons import (
 )
 
 if TYPE_CHECKING:
-    from app.core.config import Settings
+    from app.core.utils.config import Settings
 
 checkout_with_existing_checkout_payment: models_payment.Checkout
 existing_checkout_payment: models_payment.CheckoutPayment
 checkout: models_payment.Checkout
 
-user_schema: schemas_core.CoreUser
+user_schema: schemas_users.CoreUser
 
 TEST_MODULE_ROOT = "tests"
 
@@ -76,7 +77,7 @@ async def init_objects() -> None:
     user = await create_user_with_groups(
         groups=[],
     )
-    school = schemas_core.CoreSchool(
+    school = schemas_schools.CoreSchool(
         id=user.school.id,
         name=user.school.name,
         email_regex=user.school.email_regex,
@@ -84,7 +85,7 @@ async def init_objects() -> None:
     user_dict = user.__dict__
     user_dict.pop("school")
 
-    user_schema = schemas_core.CoreUser(**user_dict, school=school)
+    user_schema = schemas_users.CoreUser(**user_dict, school=school)
 
 
 # Test endpoints #

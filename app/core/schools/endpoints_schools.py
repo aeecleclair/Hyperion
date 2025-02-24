@@ -11,11 +11,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.core_endpoints import models_core, schemas_core
 from app.core.groups.groups_type import AccountType, GroupType
-from app.core.schools import cruds_schools
+from app.core.schools import cruds_schools, models_schools, schemas_schools
 from app.core.schools.schools_type import SchoolType
-from app.core.users import cruds_users
+from app.core.users import cruds_users, schemas_users
 from app.dependencies import (
     get_db,
     is_user_in,
@@ -33,7 +32,7 @@ core_module = CoreModule(
 
 @router.get(
     "/schools/",
-    response_model=list[schemas_core.CoreSchool],
+    response_model=list[schemas_schools.CoreSchool],
     status_code=200,
 )
 async def read_schools(
@@ -49,7 +48,7 @@ async def read_schools(
 
 @router.get(
     "/schools/{school_id}",
-    response_model=schemas_core.CoreSchool,
+    response_model=schemas_schools.CoreSchool,
     status_code=200,
 )
 async def read_school(
@@ -70,13 +69,13 @@ async def read_school(
 
 @router.post(
     "/schools/",
-    response_model=schemas_core.CoreSchool,
+    response_model=schemas_schools.CoreSchool,
     status_code=201,
 )
 async def create_school(
-    school: schemas_core.CoreSchoolBase,
+    school: schemas_schools.CoreSchoolBase,
     db: AsyncSession = Depends(get_db),
-    user: schemas_core.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: schemas_users.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Create a new school and add users to it based on the email regex.
@@ -93,7 +92,7 @@ async def create_school(
         )
 
     try:
-        db_school = models_core.CoreSchool(
+        db_school = models_schools.CoreSchool(
             id=uuid.uuid4(),
             name=school.name,
             email_regex=school.email_regex,
@@ -108,7 +107,7 @@ async def create_school(
                 await cruds_users.update_user(
                     db,
                     db_user.id,
-                    schemas_core.CoreUserUpdateAdmin(
+                    schemas_users.CoreUserUpdateAdmin(
                         school_id=db_school.id,
                         account_type=AccountType.other_school_student,
                     ),
@@ -127,9 +126,9 @@ async def create_school(
 )
 async def update_school(
     school_id: uuid.UUID,
-    school_update: schemas_core.CoreSchoolUpdate,
+    school_update: schemas_schools.CoreSchoolUpdate,
     db: AsyncSession = Depends(get_db),
-    user: schemas_core.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: schemas_users.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Update the name or the description of a school.
@@ -177,7 +176,7 @@ async def update_school(
                 await cruds_users.update_user(
                     db,
                     db_user.id,
-                    schemas_core.CoreUserUpdateAdmin(
+                    schemas_users.CoreUserUpdateAdmin(
                         school_id=school.id,
                         account_type=AccountType.other_school_student,
                     ),
@@ -196,7 +195,7 @@ async def update_school(
 async def delete_school(
     school_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: schemas_core.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: schemas_users.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Delete school from database.

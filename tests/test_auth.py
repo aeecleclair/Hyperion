@@ -7,17 +7,17 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 
 from app.core.auth import models_auth
-from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import AccountType, GroupType
+from app.core.users import models_users
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
     create_user_with_groups,
 )
 
-user: models_core.CoreUser
-external_user: models_core.CoreUser
-ecl_user: models_core.CoreUser
+user: models_users.CoreUser
+external_user: models_users.CoreUser
+ecl_user: models_users.CoreUser
 access_token: str
 
 valid_refresh_token = "ValidRefreshToken"

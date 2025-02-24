@@ -6,11 +6,11 @@ from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import Settings
-from app.core.core_endpoints import models_core, schemas_core
 from app.core.google_api.google_api import DriveGoogleAPI
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.payment.payment_tool import PaymentTool
+from app.core.users import models_users, schemas_users
+from app.core.utils.config import Settings
 from app.dependencies import (
     get_db,
     get_drive_file_manager,
@@ -60,7 +60,7 @@ module = Module(
 async def get_participant_by_id(
     participant_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     """
     Get a participant by id
@@ -85,7 +85,7 @@ async def get_participant_by_id(
 )
 async def create_participant(
     participant: schemas_raid.ParticipantBase,
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(is_user()),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -119,7 +119,7 @@ async def create_participant(
 async def update_participant(
     participant_id: str,
     participant: schemas_raid.ParticipantUpdate,
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(is_user()),
     db: AsyncSession = Depends(get_db),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
     settings: Settings = Depends(get_settings),
@@ -230,7 +230,7 @@ async def update_participant(
 )
 async def create_team(
     team: schemas_raid.TeamBase,
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(is_user()),
     db: AsyncSession = Depends(get_db),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
     settings: Settings = Depends(get_settings),
@@ -271,7 +271,7 @@ async def create_team(
     status_code=204,
 )
 async def generate_teams_pdf(
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.raid_admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_admin)),
     db: AsyncSession = Depends(get_db),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
     settings: Settings = Depends(get_settings),
@@ -299,7 +299,7 @@ async def generate_teams_pdf(
 async def get_team_by_participant_id(
     participant_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     """
     Get a team by participant id
@@ -325,7 +325,7 @@ async def get_team_by_participant_id(
 )
 async def get_all_teams(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.raid_admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_admin)),
 ):
     """
     Get all teams
@@ -341,7 +341,7 @@ async def get_all_teams(
 async def get_team_by_id(
     team_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.raid_admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_admin)),
 ):
     """
     Get a team by id
@@ -357,7 +357,7 @@ async def update_team(
     team_id: str,
     team: schemas_raid.TeamUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(is_user()),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
     settings: Settings = Depends(get_settings),
 ):
@@ -386,7 +386,7 @@ async def update_team(
 async def delete_team(
     team_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.raid_admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_admin)),
     settings: Settings = Depends(get_settings),
 ):
     """
@@ -417,7 +417,7 @@ async def delete_team(
 )
 async def delete_all_teams(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.raid_admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_admin)),
 ):
     """
     Delete all teams
@@ -434,7 +434,7 @@ async def upload_document(
     document_type: DocumentType,
     file: UploadFile = File(...),
     request_id: str = Depends(get_request_id),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(is_user()),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -490,7 +490,7 @@ async def upload_document(
 async def read_document(
     document_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     """
     Read a document
@@ -541,7 +541,7 @@ async def validate_document(
     document_id: str,
     validation: DocumentValidation,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.raid_admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_admin)),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
     settings: Settings = Depends(get_settings),
 ):
@@ -567,7 +567,7 @@ async def set_security_file(
     security_file: schemas_raid.SecurityFileBase,
     participant_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(is_user()),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
     settings: Settings = Depends(get_settings),
 ):
@@ -640,7 +640,7 @@ async def set_security_file(
 async def confirm_payment(
     participant_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.raid_admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_admin)),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
     settings: Settings = Depends(get_settings),
 ):
@@ -667,7 +667,7 @@ async def confirm_payment(
 async def confirm_t_shirt_payment(
     participant_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.raid_admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_admin)),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
     settings: Settings = Depends(get_settings),
 ):
@@ -698,7 +698,7 @@ async def confirm_t_shirt_payment(
 async def validate_attestation_on_honour(
     participant_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(is_user()),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
     settings: Settings = Depends(get_settings),
 ):
@@ -725,7 +725,7 @@ async def validate_attestation_on_honour(
 async def create_invite_token(
     team_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     """
     Create an invite token
@@ -759,7 +759,7 @@ async def create_invite_token(
 async def join_team(
     token: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(is_user()),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
     settings: Settings = Depends(get_settings),
 ):
@@ -817,7 +817,7 @@ async def kick_team_member(
     team_id: str,
     participant_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.raid_admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_admin)),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
     settings: Settings = Depends(get_settings),
 ):
@@ -859,7 +859,7 @@ async def merge_teams(
     team1_id: str,
     team2_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.raid_admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_admin)),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
     settings: Settings = Depends(get_settings),
 ):
@@ -914,7 +914,7 @@ async def merge_teams(
 )
 async def get_raid_information(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     """
     Get raid information
@@ -929,7 +929,7 @@ async def get_raid_information(
 async def update_raid_information(
     raid_information: coredata_raid.RaidInformation,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.raid_admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_admin)),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
     settings: Settings = Depends(get_settings),
 ):
@@ -992,7 +992,7 @@ async def update_raid_information(
 async def update_drive_folders(
     drive_folders: schemas_raid.RaidDriveFoldersCreation,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.raid_admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_admin)),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
     settings: Settings = Depends(get_settings),
 ):
@@ -1016,7 +1016,7 @@ async def update_drive_folders(
 )
 async def get_drive_folders(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.raid_admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_admin)),
 ):
     """
     Get drive folders
@@ -1031,7 +1031,7 @@ async def get_drive_folders(
 )
 async def get_raid_price(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     """
     Get raid price
@@ -1046,7 +1046,7 @@ async def get_raid_price(
 async def update_raid_price(
     raid_price: coredata_raid.RaidPrice,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.raid_admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_admin)),
 ):
     """
     Update raid price
@@ -1061,7 +1061,7 @@ async def update_raid_price(
 )
 async def get_payment_url(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(is_user()),
     settings: Settings = Depends(get_settings),
     payment_tool: PaymentTool = Depends(get_payment_tool),
 ):
@@ -1095,7 +1095,7 @@ async def get_payment_url(
         checkout_amount=price,
         checkout_name=checkout_name,
         redirection_uri=settings.RAID_PAYMENT_REDIRECTION_URL or "",
-        payer_user=schemas_core.CoreUser(**user_dict),
+        payer_user=schemas_users.CoreUser(**user_dict),
         db=db,
     )
     hyperion_error_logger.info(f"RAID: Logging Checkout id {checkout.id}")

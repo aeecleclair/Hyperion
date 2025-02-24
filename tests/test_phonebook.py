@@ -3,8 +3,9 @@ import uuid
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from app.core.core_endpoints import models_core
+from app.core.groups import models_groups
 from app.core.groups.groups_type import GroupType
+from app.core.users import models_users
 from app.modules.phonebook import models_phonebook
 from app.modules.phonebook.types_phonebook import Kinds, RoleTags
 from tests.commons import (
@@ -23,14 +24,14 @@ membership3: models_phonebook.Membership
 membership4: models_phonebook.Membership
 membership5: models_phonebook.Membership
 membership6: models_phonebook.Membership
-phonebook_user_BDE: models_core.CoreUser
-phonebook_user_president: models_core.CoreUser
-phonebook_user_simple: models_core.CoreUser
-phonebook_user_simple2: models_core.CoreUser
-phonebook_user_simple3: models_core.CoreUser
+phonebook_user_BDE: models_users.CoreUser
+phonebook_user_president: models_users.CoreUser
+phonebook_user_simple: models_users.CoreUser
+phonebook_user_simple2: models_users.CoreUser
+phonebook_user_simple3: models_users.CoreUser
 
-association1_group: models_core.CoreGroup
-association2_group: models_core.CoreGroup
+association1_group: models_groups.CoreGroup
+association2_group: models_groups.CoreGroup
 
 association2_group2: models_phonebook.AssociationAssociatedGroups
 
@@ -93,13 +94,13 @@ async def init_objects():
     phonebook_user_admin = await create_user_with_groups([GroupType.admin])
     token_admin = create_api_access_token(phonebook_user_admin)
 
-    association1_group = models_core.CoreGroup(
+    association1_group = models_groups.CoreGroup(
         id="1",
         name="ECLAIR",
         description="ECLAIR description",
     )
 
-    association2_group = models_core.CoreGroup(
+    association2_group = models_groups.CoreGroup(
         id="2",
         name="Nom",
         description="description",

@@ -3,7 +3,7 @@ from typing import Any
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.core_endpoints import models_core
+from app.core.users import models_users
 from app.modules.campaign.types_campaign import StatusType
 from app.types.sqlalchemy import Base
 
@@ -18,7 +18,7 @@ class ListMemberships(Base):
     )
     role: Mapped[str]
 
-    user: Mapped[models_core.CoreUser] = relationship("CoreUser", init=False)
+    user: Mapped[models_users.CoreUser] = relationship("CoreUser", init=False)
     lists: Mapped["Lists"] = relationship("Lists", back_populates="members", init=False)
 
 

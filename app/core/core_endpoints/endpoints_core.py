@@ -6,9 +6,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import Settings
 from app.core.core_endpoints import cruds_core, models_core, schemas_core
 from app.core.groups.groups_type import AccountType, GroupType
+from app.core.users import models_users
+from app.core.utils.config import Settings
 from app.dependencies import (
     get_db,
     get_settings,
@@ -169,7 +170,7 @@ async def get_favicon():
 )
 async def get_module_visibility(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Get all existing module_visibility.
@@ -205,7 +206,7 @@ async def get_module_visibility(
 )
 async def get_user_modules_visibility(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     """
     Get group user accessible root
@@ -223,7 +224,7 @@ async def get_user_modules_visibility(
 async def add_module_visibility(
     module_visibility: schemas_core.ModuleVisibilityCreate,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Add a new group or account type to a module
@@ -277,7 +278,7 @@ async def delete_module_group_visibility(
     root: str,
     group_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     await cruds_core.delete_module_group_visibility(
         root=root,
@@ -294,7 +295,7 @@ async def delete_module_account_type_visibility(
     root: str,
     account_type: AccountType,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     await cruds_core.delete_module_account_type_visibility(
         root=root,

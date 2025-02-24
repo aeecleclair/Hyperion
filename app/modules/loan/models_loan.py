@@ -3,7 +3,7 @@ from datetime import date
 from sqlalchemy import TEXT, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.core_endpoints import models_core
+from app.core.users import models_users
 from app.types.sqlalchemy import Base
 
 
@@ -86,7 +86,7 @@ class Loan(Base):
 
     returned_date: Mapped[date | None] = mapped_column(default=None)
 
-    borrower: Mapped[models_core.CoreUser] = relationship(
+    borrower: Mapped[models_users.CoreUser] = relationship(
         "CoreUser",
         lazy="joined",
         init=False,

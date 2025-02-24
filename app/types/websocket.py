@@ -9,7 +9,7 @@ from fastapi import WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import Settings
+from app.core.utils.config import Settings
 from app.types.scopes_type import ScopeType
 from app.utils.auth import auth_utils
 

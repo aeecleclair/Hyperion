@@ -6,8 +6,10 @@ from sqlalchemy.engine import Engine, create_engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.config import Settings
 from app.core.core_endpoints import models_core
+from app.core.groups import models_groups
+from app.core.schools import models_schools
+from app.core.utils.config import Settings
 from app.types import core_data
 from app.types.exceptions import CoreDataNotFoundError
 from app.types.sqlalchemy import Base
@@ -82,22 +84,22 @@ def create_module_account_type_visibility_sync(
         return module_visibility
 
 
-def get_group_by_id_sync(group_id: str, db: Session) -> models_core.CoreGroup | None:
+def get_group_by_id_sync(group_id: str, db: Session) -> models_groups.CoreGroup | None:
     """
     Return group with id from database
     """
     result = db.execute(
-        select(models_core.CoreGroup).where(
-            models_core.CoreGroup.id == group_id,
+        select(models_groups.CoreGroup).where(
+            models_groups.CoreGroup.id == group_id,
         ),  # needed to load the members from the relationship
     )
     return result.scalars().first()
 
 
 def create_group_sync(
-    group: models_core.CoreGroup,
+    group: models_groups.CoreGroup,
     db: Session,
-) -> models_core.CoreGroup:
+) -> models_groups.CoreGroup:
     """
     Create a new group in database and return it
     """
@@ -138,20 +140,25 @@ def set_core_data_crud_sync(
         return core_data
 
 
-def get_school_by_id_sync(school_id: str, db: Session) -> models_core.CoreSchool | None:
+def get_school_by_id_sync(
+    school_id: str,
+    db: Session,
+) -> models_schools.CoreSchool | None:
     """
     Return group with id from database
     """
     result = db.execute(
-        select(models_core.CoreSchool).where(models_core.CoreSchool.id == school_id),
+        select(models_schools.CoreSchool).where(
+            models_schools.CoreSchool.id == school_id,
+        ),
     )
     return result.scalars().first()
 
 
 def create_school_sync(
-    school: models_core.CoreSchool,
+    school: models_schools.CoreSchool,
     db: Session,
-) -> models_core.CoreSchool:
+) -> models_schools.CoreSchool:
     """
     Create a new group in database and return it
     """

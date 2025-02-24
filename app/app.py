@@ -22,12 +22,14 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import api
-from app.core.config import Settings
 from app.core.core_endpoints import coredata_core, models_core
 from app.core.google_api.google_api import GoogleAPI
+from app.core.groups import models_groups
 from app.core.groups.groups_type import GroupType
-from app.core.log import LogConfig
+from app.core.schools import models_schools
 from app.core.schools.schools_type import SchoolType
+from app.core.utils.config import Settings
+from app.core.utils.log import LogConfig
 from app.dependencies import (
     get_db,
     get_redis_client,
@@ -176,7 +178,7 @@ def initialize_groups(
             exists = initialization.get_group_by_id_sync(group_id=group_type, db=db)
             # We don't want to recreate the groups if they already exist
             if not exists:
-                group = models_core.CoreGroup(
+                group = models_groups.CoreGroup(
                     id=group_type,
                     name=group_type.name,
                     description="Group type",
@@ -202,7 +204,7 @@ def initialize_schools(
             exists = initialization.get_school_by_id_sync(school_id=school.value, db=db)
             # We don't want to recreate the groups if they already exist
             if not exists:
-                db_school = models_core.CoreSchool(
+                db_school = models_schools.CoreSchool(
                     id=school.value,
                     name=school.name,
                     email_regex="null",

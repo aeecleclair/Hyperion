@@ -6,20 +6,20 @@ from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
-from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.schools.schools_type import SchoolType
+from app.core.users import models_users
 from app.dependencies import is_user
 from tests.commons import (
     create_api_access_token,
     create_user_with_groups,
 )
 
-admin_user: models_core.CoreUser
-student_user: models_core.CoreUser
-external_user: models_core.CoreUser
-student_user_with_old_email: models_core.CoreUser
-user_with_group: models_core.CoreUser
+admin_user: models_users.CoreUser
+student_user: models_users.CoreUser
+external_user: models_users.CoreUser
+student_user_with_old_email: models_users.CoreUser
+user_with_group: models_users.CoreUser
 
 token_admin_user: str
 token_student_user: str

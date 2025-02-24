@@ -18,19 +18,19 @@ from jellyfish import jaro_winkler_similarity
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import security
 from app.core.core_endpoints import cruds_core, models_core
-from app.core.core_endpoints.models_core import CoreUser
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import AccountType, GroupType
-from app.core.users import cruds_users
+from app.core.users import cruds_users, models_users
+from app.core.users.models_users import CoreUser
+from app.core.utils import security
 from app.types import core_data
 from app.types.content_type import ContentType
 from app.types.exceptions import CoreDataNotFoundError, FileNameIsNotAnUUIDError
 from app.utils.mail.mailworker import send_email
 
 if TYPE_CHECKING:
-    from app.core.config import Settings
+    from app.core.utils.config import Settings
 
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
@@ -56,9 +56,9 @@ def is_user_external(
 
 def sort_user(
     query: str,
-    users: Sequence[models_core.CoreUser],
+    users: Sequence[models_users.CoreUser],
     limit: int = 10,
-) -> list[models_core.CoreUser]:
+) -> list[models_users.CoreUser]:
     """
     Search for users using Fuzzy String Matching
 
@@ -93,7 +93,7 @@ def sort_user(
 
 
 def is_user_member_of_any_group(
-    user: models_core.CoreUser,
+    user: models_users.CoreUser,
     allowed_groups: list[str] | list[GroupType],
 ) -> bool:
     """
@@ -466,7 +466,7 @@ async def create_and_send_email_migration(
     """
     confirmation_token = security.generate_token()
 
-    migration_object = models_core.CoreUserEmailMigrationCode(
+    migration_object = models_users.CoreUserEmailMigrationCode(
         user_id=user_id,
         new_email=new_email,
         old_email=old_email,

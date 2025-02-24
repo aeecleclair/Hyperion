@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 
-from app.core.core_endpoints import schemas_core
+from app.core.users.schemas_users import CoreUserSimple
 from app.modules.phonebook.types_phonebook import Kinds
 
 
@@ -66,7 +66,7 @@ class MembershipEdit(BaseModel):
     member_order: int | None = None
 
 
-class MemberBase(schemas_core.CoreUserSimple):
+class MemberBase(CoreUserSimple):
     email: str
     phone: str | None = None
     promo: int | None = None

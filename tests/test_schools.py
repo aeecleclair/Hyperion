@@ -4,19 +4,20 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
-from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import AccountType, GroupType
+from app.core.schools import models_schools
 from app.core.schools.schools_type import SchoolType
+from app.core.users import models_users
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
     create_user_with_groups,
 )
 
-admin_user: models_core.CoreUser
-ens_user: models_core.CoreUser
-fake_ens_user: models_core.CoreUser
-new_school_user: models_core.CoreUser
+admin_user: models_users.CoreUser
+ens_user: models_users.CoreUser
+fake_ens_user: models_users.CoreUser
+new_school_user: models_users.CoreUser
 
 UNIQUE_TOKEN = "my_unique_token"
 
@@ -27,7 +28,7 @@ id_test_ens = UUID("4d133de7-24c4-4dbc-be73-4705a2ddd315")
 async def init_objects() -> None:
     global admin_user, ens_user, fake_ens_user, new_school_user
 
-    ens = models_core.CoreSchool(
+    ens = models_schools.CoreSchool(
         id=id_test_ens,
         name="ENS",
         email_regex=r"^.*@.*ens.fr$",

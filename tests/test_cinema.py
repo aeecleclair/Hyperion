@@ -4,8 +4,8 @@ import uuid
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import GroupType
+from app.core.users import models_users
 from app.modules.cinema import models_cinema
 from tests.commons import (
     add_object_to_db,
@@ -14,8 +14,8 @@ from tests.commons import (
 )
 
 session: models_cinema.Session
-cinema_user_cinema: models_core.CoreUser
-cinema_user_simple: models_core.CoreUser
+cinema_user_cinema: models_users.CoreUser
+cinema_user_simple: models_users.CoreUser
 token_cinema: str
 token_simple: str
 

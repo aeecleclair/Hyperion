@@ -4,7 +4,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.core_endpoints import models_core
+from app.core.users import models_users
 from app.modules.phonebook import models_phonebook, schemas_phonebook, types_phonebook
 
 
@@ -13,7 +13,7 @@ from app.modules.phonebook import models_phonebook, schemas_phonebook, types_pho
 # ---------------------------------------------------------------------------- #
 async def is_user_president(
     association_id: str,
-    user: models_core.CoreUser,
+    user: models_users.CoreUser,
     db: AsyncSession,
 ) -> bool:
     association = await get_association_by_id(association_id=association_id, db=db)

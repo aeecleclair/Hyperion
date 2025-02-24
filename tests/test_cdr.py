@@ -7,6 +7,7 @@ from pytest_mock import MockerFixture
 
 from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import GroupType
+from app.core.users import models_users
 from app.modules.cdr import models_cdr
 from app.modules.cdr.types_cdr import (
     CdrStatus,
@@ -20,9 +21,9 @@ from tests.commons import (
     create_user_with_groups,
 )
 
-cdr_admin: models_core.CoreUser
-cdr_bde: models_core.CoreUser
-cdr_user: models_core.CoreUser
+cdr_admin: models_users.CoreUser
+cdr_bde: models_users.CoreUser
+cdr_user: models_users.CoreUser
 
 token_admin: str
 token_bde: str
@@ -52,7 +53,7 @@ ticket_variant: models_cdr.ProductVariant
 curriculum: models_cdr.Curriculum
 unused_curriculum: models_cdr.Curriculum
 
-cdr_user_with_curriculum_with_non_validated_purchase: models_core.CoreUser
+cdr_user_with_curriculum_with_non_validated_purchase: models_users.CoreUser
 
 purchase: models_cdr.Purchase
 

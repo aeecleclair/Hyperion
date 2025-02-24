@@ -7,8 +7,8 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 from PIL import Image
 
-from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import GroupType
+from app.core.users import models_users
 from app.modules.raid import coredata_raid, models_raid
 from app.modules.raid.models_raid import Document, Participant, SecurityFile, Team
 from app.modules.raid.raid_type import DocumentType, DocumentValidation, Size
@@ -27,10 +27,10 @@ participant: models_raid.Participant
 
 team: models_raid.Team
 
-raid_admin_user: models_core.CoreUser
-simple_user: models_core.CoreUser
-simple_user_without_participant: models_core.CoreUser
-simple_user_without_team: models_core.CoreUser
+raid_admin_user: models_users.CoreUser
+simple_user: models_users.CoreUser
+simple_user_without_participant: models_users.CoreUser
+simple_user_without_team: models_users.CoreUser
 
 token_raid_admin: str
 token_simple: str

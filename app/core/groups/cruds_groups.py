@@ -7,26 +7,26 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.core_endpoints import models_core, schemas_core
+from app.core.groups import models_groups, schemas_groups
 
 
-async def get_groups(db: AsyncSession) -> Sequence[models_core.CoreGroup]:
+async def get_groups(db: AsyncSession) -> Sequence[models_groups.CoreGroup]:
     """Return all groups from database"""
 
-    result = await db.execute(select(models_core.CoreGroup))
+    result = await db.execute(select(models_groups.CoreGroup))
     return result.scalars().all()
 
 
 async def get_group_by_id(
     db: AsyncSession,
     group_id: str,
-) -> models_core.CoreGroup | None:
+) -> models_groups.CoreGroup | None:
     """Return group with id from database"""
     result = await db.execute(
-        select(models_core.CoreGroup)
-        .where(models_core.CoreGroup.id == group_id)
+        select(models_groups.CoreGroup)
+        .where(models_groups.CoreGroup.id == group_id)
         .options(
-            selectinload(models_core.CoreGroup.members),
+            selectinload(models_groups.CoreGroup.members),
         ),  # needed to load the members from the relationship
     )
     return result.scalars().first()
@@ -35,22 +35,22 @@ async def get_group_by_id(
 async def get_group_by_name(
     db: AsyncSession,
     group_name: str,
-) -> models_core.CoreGroup | None:
+) -> models_groups.CoreGroup | None:
     """Return group with name from database"""
     result = await db.execute(
-        select(models_core.CoreGroup)
-        .where(models_core.CoreGroup.name == group_name)
+        select(models_groups.CoreGroup)
+        .where(models_groups.CoreGroup.name == group_name)
         .options(
-            selectinload(models_core.CoreGroup.members),
+            selectinload(models_groups.CoreGroup.members),
         ),  # needed to load the members from the relationship
     )
     return result.scalars().first()
 
 
 async def create_group(
-    group: models_core.CoreGroup,
+    group: models_groups.CoreGroup,
     db: AsyncSession,
-) -> models_core.CoreGroup:
+) -> models_groups.CoreGroup:
     """Create a new group in database and return it"""
 
     db.add(group)
@@ -67,13 +67,13 @@ async def delete_group(db: AsyncSession, group_id: str):
     """Delete a group from database by id"""
 
     await db.execute(
-        delete(models_core.CoreGroup).where(models_core.CoreGroup.id == group_id),
+        delete(models_groups.CoreGroup).where(models_groups.CoreGroup.id == group_id),
     )
     await db.commit()
 
 
 async def create_membership(
-    membership: models_core.CoreMembership,
+    membership: models_groups.CoreMembership,
     db: AsyncSession,
 ):
     """Add a user to a group using a membership"""
@@ -92,8 +92,8 @@ async def delete_membership_by_group_id(
     db: AsyncSession,
 ):
     await db.execute(
-        delete(models_core.CoreMembership).where(
-            models_core.CoreMembership.group_id == group_id,
+        delete(models_groups.CoreMembership).where(
+            models_groups.CoreMembership.group_id == group_id,
         ),
     )
     await db.commit()
@@ -105,9 +105,9 @@ async def delete_membership_by_group_and_user_id(
     db: AsyncSession,
 ):
     await db.execute(
-        delete(models_core.CoreMembership).where(
-            models_core.CoreMembership.group_id == group_id,
-            models_core.CoreMembership.user_id == user_id,
+        delete(models_groups.CoreMembership).where(
+            models_groups.CoreMembership.group_id == group_id,
+            models_groups.CoreMembership.user_id == user_id,
         ),
     )
     await db.commit()
@@ -116,11 +116,11 @@ async def delete_membership_by_group_and_user_id(
 async def update_group(
     db: AsyncSession,
     group_id: str,
-    group_update: schemas_core.CoreGroupUpdate,
+    group_update: schemas_groups.CoreGroupUpdate,
 ):
     await db.execute(
-        update(models_core.CoreGroup)
-        .where(models_core.CoreGroup.id == group_id)
+        update(models_groups.CoreGroup)
+        .where(models_groups.CoreGroup.id == group_id)
         .values(**group_update.model_dump(exclude_none=True)),
     )
     await db.commit()

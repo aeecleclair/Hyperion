@@ -4,8 +4,8 @@ from datetime import UTC, datetime
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import GroupType
+from app.core.users import models_users
 from app.modules.flappybird import models_flappybird
 from tests.commons import (
     add_object_to_db,
@@ -14,9 +14,9 @@ from tests.commons import (
 )
 
 flappybird_score: models_flappybird.FlappyBirdScore
-user: models_core.CoreUser
+user: models_users.CoreUser
 token: str = ""
-admin_user: models_core.CoreUser
+admin_user: models_users.CoreUser
 admin_token: str = ""
 
 
