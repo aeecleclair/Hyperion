@@ -69,6 +69,7 @@ class CoreMembershipDelete(BaseModel):
     group_id: str
 
 
+# Importing here to avoid circular imports
 from app.core.users.schemas_users import CoreUserSimple  # noqa: E402, TCH001
 
 CoreGroup.model_rebuild()

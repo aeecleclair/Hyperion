@@ -192,6 +192,7 @@ class MailMigrationRequest(BaseModel):
     new_email: str
 
 
+# Importing here to avoid circular imports
 from app.core.groups.schemas_groups import CoreGroupSimple  # noqa: E402, TCH001
 
 CoreUserSimple.model_rebuild()
