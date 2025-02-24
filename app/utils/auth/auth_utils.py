@@ -6,10 +6,10 @@ from jwt.exceptions import DecodeError, ExpiredSignatureError, InvalidTokenError
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import security
 from app.core.auth import schemas_auth
-from app.core.config import Settings
 from app.core.users import cruds_users, models_users
+from app.core.utils import security
+from app.core.utils.config import Settings
 from app.types.scopes_type import ScopeType
 
 hyperion_access_logger = logging.getLogger("hyperion.access")

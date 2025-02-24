@@ -22,14 +22,14 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import api
-from app.core.config import Settings
 from app.core.core_endpoints import coredata_core, models_core
 from app.core.google_api.google_api import GoogleAPI
 from app.core.groups import models_groups
 from app.core.groups.groups_type import GroupType
-from app.core.log import LogConfig
 from app.core.schools import models_schools
 from app.core.schools.schools_type import SchoolType
+from app.core.utils.config import Settings
+from app.core.utils.log import LogConfig
 from app.dependencies import (
     get_db,
     get_redis_client,

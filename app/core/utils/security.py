@@ -11,7 +11,7 @@ from app.core.auth import schemas_auth
 from app.core.users import cruds_users, models_users
 
 if TYPE_CHECKING:
-    from app.core.config import Settings
+    from app.core.utils.config import Settings
 
 
 """

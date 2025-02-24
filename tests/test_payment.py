@@ -28,7 +28,7 @@ from tests.commons import (
 )
 
 if TYPE_CHECKING:
-    from app.core.config import Settings
+    from app.core.utils.config import Settings
 
 checkout_with_existing_checkout_payment: models_payment.Checkout
 existing_checkout_payment: models_payment.CheckoutPayment

@@ -7,11 +7,11 @@ from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import Settings
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.notification.notification_types import CustomTopic, Topic
 from app.core.notification.schemas_notification import Message
 from app.core.users import models_users
+from app.core.utils.config import Settings
 from app.dependencies import (
     get_db,
     get_notification_tool,

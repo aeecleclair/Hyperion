@@ -20,13 +20,13 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import security
-from app.core.config import Settings
 from app.core.groups import cruds_groups, models_groups
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.schools.schools_type import SchoolType
 from app.core.users import cruds_users, models_users, schemas_users
 from app.core.users.tools_users import get_account_type_and_school_id_from_email
+from app.core.utils import security
+from app.core.utils.config import Settings
 from app.dependencies import (
     get_db,
     get_request_id,
