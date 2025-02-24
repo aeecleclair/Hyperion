@@ -1,8 +1,5 @@
-from typing import TYPE_CHECKING
-
 from pydantic import BaseModel, ConfigDict, field_validator
 
-from app.core.users.schemas_users import CoreUserSimple
 from app.utils import validators
 
 
@@ -25,7 +22,7 @@ class CoreGroupSimple(CoreGroupBase):
 class CoreGroup(CoreGroupSimple):
     """Schema for group's model similar to core_group table in database"""
 
-    members: list[CoreUserSimple] = []
+    members: "list[CoreUserSimple]" = []
 
 
 class CoreGroupCreate(CoreGroupBase):
@@ -70,3 +67,8 @@ class CoreBatchDeleteMembership(BaseModel):
 class CoreMembershipDelete(BaseModel):
     user_id: str
     group_id: str
+
+
+from app.core.users.schemas_users import CoreUserSimple  # noqa: E402, TCH001
+
+CoreGroup.model_rebuild()
