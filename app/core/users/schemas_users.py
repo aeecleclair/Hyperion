@@ -4,7 +4,6 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.core.groups.groups_type import AccountType
-from app.core.groups.schemas_groups import CoreGroupSimple
 from app.core.schools.schemas_schools import CoreSchool
 from app.types.floors_type import FloorsType
 from app.utils import validators
@@ -46,7 +45,7 @@ class CoreUser(CoreUserSimple):
     floor: FloorsType | None = None
     phone: str | None = None
     created_on: datetime | None = None
-    groups: list[CoreGroupSimple] = []
+    groups: "list[CoreGroupSimple]" = []
     school: CoreSchool | None = None
 
 
@@ -191,3 +190,8 @@ class ResetPasswordRequest(BaseModel):
 
 class MailMigrationRequest(BaseModel):
     new_email: str
+
+
+from app.core.groups.schemas_groups import CoreGroupSimple  # noqa: E402, TCH001
+
+CoreUserSimple.model_rebuild()
