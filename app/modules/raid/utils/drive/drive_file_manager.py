@@ -2,8 +2,8 @@ import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import Settings
 from app.core.google_api.google_api import DriveGoogleAPI
+from app.core.utils.config import Settings
 from app.modules.raid import coredata_raid
 from app.utils.tools import get_core_data, set_core_data
 

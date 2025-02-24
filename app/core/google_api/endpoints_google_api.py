@@ -3,8 +3,8 @@ import logging
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import Settings
 from app.core.google_api.google_api import GoogleAPI
+from app.core.utils.config import Settings
 from app.dependencies import (
     get_db,
     get_settings,

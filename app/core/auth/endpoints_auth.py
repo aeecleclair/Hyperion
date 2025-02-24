@@ -20,17 +20,17 @@ from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import security
 from app.core.auth import cruds_auth, models_auth, schemas_auth
-from app.core.config import Settings
-from app.core.security import (
+from app.core.users import cruds_users, models_users
+from app.core.utils.config import Settings
+from app.core.utils.security import (
     authenticate_user,
     create_access_token,
     create_access_token_RS256,
     generate_token,
     jws_algorithm,
+    jwt_algorithm,
 )
-from app.core.users import cruds_users, models_users
 from app.dependencies import (
     get_db,
     get_request_id,
@@ -1023,7 +1023,7 @@ def introspect_access_token(
         payload = jwt.decode(
             access_token,
             settings.ACCESS_TOKEN_SECRET_KEY,
-            algorithms=[security.jwt_algorithm],
+            algorithms=[jwt_algorithm],
         )
         # We want to validate the structure of the payload
         _ = schemas_auth.TokenData(**payload)
