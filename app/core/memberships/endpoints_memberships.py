@@ -67,7 +67,7 @@ async def read_association_membership(
         )
     )
     if db_association_membership is None:
-        raise HTTPException(status_code=404, detail="Membership not found")
+        raise HTTPException(status_code=404, detail="Association Membership not found")
 
     db_user_memberships = (
         await cruds_memberships.get_user_memberships_by_association_membership_id(
@@ -156,7 +156,7 @@ async def update_association_membership(
         )
     )
     if db_association_membership is None:
-        raise HTTPException(status_code=404, detail="Membership not found")
+        raise HTTPException(status_code=404, detail="Association Membership not found")
 
     await cruds_memberships.update_association_membership(
         db=db,
@@ -194,7 +194,7 @@ async def delete_association_membership(
         )
     )
     if db_association_membership is None:
-        raise HTTPException(status_code=404, detail="Membership not found")
+        raise HTTPException(status_code=404, detail="Association Membership not found")
 
     db_user_memberships = (
         await cruds_memberships.get_user_memberships_by_association_membership_id(
@@ -205,7 +205,7 @@ async def delete_association_membership(
     if len(db_user_memberships) > 0:
         raise HTTPException(
             status_code=400,
-            detail="Membership still has associated users",
+            detail="Association Membership still has associated users",
         )
 
     await cruds_memberships.delete_association_membership(
