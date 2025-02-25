@@ -79,19 +79,19 @@ def upgrade() -> None:
     if len(res) == 0:
         return
 
-    old_eclair_id = res[0][0]
-    new_eclair_id = GroupType.BDS
+    old_BDS_id = res[0][0]
+    new_BDS_id = GroupType.BDS
 
     # We don't need to do anything if the group id is already the correct one
-    if old_eclair_id == new_eclair_id:
+    if old_BDS_id == new_BDS_id:
         return
 
     # As the group id is a foreign key in other tables, we can not update it directly
     # We create a new group with the new id
     conn.execute(
         sa.insert(t_group).values(
-            id=new_eclair_id,
-            name="new_eclair",
+            id=new_BDS_id,
+            name="new_BDS",
             description="",
         ),
     )
@@ -99,36 +99,36 @@ def upgrade() -> None:
     # We update relationships to use the new group id
     conn.execute(
         t_membership.update()
-        .where(t_membership.c.group_id == old_eclair_id)
-        .values(group_id=new_eclair_id),
+        .where(t_membership.c.group_id == old_BDS_id)
+        .values(group_id=new_BDS_id),
     )
     conn.execute(
         t_booking_manager.update()
-        .where(t_booking_manager.c.group_id == old_eclair_id)
-        .values(group_id=new_eclair_id),
+        .where(t_booking_manager.c.group_id == old_BDS_id)
+        .values(group_id=new_BDS_id),
     )
     conn.execute(
         t_cdr_seller.update()
-        .where(t_cdr_seller.c.group_id == old_eclair_id)
-        .values(group_id=new_eclair_id),
+        .where(t_cdr_seller.c.group_id == old_BDS_id)
+        .values(group_id=new_BDS_id),
     )
     conn.execute(
         t_phonebook_association_associated_groups.update()
-        .where(t_phonebook_association_associated_groups.c.group_id == old_eclair_id)
-        .values(group_id=new_eclair_id),
+        .where(t_phonebook_association_associated_groups.c.group_id == old_BDS_id)
+        .values(group_id=new_BDS_id),
     )
     conn.execute(
         t_raffle.update()
-        .where(t_raffle.c.group_id == old_eclair_id)
-        .values(group_id=new_eclair_id),
+        .where(t_raffle.c.group_id == old_BDS_id)
+        .values(group_id=new_BDS_id),
     )
 
     # We delete the old group
-    conn.execute(t_group.delete().where(t_group.c.id == old_eclair_id))
+    conn.execute(t_group.delete().where(t_group.c.id == old_BDS_id))
 
     # We rename the new group
     conn.execute(
-        t_group.update().where(t_group.c.id == new_eclair_id).values(name="BDS"),
+        t_group.update().where(t_group.c.id == new_BDS_id).values(name="BDS"),
     )
 
 
@@ -142,7 +142,7 @@ test_cdr_seller_id = str(uuid4())
 test_phonebook_association_id = str(uuid4())
 test_raffle_id = str(uuid4())
 
-test_old_eclair_id = str(uuid4())
+test_old_BDS_id = str(uuid4())
 
 
 def pre_test_upgrade(
@@ -170,7 +170,7 @@ def pre_test_upgrade(
     alembic_runner.insert_into(
         "core_group",
         {
-            "id": test_old_eclair_id,
+            "id": test_old_BDS_id,
             "name": "BDS",
             "description": "",
         },
@@ -179,7 +179,7 @@ def pre_test_upgrade(
         "core_membership",
         {
             "user_id": test_user_id,
-            "group_id": test_old_eclair_id,
+            "group_id": test_old_BDS_id,
             "description": "",
         },
     )
@@ -189,7 +189,7 @@ def pre_test_upgrade(
         {
             "id": test_booking_manager_id,
             "name": "TestBookingManager2",
-            "group_id": test_old_eclair_id,
+            "group_id": test_old_BDS_id,
         },
     )
 
@@ -198,7 +198,7 @@ def pre_test_upgrade(
         {
             "id": test_cdr_seller_id,
             "name": "TestCDRSeller",
-            "group_id": test_old_eclair_id,
+            "group_id": test_old_BDS_id,
             "order": 1,
         },
     )
@@ -218,7 +218,7 @@ def pre_test_upgrade(
         "phonebook_association_associated_groups",
         {
             "association_id": test_phonebook_association_id,
-            "group_id": test_old_eclair_id,
+            "group_id": test_old_BDS_id,
         },
     )
     alembic_runner.insert_into(
@@ -227,7 +227,7 @@ def pre_test_upgrade(
             "id": test_raffle_id,
             "name": "TestRaffle",
             "status": "creation",
-            "group_id": test_old_eclair_id,
+            "group_id": test_old_BDS_id,
             "description": "TestRaffle",
         },
     )
@@ -237,7 +237,7 @@ def test_upgrade(
     alembic_runner: "MigrationContext",
     alembic_connection: sa.Connection,
 ) -> None:
-    new_eclair_id = GroupType.BDS
+    new_BDS_id = GroupType.BDS
 
     rows = alembic_connection.execute(
         sa.text("SELECT id from core_group WHERE name = 'BDS'"),
@@ -245,7 +245,7 @@ def test_upgrade(
 
     assert len(rows) > 0
 
-    assert rows[0][0] == new_eclair_id
+    assert rows[0][0] == new_BDS_id
 
     rows = alembic_connection.execute(
         sa.text(
@@ -255,7 +255,7 @@ def test_upgrade(
 
     assert len(rows) > 0
 
-    assert rows[0][0] == new_eclair_id
+    assert rows[0][0] == new_BDS_id
 
     rows = alembic_connection.execute(
         sa.text(
@@ -265,7 +265,7 @@ def test_upgrade(
 
     assert len(rows) > 0
 
-    assert rows[0][0] == new_eclair_id
+    assert rows[0][0] == new_BDS_id
 
     rows = alembic_connection.execute(
         sa.text(
@@ -275,7 +275,7 @@ def test_upgrade(
 
     assert len(rows) > 0
 
-    assert rows[0][0] == new_eclair_id
+    assert rows[0][0] == new_BDS_id
 
     rows = alembic_connection.execute(
         sa.text(
@@ -285,7 +285,7 @@ def test_upgrade(
 
     assert len(rows) > 0
 
-    assert rows[0][0] == new_eclair_id
+    assert rows[0][0] == new_BDS_id
 
     rows = alembic_connection.execute(
         sa.text(
@@ -295,4 +295,4 @@ def test_upgrade(
 
     assert len(rows) > 0
 
-    assert rows[0][0] == new_eclair_id
+    assert rows[0][0] == new_BDS_id
