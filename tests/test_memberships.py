@@ -59,6 +59,15 @@ async def init_objects():
     )
     await add_object_to_db(user_membership)
 
+    useecl_user_membership = models_core.CoreAssociationUserMembership(
+        id=uuid.uuid4(),
+        user_id=user.id,
+        association_membership_id=useecl_association_membership.id,
+        start_date=datetime.now(tz=UTC).date() - timedelta(days=100),
+        end_date=datetime.now(tz=UTC).date(),
+    )
+    await add_object_to_db(useecl_user_membership)
+
 
 def test_get_association_memberships(client: TestClient):
     response = client.get(
@@ -468,13 +477,13 @@ async def test_patch_user_membership_admin_overlapping_dates(client: TestClient)
         id=uuid.uuid4(),
         user_id=user.id,
         association_membership_id=useecl_association_membership.id,
-        start_date=user_membership.end_date + timedelta(days=20),
-        end_date=user_membership.end_date + timedelta(days=70),
+        start_date=datetime.now(tz=UTC).date() + timedelta(days=20),
+        end_date=datetime.now(tz=UTC).date() + timedelta(days=70),
     )
     await add_object_to_db(new_membership)
 
-    new_start_date = str(user_membership.end_date - timedelta(days=50))
-    new_end_date = str(user_membership.end_date + timedelta(days=50))
+    new_start_date = str(datetime.now(tz=UTC).date() - timedelta(days=50))
+    new_end_date = str(datetime.now(tz=UTC).date() + timedelta(days=50))
 
     response = client.patch(
         f"/memberships/users/{new_membership.id}",
