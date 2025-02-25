@@ -4,6 +4,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, StringConstraints, field_validator
 
+from app.core.core_endpoints.schemas_core import CoreUserSimple
 from app.core.memberships import schemas_memberships
 from app.core.users.schemas_users import CoreUserSimple
 from app.modules.cdr.types_cdr import (

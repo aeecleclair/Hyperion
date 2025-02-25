@@ -5,7 +5,7 @@ from uuid import UUID
 from sqlalchemy import and_, delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core, schemas_core
+from app.core.core_endpoints import models_core, schemas_core
 from app.core.memberships import schemas_memberships
 
 
