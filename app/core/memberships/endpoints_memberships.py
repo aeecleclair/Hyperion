@@ -17,10 +17,17 @@ from app.dependencies import (
     is_user_an_ecl_member,
     is_user_in,
 )
+from app.types.module import CoreModule
 
 router = APIRouter(tags=["Memberships"])
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
+
+core_module = CoreModule(
+    root="memberships",
+    tag="Memberships",
+    router=router,
+)
 
 
 @router.get(
