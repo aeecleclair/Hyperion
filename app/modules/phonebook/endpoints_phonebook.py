@@ -34,9 +34,6 @@ module = Module(
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
-# ---------------------------------------------------------------------------- #
-#                                    Get All                                   #
-# ---------------------------------------------------------------------------- #
 @module.router.get(
     "/phonebook/associations/",
     response_model=list[schemas_phonebook.AssociationComplete],
@@ -96,9 +93,6 @@ async def get_all_kinds(
     return schemas_phonebook.KindsReturn(kinds=kinds)
 
 
-# ---------------------------------------------------------------------------- #
-#                                  Association                                 #
-# ---------------------------------------------------------------------------- #
 @module.router.post(
     "/phonebook/associations/",
     response_model=schemas_phonebook.AssociationComplete,
@@ -275,9 +269,6 @@ async def delete_association(
     )
 
 
-# ---------------------------------------------------------------------------- #
-#                                    Members                                   #
-# ---------------------------------------------------------------------------- #
 @module.router.get(
     "/phonebook/associations/{association_id}/members/",
     response_model=list[schemas_phonebook.MemberComplete],
@@ -377,9 +368,6 @@ async def get_member_details(
     )
 
 
-# ---------------------------------------------------------------------------- #
-#                                  Membership                                  #
-# ---------------------------------------------------------------------------- #
 @module.router.post(
     "/phonebook/associations/memberships",
     response_model=schemas_phonebook.MembershipComplete,
@@ -598,9 +586,6 @@ async def delete_membership(
     await cruds_phonebook.delete_membership(membership_id, db)
 
 
-# ---------------------------------------------------------------------------- #
-#                                     Logos                                    #
-# ---------------------------------------------------------------------------- #
 @module.router.post(
     "/phonebook/associations/{association_id}/picture",
     response_model=standard_responses.Result,
