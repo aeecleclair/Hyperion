@@ -106,6 +106,12 @@ async def get_all_species(
     ]
 
 
+async def get_all_species_types() -> Sequence[str]:
+    """Return all SpeciesType from Enum"""
+
+    return [species_type.value for species_type in types_seed_library.SpeciesType]
+
+
 async def get_species_by_id(
     species_id: uuid.UUID,
     db: AsyncSession,
