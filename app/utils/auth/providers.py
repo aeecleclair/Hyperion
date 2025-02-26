@@ -432,7 +432,6 @@ class PlankaAuthClient(BaseAuthClient):
 
 
 class SlashAuthClient(BaseAuthClient):
-    # Restrict the authentication to this client to specific Hyperion groups.
     # When set to `None`, users from any group can use the auth client
     allowed_account_types: list[AccountType] | None = get_ecl_account_types()
 
@@ -444,7 +443,6 @@ class SlashAuthClient(BaseAuthClient):
         """
         # Override this method with custom information adapted for the client
         # WARNING: The sub (subject) Claim MUST always be returned in the UserInfo Response.
-
         return {
             "sub": user.id,
             "name": get_display_name(
@@ -452,6 +450,5 @@ class SlashAuthClient(BaseAuthClient):
                 name=user.name,
                 nickname=user.nickname,
             ),
-            "groups": [group.name for group in user.groups] + [user.account_type.value],
             "email": user.email,
         }
