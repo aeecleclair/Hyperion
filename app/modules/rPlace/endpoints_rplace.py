@@ -12,11 +12,13 @@ from app.dependencies import (
     get_settings,
     get_unsafe_db,
     get_websocket_connection_manager,
+    is_user,
     is_user_a_member,
 )
-from app.modules.rPlace import cruds_rplace, models_rplace, schemas_rplace
+from app.modules.rPlace import coredata_rplace, cruds_rplace, models_rplace, schemas_rplace
 from app.types.module import Module
 from app.types.websocket import HyperionWebsocketsRoom, WebsocketConnectionManager
+from app.utils.tools import get_core_data
 
 module = Module(
     root="rplace",
@@ -83,6 +85,20 @@ async def create_pixel(
             f"Error while sending a message to the room {HyperionWebsocketsRoom.CDR}",
         )
     return res
+
+@module.router.get(
+    "/rplace/information",
+    response_model=coredata_rplace.gridInformation,
+    status_code=200,
+)
+async def get_grid_information(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user()),
+):
+    """
+    Get grid information
+    """
+    return await get_core_data(coredata_rplace.gridInformation, db)
 
 
 @module.router.websocket("/rplace/ws")
