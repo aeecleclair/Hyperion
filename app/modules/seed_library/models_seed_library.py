@@ -44,7 +44,7 @@ class Plant(Base):
     state: Mapped[State] = mapped_column(index=True)
 
     species_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("seed_library_species.species_id"),
+        ForeignKey("seed_library_species.id"),
     )
 
     propagation_method: Mapped[PropagationMethod]
