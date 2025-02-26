@@ -4,8 +4,10 @@ from datetime import UTC, datetime, time, timedelta
 from typing import TYPE_CHECKING
 
 from fastapi import Depends, HTTPException
+from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import Settings
 from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.notification.schemas_notification import Message
@@ -13,6 +15,7 @@ from app.dependencies import (
     get_db,
     get_notification_tool,
     get_scheduler,
+    get_settings,
     is_user_a_member,
     is_user_in,
 )
@@ -20,6 +23,7 @@ from app.modules.loan import cruds_loan, models_loan, schemas_loan
 from app.types.module import Module
 from app.types.scheduler import Scheduler
 from app.utils.communication.notifications import NotificationTool
+from app.utils.mail.mailworker import send_email
 from app.utils.tools import (
     is_group_id_valid,
     is_user_id_valid,
@@ -38,6 +42,7 @@ module = Module(
 
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
+templates = Jinja2Templates(directory="assets/templates")
 
 
 @module.router.get(
@@ -502,6 +507,7 @@ async def create_loan(
     user: models_core.CoreUser = Depends(is_user_a_member),
     notification_tool: NotificationTool = Depends(get_notification_tool),
     scheduler: Scheduler = Depends(get_scheduler),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Create a new loan in database and add the requested items
@@ -641,6 +647,27 @@ async def create_loan(
         defer_date=delivery_datetime,
         job_id=f"loan_start_{loan.id}",
     )
+    end_loan_template = templates.get_template("activation_mail.html").render(
+        {
+            "loan_detail": ", ".join(
+                [str(item.total_quantity) + " " + item.name for item in loan.items],
+            ),
+            "loaner": loan.loaner.name,
+        },
+    )
+    if settings.SMTP_ACTIVE:
+        await scheduler.queue_job_defer_to(
+            send_email(
+                recipient=loan.borrower.email,
+                subject="📦 Prêt à rendre bientôt !",
+                content=end_loan_template,
+                settings=settings,
+            ),
+            job_id=f"loan_end_{loan.id}",
+            defer_date=datetime.fromisoformat(
+                (loan.end - timedelta(days=7)).isoformat(),
+            ),
+        )
 
     return schemas_loan.Loan(items_qty=items_qty_ret, **loan.__dict__)
 
@@ -654,6 +681,8 @@ async def update_loan(
     loan_update: schemas_loan.LoanUpdate,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
+    scheduler: Scheduler = Depends(get_scheduler),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Update a loan and its items.
@@ -767,6 +796,28 @@ async def update_loan(
             quantity=quantity,
         )
         await cruds_loan.create_loan_content(loan_content=loan_content, db=db)
+        end_loan_template = templates.get_template("activation_mail.html").render(
+            {
+                "loan_detail": ", ".join(
+                    [str(item.total_quantity) + " " + item.name for item in loan.items],
+                ),
+                "loaner": loan.loaner.name,
+            },
+        )
+        await scheduler.cancel_job(job_id=f"loan_end_{loan.id}")
+        if settings.SMTP_ACTIVE:
+            await scheduler.queue_job_defer_to(
+                send_email(
+                    recipient=loan.borrower.email,
+                    subject="📦 Prêt à rendre bientôt !",
+                    content=end_loan_template,
+                    settings=settings,
+                ),
+                job_id=f"loan_end_{loan.id}",
+                defer_date=datetime.fromisoformat(
+                    (loan.end - timedelta(days=7)).isoformat(),
+                ),
+            )
 
 
 @module.router.delete(
@@ -777,6 +828,7 @@ async def delete_loan(
     loan_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
+    scheduler: Scheduler = Depends(get_scheduler),
 ):
     """
     Delete a loan
@@ -817,6 +869,8 @@ async def delete_loan(
 
     await cruds_loan.delete_loan_content_by_loan_id(loan_id=loan_id, db=db)
     await cruds_loan.delete_loan_by_id(loan_id=loan_id, db=db)
+
+    await scheduler.cancel_job(job_id=f"loan_end_{loan.id}")
 
 
 @module.router.post(
@@ -877,6 +931,8 @@ async def return_loan(
         scheduler=scheduler,
         job_id=f"loan_end_{loan.id}",
     )
+
+    await scheduler.cancel_job(job_id=f"loan_end_{loan.id}")
 
 
 @module.router.post(
