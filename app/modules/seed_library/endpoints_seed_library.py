@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core
+from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import AccountType, GroupType
 from app.dependencies import (
     get_db,
@@ -49,6 +49,21 @@ async def get_all_species(
     return await cruds_seed_library.get_all_species(db)
 
 
+@module.router.get(
+    "/seed_library/species/types",
+    response_model=schemas_seed_library.SpeciesTypesReturn,
+    status_code=200,
+)
+async def get_all_species_types(
+    user: models_core.CoreUser = Depends(is_user()),
+):
+    """
+    Return all available types of species from SpeciesType enum.
+    """
+    species_type = await cruds_seed_library.get_all_species_types()
+    return schemas_seed_library.SpeciesTypesReturn(species_type=species_type)
+
+
 @module.router.post(
     "/seed_library/species/",
     response_model=schemas_seed_library.SpeciesComplete,
@@ -72,6 +87,11 @@ async def create_species(
             status_code=403,
             detail="You are not allowed to create a species",
         )
+
+    existing_species = await cruds_seed_library.get_all_species(db)
+    for species in existing_species:
+        if species.prefix == species_base.prefix:
+            raise HTTPException(400, "Prefix already used.")
 
     species = schemas_seed_library.SpeciesComplete(
         id=uuid.uuid4(),
@@ -180,7 +200,7 @@ async def get_plants_by_user_id(
     user: models_core.CoreUser = Depends(is_user()),
 ):
     """
-    Return all plants where user ={user_id} from database as a list of PlantsComplete schemas
+    Return all plants where borrower_id = {user_id} from database as a list of PlantsComplete schemas
     """
 
     if not (
@@ -275,7 +295,9 @@ async def create_plant(
             db,
         )
 
-        plant_reference = plant_reference + str(plant_number)
+        plant_reference = (
+            plant_reference + "0" * (3 - len(str(plant_number))) + str(plant_number)
+        )
 
     plant = schemas_seed_library.PlantComplete(
         id=uuid.uuid4(),

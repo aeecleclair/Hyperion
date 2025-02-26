@@ -104,3 +104,7 @@ class SeedLibraryInformation(core_data.BaseCoreData):
     contact: str
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class SpeciesTypesReturn(BaseModel):
+    species_type: list[SpeciesType]
