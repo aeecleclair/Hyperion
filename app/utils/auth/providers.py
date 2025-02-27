@@ -322,12 +322,6 @@ class DocumensoAuthClient(BaseAuthClient):
 
     allow_pkce_with_client_secret: bool = True
 
-    allowed_groups: list[GroupType] | None = [
-        GroupType.admin,
-        GroupType.BDE,
-        GroupType.eclair,
-    ]
-
     return_userinfo_in_id_token: bool = True
 
     @classmethod

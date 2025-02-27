@@ -7,7 +7,8 @@ from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups import cruds_groups
-from app.core.groups.groups_type import AccountType, GroupType
+from app.core.groups.groups_type import AccountType
+from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import cruds_users, models_users
 from app.core.users.endpoints_users import read_user
 from app.dependencies import (
@@ -15,7 +16,7 @@ from app.dependencies import (
     get_redis_client,
     get_request_id,
     is_user_a_member,
-    is_user_in,
+    is_user_allowed_to,
 )
 from app.modules.raffle import cruds_raffle, models_raffle, schemas_raffle
 from app.modules.raffle.types_raffle import RaffleStatusType
@@ -25,9 +26,16 @@ from app.types.module import Module
 from app.utils.redis import locker_get, locker_set
 from app.utils.tools import (
     get_file_from_data,
+    has_user_permission,
     is_user_member_of_any_group,
     save_file_as_data,
 )
+
+
+class RafflePermissions(ModulePermissions):
+    manage_raffle = "manage_raffle"
+    manage_cash = "manage_cash"
+
 
 module = Module(
     root="tombola",
@@ -62,7 +70,9 @@ async def get_raffle(
 async def create_raffle(
     raffle: schemas_raffle.RaffleBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RafflePermissions.manage_raffle]),
+    ),
 ):
     """
     Create a new raffle
@@ -420,7 +430,9 @@ async def get_pack_tickets_by_raffle_id(
 )
 async def get_tickets(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RafflePermissions.manage_raffle]),
+    ),
 ):
     """
     Return all tickets
@@ -528,7 +540,10 @@ async def get_tickets_by_userid(
     if user_db is None:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if not (user_id == user.id or is_user_member_of_any_group(user, [GroupType.admin])):
+    if not (
+        user_id == user.id
+        or await has_user_permission(user, RafflePermissions.manage_raffle, db)
+    ):
         raise HTTPException(
             status_code=403,
             detail="Users that are not member of the group admin can only access the endpoint for their own user_id.",
@@ -798,7 +813,9 @@ async def read_prize_logo(
 )
 async def get_users_cash(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RafflePermissions.manage_cash]),
+    ),
 ):
     """
     Get cash from all users.
@@ -827,9 +844,10 @@ async def get_cash_by_id(
     if user_db is None:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if user_id == user.id or is_user_member_of_any_group(
+    if user_id == user.id or await has_user_permission(
         user,
-        [GroupType.admin],
+        RafflePermissions.manage_cash,
+        db,
     ):
         cash = await cruds_raffle.get_cash_by_id(user_id=user_id, db=db)
         if cash is not None:
@@ -853,7 +871,9 @@ async def create_cash_of_user(
     user_id: str,
     cash: schemas_raffle.CashEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RafflePermissions.manage_cash]),
+    ),
 ):
     """
     Create cash for a user.
@@ -895,7 +915,9 @@ async def edit_cash_by_id(
     user_id: str,
     balance: schemas_raffle.CashEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RafflePermissions.manage_cash]),
+    ),
     redis_client: Redis = Depends(get_redis_client),
 ):
     """

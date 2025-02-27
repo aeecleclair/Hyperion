@@ -7,10 +7,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups import cruds_groups, models_groups
 from app.core.groups.groups_type import AccountType, GroupType
+from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import cruds_users, models_users
 from app.dependencies import (
     get_db,
     get_request_id,
+    is_user_allowed_to,
     is_user_an_ecl_member,
     is_user_in,
 )
@@ -21,9 +23,14 @@ from app.types.content_type import ContentType
 from app.types.module import Module
 from app.utils.tools import (
     get_file_from_data,
-    is_user_member_of_any_group,
+    has_user_permission,
     save_file_as_data,
 )
+
+
+class PhonebookPermissions(ModulePermissions):
+    manage_phonebook = "manage_phonebook"
+
 
 module = Module(
     root="phonebook",
@@ -100,23 +107,15 @@ async def get_all_kinds(
 async def create_association(
     association: schemas_phonebook.AssociationBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([PhonebookPermissions.manage_phonebook]),
+    ),
 ):
     """
     Create a new Association by giving an AssociationBase scheme
 
     **This endpoint is only usable by CAA, BDE**
     """
-
-    if not is_user_member_of_any_group(
-        user=user,
-        allowed_groups=[GroupType.CAA, GroupType.BDE],
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="You are not allowed to create association",
-        )
-
     association_id = str(uuid.uuid4())
     association_model = models_phonebook.Association(
         id=association_id,
@@ -157,10 +156,7 @@ async def update_association(
     **This endpoint is only usable by CAA, BDE and association's president**
     """
     if not (
-        is_user_member_of_any_group(
-            user=user,
-            allowed_groups=[GroupType.CAA, GroupType.BDE],
-        )
+        await has_user_permission(user, PhonebookPermissions.manage_phonebook, db)
         or await cruds_phonebook.is_user_president(
             association_id=association_id,
             user=user,
@@ -210,7 +206,9 @@ async def update_association_groups(
 )
 async def deactivate_association(
     association_id: str,
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([PhonebookPermissions.manage_phonebook]),
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -218,14 +216,6 @@ async def deactivate_association(
 
     **This endpoint is only usable by CAA and BDE**
     """
-    if not is_user_member_of_any_group(
-        user=user,
-        allowed_groups=[GroupType.CAA, GroupType.BDE],
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail=f"You are not allowed to delete association {association_id}",
-        )
     await cruds_phonebook.deactivate_association(association_id, db)
 
 
@@ -236,7 +226,9 @@ async def deactivate_association(
 async def delete_association(
     association_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([PhonebookPermissions.manage_phonebook]),
+    ),
 ):
     """
     Delete an Association
@@ -246,14 +238,6 @@ async def delete_association(
     **This endpoint is only usable by CAA and BDE**
     """
 
-    if not is_user_member_of_any_group(
-        user=user,
-        allowed_groups=[GroupType.CAA, GroupType.BDE],
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail=f"You are not allowed to delete association {association_id}",
-        )
     association = await cruds_phonebook.get_association_by_id(association_id, db)
     if association is None:
         raise HTTPException(404, "Association does not exist.")
@@ -392,10 +376,7 @@ async def create_membership(
         )
 
     if not (
-        is_user_member_of_any_group(
-            user=user,
-            allowed_groups=[GroupType.CAA, GroupType.BDE],
-        )
+        await has_user_permission(user, PhonebookPermissions.manage_phonebook, db)
         or await cruds_phonebook.is_user_president(
             association_id=membership.association_id,
             user=user,
@@ -410,9 +391,10 @@ async def create_membership(
     if membership.role_tags is not None:
         if RoleTags.president.value in membership.role_tags.split(
             ";",
-        ) and not is_user_member_of_any_group(
-            user=user,
-            allowed_groups=[GroupType.CAA, GroupType.BDE],
+        ) and not await has_user_permission(
+            user,
+            PhonebookPermissions.manage_phonebook,
+            db,
         ):
             raise HTTPException(
                 status_code=403,
@@ -497,10 +479,7 @@ async def update_membership(
         )
 
     if not (
-        is_user_member_of_any_group(
-            user=user,
-            allowed_groups=[GroupType.CAA, GroupType.BDE],
-        )
+        await has_user_permission(user, PhonebookPermissions.manage_phonebook, db)
         or await cruds_phonebook.is_user_president(
             association_id=old_membership.association_id,
             user=user,
@@ -515,9 +494,10 @@ async def update_membership(
     if updated_membership.role_tags is not None:
         if RoleTags.president.value in updated_membership.role_tags.split(
             ";",
-        ) and not is_user_member_of_any_group(
-            user=user,
-            allowed_groups=[GroupType.CAA, GroupType.BDE],
+        ) and not await has_user_permission(
+            user,
+            PhonebookPermissions.manage_phonebook,
+            db,
         ):
             raise HTTPException(
                 status_code=403,
@@ -560,10 +540,7 @@ async def delete_membership(
         )
 
     if not (
-        is_user_member_of_any_group(
-            user=user,
-            allowed_groups=[GroupType.CAA, GroupType.BDE],
-        )
+        await has_user_permission(user, PhonebookPermissions.manage_phonebook, db)
         or await cruds_phonebook.is_user_president(
             association_id=membership.association_id,
             user=user,
@@ -602,9 +579,10 @@ async def create_association_logo(
     **The user must be a member of the group CAA or BDE to use this endpoint**
     """
 
-    if not is_user_member_of_any_group(
-        user=user,
-        allowed_groups=[GroupType.CAA, GroupType.BDE],
+    if not await has_user_permission(
+        user,
+        PhonebookPermissions.manage_phonebook,
+        db,
     ) and not await cruds_phonebook.is_user_president(
         association_id=association_id,
         user=user,

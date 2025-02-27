@@ -6,16 +6,17 @@ from fastapi import Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.groups.groups_type import AccountType, GroupType
+from app.core.groups.groups_type import AccountType
 from app.core.notification.notification_types import CustomTopic, Topic
 from app.core.notification.schemas_notification import Message
+from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import models_users
 from app.dependencies import (
     get_db,
     get_notification_tool,
     get_request_id,
+    is_user_allowed_to,
     is_user_an_ecl_member,
-    is_user_in,
 )
 from app.modules.advert import cruds_advert, models_advert, schemas_advert
 from app.types import standard_responses
@@ -24,15 +25,22 @@ from app.types.module import Module
 from app.utils.communication.notifications import NotificationTool
 from app.utils.tools import (
     get_file_from_data,
+    has_user_permission,
     is_group_id_valid,
     is_user_member_of_any_group,
     save_file_as_data,
 )
 
+
+class AdvertPermissions(ModulePermissions):
+    manage_advertisers = "manage_advertisers"
+
+
 module = Module(
     root="advert",
     tag="Advert",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
+    permissions=AdvertPermissions,
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
@@ -64,7 +72,9 @@ async def read_advertisers(
 async def create_advertiser(
     advertiser: schemas_advert.AdvertiserBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AdvertPermissions.manage_advertisers]),
+    ),
 ):
     """
     Create a new advertiser.
@@ -100,7 +110,9 @@ async def create_advertiser(
 async def delete_advertiser(
     advertiser_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AdvertPermissions.manage_advertisers]),
+    ),
 ):
     """
     Delete an advertiser. All adverts associated with the advertiser will also be deleted from the database.
@@ -131,7 +143,9 @@ async def update_advertiser(
     advertiser_id: str,
     advertiser_update: schemas_advert.AdvertiserUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AdvertPermissions.manage_advertisers]),
+    ),
 ):
     """
     Update an advertiser
@@ -340,7 +354,11 @@ async def delete_advert(
 
     if not is_user_member_of_any_group(
         user,
-        [GroupType.admin, advert.advertiser.group_manager_id],
+        [advert.advertiser.group_manager_id],
+    ) and not await has_user_permission(
+        user,
+        AdvertPermissions.manage_advertisers,
+        db,
     ):
         raise HTTPException(
             status_code=403,
