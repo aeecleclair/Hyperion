@@ -6,10 +6,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import AccountType
+from app.core.users import models_users
 
 
 async def get_modules_by_user(
-    user: models_core.CoreUser,
+    user: models_users.CoreUser,
     db: AsyncSession,
 ) -> list[str]:
     """Return the modules a user has access to"""

@@ -9,12 +9,12 @@ from googleapiclient.discovery import Resource, build
 from googleapiclient.http import MediaFileUpload
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import Settings
 from app.core.google_api import cruds_google_api
 from app.core.google_api.coredata_google_api import (
     GoogleAPICredentials,
 )
 from app.core.google_api.models_google_api import OAuthFlowState
+from app.core.utils.config import Settings
 from app.types.exceptions import (
     CoreDataNotFoundError,
     GoogleAPIInvalidCredentialsError,

@@ -1,8 +1,8 @@
 import logging
 
 from app.app import init_db
-from app.core.config import construct_prod_settings
-from app.core.log import LogConfig
+from app.core.utils.config import construct_prod_settings
+from app.core.utils.log import LogConfig
 
 # We call `construct_prod_settings()` and not the dependency `get_settings()` because:
 # - we know we want to use the production settings

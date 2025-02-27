@@ -6,11 +6,10 @@ from jwt.exceptions import DecodeError, ExpiredSignatureError, InvalidTokenError
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import security
 from app.core.auth import schemas_auth
-from app.core.config import Settings
-from app.core.core_endpoints import models_core
-from app.core.users import cruds_users
+from app.core.users import cruds_users, models_users
+from app.core.utils import security
+from app.core.utils.config import Settings
 from app.types.scopes_type import ScopeType
 
 hyperion_access_logger = logging.getLogger("hyperion.access")
@@ -66,7 +65,7 @@ async def get_user_from_token_with_scopes(
     scopes: list[list[ScopeType]],
     db: AsyncSession,
     token_data: schemas_auth.TokenData,
-) -> models_core.CoreUser:
+) -> models_users.CoreUser:
     """
     Dependency that makes sure the token is valid, contains the expected scopes and returns the corresponding user.
     The expected scopes are passed as list of list of scopes, each list of scopes is an "AND" condition, and the list of list of scopes is an "OR" condition.

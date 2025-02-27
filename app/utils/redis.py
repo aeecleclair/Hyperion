@@ -1,6 +1,6 @@
 import redis
 
-from app.core.config import Settings
+from app.core.utils.config import Settings
 
 
 def connect(settings: Settings) -> redis.Redis | bool:

@@ -5,8 +5,8 @@ from pathlib import Path
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import GroupType
+from app.core.users import models_users
 from app.modules.advert import models_advert
 from tests.commons import (
     add_object_to_db,
@@ -16,9 +16,9 @@ from tests.commons import (
 
 advert: models_advert.Advert
 advertiser: models_advert.Advertiser
-user_admin: models_core.CoreUser
-user_advertiser: models_core.CoreUser
-user_simple: models_core.CoreUser
+user_admin: models_users.CoreUser
+user_advertiser: models_users.CoreUser
+user_simple: models_users.CoreUser
 token_admin: str = ""
 token_advertiser: str = ""
 token_simple: str = ""

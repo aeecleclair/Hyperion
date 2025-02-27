@@ -6,11 +6,10 @@ from fastapi import Depends, HTTPException, Response
 from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.core_endpoints import models_core, schemas_core
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.notification.notification_types import CustomTopic, Topic
 from app.core.notification.schemas_notification import Message
-from app.core.users import cruds_users
+from app.core.users import cruds_users, models_users, schemas_users
 from app.core.users.endpoints_users import read_user
 from app.dependencies import (
     get_db,
@@ -44,7 +43,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 )
 async def get_products(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.amap)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.amap)),
 ):
     """
     Return all products
@@ -63,7 +62,7 @@ async def get_products(
 async def create_product(
     product: schemas_amap.ProductSimple,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.amap)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.amap)),
 ):
     """
     Create a new product
@@ -84,7 +83,7 @@ async def create_product(
 async def get_product_by_id(
     product_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(is_user_a_member),
 ):
     """
     Get a specific product
@@ -105,7 +104,7 @@ async def edit_product(
     product_id: str,
     product_update: schemas_amap.ProductEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.amap)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.amap)),
 ):
     """
     Edit a product
@@ -131,7 +130,7 @@ async def edit_product(
 async def delete_product(
     product_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.amap)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.amap)),
 ):
     """
     Delete a product. A product can not be deleted if it is already used in a delivery.
@@ -159,7 +158,7 @@ async def delete_product(
 )
 async def get_deliveries(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(is_user_a_member),
 ):
     """
     Get all deliveries.
@@ -175,7 +174,7 @@ async def get_deliveries(
 async def create_delivery(
     delivery: schemas_amap.DeliveryBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.amap)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.amap)),
 ):
     """
     Create a new delivery.
@@ -208,7 +207,7 @@ async def create_delivery(
 async def delete_delivery(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.amap)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.amap)),
 ):
     """
     Delete a delivery.
@@ -237,7 +236,7 @@ async def edit_delivery(
     delivery_id: str,
     delivery: schemas_amap.DeliveryUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.amap)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.amap)),
 ):
     """
     Edit a delivery.
@@ -266,7 +265,7 @@ async def add_product_to_delivery(
     products_ids: schemas_amap.DeliveryProductsUpdate,
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.amap)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.amap)),
 ):
     """
     Add `product_id` product to `delivery_id` delivery. This endpoint will only add a membership between the two objects.
@@ -301,7 +300,7 @@ async def remove_product_from_delivery(
     delivery_id: str,
     products_ids: schemas_amap.DeliveryProductsUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.amap)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.amap)),
 ):
     """
     Remove a given product from a delivery. This won't delete the product nor the delivery.
@@ -333,7 +332,7 @@ async def remove_product_from_delivery(
 async def get_orders_from_delivery(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
-    user_req: models_core.CoreUser = Depends(is_user_in(GroupType.amap)),
+    user_req: models_users.CoreUser = Depends(is_user_in(GroupType.amap)),
 ):
     """
     Get orders from a delivery.
@@ -367,7 +366,7 @@ async def get_orders_from_delivery(
 async def get_order_by_id(
     order_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.amap)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.amap)),
 ):
     """
     Get content of an order.
@@ -392,7 +391,7 @@ async def add_order_to_delievery(
     order: schemas_amap.OrderBase,
     db: AsyncSession = Depends(get_db),
     redis_client: Redis | None = Depends(get_redis_client),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(is_user_a_member),
     request_id: str = Depends(get_request_id),
 ):
     """
@@ -508,7 +507,7 @@ async def edit_order_from_delivery(
     order: schemas_amap.OrderEdit,
     db: AsyncSession = Depends(get_db),
     redis_client: Redis | None = Depends(get_redis_client),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(is_user_a_member),
     request_id: str = Depends(get_request_id),
 ):
     """
@@ -628,7 +627,7 @@ async def remove_order(
     order_id: str,
     db: AsyncSession = Depends(get_db),
     redis_client: Redis | None = Depends(get_redis_client),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(is_user_a_member),
     request_id: str = Depends(get_request_id),
 ):
     """
@@ -702,7 +701,7 @@ async def remove_order(
 async def open_ordering_of_delivery(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.amap)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.amap)),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
@@ -735,7 +734,7 @@ async def open_ordering_of_delivery(
 async def lock_delivery(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.amap)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.amap)),
 ):
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
     if delivery is None:
@@ -756,7 +755,7 @@ async def lock_delivery(
 async def mark_delivery_as_delivered(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.amap)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.amap)),
 ):
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
     if delivery is None:
@@ -777,7 +776,7 @@ async def mark_delivery_as_delivered(
 async def archive_of_delivery(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.amap)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.amap)),
 ):
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
     if delivery is None:
@@ -799,7 +798,7 @@ async def archive_of_delivery(
 )
 async def get_users_cash(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.amap)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.amap)),
 ):
     """
     Get cash from all users.
@@ -818,7 +817,7 @@ async def get_users_cash(
 async def get_cash_by_id(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(is_user_a_member),
 ):
     """
     Get cash from a specific user.
@@ -843,7 +842,7 @@ async def get_cash_by_id(
         return schemas_amap.CashComplete(
             balance=0,
             user_id=user_id,
-            user=schemas_core.CoreUserSimple(**user_db.__dict__),
+            user=schemas_users.CoreUserSimple(**user_db.__dict__),
         )
 
     return cash
@@ -858,7 +857,7 @@ async def create_cash_of_user(
     user_id: str,
     cash: schemas_amap.CashEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.amap)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.amap)),
     request_id: str = Depends(get_request_id),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
@@ -918,7 +917,7 @@ async def edit_cash_by_id(
     user_id: str,
     balance: schemas_amap.CashEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.amap)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.amap)),
     request_id: str = Depends(get_request_id),
 ):
     """
@@ -953,7 +952,7 @@ async def edit_cash_by_id(
 async def get_orders_of_user(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(is_user_a_member),
 ):
     """
     Get orders from an user.
@@ -987,7 +986,7 @@ async def get_orders_of_user(
 )
 async def get_information(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(is_user_a_member),
 ):
     """
     Return all information
@@ -1011,7 +1010,7 @@ async def get_information(
 async def edit_information(
     edit_information: schemas_amap.InformationEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.amap)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.amap)),
 ):
     """
     Update information

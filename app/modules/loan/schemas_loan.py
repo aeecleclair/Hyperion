@@ -2,7 +2,7 @@ from datetime import date
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.core.core_endpoints import schemas_core
+from app.core.users.schemas_users import CoreUserSimple
 
 
 class LoanerBase(BaseModel):
@@ -127,7 +127,7 @@ class Loan(LoanBase):
     returned: bool
     returned_date: date | None
     items_qty: list[ItemQuantity]
-    borrower: schemas_core.CoreUserSimple
+    borrower: CoreUserSimple
     loaner: Loaner
 
 

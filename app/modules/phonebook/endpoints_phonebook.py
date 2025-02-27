@@ -5,10 +5,9 @@ from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.core_endpoints import models_core
-from app.core.groups import cruds_groups
+from app.core.groups import cruds_groups, models_groups
 from app.core.groups.groups_type import AccountType, GroupType
-from app.core.users import cruds_users
+from app.core.users import cruds_users, models_users
 from app.dependencies import (
     get_db,
     get_request_id,
@@ -35,9 +34,6 @@ module = Module(
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
-# ---------------------------------------------------------------------------- #
-#                                    Get All                                   #
-# ---------------------------------------------------------------------------- #
 @module.router.get(
     "/phonebook/associations/",
     response_model=list[schemas_phonebook.AssociationComplete],
@@ -45,7 +41,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 )
 async def get_all_associations(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
     Return all associations from database as a list of AssociationComplete schemas
@@ -73,7 +69,7 @@ async def get_all_associations(
 )
 async def get_all_role_tags(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
     Return all available role tags from RoleTags enum.
@@ -88,7 +84,7 @@ async def get_all_role_tags(
     status_code=200,
 )
 async def get_all_kinds(
-    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
     Return all available kinds of from Kinds enum.
@@ -97,9 +93,6 @@ async def get_all_kinds(
     return schemas_phonebook.KindsReturn(kinds=kinds)
 
 
-# ---------------------------------------------------------------------------- #
-#                                  Association                                 #
-# ---------------------------------------------------------------------------- #
 @module.router.post(
     "/phonebook/associations/",
     response_model=schemas_phonebook.AssociationComplete,
@@ -108,7 +101,7 @@ async def get_all_kinds(
 async def create_association(
     association: schemas_phonebook.AssociationBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
     Create a new Association by giving an AssociationBase scheme
@@ -156,7 +149,7 @@ async def create_association(
 async def update_association(
     association_id: str,
     association_edit: schemas_phonebook.AssociationEdit,
-    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -197,7 +190,7 @@ async def update_association(
 async def update_association_groups(
     association_id: str,
     association_groups_edit: schemas_phonebook.AssociationGroupsEdit,
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -218,7 +211,7 @@ async def update_association_groups(
 )
 async def deactivate_association(
     association_id: str,
-    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -244,7 +237,7 @@ async def deactivate_association(
 async def delete_association(
     association_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
     Delete an Association
@@ -276,9 +269,6 @@ async def delete_association(
     )
 
 
-# ---------------------------------------------------------------------------- #
-#                                    Members                                   #
-# ---------------------------------------------------------------------------- #
 @module.router.get(
     "/phonebook/associations/{association_id}/members/",
     response_model=list[schemas_phonebook.MemberComplete],
@@ -286,7 +276,7 @@ async def delete_association(
 )
 async def get_association_members(
     association_id: str,
-    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
     db: AsyncSession = Depends(get_db),
 ):
     """Return the list of MemberComplete of an Association."""
@@ -322,7 +312,7 @@ async def get_association_members(
 async def get_association_members_by_mandate_year(
     association_id: str,
     mandate_year: int,
-    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
     db: AsyncSession = Depends(get_db),
 ):
     """Return the list of MemberComplete of an Association with given mandate_year."""
@@ -361,7 +351,7 @@ async def get_association_members_by_mandate_year(
 async def get_member_details(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """Return MemberComplete for given user_id."""
 
@@ -378,9 +368,6 @@ async def get_member_details(
     )
 
 
-# ---------------------------------------------------------------------------- #
-#                                  Membership                                  #
-# ---------------------------------------------------------------------------- #
 @module.router.post(
     "/phonebook/associations/memberships",
     response_model=schemas_phonebook.MembershipComplete,
@@ -388,7 +375,7 @@ async def get_member_details(
 )
 async def create_membership(
     membership: schemas_phonebook.MembershipBase,
-    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -474,7 +461,7 @@ async def create_membership(
     for associated_group in association.associated_groups:
         if associated_group.id not in user_groups_id:
             await cruds_groups.create_membership(
-                models_core.CoreMembership(
+                models_groups.CoreMembership(
                     user_id=membership.user_id,
                     group_id=associated_group.id,
                     description=None,
@@ -491,7 +478,7 @@ async def create_membership(
 async def update_membership(
     updated_membership: schemas_phonebook.MembershipEdit,
     membership_id: str,
-    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -557,7 +544,7 @@ async def update_membership(
 )
 async def delete_membership(
     membership_id: str,
-    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -599,9 +586,6 @@ async def delete_membership(
     await cruds_phonebook.delete_membership(membership_id, db)
 
 
-# ---------------------------------------------------------------------------- #
-#                                     Logos                                    #
-# ---------------------------------------------------------------------------- #
 @module.router.post(
     "/phonebook/associations/{association_id}/picture",
     response_model=standard_responses.Result,
@@ -611,7 +595,7 @@ async def create_association_logo(
     association_id: str,
     image: UploadFile = File(),
     request_id: str = Depends(get_request_id),
-    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -662,7 +646,7 @@ async def create_association_logo(
 async def read_association_logo(
     association_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
 ) -> FileResponse:
     """
     Get the logo of an Association.

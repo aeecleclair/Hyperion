@@ -7,9 +7,9 @@ import aiofiles
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import Settings
 from app.core.google_api.google_api import DriveGoogleAPI
 from app.core.payment import schemas_payment
+from app.core.utils.config import Settings
 from app.modules.raid import coredata_raid, cruds_raid, models_raid, schemas_raid
 from app.modules.raid.schemas_raid import (
     ParticipantBase,

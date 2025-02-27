@@ -8,7 +8,7 @@ from typing import Any
 
 import uvicorn
 
-from app.core.config import Settings
+from app.core.utils.config import Settings
 
 
 class ColoredConsoleFormatter(uvicorn.logging.DefaultFormatter):
@@ -91,7 +91,9 @@ class LogConfig:
                     "format": self.LOG_FORMAT,
                     "datefmt": "%d-%b-%y %H:%M:%S",
                 },
-                "console_formatter": {"()": "app.core.log.ColoredConsoleFormatter"},
+                "console_formatter": {
+                    "()": "app.core.utils.log.ColoredConsoleFormatter",
+                },
                 "matrix": {
                     "format": self.MATRIX_LOG_FORMAT,
                     "datefmt": "%d-%b-%y %H:%M:%S",

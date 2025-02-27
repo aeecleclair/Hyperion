@@ -7,7 +7,7 @@ from app.modules.phonebook.types_phonebook import Kinds
 from app.types.sqlalchemy import Base
 
 if TYPE_CHECKING:
-    from app.core.core_endpoints.models_core import CoreGroup
+    from app.core.groups.models_groups import CoreGroup
 
 
 class Membership(Base):

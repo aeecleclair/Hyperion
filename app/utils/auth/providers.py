@@ -3,13 +3,13 @@ from typing import Any
 
 import unidecode
 
-from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import (
     AccountType,
     GroupType,
     get_account_types_except_externals,
     get_ecl_account_types,
 )
+from app.core.users import models_users
 from app.types.floors_type import FloorsType
 from app.types.scopes_type import ScopeType
 from app.utils.tools import get_display_name, is_user_member_of_any_group
@@ -63,7 +63,7 @@ class BaseAuthClient:
     # NOTE: you should only set this to True if you are sure the client is correctly configured and secure.
     allow_pkce_with_client_secret: bool = False
 
-    def get_userinfo(self, user: models_core.CoreUser) -> dict[str, Any]:
+    def get_userinfo(self, user: models_users.CoreUser) -> dict[str, Any]:
         """
         Return information about the user in a format understandable by the client.
         This method return the result of Openid connect userinfo endpoint.
@@ -136,7 +136,7 @@ class NextcloudAuthClient(BaseAuthClient):
     # Required claims : https://github.com/pulsejet/nextcloud-oidc-login/blob/0c072ecaa02579384bb5e10fbb9d219bbd96cfb8/3rdparty/jumbojett/openid-connect-php/src/OpenIDConnectClient.php#L1016
 
     @classmethod
-    def get_userinfo(cls, user: models_core.CoreUser):
+    def get_userinfo(cls, user: models_users.CoreUser):
         # For Nextcloud, various claims can be provided.
         # See https://github.com/pulsejet/nextcloud-oidc-login#config for claim names
 
@@ -161,7 +161,7 @@ class PiwigoAuthClient(BaseAuthClient):
     # When set to `None`, users from any group can use the auth client
     allowed_account_types: list[AccountType] | None = get_ecl_account_types()
 
-    def get_userinfo(self, user: models_core.CoreUser) -> dict[str, Any]:
+    def get_userinfo(self, user: models_users.CoreUser) -> dict[str, Any]:
         """
         Return information about the user in a format understandable by the client.
         This method return the result of Openid connect userinfo endpoint.
@@ -196,7 +196,7 @@ class HedgeDocAuthClient(BaseAuthClient):
     allowed_account_types: list[AccountType] | None = get_ecl_account_types()
 
     @classmethod
-    def get_userinfo(cls, user: models_core.CoreUser):
+    def get_userinfo(cls, user: models_users.CoreUser):
         return {
             "sub": user.id,
             "name": user.firstname,
@@ -214,7 +214,7 @@ class WikijsAuthClient(BaseAuthClient):
     allowed_account_types: list[AccountType] | None = get_ecl_account_types()
 
     @classmethod
-    def get_userinfo(cls, user: models_core.CoreUser):
+    def get_userinfo(cls, user: models_users.CoreUser):
         return {
             "sub": user.id,
             "name": get_display_name(
@@ -240,7 +240,7 @@ class SynapseAuthClient(BaseAuthClient):
     allow_token_introspection: bool = True
 
     @classmethod
-    def get_userinfo(cls, user: models_core.CoreUser):
+    def get_userinfo(cls, user: models_users.CoreUser):
         # Accepted characters are [a-z] [0-9] `.` and `-`. Spaces are replaced by `-` and accents are removed.
         username = (
             unidecode.unidecode(f"{user.firstname.strip()}.{user.name.strip()}")
@@ -271,7 +271,7 @@ class MinecraftAuthClient(BaseAuthClient):
     allowed_account_types: list[AccountType] | None = get_ecl_account_types()
 
     @classmethod
-    def get_userinfo(cls, user: models_core.CoreUser):
+    def get_userinfo(cls, user: models_users.CoreUser):
         return {
             "id": user.id,
             "nickname": user.nickname,
@@ -286,7 +286,7 @@ class ChallengerAuthClient(BaseAuthClient):
     allowed_scopes: set[ScopeType | str] = {ScopeType.openid, ScopeType.profile}
 
     @classmethod
-    def get_userinfo(cls, user: models_core.CoreUser):
+    def get_userinfo(cls, user: models_users.CoreUser):
         return {
             "sub": user.id,
             "name": user.name,
@@ -301,7 +301,7 @@ class OpenProjectAuthClient(BaseAuthClient):
     allowed_scopes: set[ScopeType | str] = {ScopeType.openid, ScopeType.profile}
 
     @classmethod
-    def get_userinfo(cls, user: models_core.CoreUser):
+    def get_userinfo(cls, user: models_users.CoreUser):
         return {
             "sub": user.id,
             "name": get_display_name(
@@ -327,7 +327,7 @@ class RalllyAuthClient(BaseAuthClient):
     return_userinfo_in_id_token: bool = True
 
     @classmethod
-    def get_userinfo(cls, user: models_core.CoreUser):
+    def get_userinfo(cls, user: models_users.CoreUser):
         return {
             "sub": user.id,
             "name": get_display_name(
@@ -353,7 +353,7 @@ class DocumensoAuthClient(BaseAuthClient):
     return_userinfo_in_id_token: bool = True
 
     @classmethod
-    def get_userinfo(cls, user: models_core.CoreUser):
+    def get_userinfo(cls, user: models_users.CoreUser):
         return {
             "sub": user.id,
             "name": get_display_name(
@@ -392,7 +392,7 @@ class OverleafAuthClient(BaseAuthClient):
     allowed_account_types: list[AccountType] | None = get_ecl_account_types()
 
     @classmethod
-    def get_userinfo(cls, user: models_core.CoreUser):
+    def get_userinfo(cls, user: models_users.CoreUser):
         return {
             "sub": user.id,
             "firstname": user.firstname,
@@ -418,7 +418,7 @@ class PlankaAuthClient(BaseAuthClient):
     }
 
     @classmethod
-    def get_userinfo(cls, user: models_core.CoreUser):
+    def get_userinfo(cls, user: models_users.CoreUser):
         return {
             "sub": user.id,
             "name": get_display_name(
@@ -435,7 +435,7 @@ class SlashAuthClient(BaseAuthClient):
     # When set to `None`, users from any group can use the auth client
     allowed_account_types: list[AccountType] | None = get_ecl_account_types()
 
-    def get_userinfo(self, user: models_core.CoreUser) -> dict[str, Any]:
+    def get_userinfo(self, user: models_users.CoreUser) -> dict[str, Any]:
         """
         See oidc specifications and `app.endpoints.auth.auth_get_userinfo` for more information:
         https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
