@@ -1,5 +1,5 @@
 from enum import Enum
 
 
-class ModulePermissions(Enum):
+class ModulePermissions(str, Enum):
     pass

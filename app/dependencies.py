@@ -300,8 +300,8 @@ def get_user_from_token_with_scopes(
 
 
 def is_user(
-    excluded_groups: list[GroupType] | None = None,
-    included_groups: list[GroupType] | None = None,
+    excluded_groups: list[GroupType | str] | None = None,
+    included_groups: list[GroupType | str] | None = None,
     excluded_account_types: list[AccountType] | None = None,
     included_account_types: list[AccountType] | None = None,
     exclude_external: bool = False,
