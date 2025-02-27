@@ -54,7 +54,14 @@ class TransferNotFoundByCallbackError(Exception):
 
 
 class TransferTotalDontMatchInCallbackError(Exception):
-    def __init__(self, checkout_id: UUID):
+    def __init__(self, transfer_id: UUID):
         super().__init__(
-            f"User transfer {checkout_id} amount does not match the paid amount",
+            f"User transfer {transfer_id} amount does not match the paid amount",
+        )
+
+
+class TransferAlreadyConfirmedInCallbackError(Exception):
+    def __init__(self, transfer_id: UUID):
+        super().__init__(
+            f"User transfer {transfer_id} amount does not match the paid amount",
         )

@@ -11,6 +11,7 @@ from app.core.myeclpay.schemas_myeclpay import (
     QRCodeContentData,
 )
 from app.core.myeclpay.types_myeclpay import (
+    TransferAlreadyConfirmedInCallbackError,
     TransferNotFoundByCallbackError,
     TransferTotalDontMatchInCallbackError,
 )
@@ -88,15 +89,21 @@ async def validate_transfer_callback(
     )
     if not transfer:
         hyperion_error_logger.error(
-            f"MyECLPay payment callback: user transfer {checkout_id} not found.",
+            f"MyECLPay payment callback: user transfer with transfer identifier {checkout_id} not found.",
         )
         raise TransferNotFoundByCallbackError(checkout_id)
 
     if transfer.total != paid_amount:
         hyperion_error_logger.error(
-            f"MyECLPay payment callback: user transfer {checkout_id} amount does not match the paid amount.",
+            f"MyECLPay payment callback: user transfer {transfer.id} amount does not match the paid amount.",
         )
         raise TransferTotalDontMatchInCallbackError(checkout_id)
+
+    if transfer.confirmed:
+        hyperion_error_logger.error(
+            f"MyECLPay payment callback: user transfer {transfer.id} is already confirmed.",
+        )
+        raise TransferAlreadyConfirmedInCallbackError(checkout_id)
 
     try:
         await cruds_myeclpay.confirm_transfer(
