@@ -24,6 +24,7 @@ class GroupType(str, Enum):
     ph = "4ec5ae77-f955-4309-96a5-19cc3c8be71c"
     admin_cdr = "c1275229-46b2-4e53-a7c4-305513bb1a2a"
     eclair = "1f841bd9-00be-41a7-96e1-860a18a46105"
+    BDS = "61af3e52-7ef9-4608-823a-39d51e83d1db"
 
     # Auth related groups
 
