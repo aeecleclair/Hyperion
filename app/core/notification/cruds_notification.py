@@ -20,13 +20,6 @@ async def get_firebase_devices_by_user_id(
     return result.scalars().all()
 
 
-async def get_all_firebase_devices(
-    db: AsyncSession,
-) -> Sequence[models_notification.FirebaseDevice]:
-    result = await db.execute(select(models_notification.FirebaseDevice))
-    return result.scalars().all()
-
-
 async def get_firebase_devices_by_user_id_and_firebase_token(
     # If we want to enable authentification for /messages/{firebase_token} endpoint, we may to uncomment the following line
     # user_id: str,
