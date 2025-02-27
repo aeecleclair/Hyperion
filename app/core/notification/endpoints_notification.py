@@ -390,29 +390,3 @@ async def get_devices(
         user_id=user.id,
         db=db,
     )
-
-
-@router.post(
-    "/notification/subscribe/topics",
-    status_code=201,
-)
-async def subscribe_all_users_to_topics(
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
-    db: AsyncSession = Depends(get_db),
-    notification_manager: NotificationManager = Depends(get_notification_manager),
-):
-    """
-    Subscribe all users to all topics
-
-    **Only admins can use this endpoint**
-    """
-    topics = [topic.value for topic in Topic]
-    devices = await cruds_notification.get_all_firebase_devices(db=db)
-    if devices:
-        for topic in topics:
-            for device in devices:
-                await notification_manager.subscribe_user_to_topic(
-                    user_id=device.user_id,
-                    custom_topic=CustomTopic(Topic(topic)),
-                    db=db,
-                )
