@@ -4,23 +4,24 @@ from datetime import UTC, date, datetime, timedelta
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import GroupType
+from app.core.memberships import models_memberships
+from app.core.users import models_users
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
     create_user_with_groups,
 )
 
-user: models_core.CoreUser
-admin_user: models_core.CoreUser
+user: models_users.CoreUser
+admin_user: models_users.CoreUser
 
 token_user: str
 token_admin: str
 
-aeecl_association_membership: models_core.CoreAssociationMembership
-useecl_association_membership: models_core.CoreAssociationMembership
-user_membership: models_core.CoreAssociationUserMembership
+aeecl_association_membership: models_memberships.CoreAssociationMembership
+useecl_association_membership: models_memberships.CoreAssociationMembership
+user_membership: models_memberships.CoreAssociationUserMembership
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
@@ -36,13 +37,13 @@ async def init_objects():
     token_admin = create_api_access_token(admin_user)
 
     global aeecl_association_membership, useecl_association_membership
-    aeecl_association_membership = models_core.CoreAssociationMembership(
+    aeecl_association_membership = models_memberships.CoreAssociationMembership(
         id=uuid.uuid4(),
         name="AEECL",
         group_id=GroupType.BDE,
     )
     await add_object_to_db(aeecl_association_membership)
-    useecl_association_membership = models_core.CoreAssociationMembership(
+    useecl_association_membership = models_memberships.CoreAssociationMembership(
         id=uuid.uuid4(),
         name="USEECL",
         group_id=GroupType.BDS,
@@ -50,7 +51,7 @@ async def init_objects():
     await add_object_to_db(useecl_association_membership)
 
     global user_membership
-    user_membership = models_core.CoreAssociationUserMembership(
+    user_membership = models_memberships.CoreAssociationUserMembership(
         id=uuid.uuid4(),
         user_id=user.id,
         association_membership_id=aeecl_association_membership.id,
@@ -59,7 +60,7 @@ async def init_objects():
     )
     await add_object_to_db(user_membership)
 
-    useecl_user_membership = models_core.CoreAssociationUserMembership(
+    useecl_user_membership = models_memberships.CoreAssociationUserMembership(
         id=uuid.uuid4(),
         user_id=user.id,
         association_membership_id=useecl_association_membership.id,
@@ -154,7 +155,7 @@ def test_delete_association_membership_with_users(client: TestClient):
 
 
 async def test_delete_association_membership_admin(client: TestClient):
-    new_membership = models_core.CoreAssociationMembership(
+    new_membership = models_memberships.CoreAssociationMembership(
         id=uuid.uuid4(),
         name="Random Association1",
         group_id=GroupType.AE,
@@ -198,7 +199,7 @@ def test_patch_association_membership_user(client: TestClient):
 
 
 async def test_patch_association_membership_admin(client: TestClient):
-    new_membership = models_core.CoreAssociationMembership(
+    new_membership = models_memberships.CoreAssociationMembership(
         id=uuid.uuid4(),
         name="Random Association2",
         group_id=GroupType.AE,
@@ -246,14 +247,14 @@ def test_get_memberships_by_user_id_admin(client: TestClient):
 
 async def test_get_membership_with_date_filter(client: TestClient):
     today = datetime.now(tz=UTC).date()
-    new_membership1 = models_core.CoreAssociationUserMembership(
+    new_membership1 = models_memberships.CoreAssociationUserMembership(
         id=uuid.uuid4(),
         user_id=user.id,
         association_membership_id=useecl_association_membership.id,
         start_date=today - timedelta(days=10),
         end_date=today + timedelta(days=10),
     )
-    new_membership2 = models_core.CoreAssociationUserMembership(
+    new_membership2 = models_memberships.CoreAssociationUserMembership(
         id=uuid.uuid4(),
         user_id=user.id,
         association_membership_id=useecl_association_membership.id,
@@ -412,7 +413,7 @@ def test_delete_user_membership_wrong_id(client: TestClient):
 
 
 async def test_delete_user_membership_admin(client: TestClient):
-    new_membership = models_core.CoreAssociationUserMembership(
+    new_membership = models_memberships.CoreAssociationUserMembership(
         id=uuid.uuid4(),
         user_id=user.id,
         association_membership_id=useecl_association_membership.id,
@@ -473,7 +474,7 @@ def test_patch_user_membership_with_wrong_dates(client: TestClient):
 
 
 async def test_patch_user_membership_admin_overlapping_dates(client: TestClient):
-    new_membership = models_core.CoreAssociationUserMembership(
+    new_membership = models_memberships.CoreAssociationUserMembership(
         id=uuid.uuid4(),
         user_id=user.id,
         association_membership_id=useecl_association_membership.id,
@@ -497,7 +498,7 @@ async def test_patch_user_membership_admin_overlapping_dates(client: TestClient)
 
 
 async def test_patch_user_membership_admin(client: TestClient):
-    new_membership = models_core.CoreAssociationUserMembership(
+    new_membership = models_memberships.CoreAssociationUserMembership(
         id=uuid.uuid4(),
         user_id=user.id,
         association_membership_id=aeecl_association_membership.id,
@@ -552,7 +553,7 @@ def test_post_batch_user_memberships_user(client: TestClient):
 
 async def test_post_batch_user_memberships_admin(client: TestClient):
     today = datetime.now(tz=UTC).date()
-    new_membership = models_core.CoreAssociationUserMembership(
+    new_membership = models_memberships.CoreAssociationUserMembership(
         id=uuid.uuid4(),
         user_id=user.id,
         association_membership_id=aeecl_association_membership.id,

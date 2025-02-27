@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
-from app.core.core_endpoints import schemas_core
+from app.core.users import schemas_users
 
 
 class MembershipBase(BaseModel):
@@ -35,7 +35,7 @@ class UserMembershipSimple(UserMembershipBase):
 
 
 class UserMembershipComplete(UserMembershipSimple):
-    user: schemas_core.CoreUserSimple
+    user: schemas_users.CoreUserSimple
 
     model_config = ConfigDict(from_attributes=True)
 

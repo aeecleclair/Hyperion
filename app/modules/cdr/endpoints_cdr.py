@@ -14,8 +14,7 @@ from fastapi import (
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.core_endpoints import models_core
-from app.core.groups import cruds_groups
+from app.core.groups import cruds_groups, schemas_groups
 from app.core.groups.groups_type import GroupType
 from app.core.memberships import cruds_memberships, schemas_memberships
 from app.core.payment.payment_tool import PaymentTool
@@ -2511,7 +2510,7 @@ async def get_payment_url(
         phone=user.phone,
         created_on=user.created_on,
         groups=[
-            schemas_core.CoreGroupSimple(
+            schemas_groups.CoreGroupSimple(
                 id=group.id,
                 name=group.name,
                 description=group.description,

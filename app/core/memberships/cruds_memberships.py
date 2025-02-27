@@ -5,15 +5,15 @@ from uuid import UUID
 from sqlalchemy import and_, delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.core_endpoints import models_core, schemas_core
-from app.core.memberships import schemas_memberships
+from app.core.memberships import models_memberships, schemas_memberships
+from app.core.users import schemas_users
 
 
 async def get_association_memberships(
     db: AsyncSession,
 ) -> Sequence[schemas_memberships.MembershipSimple]:
     result = (
-        (await db.execute(select(models_core.CoreAssociationMembership)))
+        (await db.execute(select(models_memberships.CoreAssociationMembership)))
         .scalars()
         .all()
     )
@@ -34,8 +34,8 @@ async def get_association_membership_by_name(
     result = (
         (
             await db.execute(
-                select(models_core.CoreAssociationMembership).where(
-                    models_core.CoreAssociationMembership.name == name,
+                select(models_memberships.CoreAssociationMembership).where(
+                    models_memberships.CoreAssociationMembership.name == name,
                 ),
             )
         )
@@ -60,8 +60,8 @@ async def get_association_membership_by_id(
     result = (
         (
             await db.execute(
-                select(models_core.CoreAssociationMembership).where(
-                    models_core.CoreAssociationMembership.id == membership_id,
+                select(models_memberships.CoreAssociationMembership).where(
+                    models_memberships.CoreAssociationMembership.id == membership_id,
                 ),
             )
         )
@@ -83,7 +83,7 @@ def create_association_membership(
     db: AsyncSession,
     membership: schemas_memberships.MembershipSimple,
 ):
-    membership_db = models_core.CoreAssociationMembership(
+    membership_db = models_memberships.CoreAssociationMembership(
         id=membership.id,
         name=membership.name,
         group_id=membership.group_id,
@@ -96,8 +96,8 @@ async def delete_association_membership(
     membership_id: UUID,
 ):
     await db.execute(
-        delete(models_core.CoreAssociationMembership).where(
-            models_core.CoreAssociationMembership.id == membership_id,
+        delete(models_memberships.CoreAssociationMembership).where(
+            models_memberships.CoreAssociationMembership.id == membership_id,
         ),
     )
 
@@ -108,8 +108,8 @@ async def update_association_membership(
     membership: schemas_memberships.MembershipBase,
 ):
     await db.execute(
-        update(models_core.CoreAssociationMembership)
-        .where(models_core.CoreAssociationMembership.id == membership_id)
+        update(models_memberships.CoreAssociationMembership)
+        .where(models_memberships.CoreAssociationMembership.id == membership_id)
         .values(
             name=membership.name,
             group_id=membership.group_id,
@@ -128,21 +128,21 @@ async def get_user_memberships_by_user_id(
     result = (
         (
             await db.execute(
-                select(models_core.CoreAssociationUserMembership).where(
-                    models_core.CoreAssociationUserMembership.user_id == user_id,
-                    models_core.CoreAssociationUserMembership.end_date
+                select(models_memberships.CoreAssociationUserMembership).where(
+                    models_memberships.CoreAssociationUserMembership.user_id == user_id,
+                    models_memberships.CoreAssociationUserMembership.end_date
                     >= minimal_end_date
                     if minimal_end_date
                     else and_(True),
-                    models_core.CoreAssociationUserMembership.end_date
+                    models_memberships.CoreAssociationUserMembership.end_date
                     <= maximal_end_date
                     if maximal_end_date
                     else and_(True),
-                    models_core.CoreAssociationUserMembership.start_date
+                    models_memberships.CoreAssociationUserMembership.start_date
                     >= minimal_start_date
                     if minimal_start_date
                     else and_(True),
-                    models_core.CoreAssociationUserMembership.start_date
+                    models_memberships.CoreAssociationUserMembership.start_date
                     <= maximal_start_date
                     if maximal_start_date
                     else and_(True),
@@ -159,7 +159,7 @@ async def get_user_memberships_by_user_id(
             association_membership_id=membership.association_membership_id,
             start_date=membership.start_date,
             end_date=membership.end_date,
-            user=schemas_core.CoreUserSimple(
+            user=schemas_users.CoreUserSimple(
                 id=membership.user.id,
                 account_type=membership.user.account_type,
                 school_id=membership.user.school_id,
@@ -183,22 +183,22 @@ async def get_user_memberships_by_association_membership_id(
     result = (
         (
             await db.execute(
-                select(models_core.CoreAssociationUserMembership).where(
-                    models_core.CoreAssociationUserMembership.association_membership_id
+                select(models_memberships.CoreAssociationUserMembership).where(
+                    models_memberships.CoreAssociationUserMembership.association_membership_id
                     == association_membership_id,
-                    models_core.CoreAssociationUserMembership.end_date
+                    models_memberships.CoreAssociationUserMembership.end_date
                     >= minimal_end_date
                     if minimal_end_date
                     else and_(True),
-                    models_core.CoreAssociationUserMembership.end_date
+                    models_memberships.CoreAssociationUserMembership.end_date
                     <= maximal_end_date
                     if maximal_end_date
                     else and_(True),
-                    models_core.CoreAssociationUserMembership.start_date
+                    models_memberships.CoreAssociationUserMembership.start_date
                     >= minimal_start_date
                     if minimal_start_date
                     else and_(True),
-                    models_core.CoreAssociationUserMembership.start_date
+                    models_memberships.CoreAssociationUserMembership.start_date
                     <= maximal_start_date
                     if maximal_start_date
                     else and_(True),
@@ -215,7 +215,7 @@ async def get_user_memberships_by_association_membership_id(
             association_membership_id=membership.association_membership_id,
             start_date=membership.start_date,
             end_date=membership.end_date,
-            user=schemas_core.CoreUserSimple(
+            user=schemas_users.CoreUserSimple(
                 id=membership.user.id,
                 account_type=membership.user.account_type,
                 school_id=membership.user.school_id,
@@ -236,9 +236,9 @@ async def get_user_memberships_by_user_id_and_association_membership_id(
     result = (
         (
             await db.execute(
-                select(models_core.CoreAssociationUserMembership).where(
-                    models_core.CoreAssociationUserMembership.user_id == user_id,
-                    models_core.CoreAssociationUserMembership.association_membership_id
+                select(models_memberships.CoreAssociationUserMembership).where(
+                    models_memberships.CoreAssociationUserMembership.user_id == user_id,
+                    models_memberships.CoreAssociationUserMembership.association_membership_id
                     == association_membership_id,
                 ),
             )
@@ -253,7 +253,7 @@ async def get_user_memberships_by_user_id_and_association_membership_id(
             association_membership_id=membership.association_membership_id,
             start_date=membership.start_date,
             end_date=membership.end_date,
-            user=schemas_core.CoreUserSimple(
+            user=schemas_users.CoreUserSimple(
                 id=membership.user.id,
                 account_type=membership.user.account_type,
                 school_id=membership.user.school_id,
@@ -273,8 +273,9 @@ async def get_user_membership_by_id(
     result = (
         (
             await db.execute(
-                select(models_core.CoreAssociationUserMembership).where(
-                    models_core.CoreAssociationUserMembership.id == user_membership_id,
+                select(models_memberships.CoreAssociationUserMembership).where(
+                    models_memberships.CoreAssociationUserMembership.id
+                    == user_membership_id,
                 ),
             )
         )
@@ -288,7 +289,7 @@ async def get_user_membership_by_id(
             association_membership_id=result.association_membership_id,
             start_date=result.start_date,
             end_date=result.end_date,
-            user=schemas_core.CoreUserSimple(
+            user=schemas_users.CoreUserSimple(
                 id=result.user.id,
                 account_type=result.user.account_type,
                 school_id=result.user.school_id,
@@ -306,7 +307,7 @@ def create_user_membership(
     db: AsyncSession,
     user_membership: schemas_memberships.UserMembershipSimple,
 ):
-    membership_db = models_core.CoreAssociationUserMembership(
+    membership_db = models_memberships.CoreAssociationUserMembership(
         id=user_membership.id,
         user_id=user_membership.user_id,
         association_membership_id=user_membership.association_membership_id,
@@ -321,8 +322,8 @@ async def delete_user_membership(
     user_membership_id: UUID,
 ):
     await db.execute(
-        delete(models_core.CoreAssociationUserMembership).where(
-            models_core.CoreAssociationUserMembership.id == user_membership_id,
+        delete(models_memberships.CoreAssociationUserMembership).where(
+            models_memberships.CoreAssociationUserMembership.id == user_membership_id,
         ),
     )
 
@@ -333,7 +334,9 @@ async def update_user_membership(
     user_membership_edit: schemas_memberships.UserMembershipEdit,
 ):
     await db.execute(
-        update(models_core.CoreAssociationUserMembership)
-        .where(models_core.CoreAssociationUserMembership.id == user_membership_id)
+        update(models_memberships.CoreAssociationUserMembership)
+        .where(
+            models_memberships.CoreAssociationUserMembership.id == user_membership_id,
+        )
         .values(**user_membership_edit.model_dump(exclude_none=True)),
     )

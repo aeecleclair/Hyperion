@@ -4,8 +4,8 @@ from uuid import uuid4
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import GroupType
+from app.core.memberships import models_memberships
 from app.core.users import models_users
 from tests.commons import (
     add_object_to_db,
@@ -20,10 +20,10 @@ student_user_to_keep: models_users.CoreUser
 token_admin_user: str
 token_student_user: str
 
-core_association_membership: models_core.CoreAssociationMembership
+core_association_membership: models_memberships.CoreAssociationMembership
 
-core_association_membership_user_del: models_core.CoreAssociationUserMembership
-core_association_membership_user_kept: models_core.CoreAssociationUserMembership
+core_association_membership_user_del: models_memberships.CoreAssociationUserMembership
+core_association_membership_user_kept: models_memberships.CoreAssociationUserMembership
 
 FABRISTPP_EMAIL_1 = "fabristpp.eclair1@etu.ec-lyon.fr"
 FABRISTPP_EMAIL_2 = "fabristpp.eclair3@ecl21.ec-lyon.fr"
@@ -46,7 +46,7 @@ async def init_objects() -> None:
     )
 
     global core_association_membership
-    core_association_membership = models_core.CoreAssociationMembership(
+    core_association_membership = models_memberships.CoreAssociationMembership(
         id=uuid4(),
         name="AEECL",
         group_id=GroupType.BDE,
@@ -54,20 +54,24 @@ async def init_objects() -> None:
     await add_object_to_db(core_association_membership)
 
     global core_association_membership_user_del, core_association_membership_user_kept
-    core_association_membership_user_del = models_core.CoreAssociationUserMembership(
-        id=uuid4(),
-        user_id=student_user_to_delete.id,
-        association_membership_id=core_association_membership.id,
-        start_date=datetime.now(tz=UTC).date() - timedelta(days=365),
-        end_date=datetime.now(tz=UTC).date() + timedelta(days=365),
+    core_association_membership_user_del = (
+        models_memberships.CoreAssociationUserMembership(
+            id=uuid4(),
+            user_id=student_user_to_delete.id,
+            association_membership_id=core_association_membership.id,
+            start_date=datetime.now(tz=UTC).date() - timedelta(days=365),
+            end_date=datetime.now(tz=UTC).date() + timedelta(days=365),
+        )
     )
     await add_object_to_db(core_association_membership_user_del)
-    core_association_membership_user_kept = models_core.CoreAssociationUserMembership(
-        id=uuid4(),
-        user_id=student_user_to_keep.id,
-        association_membership_id=core_association_membership.id,
-        start_date=datetime.now(tz=UTC).date() - timedelta(days=565),
-        end_date=datetime.now(tz=UTC).date() + timedelta(days=465),
+    core_association_membership_user_kept = (
+        models_memberships.CoreAssociationUserMembership(
+            id=uuid4(),
+            user_id=student_user_to_keep.id,
+            association_membership_id=core_association_membership.id,
+            start_date=datetime.now(tz=UTC).date() - timedelta(days=565),
+            end_date=datetime.now(tz=UTC).date() + timedelta(days=465),
+        )
     )
     await add_object_to_db(core_association_membership_user_kept)
 

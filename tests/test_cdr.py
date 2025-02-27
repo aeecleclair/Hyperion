@@ -5,8 +5,8 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
-from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import GroupType
+from app.core.memberships import models_memberships
 from app.core.users import models_users
 from app.modules.cdr import models_cdr
 from app.modules.cdr.types_cdr import (
@@ -62,8 +62,8 @@ signature_admin: models_cdr.Signature
 payment: models_cdr.Payment
 
 
-association_membership: models_core.CoreAssociationMembership
-user_membership: models_core.CoreAssociationUserMembership
+association_membership: models_memberships.CoreAssociationMembership
+user_membership: models_memberships.CoreAssociationUserMembership
 
 ticket: models_cdr.Ticket
 ticket_generator: models_cdr.TicketGenerator
@@ -307,7 +307,7 @@ async def init_objects():
     await add_object_to_db(payment)
 
     global association_membership
-    association_membership = models_core.CoreAssociationMembership(
+    association_membership = models_memberships.CoreAssociationMembership(
         id=uuid.uuid4(),
         name="AEECL",
         group_id=GroupType.BDE,
@@ -315,7 +315,7 @@ async def init_objects():
     await add_object_to_db(association_membership)
 
     global user_membership
-    user_membership = models_core.CoreAssociationUserMembership(
+    user_membership = models_memberships.CoreAssociationUserMembership(
         id=uuid.uuid4(),
         user_id=cdr_user.id,
         association_membership_id=association_membership.id,
@@ -2504,7 +2504,7 @@ async def test_validate_purchase(client: TestClient):
         purchased_on=datetime.now(UTC),
     )
     await add_object_to_db(purchase_to_validate)
-    membership = models_core.CoreAssociationUserMembership(
+    membership = models_memberships.CoreAssociationUserMembership(
         id=uuid.uuid4(),
         user_id=cdr_user.id,
         association_membership_id=association_membership.id,

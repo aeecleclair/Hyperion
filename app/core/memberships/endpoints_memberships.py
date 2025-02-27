@@ -5,12 +5,11 @@ from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.core_endpoints import models_core, schemas_core
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
 from app.core.memberships import cruds_memberships, schemas_memberships
 from app.core.memberships.utils_memberships import validate_user_membership
-from app.core.users import cruds_users
+from app.core.users import cruds_users, models_users, schemas_users
 from app.dependencies import (
     get_db,
     is_user,
@@ -37,7 +36,7 @@ core_module = CoreModule(
 )
 async def read_associations_memberships(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
     Return all memberships from database as a list of dictionaries
@@ -59,7 +58,7 @@ async def read_association_membership(
     minimalEndDate: date = Query(None),
     maximalEndDate: date = Query(None),
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
     Return membership with the given ID.
@@ -98,7 +97,7 @@ async def read_association_membership(
 async def create_association_membership(
     membership: schemas_memberships.MembershipBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Create a new membership.
@@ -149,7 +148,7 @@ async def update_association_membership(
     association_membership_id: uuid.UUID,
     membership: schemas_memberships.MembershipBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Update a membership.
@@ -187,7 +186,7 @@ async def update_association_membership(
 async def delete_association_membership(
     association_membership_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Delete a membership.
@@ -237,7 +236,7 @@ async def delete_association_membership(
 async def read_user_memberships(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     """
     Return all memberships for a user.
@@ -270,7 +269,7 @@ async def read_user_association_membership_history(
     user_id: str,
     association_membership_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Return all user memberships for a specific association membership for a user.
@@ -295,7 +294,7 @@ async def create_user_membership(
     user_id: str,
     user_membership: schemas_memberships.UserMembershipBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Create a new user membership.
@@ -338,7 +337,7 @@ async def create_user_membership(
         )
     return schemas_memberships.UserMembershipComplete(
         **db_user_membership.__dict__,
-        user=schemas_core.CoreUserSimple(
+        user=schemas_users.CoreUserSimple(
             name=db_user.name,
             id=db_user.id,
             firstname=db_user.firstname,
@@ -358,7 +357,7 @@ async def add_batch_membership(
     association_membership_id: uuid.UUID,
     memberships_details: list[schemas_memberships.MembershipUserMappingEmail],
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Add a batch of user to a membership.
@@ -424,7 +423,7 @@ async def update_user_membership(
     membership_id: uuid.UUID,
     user_membership: schemas_memberships.UserMembershipEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Update a user membership.
@@ -471,7 +470,7 @@ async def update_user_membership(
 async def delete_user_membership(
     membership_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
     Delete a user membership.
