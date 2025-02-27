@@ -435,7 +435,7 @@ class SlashAuthClient(BaseAuthClient):
     # When set to `None`, users from any group can use the auth client
     allowed_account_types: list[AccountType] | None = get_ecl_account_types()
 
-    def get_userinfo(self, user: models_core.CoreUser) -> dict[str, Any]:
+    def get_userinfo(self, user: models_users.CoreUser) -> dict[str, Any]:
         """
         See oidc specifications and `app.endpoints.auth.auth_get_userinfo` for more information:
         https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
