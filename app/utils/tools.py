@@ -132,6 +132,8 @@ async def has_user_permission(
     """
     Check if the user has the permission to perform the action.
     """
+    if GroupType.admin in [group.id for group in user.groups]:
+        return True
     permissions = await cruds_permissions.get_permissions_by_permission_name(
         permission_name=permission_name,
         db=db,
