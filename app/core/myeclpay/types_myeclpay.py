@@ -29,6 +29,7 @@ class TransactionStatus(str, Enum):
     CONFIRMED = "confirmed"
     CANCELED = "canceled"
     REFUNDED = "refunded"
+    PENDING = "pending"  # used for transfer requests, for which the user has 15 minutes to complete the HelloAsso checkout
 
 
 class RequestStatus(str, Enum):

@@ -499,6 +499,8 @@ async def get_store_history(
                 ),
             )
 
+    # TODO: even if this is forbidden, we should return transfer
+
     return history
 
 
@@ -1416,8 +1418,6 @@ async def get_user_wallet_history(
             detail="User is not registered for MyECL Pay",
         )
 
-    is_user_latest_tos_signed(user_payment)
-
     history: list[schemas_myeclpay.History] = []
 
     # First we get all received and send transactions
@@ -1461,17 +1461,24 @@ async def get_user_wallet_history(
         db=db,
     )
 
-    history.extend(
-        schemas_myeclpay.History(
-            id=transfer.id,
-            type=HistoryType.TRANSFER,
-            other_wallet_name="Transfer",
-            total=transfer.total,
-            creation=transfer.creation,
-            status=TransactionStatus.CONFIRMED,
+    for transfer in transfers:
+        if transfer.confirmed:
+            status = TransactionStatus.CONFIRMED
+        elif datetime.now(UTC) < transfer.creation + timedelta(minutes=15):
+            status = TransactionStatus.PENDING
+        else:
+            status = TransactionStatus.CANCELED
+
+        history.append(
+            schemas_myeclpay.History(
+                id=transfer.id,
+                type=HistoryType.TRANSFER,
+                other_wallet_name="Transfer",
+                total=transfer.total,
+                creation=transfer.creation,
+                status=status,
+            ),
         )
-        for transfer in transfers
-    )
 
     # We add refunds
     refunds = await cruds_myeclpay.get_refunds_by_wallet_id(
