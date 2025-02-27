@@ -24,6 +24,8 @@ from sqlalchemy.ext.asyncio import (
 from app.core.auth import schemas_auth
 from app.core.groups.groups_type import AccountType, GroupType, get_ecl_account_types
 from app.core.payment.payment_tool import PaymentTool
+from app.core.permissions import cruds_permissions, schemas_permissions
+from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import models_users
 from app.core.utils import security
 from app.core.utils.config import Settings, construct_prod_settings
@@ -420,3 +422,48 @@ def is_user_in(
         return user
 
     return is_user_in
+
+
+def is_user_allowed_to(
+    permissions_name: list[ModulePermissions],
+    db: AsyncSession = Depends(get_db),
+) -> Callable[[models_users.CoreUser], Coroutine[Any, Any, models_users.CoreUser]]:
+    """
+    Generate a dependency which will:
+        * check if the request header contains a valid API JWT token (a token that can be used to call endpoints from the API)
+        * make sure the user making the request exists
+        * make sure the user has the permission with the given name
+        * return the corresponding user `models_users.CoreUser` object
+    """
+
+    async def is_user_allowed_to(
+        user: models_users.CoreUser = Depends(
+            is_user(),
+        ),
+        db: AsyncSession = Depends(get_db),
+    ) -> models_users.CoreUser:
+        """
+        A dependency that checks that user has the permission with the given name then returns the corresponding user.
+        """
+        if GroupType.admin in [group.id for group in user.groups]:
+            return user
+
+        permissions: list[schemas_permissions.CorePermission] = []
+        for permission_name in permissions_name:
+            permissions += await cruds_permissions.get_permissions_by_permission_name(
+                db,
+                permission_name,
+            )
+
+        if not any(
+            permission.group_id in [group.id for group in user.groups]
+            for permission in permissions
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="Unauthorized, user does not have the required permission",
+            )
+
+        return user
+
+    return is_user_allowed_to

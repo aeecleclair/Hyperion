@@ -14,10 +14,11 @@ from fastapi import (
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.core_endpoints import models_core
 from app.core.groups import cruds_groups, schemas_groups
-from app.core.groups.groups_type import GroupType
 from app.core.memberships import cruds_memberships, schemas_memberships
 from app.core.payment.payment_tool import PaymentTool
+from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import cruds_users, models_users, schemas_users
 from app.core.users.cruds_users import get_user_by_id, get_users
 from app.core.utils.config import Settings
@@ -29,7 +30,7 @@ from app.dependencies import (
     get_websocket_connection_manager,
     is_user,
     is_user_a_member,
-    is_user_in,
+    is_user_allowed_to,
 )
 from app.modules.cdr import cruds_cdr, models_cdr, schemas_cdr
 from app.modules.cdr.types_cdr import (
@@ -54,15 +55,21 @@ from app.types.websocket import (
 from app.utils.tools import (
     create_and_send_email_migration,
     get_core_data,
+    has_user_permission,
     is_user_member_of_any_group,
     set_core_data,
 )
+
+
+class CdrPermissions(ModulePermissions):
+    manage_cdr = "manage_cdr"
+
 
 module = Module(
     root="cdr",
     tag="Cdr",
     payment_callback=validate_payment,
-    default_allowed_groups_ids=[GroupType.admin_cdr],
+    permissions=CdrPermissions,
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
@@ -83,7 +90,7 @@ async def get_cdr_users(
     **User must be part of a seller group to use this endpoint**
     """
     if not (
-        is_user_member_of_any_group(user, [GroupType.admin_cdr])
+        await has_user_permission(user, CdrPermissions.manage_cdr, db)
         or await cruds_cdr.get_sellers_by_group_ids(
             db=db,
             group_ids=[g.id for g in user.groups],
@@ -117,7 +124,7 @@ async def get_cdr_users_pending_validation(
     **User must be part of a seller group to use this endpoint**
     """
     if not (
-        is_user_member_of_any_group(user, [GroupType.admin_cdr])
+        await has_user_permission(user, CdrPermissions.manage_cdr, db)
         or await cruds_cdr.get_sellers_by_group_ids(
             db=db,
             group_ids=[g.id for g in user.groups],
@@ -180,7 +187,7 @@ async def get_cdr_user(
     """
     if user.id != user_id:
         if not (
-            is_user_member_of_any_group(user, [GroupType.admin_cdr])
+            await has_user_permission(user, CdrPermissions.manage_cdr, db)
             or await cruds_cdr.get_sellers_by_group_ids(
                 db=db,
                 group_ids=[g.id for g in user.groups],
@@ -229,7 +236,7 @@ async def update_cdr_user(
     user_update: schemas_cdr.CdrUserUpdate,
     db: AsyncSession = Depends(get_db),
     seller_user: models_users.CoreUser = Depends(
-        is_user_in(GroupType.admin_cdr),
+        is_user_allowed_to([CdrPermissions.manage_cdr]),
     ),
     ws_manager: WebsocketConnectionManager = Depends(get_websocket_connection_manager),
     settings: Settings = Depends(get_settings),
@@ -341,7 +348,9 @@ async def update_cdr_user(
 )
 async def get_sellers(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.manage_cdr]),
+    ),
 ):
     """
     Get all sellers.
@@ -366,10 +375,7 @@ async def get_sellers_by_user_id(
     **User must be authenticated to use this endpoint**
     """
 
-    if is_user_member_of_any_group(
-        user=user,
-        allowed_groups=[GroupType.admin_cdr],
-    ):
+    if await has_user_permission(user, CdrPermissions.manage_cdr, db):
         return await cruds_cdr.get_sellers(db)
     return await cruds_cdr.get_sellers_by_group_ids(
         db,
@@ -510,7 +516,9 @@ async def send_seller_results(
     # emails: schemas_cdr.ResultRequest,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.manage_cdr]),
+    ),
     # settings: Settings = Depends(get_settings),
 ):
     """
@@ -566,7 +574,7 @@ async def get_all_products(
         db,
         [x.id for x in user.groups],
     )
-    if not (sellers or is_user_member_of_any_group(user, [GroupType.admin_cdr])):
+    if not (sellers or await has_user_permission(user, CdrPermissions.manage_cdr, db)):
         raise HTTPException(
             status_code=403,
             detail="You must be a seller to get all documents.",
@@ -582,7 +590,9 @@ async def get_all_products(
 async def create_seller(
     seller: schemas_cdr.SellerBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.manage_cdr]),
+    ),
 ):
     """
     Create a seller.
@@ -620,7 +630,9 @@ async def update_seller(
     seller_id: UUID,
     seller: schemas_cdr.SellerEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.manage_cdr]),
+    ),
 ):
     """
     Update a seller.
@@ -654,7 +666,9 @@ async def update_seller(
 async def delete_seller(
     seller_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.manage_cdr]),
+    ),
 ):
     """
     Delete a seller.
@@ -1181,7 +1195,7 @@ async def get_all_sellers_documents(
         db,
         [x.id for x in user.groups],
     )
-    if not (sellers or is_user_member_of_any_group(user, [GroupType.admin_cdr])):
+    if not (sellers or await has_user_permission(user, CdrPermissions.manage_cdr, db)):
         raise HTTPException(
             status_code=403,
             detail="You must be a seller to get all documents.",
@@ -1281,7 +1295,8 @@ async def get_purchases_by_user_id(
     **User must get his own purchases or be CDR Admin to use this endpoint**
     """
     if not (
-        user_id == user.id or is_user_member_of_any_group(user, [GroupType.admin_cdr])
+        user_id == user.id
+        or await has_user_permission(user, CdrPermissions.manage_cdr, db)
     ):
         raise HTTPException(
             status_code=403,
@@ -1594,7 +1609,9 @@ async def mark_purchase_as_validated(
     product_variant_id: UUID,
     validated: bool,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.manage_cdr]),
+    ),
 ):
     """
     Validate a purchase.
@@ -1863,7 +1880,8 @@ async def get_signatures_by_user_id(
     **User must get his own signatures or be CDR Admin to use this endpoint**
     """
     if not (
-        user_id == user.id or is_user_member_of_any_group(user, [GroupType.admin_cdr])
+        user_id == user.id
+        or await has_user_permission(user, CdrPermissions.manage_cdr, db)
     ):
         raise HTTPException(
             status_code=403,
@@ -1933,13 +1951,13 @@ async def create_signature(
     sellers = await cruds_cdr.get_sellers(db)
 
     sellers_groups = [str(seller.group_id) for seller in sellers]
-    sellers_groups.append(GroupType.admin_cdr)
     if not (
         (
             user_id == user.id
             and signature.signature_type == DocumentSignatureType.numeric
         )
         or is_user_member_of_any_group(user=user, allowed_groups=sellers_groups)
+        or await has_user_permission(user, CdrPermissions.manage_cdr, db)
     ):
         raise HTTPException(
             status_code=403,
@@ -1977,7 +1995,9 @@ async def delete_signature(
     user_id: str,
     document_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.manage_cdr]),
+    ),
 ):
     """
     Delete a signature.
@@ -2031,7 +2051,9 @@ async def get_curriculums(
 async def create_curriculum(
     curriculum: schemas_cdr.CurriculumBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.manage_cdr]),
+    ),
 ):
     """
     Create a curriculum.
@@ -2065,7 +2087,9 @@ async def create_curriculum(
 async def delete_curriculum(
     curriculum_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.manage_cdr]),
+    ),
 ):
     """
     Delete a curriculum.
@@ -2109,7 +2133,8 @@ async def create_curriculum_membership(
     **User must add a curriculum to themself or be CDR Admin to use this endpoint**
     """
     if not (
-        user_id == user.id or is_user_member_of_any_group(user, [GroupType.admin_cdr])
+        user_id == user.id
+        or await has_user_permission(user, CdrPermissions.manage_cdr, db)
     ):
         raise HTTPException(
             status_code=403,
@@ -2211,7 +2236,8 @@ async def update_curriculum_membership(
     **User must add a curriculum to themself or be CDR Admin to use this endpoint**
     """
     if not (
-        user_id == user.id or is_user_member_of_any_group(user, [GroupType.admin_cdr])
+        user_id == user.id
+        or await has_user_permission(user, CdrPermissions.manage_cdr, db)
     ):
         raise HTTPException(
             status_code=403,
@@ -2300,7 +2326,8 @@ async def delete_curriculum_membership(
             detail="Invalid curriculum_id",
         )
     if not (
-        user_id == user.id or is_user_member_of_any_group(user, [GroupType.admin_cdr])
+        user_id == user.id
+        or await has_user_permission(user, CdrPermissions.manage_cdr, db)
     ):
         raise HTTPException(
             status_code=403,
@@ -2367,7 +2394,8 @@ async def get_payments_by_user_id(
     **User must get his own payments or be CDR Admin to use this endpoint**
     """
     if not (
-        user_id == user.id or is_user_member_of_any_group(user, [GroupType.admin_cdr])
+        user_id == user.id
+        or await has_user_permission(user, CdrPermissions.manage_cdr, db)
     ):
         raise HTTPException(
             status_code=403,
@@ -2385,7 +2413,9 @@ async def create_payment(
     user_id: str,
     payment: schemas_cdr.PaymentBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.manage_cdr]),
+    ),
 ):
     """
     Create a payment.
@@ -2431,7 +2461,9 @@ async def delete_payment(
     user_id: str,
     payment_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.manage_cdr]),
+    ),
 ):
     """
     Remove a payment.
@@ -2573,7 +2605,9 @@ async def get_status(
 async def update_status(
     status: schemas_cdr.Status,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.manage_cdr]),
+    ),
 ):
     current_status = await get_core_data(schemas_cdr.Status, db)
     match status.status:
@@ -2627,7 +2661,8 @@ async def get_tickets_of_user(
     user: models_users.CoreUser = Depends(is_user()),
 ):
     if not (
-        is_user_member_of_any_group(user, [GroupType.admin_cdr]) or user_id == user.id
+        await has_user_permission(user, CdrPermissions.manage_cdr, db)
+        or user_id == user.id
     ):
         raise HTTPException(
             status_code=403,
