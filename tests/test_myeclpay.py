@@ -1928,7 +1928,7 @@ async def test_store_scan_store_successful_scan(client: TestClient):
 
 async def test_unknown_transaction_refund(client: TestClient):
     response = client.post(
-        f"/myeclpay/transaction/{uuid4()}/refund",
+        f"/myeclpay/transactions/{uuid4()}/refund",
         headers={"Authorization": f"Bearer {ecl_user_access_token}"},
         json={"complete_refund": True},
     )
@@ -1952,7 +1952,7 @@ async def test_transaction_refund_unconfirmed_transaction(client: TestClient):
     await add_object_to_db(transaction_canceled)
 
     response = client.post(
-        f"/myeclpay/transaction/{transaction_canceled.id}/refund",
+        f"/myeclpay/transactions/{transaction_canceled.id}/refund",
         headers={"Authorization": f"Bearer {ecl_user_access_token}"},
         json={"complete_refund": True},
     )
@@ -1962,7 +1962,7 @@ async def test_transaction_refund_unconfirmed_transaction(client: TestClient):
 
 async def test_transaction_refund_unauthorized_user(client: TestClient):
     response = client.post(
-        f"/myeclpay/transaction/{transaction_from_ecl_user_to_store.id}/refund",
+        f"/myeclpay/transactions/{transaction_from_ecl_user_to_store.id}/refund",
         headers={"Authorization": f"Bearer {ecl_user2_access_token}"},
         json={"complete_refund": True},
     )
@@ -2000,7 +2000,7 @@ async def test_transaction_refund_complete(client: TestClient):
     )
     await add_object_to_db(transaction)
     response = client.post(
-        f"/myeclpay/transaction/{transaction.id}/refund",
+        f"/myeclpay/transactions/{transaction.id}/refund",
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={"complete_refund": True},
     )
@@ -2044,7 +2044,7 @@ async def test_transaction_refund_complete(client: TestClient):
 
 async def test_transaction_refund_partial_incomplete_amount(client: TestClient):
     response = client.post(
-        f"/myeclpay/transaction/{transaction_from_ecl_user_to_store.id}/refund",
+        f"/myeclpay/transactions/{transaction_from_ecl_user_to_store.id}/refund",
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={
             "complete_refund": False,
@@ -2059,7 +2059,7 @@ async def test_transaction_refund_partial_incomplete_amount(client: TestClient):
 
 async def test_transaction_refund_partial_invalid_amount(client: TestClient):
     response = client.post(
-        f"/myeclpay/transaction/{transaction_from_ecl_user_to_store.id}/refund",
+        f"/myeclpay/transactions/{transaction_from_ecl_user_to_store.id}/refund",
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={
             "complete_refund": False,
@@ -2073,7 +2073,7 @@ async def test_transaction_refund_partial_invalid_amount(client: TestClient):
     )
 
     response = client.post(
-        f"/myeclpay/transaction/{transaction_from_ecl_user_to_store.id}/refund",
+        f"/myeclpay/transactions/{transaction_from_ecl_user_to_store.id}/refund",
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={
             "complete_refund": False,
@@ -2111,7 +2111,7 @@ async def test_transaction_refund_partial(client: TestClient):
     )
     await add_object_to_db(transaction)
     response = client.post(
-        f"/myeclpay/transaction/{transaction.id}/refund",
+        f"/myeclpay/transactions/{transaction.id}/refund",
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={
             "complete_refund": False,
