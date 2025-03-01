@@ -1421,7 +1421,7 @@ def test_non_hello_asso_transfer_as_bde(client: TestClient):
 
 def ensure_qr_code_id_is_already_used(qr_code_id: str | UUID, client: TestClient):
     response = client.post(
-        f"/myeclpay/store/{store.id}/scan",
+        f"/myeclpay/stores/{store.id}/scan",
         headers={"Authorization": f"Bearer {ecl_user_access_token}"},
         json={
             "qr_code_id": str(qr_code_id),
@@ -1445,7 +1445,7 @@ def test_store_scan_invalid_store_id(client: TestClient):
     qr_code_id = str(uuid4())
 
     response = client.post(
-        f"/myeclpay/store/{uuid4()}/scan",
+        f"/myeclpay/stores/{uuid4()}/scan",
         headers={"Authorization": f"Bearer {ecl_user_access_token}"},
         json={
             "qr_code_id": qr_code_id,
@@ -1466,7 +1466,7 @@ def test_store_scan_store_when_not_seller(client: TestClient):
     qr_code_id = str(uuid4())
 
     response = client.post(
-        f"/myeclpay/store/{store.id}/scan",
+        f"/myeclpay/stores/{store.id}/scan",
         headers={"Authorization": f"Bearer {ecl_user_access_token}"},
         json={
             "qr_code_id": qr_code_id,
@@ -1490,7 +1490,7 @@ def test_store_scan_store_when_seller_but_can_not_bank(client: TestClient):
     qr_code_id = str(uuid4())
 
     response = client.post(
-        f"/myeclpay/store/{store.id}/scan",
+        f"/myeclpay/stores/{store.id}/scan",
         headers={
             "Authorization": f"Bearer {store_seller_no_permission_user_access_token}",
         },
@@ -1516,7 +1516,7 @@ def test_store_scan_store_invalid_wallet_device_id(client: TestClient):
     qr_code_id = str(uuid4())
 
     response = client.post(
-        f"/myeclpay/store/{store.id}/scan",
+        f"/myeclpay/stores/{store.id}/scan",
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={
             "qr_code_id": qr_code_id,
@@ -1537,7 +1537,7 @@ def test_store_scan_store_non_active_wallet_device_id(client: TestClient):
     qr_code_id = str(uuid4())
 
     response = client.post(
-        f"/myeclpay/store/{store.id}/scan",
+        f"/myeclpay/stores/{store.id}/scan",
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={
             "qr_code_id": qr_code_id,
@@ -1558,7 +1558,7 @@ def test_store_scan_store_invalid_signature(client: TestClient):
     qr_code_id = str(uuid4())
 
     response = client.post(
-        f"/myeclpay/store/{store.id}/scan",
+        f"/myeclpay/stores/{store.id}/scan",
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={
             "qr_code_id": qr_code_id,
@@ -1591,7 +1591,7 @@ def test_store_scan_store_with_non_store_qr_code(client: TestClient):
     )
 
     response = client.post(
-        f"/myeclpay/store/{store.id}/scan",
+        f"/myeclpay/stores/{store.id}/scan",
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={
             "qr_code_id": str(qr_code_content.qr_code_id),
@@ -1626,7 +1626,7 @@ def test_store_scan_store_negative_total(client: TestClient):
     )
 
     response = client.post(
-        f"/myeclpay/store/{store.id}/scan",
+        f"/myeclpay/stores/{store.id}/scan",
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={
             "qr_code_id": str(qr_code_content.qr_code_id),
@@ -1659,7 +1659,7 @@ def test_store_scan_store_total_greater_than_max(client: TestClient):
     )
 
     response = client.post(
-        f"/myeclpay/store/{store.id}/scan",
+        f"/myeclpay/stores/{store.id}/scan",
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={
             "qr_code_id": str(qr_code_content.qr_code_id),
@@ -1701,7 +1701,7 @@ def test_store_scan_store_missing_wallet(
     )
 
     response = client.post(
-        f"/myeclpay/store/{store.id}/scan",
+        f"/myeclpay/stores/{store.id}/scan",
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={
             "qr_code_id": str(qr_code_content.qr_code_id),
@@ -1737,7 +1737,7 @@ def test_store_scan_store_from_store_wallet(client: TestClient):
     )
 
     response = client.post(
-        f"/myeclpay/store/{store.id}/scan",
+        f"/myeclpay/stores/{store.id}/scan",
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={
             "qr_code_id": str(qr_code_content.qr_code_id),
@@ -1807,7 +1807,7 @@ async def test_store_scan_store_from_wallet_with_old_tos_version(client: TestCli
     )
 
     response = client.post(
-        f"/myeclpay/store/{store.id}/scan",
+        f"/myeclpay/stores/{store.id}/scan",
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={
             "qr_code_id": str(qr_code_content.qr_code_id),
@@ -1840,7 +1840,7 @@ def test_store_scan_store_insufficient_ballance(client: TestClient):
     )
 
     response = client.post(
-        f"/myeclpay/store/{store.id}/scan",
+        f"/myeclpay/stores/{store.id}/scan",
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={
             "qr_code_id": str(qr_code_content.qr_code_id),
@@ -1885,7 +1885,7 @@ async def test_store_scan_store_successful_scan(client: TestClient):
     assert user_wallet_before_scan is not None
 
     response = client.post(
-        f"/myeclpay/store/{store.id}/scan",
+        f"/myeclpay/stores/{store.id}/scan",
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={
             "qr_code_id": str(qr_code_content.qr_code_id),
