@@ -71,6 +71,7 @@ used_qr_code: models_myeclpay.UsedQRCode
 store_seller_can_bank_user: models_core.CoreUser
 store_seller_no_permission_user_access_token: str
 store_seller_can_bank_user_access_token: str
+store_seller_can_cancel_user_access_token: str
 store_seller_can_manage_sellers_user_access_token: str
 
 unregistered_ecl_user_access_token: str
@@ -370,6 +371,23 @@ async def init_objects() -> None:
         can_manage_sellers=False,
     )
     await add_object_to_db(store_seller_can_bank)
+
+    global store_seller_can_cancel_user_access_token
+    store_seller_can_cancel_user = await create_user_with_groups(
+        groups=[],
+    )
+    store_seller_can_cancel_user_access_token = create_api_access_token(
+        store_seller_can_cancel_user,
+    )
+    store_seller_can_cancel = models_myeclpay.Seller(
+        user_id=store_seller_can_cancel_user.id,
+        store_id=store.id,
+        can_bank=False,
+        can_see_history=False,
+        can_cancel=True,
+        can_manage_sellers=False,
+    )
+    await add_object_to_db(store_seller_can_cancel)
 
     global store_seller_can_manage_sellers_user_access_token
     store_seller_can_manage_sellers_user = await create_user_with_groups(
@@ -674,13 +692,16 @@ async def test_add_seller_as_lambda(client: TestClient):
 
 
 async def test_add_seller_as_seller_with_permission(client: TestClient):
+    user = await create_user_with_groups(
+        groups=[],
+    )
     response = client.post(
         f"/myeclpay/stores/{store.id}/sellers",
         headers={
             "Authorization": f"Bearer {store_seller_can_manage_sellers_user_access_token}",
         },
         json={
-            "user_id": ecl_user2.id,
+            "user_id": user.id,
             "can_bank": True,
             "can_see_history": True,
             "can_cancel": True,
@@ -691,13 +712,16 @@ async def test_add_seller_as_seller_with_permission(client: TestClient):
 
 
 async def test_add_seller_as_seller_without_permission(client: TestClient):
+    user = await create_user_with_groups(
+        groups=[],
+    )
     response = client.post(
         f"/myeclpay/stores/{store.id}/sellers",
         headers={
             "Authorization": f"Bearer {store_seller_no_permission_user_access_token}",
         },
         json={
-            "user_id": ecl_user2.id,
+            "user_id": user.id,
             "can_bank": True,
             "can_see_history": True,
             "can_cancel": True,
@@ -2001,7 +2025,9 @@ async def test_transaction_refund_complete(client: TestClient):
     await add_object_to_db(transaction)
     response = client.post(
         f"/myeclpay/transactions/{transaction.id}/refund",
-        headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
+        headers={
+            "Authorization": f"Bearer {store_seller_can_cancel_user_access_token}",
+        },
         json={"complete_refund": True},
     )
     assert response.status_code == 204
@@ -2045,7 +2071,9 @@ async def test_transaction_refund_complete(client: TestClient):
 async def test_transaction_refund_partial_incomplete_amount(client: TestClient):
     response = client.post(
         f"/myeclpay/transactions/{transaction_from_ecl_user_to_store.id}/refund",
-        headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
+        headers={
+            "Authorization": f"Bearer {store_seller_can_cancel_user_access_token}",
+        },
         json={
             "complete_refund": False,
         },
@@ -2060,7 +2088,9 @@ async def test_transaction_refund_partial_incomplete_amount(client: TestClient):
 async def test_transaction_refund_partial_invalid_amount(client: TestClient):
     response = client.post(
         f"/myeclpay/transactions/{transaction_from_ecl_user_to_store.id}/refund",
-        headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
+        headers={
+            "Authorization": f"Bearer {store_seller_can_cancel_user_access_token}",
+        },
         json={
             "complete_refund": False,
             "amount": transaction_from_ecl_user_to_store.total + 1,
@@ -2074,7 +2104,9 @@ async def test_transaction_refund_partial_invalid_amount(client: TestClient):
 
     response = client.post(
         f"/myeclpay/transactions/{transaction_from_ecl_user_to_store.id}/refund",
-        headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
+        headers={
+            "Authorization": f"Bearer {store_seller_can_cancel_user_access_token}",
+        },
         json={
             "complete_refund": False,
             "amount": 0,
@@ -2112,7 +2144,9 @@ async def test_transaction_refund_partial(client: TestClient):
     await add_object_to_db(transaction)
     response = client.post(
         f"/myeclpay/transactions/{transaction.id}/refund",
-        headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
+        headers={
+            "Authorization": f"Bearer {store_seller_can_cancel_user_access_token}",
+        },
         json={
             "complete_refund": False,
             "amount": 50,

@@ -1993,7 +1993,7 @@ async def refund_transaction(
     """
     Refund a transaction
 
-    **The user must either be the debited user or the seller of the transaction**
+    **The user must either be the credited user or a seller with cancel permissions of the credited store of the transaction**
     """
     transaction = await cruds_myeclpay.get_transaction(
         transaction_id=transaction_id,
@@ -2012,52 +2012,57 @@ async def refund_transaction(
             detail="Transaction is not available for refund",
         )
 
-    refunder_wallet = await cruds_myeclpay.get_wallet(
+    if transaction.creation <= datetime.now(UTC) - timedelta(days=30):
+        raise HTTPException(
+            status_code=400,
+            detail="Transaction older than 30 days can not be refunded",
+        )
+
+    # The wallet that was credited if the one that will be de debited during the refund
+    wallet_previously_credited = await cruds_myeclpay.get_wallet(
         wallet_id=transaction.credited_wallet_id,
         db=db,
     )
-    if refunder_wallet is None:
+    if wallet_previously_credited is None:
         raise HTTPException(
             status_code=404,
-            detail="Credited wallet does not exist",
+            detail="Credited wallet that need to refund the transaction does not exist",
         )
 
-    if refunder_wallet.type == WalletType.STORE:
-        if refunder_wallet.store is None:
+    if wallet_previously_credited.type == WalletType.STORE:
+        if wallet_previously_credited.store is None:
             raise HTTPException(
                 status_code=404,
-                detail="Store does not exist",
+                detail="Missing store in store wallet",
             )
         seller = await cruds_myeclpay.get_seller(
-            store_id=refunder_wallet.store.id,
+            store_id=wallet_previously_credited.store.id,
             user_id=user.id,
             db=db,
         )
-        if seller is None:
+        if seller is None or not seller.can_cancel:
             raise HTTPException(
                 status_code=403,
                 detail="User does not have the permission to refund this transaction",
             )
-        if not seller.can_cancel:
-            raise HTTPException(
-                status_code=403,
-                detail="User does not have the permission to refund this transaction",
-            )
+        wallet_previously_credited_name = wallet_previously_credited.store.name
     else:
+        # Currently transaction between users are forbidden
         raise HTTPException(
             status_code=403,
-            detail="User is not allowed to refund this transaction",
+            detail="Transaction credited to a user can not be refunded",
         )
-        # if refunder_wallet.user is None:
+        # if wallet_previously_credited.user is None:
         #     raise HTTPException(
         #         status_code=404,
         #         detail="User does not exist",
         #     )
-        # if refunder_wallet.user.id != user.id:
+        # if wallet_previously_credited.user.id != user.id:
         #     raise HTTPException(
         #         status_code=403,
         #         detail="User is not allowed to refund this transaction",
         #     )
+        # wallet_previously_credited_name = wallet_previously_credited.user.full_name
 
     if refund_info.complete_refund:
         refund_amount = transaction.total
@@ -2067,7 +2072,7 @@ async def refund_transaction(
                 status_code=400,
                 detail="Please provide an amount for the refund if it is not a complete refund",
             )
-        if refund_info.amount > transaction.total:
+        if refund_info.amount >= transaction.total:
             raise HTTPException(
                 status_code=400,
                 detail="Refund amount is greater than the transaction total",
@@ -2079,14 +2084,15 @@ async def refund_transaction(
             )
         refund_amount = refund_info.amount
 
-    debited_wallet = await cruds_myeclpay.get_wallet(
-        wallet_id=transaction.credited_wallet_id,
+    # The wallet that was debited is the one that will be credited during the refund
+    wallet_previously_debited = await cruds_myeclpay.get_wallet(
+        wallet_id=transaction.debited_wallet_id,
         db=db,
     )
-    if debited_wallet is None:
+    if wallet_previously_debited is None:
         raise HTTPException(
             status_code=404,
-            detail="Credited wallet does not exist",
+            detail="The wallet that should be credited during the refund does not exist",
         )
 
     await cruds_myeclpay.update_transaction_status(
@@ -2101,37 +2107,53 @@ async def refund_transaction(
             transaction_id=transaction_id,
             total=refund_amount,
             seller_user_id=user.id
-            if refunder_wallet.type == WalletType.STORE
+            if wallet_previously_credited.type == WalletType.STORE
             else None,
-            credited_wallet_id=transaction.debited_wallet_id,
-            debited_wallet_id=transaction.credited_wallet_id,
+            credited_wallet_id=wallet_previously_debited.id,
+            debited_wallet_id=wallet_previously_credited.id,
             creation=datetime.now(UTC),
         ),
         db=db,
     )
 
+    # We add the amount to the wallet that was previously debited
     await cruds_myeclpay.increment_wallet_balance(
-        wallet_id=transaction.debited_wallet_id,
+        wallet_id=wallet_previously_debited.id,
         amount=refund_amount,
         db=db,
     )
 
     await cruds_myeclpay.increment_wallet_balance(
-        wallet_id=transaction.credited_wallet_id,
+        wallet_id=wallet_previously_credited.id,
         amount=-refund_amount,
         db=db,
     )
 
     await db.commit()
 
-    if debited_wallet.user is not None:
+    if wallet_previously_debited.user is not None:
         message = Message(
             title="💳 Remboursement",
-            content=f"La transaction de {transaction.total} a été remboursée de {refund_amount/100} €",
+            content=f"La transaction pour {wallet_previously_credited_name} ({transaction.total/100} €) a été remboursée de {refund_amount/100} €",
             action_module="MyECLPay",
         )
         await notification_tool.send_notification_to_user(
-            user_id=debited_wallet.user.id,
+            user_id=wallet_previously_debited.user.id,
+            message=message,
+        )
+
+    if wallet_previously_credited.user is not None:
+        if wallet_previously_debited.user is not None:
+            wallet_previously_debited_name = wallet_previously_debited.user.full_name
+        elif wallet_previously_debited.store is not None:
+            wallet_previously_debited_name = wallet_previously_debited.store.name
+        message = Message(
+            title="💳 Remboursement",
+            content=f"Vous avez remboursé la transaction de {wallet_previously_debited_name} ({transaction.total/100} €) de {refund_amount/100} €",
+            action_module="MyECLPay",
+        )
+        await notification_tool.send_notification_to_user(
+            user_id=wallet_previously_credited.user.id,
             message=message,
         )
 
