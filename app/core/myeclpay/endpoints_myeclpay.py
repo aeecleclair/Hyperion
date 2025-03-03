@@ -1089,6 +1089,7 @@ async def sign_tos(
         account_exists_content = templates.get_template(
             "myeclpay_signed_tos_mail.html",
         ).render()
+        # TODO: change template
         background_tasks.add_task(
             send_email,
             recipient=user.email,
@@ -1294,6 +1295,7 @@ async def create_user_devices(
 async def activate_user_device(
     token: str,
     db: AsyncSession = Depends(get_db),
+    notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
     Activate a wallet device
@@ -1337,8 +1339,20 @@ async def activate_user_device(
     user = wallet.user
     if user is not None:
         hyperion_error_logger.info(
-            f"Wallet device {wallet_device.id} activated by user {user.id}",
+            f"Wallet device {wallet_device.id} ({wallet_device.name}) activated by user {user.id}",
         )
+
+        message = Message(
+            title="💳 Paiement - appareil activé",
+            content=f"Vous avez activé l'appareil {wallet_device.name}",
+            action_module="MyECLPay",
+        )
+        await notification_tool.send_notification_to_user(
+            user_id=user.id,
+            message=message,
+        )
+    else:
+        raise UnexpectedError(f"Activated wallet device {wallet_device.id} has no user")  # noqa: TRY003
 
     return "Wallet device activated"
 
@@ -1351,6 +1365,7 @@ async def revoke_user_devices(
     wallet_device_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user()),
+    notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
     Revoke a device for the user.
@@ -1392,6 +1407,20 @@ async def revoke_user_devices(
     )
 
     await db.commit()
+
+    hyperion_error_logger.info(
+        f"Wallet device {wallet_device.id} ({wallet_device.name}) revoked by user {user_payment.user_id}",
+    )
+
+    message = Message(
+        title="💳 Paiement - appareil revoqué",
+        content=f"Vous avez revoqué l'appareil {wallet_device.name}",
+        action_module="MyECLPay",
+    )
+    await notification_tool.send_notification_to_user(
+        user_id=user_payment.user_id,
+        message=message,
+    )
 
 
 @router.get(
@@ -1508,6 +1537,7 @@ async def get_user_wallet_history(
     # TODO: limite by datetime
 
 
+# TODO: do we keep this endpoint?
 @router.post(
     "/myeclpay/transfer/admin",
     response_model=None,
@@ -1518,7 +1548,7 @@ async def add_transfer_by_admin(
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user()),
     settings: Settings = Depends(get_settings),
-    payment_tool: PaymentTool = Depends(get_payment_tool),
+    notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     if transfer_info.transfer_type == TransferType.HELLO_ASSO:
         raise HTTPException(
@@ -1608,6 +1638,16 @@ async def add_transfer_by_admin(
         await db.rollback()
         raise
 
+    message = Message(
+        title="💳 Paiement - transfert",
+        content=f"Votre compte a été crédité de {transfer_info.amount/100} €",
+        action_module="MyECLPay",
+    )
+    await notification_tool.send_notification_to_user(
+        user_id=user_payment.user_id,
+        message=message,
+    )
+
 
 @router.post(
     "/myeclpay/transfer/init",
@@ -1627,7 +1667,6 @@ async def init_ha_transfer(
     if settings.HELLOASSO_MYECLPAY_SLUG is None:
         raise MissingHelloAssoSlugError("HELLOASSO_MYECLPAY_SLUG")
 
-    # TODO
     if transfer_info.redirect_url not in settings.TRUSTED_PAYMENT_REDIRECT_URLS:
         hyperion_error_logger.warning(
             f"User {user.id} tried to redirect to an untrusted URL: {transfer_info.redirect_url}",
@@ -1951,12 +1990,8 @@ async def store_scan_qrcode(
     # TODO: log the transaction
 
     message = Message(
-        # context=f"payment-{scan_info.qr_code_id}",
-        # is_visible=True,
         title=f"💳 Paiement - {store.name}",
-        # TODO: convert and add unit
         content=f"Une transaction de {scan_info.total/100} € a été effectuée",
-        # expire_on=datetime.now(UTC) + timedelta(days=3),
         action_module="MyECLPay",
     )
     await notification_tool.send_notification_to_user(
@@ -2158,6 +2193,7 @@ async def refund_transaction(
         )
 
 
+# TODO: do we need this endpoint since we can reimburse a transaction
 @router.post(
     "/myeclpay/transactions/{transaction_id}/cancel",
     status_code=204,
