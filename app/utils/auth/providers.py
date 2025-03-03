@@ -413,10 +413,6 @@ class SlashAuthClient(BaseAuthClient):
         # WARNING: The sub (subject) Claim MUST always be returned in the UserInfo Response.
         return {
             "sub": user.id,
-            "name": get_display_name(
-                firstname=user.firstname,
-                name=user.name,
-                nickname=user.nickname,
-            ),
+            "name": user.full_name,
             "email": user.email,
         }

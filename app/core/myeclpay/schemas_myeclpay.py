@@ -3,7 +3,6 @@ from uuid import UUID
 
 from pydantic import Base64Bytes, BaseModel, HttpUrl
 
-from app.core.core_endpoints import schemas_core
 from app.core.memberships import schemas_memberships
 from app.core.myeclpay.types_myeclpay import (
     HistoryType,
@@ -13,6 +12,7 @@ from app.core.myeclpay.types_myeclpay import (
     WalletDeviceStatus,
     WalletType,
 )
+from app.core.users import schemas_users
 
 
 class StructureBase(BaseModel):
@@ -23,7 +23,7 @@ class StructureBase(BaseModel):
 
 class Structure(StructureBase):
     id: UUID
-    manager_user: schemas_core.CoreUserSimple
+    manager_user: schemas_users.CoreUserSimple
     association_membership: schemas_memberships.MembershipSimple | None
 
 
@@ -81,7 +81,7 @@ class Seller(BaseModel):
     can_cancel: bool
     can_manage_sellers: bool
 
-    user: schemas_core.CoreUserSimple
+    user: schemas_users.CoreUserSimple
 
 
 class TOSSignature(BaseModel):
@@ -160,7 +160,7 @@ class Wallet(BaseModel):
     type: WalletType
     balance: int
     store: Store | None
-    user: schemas_core.CoreUser | None
+    user: schemas_users.CoreUser | None
 
 
 class WalletInfo(BaseModel):

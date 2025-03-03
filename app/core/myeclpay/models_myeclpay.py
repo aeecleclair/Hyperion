@@ -4,7 +4,7 @@ from uuid import UUID
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.core_endpoints import models_core
+from app.core.memberships import models_memberships
 from app.core.myeclpay.types_myeclpay import (
     RequestStatus,
     TransactionStatus,
@@ -13,6 +13,7 @@ from app.core.myeclpay.types_myeclpay import (
     WalletDeviceStatus,
     WalletType,
 )
+from app.core.users import models_users
 from app.types.sqlalchemy import Base, PrimaryKey
 
 
@@ -24,7 +25,7 @@ class Wallet(Base):
     balance: Mapped[int]  # Stored in cents
 
     store: Mapped["Store | None"] = relationship(init=False, lazy="joined")
-    user: Mapped[models_core.CoreUser | None] = relationship(
+    user: Mapped[models_users.CoreUser | None] = relationship(
         init=False,
         secondary="myeclpay_user_payment",
         lazy="joined",
@@ -108,10 +109,13 @@ class Structure(Base):
         default=None,
     )
 
-    manager_user: Mapped[models_core.CoreUser] = relationship(init=False, lazy="joined")
-    association_membership: Mapped[models_core.CoreAssociationMembership | None] = (
-        relationship(init=False, lazy="joined")
+    manager_user: Mapped[models_users.CoreUser] = relationship(
+        init=False,
+        lazy="joined",
     )
+    association_membership: Mapped[
+        models_memberships.CoreAssociationMembership | None
+    ] = relationship(init=False, lazy="joined")
 
 
 class StructureManagerTransfert(Base):
@@ -190,7 +194,7 @@ class Seller(Base):
     can_cancel: Mapped[bool]
     can_manage_sellers: Mapped[bool]
 
-    user: Mapped[models_core.CoreUser] = relationship(init=False, lazy="joined")
+    user: Mapped[models_users.CoreUser] = relationship(init=False, lazy="joined")
 
 
 class UserPayment(Base):

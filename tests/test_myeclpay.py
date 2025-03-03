@@ -11,8 +11,8 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import (
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
-from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import GroupType
+from app.core.memberships import models_memberships
 from app.core.myeclpay import cruds_myeclpay, models_myeclpay
 from app.core.myeclpay.schemas_myeclpay import QRCodeContentBase
 from app.core.myeclpay.types_myeclpay import (
@@ -23,6 +23,7 @@ from app.core.myeclpay.types_myeclpay import (
     WalletType,
 )
 from app.core.myeclpay.utils_myeclpay import LATEST_TOS, compute_signable_data
+from app.core.users import models_users
 from tests.commons import (
     TestingSessionLocal,
     add_object_to_db,
@@ -30,12 +31,12 @@ from tests.commons import (
     create_user_with_groups,
 )
 
-admin_user: models_core.CoreUser
+admin_user: models_users.CoreUser
 admin_user_token: str
-structure_manager_user: models_core.CoreUser
+structure_manager_user: models_users.CoreUser
 structure_manager_user_token: str
 
-ecl_user: models_core.CoreUser
+ecl_user: models_users.CoreUser
 ecl_user_access_token: str
 ecl_user_wallet: models_myeclpay.Wallet
 ecl_user_wallet_device_private_key: Ed25519PrivateKey
@@ -45,14 +46,14 @@ ecl_user_wallet_device_inactive: models_myeclpay.WalletDevice
 ecl_user_payment: models_myeclpay.UserPayment
 ecl_user_transfer: models_myeclpay.Transfer
 
-ecl_user2: models_core.CoreUser
+ecl_user2: models_users.CoreUser
 ecl_user2_access_token: str
 ecl_user2_wallet: models_myeclpay.Wallet
 ecl_user2_wallet_device: models_myeclpay.WalletDevice
 ecl_user2_payment: models_myeclpay.UserPayment
 
-association_membership: models_core.CoreAssociationMembership
-association_membership_user: models_core.CoreAssociationUserMembership
+association_membership: models_memberships.CoreAssociationMembership
+association_membership_user: models_memberships.CoreAssociationUserMembership
 structure: models_myeclpay.Structure
 store_wallet: models_myeclpay.Wallet
 store: models_myeclpay.Store
@@ -68,7 +69,7 @@ transaction_from_ecl_user2_to_ecl_user: models_myeclpay.Transaction
 used_qr_code: models_myeclpay.UsedQRCode
 
 
-store_seller_can_bank_user: models_core.CoreUser
+store_seller_can_bank_user: models_users.CoreUser
 store_seller_no_permission_user_access_token: str
 store_seller_can_bank_user_access_token: str
 store_seller_can_cancel_user_access_token: str
@@ -86,7 +87,7 @@ async def init_objects() -> None:
     admin_user_token = create_api_access_token(admin_user)
 
     global association_membership
-    association_membership = models_core.CoreAssociationMembership(
+    association_membership = models_memberships.CoreAssociationMembership(
         id=uuid4(),
         name="Test Association Membership",
         group_id=GroupType.BDE,
@@ -115,7 +116,7 @@ async def init_objects() -> None:
     )
     ecl_user_access_token = create_api_access_token(ecl_user)
 
-    association_membership_user = models_core.CoreAssociationUserMembership(
+    association_membership_user = models_memberships.CoreAssociationUserMembership(
         id=uuid4(),
         user_id=ecl_user.id,
         association_membership_id=association_membership.id,

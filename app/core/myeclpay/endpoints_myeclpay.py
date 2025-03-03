@@ -8,10 +8,6 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import security
-from app.core.config import Settings
-from app.core.core_endpoints import schemas_core
-from app.core.core_endpoints.models_core import CoreUser
 from app.core.groups.groups_type import GroupType
 from app.core.memberships import cruds_memberships, schemas_memberships
 from app.core.myeclpay import cruds_myeclpay, schemas_myeclpay
@@ -38,7 +34,10 @@ from app.core.myeclpay.utils_myeclpay import (
 from app.core.notification.schemas_notification import Message
 from app.core.payment import cruds_payment, schemas_payment
 from app.core.payment.payment_tool import PaymentTool
-from app.core.users import cruds_users
+from app.core.users import cruds_users, schemas_users
+from app.core.users.models_users import CoreUser
+from app.core.utils import security
+from app.core.utils.config import Settings
 from app.dependencies import (
     get_db,
     get_notification_tool,
@@ -119,7 +118,7 @@ async def create_structure(
         association_membership_id=structure.association_membership_id,
         association_membership=None,
         manager_user_id=structure.manager_user_id,
-        manager_user=schemas_core.CoreUserSimple(
+        manager_user=schemas_users.CoreUserSimple(
             id=db_user.id,
             name=db_user.name,
             firstname=db_user.firstname,
@@ -547,7 +546,7 @@ async def get_user_stores(
                         if store.structure.association_membership is not None
                         else None,
                         manager_user_id=store.structure.manager_user_id,
-                        manager_user=schemas_core.CoreUserSimple(
+                        manager_user=schemas_users.CoreUserSimple(
                             id=store.structure.manager_user.id,
                             name=store.structure.manager_user.name,
                             firstname=store.structure.manager_user.firstname,
@@ -1713,7 +1712,7 @@ async def init_ha_transfer(
             detail="Wallet balance would exceed the maximum allowed balance",
         )
 
-    user_schema = schemas_core.CoreUser(
+    user_schema = schemas_users.CoreUser(
         account_type=user.account_type,
         school_id=user.school_id,
         email=user.email,

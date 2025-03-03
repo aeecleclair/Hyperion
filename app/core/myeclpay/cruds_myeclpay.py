@@ -6,7 +6,6 @@ from sqlalchemy import delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.core_endpoints import schemas_core
 from app.core.memberships import schemas_memberships
 from app.core.myeclpay import models_myeclpay, schemas_myeclpay
 from app.core.myeclpay.types_myeclpay import (
@@ -15,6 +14,7 @@ from app.core.myeclpay.types_myeclpay import (
     WalletDeviceStatus,
     WalletType,
 )
+from app.core.users import schemas_users
 
 
 async def create_structure(
@@ -125,7 +125,7 @@ async def get_structures(
             else None,
             manager_user_id=structure.manager_user_id,
             id=structure.id,
-            manager_user=schemas_core.CoreUserSimple(
+            manager_user=schemas_users.CoreUserSimple(
                 id=structure.manager_user.id,
                 firstname=structure.manager_user.firstname,
                 name=structure.manager_user.name,
@@ -166,7 +166,7 @@ async def get_structure_by_id(
             else None,
             manager_user_id=structure.manager_user_id,
             id=structure.id,
-            manager_user=schemas_core.CoreUserSimple(
+            manager_user=schemas_users.CoreUserSimple(
                 id=structure.manager_user.id,
                 firstname=structure.manager_user.firstname,
                 name=structure.manager_user.name,
@@ -273,7 +273,7 @@ async def get_seller(
             can_see_history=result.can_see_history,
             can_cancel=result.can_cancel,
             can_manage_sellers=result.can_manage_sellers,
-            user=schemas_core.CoreUserSimple(
+            user=schemas_users.CoreUserSimple(
                 id=result.user.id,
                 firstname=result.user.firstname,
                 name=result.user.name,
@@ -304,7 +304,7 @@ async def get_sellers_by_store_id(
             can_see_history=seller.can_see_history,
             can_cancel=seller.can_cancel,
             can_manage_sellers=seller.can_manage_sellers,
-            user=schemas_core.CoreUserSimple(
+            user=schemas_users.CoreUserSimple(
                 id=seller.user.id,
                 firstname=seller.user.firstname,
                 name=seller.user.name,
@@ -405,7 +405,7 @@ async def get_wallets(
                     if wallet.store.structure.association_membership
                     else None,
                     manager_user_id=wallet.store.structure.manager_user_id,
-                    manager_user=schemas_core.CoreUserSimple(
+                    manager_user=schemas_users.CoreUserSimple(
                         id=wallet.store.structure.manager_user.id,
                         firstname=wallet.store.structure.manager_user.firstname,
                         name=wallet.store.structure.manager_user.name,
@@ -418,7 +418,7 @@ async def get_wallets(
             )
             if wallet.store
             else None,
-            user=schemas_core.CoreUser(
+            user=schemas_users.CoreUser(
                 id=wallet.user.id,
                 firstname=wallet.user.firstname,
                 name=wallet.user.name,
