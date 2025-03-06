@@ -266,6 +266,50 @@ async def get_user_memberships_by_user_id_and_association_membership_id(
     ]
 
 
+async def get_user_memberships_by_user_id_start_end_and_association_membership_id(
+    db: AsyncSession,
+    user_id: str,
+    start_date: date,
+    end_date: date,
+    association_membership_id: UUID,
+) -> Sequence[schemas_memberships.UserMembershipComplete]:
+    result = (
+        (
+            await db.execute(
+                select(models_memberships.CoreAssociationUserMembership).where(
+                    models_memberships.CoreAssociationUserMembership.user_id == user_id,
+                    models_memberships.CoreAssociationUserMembership.association_membership_id
+                    == association_membership_id,
+                    models_memberships.CoreAssociationUserMembership.start_date
+                    == start_date,
+                    models_memberships.CoreAssociationUserMembership.end_date
+                    == end_date,
+                ),
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return [
+        schemas_memberships.UserMembershipComplete(
+            id=membership.id,
+            user_id=membership.user_id,
+            association_membership_id=membership.association_membership_id,
+            start_date=membership.start_date,
+            end_date=membership.end_date,
+            user=schemas_users.CoreUserSimple(
+                id=membership.user.id,
+                account_type=membership.user.account_type,
+                school_id=membership.user.school_id,
+                nickname=membership.user.nickname,
+                firstname=membership.user.firstname,
+                name=membership.user.name,
+            ),
+        )
+        for membership in result
+    ]
+
+
 async def get_user_membership_by_id(
     db: AsyncSession,
     user_membership_id: UUID,
