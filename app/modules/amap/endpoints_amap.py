@@ -28,7 +28,7 @@ from app.utils.redis import locker_get, locker_set
 from app.utils.tools import has_user_permission
 
 
-class AmapPermission(ModulePermissions):
+class AmapPermissions(ModulePermissions):
     manage_amap = "manage_amap"
 
 
@@ -36,7 +36,7 @@ module = Module(
     root="amap",
     tag="AMAP",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
-    permissions=AmapPermission,
+    permissions=AmapPermissions,
 )
 
 hyperion_amap_logger = logging.getLogger("hyperion.amap")
@@ -51,7 +51,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 async def get_products(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([AmapPermission.manage_amap]),
+        is_user_allowed_to([AmapPermissions.manage_amap]),
     ),
 ):
     """
@@ -71,7 +71,7 @@ async def create_product(
     product: schemas_amap.ProductSimple,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([AmapPermission.manage_amap]),
+        is_user_allowed_to([AmapPermissions.manage_amap]),
     ),
 ):
     """
@@ -114,7 +114,7 @@ async def edit_product(
     product_update: schemas_amap.ProductEdit,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([AmapPermission.manage_amap]),
+        is_user_allowed_to([AmapPermissions.manage_amap]),
     ),
 ):
     """
@@ -142,7 +142,7 @@ async def delete_product(
     product_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([AmapPermission.manage_amap]),
+        is_user_allowed_to([AmapPermissions.manage_amap]),
     ),
 ):
     """
@@ -188,7 +188,7 @@ async def create_delivery(
     delivery: schemas_amap.DeliveryBase,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([AmapPermission.manage_amap]),
+        is_user_allowed_to([AmapPermissions.manage_amap]),
     ),
 ):
     """
@@ -222,7 +222,7 @@ async def delete_delivery(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([AmapPermission.manage_amap]),
+        is_user_allowed_to([AmapPermissions.manage_amap]),
     ),
 ):
     """
@@ -253,7 +253,7 @@ async def edit_delivery(
     delivery: schemas_amap.DeliveryUpdate,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([AmapPermission.manage_amap]),
+        is_user_allowed_to([AmapPermissions.manage_amap]),
     ),
 ):
     """
@@ -284,7 +284,7 @@ async def add_product_to_delivery(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([AmapPermission.manage_amap]),
+        is_user_allowed_to([AmapPermissions.manage_amap]),
     ),
 ):
     """
@@ -321,7 +321,7 @@ async def remove_product_from_delivery(
     products_ids: schemas_amap.DeliveryProductsUpdate,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([AmapPermission.manage_amap]),
+        is_user_allowed_to([AmapPermissions.manage_amap]),
     ),
 ):
     """
@@ -355,7 +355,7 @@ async def get_orders_from_delivery(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
     user_req: models_users.CoreUser = Depends(
-        is_user_allowed_to([AmapPermission.manage_amap]),
+        is_user_allowed_to([AmapPermissions.manage_amap]),
     ),
 ):
     """
@@ -391,7 +391,7 @@ async def get_order_by_id(
     order_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([AmapPermission.manage_amap]),
+        is_user_allowed_to([AmapPermissions.manage_amap]),
     ),
 ):
     """
@@ -441,7 +441,7 @@ async def add_order_to_delievery(
 
     if not (
         user.id == order.user_id
-        or await has_user_permission(user, AmapPermission.manage_amap, db)
+        or await has_user_permission(user, AmapPermissions.manage_amap, db)
     ):
         raise HTTPException(
             status_code=403,
@@ -562,7 +562,7 @@ async def edit_order_from_delivery(
 
     if not (
         user.id == previous_order.user_id
-        or await has_user_permission(user, AmapPermission.manage_amap, db)
+        or await has_user_permission(user, AmapPermissions.manage_amap, db)
     ):
         raise HTTPException(
             status_code=403,
@@ -662,7 +662,7 @@ async def remove_order(
 
     **A member of the group AMAP can delete orders of other users**
     """
-    is_user_admin = await has_user_permission(user, AmapPermission.manage_amap, db)
+    is_user_admin = await has_user_permission(user, AmapPermissions.manage_amap, db)
     order = await cruds_amap.get_order_by_id(db=db, order_id=order_id)
     if not order:
         raise HTTPException(status_code=404, detail="No order found")
@@ -729,7 +729,7 @@ async def open_ordering_of_delivery(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([AmapPermission.manage_amap]),
+        is_user_allowed_to([AmapPermissions.manage_amap]),
     ),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
@@ -764,7 +764,7 @@ async def lock_delivery(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([AmapPermission.manage_amap]),
+        is_user_allowed_to([AmapPermissions.manage_amap]),
     ),
 ):
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
@@ -787,7 +787,7 @@ async def mark_delivery_as_delivered(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([AmapPermission.manage_amap]),
+        is_user_allowed_to([AmapPermissions.manage_amap]),
     ),
 ):
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
@@ -810,7 +810,7 @@ async def archive_of_delivery(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([AmapPermission.manage_amap]),
+        is_user_allowed_to([AmapPermissions.manage_amap]),
     ),
 ):
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
@@ -834,7 +834,7 @@ async def archive_of_delivery(
 async def get_users_cash(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([AmapPermission.manage_amap]),
+        is_user_allowed_to([AmapPermissions.manage_amap]),
     ),
 ):
     """
@@ -865,7 +865,8 @@ async def get_cash_by_id(
         raise HTTPException(status_code=404, detail="User not found")
 
     if not (
-        user_id == user.id or has_user_permission(user, AmapPermission.manage_amap, db)
+        user_id == user.id
+        or await has_user_permission(user, AmapPermissions.manage_amap, db)
     ):
         raise HTTPException(
             status_code=403,
@@ -896,7 +897,7 @@ async def create_cash_of_user(
     cash: schemas_amap.CashEdit,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([AmapPermission.manage_amap]),
+        is_user_allowed_to([AmapPermissions.manage_amap]),
     ),
     request_id: str = Depends(get_request_id),
     notification_tool: NotificationTool = Depends(get_notification_tool),
@@ -958,7 +959,7 @@ async def edit_cash_by_id(
     balance: schemas_amap.CashEdit,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([AmapPermission.manage_amap]),
+        is_user_allowed_to([AmapPermissions.manage_amap]),
     ),
     request_id: str = Depends(get_request_id),
 ):
@@ -1006,7 +1007,7 @@ async def get_orders_of_user(
         raise HTTPException(status_code=404, detail="User not found")
 
     if not (
-        user_id == user.id or has_user_permission(user, AmapPermission.manage_amap, db)
+        user_id == user.id or has_user_permission(user, AmapPermissions.manage_amap, db)
     ):
         raise HTTPException(
             status_code=403,
@@ -1055,7 +1056,7 @@ async def edit_information(
     edit_information: schemas_amap.InformationEdit,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([AmapPermission.manage_amap]),
+        is_user_allowed_to([AmapPermissions.manage_amap]),
     ),
 ):
     """

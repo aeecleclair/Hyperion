@@ -2,17 +2,21 @@ import json
 import logging
 import uuid
 from datetime import UTC, datetime
+from os import name
 
 import aiofiles
 from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import permissions
+from app.core.permissions import cruds_permissions, schemas_permissions
 from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import cruds_users, models_users
 from app.dependencies import (
     get_db,
     get_request_id,
+    is_user,
     is_user_allowed_to,
 )
 from app.modules.campaign import cruds_campaign, models_campaign, schemas_campaign
@@ -343,6 +347,127 @@ async def update_list(
         raise HTTPException(status_code=400, detail=str(error))
 
 
+@module.router.get(
+    "/campaign/voters",
+    response_model=list[schemas_permissions.CorePermission],
+    status_code=200,
+)
+async def get_voters(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user(),
+    ),
+):
+    """
+    Return the list of voters.
+
+    **The user must be a member of a group authorized to manage the campaign to use this endpoint**
+    """
+    voters = await cruds_permissions.get_permissions_by_permission_name(
+        db=db,
+        permission_name=CampaignPermissions.vote,
+    )
+    return voters
+
+
+@module.router.post(
+    "/campaign/voters/{group_id}",
+    status_code=204,
+)
+async def add_voter(
+    group_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CampaignPermissions.manage_campaign]),
+    ),
+):
+    """
+    Add a voter.
+
+    **The user must be a member of a group authorized to manage the campaign to use this endpoint**
+    """
+    permission = (
+        await cruds_permissions.get_permissions_by_group_id_and_permission_name(
+            db=db,
+            permission_name=CampaignPermissions.vote,
+            group_id=group_id,
+        )
+    )
+
+    if permission is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="This group is already a voter.",
+        )
+    await cruds_permissions.create_permission(
+        db=db,
+        permission=schemas_permissions.CorePermission(
+            permission_name=CampaignPermissions.vote,
+            group_id=group_id,
+        ),
+    )
+
+
+@module.router.delete(
+    "/campaign/voters",
+    status_code=204,
+)
+async def delete_voters(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CampaignPermissions.manage_campaign]),
+    ),
+):
+    """
+    Delete all voters.
+
+    **The user must be a member of a group authorized to manage the campaign to use this endpoint**
+    """
+    await cruds_permissions.delete_permissions_by_permission_name(
+        db=db,
+        permission_name=CampaignPermissions.vote,
+    )
+
+
+@module.router.delete(
+    "/campaign/voters/{group_id}",
+    status_code=204,
+)
+async def delete_voter(
+    group_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CampaignPermissions.manage_campaign]),
+    ),
+):
+    """
+    Delete a voter.
+
+    **The user must be a member of a group authorized to manage the campaign to use this endpoint**
+    """
+    permission = (
+        await cruds_permissions.get_permissions_by_group_id_and_permission_name(
+            db=db,
+            permission_name=CampaignPermissions.vote,
+            group_id=group_id,
+        )
+    )
+
+    if permission is None:
+        raise HTTPException(
+            status_code=404,
+            detail="This group is not a voter.",
+        )
+
+    await cruds_permissions.delete_permission(
+        db=db,
+        permission=schemas_permissions.CorePermission(
+            permission_name=CampaignPermissions.vote,
+            group_id=group_id,
+        ),
+    )
+
+
 @module.router.post(
     "/campaign/status/open",
     status_code=204,
@@ -627,7 +752,7 @@ async def get_results(
 
     if (
         status == StatusType.counting
-        and has_user_permission(user, CampaignPermissions.manage_campaign, db)
+        and await has_user_permission(user, CampaignPermissions.manage_campaign, db)
     ) or status == StatusType.published:
         votes = await cruds_campaign.get_votes(db=db)
 
