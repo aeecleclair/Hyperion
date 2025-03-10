@@ -27,6 +27,35 @@ async def get_permissions(
     ]
 
 
+async def get_permissions_by_group_id_and_permission_name(
+    db: AsyncSession,
+    permission_name: ModulePermissions,
+    group_id: str,
+) -> schemas_permissions.CorePermission | None:
+    """Return permission with name from database"""
+    result = (
+        (
+            await db.execute(
+                select(models_permissions.CorePermission).where(
+                    models_permissions.CorePermission.permission_name
+                    == permission_name,
+                    models_permissions.CorePermission.group_id == group_id,
+                ),
+            )
+        )
+        .scalars()
+        .first()
+    )
+    return (
+        schemas_permissions.CorePermission(
+            permission_name=result.permission_name,
+            group_id=result.group_id,
+        )
+        if result
+        else None
+    )
+
+
 async def get_permissions_by_permission_name(
     db: AsyncSession,
     permission_name: ModulePermissions,
@@ -81,6 +110,19 @@ async def delete_permission(
             models_permissions.CorePermission.permission_name
             == permission.permission_name,
             models_permissions.CorePermission.group_id == permission.group_id,
+        ),
+    )
+    await db.commit()
+
+
+async def delete_permissions_by_permission_name(
+    db: AsyncSession,
+    permission_name: ModulePermissions,
+) -> None:
+    """Delete a permission from database by name"""
+    await db.execute(
+        delete(models_permissions.CorePermission).where(
+            models_permissions.CorePermission.permission_name == permission_name,
         ),
     )
     await db.commit()
