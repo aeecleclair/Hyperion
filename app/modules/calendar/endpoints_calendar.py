@@ -28,6 +28,7 @@ module = Module(
     root="event",
     tag="Calendar",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
+    permissions=CalendarPermissions,
 )
 
 ical_file_path = "data/ics/ae_calendar.ics"

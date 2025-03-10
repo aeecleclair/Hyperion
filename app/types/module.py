@@ -42,6 +42,7 @@ class Module(CoreModule):
         self,
         root: str,
         tag: str,
+        permissions: type[ModulePermissions] | None,
         default_allowed_groups_ids: list[GroupType] | None = None,
         default_allowed_account_types: list[AccountType] | None = None,
         router: APIRouter | None = None,
@@ -50,7 +51,6 @@ class Module(CoreModule):
             Awaitable[None],
         ]
         | None = None,
-        permissions: type[ModulePermissions] | None = None,
     ):
         """
         Initialize a new Module object.

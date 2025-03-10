@@ -2,14 +2,12 @@ import json
 import logging
 import uuid
 from datetime import UTC, datetime
-from os import name
 
 import aiofiles
 from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import permissions
 from app.core.permissions import cruds_permissions, schemas_permissions
 from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import cruds_users, models_users
