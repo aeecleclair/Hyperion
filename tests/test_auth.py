@@ -7,7 +7,7 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 
 from app.core.auth import models_auth
-from app.core.groups.groups_type import AccountType, GroupType
+from app.core.groups.groups_type import AccountType
 from app.core.users import models_users
 from tests.commons import (
     add_object_to_db,
@@ -36,7 +36,7 @@ async def init_objects() -> None:
 
     global ecl_user
     ecl_user = await create_user_with_groups(
-        groups=[GroupType.eclair],
+        groups=[],
         email="email@etu.ec-lyon.fr",
         password="azerty",
     )
