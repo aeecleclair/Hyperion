@@ -58,7 +58,7 @@ async def get_permissions_by_group_id_and_permission_name(
 
 async def get_permissions_by_permission_name(
     db: AsyncSession,
-    permission_name: ModulePermissions,
+    permission_name: ModulePermissions | str,
 ) -> Sequence[schemas_permissions.CorePermission]:
     """Return permission with name from database"""
     result = (
