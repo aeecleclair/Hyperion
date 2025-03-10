@@ -36,6 +36,7 @@ module = Module(
     root="phonebook",
     tag="Phonebook",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
+    permissions=PhonebookPermissions,
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")

@@ -39,6 +39,7 @@ module = Module(
     root="ph",
     tag="ph",
     default_allowed_account_types=[AccountType.student],
+    permissions=PHPermissions,
 )
 
 

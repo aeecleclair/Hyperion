@@ -1,21 +1,17 @@
-import importlib
 import logging
-from pathlib import Path
 
-from app.types.module import Module
+from app.core.core_module_list import core_module_list
+from app.modules.module_list import module_list
+from app.types.module import CoreModule
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
-module_list: list[Module] = []
+all_module_list: list[CoreModule] = []
+permissions_list: list[str] = []
 
-for endpoints_file in Path().glob("app/modules/*/endpoints_*.py"):
-    endpoint_module = importlib.import_module(
-        ".".join(endpoints_file.with_suffix("").parts),
-    )
-    if hasattr(endpoint_module, "module"):
-        module: Module = endpoint_module.module
-        module_list.append(module)
-    else:
-        hyperion_error_logger.error(
-            f"Module {endpoints_file} does not declare a module. It won't be enabled.",
-        )
+all_module_list.extend(module_list)
+all_module_list.extend(core_module_list)
+
+for module in all_module_list:
+    if module.permissions:
+        permissions_list.extend(module.permissions.__members__.keys())
