@@ -8,7 +8,7 @@ from app.core.users import schemas_users
 
 class MembershipBase(BaseModel):
     name: str
-    group_id: str
+    manager_group_id: str
 
 
 class MembershipSimple(MembershipBase):

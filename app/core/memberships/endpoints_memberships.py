@@ -74,7 +74,7 @@ async def read_association_membership(
     if db_association_membership is None:
         raise HTTPException(status_code=404, detail="Association Membership not found")
 
-    if db_association_membership.group_id not in [
+    if db_association_membership.manager_group_id not in [
         group.id for group in user.groups
     ] and GroupType.admin not in [group.id for group in user.groups]:
         raise HTTPException(
@@ -120,7 +120,7 @@ async def create_association_membership(
             detail=f"A membership with the name {membership.name} already exists",
         )
 
-    group = await cruds_groups.get_group_by_id(db, membership.group_id)
+    group = await cruds_groups.get_group_by_id(db, membership.manager_group_id)
     if group is None:
         raise HTTPException(
             status_code=404,
@@ -129,7 +129,7 @@ async def create_association_membership(
 
     db_association_membership = schemas_memberships.MembershipSimple(
         name=membership.name,
-        group_id=membership.group_id,
+        manager_group_id=membership.manager_group_id,
         id=uuid.uuid4(),
     )
 

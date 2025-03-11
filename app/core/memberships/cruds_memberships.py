@@ -21,7 +21,7 @@ async def get_association_memberships(
         schemas_memberships.MembershipSimple(
             name=membership.name,
             id=membership.id,
-            group_id=membership.group_id,
+            manager_group_id=membership.manager_group_id,
         )
         for membership in result
     ]
@@ -45,7 +45,7 @@ async def get_association_membership_by_name(
     return (
         schemas_memberships.MembershipSimple(
             name=result.name,
-            group_id=result.group_id,
+            manager_group_id=result.manager_group_id,
             id=result.id,
         )
         if result
@@ -71,7 +71,7 @@ async def get_association_membership_by_id(
     return (
         schemas_memberships.MembershipSimple(
             name=result.name,
-            group_id=result.group_id,
+            manager_group_id=result.manager_group_id,
             id=result.id,
         )
         if result
@@ -86,7 +86,7 @@ def create_association_membership(
     membership_db = models_memberships.CoreAssociationMembership(
         id=membership.id,
         name=membership.name,
-        group_id=membership.group_id,
+        manager_group_id=membership.manager_group_id,
     )
     db.add(membership_db)
 
@@ -112,7 +112,7 @@ async def update_association_membership(
         .where(models_memberships.CoreAssociationMembership.id == membership_id)
         .values(
             name=membership.name,
-            group_id=membership.group_id,
+            manager_group_id=membership.manager_group_id,
         ),
     )
 

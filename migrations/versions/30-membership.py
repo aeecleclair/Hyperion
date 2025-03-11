@@ -56,7 +56,7 @@ association_membership_table = sa.Table(
     sa.MetaData(),
     sa.Column("id", sa.UUID(), primary_key=True),
     sa.Column("name", sa.String(), nullable=False),
-    sa.Column("group_id", sa.String(), nullable=False),
+    sa.Column("manager_group_id", sa.String(), nullable=False),
 )
 
 old_product_table = sa.Table(
@@ -94,11 +94,11 @@ def upgrade() -> None:
         "core_association_membership",
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("name", sa.String(), nullable=False),
-        sa.Column("group_id", sa.String(), nullable=False),
+        sa.Column("manager_group_id", sa.String(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("name"),
         sa.ForeignKeyConstraint(
-            ["group_id"],
+            ["manager_group_id"],
             ["core_group.id"],
         ),
     )
@@ -157,8 +157,8 @@ def upgrade() -> None:
             association_membership_table,
         ).values(
             [
-                {"id": AEECL_ID, "name": "AEECL", "group_id": GroupType.BDE},
-                {"id": USEECL_ID, "name": "USEECL", "group_id": GroupType.BDS},
+                {"id": AEECL_ID, "name": "AEECL", "manager_group_id": GroupType.BDE},
+                {"id": USEECL_ID, "name": "USEECL", "manager_group_id": GroupType.BDS},
             ],
         ),
     )
