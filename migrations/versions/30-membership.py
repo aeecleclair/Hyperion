@@ -94,11 +94,11 @@ def upgrade() -> None:
         "core_association_membership",
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("name", sa.String(), nullable=False),
-        sa.Column("group_id", sa.String(), nullable=False),
+        sa.Column("manager_group_id", sa.String(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("name"),
         sa.ForeignKeyConstraint(
-            ["group_id"],
+            ["manager_group_id"],
             ["core_group.id"],
         ),
     )
