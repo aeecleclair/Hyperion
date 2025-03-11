@@ -300,6 +300,8 @@ class OpenProjectAuthClient(BaseAuthClient):
     # See app.types.scopes_type.ScopeType for possible values
     allowed_scopes: set[ScopeType | str] = {ScopeType.openid, ScopeType.profile}
 
+    allowed_account_types: list[AccountType] | None = None
+
     @classmethod
     def get_userinfo(cls, user: models_users.CoreUser):
         return {
