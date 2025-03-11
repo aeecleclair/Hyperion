@@ -664,9 +664,7 @@ async def create_loan(
                 settings=settings,
             ),
             job_id=f"loan_end_{loan.id}",
-            defer_date=datetime.fromisoformat(
-                (loan.end - timedelta(days=7)).isoformat(),
-            ),
+            defer_date=datetime.combine(loan.end - timedelta(days=7), delivery_time, tzinfo=UTC)
         )
 
     return schemas_loan.Loan(items_qty=items_qty_ret, **loan.__dict__)
