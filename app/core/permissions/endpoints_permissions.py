@@ -74,6 +74,11 @@ async def read_permission(
     """
     Return permission with name from database
     """
+    if permission_name not in permissions_list:
+        raise HTTPException(
+            status_code=404,
+            detail="Permission not found",
+        )
 
     return await cruds_permissions.get_permissions_by_permission_name(
         db,
