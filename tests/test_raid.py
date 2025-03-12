@@ -7,9 +7,10 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 from PIL import Image
 
-from app.core.groups.groups_type import GroupType
+from app.core.groups import models_groups
 from app.core.users import models_users
 from app.modules.raid import coredata_raid, models_raid
+from app.modules.raid.endpoints_raid import RaidPermissions
 from app.modules.raid.models_raid import Document, Participant, SecurityFile, Team
 from app.modules.raid.raid_type import DocumentType, DocumentValidation, Size
 from app.modules.raid.utils.pdf.pdf_writer import (
@@ -20,8 +21,11 @@ from app.modules.raid.utils.pdf.pdf_writer import (
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
+    create_groups_with_permissions,
     create_user_with_groups,
 )
+
+admin_group: models_groups.CoreGroup
 
 participant: models_raid.Participant
 
@@ -40,8 +44,13 @@ token_simple_without_team: str
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
+    global admin_group
+    admin_group = await create_groups_with_permissions(
+        [RaidPermissions.manage_raid],
+        "raid_admin",
+    )
     global raid_admin_user, token_raid_admin
-    raid_admin_user = await create_user_with_groups([GroupType.raid_admin])
+    raid_admin_user = await create_user_with_groups([admin_group.id])
     token_raid_admin = create_api_access_token(raid_admin_user)
 
     global simple_user, token_simple

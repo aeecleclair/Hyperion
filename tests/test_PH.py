@@ -5,14 +5,18 @@ from pathlib import Path
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from app.core.groups.groups_type import GroupType
+from app.core.groups import models_groups
 from app.core.users import models_users
 from app.modules.ph import models_ph
+from app.modules.ph.endpoints_ph import PHPermissions
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
+    create_groups_with_permissions,
     create_user_with_groups,
 )
+
+admin_group: models_groups.CoreGroup
 
 ph_user_ph: models_users.CoreUser
 ph_user_simple: models_users.CoreUser
@@ -26,8 +30,13 @@ paper2: models_ph.Paper
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
+    global admin_group
+    admin_group = await create_groups_with_permissions(
+        [PHPermissions.manage_ph],
+        "ph_admin",
+    )
     global ph_user_ph
-    ph_user_ph = await create_user_with_groups([GroupType.ph])
+    ph_user_ph = await create_user_with_groups([admin_group.id])
 
     global token_ph
     token_ph = create_api_access_token(ph_user_ph)

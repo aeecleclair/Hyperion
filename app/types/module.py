@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.payment import schemas_payment
+from app.core.permissions.type_permissions import ModulePermissions
 
 
 class CoreModule:
@@ -18,12 +19,14 @@ class CoreModule:
             Awaitable[None],
         ]
         | None = None,
+        permissions: type[ModulePermissions] | None = None,
     ):
         """
         Initialize a new Module object.
         :param root: the root of the module, used by Titan
         :param router: an optional custom APIRouter
         :param payment_callback: an optional method to call when a payment is notified by HelloAsso. A CheckoutPayment and the database will be provided during the call
+        :param permissions: an optional list of permissions that can be used to restrict access to specific endpoints of the module
         """
         self.root = root
         self.router = router or APIRouter(tags=[tag])
@@ -31,6 +34,7 @@ class CoreModule:
             Callable[[schemas_payment.CheckoutPayment, AsyncSession], Awaitable[None]]
             | None
         ) = payment_callback
+        self.permissions = permissions
 
 
 class Module(CoreModule):
@@ -38,6 +42,7 @@ class Module(CoreModule):
         self,
         root: str,
         tag: str,
+        permissions: type[ModulePermissions] | None,
         default_allowed_groups_ids: list[GroupType] | None = None,
         default_allowed_account_types: list[AccountType] | None = None,
         router: APIRouter | None = None,
@@ -54,6 +59,7 @@ class Module(CoreModule):
         :param default_allowed_account_types: list of account_types that should be able to see the module by default
         :param router: an optional custom APIRouter
         :param payment_callback: an optional method to call when a payment is notified by HelloAsso. A CheckoutPayment and the database will be provided during the call
+        :param permissions: an optional list of permissions that can be used to restrict access to specific endpoints of the module
         """
         self.root = root
         self.default_allowed_groups_ids = default_allowed_groups_ids
@@ -63,3 +69,4 @@ class Module(CoreModule):
             Callable[[schemas_payment.CheckoutPayment, AsyncSession], Awaitable[None]]
             | None
         ) = payment_callback
+        self.permissions = permissions
