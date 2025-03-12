@@ -10,7 +10,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 class DuplicatePermissionsError(Exception):
     def __init__(self, permissions: list[list[str]]):
         arranged_permissions = [
-            f"    - '{permission[0].split(".")[1]}': {', '.join(permission)}"
+            f"    - '{permission[0].split('.')[1]}': {', '.join(permission)}"
             for permission in permissions
         ]
         super().__init__(
