@@ -54,6 +54,15 @@ class CoreUser(Base):
         init=False,
     )
 
+    @property
+    def full_name(self) -> str:
+        """
+        Return the full name of the user, including first name, name and nickname if it exists.
+        """
+        if self.nickname:
+            return f"{self.firstname} {self.name} ({self.nickname})"
+        return f"{self.firstname} {self.name}"
+
 
 class CoreUserUnconfirmed(Base):
     __tablename__ = "core_user_unconfirmed"
