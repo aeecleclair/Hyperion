@@ -13,13 +13,14 @@ from app.core.groups.groups_type import GroupType
 from app.core.permissions import cruds_permissions, schemas_permissions
 from app.dependencies import (
     get_db,
+    is_user,
     is_user_in,
 )
 from app.module import full_name_permissions_list, permissions_list
 from app.types.module import CoreModule
 from app.utils.tools import is_group_id_valid
 
-router = APIRouter(tags=["Groups"])
+router = APIRouter(tags=["Permissions"])
 
 core_module = CoreModule(
     root="permissions",
@@ -52,7 +53,7 @@ async def read_permissions_list(
 )
 async def read_permissions(
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_in(GroupType.admin)),
+    user=Depends(is_user()),
 ):
     """
     Return all permissions from database
