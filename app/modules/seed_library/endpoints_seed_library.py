@@ -10,12 +10,12 @@ from app.core.groups.groups_type import AccountType, GroupType
 from app.dependencies import (
     get_db,
     is_user,
+    is_user_in,
 )
 from app.modules.seed_library import (
     cruds_seed_library,
     schemas_seed_library,
 )
-from app.types.exceptions import CoreDataNotFoundError
 from app.types.module import Module
 from app.utils import tools
 from app.utils.tools import is_user_member_of_any_group
@@ -30,11 +30,6 @@ module = Module(
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
-# ---------------------------------------------------------------------------- #
-#                                  Species                                     #
-# ---------------------------------------------------------------------------- #
-
-
 @module.router.get(
     "/seed_library/species/",
     response_model=list[schemas_seed_library.SpeciesComplete],
@@ -42,6 +37,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 )
 async def get_all_species(
     db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user()),
 ):
     """
     Return all species from database as a list of SpeciesComplete schemas
@@ -72,26 +68,20 @@ async def get_all_species_types(
 async def create_species(
     species_base: schemas_seed_library.SpeciesBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.seed_library)),
 ):
     """
     Create a new Species by giving an SpeciesBase scheme
     **This endpoint is only usable by seed_library **
     """
 
-    if not is_user_member_of_any_group(
-        user=user,
-        allowed_groups=[GroupType.seed_library],
-    ):
+    if (
+        await cruds_seed_library.count_species_with_prefix(species_base.prefix, db)
+    ) != 0:
         raise HTTPException(
-            status_code=403,
-            detail="You are not allowed to create a species",
+            status_code=400,
+            detail="Prefix already used",
         )
-
-    existing_species = await cruds_seed_library.get_all_species(db)
-    for species in existing_species:
-        if species.prefix == species_base.prefix:
-            raise HTTPException(400, "Prefix already used.")
 
     species = schemas_seed_library.SpeciesComplete(
         id=uuid.uuid4(),
@@ -109,23 +99,13 @@ async def create_species(
 async def update_species(
     species_id: uuid.UUID,
     species_edit: schemas_seed_library.SpeciesEdit,
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.seed_library)),
     db: AsyncSession = Depends(get_db),
 ):
     """
     Update a Specie
     **This endpoint is only usable by seed_library**
     """
-    if not (
-        is_user_member_of_any_group(
-            user=user,
-            allowed_groups=[GroupType.seed_library],
-        )
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail=f"You are not allowed to update species {species_id}",
-        )
 
     try:
         await cruds_seed_library.update_species(
@@ -144,21 +124,12 @@ async def update_species(
 async def delete_species(
     species_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.seed_library)),
 ):
     """
     Delete a Species
     **This endpoint is only usable by seed_library**
     """
-
-    if not is_user_member_of_any_group(
-        user=user,
-        allowed_groups=[GroupType.seed_library],
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail=f"You are not allowed to delete species {species_id}",
-        )
 
     species = await cruds_seed_library.get_species_by_id(species_id, db)
     if species is None:
@@ -168,11 +139,6 @@ async def delete_species(
         species_id=species_id,
         db=db,
     )
-
-
-# ---------------------------------------------------------------------------- #
-#                                  Plants                                      #
-# ---------------------------------------------------------------------------- #
 
 
 @module.router.get(
@@ -190,33 +156,6 @@ async def get_waiting_plants(
 
 
 @module.router.get(
-    "/seed_library/plants/users/{user_id}",
-    response_model=list[schemas_seed_library.PlantSimple],
-    status_code=200,
-)
-async def get_plants_by_user_id(
-    user_id: str,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
-):
-    """
-    Return all plants where borrower_id = {user_id} from database as a list of PlantsComplete schemas
-    """
-
-    if not (
-        is_user_member_of_any_group(
-            user=user,
-            allowed_groups=[GroupType.seed_library],
-        )
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="You are not allowed to see plants from this user",
-        )
-    return await cruds_seed_library.get_plants_by_user_id(user_id, db)
-
-
-@module.router.get(
     "/seed_library/plants/users/me",
     response_model=list[schemas_seed_library.PlantSimple],
     status_code=200,
@@ -229,6 +168,22 @@ async def get_my_plants(
     Return all plants where user ={user_id} from database as a list of PlantsComplete schemas
     """
     return await cruds_seed_library.get_plants_by_user_id(user.id, db)
+
+
+@module.router.get(
+    "/seed_library/plants/users/{user_id}",
+    response_model=list[schemas_seed_library.PlantSimple],
+    status_code=200,
+)
+async def get_plants_by_user_id(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.seed_library)),
+):
+    """
+    Return all plants where borrower_id = {user_id} from database as a list of PlantsComplete schemas
+    """
+    return await cruds_seed_library.get_plants_by_user_id(user_id, db)
 
 
 @module.router.get(
@@ -284,20 +239,12 @@ async def create_plant(
         )
     date = datetime.now(tz=UTC)
     if species_reference:
-        plant_reference = (
-            str(species_reference.prefix)
-            + str(date.day)
-            + str(date.month)
-            + str(date.year)
-        )
+        plant_reference = f"{species_reference.prefix}{date.day}{date.month}{date.year}"
         plant_number = await cruds_seed_library.count_plants_created_today(
             plant_reference,
             db,
         )
-
-        plant_reference = (
-            plant_reference + "0" * (3 - len(str(plant_number))) + str(plant_number)
-        )
+        plant_reference = f"{species_reference.prefix}{date.day}{date.month}{date.year}{plant_number:03}"
 
     plant = schemas_seed_library.PlantComplete(
         id=uuid.uuid4(),
@@ -343,14 +290,11 @@ async def update_plant(
             status_code=403,
             detail=f"You are not allowed to update plant {plant_id} since you do not own the plant",
         )
-    try:
-        await cruds_seed_library.update_plant(
-            plant_id=plant_id,
-            plant_edit=plant_edit,
-            db=db,
-        )
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+    await cruds_seed_library.update_plant(
+        plant_id=plant_id,
+        plant_edit=plant_edit,
+        db=db,
+    )
 
 
 @module.router.patch(
@@ -360,32 +304,18 @@ async def update_plant(
 async def update_plant_admin(
     plant_id: uuid.UUID,
     plant_edit: schemas_seed_library.PlantEdit,
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.seed_library)),
     db: AsyncSession = Depends(get_db),
 ):
     """
     Update a Plant
     **This endpoint is only usable by seed_library**
     """
-    if not (
-        is_user_member_of_any_group(
-            user=user,
-            allowed_groups=[GroupType.seed_library],
-        )
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail=f"You are not allowed to update plant {plant_id}",
-        )
-
-    try:
-        await cruds_seed_library.update_plant(
-            plant_id,
-            plant_edit,
-            db,
-        )
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+    await cruds_seed_library.update_plant(
+        plant_id,
+        plant_edit,
+        db,
+    )
 
 
 @module.router.patch(
@@ -401,10 +331,7 @@ async def borrow_plant(
     Plant borrowed by the user (modify borrowing date, borrower and state)
     """
 
-    try:
-        await cruds_seed_library.borrow_plant(user.id, plant_id, db)
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+    await cruds_seed_library.borrow_plant(user.id, plant_id, db)
 
 
 @module.router.delete(
@@ -440,37 +367,16 @@ async def delete_plant(
     )
 
 
-# ---------------------------------------------------------------------------- #
-#                              SeedLibraryInformation                          #
-# ---------------------------------------------------------------------------- #
-
-
 @module.router.get(
     "/seed_library/seed_library_information/",
     response_model=schemas_seed_library.SeedLibraryInformation,
     status_code=200,
 )
 async def get_seed_library_information(db: AsyncSession = Depends(get_db)):
-    try:
-        info = await tools.get_core_data(
-            schemas_seed_library.SeedLibraryInformation,
-            db,
-        )
-    except CoreDataNotFoundError:
-        await tools.set_core_data(
-            schemas_seed_library.SeedLibraryInformation(
-                facebook_url="",
-                forum_url="",
-                description="",
-                contact="",
-            ),
-            db,
-        )
-        return await tools.get_core_data(
-            schemas_seed_library.SeedLibraryInformation,
-            db,
-        )
-    return info
+    return await tools.get_core_data(
+        schemas_seed_library.SeedLibraryInformation,
+        db,
+    )
 
 
 @module.router.patch(
@@ -478,29 +384,11 @@ async def get_seed_library_information(db: AsyncSession = Depends(get_db)):
     status_code=204,
 )
 async def update_seed_library_information(
-    facebook_url: str,
-    forum_url: str,
-    description: str,
-    contact: str,
-    user: models_core.CoreUser = Depends(is_user()),
+    information: schemas_seed_library.SeedLibraryInformation,
+    user: models_core.CoreUser = Depends(is_user_in(GroupType.seed_library)),
     db: AsyncSession = Depends(get_db),
 ):
-    if not (
-        is_user_member_of_any_group(
-            user=user,
-            allowed_groups=[GroupType.seed_library],
-        )
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="You are not allowed to update seed_library_information",
-        )
     await tools.set_core_data(
-        schemas_seed_library.SeedLibraryInformation(
-            facebook_url=facebook_url,
-            forum_url=forum_url,
-            description=description,
-            contact=contact,
-        ),
+        information,
         db,
     )
