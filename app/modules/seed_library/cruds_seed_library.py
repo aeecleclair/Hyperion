@@ -2,7 +2,7 @@ import uuid
 from collections.abc import Sequence
 from datetime import UTC, datetime
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -384,16 +384,25 @@ async def count_plants_created_today(
     ref: str,
     db: AsyncSession,
 ) -> int:
-    """Return all Lines with plant_reference beginning by ref from database"""
-    result = (
-        (
-            await db.execute(
-                select(models_seed_library.Plant).where(
-                    models_seed_library.Plant.plant_reference.startswith(ref),
-                ),
-            )
-        )
-        .scalars()
-        .all()
+    """Count the number of lines with plant_reference beginning with ref from database"""
+    result = await db.execute(
+        select(func.count()).where(
+            models_seed_library.Plant.plant_reference.startswith(ref),
+        ),
     )
-    return len(result)
+
+    return result.scalar() or 0
+
+
+async def count_species_with_prefix(
+    prefix: str,
+    db: AsyncSession,
+) -> int:
+    """Count the number of Species with specific prefix"""
+    result = await db.execute(
+        select(func.count()).where(
+            models_seed_library.Species.prefix == prefix,
+        ),
+    )
+
+    return result.scalar() or 0

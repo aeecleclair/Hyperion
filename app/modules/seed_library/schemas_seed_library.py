@@ -98,10 +98,10 @@ class PlantEdit(BaseModel):
 
 
 class SeedLibraryInformation(core_data.BaseCoreData):
-    facebook_url: str
-    forum_url: str
-    description: str  # pour expliquer le principe du module
-    contact: str
+    facebook_url: str = ""
+    forum_url: str = ""
+    description: str = ""  # pour expliquer le principe du module
+    contact: str = ""
 
     model_config = ConfigDict(from_attributes=True)
 
