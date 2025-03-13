@@ -47,4 +47,12 @@ async def create_pixel(
         raise ValueError(error)
 
 
+async def get_pixel_info(db: AsyncSession, x: int, y: int) -> models_rplace.Pixel:
+    result = await db.execute(
+        select(models_rplace.Pixel)
+        .where(models_rplace.Pixel.x == x, models_rplace.Pixel.y == y)
+        .order_by(models_rplace.Pixel.date.desc())
+    )
+
+    return result.scalars().first()
 
