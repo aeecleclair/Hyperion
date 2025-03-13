@@ -114,3 +114,16 @@ async def websocket_endpoint(
         room=HyperionWebsocketsRoom.Rplace,
         db=db,
     )
+
+@module.router.get(
+    "/rplace/pixel_info/{x}/{y}",
+    response_model=schemas_rplace.PixelComplete,
+    status_code=200,
+)
+async def get_pixel_info(
+    x: int,
+    y: int,
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    return await cruds_rplace.get_pixel_info(db=db, x=x, y=y)
