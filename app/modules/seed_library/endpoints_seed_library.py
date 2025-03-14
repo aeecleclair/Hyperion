@@ -5,8 +5,8 @@ from datetime import UTC, datetime
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.core_endpoints import models_core
 from app.core.groups.groups_type import AccountType, GroupType
+from app.core.users import models_users
 from app.dependencies import (
     get_db,
     is_user,
@@ -37,7 +37,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 )
 async def get_all_species(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     """
     Return all species from database as a list of SpeciesComplete schemas
@@ -51,7 +51,7 @@ async def get_all_species(
     status_code=200,
 )
 async def get_all_species_types(
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     """
     Return all available types of species from SpeciesType enum.
@@ -68,7 +68,7 @@ async def get_all_species_types(
 async def create_species(
     species_base: schemas_seed_library.SpeciesBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.seed_library)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.seed_library)),
 ):
     """
     Create a new Species by giving an SpeciesBase scheme
@@ -99,7 +99,7 @@ async def create_species(
 async def update_species(
     species_id: uuid.UUID,
     species_edit: schemas_seed_library.SpeciesEdit,
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.seed_library)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.seed_library)),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -124,7 +124,7 @@ async def update_species(
 async def delete_species(
     species_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.seed_library)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.seed_library)),
 ):
     """
     Delete a Species
@@ -162,7 +162,7 @@ async def get_waiting_plants(
 )
 async def get_my_plants(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     """
     Return all plants where user ={user_id} from database as a list of PlantsComplete schemas
@@ -178,7 +178,7 @@ async def get_my_plants(
 async def get_plants_by_user_id(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.seed_library)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.seed_library)),
 ):
     """
     Return all plants where borrower_id = {user_id} from database as a list of PlantsComplete schemas
@@ -212,7 +212,7 @@ async def get_plant_by_id(
 async def create_plant(
     plant_base: schemas_seed_library.PlantCreation,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     """
     Create a new Plant by giving an PlantCreation scheme
@@ -274,7 +274,7 @@ async def create_plant(
 async def update_plant(
     plant_id: uuid.UUID,
     plant_edit: schemas_seed_library.PlantEdit,
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(is_user()),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -304,7 +304,7 @@ async def update_plant(
 async def update_plant_admin(
     plant_id: uuid.UUID,
     plant_edit: schemas_seed_library.PlantEdit,
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.seed_library)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.seed_library)),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -324,7 +324,7 @@ async def update_plant_admin(
 )
 async def borrow_plant(
     plant_id: uuid.UUID,
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(is_user()),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -341,7 +341,7 @@ async def borrow_plant(
 async def delete_plant(
     plant_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     """
     Delete a Plant
@@ -385,7 +385,7 @@ async def get_seed_library_information(db: AsyncSession = Depends(get_db)):
 )
 async def update_seed_library_information(
     information: schemas_seed_library.SeedLibraryInformation,
-    user: models_core.CoreUser = Depends(is_user_in(GroupType.seed_library)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.seed_library)),
     db: AsyncSession = Depends(get_db),
 ):
     await tools.set_core_data(
