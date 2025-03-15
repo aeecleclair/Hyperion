@@ -5,7 +5,29 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.notification import models_notification
-from app.core.notification.notification_types import CustomTopic, Topic
+
+
+async def get_notification_topic(
+    db: AsyncSession,
+) -> Sequence[models_notification.NotificationTopic]:
+    result = await db.execute(select(models_notification.NotificationTopic))
+    return result.scalars().all()
+
+
+async def create_notification_topic(
+    notification_topic: models_notification.NotificationTopic,
+    db: AsyncSession,
+) -> models_notification.NotificationTopic:
+    """Register a new topic in database and return it"""
+
+    db.add(notification_topic)
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise
+    else:
+        return notification_topic
 
 
 async def get_firebase_devices_by_user_id(
@@ -111,29 +133,37 @@ async def create_topic_membership(
 
 async def delete_topic_membership(
     user_id: str,
-    custom_topic: CustomTopic,
+    topic_id: str,
     db: AsyncSession,
 ):
     await db.execute(
         delete(models_notification.TopicMembership).where(
             models_notification.TopicMembership.user_id == user_id,
-            models_notification.TopicMembership.topic == custom_topic.topic,
-            models_notification.TopicMembership.topic_identifier
-            == custom_topic.topic_identifier,
+            models_notification.TopicMembership.topic_id == topic_id,
         ),
     )
     await db.flush()
 
 
-async def get_topic_memberships_by_topic(
-    custom_topic: CustomTopic,
+async def get_topic_memberships_by_topic_id(
+    topic_id: str,
     db: AsyncSession,
 ) -> Sequence[models_notification.TopicMembership]:
     result = await db.execute(
         select(models_notification.TopicMembership).where(
-            models_notification.TopicMembership.topic == custom_topic.topic,
-            models_notification.TopicMembership.topic_identifier
-            == custom_topic.topic_identifier,
+            models_notification.TopicMembership.topic_id == topic_id,
+        ),
+    )
+    return result.scalars().all()
+
+
+async def get_topic_memberships_by_topic_id(
+    topic_id: str,
+    db: AsyncSession,
+) -> Sequence[models_notification.TopicMembership]:
+    result = await db.execute(
+        select(models_notification.TopicMembership).where(
+            models_notification.TopicMembership.topic_id == topic_id,
         ),
     )
     return result.scalars().all()
@@ -151,46 +181,41 @@ async def get_topic_memberships_by_user_id(
     return result.scalars().all()
 
 
-async def get_topic_memberships_with_identifiers_by_user_id_and_topic(
+async def get_topic_memberships_with_identifiers_by_user_id_and_topic_id(
     user_id: str,
-    topic: Topic,
+    topic_id: str,
     db: AsyncSession,
 ) -> Sequence[models_notification.TopicMembership]:
     result = await db.execute(
         select(models_notification.TopicMembership).where(
             models_notification.TopicMembership.user_id == user_id,
-            models_notification.TopicMembership.topic == topic,
-            models_notification.TopicMembership.topic_identifier != "",
+            models_notification.TopicMembership.topic_id == topic_id,
         ),
     )
     return result.scalars().all()
 
 
-async def get_topic_membership_by_user_id_and_custom_topic(
+async def get_topic_membership_by_user_id_and_topic_id(
     user_id: str,
-    custom_topic: CustomTopic,
+    topic_id: str,
     db: AsyncSession,
 ) -> models_notification.TopicMembership | None:
     result = await db.execute(
         select(models_notification.TopicMembership).where(
             models_notification.TopicMembership.user_id == user_id,
-            models_notification.TopicMembership.topic == custom_topic.topic,
-            models_notification.TopicMembership.topic_identifier
-            == custom_topic.topic_identifier,
+            models_notification.TopicMembership.topic_id == topic_id,
         ),
     )
     return result.scalars().first()
 
 
-async def get_user_ids_by_topic(
-    custom_topic: CustomTopic,
+async def get_user_ids_by_topic_id(
+    topic_id: str,
     db: AsyncSession,
 ) -> list[str]:
     result = await db.execute(
         select(models_notification.TopicMembership.user_id).where(
-            models_notification.TopicMembership.topic == custom_topic.topic,
-            models_notification.TopicMembership.topic_identifier
-            == custom_topic.topic_identifier,
+            models_notification.TopicMembership.topic_id == topic_id,
         ),
     )
     return list(result.scalars().all())
