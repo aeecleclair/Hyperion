@@ -42,24 +42,14 @@ class SpeciesEdit(BaseModel):
     end_season: datetime | None = None
     time_maturation: int | None = None  # temps en jours
 
-    model_config = ConfigDict(from_attributes=True)
-
 
 class PlantCreation(BaseModel):
-    state: State
     species_id: uuid.UUID
     propagation_method: PropagationMethod
     nb_seeds_envelope: int = 1  # 1 si propagation_method = cutting
     ancestor_id: uuid.UUID | None = None
     previous_note: str | None = None
-    current_note: str | None = None
-    borrower_id: str | None = None
     confidential: bool = False
-    planting_date: datetime | None = None
-    borrowing_date: datetime | None = None
-    nickname: str | None = None
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 class PlantSimple(BaseModel):
@@ -71,8 +61,6 @@ class PlantSimple(BaseModel):
     borrower_id: str | None = None
     nickname: str | None = None
 
-    model_config = ConfigDict(from_attributes=True)
-
 
 class PlantComplete(PlantSimple):
     previous_note: str | None = None
@@ -83,8 +71,6 @@ class PlantComplete(PlantSimple):
     nb_seeds_envelope: int = 1  # 1 si propagation_method = cutting
     confidential: bool = False
 
-    model_config = ConfigDict(from_attributes=True)
-
 
 class PlantEdit(BaseModel):
     state: State
@@ -94,16 +80,12 @@ class PlantEdit(BaseModel):
     borrowing_date: datetime | None = None
     nickname: str | None = None
 
-    model_config = ConfigDict(from_attributes=True)
-
 
 class SeedLibraryInformation(core_data.BaseCoreData):
     facebook_url: str = ""
     forum_url: str = ""
     description: str = ""  # pour expliquer le principe du module
     contact: str = ""
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 class SpeciesTypesReturn(BaseModel):
