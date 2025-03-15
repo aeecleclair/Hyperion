@@ -120,19 +120,17 @@ async def unregister_firebase_device(
     )
     for topic in user_topics:
         await notification_manager.unsubscribe_tokens_to_topic(
-            custom_topic=CustomTopic(topic.topic),
+            topic_id=topic.id,
             tokens=[firebase_token],
         )
 
 
 @router.post(
-    "/notification/topics/{topic_str}/subscribe",
+    "/notification/topics/{topic_id}/subscribe",
     status_code=204,
 )
 async def subscribe_to_topic(
-    topic_str: str = Path(
-        description="The topic to subscribe to. The Topic may be followed by an additional identifier (ex: cinema_4c029b5f-2bf7-4b70-85d4-340a4bd28653)",
-    ),
+    topic_id: str = Path(),
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
     notification_manager: NotificationManager = Depends(get_notification_manager),
@@ -143,17 +141,9 @@ async def subscribe_to_topic(
     **The user must be authenticated to use this endpoint**
     """
 
-    try:
-        custom_topic = CustomTopic.from_str(topic_str)
-    except Exception as error:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Invalid custom topic: {error}",
-        )
-
     await notification_manager.subscribe_user_to_topic(
         user_id=user.id,
-        custom_topic=custom_topic,
+        topic_id=topic_id,
         db=db,
     )
 
@@ -163,7 +153,7 @@ async def subscribe_to_topic(
     status_code=204,
 )
 async def unsubscribe_to_topic(
-    topic_str: str,
+    topic_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
     notification_manager: NotificationManager = Depends(get_notification_manager),
@@ -174,11 +164,9 @@ async def unsubscribe_to_topic(
     **The user must be authenticated to use this endpoint**
     """
 
-    custom_topic = CustomTopic.from_str(topic_str)
-
     await notification_manager.unsubscribe_user_to_topic(
         user_id=user.id,
-        custom_topic=custom_topic,
+        topic_id=topic_id,
         db=db,
     )
 
@@ -204,11 +192,12 @@ async def get_topic(
         db=db,
     )
 
-    return [
-        CustomTopic(topic=membership.topic).to_str()
-        for membership in memberships
-        if not membership.topic_identifier
-    ]
+    topics = []
+    for membership in memberships:
+        topic = await cruds_notification.get_topic_by_id(membership.topic_id, db)
+        topics.append(topic.name)
+
+    return topics
 
 
 @router.get(
@@ -230,7 +219,7 @@ async def get_topic_identifier(
     memberships = await cruds_notification.get_topic_memberships_with_identifiers_by_user_id_and_topic(
         user_id=user.id,
         db=db,
-        topic=topic,
+        topic_id=topic_id,
     )
 
     return [
