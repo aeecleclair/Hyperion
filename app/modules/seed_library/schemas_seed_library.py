@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 
 from app.modules.seed_library.types_seed_library import (
     PropagationMethod,
@@ -22,14 +22,10 @@ class SpeciesBase(BaseModel):
     end_season: datetime | None = None
     time_maturation: int | None = None  # temps en jours
 
-    model_config = ConfigDict(from_attributes=True)
-
 
 # then we add an id for the Species instance to be complete
 class SpeciesComplete(SpeciesBase):
     id: uuid.UUID
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 # we can then modify some of the variables … but not the id
@@ -67,7 +63,7 @@ class PlantComplete(PlantSimple):
     current_note: str | None = None
     planting_date: datetime | None = None
     borrowing_date: datetime | None = None
-    ancestor_id: uuid.UUID
+    ancestor_id: uuid.UUID | None = None
     nb_seeds_envelope: int = 1  # 1 si propagation_method = cutting
     confidential: bool = False
 

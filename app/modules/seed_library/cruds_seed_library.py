@@ -9,7 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.seed_library import (
     models_seed_library,
     schemas_seed_library,
-    types_seed_library,
+)
+from app.modules.seed_library.types_seed_library import (
+    SpeciesType,
+    State,
 )
 
 # ---------------------------------------------------------------------------- #
@@ -109,7 +112,7 @@ async def get_all_species(
 async def get_all_species_types() -> Sequence[str]:
     """Return all SpeciesType from Enum"""
 
-    return [species_type.value for species_type in types_seed_library.SpeciesType]
+    return [species_type.value for species_type in SpeciesType]
 
 
 async def get_species_by_id(
@@ -329,7 +332,7 @@ async def get_waiting_plants(
         (
             await db.execute(
                 select(models_seed_library.Plant).where(
-                    models_seed_library.Plant.state == types_seed_library.State.waiting,
+                    models_seed_library.Plant.state == State.waiting,
                 ),
             )
         )
@@ -370,7 +373,7 @@ async def borrow_plant(
         .values(
             borrower_id=user_id,
             borrowing_date=datetime.now(tz=UTC),
-            state=types_seed_library.State.retrieved,
+            state=State.retrieved,
         ),
     )
     try:
