@@ -121,20 +121,6 @@ class History(BaseModel):
     status: TransactionStatus
 
 
-class QRCodeContentBase(BaseModel):
-    qr_code_id: UUID
-    total: int
-    creation: datetime
-    wallet_device_id: UUID
-    # If the QR Code is intended to be scanned for a Store Wallet, or for an other user Wallet
-    store: bool
-
-
-class ScanInfo(QRCodeContentBase):
-    signature: Base64Bytes
-    bypass_membership: bool = False
-
-
 class QRCodeContentData(BaseModel):
     """
     Format of the data stored in the QR code.
@@ -153,6 +139,11 @@ class QRCodeContentData(BaseModel):
     iat: datetime
     key: UUID
     store: bool
+
+
+class ScanInfo(QRCodeContentData):
+    signature: Base64Bytes
+    bypass_membership: bool = False
 
 
 class Wallet(BaseModel):

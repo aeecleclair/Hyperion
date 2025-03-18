@@ -7,7 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.myeclpay import cruds_myeclpay
 from app.core.myeclpay.models_myeclpay import UserPayment
 from app.core.myeclpay.schemas_myeclpay import (
-    QRCodeContentBase,
     QRCodeContentData,
 )
 from app.core.myeclpay.types_myeclpay import (
@@ -27,13 +26,13 @@ MAX_TRANSACTION_TOTAL = 2000
 QRCODE_EXPIRATION = 5  # minutes
 
 
-def compute_signable_data(content: QRCodeContentBase) -> bytes:
+def compute_signable_data(content: QRCodeContentData) -> bytes:
     return (
         QRCodeContentData(
-            id=content.qr_code_id,
-            tot=content.total,
-            iat=content.creation,
-            key=content.wallet_device_id,
+            id=content.id,
+            tot=content.tot,
+            iat=content.iat,
+            key=content.key,
             store=content.store,
         )
         .model_dump_json()
