@@ -2,7 +2,7 @@
 
 from datetime import date, datetime
 
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.users.models_users import CoreUser
@@ -76,7 +76,7 @@ class Order(Base):
         index=True,
     )
     order_id: Mapped[str] = mapped_column(primary_key=True, index=True)
-    amount: Mapped[float]
+    amount: Mapped[int]
     collection_slot: Mapped[AmapSlotType]
     ordering_date: Mapped[datetime]
     delivery_date: Mapped[date]
@@ -88,7 +88,7 @@ class Order(Base):
         "Product",
         secondary="amap_order_content",
         viewonly=True,
-        default_factory=list,
+        init=False,
     )
 
 
