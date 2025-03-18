@@ -58,3 +58,17 @@ def trailing_spaces_remover(value: str | None) -> str | None:
     if value is not None:
         return value.strip()
     return value
+
+
+def trailing_return_remover(value: str | None) -> str | None:
+    """
+    Remove trailing return.
+
+    If the value is None, it is returned as is. The validator can thus be used for optional values.
+
+    This function is intended to be used as a Pydantic validator:
+    https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
+    """
+    if value is not None:
+        return value.strip("\n")
+    return value
