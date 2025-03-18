@@ -966,3 +966,68 @@ async def download_team_files_zip(
         media_type="application/zip",
         filename=Path(zip_file_path).name,
     )
+
+
+#################################### ENDPOINTS FOR CHRONO RAID ####################################
+
+
+@module.router.get(
+    "/chrono_raid/temps",
+    response_model=list[schemas_raid.Temps],
+    status_code=200,
+)
+async def get_temps(
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Return all times
+    """
+    result = await cruds_raid.get_temps(
+        db=db,
+    )
+    return result
+
+
+@module.router.get(
+    "/chrono_raid/temps/{date}",
+    response_model=list[schemas_raid.Temps],
+    status_code=200,
+)
+async def get_temps_by_date(
+    date: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Return all times for a given date
+    """
+    result = await cruds_raid.get_temps_by_date(
+        date=date,
+        db=db,
+    )
+    return result
+
+
+@module.router.post(
+    "/chrono_raid/temps",
+    response_model=schemas_raid.Temps,
+    status_code=201,
+)
+async def add_or_update_time(
+    temps: schemas_raid.Temps,
+    db: AsyncSession = Depends(get_db),
+    # user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_volonteer)),
+):
+    """
+    Add a new time
+    """
+    existing_temps = await cruds_raid.get_temps_by_id(temps.id, db)
+
+    if existing_temps:
+        if temps.last_modification_date > existing_temps.last_modification_date:
+            return await cruds_raid.update_temps(temps, db)
+        return existing_temps
+
+    return await cruds_raid.add_temps(
+        temps,
+        db,
+    )

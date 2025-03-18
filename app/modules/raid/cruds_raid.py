@@ -592,3 +592,63 @@ async def get_participant_checkout_by_checkout_id(
         ),
     )
     return checkout.scalars().first()
+
+
+#################################### CRUDS FOR CHRONO RAID ####################################
+
+
+async def get_temps(
+    db: AsyncSession,
+) -> Sequence[models_raid.Temps]:
+    temps = await db.execute(select(models_raid.Temps))
+    return temps.scalars().all()
+
+
+async def get_temps_by_date(
+    date: str,
+    db: AsyncSession,
+) -> Sequence[models_raid.Temps]:
+    temps = await db.execute(
+        select(models_raid.Temps).where(
+            models_raid.Temps.last_modification_date >= date
+        ),
+    )
+    return temps.scalars().all()
+
+
+async def get_temps_by_id(
+    temps_id: str,
+    db: AsyncSession,
+) -> models_raid.Temps | None:
+    temps = await db.execute(
+        select(models_raid.Temps).where(models_raid.Temps.id == temps_id),
+    )
+    return temps.scalars().first()
+
+
+async def add_temps(
+    temps: schemas_raid.Temps,
+    db: AsyncSession,
+) -> models_raid.Temps:
+    temps_db = models_raid.Temps(**temps.model_dump())
+    db.add(temps_db)
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise
+    else:
+        return temps_db
+
+
+async def update_temps(
+    temps: schemas_raid.Temps,
+    db: AsyncSession,
+) -> schemas_raid.Temps:
+    await db.execute(
+        update(models_raid.Temps)
+        .where(models_raid.Temps.id == temps.id)
+        .values(**temps.model_dump(exclude_none=True)),
+    )
+    await db.commit()
+    return temps
