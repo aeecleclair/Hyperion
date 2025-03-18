@@ -75,7 +75,7 @@ class OrderBase(BaseModel):
 
 class OrderComplete(OrderBase):
     order_id: str
-    amount: float
+    amount: int
     ordering_date: datetime
     delivery_date: date
     model_config = ConfigDict(from_attributes=True)
@@ -87,7 +87,7 @@ class OrderReturn(BaseModel):
     productsdetail: Sequence[ProductQuantity]
     collection_slot: AmapSlotType
     order_id: str
-    amount: float
+    amount: int
     ordering_date: datetime
     delivery_date: date
     model_config = ConfigDict(from_attributes=True)
