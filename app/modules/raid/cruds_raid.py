@@ -1,3 +1,4 @@
+from collections import defaultdict
 from collections.abc import Sequence
 from datetime import UTC, datetime
 
@@ -603,6 +604,22 @@ async def get_temps(
     temps = await db.execute(select(models_raid.Temps))
     return temps.scalars().all()
 
+async def get_active_temps_grouped_by_dossard(
+    db: AsyncSession,
+) -> dict[int, list[models_raid.Temps]]:
+    result = await db.execute(
+        select(models_raid.Temps)
+        .where(models_raid.Temps.status == True)
+        .order_by(models_raid.Temps.dossard, models_raid.Temps.date)
+    )
+    
+    temps_list = result.scalars().all()
+    
+    grouped_temps = defaultdict(list)
+    for temps in temps_list:
+        grouped_temps[temps.dossard].append(temps)
+    
+    return dict(grouped_temps)
 
 async def get_temps_by_date(
     date: str,
