@@ -60,7 +60,7 @@ def trailing_spaces_remover(value: str | None) -> str | None:
     return value
 
 
-def trailing_return_remover(value: bytes | None) -> bytes | None:
+def trailing_return_remover(value: str | None) -> str | None:
     """
     Remove trailing return.
 
@@ -70,5 +70,5 @@ def trailing_return_remover(value: bytes | None) -> bytes | None:
     https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators
     """
     if value is not None:
-        return value.strip(b"\n")
+        return value.strip("\n")
     return value

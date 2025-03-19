@@ -143,7 +143,7 @@ class QRCodeContentData(BaseModel):
 
 
 class ScanInfo(QRCodeContentData):
-    signature: Base64Bytes
+    signature: str
     bypass_membership: bool = False
 
     _signature_normalizer = field_validator("signature")(
