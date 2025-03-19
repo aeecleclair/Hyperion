@@ -1008,26 +1008,56 @@ async def get_temps_by_date(
 
 
 @module.router.post(
-    "/chrono_raid/temps",
-    response_model=schemas_raid.Temps,
-    status_code=201,
+    "/chrono_raid/temps/{date}",
+    response_model = list[schemas_raid.Temps],
+    status_code = 201,
 )
 async def add_or_update_time(
-    temps: schemas_raid.Temps,
+    list_temps: list[schemas_raid.Temps],
+    date: str,
     db: AsyncSession = Depends(get_db),
     # user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_volonteer)),
 ):
     """
-    Add a new time
+    Add or update a list of new times
     """
-    existing_temps = await cruds_raid.get_temps_by_id(temps.id, db)
+    for temps in list_temps:
+        existing_temps = await cruds_raid.get_temps_by_id(temps.id, db)
 
-    if existing_temps:
-        if temps.last_modification_date > existing_temps.last_modification_date:
-            return await cruds_raid.update_temps(temps, db)
-        return existing_temps
+        if existing_temps and temps.last_modification_date > existing_temps.last_modification_date:
+            await cruds_raid.update_temps(temps, db)
+        else:
+            await cruds_raid.add_temps(temps, db)
 
-    return await cruds_raid.add_temps(
-        temps,
-        db,
+    result = await cruds_raid.get_temps_by_date(
+        date=date,
+        db=db,
     )
+    return result
+
+@module.router.get(
+    "/chrono_raid/csv_temps",
+    response_class=FileResponse,
+    status_code=200,
+)
+async def get_csv_temps(
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Return a csv with all times
+    """
+    CSV_FILE_PATH = "data/raid/results_chrono_raid.csv"
+
+    grouped_temps: dict[int, list[models_raid.Temps]] = await cruds_raid.get_active_temps_grouped_by_dossard(db)
+
+    with open(CSV_FILE_PATH, "w", encoding="utf-8") as f:
+        for dossard, temps_list in grouped_temps.items():
+            row = [str(dossard)] + [temps.date.replace("T", " ") for temps in temps_list]
+            f.write(",".join(row) + "\n")
+
+    # return get_file_from_data(
+    #     default_asset="assets/default.csv",
+    #     directory="data/raid",
+    #     filename=str("results_chrono_raid.csv"),
+    # )
+    return FileResponse(CSV_FILE_PATH, media_type="text/csv", filename="results_chrono_raid.csv")
