@@ -16,7 +16,7 @@ from app.modules.seed_library import (
     cruds_seed_library,
     schemas_seed_library,
 )
-from app.modules.seed_library.types_seed_library import State
+from app.modules.seed_library.types_seed_library import PlantState
 from app.types.module import Module
 from app.utils import tools
 from app.utils.tools import is_user_member_of_any_group
@@ -249,7 +249,7 @@ async def create_plant(
 
     plant = schemas_seed_library.PlantComplete(
         id=uuid.uuid4(),
-        state=State.waiting,
+        state=PlantState.waiting,
         species_id=plant_base.species_id,
         propagation_method=plant_base.propagation_method,
         nb_seeds_envelope=plant_base.nb_seeds_envelope,

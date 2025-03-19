@@ -11,8 +11,8 @@ from app.modules.seed_library import (
     schemas_seed_library,
 )
 from app.modules.seed_library.types_seed_library import (
+    PlantState,
     SpeciesType,
-    State,
 )
 
 # ---------------------------------------------------------------------------- #
@@ -332,7 +332,7 @@ async def get_waiting_plants(
         (
             await db.execute(
                 select(models_seed_library.Plant).where(
-                    models_seed_library.Plant.state == State.waiting,
+                    models_seed_library.Plant.state == PlantState.waiting,
                 ),
             )
         )
@@ -373,7 +373,7 @@ async def borrow_plant(
         .values(
             borrower_id=user_id,
             borrowing_date=datetime.now(tz=UTC),
-            state=State.retrieved,
+            state=PlantState.retrieved,
         ),
     )
     try:

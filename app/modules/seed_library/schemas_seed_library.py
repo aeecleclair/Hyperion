@@ -4,9 +4,9 @@ from datetime import datetime
 from pydantic import BaseModel
 
 from app.modules.seed_library.types_seed_library import (
+    PlantState,
     PropagationMethod,
     SpeciesType,
-    State,
 )
 from app.types import core_data
 
@@ -51,7 +51,7 @@ class PlantCreation(BaseModel):
 class PlantSimple(BaseModel):
     id: uuid.UUID
     plant_reference: str
-    state: State
+    state: PlantState
     species_id: uuid.UUID
     propagation_method: PropagationMethod
     borrower_id: str | None = None
@@ -69,7 +69,7 @@ class PlantComplete(PlantSimple):
 
 
 class PlantEdit(BaseModel):
-    state: State
+    state: PlantState
     current_note: str | None = None
     confidential: bool = False
     planting_date: datetime | None = None

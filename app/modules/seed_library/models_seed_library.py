@@ -5,9 +5,9 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.modules.seed_library.types_seed_library import (
+    PlantState,
     PropagationMethod,
     SpeciesType,
-    State,
 )
 from app.types.sqlalchemy import Base, PrimaryKey
 
@@ -29,7 +29,7 @@ class Species(Base):
 class Plant(Base):
     __tablename__ = "seed_library_plants"
     id: Mapped[PrimaryKey]
-    state: Mapped[State] = mapped_column(index=True)
+    state: Mapped[PlantState] = mapped_column(index=True)
     species_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("seed_library_species.id"),
     )

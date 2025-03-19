@@ -12,7 +12,7 @@ class SpeciesType(Enum):
     other = "Autre"
 
 
-class State(Enum):
+class PlantState(Enum):
     waiting = "en attente"
     retrieved = "récupérée"
     used_up = "consommée"
