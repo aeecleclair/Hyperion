@@ -269,7 +269,7 @@ async def create_plant(
 
 
 @module.router.patch(
-    "/seed_library/plant/{plant_id}",
+    "/seed_library/plants/{plant_id}",
     status_code=204,
 )
 async def update_plant(
@@ -299,7 +299,7 @@ async def update_plant(
 
 
 @module.router.patch(
-    "/seed_library/plant/{plant_id}/admin",
+    "/seed_library/plants/{plant_id}/admin",
     status_code=204,
 )
 async def update_plant_admin(
@@ -369,7 +369,7 @@ async def delete_plant(
 
 
 @module.router.get(
-    "/seed_library/seed_library_information/",
+    "/seed_library/information",
     response_model=schemas_seed_library.SeedLibraryInformation,
     status_code=200,
 )
@@ -381,7 +381,7 @@ async def get_seed_library_information(db: AsyncSession = Depends(get_db)):
 
 
 @module.router.patch(
-    "/seed_library/seed_library_information",
+    "/seed_library/information",
     status_code=204,
 )
 async def update_seed_library_information(
