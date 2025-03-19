@@ -1009,8 +1009,8 @@ async def get_temps_by_date(
 
 @module.router.post(
     "/chrono_raid/temps/{date}",
-    response_model = list[schemas_raid.Temps],
-    status_code = 201,
+    response_model=list[schemas_raid.Temps],
+    status_code=201,
 )
 async def add_or_update_time(
     list_temps: list[schemas_raid.Temps],
@@ -1024,7 +1024,10 @@ async def add_or_update_time(
     for temps in list_temps:
         existing_temps = await cruds_raid.get_temps_by_id(temps.id, db)
 
-        if existing_temps and temps.last_modification_date > existing_temps.last_modification_date:
+        if (
+            existing_temps
+            and temps.last_modification_date > existing_temps.last_modification_date
+        ):
             await cruds_raid.update_temps(temps, db)
         else:
             await cruds_raid.add_temps(temps, db)
@@ -1034,6 +1037,7 @@ async def add_or_update_time(
         db=db,
     )
     return result
+
 
 @module.router.get(
     "/chrono_raid/csv_temps",
@@ -1048,16 +1052,20 @@ async def get_csv_temps(
     """
     CSV_FILE_PATH = "data/raid/results_chrono_raid.csv"
 
-    grouped_temps: dict[int, list[models_raid.Temps]] = await cruds_raid.get_active_temps_grouped_by_dossard(db)
+    grouped_temps: dict[
+        int,
+        list[models_raid.Temps],
+    ] = await cruds_raid.get_active_temps_grouped_by_dossard(db)
 
-    with open(CSV_FILE_PATH, "w", encoding="utf-8") as f:
+    with Path.open(CSV_FILE_PATH, "w", encoding="utf-8") as f:
         for dossard, temps_list in grouped_temps.items():
-            row = [str(dossard)] + [temps.date.replace("T", " ") for temps in temps_list]
+            row = [str(dossard)] + [
+                temps.date.replace("T", " ") for temps in temps_list
+            ]
             f.write(",".join(row) + "\n")
 
-    # return get_file_from_data(
-    #     default_asset="assets/default.csv",
-    #     directory="data/raid",
-    #     filename=str("results_chrono_raid.csv"),
-    # )
-    return FileResponse(CSV_FILE_PATH, media_type="text/csv", filename="results_chrono_raid.csv")
+    return FileResponse(
+        CSV_FILE_PATH,
+        media_type="text/csv",
+        filename="results_chrono_raid.csv",
+    )
