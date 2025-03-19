@@ -189,7 +189,7 @@ async def get_plants_by_user_id(
 
 @module.router.get(
     "/seed_library/plants/{plant_id}",
-    response_model=schemas_seed_library.PlantSimple,
+    response_model=schemas_seed_library.PlantComplete,
     status_code=200,
 )
 async def get_plant_by_id(
