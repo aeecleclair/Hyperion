@@ -1,4 +1,3 @@
-import base64
 import logging
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -1251,9 +1250,7 @@ async def create_user_devices(
         id=uuid.uuid4(),
         name=wallet_device_creation.name,
         wallet_id=user_payment.wallet_id,
-        ed25519_public_key=base64.decodebytes(
-            wallet_device_creation.ed25519_public_key.encode(),
-        ).decode(),
+        ed25519_public_key=wallet_device_creation.ed25519_public_key,
         creation=datetime.now(UTC),
         status=WalletDeviceStatus.INACTIVE,
         activation_token=activation_token,
@@ -1860,7 +1857,7 @@ async def store_scan_qrcode(
         )
 
     if not verify_signature(
-        public_key_bytes=debited_wallet_device.ed25519_public_key.encode(),
+        public_key_bytes=bytes.fromhex(debited_wallet_device.ed25519_public_key),
         signature=scan_info.signature,
         data=scan_info,
         wallet_device_id=scan_info.key,
