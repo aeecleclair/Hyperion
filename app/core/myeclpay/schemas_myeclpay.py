@@ -1,7 +1,11 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import Base64Bytes, BaseModel, HttpUrl, field_validator
+from pydantic import (
+    Base64Bytes,
+    BaseModel,
+    HttpUrl,
+)
 
 from app.core.memberships import schemas_memberships
 from app.core.myeclpay.types_myeclpay import (
@@ -13,7 +17,6 @@ from app.core.myeclpay.types_myeclpay import (
     WalletType,
 )
 from app.core.users import schemas_users
-from app.utils import validators
 
 
 class StructureBase(BaseModel):
@@ -145,10 +148,6 @@ class QRCodeContentData(BaseModel):
 class ScanInfo(QRCodeContentData):
     signature: str
     bypass_membership: bool = False
-
-    _signature_normalizer = field_validator("signature")(
-        validators.trailing_return_remover,
-    )
 
 
 class Wallet(BaseModel):

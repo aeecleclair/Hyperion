@@ -26,7 +26,6 @@ from app.core.myeclpay.utils_myeclpay import (
     MAX_TRANSACTION_TOTAL,
     QRCODE_EXPIRATION,
     TOS_CONTENT,
-    compute_signable_data,
     is_user_latest_tos_signed,
     validate_transfer_callback,
     verify_signature,
@@ -1860,7 +1859,7 @@ async def store_scan_qrcode(
     if not verify_signature(
         public_key_bytes=debited_wallet_device.ed25519_public_key,
         signature=scan_info.signature,
-        data=compute_signable_data(scan_info),
+        data=scan_info,
         wallet_device_id=scan_info.key,
         request_id=request_id,
     ):

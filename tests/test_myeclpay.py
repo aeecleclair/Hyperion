@@ -14,7 +14,7 @@ from pytest_mock import MockerFixture
 from app.core.groups.groups_type import GroupType
 from app.core.memberships import models_memberships
 from app.core.myeclpay import cruds_myeclpay, models_myeclpay
-from app.core.myeclpay.schemas_myeclpay import QRCodeContentBase
+from app.core.myeclpay.schemas_myeclpay import QRCodeContentData
 from app.core.myeclpay.types_myeclpay import (
     TransactionStatus,
     TransactionType,
@@ -22,7 +22,7 @@ from app.core.myeclpay.types_myeclpay import (
     WalletDeviceStatus,
     WalletType,
 )
-from app.core.myeclpay.utils_myeclpay import LATEST_TOS, compute_signable_data
+from app.core.myeclpay.utils_myeclpay import LATEST_TOS
 from app.core.users import models_users
 from tests.commons import (
     TestingSessionLocal,
@@ -1264,7 +1264,7 @@ def test_get_transactions_success(client: TestClient):
         transactions_dict[transaction_from_ecl_user_to_ecl_user2.id][
             "other_wallet_name"
         ]
-        == "nickname (firstname ECL User 2)"
+        == "firstname ECL User 2 (nickname)"
     )
     assert (
         transactions_dict[transaction_from_ecl_user_to_ecl_user2.id]["type"] == "given"
@@ -1449,10 +1449,10 @@ def ensure_qr_code_id_is_already_used(qr_code_id: str | UUID, client: TestClient
         f"/myeclpay/stores/{store.id}/scan",
         headers={"Authorization": f"Bearer {ecl_user_access_token}"},
         json={
-            "qr_code_id": str(qr_code_id),
-            "wallet_device_id": str(ecl_user_wallet_device.id),
-            "total": 100,
-            "creation": (datetime.now(UTC)).isoformat(),
+            "id": str(qr_code_id),
+            "key": str(ecl_user_wallet_device.id),
+            "tot": 100,
+            "iat": (datetime.now(UTC)).isoformat(),
             "store": True,
             "signature": "sign",
         },
@@ -1473,10 +1473,10 @@ def test_store_scan_invalid_store_id(client: TestClient):
         f"/myeclpay/stores/{uuid4()}/scan",
         headers={"Authorization": f"Bearer {ecl_user_access_token}"},
         json={
-            "qr_code_id": qr_code_id,
-            "wallet_device_id": str(ecl_user_wallet_device.id),
-            "total": 100,
-            "creation": datetime.now(UTC).isoformat(),
+            "id": qr_code_id,
+            "key": str(ecl_user_wallet_device.id),
+            "tot": 100,
+            "iat": datetime.now(UTC).isoformat(),
             "store": True,
             "signature": "sign",
         },
@@ -1494,10 +1494,10 @@ def test_store_scan_store_when_not_seller(client: TestClient):
         f"/myeclpay/stores/{store.id}/scan",
         headers={"Authorization": f"Bearer {ecl_user_access_token}"},
         json={
-            "qr_code_id": qr_code_id,
-            "wallet_device_id": str(ecl_user_wallet_device.id),
-            "total": 100,
-            "creation": datetime.now(UTC).isoformat(),
+            "id": qr_code_id,
+            "key": str(ecl_user_wallet_device.id),
+            "tot": 100,
+            "iat": datetime.now(UTC).isoformat(),
             "store": True,
             "signature": "sign",
         },
@@ -1520,10 +1520,10 @@ def test_store_scan_store_when_seller_but_can_not_bank(client: TestClient):
             "Authorization": f"Bearer {store_seller_no_permission_user_access_token}",
         },
         json={
-            "qr_code_id": qr_code_id,
-            "wallet_device_id": str(ecl_user_wallet_device.id),
-            "total": 100,
-            "creation": datetime.now(UTC).isoformat(),
+            "id": qr_code_id,
+            "key": str(ecl_user_wallet_device.id),
+            "tot": 100,
+            "iat": datetime.now(UTC).isoformat(),
             "store": True,
             "signature": "sign",
         },
@@ -1544,10 +1544,10 @@ def test_store_scan_store_invalid_wallet_device_id(client: TestClient):
         f"/myeclpay/stores/{store.id}/scan",
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={
-            "qr_code_id": qr_code_id,
-            "wallet_device_id": str(uuid4()),
-            "total": 100,
-            "creation": datetime.now(UTC).isoformat(),
+            "id": qr_code_id,
+            "key": str(uuid4()),
+            "tot": 100,
+            "iat": datetime.now(UTC).isoformat(),
             "store": True,
             "signature": "sign",
         },
@@ -1565,10 +1565,10 @@ def test_store_scan_store_non_active_wallet_device_id(client: TestClient):
         f"/myeclpay/stores/{store.id}/scan",
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={
-            "qr_code_id": qr_code_id,
-            "wallet_device_id": str(ecl_user_wallet_device_inactive.id),
-            "total": 100,
-            "creation": datetime.now(UTC).isoformat(),
+            "id": qr_code_id,
+            "key": str(ecl_user_wallet_device_inactive.id),
+            "tot": 100,
+            "iat": datetime.now(UTC).isoformat(),
             "store": True,
             "signature": "sign",
         },
@@ -1586,10 +1586,10 @@ def test_store_scan_store_invalid_signature(client: TestClient):
         f"/myeclpay/stores/{store.id}/scan",
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={
-            "qr_code_id": qr_code_id,
-            "wallet_device_id": str(ecl_user_wallet_device.id),
-            "total": 100,
-            "creation": datetime.now(UTC).isoformat(),
+            "id": qr_code_id,
+            "key": str(ecl_user_wallet_device.id),
+            "tot": 100,
+            "iat": datetime.now(UTC).isoformat(),
             "store": True,
             "signature": "invalid signature",
         },
@@ -1603,26 +1603,26 @@ def test_store_scan_store_invalid_signature(client: TestClient):
 def test_store_scan_store_with_non_store_qr_code(client: TestClient):
     qr_code_id = uuid4()
 
-    qr_code_content = QRCodeContentBase(
-        qr_code_id=qr_code_id,
-        total=-1,
-        creation=datetime.now(UTC),
+    qr_code_content = QRCodeContentData(
+        id=qr_code_id,
+        tot=-1,
+        iat=datetime.now(UTC),
         store=False,
-        wallet_device_id=ecl_user_wallet_device.id,
+        key=ecl_user_wallet_device.id,
     )
 
     signature = ecl_user_wallet_device_private_key.sign(
-        compute_signable_data(qr_code_content),
+        qr_code_content.model_dump_json().encode("utf-8"),
     )
 
     response = client.post(
         f"/myeclpay/stores/{store.id}/scan",
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={
-            "qr_code_id": str(qr_code_content.qr_code_id),
-            "wallet_device_id": str(qr_code_content.wallet_device_id),
-            "total": qr_code_content.total,
-            "creation": qr_code_content.creation.isoformat(),
+            "id": str(qr_code_content.id),
+            "key": str(qr_code_content.key),
+            "tot": qr_code_content.tot,
+            "iat": qr_code_content.iat.isoformat(),
             "store": qr_code_content.store,
             "signature": base64.b64encode(signature).decode("utf-8"),
         },
@@ -1638,26 +1638,26 @@ def test_store_scan_store_with_non_store_qr_code(client: TestClient):
 def test_store_scan_store_negative_total(client: TestClient):
     qr_code_id = uuid4()
 
-    qr_code_content = QRCodeContentBase(
-        qr_code_id=qr_code_id,
-        total=-1,
-        creation=datetime.now(UTC),
+    qr_code_content = QRCodeContentData(
+        id=qr_code_id,
+        tot=-1,
+        iat=datetime.now(UTC),
         store=True,
-        wallet_device_id=ecl_user_wallet_device.id,
+        key=ecl_user_wallet_device.id,
     )
 
     signature = ecl_user_wallet_device_private_key.sign(
-        compute_signable_data(qr_code_content),
+        qr_code_content.model_dump_json().encode("utf-8"),
     )
 
     response = client.post(
         f"/myeclpay/stores/{store.id}/scan",
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={
-            "qr_code_id": str(qr_code_content.qr_code_id),
-            "wallet_device_id": str(qr_code_content.wallet_device_id),
-            "total": qr_code_content.total,
-            "creation": qr_code_content.creation.isoformat(),
+            "id": str(qr_code_content.id),
+            "key": str(qr_code_content.key),
+            "tot": qr_code_content.tot,
+            "iat": qr_code_content.iat.isoformat(),
             "store": qr_code_content.store,
             "signature": base64.b64encode(signature).decode("utf-8"),
         },
@@ -1671,26 +1671,26 @@ def test_store_scan_store_negative_total(client: TestClient):
 def test_store_scan_store_total_greater_than_max(client: TestClient):
     qr_code_id = uuid4()
 
-    qr_code_content = QRCodeContentBase(
-        qr_code_id=qr_code_id,
-        total=4000,
-        creation=datetime.now(UTC),
+    qr_code_content = QRCodeContentData(
+        id=qr_code_id,
+        tot=4000,
+        iat=datetime.now(UTC),
         store=True,
-        wallet_device_id=ecl_user_wallet_device.id,
+        key=ecl_user_wallet_device.id,
     )
 
     signature = ecl_user_wallet_device_private_key.sign(
-        compute_signable_data(qr_code_content),
+        qr_code_content.model_dump_json().encode("utf-8"),
     )
 
     response = client.post(
         f"/myeclpay/stores/{store.id}/scan",
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={
-            "qr_code_id": str(qr_code_content.qr_code_id),
-            "wallet_device_id": str(qr_code_content.wallet_device_id),
-            "total": qr_code_content.total,
-            "creation": qr_code_content.creation.isoformat(),
+            "id": str(qr_code_content.id),
+            "key": str(qr_code_content.key),
+            "tot": qr_code_content.tot,
+            "iat": qr_code_content.iat.isoformat(),
             "store": qr_code_content.store,
             "signature": base64.b64encode(signature).decode("utf-8"),
         },
@@ -1713,26 +1713,26 @@ def test_store_scan_store_missing_wallet(
 
     qr_code_id = uuid4()
 
-    qr_code_content = QRCodeContentBase(
-        qr_code_id=qr_code_id,
-        total=100,
-        creation=datetime.now(UTC),
+    qr_code_content = QRCodeContentData(
+        id=qr_code_id,
+        tot=100,
+        iat=datetime.now(UTC),
         store=True,
-        wallet_device_id=ecl_user_wallet_device.id,
+        key=ecl_user_wallet_device.id,
     )
 
     signature = ecl_user_wallet_device_private_key.sign(
-        compute_signable_data(qr_code_content),
+        qr_code_content.model_dump_json().encode("utf-8"),
     )
 
     response = client.post(
         f"/myeclpay/stores/{store.id}/scan",
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={
-            "qr_code_id": str(qr_code_content.qr_code_id),
-            "wallet_device_id": str(qr_code_content.wallet_device_id),
-            "total": qr_code_content.total,
-            "creation": qr_code_content.creation.isoformat(),
+            "id": str(qr_code_content.id),
+            "key": str(qr_code_content.key),
+            "tot": qr_code_content.tot,
+            "iat": qr_code_content.iat.isoformat(),
             "store": qr_code_content.store,
             "signature": base64.b64encode(signature).decode("utf-8"),
         },
@@ -1749,26 +1749,26 @@ def test_store_scan_store_missing_wallet(
 def test_store_scan_store_from_store_wallet(client: TestClient):
     qr_code_id = uuid4()
 
-    qr_code_content = QRCodeContentBase(
-        qr_code_id=qr_code_id,
-        total=1100,
-        creation=datetime.now(UTC),
+    qr_code_content = QRCodeContentData(
+        id=qr_code_id,
+        tot=1100,
+        iat=datetime.now(UTC),
         store=True,
-        wallet_device_id=store_wallet_device.id,
+        key=store_wallet_device.id,
     )
 
     signature = store_wallet_device_private_key.sign(
-        compute_signable_data(qr_code_content),
+        qr_code_content.model_dump_json().encode("utf-8"),
     )
 
     response = client.post(
         f"/myeclpay/stores/{store.id}/scan",
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={
-            "qr_code_id": str(qr_code_content.qr_code_id),
-            "wallet_device_id": str(qr_code_content.wallet_device_id),
-            "total": qr_code_content.total,
-            "creation": qr_code_content.creation.isoformat(),
+            "id": str(qr_code_content.id),
+            "key": str(qr_code_content.key),
+            "tot": qr_code_content.tot,
+            "iat": qr_code_content.iat.isoformat(),
             "store": qr_code_content.store,
             "signature": base64.b64encode(signature).decode("utf-8"),
         },
@@ -1819,26 +1819,26 @@ async def test_store_scan_store_from_wallet_with_old_tos_version(client: TestCli
 
     qr_code_id = uuid4()
 
-    qr_code_content = QRCodeContentBase(
-        qr_code_id=qr_code_id,
-        total=1100,
-        creation=datetime.now(UTC),
+    qr_code_content = QRCodeContentData(
+        id=qr_code_id,
+        tot=1100,
+        iat=datetime.now(UTC),
         store=True,
-        wallet_device_id=ecl_user_wallet_device.id,
+        key=ecl_user_wallet_device.id,
     )
 
     signature = ecl_user_wallet_device_private_key.sign(
-        compute_signable_data(qr_code_content),
+        qr_code_content.model_dump_json().encode("utf-8"),
     )
 
     response = client.post(
         f"/myeclpay/stores/{store.id}/scan",
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={
-            "qr_code_id": str(qr_code_content.qr_code_id),
-            "wallet_device_id": str(qr_code_content.wallet_device_id),
-            "total": qr_code_content.total,
-            "creation": qr_code_content.creation.isoformat(),
+            "id": str(qr_code_content.id),
+            "key": str(qr_code_content.key),
+            "tot": qr_code_content.tot,
+            "iat": qr_code_content.iat.isoformat(),
             "store": qr_code_content.store,
             "signature": base64.b64encode(signature).decode("utf-8"),
         },
@@ -1852,26 +1852,26 @@ async def test_store_scan_store_from_wallet_with_old_tos_version(client: TestCli
 def test_store_scan_store_insufficient_ballance(client: TestClient):
     qr_code_id = uuid4()
 
-    qr_code_content = QRCodeContentBase(
-        qr_code_id=qr_code_id,
-        total=2000,
-        creation=datetime.now(UTC),
+    qr_code_content = QRCodeContentData(
+        id=qr_code_id,
+        tot=2000,
+        iat=datetime.now(UTC),
         store=True,
-        wallet_device_id=ecl_user_wallet_device.id,
+        key=ecl_user_wallet_device.id,
     )
 
     signature = ecl_user_wallet_device_private_key.sign(
-        compute_signable_data(qr_code_content),
+        qr_code_content.model_dump_json().encode("utf-8"),
     )
 
     response = client.post(
         f"/myeclpay/stores/{store.id}/scan",
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={
-            "qr_code_id": str(qr_code_content.qr_code_id),
-            "wallet_device_id": str(qr_code_content.wallet_device_id),
-            "total": qr_code_content.total,
-            "creation": qr_code_content.creation.isoformat(),
+            "id": str(qr_code_content.id),
+            "key": str(qr_code_content.key),
+            "tot": qr_code_content.tot,
+            "iat": qr_code_content.iat.isoformat(),
             "store": qr_code_content.store,
             "signature": base64.b64encode(signature).decode("utf-8"),
         },
@@ -1885,16 +1885,16 @@ def test_store_scan_store_insufficient_ballance(client: TestClient):
 async def test_store_scan_store_successful_scan(client: TestClient):
     qr_code_id = uuid4()
 
-    qr_code_content = QRCodeContentBase(
-        qr_code_id=qr_code_id,
-        total=500,
-        creation=datetime.now(UTC),
+    qr_code_content = QRCodeContentData(
+        id=qr_code_id,
+        tot=500,
+        iat=datetime.now(UTC),
         store=True,
-        wallet_device_id=ecl_user_wallet_device.id,
+        key=ecl_user_wallet_device.id,
     )
 
     signature = ecl_user_wallet_device_private_key.sign(
-        compute_signable_data(qr_code_content),
+        qr_code_content.model_dump_json().encode("utf-8"),
     )
 
     async with TestingSessionLocal() as db:
@@ -1913,10 +1913,10 @@ async def test_store_scan_store_successful_scan(client: TestClient):
         f"/myeclpay/stores/{store.id}/scan",
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
         json={
-            "qr_code_id": str(qr_code_content.qr_code_id),
-            "wallet_device_id": str(qr_code_content.wallet_device_id),
-            "total": qr_code_content.total,
-            "creation": qr_code_content.creation.isoformat(),
+            "id": str(qr_code_content.id),
+            "key": str(qr_code_content.key),
+            "tot": qr_code_content.tot,
+            "iat": qr_code_content.iat.isoformat(),
             "store": qr_code_content.store,
             "signature": base64.b64encode(signature).decode("utf-8"),
         },
@@ -1940,11 +1940,11 @@ async def test_store_scan_store_successful_scan(client: TestClient):
     # We check that the wallet balances were updated
     assert (
         store_wallet_after_scan.balance
-        == store_wallet_before_scan.balance + qr_code_content.total
+        == store_wallet_before_scan.balance + qr_code_content.tot
     )
     assert (
         user_wallet_after_scan.balance
-        == user_wallet_before_scan.balance - qr_code_content.total
+        == user_wallet_before_scan.balance - qr_code_content.tot
     )
 
     # We check that a transaction was created

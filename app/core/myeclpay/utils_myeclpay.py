@@ -1,3 +1,4 @@
+import base64
 import logging
 from uuid import UUID
 
@@ -26,24 +27,10 @@ MAX_TRANSACTION_TOTAL = 2000
 QRCODE_EXPIRATION = 5  # minutes
 
 
-def compute_signable_data(content: QRCodeContentData) -> bytes:
-    return (
-        QRCodeContentData(
-            id=content.id,
-            tot=content.tot,
-            iat=content.iat,
-            key=content.key,
-            store=content.store,
-        )
-        .model_dump_json()
-        .encode("utf-8")
-    )
-
-
 def verify_signature(
     public_key_bytes: bytes,
-    signature: bytes,
-    data: bytes,
+    signature: str,
+    data: QRCodeContentData,
     wallet_device_id: UUID,
     request_id: str,
 ) -> bool:
@@ -53,16 +40,17 @@ def verify_signature(
     try:
         loaded_public_key = ed25519.Ed25519PublicKey.from_public_bytes(public_key_bytes)
         loaded_public_key.verify(
-            signature,
-            data,
+            base64.decodebytes(signature.encode("utf-8")),
+            data.model_dump_json(exclude={"signature", "bypass_membership"}).encode(
+                "utf-8",
+            ),
         )
     except Exception as error:
         hyperion_security_logger.info(
             f"MyECLPay: Failed to verify signature for QR Code with WalletDevice {wallet_device_id}: {error} ({request_id})",
         )
         return False
-    else:
-        return True
+    return True
 
 
 def is_user_latest_tos_signed(
