@@ -1131,6 +1131,20 @@ async def test_create_and_activate_user_device(
     assert response.status_code == 201
     assert response.json()["id"] is not None
 
+    async with TestingSessionLocal() as db:
+        wallet_device = await db.get(
+            models_myeclpay.WalletDevice,
+            response.json()["id"],
+        )
+        assert wallet_device is not None
+        assert (
+            wallet_device.ed25519_public_key
+            == ecl_user_wallet_device_public_key.public_bytes(
+                encoding=serialization.Encoding.Raw,
+                format=serialization.PublicFormat.Raw,
+            )
+        )
+
     response = client.get(
         f"/myeclpay/devices/activate?token={UNIQUE_TOKEN}",
         headers={"Authorization": f"Bearer {ecl_user_access_token}"},
@@ -1292,7 +1306,7 @@ def test_get_transactions_success(client: TestClient):
         transactions_dict[transaction_from_ecl_user2_to_ecl_user.id][
             "other_wallet_name"
         ]
-        == "nickname (firstname ECL User 2)"
+        == "firstname ECL User 2 (nickname)"
     )
     assert (
         transactions_dict[transaction_from_ecl_user2_to_ecl_user.id]["type"]

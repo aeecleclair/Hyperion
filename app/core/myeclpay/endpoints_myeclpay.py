@@ -1,3 +1,4 @@
+import base64
 import logging
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -1250,7 +1251,9 @@ async def create_user_devices(
         id=uuid.uuid4(),
         name=wallet_device_creation.name,
         wallet_id=user_payment.wallet_id,
-        ed25519_public_key=wallet_device_creation.ed25519_public_key,
+        ed25519_public_key=base64.decodebytes(
+            wallet_device_creation.ed25519_public_key.encode(),
+        ),
         creation=datetime.now(UTC),
         status=WalletDeviceStatus.INACTIVE,
         activation_token=activation_token,

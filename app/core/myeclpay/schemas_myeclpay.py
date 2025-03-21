@@ -2,7 +2,6 @@ from datetime import datetime
 from uuid import UUID
 
 from pydantic import (
-    Base64Bytes,
     BaseModel,
     HttpUrl,
 )
@@ -176,7 +175,7 @@ class WalletDevice(WalletDeviceBase):
 
 
 class WalletDeviceCreation(WalletDeviceBase):
-    ed25519_public_key: Base64Bytes
+    ed25519_public_key: str
 
 
 class Transaction(BaseModel):
