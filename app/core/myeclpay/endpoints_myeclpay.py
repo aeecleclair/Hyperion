@@ -1253,7 +1253,7 @@ async def create_user_devices(
         wallet_id=user_payment.wallet_id,
         ed25519_public_key=base64.decodebytes(
             wallet_device_creation.ed25519_public_key.encode(),
-        ),
+        ).decode(),
         creation=datetime.now(UTC),
         status=WalletDeviceStatus.INACTIVE,
         activation_token=activation_token,
@@ -1860,7 +1860,7 @@ async def store_scan_qrcode(
         )
 
     if not verify_signature(
-        public_key_bytes=debited_wallet_device.ed25519_public_key,
+        public_key_bytes=debited_wallet_device.ed25519_public_key.encode(),
         signature=scan_info.signature,
         data=scan_info,
         wallet_device_id=scan_info.key,
