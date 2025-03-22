@@ -1,15 +1,12 @@
 from collections.abc import Sequence
-from datetime import UTC, date, datetime
 from uuid import UUID
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import noload, selectinload
 
-from app.core.core_endpoints.models_core import CoreAssociationMembership
 from app.core.users.models_users import CoreUser
 from app.modules.cdr import models_cdr, schemas_cdr
-from app.types.membership import AvailableAssociationMembership
 
 
 async def get_cdr_users_curriculum(
@@ -712,75 +709,6 @@ async def delete_payment(
         delete(models_cdr.Payment).where(
             models_cdr.Payment.id == payment_id,
         ),
-    )
-
-
-async def get_actual_memberships_by_user_id(
-    db: AsyncSession,
-    user_id: str,
-) -> Sequence[CoreAssociationMembership]:
-    result = await db.execute(
-        select(CoreAssociationMembership).where(
-            CoreAssociationMembership.user_id == user_id,
-            CoreAssociationMembership.end_date > date(datetime.now(UTC).year, 9, 5),
-        ),
-    )
-    return result.scalars().all()
-
-
-async def get_membership_by_user_id_and_membership_name(
-    db: AsyncSession,
-    user_id: str,
-    membership: AvailableAssociationMembership,
-) -> CoreAssociationMembership | None:
-    result = await db.execute(
-        select(CoreAssociationMembership).where(
-            CoreAssociationMembership.user_id == user_id
-            and CoreAssociationMembership.membership == membership,
-        ),
-    )
-    return result.scalars().first()
-
-
-async def get_membership_by_id(
-    db: AsyncSession,
-    membership_id: UUID,
-) -> CoreAssociationMembership | None:
-    result = await db.execute(
-        select(CoreAssociationMembership).where(
-            CoreAssociationMembership.id == membership_id,
-        ),
-    )
-    return result.scalars().first()
-
-
-def create_membership(
-    db: AsyncSession,
-    membership: CoreAssociationMembership,
-):
-    db.add(membership)
-
-
-async def delete_membership(
-    db: AsyncSession,
-    membership_id: UUID,
-):
-    await db.execute(
-        delete(CoreAssociationMembership).where(
-            CoreAssociationMembership.id == membership_id,
-        ),
-    )
-
-
-async def update_membership(
-    db: AsyncSession,
-    membership_id: UUID,
-    membership: schemas_cdr.MembershipEdit,
-):
-    await db.execute(
-        update(CoreAssociationMembership)
-        .where(CoreAssociationMembership.id == membership_id)
-        .values(**membership.model_dump(exclude_none=True)),
     )
 
 

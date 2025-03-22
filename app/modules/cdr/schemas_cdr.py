@@ -4,6 +4,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, StringConstraints, field_validator
 
+from app.core.memberships import schemas_memberships
 from app.core.users.schemas_users import CoreUserSimple
 from app.modules.cdr.types_cdr import (
     CdrStatus,
@@ -12,7 +13,6 @@ from app.modules.cdr.types_cdr import (
 )
 from app.types.core_data import BaseCoreData
 from app.types.floors_type import FloorsType
-from app.types.membership import AvailableAssociationMembership
 from app.types.websocket import WSMessageModel
 from app.utils import validators
 
@@ -131,7 +131,7 @@ class ProductBase(BaseModel):
     description_fr: str | None = None
     description_en: str | None = None
     available_online: bool
-    related_membership: AvailableAssociationMembership | None = None
+    related_membership: schemas_memberships.MembershipSimple | None = None
     tickets: list[GenerateTicketBase] = []
     product_constraints: list[UUID]
     document_constraints: list[UUID]
@@ -146,7 +146,7 @@ class ProductCompleteNoConstraint(BaseModel):
     id: UUID
     seller_id: UUID
     variants: list[ProductVariantComplete] = []
-    related_membership: AvailableAssociationMembership | None = None
+    related_membership: schemas_memberships.MembershipSimple | None = None
     tickets: list[GenerateTicketComplete]
 
     model_config = ConfigDict(from_attributes=True)
@@ -161,7 +161,7 @@ class ProductComplete(BaseModel):
     id: UUID
     seller_id: UUID
     variants: list[ProductVariantComplete] = []
-    related_membership: AvailableAssociationMembership | None = None
+    related_membership: schemas_memberships.MembershipSimple | None = None
     product_constraints: list[ProductCompleteNoConstraint] = []
     document_constraints: list[DocumentComplete] = []
     tickets: list[GenerateTicketComplete] = []
@@ -176,7 +176,7 @@ class ProductEdit(BaseModel):
     description_en: str | None = None
     description: str | None = None
     available_online: bool | None = None
-    related_membership: AvailableAssociationMembership | None = None
+    related_membership: schemas_memberships.MembershipSimple | None = None
     product_constraints: list[UUID] | None = None
     document_constraints: list[UUID] | None = None
 
@@ -246,29 +246,6 @@ class PaymentComplete(PaymentBase):
     user_id: str
 
     model_config = ConfigDict(from_attributes=True)
-
-
-class MembershipBase(BaseModel):
-    membership: AvailableAssociationMembership
-    start_date: date
-    end_date: date
-
-
-class MembershipComplete(MembershipBase):
-    id: UUID
-    user_id: str
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class MembershipEdit(BaseModel):
-    end_date: date | None = None
-
-
-class MembershipUserMappingEmail(BaseModel):
-    user_email: str
-    start_date: date
-    end_date: date
 
 
 class Status(BaseCoreData):
