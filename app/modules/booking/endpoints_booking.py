@@ -38,12 +38,12 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 )
 async def get_managers(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.BDE)),
 ):
     """
     Get existing managers.
 
-    **This endpoint is only usable by administrators**
+    **This endpoint is only usable by BDE**
     """
 
     return await cruds_booking.get_managers(db=db)
@@ -57,12 +57,12 @@ async def get_managers(
 async def create_manager(
     manager: schemas_booking.ManagerBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.BDE)),
 ):
     """
     Create a manager.
 
-    **This endpoint is only usable by administrators**
+    **This endpoint is only usable by BDE**
     """
 
     # We need to check that manager.group_id is a valid group
@@ -92,12 +92,12 @@ async def update_manager(
     manager_id: str,
     manager_update: schemas_booking.ManagerUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.BDE)),
 ):
     """
     Update a manager, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value.
 
-    **This endpoint is only usable by administrators**
+    **This endpoint is only usable by BDE**
     """
 
     # We need to check that manager.group_id is a valid group
@@ -124,12 +124,12 @@ async def update_manager(
 async def delete_manager(
     manager_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.BDE)),
 ):
     """
     Delete a manager only if the manager is not linked to any room
 
-    **This endpoint is only usable by administrators**
+    **This endpoint is only usable by BDE**
     """
 
     manager = await cruds_booking.get_manager_by_id(db=db, manager_id=manager_id)
@@ -423,12 +423,12 @@ async def get_rooms(
 async def create_room(
     room: schemas_booking.RoomBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.BDE)),
 ):
     """
     Create a new room in database.
 
-    **This endpoint is only usable by admins**
+    **This endpoint is only usable by BDE**
     """
 
     try:
@@ -449,12 +449,12 @@ async def edit_room(
     room_id: str,
     room: schemas_booking.RoomBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.BDE)),
 ):
     """
     Edit a room.
 
-    **This endpoint is only usable by admins**
+    **This endpoint is only usable by BDE**
     """
 
     await cruds_booking.edit_room(db=db, room_id=room_id, room=room)
@@ -467,12 +467,12 @@ async def edit_room(
 async def delete_room(
     room_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.BDE)),
 ):
     """
     Delete a room only if there are not future or ongoing bookings of this room
 
-    **This endpoint is only usable by admins**
+    **This endpoint is only usable by BDE**
     """
     room = await cruds_booking.get_room_by_id(db=db, room_id=room_id)
     if all(booking.end < datetime.now(UTC) for booking in room.bookings):
