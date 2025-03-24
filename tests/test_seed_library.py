@@ -473,6 +473,45 @@ def test_create_plant_with_unknown_species(client: TestClient):
 # ---------------------------------------------------------------------------- #
 
 
+def test_update_information_as_simple(client: TestClient):
+    response = client.patch(
+        "/seed_library/information",
+        json={
+            "facebook_url": "",
+            "forum_url": "",
+            "description": "",
+            "contact": "",
+        },
+        headers={"Authorization": f"Bearer {token_simple}"},
+    )
+    assert response.status_code == 403
+
+
+def test_update_information_as_admin(client: TestClient):
+    response = client.patch(
+        "/seed_library/information",
+        json={
+            "facebook_url": "https://www.facebook.com/",
+            "forum_url": "https://www.facebook.com/",
+            "description": "this is a description",
+            "contact": "test@email.fr",
+        },
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 204
+
+    response_get = client.get(
+        "/seed_library/information",
+        headers={"Authorization": f"Bearer {token_simple}"},
+    )
+    assert response_get.status_code == 200
+    json = response_get.json()
+    assert json["facebook_url"] == "https://www.facebook.com/"
+    assert json["forum_url"] == "https://www.facebook.com/"
+    assert json["description"] == "this is a description"
+    assert json["contact"] == "test@email.fr"
+
+
 def test_update_species_as_simple(client: TestClient):
     response = client.patch(
         f"/seed_library/species/{species1.id}",
@@ -839,7 +878,7 @@ def test_delete_plant_simple(client: TestClient):
 
 def test_delete_plant_not_existing(client: TestClient):
     response = client.delete(
-        f"/seed_library/ plants/{uuid.uuid4()}",
+        f"/seed_library/plants/{uuid.uuid4()}",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 404

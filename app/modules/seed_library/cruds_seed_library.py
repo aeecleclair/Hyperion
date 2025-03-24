@@ -219,33 +219,6 @@ async def delete_plant(plant_id: uuid.UUID, db: AsyncSession):
         raise
 
 
-async def get_all_plants(
-    db: AsyncSession,
-) -> Sequence[schemas_seed_library.PlantComplete]:
-    """Return all Plants from database"""
-
-    result = (await db.execute(select(models_seed_library.Plant))).scalars().all()
-    return [
-        schemas_seed_library.PlantComplete(
-            id=plant.id,
-            state=plant.state,
-            species_id=plant.species_id,
-            propagation_method=plant.propagation_method,
-            nb_seeds_envelope=plant.nb_seeds_envelope,
-            reference=plant.reference,
-            ancestor_id=plant.ancestor_id,
-            previous_note=plant.previous_note,
-            current_note=plant.current_note,
-            borrower_id=plant.borrower_id,
-            confidential=plant.confidential,
-            nickname=plant.nickname,
-            planting_date=plant.planting_date,
-            borrowing_date=plant.borrowing_date,
-        )
-        for plant in result
-    ]
-
-
 async def get_plants_by_user_id(
     user_id: str,
     db: AsyncSession,

@@ -125,14 +125,11 @@ async def update_species(
     if species_db is None:
         raise HTTPException(404, "Species not found")
 
-    try:
-        await cruds_seed_library.update_species(
-            species_id=species_id,
-            species_edit=species_edit,
-            db=db,
-        )
-    except Exception:
-        raise HTTPException(status_code=400, detail="Could not update species")
+    await cruds_seed_library.update_species(
+        species_id=species_id,
+        species_edit=species_edit,
+        db=db,
+    )
 
 
 @module.router.delete(
