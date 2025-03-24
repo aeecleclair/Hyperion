@@ -8,16 +8,15 @@ from app.modules.seed_library.types_seed_library import (
     PropagationMethod,
     SpeciesType,
 )
-from app.types import core_data
 
 
 class SpeciesBase(BaseModel):
     prefix: str  # 3 caracteres
-    species_name: str
+    name: str
     difficulty: int  # entre 1 (facile) et 5 (difficile)
-    card: str
-    nb_seeds_recommended: int | None = None
     species_type: SpeciesType
+    card: str | None = None
+    nb_seeds_recommended: int | None = None
     start_season: datetime | None = None
     end_season: datetime | None = None
     time_maturation: int | None = None  # temps en jours
@@ -50,7 +49,7 @@ class PlantCreation(BaseModel):
 
 class PlantSimple(BaseModel):
     id: uuid.UUID
-    plant_reference: str
+    reference: str
     state: PlantState
     species_id: uuid.UUID
     propagation_method: PropagationMethod
@@ -75,13 +74,6 @@ class PlantEdit(BaseModel):
     planting_date: datetime | None = None
     borrowing_date: datetime | None = None
     nickname: str | None = None
-
-
-class SeedLibraryInformation(core_data.BaseCoreData):
-    facebook_url: str = ""
-    forum_url: str = ""
-    description: str = ""  # pour expliquer le principe du module
-    contact: str = ""
 
 
 class SpeciesTypesReturn(BaseModel):

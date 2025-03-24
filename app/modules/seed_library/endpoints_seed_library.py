@@ -13,6 +13,7 @@ from app.dependencies import (
     is_user_in,
 )
 from app.modules.seed_library import (
+    coredata_seed_library,
     cruds_seed_library,
     schemas_seed_library,
 )
@@ -84,6 +85,18 @@ async def create_species(
             detail="Prefix already used",
         )
 
+    if (await cruds_seed_library.count_species_with_name(species_base.name, db)) != 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Species name already used",
+        )
+
+    if species_base.difficulty < 1 or species_base.difficulty > 5:
+        raise HTTPException(
+            status_code=400,
+            detail="Difficulty must be between 1 and 5",
+        )
+
     species = schemas_seed_library.SpeciesComplete(
         id=uuid.uuid4(),
         **species_base.model_dump(),
@@ -107,6 +120,10 @@ async def update_species(
     Update a Specie
     **This endpoint is only usable by seed_library**
     """
+
+    species_db = await cruds_seed_library.get_species_by_id(species_id, db)
+    if species_db is None:
+        raise HTTPException(404, "Species not found")
 
     try:
         await cruds_seed_library.update_species(
@@ -134,7 +151,14 @@ async def delete_species(
 
     species = await cruds_seed_library.get_species_by_id(species_id, db)
     if species is None:
-        raise HTTPException(404, "Species does not exist.")
+        raise HTTPException(404, "Species not found")
+
+    active_plants = await cruds_seed_library.count_species_active_plants(species_id, db)
+    if active_plants != 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Species is still in use",
+        )
 
     return await cruds_seed_library.delete_species(
         species_id=species_id,
@@ -201,7 +225,7 @@ async def get_plant_by_id(
     """
     plant = await cruds_seed_library.get_plant_by_id(plant_id, db)
     if plant is None:
-        raise HTTPException(404, "Plant does not exist.")
+        raise HTTPException(404, "Plant not found")
     return plant
 
 
@@ -240,12 +264,12 @@ async def create_plant(
         )
     date = datetime.now(tz=UTC)
     if species_reference:
-        plant_reference = f"{species_reference.prefix}{date.day}{date.month}{date.year}"
+        reference = f"{species_reference.prefix}{date.day}{date.month}{date.year}"
         plant_number = await cruds_seed_library.count_plants_created_today(
-            plant_reference,
+            reference,
             db,
         )
-        plant_reference = f"{species_reference.prefix}{date.day}{date.month}{date.year}{plant_number:03}"
+        reference = f"{species_reference.prefix}{date.day}{date.month}{date.year}{plant_number:03}"
 
     plant = schemas_seed_library.PlantComplete(
         id=uuid.uuid4(),
@@ -253,7 +277,7 @@ async def create_plant(
         species_id=plant_base.species_id,
         propagation_method=plant_base.propagation_method,
         nb_seeds_envelope=plant_base.nb_seeds_envelope,
-        plant_reference=plant_reference,
+        reference=reference,
         ancestor_id=plant_base.ancestor_id,
         previous_note=plant_base.previous_note,
         current_note=None,
@@ -284,7 +308,7 @@ async def update_plant(
     """
     plant = await cruds_seed_library.get_plant_by_id(plant_id, db)
     if plant is None:
-        raise HTTPException(404, "Plant does not exist.")
+        raise HTTPException(404, "Plant not found")
 
     if plant.borrower_id != user.id:
         raise HTTPException(
@@ -312,6 +336,10 @@ async def update_plant_admin(
     Update a Plant
     **This endpoint is only usable by seed_library**
     """
+    plant = await cruds_seed_library.get_plant_by_id(plant_id, db)
+    if plant is None:
+        raise HTTPException(404, "Plant not found")
+
     await cruds_seed_library.update_plant(
         plant_id,
         plant_edit,
@@ -331,6 +359,10 @@ async def borrow_plant(
     """
     Plant borrowed by the user (modify borrowing date, borrower and state)
     """
+
+    plant = await cruds_seed_library.get_plant_by_id(plant_id, db)
+    if plant is None:
+        raise HTTPException(404, "Plant not found")
 
     await cruds_seed_library.borrow_plant(user.id, plant_id, db)
 
@@ -360,7 +392,13 @@ async def delete_plant(
 
     plant = await cruds_seed_library.get_plant_by_id(plant_id, db)
     if plant is None:
-        raise HTTPException(404, "Plant does not exist.")
+        raise HTTPException(404, "Plant not found")
+
+    if plant.state != PlantState.waiting:
+        raise HTTPException(
+            status_code=400,
+            detail="Plant is not in waiting state",
+        )
 
     return await cruds_seed_library.delete_plant(
         plant_id=plant_id,
@@ -370,12 +408,12 @@ async def delete_plant(
 
 @module.router.get(
     "/seed_library/information",
-    response_model=schemas_seed_library.SeedLibraryInformation,
+    response_model=coredata_seed_library.SeedLibraryInformation,
     status_code=200,
 )
 async def get_seed_library_information(db: AsyncSession = Depends(get_db)):
     return await tools.get_core_data(
-        schemas_seed_library.SeedLibraryInformation,
+        coredata_seed_library.SeedLibraryInformation,
         db,
     )
 
@@ -385,7 +423,7 @@ async def get_seed_library_information(db: AsyncSession = Depends(get_db)):
     status_code=204,
 )
 async def update_seed_library_information(
-    information: schemas_seed_library.SeedLibraryInformation,
+    information: coredata_seed_library.SeedLibraryInformation,
     user: models_users.CoreUser = Depends(is_user_in(GroupType.seed_library)),
     db: AsyncSession = Depends(get_db),
 ):

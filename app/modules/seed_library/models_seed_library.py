@@ -16,7 +16,7 @@ class Species(Base):
     __tablename__ = "seed_library_species"
     id: Mapped[PrimaryKey]
     prefix: Mapped[str] = mapped_column(unique=True)  # 3 letters
-    species_name: Mapped[str] = mapped_column(unique=True)
+    name: Mapped[str] = mapped_column(unique=True)
     difficulty: Mapped[int | None]
     card: Mapped[str | None]
     nb_seeds_recommended: Mapped[int | None]
@@ -29,13 +29,13 @@ class Species(Base):
 class Plant(Base):
     __tablename__ = "seed_library_plants"
     id: Mapped[PrimaryKey]
+    reference: Mapped[str] = mapped_column(unique=True)
     state: Mapped[PlantState] = mapped_column(index=True)
     species_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("seed_library_species.id"),
     )
     propagation_method: Mapped[PropagationMethod]
     nb_seeds_envelope: Mapped[int | None]
-    plant_reference: Mapped[str] = mapped_column(unique=True)
     ancestor_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("seed_library_plants.id"),
     )

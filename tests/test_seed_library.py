@@ -55,7 +55,7 @@ async def init_objects() -> None:
     species1 = models_seed_library.Species(
         id=uuid.uuid4(),
         prefix="ROM",
-        species_name="Romarin",
+        name="Romarin",
         difficulty=2,
         card="description or URL",
         nb_seeds_recommended=15,
@@ -70,7 +70,7 @@ async def init_objects() -> None:
     species2 = models_seed_library.Species(
         id=uuid.uuid4(),
         prefix="ORC",
-        species_name="Orchidée",
+        name="Orchidée",
         difficulty=3,
         card="description or URL",
         nb_seeds_recommended=1,
@@ -88,7 +88,7 @@ async def init_objects() -> None:
         species_id=species1.id,
         propagation_method=types_seed_library.PropagationMethod.seed,
         nb_seeds_envelope=18,
-        plant_reference="ROM27022024001",
+        reference="ROM27022024001",
         ancestor_id=None,
         previous_note=None,
         current_note="this is my new note",
@@ -107,7 +107,7 @@ async def init_objects() -> None:
         species_id=species1.id,
         propagation_method=types_seed_library.PropagationMethod.seed,
         nb_seeds_envelope=12,
-        plant_reference="ROM27022025001",
+        reference="ROM27022025001",
         ancestor_id=plant_ancestor_from_1.id,
         previous_note="this is my ancestor note",
         current_note=None,
@@ -126,7 +126,7 @@ async def init_objects() -> None:
         species_id=species2.id,
         propagation_method=types_seed_library.PropagationMethod.cutting,
         nb_seeds_envelope=18,
-        plant_reference="ORC27022025001",
+        reference="ORC27022025001",
         ancestor_id=None,
         previous_note=None,
         current_note="this is my new note",
@@ -145,7 +145,7 @@ async def init_objects() -> None:
         species_id=species2.id,
         propagation_method=types_seed_library.PropagationMethod.cutting,
         nb_seeds_envelope=23,
-        plant_reference="ORC27022025002",
+        reference="ORC27022025002",
         ancestor_id=plant_from_2.id,
         previous_note=None,
         current_note="...",
@@ -164,7 +164,7 @@ async def init_objects() -> None:
         species_id=species1.id,
         propagation_method=types_seed_library.PropagationMethod.seed,
         nb_seeds_envelope=212,
-        plant_reference="ROM27022025001",
+        reference="ROM27022025003",
         ancestor_id=plant_from_1.id,
         previous_note=None,
         current_note="...",
@@ -196,7 +196,7 @@ def test_get_all_species_types(client: TestClient):
         headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response.status_code == 200
-    assert len(response.json()) == 8
+    assert len(response.json()["species_type"]) == len(types_seed_library.SpeciesType)
 
 
 def test_get_waiting_plants(client: TestClient):
@@ -208,7 +208,7 @@ def test_get_waiting_plants(client: TestClient):
     plants = response.json()
     assert len(plants) == 2
     plant0 = plants[0]
-    assert plant0["id"] == plant_from_1.id
+    assert plant0["id"] == str(plant_from_1.id)
 
 
 def test_get_my_plants(client: TestClient):
@@ -221,8 +221,8 @@ def test_get_my_plants(client: TestClient):
     assert len(plants) == 3
 
     plants_id = [plant["id"] for plant in plants]
-    assert plant_ancestor_from_1.id in plants_id
-    assert plant_from_2.id in plants_id
+    assert str(plant_ancestor_from_1.id) in plants_id
+    assert str(plant_from_2.id) in plants_id
 
 
 def test_get_plants_by_user_id_as_simple(client: TestClient):
@@ -243,21 +243,20 @@ def test_get_plants_by_user_id_as_admin(client: TestClient):
     assert len(plants) == 3
 
     plants_id = [plant["id"] for plant in plants]
-    assert plant_ancestor_from_1.id in plants_id
-    assert plant_from_2.id in plants_id
+    assert str(plant_ancestor_from_1.id) in plants_id
+    assert str(plant_from_2.id) in plants_id
 
 
-def test_get_plant_by_known_id(client: TestClient):
+def test_get_plant_with_valid_id(client: TestClient):
     response = client.get(
         f"/seed_library/plants/{plant_from_1.id}",
         headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response.status_code == 200
-    assert len(response.json()) == 1
-    assert response.json()["id"] == plant_from_1.id
+    assert response.json()["id"] == str(plant_from_1.id)
 
 
-def test_get_plant_by_non_unknown_id(client: TestClient):
+def test_get_plant_with_unknown_id(client: TestClient):
     response = client.get(
         f"/seed_library/plants/{uuid.uuid4()}",
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -271,6 +270,11 @@ def test_get_information(client: TestClient):
         headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response.status_code == 200
+    json = response.json()
+    assert json["facebook_url"] is not None
+    assert json["forum_url"] is not None
+    assert json["description"] is not None
+    assert json["contact"] is not None
 
 
 # ---------------------------------------------------------------------------- #
@@ -283,11 +287,11 @@ def test_create_species_as_simple(client: TestClient):
         "/seed_library/species/",
         json={
             "prefix": "TOM",
-            "species_name": "Tomate",
+            "name": "Tomate",
             "difficulty": 1,
             "card": "https://fr.wikipedia.org/wiki/Tomate",
             "nb_seeds_recommended": 8,
-            "species_type": types_seed_library.SpeciesType.vegetables,
+            "species_type": types_seed_library.SpeciesType.vegetables.value,
             "time_maturation": 12,
         },
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -300,11 +304,11 @@ def test_create_species_used_prefix_as_admin(client: TestClient):
         "/seed_library/species/",
         json={
             "prefix": "ROM",
-            "species_name": "Tomate",
+            "name": "Tomate",
             "difficulty": 1,
             "card": "https://fr.wikipedia.org/wiki/Tomate",
             "nb_seeds_recommended": 8,
-            "species_type": types_seed_library.SpeciesType.vegetables,
+            "species_type": types_seed_library.SpeciesType.vegetables.value,
             "time_maturation": 12,
         },
         headers={"Authorization": f"Bearer {token_admin}"},
@@ -317,11 +321,11 @@ def test_create_species_used_name_as_admin(client: TestClient):
         "/seed_library/species/",
         json={
             "prefix": "TOM",
-            "species_name": "Romarin",
+            "name": "Romarin",
             "difficulty": 1,
             "card": "https://fr.wikipedia.org/wiki/Tomate",
             "nb_seeds_recommended": 8,
-            "species_type": types_seed_library.SpeciesType.vegetables,
+            "species_type": types_seed_library.SpeciesType.vegetables.value,
             "time_maturation": 12,
         },
         headers={"Authorization": f"Bearer {token_admin}"},
@@ -334,11 +338,11 @@ def test_create_species_impossible_difficulty_as_admin(client: TestClient):
         "/seed_library/species/",
         json={
             "prefix": "TOM",
-            "species_name": "Tomate",
+            "name": "Tomate",
             "difficulty": 7,
             "card": "https://fr.wikipedia.org/wiki/Tomate",
             "nb_seeds_recommended": 8,
-            "species_type": types_seed_library.SpeciesType.vegetables,
+            "species_type": types_seed_library.SpeciesType.vegetables.value,
             "time_maturation": 12,
         },
         headers={"Authorization": f"Bearer {token_admin}"},
@@ -351,17 +355,24 @@ def test_create_species_as_admin(client: TestClient):
         "/seed_library/species/",
         json={
             "prefix": "TOM",
-            "species_name": "Tomate",
+            "name": "Tomate",
             "difficulty": 1,
             "card": "https://fr.wikipedia.org/wiki/Tomate",
             "nb_seeds_recommended": 8,
-            "species_type": types_seed_library.SpeciesType.vegetables,
+            "species_type": types_seed_library.SpeciesType.vegetables.value,
             "time_maturation": 12,
         },
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 201
-    assert len(response.json()) == 1
+    species_id = response.json()["id"]
+
+    response_get = client.get(
+        "/seed_library/species/",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response_get.status_code == 200
+    assert species_id in [s["id"] for s in response_get.json()]
 
     ###############Vérif################
 
@@ -377,8 +388,8 @@ def test_create_plant_without_ancestor_as_simple(client: TestClient):
     response = client.post(
         "/seed_library/plants/",
         json={
-            "species_id": species1.id,
-            "propagation_method": types_seed_library.PropagationMethod.seed,
+            "species_id": str(species1.id),
+            "propagation_method": types_seed_library.PropagationMethod.seed.value,
             "nb_seeds_envelope": 3,
             # "ancestor_id": None,
             "previous_note": "Oskour maman j ai tué ma plante",
@@ -393,8 +404,8 @@ def test_create_plant_without_ancestor_as_admin(client: TestClient):
     response = client.post(
         "/seed_library/plants/",
         json={
-            "species_id": species1.id,
-            "propagation_method": types_seed_library.PropagationMethod.seed,
+            "species_id": str(species1.id),
+            "propagation_method": types_seed_library.PropagationMethod.seed.value,
             "nb_seeds_envelope": 3,
             "ancestor_id": None,
             "previous_note": "Oskour maman j ai tué ma plante",
@@ -403,8 +414,7 @@ def test_create_plant_without_ancestor_as_admin(client: TestClient):
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 201
-    assert len(response.json()) == 1
-    assert response.json()["id"] == plant_from_1.id
+    plant_id = response.json()["id"]
 
     ###############Vérif################
 
@@ -413,48 +423,43 @@ def test_create_plant_without_ancestor_as_admin(client: TestClient):
         headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response_get.status_code == 200
-    assert len(response_get.json()) == 3
-    assert len(response_get.json()["plant_reference"]) == 12
-    assert len(response_get.json()["id"]) != plant_from_1.id
+    assert plant_id in [p["id"] for p in response_get.json()]
 
 
 def test_create_plant_with_ancestor(client: TestClient):
     response = client.post(
         "/seed_library/plants/",
         json={
-            "species_id": species1.id,
-            "propagation_method": types_seed_library.PropagationMethod.seed,
+            "species_id": str(species1.id),
+            "propagation_method": types_seed_library.PropagationMethod.seed.value,
             "nb_seeds_envelope": 3,
-            "ancestor_id": plant_from_1.id,
+            "ancestor_id": str(plant_from_1.id),
             "previous_note": "Oskour maman j ai tué ma plante",
             "confidential": False,
         },
         headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response.status_code == 201
-    assert len(response.json()) == 1
-    assert response.json()["id"] == plant_from_1.id
+    plant_id = response.json()["id"]
 
     ###############Vérif################
 
     response_get = client.get(
-        "/seed_library/plants/waiting",
+        f"/seed_library/plants/{plant_id}",
         headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response_get.status_code == 200
-    assert len(response_get.json()) == 4
-    assert len(response_get.json()["plant_reference"]) == 12
-    assert len(response_get.json()["id"]) != plant_from_1.id
+    assert response_get.json()["ancestor_id"] == str(plant_from_1.id)
 
 
-def test_create_plant_without_species(client: TestClient):
+def test_create_plant_with_unknown_species(client: TestClient):
     response = client.post(
         "/seed_library/plants/",
         json={
-            "species_id": uuid.uuid4(),
-            "propagation_method": types_seed_library.PropagationMethod.seed,
+            "species_id": str(uuid.uuid4()),
+            "propagation_method": types_seed_library.PropagationMethod.seed.value,
             "nb_seeds_envelope": 5,
-            "ancestor_id": plant_from_1.id,
+            "ancestor_id": str(plant_from_1.id),
             "previous_note": "Oskour maman j ai tué ma plante",
             "confidential": False,
         },
@@ -476,13 +481,17 @@ def test_update_species_as_simple(client: TestClient):
             "difficulty": 2,
             "card": "https://fr.wiktionary.org/wiki/dat%C3%A9",
             "nb_seeds_recommended": 48,
-            "start_season": datetime(2025, 10, 1, tzinfo=UTC),
-            "end_season": datetime(2025, 12, 1, tzinfo=UTC),
+            "start_season": datetime(2025, 10, 1, tzinfo=UTC).strftime(
+                "%Y-%m-%dT%H:%M:%SZ",
+            ),
+            "end_season": datetime(2025, 12, 1, tzinfo=UTC).strftime(
+                "%Y-%m-%dT%H:%M:%SZ",
+            ),
             "time_maturation": 6,
         },
         headers={"Authorization": f"Bearer {token_simple}"},
     )
-    assert response.status_code == 400
+    assert response.status_code == 403
 
 
 def test_update_unknown_species(client: TestClient):
@@ -493,55 +502,48 @@ def test_update_unknown_species(client: TestClient):
             "difficulty": 2,
             "card": "https://fr.wiktionary.org/wiki/dat%C3%A9",
             "nb_seeds_recommended": 48,
-            "start_season": datetime(2025, 10, 1, tzinfo=UTC),
-            "end_season": datetime(2025, 12, 1, tzinfo=UTC),
+            "start_season": datetime(2025, 10, 1, tzinfo=UTC).strftime(
+                "%Y-%m-%dT%H:%M:%SZ",
+            ),
+            "end_season": datetime(2025, 12, 1, tzinfo=UTC).strftime(
+                "%Y-%m-%dT%H:%M:%SZ",
+            ),
             "time_maturation": 6,
         },
-        headers={"Authorization": f"Bearer {token_simple}"},
-    )
-    assert response.status_code == 400
-
-
-def test_update_species_as_admin(client: TestClient):
-    ##############Plant creation###############
-    response_create = client.post(
-        "/seed_library/species/",
-        json={
-            "prefix": "UPD",
-            "species_name": "Update",
-            "difficulty": 1,
-            "card": "https://fr.wikipedia.org/wiki/Mise_%C3%A0_jour",
-            "nb_seeds_recommended": 11,
-            "species_type": types_seed_library.SpeciesType.interior,
-            "time_maturation": 3,
-        },
         headers={"Authorization": f"Bearer {token_admin}"},
     )
-    assert response_create.status_code == 201
-    ###########Check create+get id#############
-    response_get = client.get(
-        "/seed_library/species/",
-        headers={"Authorization": f"Bearer {token_admin}"},
+    assert response.status_code == 404
+
+
+async def test_update_species_as_admin(client: TestClient):
+    species_db = models_seed_library.Species(
+        id=uuid.uuid4(),
+        prefix="UPD",
+        name="Update",
+        difficulty=1,
+        card="description or URL",
+        nb_seeds_recommended=15,
+        species_type=types_seed_library.SpeciesType.aromatic,
+        start_season=datetime(2025, 10, 1, tzinfo=UTC),
+        end_season=datetime(2025, 12, 1, tzinfo=UTC),
+        time_maturation=55,
     )
-    assert response_get.status_code == 200
-    assert len(response_get.json()) == 4
-    test = False
-    for s in response_get.json():
-        if s["species_name"] == "Update":
-            test = True
-            new_id = s["id"]
-    assert test
+    await add_object_to_db(species_db)
 
     ################Modification################
     response = client.patch(
-        f"/seed_library/species/{new_id}",
+        f"/seed_library/species/{species_db.id}",
         json={
             "prefix": "DAT",
             "difficulty": 2,
             "card": "https://fr.wiktionary.org/wiki/dat%C3%A9",
             "nb_seeds_recommended": 48,
-            "start_season": datetime(2025, 10, 1, tzinfo=UTC),
-            "end_season": datetime(2025, 12, 1, tzinfo=UTC),
+            "start_season": datetime(2025, 10, 1, tzinfo=UTC).strftime(
+                "%Y-%m-%dT%H:%M:%SZ",
+            ),
+            "end_season": datetime(2025, 12, 1, tzinfo=UTC).strftime(
+                "%Y-%m-%dT%H:%M:%SZ",
+            ),
             "time_maturation": 6,
         },
         headers={"Authorization": f"Bearer {token_admin}"},
@@ -553,15 +555,20 @@ def test_update_species_as_admin(client: TestClient):
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response_updated_get.status_code == 200
-    test = False
-    for s in response_get.json():
-        if s["id"] == new_id:
-            assert s["prefix"] == "DAT"
-            assert s["difficulty"] == 2
-            assert s["card"] == "https://fr.wiktionary.org/wiki/dat%C3%A9"
-            assert s[""] == 48
-            test = True
-    assert test
+    species = next(
+        (s for s in response_updated_get.json() if s["id"] == str(species_db.id)),
+    )
+    assert species["prefix"] == "DAT"
+    assert species["difficulty"] == 2
+    assert species["card"] == "https://fr.wiktionary.org/wiki/dat%C3%A9"
+    assert species["nb_seeds_recommended"] == 48
+    assert species["start_season"] == datetime(2025, 10, 1, tzinfo=UTC).strftime(
+        "%Y-%m-%dT%H:%M:%SZ",
+    )
+    assert species["end_season"] == datetime(2025, 12, 1, tzinfo=UTC).strftime(
+        "%Y-%m-%dT%H:%M:%SZ",
+    )
+    assert species["time_maturation"] == 6
 
 
 def test_update_plant_not_as_owner(client: TestClient):
@@ -570,11 +577,11 @@ def test_update_plant_not_as_owner(client: TestClient):
     response = client.patch(
         f"/seed_library/plants/{plant_from_2_update_test.id}",
         json={
-            "state": types_seed_library.PlantState.used_up,
+            "state": types_seed_library.PlantState.used_up.value,
             "current_note": "plant successfully modified",
             "confidential": False,
-            "planting_date": pd,
-            "borrowing_date": bd,
+            "planting_date": pd.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "borrowing_date": bd.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "nickname": "your updated plant",
         },
         headers={"Authorization": f"Bearer {token_admin}"},
@@ -588,11 +595,11 @@ def test_update_unknown_plant(client: TestClient):
     response = client.patch(
         f"/seed_library/plants/{uuid.uuid4()}",
         json={
-            "state": types_seed_library.PlantState.used_up,
+            "state": types_seed_library.PlantState.used_up.value,
             "current_note": "plant successfully modified",
             "confidential": False,
-            "planting_date": pd,
-            "borrowing_date": bd,
+            "planting_date": pd.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "borrowing_date": bd.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "nickname": "your updated plant",
         },
         headers={"Authorization": f"Bearer {token_admin}"},
@@ -606,11 +613,11 @@ def test_update_plant_as_owner(client: TestClient):
     response = client.patch(
         f"/seed_library/plants/{plant_from_2_update_test.id}",
         json={
-            "state": types_seed_library.PlantState.used_up,
+            "state": types_seed_library.PlantState.used_up.value,
             "current_note": "plant successfully modified",
             "confidential": False,
-            "planting_date": pd,
-            "borrowing_date": bd,
+            "planting_date": pd.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "borrowing_date": bd.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "nickname": "your updated plant",
         },
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -618,21 +625,17 @@ def test_update_plant_as_owner(client: TestClient):
     assert response.status_code == 204
     ############## Check Update ###############
     response_updated_get = client.get(
-        "/seed_library/plants/{plant_from_2_update_test.id}",
+        f"/seed_library/plants/{plant_from_2_update_test.id}",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response_updated_get.status_code == 200
-    test = False
-    for p in response_updated_get.json():
-        if p["id"] == plant_from_2_update_test.id:
-            assert p["state"] == types_seed_library.PlantState.used_up
-            assert p["current_note"] == "plant successfully modified"
-            assert p["confidential"] == False
-            assert p["planting_date"] == pd
-            assert p["borrowing_date"] == bd
-            assert p["nickname"] == "your updated plant"
-            test = True
-    assert test
+    json = response_updated_get.json()
+    assert json["state"] == types_seed_library.PlantState.used_up.value
+    assert json["current_note"] == "plant successfully modified"
+    assert not json["confidential"]
+    assert json["planting_date"] == pd.strftime("%Y-%m-%dT%H:%M:%SZ")
+    assert json["borrowing_date"] == bd.strftime("%Y-%m-%dT%H:%M:%SZ")
+    assert json["nickname"] == "your updated plant"
 
 
 def test_update_unknown_plant_admin(client: TestClient):
@@ -641,14 +644,14 @@ def test_update_unknown_plant_admin(client: TestClient):
     response = client.patch(
         f"/seed_library/plants/{uuid.uuid4()}/admin",
         json={
-            "state": types_seed_library.PlantState.retrieved,
+            "state": types_seed_library.PlantState.retrieved.value,
             "current_note": "plant successfully modified",
             "confidential": True,
-            "planting_date": pd,
-            "borrowing_date": bd,
+            "planting_date": pd.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "borrowing_date": bd.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "nickname": "updated plant",
         },
-        headers={"Authorization": f"Bearer {token_simple}"},
+        headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 404
 
@@ -659,11 +662,11 @@ def test_update_plant_admin_as_simple(client: TestClient):
     response = client.patch(
         f"/seed_library/plants/{plant_from_1.id}/admin",
         json={
-            "state": types_seed_library.PlantState.retrieved,
+            "state": types_seed_library.PlantState.retrieved.value,
             "current_note": "plant successfully modified",
             "confidential": True,
-            "planting_date": pd,
-            "borrowing_date": bd,
+            "planting_date": pd.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "borrowing_date": bd.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "nickname": "updated plant",
         },
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -671,46 +674,36 @@ def test_update_plant_admin_as_simple(client: TestClient):
     assert response.status_code == 403
 
 
-def test_update_plant_admin_as_admin(client: TestClient):
-    ##############Plant creation###############
-    response_create = client.post(
-        "/seed_library/plants/",
-        json={
-            "species_id": species1.id,
-            "propagation_method": types_seed_library.PropagationMethod.seed,
-            "nb_seeds_envelope": 32,
-            "ancestor_id": plant_from_1.id,
-            "previous_note": "test_admin_update_plant_admin",
-            "confidential": False,
-        },
-        headers={"Authorization": f"Bearer {token_admin}"},
+async def test_update_plant_admin_as_admin(client: TestClient):
+    plant_db = models_seed_library.Plant(
+        id=uuid.uuid4(),
+        reference="ROM27022025004",
+        state=types_seed_library.PlantState.waiting,
+        species_id=species1.id,
+        propagation_method=types_seed_library.PropagationMethod.seed,
+        nb_seeds_envelope=32,
+        ancestor_id=plant_from_1.id,
+        previous_note="test_admin_update_plant_admin",
+        current_note=None,
+        borrower_id=None,
+        confidential=False,
+        nickname=None,
+        planting_date=None,
+        borrowing_date=None,
     )
-    assert response_create.status_code == 201
-    ###########Check create+get id#############
-    response_get = client.get(
-        "/seed_library/plants/waiting",
-        headers={"Authorization": f"Bearer {token_admin}"},
-    )
-    assert response_get.status_code == 200
-    assert len(response_get.json()) == 5
-    test = False
-    for p in response_get.json():
-        if p["previous_note"] == "test_admin_update_plant_admin":
-            test = True
-            new_id = p["id"]
-    assert test
+    await add_object_to_db(plant_db)
 
     ################Modification################
     pd = datetime(2000, 1, 1, tzinfo=UTC)
     bd = datetime(2000, 2, 1, tzinfo=UTC)
     response = client.patch(
-        f"/seed_library/plants/{new_id}/admin",
+        f"/seed_library/plants/{plant_db.id}/admin",
         json={
-            "state": types_seed_library.PlantState.retrieved,
+            "state": types_seed_library.PlantState.retrieved.value,
             "current_note": "plant successfully modified",
             "confidential": True,
-            "planting_date": pd,
-            "borrowing_date": bd,
+            "planting_date": pd.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "borrowing_date": bd.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "nickname": "updated plant",
         },
         headers={"Authorization": f"Bearer {token_admin}"},
@@ -718,21 +711,23 @@ def test_update_plant_admin_as_admin(client: TestClient):
     assert response.status_code == 204
     ############## Check Update ###############
     response_updated_get = client.get(
-        "/seed_library/plants/{new_id}",
+        f"/seed_library/plants/{plant_db.id}",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response_updated_get.status_code == 200
-    test = False
-    for p in response_get.json():
-        if p["id"] == new_id:
-            assert p["state"] == types_seed_library.PlantState.retrieved
-            assert p["current_note"] == "plant successfully modified"
-            assert p["confidential"] == True
-            assert p["planting_date"] == pd
-            assert p["borrowing_date"] == bd
-            assert p["nickname"] == "updated plant"
-            test = True
-    assert test
+    assert (
+        response_updated_get.json()["state"]
+        == types_seed_library.PlantState.retrieved.value
+    )
+    assert response_updated_get.json()["current_note"] == "plant successfully modified"
+    assert response_updated_get.json()["confidential"]
+    assert response_updated_get.json()["planting_date"] == pd.strftime(
+        "%Y-%m-%dT%H:%M:%SZ",
+    )
+    assert response_updated_get.json()["borrowing_date"] == bd.strftime(
+        "%Y-%m-%dT%H:%M:%SZ",
+    )
+    assert response_updated_get.json()["nickname"] == "updated plant"
 
 
 def test_unknown_borrow(client: TestClient):
@@ -751,18 +746,14 @@ def test_borrow(client: TestClient):
     assert response.status_code == 204
     ############## Check Update ###############
     response_updated_get = client.get(
-        "/seed_library/plants/{plant_from_1_update_test.id}",
+        f"/seed_library/plants/{plant_from_1_update_test.id}",
         headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response_updated_get.status_code == 200
-    test = False
-    for p in response_updated_get.json():
-        if p["id"] == plant_from_1_update_test.id:
-            assert p["borrower_id"] == token_simple
-            assert p["borrowing_date"] is not None
-            assert p["state"] == types_seed_library.PlantState.retrieved
-            test = True
-    assert test
+    json = response_updated_get.json()
+    assert json["borrower_id"] == simple_user.id
+    assert json["borrowing_date"] is not None
+    assert json["state"] == types_seed_library.PlantState.retrieved.value
 
 
 # ---------------------------------------------------------------------------- #
@@ -781,8 +772,7 @@ def test_delete_species_simple(client: TestClient):
         "/seed_library/species/",
         headers={"Authorization": f"Bearer {token_simple}"},
     ).json()
-
-    assert len(species) == 4
+    assert str(species1.id) in [s["id"] for s in species]
 
 
 def test_delete_species_not_existing(client: TestClient):
@@ -792,47 +782,33 @@ def test_delete_species_not_existing(client: TestClient):
     )
     assert response.status_code == 404
 
-    species = client.get(
-        "/seed_library/species/",
-        headers={"Authorization": f"Bearer {token_admin}"},
-    ).json()
 
-    assert len(species) == 4
-
-
-def test_delete_species_admin(client: TestClient):
-    response = client.post(
-        "/seed_library/species/",
-        json={
-            "prefix": "Del",
-            "species_name": "Delete",
-            "difficulty": 5,
-            "card": "https://fr.wikipedia.org/wiki/Tomate",
-            "nb_seeds_recommended": 8,
-            "species_type": types_seed_library.SpeciesType.vegetables,
-            "time_maturation": 12,
-        },
+def test_delete_species_used(client: TestClient):
+    response = client.delete(
+        f"/seed_library/species/{species1.id}",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Species is still in use"
 
-    assert response.status_code == 201
 
-    species = client.get(
-        "/seed_library/species/",
-        headers={"Authorization": f"Bearer {token_admin}"},
-    ).json()
-    assert species.status_code == 200
-    assert len(species) == 5
-
-    test = False
-    for s in species.json():
-        if s["species_name"] == "Delete":
-            test = True
-            id_delete = s["id"]
-    assert test
+async def test_delete_species_admin(client: TestClient):
+    species_db = models_seed_library.Species(
+        id=uuid.uuid4(),
+        prefix="DEL",
+        name="Delete",
+        difficulty=1,
+        card="description or URL",
+        nb_seeds_recommended=15,
+        species_type=types_seed_library.SpeciesType.aromatic,
+        start_season=datetime(2025, 10, 1, tzinfo=UTC),
+        end_season=datetime(2025, 12, 1, tzinfo=UTC),
+        time_maturation=55,
+    )
+    await add_object_to_db(species_db)
 
     response = client.delete(
-        f"/seed_library/species/{id_delete}",
+        f"/seed_library/species/{species_db.id}",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
 
@@ -843,7 +819,7 @@ def test_delete_species_admin(client: TestClient):
         headers={"Authorization": f"Bearer {token_admin}"},
     ).json()
 
-    assert len(species) == 4
+    assert str(species_db.id) not in [s["id"] for s in species]
 
 
 def test_delete_plant_simple(client: TestClient):
@@ -858,7 +834,7 @@ def test_delete_plant_simple(client: TestClient):
         headers={"Authorization": f"Bearer {token_simple}"},
     ).json()
 
-    assert len(plants) == 5
+    assert str(plant_from_1.id) in [p["id"] for p in plants]
 
 
 def test_delete_plant_not_existing(client: TestClient):
@@ -868,46 +844,37 @@ def test_delete_plant_not_existing(client: TestClient):
     )
     assert response.status_code == 404
 
-    plants = client.get(
-        "/seed_library/plants/waiting",
-        headers={"Authorization": f"Bearer {token_admin}"},
-    ).json()
 
-    assert len(plants) == 5
-
-
-def test_delete_plant_admin(client: TestClient):
-    response = client.post(
-        "/seed_library/plants/",
-        json={
-            "species_id": species1.id,
-            "propagation_method": types_seed_library.PropagationMethod.seed,
-            "nb_seeds_envelope": 3,
-            "ancestor_id": None,
-            "previous_note": "Oskour maman j ai tué ma plante",
-            "confidential": False,
-        },
+def test_delete_plant_borrowed(client: TestClient):
+    response = client.delete(
+        f"/seed_library/plants/{plant_from_2.id}",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Plant is not in waiting state"
 
-    assert response.status_code == 201
 
-    plants = client.get(
-        "/seed_library/plants/waiting",
-        headers={"Authorization": f"Bearer {token_admin}"},
-    ).json()
-    assert plants.status_code == 200
-    assert len(plants) == 6
-
-    test = False
-    for p in plants.json():
-        if p["previous_note"] == "Oskour maman j ai tué ma plante":
-            test = True
-            id_delete = p["id"]
-    assert test
+async def test_delete_plant_admin(client: TestClient):
+    plant_db = models_seed_library.Plant(
+        id=uuid.uuid4(),
+        reference="ROM27022025005",
+        state=types_seed_library.PlantState.waiting,
+        species_id=species1.id,
+        propagation_method=types_seed_library.PropagationMethod.seed,
+        nb_seeds_envelope=32,
+        ancestor_id=plant_from_1.id,
+        previous_note="test_admin_delete_plant",
+        current_note=None,
+        borrower_id=None,
+        confidential=False,
+        nickname=None,
+        planting_date=None,
+        borrowing_date=None,
+    )
+    await add_object_to_db(plant_db)
 
     response = client.delete(
-        f"/seed_library/plants/{id_delete}",
+        f"/seed_library/plants/{plant_db.id}",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
 
@@ -917,5 +884,4 @@ def test_delete_plant_admin(client: TestClient):
         "/seed_library/plants/waiting",
         headers={"Authorization": f"Bearer {token_admin}"},
     ).json()
-
-    assert len(plants) == 5
+    assert str(plant_db.id) not in [p["id"] for p in plants]

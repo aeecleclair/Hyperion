@@ -29,7 +29,7 @@ async def create_species(
     species_db = models_seed_library.Species(
         id=species.id,
         prefix=species.prefix,
-        species_name=species.species_name,
+        name=species.name,
         difficulty=species.difficulty,
         card=species.card,
         nb_seeds_recommended=species.nb_seeds_recommended,
@@ -96,7 +96,7 @@ async def get_all_species(
         schemas_seed_library.SpeciesComplete(
             id=species.id,
             prefix=species.prefix,
-            species_name=species.species_name,
+            name=species.name,
             difficulty=species.difficulty,
             card=species.card,
             nb_seeds_recommended=species.nb_seeds_recommended,
@@ -136,7 +136,7 @@ async def get_species_by_id(
         schemas_seed_library.SpeciesComplete(
             id=result.id,
             prefix=result.prefix,
-            species_name=result.species_name,
+            name=result.name,
             difficulty=result.difficulty,
             card=result.card,
             nb_seeds_recommended=result.nb_seeds_recommended,
@@ -166,7 +166,7 @@ async def create_plant(
         species_id=plant.species_id,
         propagation_method=plant.propagation_method,
         nb_seeds_envelope=plant.nb_seeds_envelope,
-        plant_reference=plant.plant_reference,
+        reference=plant.reference,
         ancestor_id=plant.ancestor_id,
         previous_note=plant.previous_note,
         current_note=plant.current_note,
@@ -232,7 +232,7 @@ async def get_all_plants(
             species_id=plant.species_id,
             propagation_method=plant.propagation_method,
             nb_seeds_envelope=plant.nb_seeds_envelope,
-            plant_reference=plant.plant_reference,
+            reference=plant.reference,
             ancestor_id=plant.ancestor_id,
             previous_note=plant.previous_note,
             current_note=plant.current_note,
@@ -270,7 +270,7 @@ async def get_plants_by_user_id(
             species_id=plant.species_id,
             propagation_method=plant.propagation_method,
             nb_seeds_envelope=plant.nb_seeds_envelope,
-            plant_reference=plant.plant_reference,
+            reference=plant.reference,
             ancestor_id=plant.ancestor_id,
             previous_note=plant.previous_note,
             current_note=plant.current_note,
@@ -308,7 +308,7 @@ async def get_plant_by_id(
             species_id=result.species_id,
             propagation_method=result.propagation_method,
             nb_seeds_envelope=result.nb_seeds_envelope,
-            plant_reference=result.plant_reference,
+            reference=result.reference,
             ancestor_id=result.ancestor_id,
             previous_note=result.previous_note,
             current_note=result.current_note,
@@ -346,7 +346,7 @@ async def get_waiting_plants(
             species_id=plant.species_id,
             propagation_method=plant.propagation_method,
             nb_seeds_envelope=plant.nb_seeds_envelope,
-            plant_reference=plant.plant_reference,
+            reference=plant.reference,
             ancestor_id=plant.ancestor_id,
             previous_note=plant.previous_note,
             current_note=plant.current_note,
@@ -387,10 +387,10 @@ async def count_plants_created_today(
     ref: str,
     db: AsyncSession,
 ) -> int:
-    """Count the number of lines with plant_reference beginning with ref from database"""
+    """Count the number of lines with reference beginning with ref from database"""
     result = await db.execute(
         select(func.count()).where(
-            models_seed_library.Plant.plant_reference.startswith(ref),
+            models_seed_library.Plant.reference.startswith(ref),
         ),
     )
 
@@ -405,6 +405,35 @@ async def count_species_with_prefix(
     result = await db.execute(
         select(func.count()).where(
             models_seed_library.Species.prefix == prefix,
+        ),
+    )
+
+    return result.scalar() or 0
+
+
+async def count_species_with_name(
+    name: str,
+    db: AsyncSession,
+) -> int:
+    """Count the number of Species with specific prefix"""
+    result = await db.execute(
+        select(func.count()).where(
+            models_seed_library.Species.name == name,
+        ),
+    )
+
+    return result.scalar() or 0
+
+
+async def count_species_active_plants(
+    species_id: uuid.UUID,
+    db: AsyncSession,
+) -> int:
+    """Count the number of Species with specific prefix"""
+    result = await db.execute(
+        select(func.count()).where(
+            models_seed_library.Plant.species_id == species_id,
+            models_seed_library.Plant.state != PlantState.used_up,
         ),
     )
 

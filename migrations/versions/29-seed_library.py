@@ -55,7 +55,7 @@ def upgrade() -> None:
         "seed_library_species",
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("prefix", sa.String(), nullable=False),
-        sa.Column("species_name", sa.String(), nullable=False),
+        sa.Column("name", sa.String(), nullable=False),
         sa.Column("difficulty", sa.Integer(), nullable=True),
         sa.Column("card", sa.String(), nullable=True),
         sa.Column("nb_seeds_recommended", sa.Integer(), nullable=True),
@@ -72,7 +72,7 @@ def upgrade() -> None:
         sa.Column("time_maturation", sa.Integer(), nullable=True),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("prefix"),
-        sa.UniqueConstraint("species_name"),
+        sa.UniqueConstraint("name"),
     )
     op.create_table(
         "seed_library_plants",
@@ -89,7 +89,7 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("nb_seeds_envelope", sa.Integer(), nullable=True),
-        sa.Column("plant_reference", sa.String(), nullable=False),
+        sa.Column("reference", sa.String(), nullable=False),
         sa.Column("ancestor_id", sa.Uuid(), nullable=True),
         sa.Column("previous_note", sa.String(), nullable=True),
         sa.Column("current_note", sa.String(), nullable=True),
@@ -102,7 +102,7 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["borrower_id"], ["core_user.id"]),
         sa.ForeignKeyConstraint(["species_id"], ["seed_library_species.id"]),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("plant_reference"),
+        sa.UniqueConstraint("reference"),
     )
     op.create_index(
         op.f("ix_seed_library_plants_borrower_id"),
