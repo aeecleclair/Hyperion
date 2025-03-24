@@ -145,7 +145,7 @@ class QRCodeContentData(BaseModel):
 
 
 class ScanInfo(QRCodeContentData):
-    signature: str
+    signature: bytes
     bypass_membership: bool = False
 
 
@@ -175,7 +175,7 @@ class WalletDevice(WalletDeviceBase):
 
 
 class WalletDeviceCreation(WalletDeviceBase):
-    ed25519_public_key: str
+    ed25519_public_key: bytes
 
 
 class Transaction(BaseModel):

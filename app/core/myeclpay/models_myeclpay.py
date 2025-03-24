@@ -38,7 +38,7 @@ class WalletDevice(Base):
     id: Mapped[PrimaryKey]
     name: Mapped[str]
     wallet_id: Mapped[UUID] = mapped_column(ForeignKey("myeclpay_wallet.id"))
-    ed25519_public_key: Mapped[str]
+    ed25519_public_key: Mapped[bytes]
     creation: Mapped[datetime]
     status: Mapped[WalletDeviceStatus]
     activation_token: Mapped[str] = mapped_column(unique=True)

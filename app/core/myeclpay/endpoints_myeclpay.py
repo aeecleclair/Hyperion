@@ -1857,7 +1857,7 @@ async def store_scan_qrcode(
         )
 
     if not verify_signature(
-        public_key_bytes=bytes.fromhex(debited_wallet_device.ed25519_public_key),
+        public_key_bytes=debited_wallet_device.ed25519_public_key,
         signature=scan_info.signature,
         data=scan_info,
         wallet_device_id=scan_info.key,
