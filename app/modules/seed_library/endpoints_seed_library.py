@@ -117,7 +117,7 @@ async def update_species(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Update a Specie
+    Update a Species
     **This endpoint is only usable by seed_library**
     """
 
