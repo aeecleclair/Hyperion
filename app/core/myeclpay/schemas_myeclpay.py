@@ -145,7 +145,7 @@ class QRCodeContentData(BaseModel):
 
 
 class ScanInfo(QRCodeContentData):
-    signature: bytes
+    signature: str
     bypass_membership: bool = False
 
 
