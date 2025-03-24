@@ -53,6 +53,8 @@ class PlantSimple(BaseModel):
     state: PlantState
     species_id: uuid.UUID
     propagation_method: PropagationMethod
+    nb_seeds_envelope: int = 1  # 1 si propagation_method = cutting
+    planting_date: datetime | None = None
     borrower_id: str | None = None
     nickname: str | None = None
 
@@ -60,10 +62,8 @@ class PlantSimple(BaseModel):
 class PlantComplete(PlantSimple):
     previous_note: str | None = None
     current_note: str | None = None
-    planting_date: datetime | None = None
     borrowing_date: datetime | None = None
     ancestor_id: uuid.UUID | None = None
-    nb_seeds_envelope: int = 1  # 1 si propagation_method = cutting
     confidential: bool = False
 
 
