@@ -299,6 +299,23 @@ def test_create_species_as_simple(client: TestClient):
     assert response.status_code == 403
 
 
+def test_create_species_wrong_prefix_as_admin(client: TestClient):
+    response = client.post(
+        "/seed_library/species/",
+        json={
+            "prefix": "DATAT",
+            "name": "Tomate",
+            "difficulty": 1,
+            "card": "https://fr.wikipedia.org/wiki/Tomate",
+            "nb_seeds_recommended": 8,
+            "species_type": types_seed_library.SpeciesType.vegetables.value,
+            "time_maturation": 12,
+        },
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 400
+
+
 def test_create_species_used_prefix_as_admin(client: TestClient):
     response = client.post(
         "/seed_library/species/",
@@ -521,10 +538,10 @@ def test_update_species_as_simple(client: TestClient):
             "card": "https://fr.wiktionary.org/wiki/dat%C3%A9",
             "nb_seeds_recommended": 48,
             "start_season": datetime(2025, 10, 1, tzinfo=UTC).strftime(
-                "%Y-%m-%dT%H:%M:%SZ",
+                "%Y-%m-%d",
             ),
             "end_season": datetime(2025, 12, 1, tzinfo=UTC).strftime(
-                "%Y-%m-%dT%H:%M:%SZ",
+                "%Y-%m-%d",
             ),
             "time_maturation": 6,
         },
@@ -542,16 +559,49 @@ def test_update_unknown_species(client: TestClient):
             "card": "https://fr.wiktionary.org/wiki/dat%C3%A9",
             "nb_seeds_recommended": 48,
             "start_season": datetime(2025, 10, 1, tzinfo=UTC).strftime(
-                "%Y-%m-%dT%H:%M:%SZ",
+                "%Y-%m-%d",
             ),
             "end_season": datetime(2025, 12, 1, tzinfo=UTC).strftime(
-                "%Y-%m-%dT%H:%M:%SZ",
+                "%Y-%m-%d",
             ),
             "time_maturation": 6,
         },
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 404
+
+
+def test_update_species_wrong_prefixe(client: TestClient):
+    response = client.patch(
+        f"/seed_library/species/{species1.id}",
+        json={
+            "prefix": "DATAT",
+        },
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 400
+
+
+def test_update_species_used_prefixe(client: TestClient):
+    response = client.patch(
+        f"/seed_library/species/{species1.id}",
+        json={
+            "prefix": "ORC",
+        },
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 400
+
+
+def test_update_species_used_name(client: TestClient):
+    response = client.patch(
+        f"/seed_library/species/{species1.id}",
+        json={
+            "name": "Orchidée",
+        },
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 400
 
 
 async def test_update_species_as_admin(client: TestClient):
@@ -578,10 +628,10 @@ async def test_update_species_as_admin(client: TestClient):
             "card": "https://fr.wiktionary.org/wiki/dat%C3%A9",
             "nb_seeds_recommended": 48,
             "start_season": datetime(2025, 10, 1, tzinfo=UTC).strftime(
-                "%Y-%m-%dT%H:%M:%SZ",
+                "%Y-%m-%d",
             ),
             "end_season": datetime(2025, 12, 1, tzinfo=UTC).strftime(
-                "%Y-%m-%dT%H:%M:%SZ",
+                "%Y-%m-%d",
             ),
             "time_maturation": 6,
         },
@@ -602,10 +652,10 @@ async def test_update_species_as_admin(client: TestClient):
     assert species["card"] == "https://fr.wiktionary.org/wiki/dat%C3%A9"
     assert species["nb_seeds_recommended"] == 48
     assert species["start_season"] == datetime(2025, 10, 1, tzinfo=UTC).strftime(
-        "%Y-%m-%dT%H:%M:%SZ",
+        "%Y-%m-%d",
     )
     assert species["end_season"] == datetime(2025, 12, 1, tzinfo=UTC).strftime(
-        "%Y-%m-%dT%H:%M:%SZ",
+        "%Y-%m-%d",
     )
     assert species["time_maturation"] == 6
 
@@ -619,8 +669,8 @@ def test_update_plant_not_as_owner(client: TestClient):
             "state": types_seed_library.PlantState.used_up.value,
             "current_note": "plant successfully modified",
             "confidential": False,
-            "planting_date": pd.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "borrowing_date": bd.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "planting_date": pd.strftime("%Y-%m-%d"),
+            "borrowing_date": bd.strftime("%Y-%m-%d"),
             "nickname": "your updated plant",
         },
         headers={"Authorization": f"Bearer {token_admin}"},
@@ -637,8 +687,8 @@ def test_update_unknown_plant(client: TestClient):
             "state": types_seed_library.PlantState.used_up.value,
             "current_note": "plant successfully modified",
             "confidential": False,
-            "planting_date": pd.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "borrowing_date": bd.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "planting_date": pd.strftime("%Y-%m-%d"),
+            "borrowing_date": bd.strftime("%Y-%m-%d"),
             "nickname": "your updated plant",
         },
         headers={"Authorization": f"Bearer {token_admin}"},
@@ -655,8 +705,8 @@ def test_update_plant_as_owner(client: TestClient):
             "state": types_seed_library.PlantState.used_up.value,
             "current_note": "plant successfully modified",
             "confidential": False,
-            "planting_date": pd.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "borrowing_date": bd.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "planting_date": pd.strftime("%Y-%m-%d"),
+            "borrowing_date": bd.strftime("%Y-%m-%d"),
             "nickname": "your updated plant",
         },
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -672,8 +722,8 @@ def test_update_plant_as_owner(client: TestClient):
     assert json["state"] == types_seed_library.PlantState.used_up.value
     assert json["current_note"] == "plant successfully modified"
     assert not json["confidential"]
-    assert json["planting_date"] == pd.strftime("%Y-%m-%dT%H:%M:%SZ")
-    assert json["borrowing_date"] == bd.strftime("%Y-%m-%dT%H:%M:%SZ")
+    assert json["planting_date"] == pd.strftime("%Y-%m-%d")
+    assert json["borrowing_date"] == bd.strftime("%Y-%m-%d")
     assert json["nickname"] == "your updated plant"
 
 
@@ -686,8 +736,8 @@ def test_update_unknown_plant_admin(client: TestClient):
             "state": types_seed_library.PlantState.retrieved.value,
             "current_note": "plant successfully modified",
             "confidential": True,
-            "planting_date": pd.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "borrowing_date": bd.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "planting_date": pd.strftime("%Y-%m-%d"),
+            "borrowing_date": bd.strftime("%Y-%m-%d"),
             "nickname": "updated plant",
         },
         headers={"Authorization": f"Bearer {token_admin}"},
@@ -704,8 +754,8 @@ def test_update_plant_admin_as_simple(client: TestClient):
             "state": types_seed_library.PlantState.retrieved.value,
             "current_note": "plant successfully modified",
             "confidential": True,
-            "planting_date": pd.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "borrowing_date": bd.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "planting_date": pd.strftime("%Y-%m-%d"),
+            "borrowing_date": bd.strftime("%Y-%m-%d"),
             "nickname": "updated plant",
         },
         headers={"Authorization": f"Bearer {token_simple}"},
@@ -741,8 +791,8 @@ async def test_update_plant_admin_as_admin(client: TestClient):
             "state": types_seed_library.PlantState.retrieved.value,
             "current_note": "plant successfully modified",
             "confidential": True,
-            "planting_date": pd.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "borrowing_date": bd.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "planting_date": pd.strftime("%Y-%m-%d"),
+            "borrowing_date": bd.strftime("%Y-%m-%d"),
             "nickname": "updated plant",
         },
         headers={"Authorization": f"Bearer {token_admin}"},
@@ -761,10 +811,10 @@ async def test_update_plant_admin_as_admin(client: TestClient):
     assert response_updated_get.json()["current_note"] == "plant successfully modified"
     assert response_updated_get.json()["confidential"]
     assert response_updated_get.json()["planting_date"] == pd.strftime(
-        "%Y-%m-%dT%H:%M:%SZ",
+        "%Y-%m-%d",
     )
     assert response_updated_get.json()["borrowing_date"] == bd.strftime(
-        "%Y-%m-%dT%H:%M:%SZ",
+        "%Y-%m-%d",
     )
     assert response_updated_get.json()["nickname"] == "updated plant"
 

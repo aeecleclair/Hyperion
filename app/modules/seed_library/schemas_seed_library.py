@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import date
 
 from pydantic import BaseModel
 
@@ -17,8 +17,8 @@ class SpeciesBase(BaseModel):
     species_type: SpeciesType
     card: str | None = None
     nb_seeds_recommended: int | None = None
-    start_season: datetime | None = None
-    end_season: datetime | None = None
+    start_season: date | None = None
+    end_season: date | None = None
     time_maturation: int | None = None  # temps en jours
 
 
@@ -29,12 +29,14 @@ class SpeciesComplete(SpeciesBase):
 
 # we can then modify some of the variables … but not the id
 class SpeciesEdit(BaseModel):
-    prefix: str  # 3 caracteres
-    difficulty: int  # entre 1 (facile) et 5 (difficile)
-    card: str
+    name: str | None = None
+    prefix: str | None = None  # 3 caracteres
+    difficulty: int | None = None  # entre 1 (facile) et 5 (difficile)
+    card: str | None = None
+    species_type: SpeciesType | None = None
     nb_seeds_recommended: int | None = None
-    start_season: datetime | None = None
-    end_season: datetime | None = None
+    start_season: date | None = None
+    end_season: date | None = None
     time_maturation: int | None = None  # temps en jours
 
 
@@ -54,7 +56,7 @@ class PlantSimple(BaseModel):
     species_id: uuid.UUID
     propagation_method: PropagationMethod
     nb_seeds_envelope: int = 1  # 1 si propagation_method = cutting
-    planting_date: datetime | None = None
+    planting_date: date | None = None
     borrower_id: str | None = None
     nickname: str | None = None
 
@@ -62,17 +64,17 @@ class PlantSimple(BaseModel):
 class PlantComplete(PlantSimple):
     previous_note: str | None = None
     current_note: str | None = None
-    borrowing_date: datetime | None = None
+    borrowing_date: date | None = None
     ancestor_id: uuid.UUID | None = None
     confidential: bool = False
 
 
 class PlantEdit(BaseModel):
-    state: PlantState
+    state: PlantState | None = None
     current_note: str | None = None
     confidential: bool = False
-    planting_date: datetime | None = None
-    borrowing_date: datetime | None = None
+    planting_date: date | None = None
+    borrowing_date: date | None = None
     nickname: str | None = None
 
 

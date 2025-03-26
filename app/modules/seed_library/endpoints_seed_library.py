@@ -76,6 +76,12 @@ async def create_species(
     Create a new Species by giving an SpeciesBase scheme
     **This endpoint is only usable by seed_library **
     """
+    if len(species_base.prefix) != 3:
+        raise HTTPException(
+            status_code=400,
+            detail="Prefix must be 3 characters long",
+        )
+    species_base.prefix = species_base.prefix.upper()
 
     if (
         await cruds_seed_library.count_species_with_prefix(species_base.prefix, db)
@@ -120,10 +126,40 @@ async def update_species(
     Update a Species
     **This endpoint is only usable by seed_library**
     """
-
     species_db = await cruds_seed_library.get_species_by_id(species_id, db)
     if species_db is None:
         raise HTTPException(404, "Species not found")
+
+    if species_edit.prefix is not None:
+        if len(species_edit.prefix) != 3:
+            raise HTTPException(
+                status_code=400,
+                detail="Prefix must be 3 characters long",
+            )
+        species_edit.prefix = species_edit.prefix.upper()
+        if (
+            await cruds_seed_library.count_species_with_prefix(species_edit.prefix, db)
+        ) != 0 and species_edit.prefix != species_db.prefix:
+            raise HTTPException(
+                status_code=400,
+                detail="Prefix already used",
+            )
+
+    if species_edit.name is not None:
+        if (
+            await cruds_seed_library.count_species_with_name(species_edit.name, db)
+        ) != 0 and species_edit.name != species_db.name:
+            raise HTTPException(
+                status_code=400,
+                detail="Species name already used",
+            )
+
+    if species_edit.difficulty is not None:
+        if species_edit.difficulty < 1 or species_edit.difficulty > 5:
+            raise HTTPException(
+                status_code=400,
+                detail="Difficulty must be between 1 and 5",
+            )
 
     await cruds_seed_library.update_species(
         species_id=species_id,

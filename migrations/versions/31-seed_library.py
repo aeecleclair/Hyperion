@@ -14,8 +14,6 @@ from enum import Enum
 import sqlalchemy as sa
 from alembic import op
 
-from app.types.sqlalchemy import TZDateTime
-
 # revision identifiers, used by Alembic.
 revision: str = "e382ba1d64c2"
 down_revision: str | None = "ea30ad00bb01"
@@ -67,8 +65,8 @@ def upgrade() -> None:
             ),
             nullable=True,
         ),
-        sa.Column("start_season", TZDateTime(), nullable=True),
-        sa.Column("end_season", TZDateTime(), nullable=True),
+        sa.Column("start_season", sa.Date(), nullable=True),
+        sa.Column("end_season", sa.Date(), nullable=True),
         sa.Column("time_maturation", sa.Integer(), nullable=True),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("prefix"),
@@ -96,8 +94,8 @@ def upgrade() -> None:
         sa.Column("borrower_id", sa.String(), nullable=True),
         sa.Column("confidential", sa.Boolean(), nullable=True),
         sa.Column("nickname", sa.String(), nullable=True),
-        sa.Column("planting_date", TZDateTime(), nullable=True),
-        sa.Column("borrowing_date", TZDateTime(), nullable=True),
+        sa.Column("planting_date", sa.Date(), nullable=True),
+        sa.Column("borrowing_date", sa.Date(), nullable=True),
         sa.ForeignKeyConstraint(["ancestor_id"], ["seed_library_plants.id"]),
         sa.ForeignKeyConstraint(["borrower_id"], ["core_user.id"]),
         sa.ForeignKeyConstraint(["species_id"], ["seed_library_species.id"]),

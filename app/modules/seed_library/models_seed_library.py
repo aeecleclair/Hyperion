@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import date
 
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
@@ -21,8 +21,8 @@ class Species(Base):
     card: Mapped[str | None]
     nb_seeds_recommended: Mapped[int | None]
     species_type: Mapped[SpeciesType | None]
-    start_season: Mapped[datetime | None]
-    end_season: Mapped[datetime | None]
+    start_season: Mapped[date | None]
+    end_season: Mapped[date | None]
     time_maturation: Mapped[int | None]  # number of days
 
 
@@ -47,5 +47,5 @@ class Plant(Base):
     )
     confidential: Mapped[bool | None]
     nickname: Mapped[str | None]
-    planting_date: Mapped[datetime | None]
-    borrowing_date: Mapped[datetime | None]
+    planting_date: Mapped[date | None]
+    borrowing_date: Mapped[date | None]
