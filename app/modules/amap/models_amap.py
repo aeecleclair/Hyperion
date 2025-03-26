@@ -44,7 +44,7 @@ class Product(Base):
         index=True,
         unique=True,
     )
-    price: Mapped[float]
+    price: Mapped[int]
     category: Mapped[str] = mapped_column(index=True)
 
 
@@ -99,7 +99,7 @@ class Cash(Base):
         ForeignKey("core_user.id"),
         primary_key=True,
     )
-    balance: Mapped[float]
+    balance: Mapped[int]
     user: Mapped[CoreUser] = relationship("CoreUser", init=False)
 
 
