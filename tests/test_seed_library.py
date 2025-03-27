@@ -611,11 +611,11 @@ async def test_update_species_as_admin(client: TestClient):
         name="Update",
         difficulty=1,
         card="description or URL",
-        nb_seeds_recommended=15,
         species_type=types_seed_library.SpeciesType.aromatic,
-        start_season=datetime(2025, 10, 1, tzinfo=UTC),
-        end_season=datetime(2025, 12, 1, tzinfo=UTC),
-        time_maturation=55,
+        nb_seeds_recommended=None,
+        start_season=None,
+        end_season=None,
+        time_maturation=None,
     )
     await add_object_to_db(species_db)
 
@@ -624,9 +624,11 @@ async def test_update_species_as_admin(client: TestClient):
         f"/seed_library/species/{species_db.id}",
         json={
             "prefix": "DAT",
+            "name": "Updated",
             "difficulty": 2,
             "card": "https://fr.wiktionary.org/wiki/dat%C3%A9",
             "nb_seeds_recommended": 48,
+            "species_type": types_seed_library.SpeciesType.vegetables.value,
             "start_season": datetime(2025, 10, 1, tzinfo=UTC).strftime(
                 "%Y-%m-%d",
             ),
@@ -648,6 +650,8 @@ async def test_update_species_as_admin(client: TestClient):
         (s for s in response_updated_get.json() if s["id"] == str(species_db.id)),
     )
     assert species["prefix"] == "DAT"
+    assert species["name"] == "Updated"
+    assert species["species_type"] == types_seed_library.SpeciesType.vegetables.value
     assert species["difficulty"] == 2
     assert species["card"] == "https://fr.wiktionary.org/wiki/dat%C3%A9"
     assert species["nb_seeds_recommended"] == 48
