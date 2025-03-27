@@ -17,7 +17,7 @@ from app.modules.seed_library import (
     cruds_seed_library,
     schemas_seed_library,
 )
-from app.modules.seed_library.types_seed_library import PlantState
+from app.modules.seed_library.types_seed_library import PlantState, SpeciesType
 from app.types.module import Module
 from app.utils import tools
 from app.utils.tools import is_user_member_of_any_group
@@ -58,8 +58,9 @@ async def get_all_species_types(
     """
     Return all available types of species from SpeciesType enum.
     """
-    species_type = await cruds_seed_library.get_all_species_types()
-    return schemas_seed_library.SpeciesTypesReturn(species_type=species_type)
+    return schemas_seed_library.SpeciesTypesReturn(
+        species_type=[species_type.value for species_type in SpeciesType],
+    )
 
 
 @module.router.post(
@@ -206,6 +207,7 @@ async def delete_species(
 )
 async def get_waiting_plants(
     db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     """
     Return all plants where state=waiting from database as a list of PlantsComplete schemas
@@ -252,6 +254,7 @@ async def get_plants_by_user_id(
 async def get_plant_by_id(
     plant_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     """
     Return the plants where plant ={plant_id} from database as a PlantsComplete schemas
@@ -407,21 +410,12 @@ async def borrow_plant(
 async def delete_plant(
     plant_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.seed_library)),
 ):
     """
     Delete a Plant
     **This endpoint is only usable by seed_library**
     """
-
-    if not is_user_member_of_any_group(
-        user=user,
-        allowed_groups=[GroupType.seed_library],
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail=f"You are not allowed to delete plant {plant_id}",
-        )
 
     plant = await cruds_seed_library.get_plant_by_id(plant_id, db)
     if plant is None:
@@ -444,7 +438,10 @@ async def delete_plant(
     response_model=coredata_seed_library.SeedLibraryInformation,
     status_code=200,
 )
-async def get_seed_library_information(db: AsyncSession = Depends(get_db)):
+async def get_seed_library_information(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user()),
+):
     return await tools.get_core_data(
         coredata_seed_library.SeedLibraryInformation,
         db,

@@ -12,7 +12,6 @@ from app.modules.seed_library import (
 )
 from app.modules.seed_library.types_seed_library import (
     PlantState,
-    SpeciesType,
 )
 
 # ---------------------------------------------------------------------------- #
@@ -107,12 +106,6 @@ async def get_all_species(
         )
         for species in result
     ]
-
-
-async def get_all_species_types() -> Sequence[str]:
-    """Return all SpeciesType from Enum"""
-
-    return [species_type.value for species_type in SpeciesType]
 
 
 async def get_species_by_id(
