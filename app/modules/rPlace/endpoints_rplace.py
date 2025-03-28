@@ -163,7 +163,7 @@ async def get_last_pixel_date(
     if date is None:
             raise HTTPException(
                 status_code=404,
-                detail="pas de pixel placé",
+                detail="pas de pixel place",
             )
     return date
     
