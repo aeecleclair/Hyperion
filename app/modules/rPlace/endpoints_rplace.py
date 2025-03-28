@@ -161,10 +161,14 @@ async def get_last_pixel_date(
 ):
     date = await cruds_rplace.get_last_pixel_date(db=db, user_id=user.id)
     if date is None:
-            raise HTTPException(
-                status_code=404,
-                detail="pas de pixel place",
-            )
+            date = models_rplace.Pixel(
+                    id=uuid.uuid4(),
+                    date=datetime(2003, 5, 17, 7, 46, 0, 0),
+                    user_id=user.id,
+                    x=-1,
+                    y=-1,
+                    color="",
+                )
     return date
     
 
