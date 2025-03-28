@@ -19,3 +19,6 @@ class PixelComplete(BaseModel):
 class NewPixelWSMessageModel(WSMessageModel):
     command: Literal["NEW_PIXEL"] = "NEW_PIXEL"
     data: Pixel
+
+class UserInfo(BaseModel):
+    date: datetime
