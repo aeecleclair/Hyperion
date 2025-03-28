@@ -126,4 +126,30 @@ async def get_pixel_info(
     db: AsyncSession = Depends(get_db),
     user: models_core.CoreUser = Depends(is_user_a_member),
 ):
-    return await cruds_rplace.get_pixel_info(db=db, x=x, y=y)
+    info = await cruds_rplace.get_pixel_info(db=db, x=x, y=y)
+    if info is None:
+            raise HTTPException(
+                status_code=404,
+                detail="pas de pixel place",
+            )
+    return info
+
+
+@module.router.get(
+    "/rplace/last_pixel_date",
+    response_model=schemas_rplace.UserInfo,
+    status_code=200,
+)
+async def get_last_pixel_date(
+    db: AsyncSession = Depends(get_db),
+    user: models_core.CoreUser = Depends(is_user_a_member),
+):
+    date = await cruds_rplace.get_last_pixel_date(db=db, user_id=user.id)
+    if date is None:
+            raise HTTPException(
+                status_code=404,
+                detail="pas de pixel placé",
+            )
+    return date
+    
+

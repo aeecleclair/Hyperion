@@ -56,3 +56,11 @@ async def get_pixel_info(db: AsyncSession, x: int, y: int) -> models_rplace.Pixe
 
     return result.scalars().first()
 
+async def get_last_pixel_date(db: AsyncSession, user_id: str) -> datetime:
+    result = await db.execute(
+        select(models_rplace.Pixel)
+        .where(models_rplace.Pixel.user_id == user_id)
+        .order_by(models_rplace.Pixel.date.desc())
+    )
+
+    return result.scalars().first()
