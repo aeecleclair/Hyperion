@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from fastapi import Depends, HTTPException, WebSocket
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -61,30 +61,45 @@ async def create_pixel(
         y=pixel.y,
         color=pixel.color,
     )
-    try:
-        res = await cruds_rplace.create_pixel(
-            rplace_pixel=db_item,
-            db=db,
-        )
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
 
-    try:
-        await ws_manager.send_message_to_room(
-            message=schemas_rplace.NewPixelWSMessageModel(
-                data=schemas_rplace.Pixel(
-                    x=pixel.x,
-                    y=pixel.y,
-                    color=pixel.color,
+    last_pixel_placed = await get_last_pixel_date(
+        db=db,
+        user=user,
+    )
+
+    grid_information = await get_core_data(coredata_rplace.gridInformation, db)
+
+    if datetime.now() - last_pixel_placed.date.replace(tzinfo=None) >= timedelta(microseconds=grid_information.cooldown):
+        try:
+            res = await cruds_rplace.create_pixel(
+                rplace_pixel=db_item,
+                db=db,
+            )
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail=str(error))
+
+        try:
+            await ws_manager.send_message_to_room(
+                message=schemas_rplace.NewPixelWSMessageModel(
+                    data=schemas_rplace.Pixel(
+                        x=pixel.x,
+                        y=pixel.y,
+                        color=pixel.color,
+                    ),
                 ),
-            ),
-            room_id=HyperionWebsocketsRoom.Rplace,
-        )
-    except Exception:
-        hyperion_error_logger.exception(
-            f"Error while sending a message to the room {HyperionWebsocketsRoom.CDR}",
-        )
-    return res
+                room_id=HyperionWebsocketsRoom.Rplace,
+            )
+        except Exception:
+            hyperion_error_logger.exception(
+                f"Error while sending a message to the room {HyperionWebsocketsRoom.CDR}",
+            )
+        return res
+    else:
+         raise HTTPException(
+                status_code=401,
+                detail="Vous devez attendre avant de placer un autre pixel",
+            )
+         
 
 @module.router.get(
     "/rplace/information",
