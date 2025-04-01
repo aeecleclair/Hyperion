@@ -137,7 +137,7 @@ async def init_objects() -> None:
     )
     await add_object_to_db(prize_to_draw)
 
-    cash = models_raffle.Cash(user_id=student_user.id, balance=66)
+    cash = models_raffle.Cash(user_id=student_user.id, balance=6600)
     await add_object_to_db(cash)
 
 
