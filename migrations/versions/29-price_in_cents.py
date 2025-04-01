@@ -68,12 +68,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.execute("UPDATE amap_cash SET balance = balance / 100")
-    op.execute("UPDATE amap_order SET amount = amount / 100")
-    op.execute("UPDATE amap_product SET price = price / 100")
-    op.execute("UPDATE raffle_cash SET balance = balance / 100")
-    op.execute("UPDATE raffle_pack_ticket SET price = price / 100")
-
     op.alter_column(
         "raffle_pack_ticket",
         "price",
@@ -110,6 +104,12 @@ def downgrade() -> None:
         existing_nullable=False,
     )
 
+    op.execute("UPDATE amap_cash SET balance = balance / 100")
+    op.execute("UPDATE amap_order SET amount = amount / 100")
+    op.execute("UPDATE amap_product SET price = price / 100")
+    op.execute("UPDATE raffle_cash SET balance = balance / 100")
+    op.execute("UPDATE raffle_pack_ticket SET price = price / 100")
+
 
 user_id = uuid4()
 group_id = uuid4()
@@ -144,13 +144,6 @@ def pre_test_upgrade(
             "phone": "phone",
             "floor": "Autre",
             "created_on": None,
-        },
-    )
-    alembic_runner.insert_into(
-        "core_membership",
-        {
-            "user_id": user_id,
-            "group_id": group_id,
         },
     )
     alembic_runner.insert_into(
