@@ -878,7 +878,7 @@ async def create_cash_of_user(
             detail="This user already has a cash.",
         )
 
-    cash_db = models_amap.Cash(user_id=user_id, balance=cash.balance, user=user)
+    cash_db = models_amap.Cash(user_id=user_id, balance=cash.balance)
 
     await cruds_amap.create_cash_of_user(
         cash=cash_db,

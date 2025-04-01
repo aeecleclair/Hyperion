@@ -20,7 +20,7 @@ class ProductBase(BaseModel):
     """Base schema for AMAP products"""
 
     name: str
-    price: float
+    price: int
 
 
 class ProductSimple(ProductBase):
@@ -30,7 +30,7 @@ class ProductSimple(ProductBase):
 class ProductEdit(BaseModel):
     category: str | None = None
     name: str | None = None
-    price: float | None = None
+    price: int | None = None
 
 
 class ProductComplete(ProductSimple):
@@ -114,7 +114,7 @@ class AddProductDelivery(BaseModel):
 
 
 class CashBase(BaseModel):
-    balance: float
+    balance: int
     user_id: str
     model_config = ConfigDict(from_attributes=True)
 
@@ -128,7 +128,7 @@ class CashDB(CashBase):
 
 
 class CashEdit(BaseModel):
-    balance: float
+    balance: int
 
 
 class Information(BaseModel):
