@@ -150,7 +150,7 @@ def pre_test_upgrade(
         "amap_cash",
         {
             "user_id": user_id,
-            "balance": 11.56,
+            "balance": 3.3999999999999964,
         },
     )
     alembic_runner.insert_into(
@@ -158,7 +158,7 @@ def pre_test_upgrade(
         {
             "id": uuid4(),
             "name": "name",
-            "price": 10.511111,
+            "price": 1.1000000000000014,
             "category": "category",
         },
     )
@@ -166,7 +166,7 @@ def pre_test_upgrade(
         "raffle_cash",
         {
             "user_id": user_id,
-            "balance": 4.99999999997,
+            "balance": 1.4210854715202004e-14,
         },
     )
     alembic_runner.insert_into(
@@ -182,7 +182,7 @@ def pre_test_upgrade(
         "raffle_pack_ticket",
         {
             "id": uuid4(),
-            "price": 7.5,
+            "price": -3.552713678800501e-15,
             "pack_size": 5,
             "raffle_id": raffle_id,
         },
@@ -196,21 +196,21 @@ def test_upgrade(
     amap_cash = alembic_connection.execute(
         sa.text(f"SELECT balance FROM amap_cash WHERE user_id = '{user_id}'"),
     ).fetchall()
-    assert amap_cash[0][0] == 1156
+    assert amap_cash[0][0] == 340
 
     amap_product = alembic_connection.execute(
         sa.text("SELECT price FROM amap_product WHERE name = 'name'"),
     ).fetchall()
-    assert amap_product[0][0] == 1051
+    assert amap_product[0][0] == 110
 
     raffle_cash = alembic_connection.execute(
         sa.text(f"SELECT balance FROM raffle_cash WHERE user_id = '{user_id}'"),
     ).fetchall()
-    assert raffle_cash[0][0] == 500
+    assert raffle_cash[0][0] == 0
 
     raffle_pack_ticket = alembic_connection.execute(
         sa.text(
             f"SELECT price FROM raffle_pack_ticket WHERE raffle_id = '{raffle_id}'",
         ),
     ).fetchall()
-    assert raffle_pack_ticket[0][0] == 750
+    assert raffle_pack_ticket[0][0] == 0
