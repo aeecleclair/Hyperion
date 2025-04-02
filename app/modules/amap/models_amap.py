@@ -44,7 +44,7 @@ class Product(Base):
         index=True,
         unique=True,
     )
-    price: Mapped[float]
+    price: Mapped[int]
     category: Mapped[str] = mapped_column(index=True)
 
 
@@ -76,7 +76,7 @@ class Order(Base):
         index=True,
     )
     order_id: Mapped[str] = mapped_column(primary_key=True, index=True)
-    amount: Mapped[float]
+    amount: Mapped[int]
     collection_slot: Mapped[AmapSlotType]
     ordering_date: Mapped[datetime]
     delivery_date: Mapped[date]
@@ -88,7 +88,7 @@ class Order(Base):
         "Product",
         secondary="amap_order_content",
         viewonly=True,
-        default_factory=list,
+        init=False,
     )
 
 
@@ -99,7 +99,7 @@ class Cash(Base):
         ForeignKey("core_user.id"),
         primary_key=True,
     )
-    balance: Mapped[float]
+    balance: Mapped[int]
     user: Mapped[CoreUser] = relationship("CoreUser", init=False)
 
 

@@ -464,7 +464,6 @@ async def add_order_to_delievery(
         raise HTTPException(status_code=400, detail="You can't order nothing")
 
     redis_key = "amap_" + order.user_id
-
     if not isinstance(redis_client, Redis) or locker_get(
         redis_client=redis_client,
         key=redis_key,
@@ -494,8 +493,8 @@ async def add_order_to_delievery(
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error))
 
-    finally:
-        locker_set(redis_client=redis_client, key=redis_key, lock=False)
+    # finally:
+    #     locker_set(redis_client=redis_client, key=redis_key, lock=False)
 
 
 @module.router.patch(
@@ -585,7 +584,6 @@ async def edit_order_from_delivery(
             raise HTTPException(status_code=404, detail="No cash found")
 
         redis_key = "amap_" + previous_order.user_id
-
         if not isinstance(redis_client, Redis) or locker_get(
             redis_client=redis_client,
             key=redis_key,
@@ -615,8 +613,8 @@ async def edit_order_from_delivery(
         except ValueError as error:
             raise HTTPException(status_code=400, detail=str(error))
 
-        finally:
-            locker_set(redis_client=redis_client, key=redis_key, lock=False)
+        # finally:
+        #     locker_set(redis_client=redis_client, key=redis_key, lock=False)
 
 
 @module.router.delete(
@@ -898,7 +896,7 @@ async def create_cash_of_user(
 
     message = Message(
         title="AMAP - Solde mis à jour",
-        content=f"Votre nouveau solde est de {cash} €.",
+        content=f"Votre nouveau solde est de {cash.balance//100}€{cash.balance%100}.",
         action_module="amap",
     )
     await notification_tool.send_notification_to_user(
