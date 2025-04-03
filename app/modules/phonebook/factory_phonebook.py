@@ -6,7 +6,7 @@ from app.core.groups.groups_type import GroupType
 from app.core.users import cruds_users
 from app.modules.phonebook import cruds_phonebook, models_phonebook
 from app.modules.phonebook.types_phonebook import Kinds
-from app.utils.factory import Factory
+from app.types.factory import Factory
 
 
 class PhonebookFactory(Factory):

@@ -5,7 +5,7 @@ from app.core.factory_core import CoreFactory
 from app.core.users import cruds_users
 from app.modules.calendar import cruds_calendar, models_calendar
 from app.modules.calendar.types_calendar import CalendarEventType
-from app.utils.factory import Factory
+from app.types.factory import Factory
 
 
 class CalendarFactory(Factory):

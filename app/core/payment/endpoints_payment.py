@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.core_module_list import core_module_list
 from app.core.payment import cruds_payment, models_payment, schemas_payment
 from app.dependencies import get_db
-from app.modules.module_list import module_list
+from app.module import module_list
 from app.types.module import CoreModule
 
 router = APIRouter(tags=["Payments"])
@@ -22,6 +22,7 @@ core_module = CoreModule(
     root="payment",
     tag="Payments",
     router=router,
+    factory=None,
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")

@@ -2,7 +2,7 @@ import uuid
 
 from app.modules.campaign import cruds_campaign, models_campaign
 from app.modules.campaign.types_campaign import ListType
-from app.utils.factory import Factory
+from app.types.factory import Factory
 
 
 class CampaignFactory(Factory):
