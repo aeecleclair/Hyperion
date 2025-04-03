@@ -1,17 +1,17 @@
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from app.core.factory_core import CoreFactory
+from app.core.users.factory_users import CoreUsersFactory
 from app.modules.amap import cruds_amap, models_amap, schemas_amap
 from app.modules.amap.types_amap import DeliveryStatusType
-from app.utils.factory import Factory
+from app.types.factory import Factory
 
 
 class AmapFactory(Factory):
     def __init__(self):
         super().__init__(
             name="amap",
-            depends_on=[CoreFactory],
+            depends_on=[CoreUsersFactory],
         )
 
     async def create_products(self, db):
@@ -64,7 +64,7 @@ class AmapFactory(Factory):
         await cruds_amap.create_cash_of_user(
             db=db,
             cash=models_amap.Cash(
-                user_id=CoreFactory.demo_user_id,
+                user_id=CoreUsersFactory.demo_users_id[0],
                 balance=100,
             ),
         )

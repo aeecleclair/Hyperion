@@ -3,7 +3,7 @@ from datetime import date
 
 from app.core.factory_core import CoreFactory
 from app.modules.loan import cruds_loan, models_loan
-from app.utils.factory import Factory
+from app.types.factory import Factory
 
 
 class LoanFactory(Factory):

@@ -9,7 +9,7 @@ from app.modules.booking import (
     schemas_booking,
     types_booking,
 )
-from app.utils.factory import Factory
+from app.types.factory import Factory
 
 
 class BookingFactory(Factory):

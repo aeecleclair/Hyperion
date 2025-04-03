@@ -19,3 +19,28 @@ class Factory(ABC):
     @abstractmethod
     async def run(self, db: AsyncSession):
         pass
+
+
+# Template for a module factory
+"""
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.types.factory import Factory
+
+
+class ModuleFactory(Factory):
+    def __init__(self):
+        super().__init__(
+            name="module",
+            depends_on=[],
+        )
+
+    async def run(self, db: AsyncSession):
+        pass
+
+    async def should_run(self, db: AsyncSession):
+        return True
+
+
+factory = ModuleFactory()
+"""

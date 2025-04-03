@@ -1,6 +1,5 @@
 """File defining the Metadata. And the basic functions creating the database tables and calling the router"""
 
-import importlib
 import logging
 import uuid
 from collections.abc import AsyncGenerator, Awaitable, Callable
@@ -24,8 +23,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from app import api
-from app.core import factory_core
-from app.core.config import Settings
 from app.core.core_endpoints import coredata_core, models_core
 from app.core.google_api.google_api import GoogleAPI
 from app.core.groups import models_groups
@@ -41,16 +38,16 @@ from app.dependencies import (
     get_websocket_connection_manager,
     init_and_get_db_engine,
 )
-from app.modules.module_list import module_list
+from app.module import all_modules, module_list
 from app.types.exceptions import ContentHTTPException, GoogleAPIInvalidCredentialsError
 from app.types.sqlalchemy import Base
 from app.utils import initialization
-from app.utils.factory import Factory
 from app.utils.redis import limiter
 
 if TYPE_CHECKING:
     import redis
 
+    from app.types.factory import Factory
     from app.types.scheduler import Scheduler
     from app.types.websocket import WebsocketConnectionManager
 
@@ -231,22 +228,13 @@ async def run_factories(db: AsyncSession, settings: Settings) -> None:
         return
 
     # Importing the core_factory at the beginning of the factories.
-    factories_list: list[Factory] = [
-        factory_core.factory,
-    ]
-    for factories_file in Path().glob("app/modules/*/factory_*.py"):
-        factory_module = importlib.import_module(
-            ".".join(factories_file.with_suffix("").parts),
-        )
-        if hasattr(factory_module, "factory") and isinstance(
-            factory_module.factory,
-            Factory,
-        ):  # Verify that the module has a factory class object
-            factory = factory_module.factory
-            factories_list.append(factory)
+    factories_list: list[Factory] = []
+    for module in all_modules:
+        if module.factory:
+            factories_list.append(module.factory)
         else:
             hyperion_error_logger.error(
-                f"Module {factories_file} does not declare a module. It won't be enabled.",
+                f"Module {module.root} does not declare a factory. It won't provide any base data.",
             )
 
     # We have to run the factories in a specific order to make sure the dependencies are met
