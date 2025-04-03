@@ -16,7 +16,7 @@ from app.dependencies import (
     is_user,
     is_user_in,
 )
-from app.modules.module_list import module_list
+from app.module import module_list
 from app.types.module import CoreModule
 from app.utils.tools import is_group_id_valid
 

@@ -1,7 +1,7 @@
 import uuid
 from datetime import date
 
-from app.core.factory_core import CoreFactory
+from app.core.users.factory_users import CoreUsersFactory
 from app.modules.loan import cruds_loan, models_loan
 from app.types.factory import Factory
 
@@ -10,7 +10,7 @@ class LoanFactory(Factory):
     def __init__(self):
         super().__init__(
             name="loan",
-            depends_on=[CoreFactory],
+            depends_on=[CoreUsersFactory],
         )
 
     async def create_loan(self, db):
@@ -79,7 +79,7 @@ class LoanFactory(Factory):
             db=db,
             loan=models_loan.Loan(
                 id=loan_id_1,
-                borrower_id=CoreFactory.demo_user_id,
+                borrower_id=CoreUsersFactory.demo_users_id[0],
                 loaner_id=loaner_id_1,
                 start=date(2025, 2, 22),
                 end=date(2025, 2, 25),
@@ -96,7 +96,7 @@ class LoanFactory(Factory):
             db=db,
             loan=models_loan.Loan(
                 id=loan_id_2,
-                borrower_id=CoreFactory.demo_user_id,
+                borrower_id=CoreUsersFactory.demo_users_id[1],
                 loaner_id=loaner_id_2,
                 start=date(2025, 2, 22),
                 end=date(2025, 2, 25),

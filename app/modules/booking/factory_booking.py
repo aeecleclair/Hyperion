@@ -1,8 +1,8 @@
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from app.core.factory_core import CoreFactory
 from app.core.groups.groups_type import GroupType
+from app.core.users.factory_users import CoreUsersFactory
 from app.modules.booking import (
     cruds_booking,
     models_booking,
@@ -47,7 +47,7 @@ class BookingFactory(Factory):
             booking=schemas_booking.BookingComplete(
                 id=str(uuid.uuid4()),
                 decision=types_booking.Decision.approved,
-                applicant_id=CoreFactory.demo_user_id,
+                applicant_id=CoreUsersFactory.demo_users_id[0],
                 reason="Test",
                 start=datetime.now(UTC),
                 end=datetime.now(UTC) + timedelta(days=1),

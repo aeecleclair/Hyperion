@@ -26,6 +26,7 @@ module = Module(
     root="seed_library",
     tag="seed_library",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
+    factory=None,
 )
 
 
