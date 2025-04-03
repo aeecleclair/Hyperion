@@ -53,7 +53,7 @@ class CoreGroupsFactory(Factory):
         await self.create_core_memberships(db=db)
 
     async def should_run(self, db: AsyncSession):
-        return True
+        return  len(await cruds_groups.get_groups(db=db)) == 0
 
 
 factory = CoreGroupsFactory()
