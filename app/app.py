@@ -233,7 +233,7 @@ async def run_factories(db: AsyncSession, settings: Settings) -> None:
         if module.factory:
             factories_list.append(module.factory)
         else:
-            hyperion_error_logger.error(
+            hyperion_error_logger.warning(
                 f"Module {module.root} does not declare a factory. It won't provide any base data.",
             )
 
