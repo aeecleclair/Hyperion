@@ -1,3 +1,4 @@
+import logging
 import random
 import uuid
 from datetime import UTC, datetime
@@ -20,6 +21,7 @@ NB_USERS = 100
 
 faker = Faker("fr_FR")
 settings = get_settings()
+hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 class CoreUsersFactory(Factory):
@@ -68,10 +70,7 @@ class CoreUsersFactory(Factory):
         )
 
     async def create_core_users(self, db):
-        password = [
-            security.get_password_hash(faker.password(16, True, True, True, True))
-            for _ in range(NB_USERS)
-        ]
+        password = [faker.password(16, True, True, True, True) for _ in range(NB_USERS)]
         firstname = [faker.first_name() for _ in range(NB_USERS)]
         name = [faker.last_name() for _ in range(NB_USERS)]
         nickname = [faker.user_name() for _ in range(NB_USERS)]
@@ -82,6 +81,11 @@ class CoreUsersFactory(Factory):
         ]
         floors = [random.choice(list(FloorsType)) for _ in range(NB_USERS)]
         for i in range(NB_USERS):
+            hyperion_error_logger.debug(
+                "Creating user %s/%s",
+                i + 1,
+                NB_USERS,
+            )
             if i < NB_USERS // 2:
                 email = firstname[i] + "." + name[i] + "@etu.ec-lyon.fr"
                 school_id = SchoolType.centrale_lyon.value

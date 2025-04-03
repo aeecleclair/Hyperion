@@ -16,7 +16,7 @@ class BookingFactory(Factory):
     def __init__(self):
         super().__init__(
             name="booking",
-            depends_on=[],
+            depends_on=[CoreUsersFactory],
         )
 
     async def create_booking(self, db):
