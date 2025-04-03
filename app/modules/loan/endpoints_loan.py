@@ -16,7 +16,7 @@ from app.dependencies import (
     is_user_a_member,
     is_user_in,
 )
-from app.modules.loan import cruds_loan, models_loan, schemas_loan
+from app.modules.loan import cruds_loan, factory_loan, models_loan, schemas_loan
 from app.types.module import Module
 from app.types.scheduler import Scheduler
 from app.utils.communication.notifications import NotificationTool
@@ -34,6 +34,7 @@ module = Module(
     root="loan",
     tag="Loans",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
+    factory=factory_loan.factory,
 )
 
 

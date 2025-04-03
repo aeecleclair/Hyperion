@@ -3,7 +3,7 @@
     "editor.tabSize": 4,
     "editor.insertSpaces": true,
     "editor.detectIndentation": false,
-    "python.analysis.typeCheckingMode": "standard",
+    "python.analysis.typeCheckingMode": "off",
     "editor.codeActionsOnSave": {
         "source.organizeImports": "explicit"
     },

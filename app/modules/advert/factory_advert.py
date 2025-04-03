@@ -1,8 +1,9 @@
 import uuid
 from datetime import UTC, datetime, timedelta
 
+from app.core.groups.groups_type import GroupType
 from app.modules.advert import cruds_advert, models_advert
-from app.utils.factory import Factory
+from app.types.factory import Factory
 
 
 class AdvertFactory(Factory):
@@ -17,7 +18,7 @@ class AdvertFactory(Factory):
             id=str(uuid.uuid4()),
             name="Le BDE",
             adverts=[],
-            group_manager_id=str(uuid.uuid4()),
+            group_manager_id=str(GroupType.BDE.value),
         )
 
         await cruds_advert.create_advert(
@@ -50,7 +51,7 @@ class AdvertFactory(Factory):
             id=str(uuid.uuid4()),
             name="Eclair ces bgs",
             adverts=[],
-            group_manager_id=str(uuid.uuid4()),
+            group_manager_id=str(GroupType.eclair.value),
         )
 
         await cruds_advert.create_advert(

@@ -3,7 +3,7 @@ import uuid
 from datetime import UTC, datetime
 
 from app.modules.cinema import cruds_cinema, schemas_cinema
-from app.utils.factory import Factory
+from app.types.factory import Factory
 
 
 class CinemaFactory(Factory):
@@ -46,7 +46,7 @@ class CinemaFactory(Factory):
             await cruds_cinema.create_session(
                 session=schemas_cinema.CineSessionComplete(
                     start=datetime.now(UTC),
-                    duration=random.randint(90, 180),  # noqa: S311
+                    duration=random.randint(90, 180),
                     name=key,
                     overview=value["overview"],
                     genre=value["genre"],

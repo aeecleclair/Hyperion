@@ -28,6 +28,7 @@ core_module = CoreModule(
     root="",
     tag="Core",
     router=router,
+    factory=None,
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
@@ -206,7 +207,7 @@ async def get_module_visibility(
             schemas_core.ModuleVisibility(
                 root=module.root,
                 allowed_group_ids=allowed_group_ids,
-                allowed_account_types=allowed_account_types,
+                allowed_account_types=allowed_account_types.count(""),
             ),
         )
 

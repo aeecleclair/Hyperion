@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.payment import schemas_payment
+from app.types.factory import Factory
 
 
 class CoreModule:
@@ -12,6 +13,7 @@ class CoreModule:
         self,
         root: str,
         tag: str,
+        factory: Factory | None,
         router: APIRouter | None = None,
         payment_callback: Callable[
             [schemas_payment.CheckoutPayment, AsyncSession],
@@ -31,6 +33,7 @@ class CoreModule:
             Callable[[schemas_payment.CheckoutPayment, AsyncSession], Awaitable[None]]
             | None
         ) = payment_callback
+        self.factory = factory
 
 
 class Module(CoreModule):
@@ -38,6 +41,7 @@ class Module(CoreModule):
         self,
         root: str,
         tag: str,
+        factory: Factory | None,
         default_allowed_groups_ids: list[GroupType] | None = None,
         default_allowed_account_types: list[AccountType] | None = None,
         router: APIRouter | None = None,
@@ -63,3 +67,4 @@ class Module(CoreModule):
             Callable[[schemas_payment.CheckoutPayment, AsyncSession], Awaitable[None]]
             | None
         ) = payment_callback
+        self.factory = factory
