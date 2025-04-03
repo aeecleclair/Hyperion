@@ -29,6 +29,7 @@ module = Module(
     root="recommendation",
     tag="Recommendation",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
+    factory=None,
 )
 
 

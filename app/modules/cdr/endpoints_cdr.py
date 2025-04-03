@@ -64,6 +64,7 @@ module = Module(
     tag="Cdr",
     payment_callback=validate_payment,
     default_allowed_groups_ids=[GroupType.admin_cdr],
+    factory=None,
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")

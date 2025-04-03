@@ -44,19 +44,20 @@ class CoreUsersFactory(Factory):
         groups_type.GroupType.raid_admin,
         groups_type.GroupType.BDS,
     ]
-    if settings.FACTORIES_DEMO_USERS_PASSWORDS:
-        if len(settings.FACTORIES_DEMO_USERS_PASSWORDS) != len(demo_users_id):
-            raise ValueError(  # noqa: TRY003
-                "The number of demo users passwords must be equal to the number of demo users ids",
+    if settings.USE_FACTORIES:
+        if settings.FACTORIES_DEMO_USERS_PASSWORDS:
+            if len(settings.FACTORIES_DEMO_USERS_PASSWORDS) != len(demo_users_id):
+                raise ValueError(  # noqa: TRY003
+                    "The number of demo users passwords must be equal to the number of demo users ids",
+                )
+            demo_passwords = [
+                security.get_password_hash(password)
+                for password in settings.FACTORIES_DEMO_USERS_PASSWORDS
+            ]
+        else:
+            raise DotenvMissingVariableError(
+                "FACTORIES_DEMO_USERS_PASSWORDS",
             )
-        demo_passwords = [
-            security.get_password_hash(password)
-            for password in settings.FACTORIES_DEMO_USERS_PASSWORDS
-        ]
-    else:
-        raise DotenvMissingVariableError(
-            "FACTORIES_DEMO_USERS_PASSWORDS",
-        )
 
     other_users_id = [str(uuid.uuid4()) for _ in range(NB_USERS)]
 
@@ -76,10 +77,10 @@ class CoreUsersFactory(Factory):
         nickname = [faker.user_name() for _ in range(NB_USERS)]
         phone = [faker.phone_number() for _ in range(NB_USERS)]
         promos = [
-            randint(datetime.now(tz=UTC).year - 5, datetime.now(tz=UTC).year)  # noqa: S311
+            randint(datetime.now(tz=UTC).year - 5, datetime.now(tz=UTC).year)
             for _ in range(NB_USERS)
         ]
-        floors = [random.choice(list(FloorsType)) for _ in range(NB_USERS)]  # noqa: S311
+        floors = [random.choice(list(FloorsType)) for _ in range(NB_USERS)]
         for i in range(NB_USERS):
             if i < NB_USERS // 2:
                 email = firstname[i] + "." + name[i] + "@etu.ec-lyon.fr"
