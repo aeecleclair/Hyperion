@@ -1,8 +1,8 @@
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from app.core.factory_core import CoreFactory
 from app.core.users import cruds_users
+from app.core.users.factory_users import CoreUsersFactory
 from app.modules.calendar import cruds_calendar, models_calendar
 from app.modules.calendar.types_calendar import CalendarEventType
 from app.types.factory import Factory
@@ -12,7 +12,7 @@ class CalendarFactory(Factory):
     def __init__(self):
         super().__init__(
             name="calendar",
-            depends_on=[CoreFactory],
+            depends_on=[CoreUsersFactory],
         )
 
     async def should_run(self, db):
@@ -23,7 +23,10 @@ class CalendarFactory(Factory):
         await self.create_event(db)
 
     async def create_event(self, db):
-        user = await cruds_users.get_user_by_email(db, "demo.test@myecl.fr")
+        user = await cruds_users.get_user_by_id(
+            db,
+            user_id=CoreUsersFactory.demo_users_id[0],
+        )
         if user is None:
             return
         event = models_calendar.Event(

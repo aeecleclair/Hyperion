@@ -1,9 +1,9 @@
 import uuid
 
-from app.core.core_endpoints.models_core import CoreGroup
-from app.core.factory_core import CoreFactory
 from app.core.groups.groups_type import GroupType
+from app.core.groups.models_groups import CoreGroup
 from app.core.users import cruds_users
+from app.core.users.factory_users import CoreUsersFactory
 from app.modules.phonebook import cruds_phonebook, models_phonebook
 from app.modules.phonebook.types_phonebook import Kinds
 from app.types.factory import Factory
@@ -13,7 +13,7 @@ class PhonebookFactory(Factory):
     def __init__(self):
         super().__init__(
             name="phonebook",
-            depends_on=[CoreFactory],
+            depends_on=[CoreUsersFactory],
         )
 
     async def create_association(self, db):
@@ -41,7 +41,7 @@ class PhonebookFactory(Factory):
         await cruds_phonebook.create_membership(
             membership=models_phonebook.Membership(
                 id=str(uuid.uuid4()),
-                user_id=CoreFactory.demo_user_id,
+                user_id=CoreUsersFactory.demo_users_id[0],
                 association_id=association_id_1,
                 mandate_year=2025,
                 role_name="Prez",
