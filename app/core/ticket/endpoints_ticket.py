@@ -9,16 +9,16 @@ from fastapi import (
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core, schemas_core
 from app.core.groups.groups_type import GroupType
 from app.core.ticket import cruds_ticket, schemas_ticket
+from app.core.users import models_users, schemas_users
 from app.dependencies import (
     get_db,
     is_user,
     is_user_a_member,
 )
 from app.utils.tools import (
-    is_user_member_of_an_allowed_group,
+    is_user_member_of_any_group,
 )
 
 router = APIRouter(tags=["Tickets"])
@@ -33,7 +33,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 )
 async def get_my_tickets(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_users.CoreUser = Depends(is_user),
 ):
     return await cruds_ticket.get_tickets_of_user(db=db, user_id=user.id)
 
@@ -46,10 +46,10 @@ async def get_my_tickets(
 async def get_tickets_of_user(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_users.CoreUser = Depends(is_user),
 ):
     if not (
-        is_user_member_of_an_allowed_group(user, [GroupType.admin_purchases])
+        is_user_member_of_any_group(user, [GroupType.admin_purchases])
         or user_id == user.id
     ):
         raise HTTPException(
@@ -67,7 +67,7 @@ async def get_tickets_of_user(
 async def get_ticket_secret(
     ticket_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
+    user: models_users.CoreUser = Depends(is_user),
 ):
     ticket = await cruds_ticket.get_ticket(db=db, ticket_id=ticket_id)
     if not ticket:
@@ -92,7 +92,7 @@ async def get_ticket_by_secret(
     generator_id: UUID,
     secret: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(is_user_a_member),
 ):
     ticket_generator = await cruds_ticket.get_ticket_generator(
         db=db,
@@ -131,7 +131,7 @@ async def scan_ticket(
     secret: UUID,
     ticket_data: schemas_ticket.TicketScan,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(is_user_a_member),
 ):
     ticket_generator = await cruds_ticket.get_ticket_generator(
         db=db,
@@ -185,14 +185,14 @@ async def scan_ticket(
 
 @router.get(
     "/tickets/generator/{generator_id}/lists/{tag}/",
-    response_model=list[schemas_core.CoreUserSimple],
+    response_model=list[schemas_users.CoreUserSimple],
     status_code=200,
 )
 async def get_users_by_tag(
     generator_id: UUID,
     tag: str,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(is_user_a_member),
 ):
     ticket_generator = await cruds_ticket.get_ticket_generator(
         db=db,
@@ -227,7 +227,7 @@ async def get_users_by_tag(
 async def get_tags_of_ticket(
     generator_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(is_user_a_member),
 ):
     ticket_generator = await cruds_ticket.get_ticket_generator(
         db=db,

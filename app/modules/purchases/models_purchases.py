@@ -13,7 +13,6 @@ from app.modules.purchases.types_purchases import (
     PaymentType,
     PurchasesLogActionType,
 )
-from app.types.membership import AvailableAssociationMembership
 from app.types.sqlalchemy import Base, PrimaryKey
 
 
@@ -77,9 +76,9 @@ class PurchasesProduct(Base):
     )
     name_fr: Mapped[str]
     name_en: Mapped[str | None]
-    description_fr: Mapped[str | None]
-    description_en: Mapped[str | None]
     available_online: Mapped[bool]
+    description_fr: Mapped[str | None] = mapped_column(default=None)
+    description_en: Mapped[str | None] = mapped_column(default=None)
     product_constraints: Mapped[list["PurchasesProduct"]] = relationship(
         "PurchasesProduct",
         secondary="purchases_product_constraint",
@@ -87,21 +86,28 @@ class PurchasesProduct(Base):
         secondaryjoin="ProductConstraint.product_constraint_id==PurchasesProduct.id",
         lazy="joined",
         join_depth=1,
+        default_factory=list,
     )
     document_constraints: Mapped[list["Document"]] = relationship(
         "app.modules.purchases.models_purchases.Document",
         secondary="purchases_document_constraint",
         lazy="selectin",  # Constraints are always loaded in cruds so we set this to not have to put selectinload
+        default_factory=list,
     )
     variants: Mapped[list["ProductVariant"]] = relationship(
         "ProductVariant",
         lazy="selectin",
+        init=False,
     )
-    related_membership: Mapped[AvailableAssociationMembership | None]
+    related_membership_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("core_association_membership.id"),
+        default=None,
+    )
     tickets: Mapped[list["TicketGenerator"]] = relationship(
         "TicketGenerator",
         secondary="purchases_ticket_generator",
         lazy="selectin",
+        default_factory=list,
     )
 
 
@@ -147,18 +153,21 @@ class ProductVariant(Base):
     )
     name_fr: Mapped[str]
     name_en: Mapped[str | None]
-    description_fr: Mapped[str | None]
-    description_en: Mapped[str | None]
     price: Mapped[int]
     enabled: Mapped[bool]
     unique: Mapped[bool]
+    needs_validation: Mapped[bool]
+    description_fr: Mapped[str | None] = mapped_column(default=None)
+    description_en: Mapped[str | None] = mapped_column(default=None)
     allowed_curriculum: Mapped[list[Curriculum]] = relationship(
         "Curriculum",
         secondary="purchases_allowed_curriculum",
         lazy="selectin",
+        init=False,
     )
-    related_membership_added_duration: Mapped[timedelta | None]
-    needs_validation: Mapped[bool]
+    related_membership_added_duration: Mapped[timedelta | None] = mapped_column(
+        default=None,
+    )
 
 
 class Document(Base):
@@ -182,11 +191,14 @@ class Purchase(Base):
         ForeignKey("purchases_product_variant.id"),
         primary_key=True,
     )
-    product_variant: Mapped["ProductVariant"] = relationship("ProductVariant")
     quantity: Mapped[int]
     paid: Mapped[bool]
     validated: Mapped[bool]
     purchased_on: Mapped[datetime]
+    product_variant: Mapped["ProductVariant"] = relationship(
+        "ProductVariant",
+        init=False,
+    )
 
 
 class Signature(Base):
@@ -240,7 +252,7 @@ class PurchasesAction(Base):
 class Checkout(Base):
     __tablename__ = "purchases_checkout"
     id: Mapped[PrimaryKey]
-    user_id = mapped_column(
+    user_id: Mapped[str] = mapped_column(
         ForeignKey("core_user.id"),
         nullable=False,
     )
@@ -249,17 +261,18 @@ class Checkout(Base):
         "ProductVariant",
         secondary="purchases_checkout_paid_product",
         lazy="selectin",
+        init=False,
     )
 
 
 class CheckoutPaidProduct(Base):
     __tablename__ = "purchases_checkout_paid_product"
-    user_id = mapped_column(
+    user_id: Mapped[str] = mapped_column(
         ForeignKey("core_user.id"),
         nullable=False,
         primary_key=True,
     )
-    product_variant_id = mapped_column(
+    product_variant_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("purchases_product_variant.id"),
         nullable=False,
         primary_key=True,
@@ -283,7 +296,7 @@ class CustomData(Base):
         ForeignKey("purchases_customdata_field.id"),
         primary_key=True,
     )
-    field: Mapped["CustomDataField"] = relationship("CustomDataField")
+    field: Mapped["CustomDataField"] = relationship("CustomDataField", init=False)
     user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), primary_key=True)
     value: Mapped[str]
 

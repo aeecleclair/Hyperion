@@ -1,7 +1,8 @@
 import logging
+import os
 import re
 from collections.abc import Sequence
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from uuid import UUID, uuid4
 
@@ -10,27 +11,26 @@ from fastapi import (
     Depends,
     HTTPException,
     WebSocket,
+    WebSocketDisconnect,
 )
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.groups import cruds_groups, schemas_groups
+from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
-from app.core.memberships import cruds_memberships, schemas_memberships
+from app.core.memberships import (
+    cruds_memberships,
+    schemas_memberships,
+)
 from app.core.payment.payment_tool import PaymentTool
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-from app.core.users import cruds_users, models_users, schemas_users
-========
 from app.core.ticket import cruds_ticket, models_ticket, schemas_ticket
-from app.core.users import cruds_users
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
+from app.core.users import cruds_users, models_users, schemas_users
 from app.core.users.cruds_users import get_user_by_id, get_users
 from app.core.utils.config import Settings
 from app.dependencies import (
     get_db,
     get_payment_tool,
     get_settings,
-    get_unsafe_db,
     get_websocket_connection_manager,
     is_user,
     is_user_a_member,
@@ -49,10 +49,15 @@ from app.modules.purchases.utils_purchases import (
     validate_payment,
 )
 from app.types.module import Module
+from app.types.scopes_type import ScopeType
 from app.types.websocket import (
+    ConnectionWSMessageModel,
+    ConnectionWSMessageModelData,
+    ConnectionWSMessageModelStatus,
     HyperionWebsocketsRoom,
     WebsocketConnectionManager,
 )
+from app.utils.auth import auth_utils
 
 # from app.utils.mail.mailworker import send_email
 from app.utils.tools import (
@@ -87,13 +92,8 @@ async def get_purchases_users(
     **User must be part of a seller group to use this endpoint**
     """
     if not (
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-        is_user_member_of_any_group(user, [GroupType.admin_cdr])
-        or await cruds_cdr.get_sellers_by_group_ids(
-========
-        is_user_member_of_an_allowed_group(user, [GroupType.admin_purchases])
+        is_user_member_of_any_group(user, [GroupType.admin_purchases])
         or await cruds_purchases.get_sellers_by_group_ids(
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
             db=db,
             group_ids=[g.id for g in user.groups],
         )
@@ -128,13 +128,8 @@ async def get_purchases_users_pending_validation(
     **User must be part of a seller group to use this endpoint**
     """
     if not (
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-        is_user_member_of_any_group(user, [GroupType.admin_cdr])
-        or await cruds_cdr.get_sellers_by_group_ids(
-========
-        is_user_member_of_an_allowed_group(user, [GroupType.admin_purchases])
+        is_user_member_of_any_group(user, [GroupType.admin_purchases])
         or await cruds_purchases.get_sellers_by_group_ids(
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
             db=db,
             group_ids=[g.id for g in user.groups],
         )
@@ -156,30 +151,9 @@ async def get_purchases_users_pending_validation(
     }
 
     return [
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-        schemas_cdr.CdrUser(
-            account_type=user.account_type,
-            school_id=user.school_id,
-            curriculum=schemas_cdr.CurriculumComplete(
-                name=curriculum_memberships_mapping[user.id].name,
-                id=curriculum_memberships_mapping[user.id].id,
-            )
-            if user.id in curriculum_memberships_mapping
-            else None,
-            promo=user.promo,
-            email=user.email,
-            birthday=user.birthday,
-            phone=user.phone,
-            floor=user.floor,
-            id=user.id,
-            name=user.name,
-            firstname=user.firstname,
-            nickname=user.nickname,
-========
         schemas_purchases.PurchasesUser(
             curriculum=curriculum_memberships_mapping.get(user.id, None),
             **user.__dict__,
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
         )
         for user in core_users
     ]
@@ -202,13 +176,8 @@ async def get_purchases_user(
     """
     if user.id != user_id:
         if not (
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-            is_user_member_of_any_group(user, [GroupType.admin_cdr])
-            or await cruds_cdr.get_sellers_by_group_ids(
-========
-            is_user_member_of_an_allowed_group(user, [GroupType.admin_purchases])
+            is_user_member_of_any_group(user, [GroupType.admin_purchases])
             or await cruds_purchases.get_sellers_by_group_ids(
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
                 db=db,
                 group_ids=[g.id for g in user.groups],
             )
@@ -223,30 +192,6 @@ async def get_purchases_user(
             status_code=404,
             detail="User not found.",
         )
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-    curriculum = await cruds_cdr.get_cdr_user_curriculum(db, user_id)
-    curriculum_complete = {c.id: c for c in await cruds_cdr.get_curriculums(db=db)}
-
-    return schemas_cdr.CdrUser(
-        account_type=user_db.account_type,
-        school_id=user_db.school_id,
-        name=user_db.name,
-        firstname=user_db.firstname,
-        nickname=user_db.nickname,
-        curriculum=schemas_cdr.CurriculumComplete(
-            name=curriculum_complete[curriculum.curriculum_id].name,
-            id=curriculum.curriculum_id,
-        )
-        if curriculum
-        else None,
-        id=user_db.id,
-        promo=user_db.promo,
-        email=user_db.email,
-        birthday=user_db.birthday,
-        phone=user_db.phone,
-        floor=user_db.floor,
-    )
-========
     user_dict = user_db.__dict__
     curriculum = await cruds_purchases.get_purchases_user_curriculum(db, user_id)
     curriculum_complete = {
@@ -255,7 +200,6 @@ async def get_purchases_user(
     if curriculum:
         user_dict["curriculum"] = curriculum_complete[curriculum.curriculum_id]
     return schemas_purchases.PurchasesUser(**user_dict)
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
 
 
 @module.router.patch(
@@ -266,13 +210,8 @@ async def update_purchases_user(
     user_id: str,
     user_update: schemas_purchases.PurchasesUserUpdate,
     db: AsyncSession = Depends(get_db),
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
     seller_user: models_users.CoreUser = Depends(
-        is_user_in(GroupType.admin_cdr),
-========
-    seller_user: models_core.CoreUser = Depends(
-        is_user_a_member_of(GroupType.admin_purchases),
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
+        is_user_in(GroupType.admin_purchases),
     ),
     ws_manager: WebsocketConnectionManager = Depends(get_websocket_connection_manager),
     settings: Settings = Depends(get_settings),
@@ -333,7 +272,6 @@ async def update_purchases_user(
                     floor=user_update.floor,
                 ),
             )
-        await db.commit()
     except Exception:
         await db.rollback()
         raise
@@ -356,17 +294,7 @@ async def update_purchases_user(
                         curriculum=schemas_purchases.CurriculumComplete(
                             **curriculum.__dict__,
                         ),
-                        school_id=user_db.school_id,
-                        account_type=user_db.account_type,
-                        name=user_db.name,
-                        firstname=user_db.firstname,
-                        nickname=user_db.nickname,
-                        id=user_db.id,
-                        promo=user_db.promo,
-                        email=user_db.email,
-                        birthday=user_db.birthday,
-                        phone=user_db.phone,
-                        floor=user_db.floor,
+                        **user_db.__dict__,
                     ),
                 ),
                 room_id=HyperionWebsocketsRoom.Purchases,
@@ -384,13 +312,9 @@ async def update_purchases_user(
 )
 async def get_sellers(
     db: AsyncSession = Depends(get_db),
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
-========
-    user: models_core.CoreUser = Depends(
-        is_user_a_member_of(GroupType.admin_purchases),
+    user: models_users.CoreUser = Depends(
+        is_user_in(GroupType.admin_purchases),
     ),
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
 ):
     """
     Get all sellers.
@@ -559,13 +483,9 @@ async def send_seller_results(
     # emails: schemas_purchases.ResultRequest,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
-========
-    user: models_core.CoreUser = Depends(
-        is_user_a_member_of(GroupType.admin_purchases),
+    user: models_users.CoreUser = Depends(
+        is_user_in(GroupType.admin_purchases),
     ),
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
     # settings: Settings = Depends(get_settings),
 ):
     """
@@ -621,13 +541,7 @@ async def get_all_products(
         db,
         [x.id for x in user.groups],
     )
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-    if not (sellers or is_user_member_of_any_group(user, [GroupType.admin_cdr])):
-========
-    if not (
-        sellers or is_user_member_of_an_allowed_group(user, [GroupType.admin_purchases])
-    ):
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
+    if not (sellers or is_user_member_of_any_group(user, [GroupType.admin_purchases])):
         raise HTTPException(
             status_code=403,
             detail="You must be a seller to get all documents.",
@@ -643,13 +557,9 @@ async def get_all_products(
 async def create_seller(
     seller: schemas_purchases.SellerBase,
     db: AsyncSession = Depends(get_db),
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
-========
-    user: models_core.CoreUser = Depends(
-        is_user_a_member_of(GroupType.admin_purchases),
+    user: models_users.CoreUser = Depends(
+        is_user_in(GroupType.admin_purchases),
     ),
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
 ):
     """
     Create a seller.
@@ -666,9 +576,7 @@ async def create_seller(
         )
     db_seller = models_purchases.Seller(
         id=uuid4(),
-        name=seller.name,
-        group_id=seller.group_id,
-        order=seller.order,
+        **seller.model_dump(),
     )
     try:
         cruds_purchases.create_seller(db, db_seller)
@@ -687,13 +595,9 @@ async def update_seller(
     seller_id: UUID,
     seller: schemas_purchases.SellerEdit,
     db: AsyncSession = Depends(get_db),
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
-========
-    user: models_core.CoreUser = Depends(
-        is_user_a_member_of(GroupType.admin_purchases),
+    user: models_users.CoreUser = Depends(
+        is_user_in(GroupType.admin_purchases),
     ),
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
 ):
     """
     Update a seller.
@@ -727,13 +631,9 @@ async def update_seller(
 async def delete_seller(
     seller_id: UUID,
     db: AsyncSession = Depends(get_db),
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
-========
-    user: models_core.CoreUser = Depends(
-        is_user_a_member_of(GroupType.admin_purchases),
+    user: models_users.CoreUser = Depends(
+        is_user_in(GroupType.admin_purchases),
     ),
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
 ):
     """
     Delete a seller.
@@ -827,14 +727,9 @@ async def create_product(
     db_product = models_purchases.PurchasesProduct(
         id=uuid4(),
         seller_id=seller_id,
-        name_fr=product.name_fr,
-        name_en=product.name_en,
-        available_online=product.available_online,
-        description_fr=product.description_fr,
-        description_en=product.description_en,
-        related_membership_id=product.related_membership.id
-        if product.related_membership
-        else None,
+        **product.model_dump(
+            exclude={"product_constraints", "document_constraints", "ticket"},
+        ),
     )
     try:
         cruds_purchases.create_product(db, db_product)
@@ -857,17 +752,7 @@ async def create_product(
         for ticket in product.tickets:
             cruds_ticket.create_ticket_generator(
                 db,
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-                models_cdr.TicketGenerator(
-                    id=uuid4(),
-                    product_id=db_product.id,
-                    name=ticket.name,
-                    max_use=ticket.max_use,
-                    expiration=ticket.expiration,
-                ),
-========
                 models_ticket.TicketGenerator(id=uuid4(), **ticket.model_dump()),
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
             )
         await db.commit()
         return await cruds_purchases.get_product_by_id(db, db_product.id)
@@ -1053,18 +938,11 @@ async def create_product_variant(
     db_product_variant = models_purchases.ProductVariant(
         id=uuid4(),
         product_id=product_id,
-        name_fr=product_variant.name_fr,
-        name_en=product_variant.name_en,
-        price=product_variant.price,
-        enabled=product_variant.enabled,
-        unique=product_variant.unique,
-        related_membership_added_duration=product_variant.related_membership_added_duration,
-        description_fr=product_variant.description_fr,
-        description_en=product_variant.description_en,
+        **product_variant.model_dump(exclude={"allowed_curriculum"}),
     )
     if (
         product
-        and product.related_membership
+        and product.related_membership_id
         and not db_product_variant.related_membership_added_duration
     ):
         raise HTTPException(
@@ -1073,7 +951,7 @@ async def create_product_variant(
         )
     if (
         product
-        and not product.related_membership
+        and not product.related_membership_id
         and db_product_variant.related_membership_added_duration
     ):
         raise HTTPException(
@@ -1155,7 +1033,7 @@ async def update_product_variant(
             )
     if (
         db_product
-        and not db_product.related_membership
+        and not db_product.related_membership_id
         and product_variant.related_membership_added_duration
     ):
         raise HTTPException(
@@ -1279,13 +1157,7 @@ async def get_all_sellers_documents(
         db,
         [x.id for x in user.groups],
     )
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-    if not (sellers or is_user_member_of_any_group(user, [GroupType.admin_cdr])):
-========
-    if not (
-        sellers or is_user_member_of_an_allowed_group(user, [GroupType.admin_purchases])
-    ):
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
+    if not (sellers or is_user_member_of_any_group(user, [GroupType.admin_purchases])):
         raise HTTPException(
             status_code=403,
             detail="You must be a seller to get all documents.",
@@ -1385,12 +1257,8 @@ async def get_purchases_by_user_id(
     **User must get his own purchases or be Purchases Admin to use this endpoint**
     """
     if not (
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-        user_id == user.id or is_user_member_of_any_group(user, [GroupType.admin_cdr])
-========
         user_id == user.id
-        or is_user_member_of_an_allowed_group(user, [GroupType.admin_purchases])
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
+        or is_user_member_of_any_group(user, [GroupType.admin_purchases])
     ):
         raise HTTPException(
             status_code=403,
@@ -1415,40 +1283,11 @@ async def get_purchases_by_user_id(
                 )
                 if seller:
                     result.append(
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-                        schemas_cdr.PurchaseReturn(
-                            user_id=purchase.user_id,
-                            product_variant_id=purchase.product_variant_id,
-                            validated=purchase.validated,
-                            purchased_on=purchase.purchased_on,
-                            quantity=purchase.quantity,
-========
                         schemas_purchases.PurchaseReturn(
                             **purchase.__dict__,
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
                             price=product_variant.price,
-                            product=schemas_cdr.ProductComplete(
-                                id=product.id,
-                                seller_id=product.seller_id,
-                                name_fr=product.name_fr,
-                                name_en=product.name_en,
-                                available_online=product.available_online,
-                                description_fr=product.description_fr,
-                                description_en=product.description_en,
-                                related_membership=schemas_memberships.MembershipSimple(
-                                    id=product.related_membership.id,
-                                    name=product.related_membership.name,
-                                    manager_group_id=product.related_membership.manager_group_id,
-                                )
-                                if product.related_membership
-                                else None,
-                            ),
-                            seller=schemas_cdr.SellerComplete(
-                                id=seller.id,
-                                name=seller.name,
-                                group_id=seller.group_id,
-                                order=seller.order,
-                            ),
+                            product=product,
+                            seller=seller,
                         ),
                     )
     return result
@@ -1508,40 +1347,11 @@ async def get_purchases_by_user_id_by_seller_id(
                 )
                 if seller:
                     result.append(
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-                        schemas_cdr.PurchaseReturn(
-                            user_id=purchase.user_id,
-                            product_variant_id=purchase.product_variant_id,
-                            validated=purchase.validated,
-                            purchased_on=purchase.purchased_on,
-                            quantity=purchase.quantity,
-========
                         schemas_purchases.PurchaseReturn(
                             **purchase.__dict__,
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
                             price=product_variant.price,
-                            product=schemas_cdr.ProductComplete(
-                                id=product.id,
-                                seller_id=product.seller_id,
-                                name_fr=product.name_fr,
-                                name_en=product.name_en,
-                                available_online=product.available_online,
-                                description_fr=product.description_fr,
-                                description_en=product.description_en,
-                                related_membership=schemas_memberships.MembershipSimple(
-                                    id=product.related_membership.id,
-                                    name=product.related_membership.name,
-                                    manager_group_id=product.related_membership.manager_group_id,
-                                )
-                                if product.related_membership
-                                else None,
-                            ),
-                            seller=schemas_cdr.SellerComplete(
-                                id=seller.id,
-                                name=seller.name,
-                                group_id=seller.group_id,
-                                order=seller.order,
-                            ),
+                            product=product,
+                            seller=seller,
                         ),
                     )
     return result
@@ -1641,13 +1451,8 @@ async def create_purchase(
 
 
 async def remove_existing_membership(
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-    existing_membership: schemas_memberships.UserMembershipComplete,
-    product_variant: models_cdr.ProductVariant,
-========
-    existing_membership: models_core.CoreAssociationMembership,
+    existing_membership: schemas_memberships.UserMembershipSimple,
     product_variant: models_purchases.ProductVariant,
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
     db: AsyncSession,
 ):
     if product_variant.related_membership_added_duration:
@@ -1656,26 +1461,15 @@ async def remove_existing_membership(
             - product_variant.related_membership_added_duration
             <= existing_membership.start_date
         ):
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
             await cruds_memberships.delete_user_membership(
-========
-            await cruds_purchases.delete_membership(
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
                 db=db,
                 user_membership_id=existing_membership.id,
             )
         else:
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
             await cruds_memberships.update_user_membership(
                 db=db,
                 user_membership_id=existing_membership.id,
                 user_membership_edit=schemas_memberships.UserMembershipEdit(
-========
-            await cruds_purchases.update_membership(
-                db=db,
-                membership_id=existing_membership.id,
-                membership=schemas_purchases.MembershipEdit(
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
                     end_date=existing_membership.end_date
                     - product_variant.related_membership_added_duration,
                 ),
@@ -1685,56 +1479,43 @@ async def remove_existing_membership(
 async def add_membership(
     memberships: Sequence[schemas_memberships.UserMembershipComplete],
     user_id: str,
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-    product_related_membership_id: UUID,
-    product_variant: models_cdr.ProductVariant,
-========
     product: models_purchases.PurchasesProduct,
     product_variant: models_purchases.ProductVariant,
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
     db: AsyncSession,
 ):
+    if not product.related_membership_id:
+        return
     if product_variant.related_membership_added_duration:
         existing_membership = next(
             (
                 m
                 for m in memberships
-                if m.association_membership_id == product_related_membership_id
+                if m.association_membership_id == product.related_membership_id
             ),
             None,
         )
         if existing_membership:
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
             await cruds_memberships.update_user_membership(
                 db=db,
                 user_membership_id=existing_membership.id,
                 user_membership_edit=schemas_memberships.UserMembershipEdit(
-========
-            await cruds_purchases.update_membership(
-                db=db,
-                membership_id=existing_membership.id,
-                membership=schemas_purchases.MembershipEdit(
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
                     end_date=existing_membership.end_date
                     + product_variant.related_membership_added_duration,
                 ),
             )
         else:
+            added_membership = schemas_memberships.UserMembershipSimple(
+                id=uuid4(),
+                user_id=user_id,
+                association_membership_id=product.related_membership_id,
+                start_date=date(datetime.now(tz=UTC).date().year, 9, 1),
+                end_date=date(datetime.now(tz=UTC).date().year, 9, 1)
+                + product_variant.related_membership_added_duration,
+            )
             cruds_memberships.create_user_membership(
                 db=db,
-                user_membership=schemas_memberships.UserMembershipSimple(
-                    id=uuid4(),
-                    user_id=user_id,
-                    association_membership_id=product_related_membership_id,
-                    start_date=date(datetime.now(tz=UTC).date().year, 9, 1),
-                    end_date=date(datetime.now(tz=UTC).date().year, 9, 1)
-                    + product_variant.related_membership_added_duration,
-                ),
+                user_membership=added_membership,
             )
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-========
-            cruds_purchases.create_membership(db=db, membership=added_membership)
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
 
 
 @module.router.patch(
@@ -1746,13 +1527,9 @@ async def mark_purchase_as_validated(
     product_variant_id: UUID,
     validated: bool,
     db: AsyncSession = Depends(get_db),
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
-========
-    user: models_core.CoreUser = Depends(
-        is_user_a_member_of(GroupType.admin_purchases),
+    user: models_users.CoreUser = Depends(
+        is_user_in(GroupType.admin_purchases),
     ),
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
 ):
     """
     Validate a purchase.
@@ -1789,14 +1566,11 @@ async def mark_purchase_as_validated(
             detail="Invalid product.",
         )
     if validated:
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
         memberships = await cruds_memberships.get_user_memberships_by_user_id(
-========
-        memberships = await cruds_purchases.get_actual_memberships_by_user_id(
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
             db=db,
             user_id=user_id,
-            minimal_end_date=date(datetime.now(UTC).year, 9, 5),
+            maximal_start_date=datetime.now(UTC) + timedelta(days=31),
+            minimal_end_date=datetime.now(UTC) + timedelta(days=31),
         )
         for product_constraint in product.product_constraints:
             purchases = await cruds_purchases.get_purchases_by_ids(
@@ -1807,8 +1581,8 @@ async def mark_purchase_as_validated(
                 ],
             )
             if not purchases:
-                if product_constraint.related_membership:
-                    if product_constraint.related_membership not in [
+                if product_constraint.related_membership_id:
+                    if product_constraint.related_membership_id not in [
                         m.association_membership_id for m in memberships
                     ]:
                         raise HTTPException(
@@ -1831,11 +1605,11 @@ async def mark_purchase_as_validated(
                     status_code=403,
                     detail=f"Document signature constraint {document_constraint.name} not satisfied.",
                 )
-        if product.related_membership:
+        if product.related_membership_id:
             await add_membership(
                 memberships=memberships,
                 user_id=user_id,
-                product_related_membership_id=product.related_membership.id,
+                product=product,
                 product_variant=product_variant,
                 db=db,
             )
@@ -1845,7 +1619,6 @@ async def mark_purchase_as_validated(
                 secret=uuid4(),
                 name=ticketgen.name,
                 generator_id=ticketgen.id,
-                product_variant_id=product_variant.id,
                 user_id=user_id,
                 scan_left=ticketgen.max_use,
                 tags="",
@@ -1853,21 +1626,18 @@ async def mark_purchase_as_validated(
             )
             cruds_ticket.create_ticket(db=db, ticket=ticket)
     else:
-        if product.related_membership:
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
+        if product.related_membership_id:
             memberships = await cruds_memberships.get_user_memberships_by_user_id(
-========
-            memberships = await cruds_purchases.get_actual_memberships_by_user_id(
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
                 db=db,
                 user_id=user_id,
-                minimal_end_date=date(datetime.now(UTC).year, 9, 5),
+                maximal_start_date=datetime.now(UTC) + timedelta(days=31),
+                minimal_end_date=datetime.now(UTC) + timedelta(days=31),
             )
             existing_membership = next(
                 (
                     m
                     for m in memberships
-                    if m.association_membership_id == product.related_membership
+                    if m.association_membership_id == product.related_membership_id
                 ),
                 None,
             )
@@ -1899,58 +1669,6 @@ async def mark_purchase_as_validated(
         return db_purchase
 
 
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-========
-@module.router.post(
-    "/purchases/memberships/{membership_id}/add-batch/",
-    status_code=201,
-    response_model=list[schemas_purchases.MembershipUserMappingEmail],
-)
-async def add_batch_membership(
-    membership_id: AvailableAssociationMembership,
-    memberships: list[schemas_purchases.MembershipUserMappingEmail],
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(
-        is_user_a_member_of(GroupType.admin_purchases),
-    ),
-):
-    """
-    Add a batch of user to a membership.
-
-    Return the list of unknown users whose email is not in the database.
-
-    **User must be Purchases Admin to use this endpoint**
-    """
-    unknown_users: list[schemas_purchases.MembershipUserMappingEmail] = []
-    for m in memberships:
-        m_user = await cruds_users.get_user_by_email(db=db, email=m.user_email)
-        if not m_user:
-            unknown_users.append(m)
-            continue
-        stored = await cruds_purchases.get_actual_memberships_by_user_id(
-            db=db,
-            user_id=m_user.id,
-        )
-        if membership_id not in [m.membership for m in stored]:
-            cruds_purchases.create_membership(
-                db=db,
-                membership=models_core.CoreAssociationMembership(
-                    id=uuid4(),
-                    user_id=m_user.id,
-                    membership=membership_id,
-                    start_date=m.start_date,
-                    end_date=m.end_date,
-                ),
-            )
-    try:
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
-    return unknown_users
-
-
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
 @module.router.delete(
     "/purchases/users/{user_id}/purchases/{product_variant_id}/",
     status_code=204,
@@ -2017,16 +1735,9 @@ async def delete_purchase(
             if purchased_product:
                 if product in purchased_product.product_constraints:
                     memberships = (
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
                         await cruds_memberships.get_user_memberships_by_user_id(
                             db=db,
                             user_id=user_id,
-                            minimal_end_date=date(datetime.now(UTC).year, 9, 5),
-========
-                        await cruds_purchases.get_actual_memberships_by_user_id(
-                            db=db,
-                            user_id=user_id,
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
                         )
                     )
                     all_possible_purchases = await cruds_purchases.get_purchases_by_ids(
@@ -2038,8 +1749,8 @@ async def delete_purchase(
                         all_possible_purchases = list(all_possible_purchases)
                         all_possible_purchases.remove(db_purchase)
                         if not all_possible_purchases:
-                            if product.related_membership:
-                                if product.related_membership not in [
+                            if product.related_membership_id:
+                                if product.related_membership_id not in [
                                     m.association_membership_id for m in memberships
                                 ]:
                                     raise HTTPException(
@@ -2090,12 +1801,8 @@ async def get_signatures_by_user_id(
     **User must get his own signatures or be Purchases Admin to use this endpoint**
     """
     if not (
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-        user_id == user.id or is_user_member_of_any_group(user, [GroupType.admin_cdr])
-========
         user_id == user.id
-        or is_user_member_of_an_allowed_group(user, [GroupType.admin_purchases])
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
+        or is_user_member_of_any_group(user, [GroupType.admin_purchases])
     ):
         raise HTTPException(
             status_code=403,
@@ -2188,8 +1895,7 @@ async def create_signature(
     db_signature = models_purchases.Signature(
         user_id=user_id,
         document_id=document_id,
-        signature_type=signature.signature_type,
-        numeric_signature_id=signature.numeric_signature_id,
+        **signature.model_dump(exclude_none=False),
     )
     try:
         cruds_purchases.create_signature(db, db_signature)
@@ -2209,13 +1915,9 @@ async def delete_signature(
     user_id: str,
     document_id: UUID,
     db: AsyncSession = Depends(get_db),
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
-========
-    user: models_core.CoreUser = Depends(
-        is_user_a_member_of(GroupType.admin_purchases),
+    user: models_users.CoreUser = Depends(
+        is_user_in(GroupType.admin_purchases),
     ),
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
 ):
     """
     Delete a signature.
@@ -2269,13 +1971,9 @@ async def get_curriculums(
 async def create_curriculum(
     curriculum: schemas_purchases.CurriculumBase,
     db: AsyncSession = Depends(get_db),
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
-========
-    user: models_core.CoreUser = Depends(
-        is_user_a_member_of(GroupType.admin_purchases),
+    user: models_users.CoreUser = Depends(
+        is_user_in(GroupType.admin_purchases),
     ),
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
 ):
     """
     Create a curriculum.
@@ -2309,13 +2007,9 @@ async def create_curriculum(
 async def delete_curriculum(
     curriculum_id: UUID,
     db: AsyncSession = Depends(get_db),
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
-========
-    user: models_core.CoreUser = Depends(
-        is_user_a_member_of(GroupType.admin_purchases),
+    user: models_users.CoreUser = Depends(
+        is_user_in(GroupType.admin_purchases),
     ),
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
 ):
     """
     Delete a curriculum.
@@ -2359,12 +2053,8 @@ async def create_curriculum_membership(
     **User must add a curriculum to themself or be Purchases Admin to use this endpoint**
     """
     if not (
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-        user_id == user.id or is_user_member_of_any_group(user, [GroupType.admin_cdr])
-========
         user_id == user.id
-        or is_user_member_of_an_allowed_group(user, [GroupType.admin_purchases])
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
+        or is_user_member_of_any_group(user, [GroupType.admin_purchases])
     ):
         raise HTTPException(
             status_code=403,
@@ -2425,30 +2115,12 @@ async def create_curriculum_membership(
     if purchases_status.status == PurchasesStatus.onsite:
         try:
             await ws_manager.send_message_to_room(
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-                message=schemas_cdr.NewUserWSMessageModel(
-                    data=schemas_cdr.CdrUser(
-                        account_type=db_user.account_type,
-                        school_id=db_user.school_id,
-                        curriculum=schemas_cdr.CurriculumComplete(
-                            id=wanted_curriculum.id,
-                            name=wanted_curriculum.name,
-========
                 message=schemas_purchases.NewUserWSMessageModel(
                     data=schemas_purchases.PurchasesUser(
                         curriculum=schemas_purchases.CurriculumComplete(
                             **wanted_curriculum.__dict__,
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
                         ),
-                        promo=db_user.promo,
-                        email=db_user.email,
-                        birthday=db_user.birthday,
-                        phone=db_user.phone,
-                        floor=db_user.floor,
-                        id=db_user.id,
-                        name=db_user.name,
-                        firstname=db_user.firstname,
-                        nickname=db_user.nickname,
+                        **db_user.__dict__,
                     ),
                 ),
                 room_id=HyperionWebsocketsRoom.Purchases,
@@ -2476,12 +2148,8 @@ async def update_curriculum_membership(
     **User must add a curriculum to themself or be Purchases Admin to use this endpoint**
     """
     if not (
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-        user_id == user.id or is_user_member_of_any_group(user, [GroupType.admin_cdr])
-========
         user_id == user.id
-        or is_user_member_of_an_allowed_group(user, [GroupType.admin_purchases])
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
+        or is_user_member_of_any_group(user, [GroupType.admin_purchases])
     ):
         raise HTTPException(
             status_code=403,
@@ -2517,30 +2185,12 @@ async def update_curriculum_membership(
     if purchases_status.status == PurchasesStatus.onsite:
         try:
             await ws_manager.send_message_to_room(
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-                message=schemas_cdr.UpdateUserWSMessageModel(
-                    data=schemas_cdr.CdrUser(
-                        account_type=db_user.account_type,
-                        school_id=db_user.school_id,
-                        curriculum=schemas_cdr.CurriculumComplete(
-                            id=curriculum.id,
-                            name=curriculum.name,
-========
                 message=schemas_purchases.UpdateUserWSMessageModel(
                     data=schemas_purchases.PurchasesUser(
                         curriculum=schemas_purchases.CurriculumComplete(
                             **curriculum.__dict__,
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
                         ),
-                        promo=db_user.promo,
-                        email=db_user.email,
-                        birthday=db_user.birthday,
-                        phone=db_user.phone,
-                        floor=db_user.floor,
-                        id=db_user.id,
-                        name=db_user.name,
-                        firstname=db_user.firstname,
-                        nickname=db_user.nickname,
+                        **db_user.__dict__,
                     ),
                 ),
                 room_id=HyperionWebsocketsRoom.Purchases,
@@ -2577,12 +2227,8 @@ async def delete_curriculum_membership(
             detail="Invalid curriculum_id",
         )
     if not (
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-        user_id == user.id or is_user_member_of_any_group(user, [GroupType.admin_cdr])
-========
         user_id == user.id
-        or is_user_member_of_an_allowed_group(user, [GroupType.admin_purchases])
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
+        or is_user_member_of_any_group(user, [GroupType.admin_purchases])
     ):
         raise HTTPException(
             status_code=403,
@@ -2609,27 +2255,10 @@ async def delete_curriculum_membership(
     if purchases_status.status == PurchasesStatus.onsite:
         try:
             await ws_manager.send_message_to_room(
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-                message=schemas_cdr.UpdateUserWSMessageModel(
-                    data=schemas_cdr.CdrUser(
-                        account_type=db_user.account_type,
-                        school_id=db_user.school_id,
-                        curriculum=None,
-                        promo=db_user.promo,
-                        email=db_user.email,
-                        birthday=db_user.birthday,
-                        phone=db_user.phone,
-                        floor=db_user.floor,
-                        id=db_user.id,
-                        name=db_user.name,
-                        firstname=db_user.firstname,
-                        nickname=db_user.nickname,
-========
                 message=schemas_purchases.UpdateUserWSMessageModel(
                     data=schemas_purchases.PurchasesUser(
                         curriculum=None,
                         **db_user.__dict__,
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
                     ),
                 ),
                 room_id=HyperionWebsocketsRoom.Purchases,
@@ -2656,12 +2285,8 @@ async def get_payments_by_user_id(
     **User must get his own payments or be Purchases Admin to use this endpoint**
     """
     if not (
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-        user_id == user.id or is_user_member_of_any_group(user, [GroupType.admin_cdr])
-========
         user_id == user.id
-        or is_user_member_of_an_allowed_group(user, [GroupType.admin_purchases])
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
+        or is_user_member_of_any_group(user, [GroupType.admin_purchases])
     ):
         raise HTTPException(
             status_code=403,
@@ -2679,13 +2304,9 @@ async def create_payment(
     user_id: str,
     payment: schemas_purchases.PaymentBase,
     db: AsyncSession = Depends(get_db),
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
-========
-    user: models_core.CoreUser = Depends(
-        is_user_a_member_of(GroupType.admin_purchases),
+    user: models_users.CoreUser = Depends(
+        is_user_in(GroupType.admin_purchases),
     ),
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
 ):
     """
     Create a payment.
@@ -2701,8 +2322,7 @@ async def create_payment(
     db_payment = models_purchases.Payment(
         id=uuid4(),
         user_id=user_id,
-        total=payment.total,
-        payment_type=payment.payment_type,
+        **payment.model_dump(),
     )
     db_action = models_purchases.PurchasesAction(
         id=uuid4(),
@@ -2731,13 +2351,9 @@ async def delete_payment(
     user_id: str,
     payment_id: UUID,
     db: AsyncSession = Depends(get_db),
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
-========
-    user: models_core.CoreUser = Depends(
-        is_user_a_member_of(GroupType.admin_purchases),
+    user: models_users.CoreUser = Depends(
+        is_user_in(GroupType.admin_purchases),
     ),
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
 ):
     """
     Remove a payment.
@@ -2807,28 +2423,7 @@ async def get_payment_url(
             status_code=403,
             detail="Please give an amount in cents, greater than 1€.",
         )
-    user_schema = schemas_users.CoreUser(
-        account_type=user.account_type,
-        school_id=user.school_id,
-        email=user.email,
-        birthday=user.birthday,
-        promo=user.promo,
-        floor=user.floor,
-        phone=user.phone,
-        created_on=user.created_on,
-        groups=[
-            schemas_groups.CoreGroupSimple(
-                id=group.id,
-                name=group.name,
-                description=group.description,
-            )
-            for group in user.groups
-        ],
-        id=user.id,
-        name=user.name,
-        firstname=user.firstname,
-        nickname=user.nickname,
-    )
+    user_schema = schemas_users.CoreUser(**user.__dict__)
     checkout = await payment_tool.init_checkout(
         module=module.root,
         helloasso_slug="AEECL",
@@ -2841,8 +2436,8 @@ async def get_payment_url(
     hyperion_error_logger.info(f"Purchases: Logging Checkout id {checkout.id}")
     purchase_checkout = models_purchases.Checkout(
         id=uuid4(),
-        user_id=user.id,
         checkout_id=checkout.id,
+        user_id=user.id,
     )
 
     cruds_purchases.create_checkout(
@@ -2867,132 +2462,8 @@ async def get_payment_url(
 
 
 @module.router.get(
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-    "/cdr/status/",
-    response_model=schemas_cdr.Status,
-========
-    "/purchases/users/{user_id}/memberships/",
-    response_model=list[schemas_purchases.MembershipComplete],
-    status_code=200,
-)
-async def get_memberships_by_user_id(
-    user_id: str,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user),
-):
-    if not (
-        user_id == user.id
-        or is_user_member_of_an_allowed_group(user, [GroupType.admin_purchases])
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="You're not allowed to see other users memberships.",
-        )
-    return await cruds_purchases.get_actual_memberships_by_user_id(
-        db=db,
-        user_id=user_id,
-    )
-
-
-@module.router.post(
-    "/purchases/users/{user_id}/memberships/",
-    response_model=schemas_purchases.MembershipComplete,
-    status_code=201,
-)
-async def create_membership(
-    user_id: str,
-    membership: schemas_purchases.MembershipBase,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(
-        is_user_a_member_of(GroupType.admin_purchases),
-    ),
-):
-    db_membership = models_core.CoreAssociationMembership(
-        id=uuid4(),
-        user_id=user_id,
-        **membership.model_dump(),
-    )
-    try:
-        cruds_purchases.create_membership(db, db_membership)
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
-    else:
-        return db_membership
-
-
-@module.router.patch(
-    "/purchases/users/{user_id}/memberships/{membership}/",
-    status_code=204,
-)
-async def update_membership(
-    user_id: str,
-    membership: AvailableAssociationMembership,
-    membership_edit: schemas_purchases.MembershipEdit,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(
-        is_user_a_member_of(GroupType.admin_purchases),
-    ),
-):
-    db_membership = await cruds_purchases.get_membership_by_user_id_and_membership_name(
-        user_id=user_id,
-        membership=membership,
-        db=db,
-    )
-    if db_membership is None:
-        raise HTTPException(
-            status_code=404,
-            detail="This user doesn't have this membership",
-        )
-    try:
-        await cruds_purchases.update_membership(
-            membership_id=db_membership.id,
-            membership=membership_edit,
-            db=db,
-        )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
-
-
-@module.router.delete(
-    "/purchases/users/{user_id}/memberships/{membership_id}/",
-    status_code=204,
-)
-async def delete_membership(
-    user_id: str,
-    membership_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(
-        is_user_a_member_of(GroupType.admin_purchases),
-    ),
-):
-    db_membership = await cruds_purchases.get_membership_by_id(
-        membership_id=membership_id,
-        db=db,
-    )
-    if not db_membership or db_membership.user_id != user_id:
-        raise HTTPException(
-            status_code=404,
-            detail="Invalid membership_id",
-        )
-    try:
-        await cruds_purchases.delete_membership(
-            membership_id=membership_id,
-            db=db,
-        )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
-
-
-@module.router.get(
     "/purchases/status/",
     response_model=schemas_purchases.Status,
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
     status_code=200,
 )
 async def get_status(
@@ -3009,13 +2480,9 @@ async def get_status(
 async def update_status(
     status: schemas_purchases.Status,
     db: AsyncSession = Depends(get_db),
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
-========
-    user: models_core.CoreUser = Depends(
-        is_user_a_member_of(GroupType.admin_purchases),
+    user: models_users.CoreUser = Depends(
+        is_user_in(GroupType.admin_purchases),
     ),
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
 ):
     current_status = await get_core_data(schemas_purchases.Status, db)
     match status.status:
@@ -3047,391 +2514,8 @@ async def update_status(
 
 
 @module.router.get(
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-    "/cdr/users/me/tickets/",
-    response_model=list[schemas_cdr.Ticket],
-    status_code=200,
-)
-async def get_my_tickets(
-    db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
-):
-    return await cruds_cdr.get_tickets_of_user(db=db, user_id=user.id)
-
-
-@module.router.get(
-    "/cdr/users/{user_id}/tickets/",
-    response_model=list[schemas_cdr.Ticket],
-    status_code=200,
-)
-async def get_tickets_of_user(
-    user_id: str,
-    db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
-):
-    if not (
-        is_user_member_of_any_group(user, [GroupType.admin_cdr]) or user_id == user.id
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="You can't get another user tickets.",
-        )
-    return await cruds_cdr.get_tickets_of_user(db=db, user_id=user_id)
-
-
-@module.router.get(
-    "/cdr/users/me/tickets/{ticket_id}/secret/",
-    response_model=schemas_cdr.TicketSecret,
-    status_code=200,
-)
-async def get_ticket_secret(
-    ticket_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
-):
-    ticket = await cruds_cdr.get_ticket(db=db, ticket_id=ticket_id)
-    if not ticket:
-        raise HTTPException(
-            status_code=404,
-            detail="Ticket not found.",
-        )
-    if ticket.user_id != user.id:
-        raise HTTPException(
-            status_code=403,
-            detail="You can't get another user ticket secret.",
-        )
-    return schemas_cdr.TicketSecret(qr_code_secret=ticket.secret)
-
-
-@module.router.get(
-    "/cdr/sellers/{seller_id}/products/{product_id}/tickets/{generator_id}/{secret}/",
-    response_model=schemas_cdr.Ticket,
-    status_code=200,
-)
-async def get_ticket_by_secret(
-    seller_id: UUID,
-    product_id: UUID,
-    generator_id: UUID,
-    secret: UUID,
-    db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
-):
-    product = await check_request_consistency(
-        db=db,
-        seller_id=seller_id,
-        product_id=product_id,
-    )
-    if not product:
-        raise HTTPException(
-            status_code=404,
-            detail="Product not found.",
-        )
-    await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
-    ticket_generator = await cruds_cdr.get_ticket_generator(
-        db=db,
-        ticket_generator_id=generator_id,
-    )
-    if not ticket_generator:
-        raise HTTPException(
-            status_code=404,
-            detail="Ticket generator not found.",
-        )
-    if ticket_generator.product_id != product_id:
-        raise HTTPException(
-            status_code=404,
-            detail="This Ticket generator is not related to this product.",
-        )
-    ticket = await cruds_cdr.get_ticket_by_secret(db=db, secret=secret)
-    if not ticket:
-        raise HTTPException(
-            status_code=404,
-            detail="Ticket not found.",
-        )
-    if ticket.generator_id != generator_id:
-        raise HTTPException(
-            status_code=404,
-            detail="This Ticket is not related to this product.",
-        )
-    return ticket
-
-
-@module.router.patch(
-    "/cdr/sellers/{seller_id}/products/{product_id}/tickets/{generator_id}/{secret}/",
-    status_code=204,
-)
-async def scan_ticket(
-    seller_id: UUID,
-    product_id: UUID,
-    generator_id: UUID,
-    secret: UUID,
-    ticket_data: schemas_cdr.TicketScan,
-    db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
-):
-    product = await check_request_consistency(
-        db=db,
-        seller_id=seller_id,
-        product_id=product_id,
-    )
-    if not product:
-        raise HTTPException(
-            status_code=404,
-            detail="Product not found.",
-        )
-    await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
-    ticket_generator = await cruds_cdr.get_ticket_generator(
-        db=db,
-        ticket_generator_id=generator_id,
-    )
-    if not ticket_generator:
-        raise HTTPException(
-            status_code=404,
-            detail="Ticket generator not found.",
-        )
-    if ticket_generator.product_id != product_id:
-        raise HTTPException(
-            status_code=404,
-            detail="This Ticket generator is not related to this product.",
-        )
-    ticket = await cruds_cdr.get_ticket_by_secret(db=db, secret=secret)
-    if not ticket:
-        raise HTTPException(
-            status_code=404,
-            detail="Ticket not found.",
-        )
-    if ticket.generator_id != generator_id:
-        raise HTTPException(
-            status_code=404,
-            detail="This Ticket is not related to this product.",
-        )
-    if ticket.scan_left <= 0:
-        raise HTTPException(
-            status_code=403,
-            detail="This ticket has already been used for the maximum amount.",
-        )
-    if ticket.expiration < datetime.now(tz=UTC):
-        raise HTTPException(
-            status_code=403,
-            detail="This ticket has expired.",
-        )
-    try:
-        await cruds_cdr.scan_ticket(
-            db=db,
-            ticket_id=ticket.id,
-            scan=ticket.scan_left - 1,
-            tags=ticket.tags + "," + ticket_data.tag
-            if ticket.tags != ""
-            else ticket_data.tag,
-        )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
-
-
-@module.router.get(
-    "/cdr/sellers/{seller_id}/products/{product_id}/tickets/{generator_id}/lists/{tag}/",
-    response_model=list[schemas_users.CoreUserSimple],
-    status_code=200,
-)
-async def get_users_by_tag(
-    seller_id: UUID,
-    product_id: UUID,
-    generator_id: UUID,
-    tag: str,
-    db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
-):
-    product = await check_request_consistency(
-        db=db,
-        seller_id=seller_id,
-        product_id=product_id,
-    )
-    if not product:
-        raise HTTPException(
-            status_code=404,
-            detail="Product not found.",
-        )
-    ticket_generator = await cruds_cdr.get_ticket_generator(
-        db=db,
-        ticket_generator_id=generator_id,
-    )
-    if not ticket_generator:
-        raise HTTPException(
-            status_code=404,
-            detail="Ticket generator not found.",
-        )
-    if ticket_generator.product_id != product_id:
-        raise HTTPException(
-            status_code=404,
-            detail="This Ticket generator is not related to this product.",
-        )
-
-    tickets = await cruds_cdr.get_tickets_by_tag(
-        db=db,
-        generator_id=generator_id,
-        tag=tag,
-    )
-
-    return [ticket.user for ticket in tickets]
-
-
-@module.router.get(
-    "/cdr/sellers/{seller_id}/products/{product_id}/tags/{generator_id}/",
-    response_model=list[str],
-    status_code=200,
-)
-async def get_tags_of_ticket(
-    seller_id: UUID,
-    product_id: UUID,
-    generator_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
-):
-    product = await check_request_consistency(
-        db=db,
-        seller_id=seller_id,
-        product_id=product_id,
-    )
-    if not product:
-        raise HTTPException(
-            status_code=404,
-            detail="Product not found.",
-        )
-    ticket_generator = await cruds_cdr.get_ticket_generator(
-        db=db,
-        ticket_generator_id=generator_id,
-    )
-    if not ticket_generator:
-        raise HTTPException(
-            status_code=404,
-            detail="Ticket generator not found.",
-        )
-    if ticket_generator.product_id != product_id:
-        raise HTTPException(
-            status_code=404,
-            detail="This Ticket generator is not related to this product.",
-        )
-
-    tickets = await cruds_cdr.get_tickets_by_generator(db=db, generator_id=generator_id)
-
-    tags = set()
-    for ticket in tickets:
-        for tag in ticket.tags.split(","):
-            tags.add(tag)
-    return list(tags)
-
-
-@module.router.post(
-    "/cdr/sellers/{seller_id}/products/{product_id}/tickets/",
-    status_code=201,
-    response_model=schemas_cdr.ProductComplete,
-)
-async def generate_ticket_for_product(
-    seller_id: UUID,
-    product_id: UUID,
-    ticket_data: schemas_cdr.GenerateTicketBase,
-    db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
-):
-    await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
-    product = await check_request_consistency(
-        db=db,
-        seller_id=seller_id,
-        product_id=product_id,
-    )
-    if not product:
-        raise HTTPException(
-            status_code=404,
-            detail="Product not found.",
-        )
-    ticketgen = models_cdr.TicketGenerator(
-        id=uuid4(),
-        product_id=product_id,
-        name=ticket_data.name,
-        max_use=ticket_data.max_use,
-        expiration=ticket_data.expiration,
-    )
-    cruds_cdr.create_ticket_generator(db=db, ticket=ticketgen)
-
-    validated_purchases = await cruds_cdr.get_product_validated_purchases(
-        db=db,
-        product_id=ticketgen.product_id,
-    )
-    for purchase in validated_purchases:
-        ticket = models_cdr.Ticket(
-            id=uuid4(),
-            secret=uuid4(),
-            name=ticketgen.name,
-            generator_id=ticketgen.id,
-            product_variant_id=purchase.product_variant_id,
-            user_id=purchase.user_id,
-            scan_left=ticketgen.max_use,
-            tags="",
-            expiration=ticketgen.expiration,
-        )
-        cruds_cdr.create_ticket(db=db, ticket=ticket)
-    try:
-        await db.commit()
-        return await cruds_cdr.get_product_by_id(db=db, product_id=product_id)
-    except Exception:
-        await db.rollback()
-        raise
-
-
-@module.router.delete(
-    "/cdr/sellers/{seller_id}/products/{product_id}/tickets/{ticket_generator_id}",
-    status_code=204,
-)
-async def delete_ticket_generator_for_product(
-    seller_id: UUID,
-    product_id: UUID,
-    ticket_generator_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
-):
-    await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
-    product = await check_request_consistency(
-        db=db,
-        seller_id=seller_id,
-        product_id=product_id,
-    )
-    if not product:
-        raise HTTPException(
-            status_code=404,
-            detail="Product not found.",
-        )
-    ticketgen = await cruds_cdr.get_ticket_generator(
-        db=db,
-        ticket_generator_id=ticket_generator_id,
-    )
-    if not ticketgen:
-        raise HTTPException(
-            status_code=404,
-            detail="Product Ticket not found.",
-        )
-    await cruds_cdr.delete_ticket_generator(
-        db=db,
-        ticket_generator_id=ticket_generator_id,
-    )
-    await cruds_cdr.delete_product_generated_tickets(
-        db=db,
-        ticket_generator_id=ticket_generator_id,
-    )
-    try:
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
-
-
-@module.router.get(
-    "/cdr/sellers/{seller_id}/products/{product_id}/data/",
-    response_model=list[schemas_cdr.CustomDataFieldComplete],
-========
     "/purchases/sellers/{seller_id}/products/{product_id}/data/",
     response_model=list[schemas_purchases.CustomDataFieldComplete],
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py
     status_code=200,
 )
 async def get_custom_data_fields(
@@ -3474,6 +2558,7 @@ async def create_custom_data_field(
         id=uuid4(),
         product_id=product_id,
         name=custom_data_field.name,
+        user_can_answer=True,
     )
     try:
         cruds_purchases.create_customdata_field(db, db_data)
@@ -3703,17 +2788,9 @@ async def delete_customdata(
 async def websocket_endpoint(
     websocket: WebSocket,
     ws_manager: WebsocketConnectionManager = Depends(get_websocket_connection_manager),
-    db: AsyncSession = Depends(get_unsafe_db),
+    db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ):
-<<<<<<<< HEAD:app/modules/cdr/endpoints_cdr.py
-    await ws_manager.manage_websocket(
-        websocket=websocket,
-        settings=settings,
-        room=HyperionWebsocketsRoom.CDR,
-        db=db,
-    )
-========
     await websocket.accept()
 
     try:
@@ -3787,7 +2864,7 @@ async def generate_ticket(
     product_id: UUID,
     ticket_data: schemas_ticket.GenerateTicketBase,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(is_user_a_member),
 ):
     await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
     seller = await cruds_purchases.get_seller_by_id(db=db, seller_id=seller_id)
@@ -3834,7 +2911,6 @@ async def generate_ticket(
             secret=uuid4(),
             name=ticketgen.name,
             generator_id=ticketgen.id,
-            product_variant_id=purchase.product_variant_id,
             user_id=purchase.user_id,
             scan_left=ticketgen.max_use,
             tags="",
@@ -3858,7 +2934,7 @@ async def delete_ticket_generator_for_product(
     product_id: UUID,
     ticket_generator_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(is_user_a_member),
 ):
     await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
     product = await check_request_consistency(
@@ -3898,4 +2974,3 @@ async def delete_ticket_generator_for_product(
     except Exception:
         await db.rollback()
         raise
->>>>>>>> efc3a5ac (change CDR into Purchases):app/modules/purchases/endpoints_purchases.py

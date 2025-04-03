@@ -5,25 +5,25 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
-from app.core import models_core
 from app.core.groups.groups_type import GroupType
+from app.core.memberships import models_memberships
 from app.core.ticket import models_ticket
+from app.core.users import models_users
 from app.modules.purchases import models_purchases
 from app.modules.purchases.types_purchases import (
     DocumentSignatureType,
     PaymentType,
     PurchasesStatus,
 )
-from app.types.membership import AvailableAssociationMembership
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
     create_user_with_groups,
 )
 
-purchases_admin: models_core.CoreUser
-purchases_bde: models_core.CoreUser
-purchases_user: models_core.CoreUser
+purchases_admin: models_users.CoreUser
+purchases_bde: models_users.CoreUser
+purchases_user: models_users.CoreUser
 
 token_admin: str
 token_bde: str
@@ -53,7 +53,7 @@ ticket_variant: models_purchases.ProductVariant
 curriculum: models_purchases.Curriculum
 unused_curriculum: models_purchases.Curriculum
 
-purchases_user_with_curriculum_with_non_validated_purchase: models_core.CoreUser
+purchases_user_with_curriculum_with_non_validated_purchase: models_users.CoreUser
 
 purchase: models_purchases.Purchase
 
@@ -62,7 +62,8 @@ signature_admin: models_purchases.Signature
 
 payment: models_purchases.Payment
 
-membership: models_core.CoreAssociationMembership
+association_membership: models_memberships.CoreAssociationMembership
+user_membership: models_memberships.CoreAssociationUserMembership
 
 ticket: models_ticket.Ticket
 ticket_generator: models_ticket.TicketGenerator
@@ -72,7 +73,7 @@ ticket_generator: models_ticket.TicketGenerator
 async def init_objects():
     global purchases_admin
     purchases_admin = await create_user_with_groups(
-        [GroupType.student, GroupType.admin_purchases],
+        [GroupType.admin_purchases],
         email="purchases_admin@etu.ec-lyon.fr",
     )
 
@@ -80,13 +81,13 @@ async def init_objects():
     token_admin = create_api_access_token(purchases_admin)
 
     global purchases_bde
-    purchases_bde = await create_user_with_groups([GroupType.student, GroupType.BDE])
+    purchases_bde = await create_user_with_groups([GroupType.BDE])
 
     global token_bde
     token_bde = create_api_access_token(purchases_bde)
 
     global purchases_user
-    purchases_user = await create_user_with_groups([GroupType.student])
+    purchases_user = await create_user_with_groups([])
 
     global token_user
     token_user = create_api_access_token(purchases_user)
@@ -241,7 +242,7 @@ async def init_objects():
     await add_object_to_db(unused_curriculum)
 
     purchases_user_with_curriculum_without_purchase = await create_user_with_groups(
-        [GroupType.student],
+        [],
     )
     curriculum_membership = models_purchases.CurriculumMembership(
         user_id=purchases_user_with_curriculum_without_purchase.id,
@@ -252,7 +253,7 @@ async def init_objects():
     global purchases_user_with_curriculum_with_non_validated_purchase
     purchases_user_with_curriculum_with_non_validated_purchase = (
         await create_user_with_groups(
-            [GroupType.student],
+            [],
         )
     )
     curriculum_membership_for_user_with_curriculum_with_non_validated_purchase = (
@@ -271,7 +272,7 @@ async def init_objects():
             quantity=1,
             validated=False,
             purchased_on=datetime.now(UTC),
-            paid=False
+            paid=False,
         )
     )
     await add_object_to_db(
@@ -307,15 +308,22 @@ async def init_objects():
     )
     await add_object_to_db(payment)
 
-    global membership
-    membership = models_core.CoreAssociationMembership(
+    global user_membership, association_membership
+    association_membership = models_memberships.CoreAssociationMembership(
+        id=uuid.uuid4(),
+        name="AEECL",
+        manager_group_id=str(GroupType.BDE.value),
+    )
+    await add_object_to_db(association_membership)
+
+    user_membership = models_memberships.CoreAssociationUserMembership(
         id=uuid.uuid4(),
         user_id=purchases_user.id,
-        membership=AvailableAssociationMembership.aeecl,
-        start_date=date(2022, 9, 1),
-        end_date=date(2026, 9, 1),
+        association_membership_id=association_membership.id,
+        start_date=datetime.now(UTC) - timedelta(days=365),
+        end_date=datetime.now(UTC) + timedelta(days=365),
     )
-    await add_object_to_db(membership)
+    await add_object_to_db(user_membership)
 
     global ticket_product
     ticket_product = models_purchases.PurchasesProduct(
@@ -2066,104 +2074,6 @@ def test_delete_payment_admin(client: TestClient):
     assert str(payment.id) not in [x["id"] for x in response.json()]
 
 
-def test_get_memberships_by_user_id_user(client: TestClient):
-    response = client.get(
-        f"/purchases/users/{purchases_user.id}/memberships/",
-        headers={"Authorization": f"Bearer {token_user}"},
-    )
-    assert response.status_code == 200
-    assert str(membership.id) in [x["id"] for x in response.json()]
-
-
-def test_get_memberships_by_user_id_other_user(client: TestClient):
-    response = client.get(
-        f"/purchases/users/{purchases_bde.id}/memberships/",
-        headers={"Authorization": f"Bearer {token_user}"},
-    )
-    assert response.status_code == 403
-
-
-def test_get_memberships_by_user_id_admin(client: TestClient):
-    response = client.get(
-        f"/purchases/users/{purchases_user.id}/memberships/",
-        headers={"Authorization": f"Bearer {token_admin}"},
-    )
-    assert response.status_code == 200
-    assert str(membership.id) in [x["id"] for x in response.json()]
-
-
-def test_create_membership_user(client: TestClient):
-    response = client.post(
-        f"/purchases/users/{purchases_user.id}/memberships/",
-        json={
-            "membership": AvailableAssociationMembership.useecl,
-            "start_date": str(date(2024, 6, 1)),
-            "end_date": str(date(2028, 6, 1)),
-        },
-        headers={"Authorization": f"Bearer {token_user}"},
-    )
-    assert response.status_code == 403
-
-
-def test_create_membership_admin(client: TestClient):
-    response = client.post(
-        f"/purchases/users/{purchases_user.id}/memberships/",
-        json={
-            "membership": AvailableAssociationMembership.useecl,
-            "start_date": str(date(2024, 6, 1)),
-            "end_date": str(date(2028, 6, 1)),
-        },
-        headers={"Authorization": f"Bearer {token_admin}"},
-    )
-    assert response.status_code == 201
-    membership_id = uuid.UUID(response.json()["id"])
-
-    response = client.get(
-        f"/purchases/users/{purchases_user.id}/memberships/",
-        headers={"Authorization": f"Bearer {token_admin}"},
-    )
-    assert response.status_code == 200
-    assert str(membership_id) in [x["id"] for x in response.json()]
-
-
-def test_delete_membership_user(client: TestClient):
-    response = client.delete(
-        f"/purchases/users/{purchases_user.id}/memberships/{membership.id}",
-        headers={"Authorization": f"Bearer {token_user}"},
-    )
-    assert response.status_code == 403
-
-    response = client.get(
-        f"/purchases/users/{purchases_user.id}/memberships/",
-        headers={"Authorization": f"Bearer {token_admin}"},
-    )
-    assert response.status_code == 200
-    assert str(membership.id) in [x["id"] for x in response.json()]
-
-
-def test_delete_membership_wrong_id(client: TestClient):
-    response = client.delete(
-        f"/purchases/users/{purchases_user.id}/memberships/{uuid.uuid4()}",
-        headers={"Authorization": f"Bearer {token_admin}"},
-    )
-    assert response.status_code == 404
-
-
-def test_delete_membership_admin(client: TestClient):
-    response = client.delete(
-        f"/purchases/users/{purchases_user.id}/memberships/{membership.id}",
-        headers={"Authorization": f"Bearer {token_admin}"},
-    )
-    assert response.status_code == 204
-
-    response = client.get(
-        f"/purchases/users/{purchases_user.id}/memberships/",
-        headers={"Authorization": f"Bearer {token_admin}"},
-    )
-    assert response.status_code == 200
-    assert str(membership.id) not in [x["id"] for x in response.json()]
-
-
 def test_change_status_admin_closed(client: TestClient):
     response = client.patch(
         "/purchases/status/",
@@ -2333,7 +2243,7 @@ async def test_pay(mocker: MockerFixture, client: TestClient):
 
     response = client.post(
         "/purchases/pay/",
-        json={"purchase_ids":[]},
+        json={"purchase_ids": []},
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
@@ -2521,7 +2431,7 @@ async def test_validate_purchase(client: TestClient):
         name_fr="Produit à adhésion",
         name_en="Product",
         available_online=False,
-        related_membership=AvailableAssociationMembership.useecl,
+        related_membership_id=association_membership.id,
     )
     await add_object_to_db(product_membership)
     product_membership_to_purchase = models_purchases.PurchasesProduct(
@@ -2530,7 +2440,7 @@ async def test_validate_purchase(client: TestClient):
         name_fr="Produit à adhésion",
         name_en="Product",
         available_online=False,
-        related_membership=AvailableAssociationMembership.aeecl,
+        related_membership_id=association_membership.id,
     )
     await add_object_to_db(product_membership_to_purchase)
     product_2 = models_purchases.PurchasesProduct(
@@ -2586,10 +2496,18 @@ async def test_validate_purchase(client: TestClient):
         paid=False,
     )
     await add_object_to_db(purchase_to_validate)
-    membership = models_core.CoreAssociationMembership(
+
+    membership_association = models_memberships.CoreAssociationMembership(
+        id=uuid.uuid4(),
+        name="USEECL",
+        manager_group_id=GroupType.BDS.value,
+    )
+    await add_object_to_db(membership_association)
+
+    membership = models_memberships.CoreAssociationUserMembership(
         id=uuid.uuid4(),
         user_id=purchases_user.id,
-        membership=AvailableAssociationMembership.useecl,
+        association_membership_id=membership_association.id,
         start_date=date(2022, 9, 1),
         end_date=datetime.now(UTC).date() + timedelta(days=100),
     )
@@ -2643,6 +2561,7 @@ async def test_delete_customdata_field(client: TestClient):
         id=uuid.uuid4(),
         product_id=product.id,
         name="Supprime",
+        user_can_answer=True,
     )
     await add_object_to_db(field)
 
@@ -2664,6 +2583,7 @@ async def test_create_customdata(client: TestClient):
         id=uuid.uuid4(),
         product_id=product.id,
         name="Field",
+        user_can_answer=True,
     )
     await add_object_to_db(customdata_field)
     response = client.post(
@@ -2679,6 +2599,7 @@ async def test_create_customdata_user(client: TestClient):
         id=uuid.uuid4(),
         product_id=product.id,
         name="Field",
+        user_can_answer=True,
     )
     await add_object_to_db(customdata_field)
     response = client.post(
@@ -2694,6 +2615,7 @@ async def test_update_customdata(client: TestClient):
         id=uuid.uuid4(),
         product_id=product.id,
         name="Edit",
+        user_can_answer=True,
     )
     await add_object_to_db(field)
     customdata = models_purchases.CustomData(
@@ -2723,6 +2645,7 @@ async def test_update_customdata_user(client: TestClient):
         id=uuid.uuid4(),
         product_id=product.id,
         name="Edit",
+        user_can_answer=True,
     )
     await add_object_to_db(field)
     customdata = models_purchases.CustomData(
@@ -2745,6 +2668,7 @@ async def test_delete_customdata(client: TestClient):
         id=uuid.uuid4(),
         product_id=product.id,
         name="Supprime",
+        user_can_answer=True,
     )
     await add_object_to_db(field)
     customdata = models_purchases.CustomData(
@@ -2772,6 +2696,7 @@ async def test_customdata_deletion_on_purchase_deletion(client: TestClient):
         id=uuid.uuid4(),
         product_id=product.id,
         name="Supprime",
+        user_can_answer=True,
     )
     await add_object_to_db(field)
     customdata = models_purchases.CustomData(

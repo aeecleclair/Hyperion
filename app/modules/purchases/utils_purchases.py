@@ -8,9 +8,9 @@ from fastapi import (
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core
 from app.core.groups.groups_type import GroupType
 from app.core.payment import schemas_payment
+from app.core.users import models_users
 from app.dependencies import (
     hyperion_access_logger,
 )
@@ -20,7 +20,7 @@ from app.modules.purchases.types_purchases import (
     PurchasesLogActionType,
 )
 from app.utils.tools import (
-    is_user_member_of_an_allowed_group,
+    is_user_member_of_any_group,
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
@@ -51,6 +51,7 @@ async def validate_payment(
     )
     db_action = models_purchases.PurchasesAction(
         id=uuid4(),
+        user_id=None,
         subject_id=checkout.user_id,
         action_type=PurchasesLogActionType.payment_add,
         action=str(checkout_payment.__dict__),
@@ -72,7 +73,7 @@ async def validate_payment(
 
 async def is_user_in_a_seller_group(
     seller_id: UUID,
-    user: models_core.CoreUser,
+    user: models_users.CoreUser,
     db: AsyncSession,
 ):
     """
@@ -86,7 +87,7 @@ async def is_user_in_a_seller_group(
             detail="Seller not found.",
         )
 
-    if is_user_member_of_an_allowed_group(
+    if is_user_member_of_any_group(
         user=user,
         allowed_groups=[str(seller.group_id), GroupType.admin_purchases],
     ):
@@ -171,7 +172,7 @@ async def check_request_consistency(
 def construct_dataframe_from_users_purchases(
     users_purchases: dict[str, list[models_purchases.Purchase]],
     users_answers: dict[str, list[models_purchases.CustomData]],
-    users: list[models_core.CoreUser],
+    users: list[models_users.CoreUser],
     products: list[models_purchases.PurchasesProduct],
     variants: list[models_purchases.ProductVariant],
     data_fields: dict[UUID, list[models_purchases.CustomDataField]],

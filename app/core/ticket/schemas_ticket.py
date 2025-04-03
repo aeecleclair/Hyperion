@@ -4,7 +4,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, StringConstraints
 
-from app.core.schemas_core import CoreUserSimple
+from app.core.users.schemas_users import CoreUserSimple
 from app.types.floors_type import FloorsType
 
 

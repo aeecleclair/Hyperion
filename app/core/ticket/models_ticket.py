@@ -6,7 +6,7 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 if TYPE_CHECKING:
-    from app.core.models_core import CoreUser
+    from app.core.users.models_users import CoreUser
 
 from app.types.sqlalchemy import Base, PrimaryKey
 
@@ -32,7 +32,7 @@ class Ticket(Base):
         ForeignKey("core_user.id"),
     )
     name: Mapped[str]
-    user: Mapped["CoreUser"] = relationship("CoreUser")
+    user: Mapped["CoreUser"] = relationship("CoreUser", init=False)
     scan_left: Mapped[int]
     tags: Mapped[str]  # Comma separated values
     expiration: Mapped[datetime]
