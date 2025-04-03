@@ -1,7 +1,5 @@
 import uuid
 
-from app.core.groups.groups_type import GroupType
-from app.core.groups.models_groups import CoreGroup
 from app.core.users import cruds_users
 from app.core.users.factory_users import CoreUsersFactory
 from app.modules.phonebook import cruds_phonebook, models_phonebook
@@ -23,14 +21,6 @@ class PhonebookFactory(Factory):
                 id=association_id_1,
                 name="Eclair",
                 description="L'asso d'informatique la plus cool !",
-                associated_groups=[
-                    CoreGroup(
-                        name="Eclair",
-                        description="L'asso d'informatique la plus cool !",
-                        id=GroupType.eclair,
-                        members=[],
-                    ),
-                ],
                 deactivated=False,
                 kind=Kinds.section_ae,
                 mandate_year=2025,

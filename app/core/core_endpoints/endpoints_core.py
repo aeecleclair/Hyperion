@@ -25,7 +25,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 router = APIRouter(tags=["Core"])
 
 core_module = CoreModule(
-    root="",
+    root="core",
     tag="Core",
     router=router,
     factory=None,

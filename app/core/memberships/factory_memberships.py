@@ -46,7 +46,7 @@ class ModuleFactory(Factory):
             )
 
             members = random.sample(
-                CoreUsersFactory.demo_users_id,
+                CoreUsersFactory.other_users_id,
                 20,
             )
             for user_id in members:
