@@ -1,15 +1,15 @@
 from datetime import date, datetime, timedelta
-from typing import Annotated, Literal
+from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, StringConstraints, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator
 
-from app.core.memberships import schemas_memberships
+from app.core.ticket.schemas_ticket import GenerateTicketBase, GenerateTicketComplete
 from app.core.users.schemas_users import CoreUserSimple
-from app.modules.cdr.types_cdr import (
-    CdrStatus,
+from app.modules.purchases.types_purchases import (
     DocumentSignatureType,
     PaymentType,
+    PurchasesStatus,
 )
 from app.types.core_data import BaseCoreData
 from app.types.floors_type import FloorsType
@@ -38,11 +38,11 @@ class CurriculumComplete(CurriculumBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class CdrUserPreview(CoreUserSimple):
+class PurchasesUserPreview(CoreUserSimple):
     curriculum: CurriculumComplete | None = None
 
 
-class CdrUser(CdrUserPreview):
+class PurchasesUser(PurchasesUserPreview):
     promo: int | None = None
     email: str
     birthday: date | None = None
@@ -52,7 +52,7 @@ class CdrUser(CdrUserPreview):
     model_config = ConfigDict(from_attributes=True)
 
 
-class CdrUserUpdate(BaseModel):
+class PurchasesUserUpdate(BaseModel):
     promo: int | None = None
     nickname: str | None = None
     email: str | None = None
@@ -68,23 +68,6 @@ class CdrUserUpdate(BaseModel):
     )
 
 
-class GenerateTicketBase(BaseModel):
-    name: str
-    max_use: int
-    expiration: datetime
-
-
-class GenerateTicketComplete(GenerateTicketBase):
-    id: UUID
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class GenerateTicketEdit(BaseModel):
-    max_use: int | None = None
-    expiration: datetime | None = None
-
-
 class ProductVariantBase(BaseModel):
     name_fr: str
     name_en: str | None = None
@@ -95,6 +78,7 @@ class ProductVariantBase(BaseModel):
     unique: bool
     allowed_curriculum: list[UUID]
     related_membership_added_duration: timedelta | None = None
+    needs_validation: bool
 
 
 class ProductVariantComplete(BaseModel):
@@ -123,6 +107,7 @@ class ProductVariantEdit(BaseModel):
     unique: bool | None = None
     allowed_curriculum: list[UUID] | None = None
     related_membership_added_duration: timedelta | None = None
+    needs_validation: bool | None = None
 
 
 class ProductBase(BaseModel):
@@ -131,7 +116,7 @@ class ProductBase(BaseModel):
     description_fr: str | None = None
     description_en: str | None = None
     available_online: bool
-    related_membership: schemas_memberships.MembershipSimple | None = None
+    related_membership_id: UUID | None = None
     tickets: list[GenerateTicketBase] = []
     product_constraints: list[UUID]
     document_constraints: list[UUID]
@@ -146,7 +131,7 @@ class ProductCompleteNoConstraint(BaseModel):
     id: UUID
     seller_id: UUID
     variants: list[ProductVariantComplete] = []
-    related_membership: schemas_memberships.MembershipSimple | None = None
+    related_membership_id: UUID | None = None
     tickets: list[GenerateTicketComplete]
 
     model_config = ConfigDict(from_attributes=True)
@@ -161,7 +146,7 @@ class ProductComplete(BaseModel):
     id: UUID
     seller_id: UUID
     variants: list[ProductVariantComplete] = []
-    related_membership: schemas_memberships.MembershipSimple | None = None
+    related_membership_id: UUID | None = None
     product_constraints: list[ProductCompleteNoConstraint] = []
     document_constraints: list[DocumentComplete] = []
     tickets: list[GenerateTicketComplete] = []
@@ -176,7 +161,7 @@ class ProductEdit(BaseModel):
     description_en: str | None = None
     description: str | None = None
     available_online: bool | None = None
-    related_membership: schemas_memberships.MembershipSimple | None = None
+    related_membership_id: UUID | None = None
     product_constraints: list[UUID] | None = None
     document_constraints: list[UUID] | None = None
 
@@ -249,48 +234,25 @@ class PaymentComplete(PaymentBase):
 
 
 class Status(BaseCoreData):
-    status: CdrStatus = CdrStatus.pending
+    status: PurchasesStatus = PurchasesStatus.pending
+
+
+class PaymentCart(BaseModel):
+    purchase_ids: list[UUID] = []
 
 
 class PaymentUrl(BaseModel):
     url: str
 
 
-class UserTicket(CoreUserSimple):
-    promo: int | None = None
-    floor: FloorsType | None = None
-    created_on: datetime | None = None
-
-
-class Ticket(BaseModel):
-    id: UUID
-    product_variant: ProductVariantComplete
-    user: UserTicket
-    scan_left: int
-    tags: str
-    expiration: datetime
-    name: str
-
-
-class TicketScan(BaseModel):
-    tag: Annotated[
-        str,
-        StringConstraints(to_lower=True, strip_whitespace=True, pattern=r"[^,]+"),
-    ]
-
-
-class TicketSecret(BaseModel):
-    qr_code_secret: UUID
-
-
 class NewUserWSMessageModel(WSMessageModel):
     command: Literal["NEW_USER"] = "NEW_USER"
-    data: CdrUser
+    data: PurchasesUser
 
 
 class UpdateUserWSMessageModel(WSMessageModel):
     command: Literal["UPDATE_USER"] = "UPDATE_USER"
-    data: CdrUser
+    data: PurchasesUser
 
 
 class CustomDataFieldBase(BaseModel):

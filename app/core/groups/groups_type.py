@@ -22,7 +22,7 @@ class GroupType(str, Enum):
     cinema = "ce5f36e6-5377-489f-9696-de70e2477300"
     raid_admin = "e9e6e3d3-9f5f-4e9b-8e5f-9f5f4e9b8e5f"
     ph = "4ec5ae77-f955-4309-96a5-19cc3c8be71c"
-    admin_cdr = "c1275229-46b2-4e53-a7c4-305513bb1a2a"
+    admin_purchases = "c1275229-46b2-4e53-a7c4-305513bb1a2a"
     eclair = "1f841bd9-00be-41a7-96e1-860a18a46105"
     BDS = "61af3e52-7ef9-4608-823a-39d51e83d1db"
     seed_library = "09153d2a-14f4-49a4-be57-5d0f265261b9"

@@ -238,7 +238,7 @@ class MockedPaymentTool:
         if exist is None:
             checkout_model = models_payment.Checkout(
                 id=checkout_id,
-                module="cdr",
+                module="purchases",
                 name=checkout_name,
                 amount=500,
                 hello_asso_checkout_id=123,

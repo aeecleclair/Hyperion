@@ -15,7 +15,7 @@ from app.utils.auth import auth_utils
 
 
 class HyperionWebsocketsRoom(str, Enum):
-    CDR = "5a816d32-8b5d-4c44-8a8d-18fd830ec5a8"
+    Purchases = "5a816d32-8b5d-4c44-8a8d-18fd830ec5a8"
 
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
