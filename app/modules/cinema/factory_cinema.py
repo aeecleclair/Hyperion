@@ -9,7 +9,7 @@ from app.types.factory import Factory
 class CinemaFactory(Factory):
     def __init__(self):
         super().__init__(
-            name="cinema",
+            name="Cinema",
             depends_on=[],
         )
 
