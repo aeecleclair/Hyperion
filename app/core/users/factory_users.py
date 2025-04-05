@@ -13,7 +13,6 @@ from app.core.users import cruds_users
 from app.core.users.models_users import CoreUser
 from app.core.utils import security
 from app.dependencies import get_settings
-from app.types.exceptions import DotenvMissingVariableError
 from app.types.factory import Factory
 from app.types.floors_type import FloorsType
 
@@ -46,20 +45,11 @@ class CoreUsersFactory(Factory):
         groups_type.GroupType.raid_admin,
         groups_type.GroupType.BDS,
     ]
-    if settings.USE_FACTORIES:
-        if settings.FACTORIES_DEMO_USERS_PASSWORDS:
-            if len(settings.FACTORIES_DEMO_USERS_PASSWORDS) != len(demo_users_id):
-                raise ValueError(  # noqa: TRY003
-                    "The number of demo users passwords must be equal to the number of demo users ids",
-                )
-            demo_passwords = [
-                security.get_password_hash(password)
-                for password in settings.FACTORIES_DEMO_USERS_PASSWORDS
-            ]
-        else:
-            raise DotenvMissingVariableError(
-                "FACTORIES_DEMO_USERS_PASSWORDS",
-            )
+    if settings.USE_FACTORIES and settings.FACTORIES_DEMO_USERS_PASSWORD:
+        demo_passwords = [
+            security.get_password_hash(settings.FACTORIES_DEMO_USERS_PASSWORD)
+            for _ in range(len(demo_users_id))
+        ]
 
     other_users_id = [str(uuid.uuid4()) for _ in range(NB_USERS)]
 
