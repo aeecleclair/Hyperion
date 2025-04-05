@@ -1,16 +1,17 @@
+import random
 import uuid
 
 from app.core.users import cruds_users
 from app.core.users.factory_users import CoreUsersFactory
 from app.modules.phonebook import cruds_phonebook, models_phonebook
-from app.modules.phonebook.types_phonebook import Kinds
+from app.modules.phonebook.types_phonebook import Kinds, RoleTags
 from app.types.factory import Factory
 
 
 class PhonebookFactory(Factory):
     def __init__(self):
         super().__init__(
-            name="phonebook",
+            name="Phonebook",
             depends_on=[CoreUsersFactory],
         )
 
@@ -35,7 +36,7 @@ class PhonebookFactory(Factory):
                 association_id=association_id_1,
                 mandate_year=2025,
                 role_name="Prez",
-                role_tags="Prez",
+                role_tags=RoleTags.president.name,
                 member_order=1,
             ),
             db=db,
@@ -49,23 +50,22 @@ class PhonebookFactory(Factory):
                 description="Description de l'asso 2",
                 associated_groups=[],
                 deactivated=False,
-                kind=Kinds.section_ae,
+                kind=Kinds.section_use,
                 mandate_year=2025,
             ),
             db=db,
         )
-
         users = await cruds_users.get_users(db=db)
-        for i in range(len(users)):
-            user = users[i]
+        tags = list(RoleTags)
+        for i, user in enumerate(random.sample(users, 10)):
             await cruds_phonebook.create_membership(
                 membership=models_phonebook.Membership(
                     id=str(uuid.uuid4()),
                     user_id=user.id,
                     association_id=association_id_2,
                     mandate_year=2025,
-                    role_name=f"VP {user.nickname}",
-                    role_tags="Idk",
+                    role_name=f"VP {i}",
+                    role_tags=tags[i].name if i < len(tags) else "",
                     member_order=i,
                 ),
                 db=db,

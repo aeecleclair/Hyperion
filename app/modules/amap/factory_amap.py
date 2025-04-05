@@ -10,7 +10,7 @@ from app.types.factory import Factory
 class AmapFactory(Factory):
     def __init__(self):
         super().__init__(
-            name="amap",
+            name="Amap",
             depends_on=[CoreUsersFactory],
         )
 
@@ -75,8 +75,7 @@ class AmapFactory(Factory):
         await self.create_cash_of_user(db)
 
     async def should_run(self, db):
-        products = await cruds_amap.get_products(db=db)
-        return len(products) == 0
+        return len(await cruds_amap.get_products(db=db)) == 0
 
 
 factory = AmapFactory()
