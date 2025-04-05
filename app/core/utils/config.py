@@ -136,7 +136,7 @@ class Settings(BaseSettings):
     USE_FACTORIES: bool = (
         False  # If True, the database will be populated with fake data
     )
-    FACTORIES_DEMO_USERS_PASSWORDS: list[str] | None = None
+    FACTORIES_DEMO_USERS_PASSWORD: str | None = None
 
     #####################
     # Hyperion settings #
@@ -215,7 +215,7 @@ class Settings(BaseSettings):
     # The combination of `@property` and `@lru_cache` should be replaced by `@cached_property`
     # See https://docs.python.org/3.8/library/functools.html?highlight=#functools.cached_property
 
-    @computed_field  # type: ignore[misc] # Current issue with mypy, see https://docs.pydantic.dev/2.0/usage/computed_fields/ and https://github.com/python/mypy/issues/1362
+    @computed_field  # type: ignore[prop-decorator] # Current issue with mypy, see https://docs.pydantic.dev/2.0/usage/computed_fields/ and https://github.com/python/mypy/issues/1362
     @cached_property
     def RSA_PRIVATE_KEY(cls) -> rsa.RSAPrivateKey:
         # https://cryptography.io/en/latest/hazmat/primitives/asymmetric/serialization/#module-cryptography.hazmat.primitives.serialization
@@ -224,12 +224,12 @@ class Settings(BaseSettings):
             raise InvalidRSAKeyInDotenvError(private_key.__class__.__name__)
         return private_key
 
-    @computed_field  # type: ignore[misc]
+    @computed_field  # type: ignore[prop-decorator]
     @cached_property
     def RSA_PUBLIC_KEY(cls) -> rsa.RSAPublicKey:
         return cls.RSA_PRIVATE_KEY.public_key()
 
-    @computed_field  # type: ignore[misc]
+    @computed_field  # type: ignore[prop-decorator]
     @cached_property
     def RSA_PUBLIC_JWK(cls) -> dict[str, list[dict[str, Any]]]:
         # See https://github.com/jpadilla/pyjwt/issues/880
@@ -249,7 +249,7 @@ class Settings(BaseSettings):
 
     # This property parse AUTH_CLIENTS to create a dictionary of auth clients:
     # {"client_id": AuthClientClassInstance}
-    @computed_field  # type: ignore[misc]
+    @computed_field  # type: ignore[prop-decorator]
     @cached_property
     def KNOWN_AUTH_CLIENTS(cls) -> dict[str, providers.BaseAuthClient]:
         clients = {}
@@ -275,12 +275,12 @@ class Settings(BaseSettings):
 
         return clients
 
-    @computed_field  # type: ignore[misc]
+    @computed_field  # type: ignore[prop-decorator]
     @cached_property
     def OIDC_ISSUER(cls) -> str:
         return cls.CLIENT_URL[:-1]
 
-    @computed_field  # type: ignore[misc]
+    @computed_field  # type: ignore[prop-decorator]
     @cached_property
     def REDIS_URL(cls) -> str | None:
         if cls.REDIS_HOST:
@@ -355,7 +355,7 @@ class Settings(BaseSettings):
         """
         Check that the factories demo passwords are set if USE_FACTORIES is True
         """
-        if self.USE_FACTORIES and not self.FACTORIES_DEMO_USERS_PASSWORDS:
+        if self.USE_FACTORIES and not self.FACTORIES_DEMO_USERS_PASSWORD:
             raise DotenvMissingVariableError(
                 "FACTORIES_DEMO_USERS_PASSWORDS",
             )
