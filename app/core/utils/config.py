@@ -153,7 +153,7 @@ class Settings(BaseSettings):
     USE_FACTORIES: bool = (
         False  # If True, the database will be populated with fake data
     )
-    FACTORIES_DEMO_USERS_PASSWORDS: list[str] | None = None
+    FACTORIES_DEMO_USERS_PASSWORD: str | None = None
 
     #####################
     # Hyperion settings #
@@ -419,7 +419,7 @@ class Settings(BaseSettings):
         """
         Check that the factories demo passwords are set if USE_FACTORIES is True
         """
-        if self.USE_FACTORIES and not self.FACTORIES_DEMO_USERS_PASSWORDS:
+        if self.USE_FACTORIES and not self.FACTORIES_DEMO_USERS_PASSWORD:
             raise DotenvMissingVariableError(
                 "FACTORIES_DEMO_USERS_PASSWORDS",
             )
