@@ -16,8 +16,8 @@ from app.types.factory import Factory
 
 class ModuleFactory(Factory):
     memberships_ids = [
-        str(uuid4()),
-        str(uuid4()),
+        uuid4(),
+        uuid4(),
     ]
     memberships_names = [
         "AEECL",
@@ -30,7 +30,7 @@ class ModuleFactory(Factory):
 
     def __init__(self):
         super().__init__(
-            name="module",
+            name="Memberships",
             depends_on=[CoreUsersFactory],
         )
 
@@ -70,9 +70,10 @@ class ModuleFactory(Factory):
                         ),
                     ),
                 )
+        await db.commit()
 
     async def should_run(self, db: AsyncSession):
-        return (
+        result = (
             len(
                 await cruds_memberships.get_association_memberships(
                     db=db,
@@ -80,6 +81,15 @@ class ModuleFactory(Factory):
             )
             == 0
         )
+        if not result:
+            registered_memberships = (
+                await cruds_memberships.get_association_memberships(
+                    db=db,
+                )
+            )
+            self.memberships_ids = [
+                membership.id for membership in registered_memberships
+            ]
 
 
 factory = ModuleFactory()

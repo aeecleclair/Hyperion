@@ -9,11 +9,11 @@ from app.types.factory import Factory
 class AdvertFactory(Factory):
     def __init__(self):
         super().__init__(
-            name="advert",
+            name="Advert",
             depends_on=[],
         )
 
-    async def create_advert(self, db):
+    async def run(self, db):
         advertiser = models_advert.Advertiser(
             id=str(uuid.uuid4()),
             name="Le BDE",
@@ -67,12 +67,8 @@ class AdvertFactory(Factory):
             ),
         )
 
-    async def run(self, db):
-        await self.create_advert(db)
-
     async def should_run(self, db):
-        adverts = await cruds_advert.get_adverts(db=db)
-        return len(adverts) == 0
+        return len(await cruds_advert.get_adverts(db=db)) == 0
 
 
 factory = AdvertFactory()
