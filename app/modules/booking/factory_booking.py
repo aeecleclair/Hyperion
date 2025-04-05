@@ -15,11 +15,11 @@ from app.types.factory import Factory
 class BookingFactory(Factory):
     def __init__(self):
         super().__init__(
-            name="booking",
+            name="Booking",
             depends_on=[CoreUsersFactory],
         )
 
-    async def create_booking(self, db):
+    async def run(self, db):
         booking_manager_id = str(uuid.uuid4())
         room_id_1 = str(uuid.uuid4())
         await cruds_booking.create_manager(
@@ -60,12 +60,8 @@ class BookingFactory(Factory):
             ),
         )
 
-    async def run(self, db):
-        await self.create_booking(db)
-
     async def should_run(self, db):
-        campaigns = await cruds_booking.get_rooms(db=db)
-        return len(campaigns) == 0
+        return len(await cruds_booking.get_rooms(db=db)) == 0
 
 
 factory = BookingFactory()

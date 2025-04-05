@@ -4,6 +4,7 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups import cruds_groups
+from app.core.groups.groups_type import GroupType
 from app.core.groups.models_groups import CoreGroup, CoreMembership
 from app.core.users.factory_users import CoreUsersFactory
 from app.types.factory import Factory
@@ -17,7 +18,7 @@ class CoreGroupsFactory(Factory):
 
     def __init__(self):
         super().__init__(
-            name="groups",
+            name="Groups",
             depends_on=[CoreUsersFactory],
         )
 
@@ -36,7 +37,7 @@ class CoreGroupsFactory(Factory):
 
     async def create_core_memberships(self, db: AsyncSession):
         for i in range(len(self.groups_ids)):
-            users = random.sample(CoreUsersFactory.demo_users_id, 10)
+            users = random.sample(CoreUsersFactory.other_users_id, 10)
 
             for user_id in users:
                 await cruds_groups.create_membership(
@@ -53,7 +54,7 @@ class CoreGroupsFactory(Factory):
         await self.create_core_memberships(db=db)
 
     async def should_run(self, db: AsyncSession):
-        return  len(await cruds_groups.get_groups(db=db)) == 0
+        return len(await cruds_groups.get_groups(db=db)) == len(GroupType)
 
 
 factory = CoreGroupsFactory()

@@ -9,11 +9,11 @@ from app.types.factory import Factory
 class LoanFactory(Factory):
     def __init__(self):
         super().__init__(
-            name="loan",
+            name="Loan",
             depends_on=[CoreUsersFactory],
         )
 
-    async def create_loan(self, db):
+    async def run(self, db):
         loaner_id_1 = str(uuid.uuid4())
         group_manager_id_1 = str(uuid.uuid4())
         await cruds_loan.create_loaner(
@@ -107,9 +107,6 @@ class LoanFactory(Factory):
                 items=[item_3],
             ),
         )
-
-    async def run(self, db):
-        await self.create_loan(db)
 
     async def should_run(self, db):
         campaigns = await cruds_loan.get_loaners(db=db)

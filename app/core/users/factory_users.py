@@ -65,7 +65,7 @@ class CoreUsersFactory(Factory):
 
     def __init__(self):
         super().__init__(
-            name="users",
+            name="Users",
             depends_on=[],
         )
 
@@ -87,15 +87,15 @@ class CoreUsersFactory(Factory):
                 NB_USERS,
             )
             if i < NB_USERS // 2:
-                email = firstname[i] + "." + name[i] + "@etu.ec-lyon.fr"
+                email = (firstname[i] + "." + name[i] + "@etu.ec-lyon.fr").lower()
                 school_id = SchoolType.centrale_lyon.value
                 account_type = groups_type.AccountType.student
             elif i < 3 * NB_USERS // 4:
-                email = firstname[i] + "." + name[i] + "@ec-lyon.fr"
+                email = (firstname[i] + "." + name[i] + "@ec-lyon.fr").lower()
                 school_id = SchoolType.centrale_lyon.value
                 account_type = groups_type.AccountType.staff
             elif i < 4 * NB_USERS // 5:
-                email = firstname[i] + "." + name[i] + "@centraliens-lyon.net"
+                email = (firstname[i] + "." + name[i] + "@centraliens-lyon.net").lower()
                 school_id = SchoolType.centrale_lyon.value
                 account_type = groups_type.AccountType.former_student
             else:
@@ -150,7 +150,20 @@ class CoreUsersFactory(Factory):
         await self.create_core_users(db=db)
 
     async def should_run(self, db):
-        return len(await cruds_users.get_users(db=db)) == 0
+        result = len(await cruds_users.get_users(db=db)) == 0
+        if not result:
+            registered_users = await cruds_users.get_users(db=db)
+            self.other_users_id = [
+                user.id
+                for user in registered_users
+                if user.nickname not in self.demo_nicknames
+            ]
+            self.demo_users_id = [
+                user.id
+                for user in registered_users
+                if user.nickname in self.demo_nicknames
+            ]
+        return result
 
 
 factory = CoreUsersFactory()

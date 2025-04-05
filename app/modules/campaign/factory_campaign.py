@@ -8,11 +8,11 @@ from app.types.factory import Factory
 class CampaignFactory(Factory):
     def __init__(self):
         super().__init__(
-            name="campaign",
+            name="Campaign",
             depends_on=[],
         )
 
-    async def create_campaign(self, db):
+    async def run(self, db):
         section_id = str(uuid.uuid4())
         await cruds_campaign.add_section(
             db=db,
@@ -59,12 +59,8 @@ class CampaignFactory(Factory):
             ),
         )
 
-    async def run(self, db):
-        await self.create_campaign(db)
-
     async def should_run(self, db):
-        campaigns = await cruds_campaign.get_lists(db=db)
-        return len(campaigns) == 0
+        return len(await cruds_campaign.get_lists(db=db)) == 0
 
 
 factory = CampaignFactory()
