@@ -15,6 +15,7 @@ from app.dependencies import (
 from app.modules.seed_library import (
     coredata_seed_library,
     cruds_seed_library,
+    factory_seed_library,
     schemas_seed_library,
 )
 from app.modules.seed_library.types_seed_library import PlantState, SpeciesType
@@ -26,7 +27,7 @@ module = Module(
     root="seed_library",
     tag="seed_library",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
-    factory=None,
+    factory=factory_seed_library.factory,
 )
 
 
