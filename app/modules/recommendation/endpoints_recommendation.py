@@ -14,6 +14,7 @@ from app.dependencies import (
 )
 from app.modules.recommendation import (
     cruds_recommendation,
+    factory_recommendation,
     models_recommendation,
     schemas_recommendation,
 )
@@ -29,7 +30,7 @@ module = Module(
     root="recommendation",
     tag="Recommendation",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
-    factory=None,
+    factory=factory_recommendation.factory,
 )
 
 
