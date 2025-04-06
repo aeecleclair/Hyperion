@@ -138,7 +138,7 @@ async def create_association_membership(
         id=uuid.uuid4(),
     )
 
-    cruds_memberships.create_association_membership(
+    await cruds_memberships.create_association_membership(
         db=db,
         membership=db_association_membership,
     )
@@ -335,7 +335,10 @@ async def create_user_membership(
     )
     await validate_user_membership(db_user_membership, db)
 
-    cruds_memberships.create_user_membership(db=db, user_membership=db_user_membership)
+    await cruds_memberships.create_user_membership(
+        db=db,
+        user_membership=db_user_membership,
+    )
     try:
         await db.commit()
     except Exception:
@@ -403,7 +406,7 @@ async def add_batch_membership(
             end_date=detail.end_date,
         )
         if len(stored_memberships) == 0:
-            cruds_memberships.create_user_membership(
+            await cruds_memberships.create_user_membership(
                 db=db,
                 user_membership=schemas_memberships.UserMembershipSimple(
                     id=uuid.uuid4(),
