@@ -1,6 +1,7 @@
 """File defining the Metadata. And the basic functions creating the database tables and calling the router"""
 
 import logging
+import os
 import uuid
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
@@ -10,6 +11,8 @@ from typing import TYPE_CHECKING, Literal
 import alembic.command as alembic_command
 import alembic.config as alembic_config
 import alembic.migration as alembic_migration
+import psutil
+import redis
 from calypsso import get_calypsso_app
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.encoders import jsonable_encoder
@@ -40,16 +43,14 @@ from app.dependencies import (
 )
 from app.module import all_modules, module_list
 from app.types.exceptions import ContentHTTPException, GoogleAPIInvalidCredentialsError
+from app.types.scheduler import Scheduler
 from app.types.sqlalchemy import Base
+from app.types.websocket import WebsocketConnectionManager
 from app.utils import initialization
 from app.utils.redis import limiter
 
 if TYPE_CHECKING:
-    import redis
-
     from app.types.factory import Factory
-    from app.types.scheduler import Scheduler
-    from app.types.websocket import WebsocketConnectionManager
 
 # NOTE: We can not get loggers at the top of this file like we do in other files
 # as the loggers are not yet initialized
@@ -397,6 +398,94 @@ def init_db(
     )
 
 
+async def init_lifespan(
+    app: FastAPI,
+    settings: Settings,
+    hyperion_error_logger: logging.Logger,
+) -> tuple[Scheduler, WebsocketConnectionManager]:
+    # We need to run the factories and the google api credentials only once across all the workers
+    # We use the parent process to get the workers
+    parent_pid = os.getppid()  # PID du parent (FastAPI master process)
+    parent_process = psutil.Process(parent_pid)
+    workers = [
+        p for p in parent_process.children() if p.status() != psutil.STATUS_ZOMBIE
+    ]
+
+    # There is more than one worker
+    # We use the redis client to check if the factories have already been run and the google api credentials have been set
+    if len(workers) > 1:
+        redis_client = app.dependency_overrides.get(
+            get_redis_client,
+            get_redis_client,
+        )(settings=settings)
+        if type(redis_client) is redis.Redis:
+            # We need to run the factories only once across all the workers
+            # We use the redis client to check if the factories have already been run
+            if redis_client.setnx("factories_run", "1"):
+                async for db in app.dependency_overrides.get(
+                    get_db,
+                    get_db,
+                )():
+                    await run_factories(db, settings)
+
+            if redis_client.setnx("google_api_credentials", "1"):
+                # Init Google API credentials
+                google_api = GoogleAPI()
+                if google_api.is_google_api_configured(settings):
+                    async for db in app.dependency_overrides.get(
+                        get_db,
+                        get_db,
+                    )():
+                        try:
+                            await google_api.get_credentials(db, settings)
+                        except GoogleAPIInvalidCredentialsError:
+                            # We expect this error to be raised if the credentials were never set before
+                            pass
+        else:
+            hyperion_error_logger.info(
+                "Redis client not configured while multiple workers are used. Skipping data initialization.",
+            )
+    # There is only one worker
+    # We need to run the factories and the google api credentials
+    else:
+        hyperion_error_logger.info("Running factories")
+        async for db in app.dependency_overrides.get(
+            get_db,
+            get_db,
+        )():
+            await run_factories(db, settings)
+        google_api = GoogleAPI()
+        if google_api.is_google_api_configured(settings):
+            async for db in app.dependency_overrides.get(
+                get_db,
+                get_db,
+            )():
+                try:
+                    await google_api.get_credentials(db, settings)
+                except GoogleAPIInvalidCredentialsError:
+                    # We expect this error to be raised if the credentials were never set before
+                    pass
+
+    ws_manager: WebsocketConnectionManager = app.dependency_overrides.get(
+        get_websocket_connection_manager,
+        get_websocket_connection_manager,
+    )(settings=settings)
+
+    arq_scheduler: Scheduler = app.dependency_overrides.get(
+        get_scheduler,
+        get_scheduler,
+    )(settings=settings)
+
+    await ws_manager.connect_broadcaster()
+    await arq_scheduler.start(
+        redis_host=settings.REDIS_HOST,
+        redis_port=settings.REDIS_PORT,
+        redis_password=settings.REDIS_PASSWORD,
+        _dependency_overrides=app.dependency_overrides,
+    )
+    return arq_scheduler, ws_manager
+
+
 # We wrap the application in a function to be able to pass the settings and drop_db parameters
 # The drop_db parameter is used to drop the database tables before creating them again
 def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
@@ -430,42 +519,11 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     # https://fastapi.tiangolo.com/advanced/events/
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator:
-        async for db in app.dependency_overrides.get(
-            get_db,
-            get_db,
-        )():
-            await run_factories(db, settings)
-        # Init Google API credentials
-        google_api = GoogleAPI()
-        if google_api.is_google_api_configured(settings):
-            async for db in app.dependency_overrides.get(
-                get_db,
-                get_db,
-            )():
-                try:
-                    await google_api.get_credentials(db, settings)
-                except GoogleAPIInvalidCredentialsError:
-                    # We expect this error to be raised if the credentials were never set before
-                    pass
-
-        ws_manager: WebsocketConnectionManager = app.dependency_overrides.get(
-            get_websocket_connection_manager,
-            get_websocket_connection_manager,
-        )(settings=settings)
-
-        arq_scheduler: Scheduler = app.dependency_overrides.get(
-            get_scheduler,
-            get_scheduler,
-        )(settings=settings)
-
-        await ws_manager.connect_broadcaster()
-        await arq_scheduler.start(
-            redis_host=settings.REDIS_HOST,
-            redis_port=settings.REDIS_PORT,
-            redis_password=settings.REDIS_PASSWORD,
-            _dependency_overrides=app.dependency_overrides,
+        arq_scheduler, ws_manager = await init_lifespan(
+            app=app,
+            settings=settings,
+            hyperion_error_logger=hyperion_error_logger,
         )
-
         yield
         hyperion_error_logger.info("Shutting down")
         await arq_scheduler.close()
