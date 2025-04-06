@@ -225,9 +225,9 @@ async def run_factories(db: AsyncSession, settings: Settings) -> None:
     """Run the factories to create default data in the database"""
     hyperion_error_logger = logging.getLogger("hyperion.error")
     if not settings.USE_FACTORIES:
-        hyperion_error_logger.info("Startup: Factories are disabled")
         return
 
+    hyperion_error_logger.info("Startup: Factories enabled")
     # Importing the core_factory at the beginning of the factories.
     factories_list: list[Factory] = []
     for module in all_modules:

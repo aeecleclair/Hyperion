@@ -14,10 +14,13 @@ class Factory(ABC):
 
     @abstractmethod
     async def should_run(self, db: AsyncSession) -> bool:
-        pass
+        """
+        Check if the factory should run.
+        This prevent duplicate runs of the same factory.
+        """
 
     @abstractmethod
-    async def run(self, db: AsyncSession):
+    async def run(self, db: AsyncSession) -> None:
         pass
 
 
