@@ -1509,7 +1509,7 @@ async def add_membership(
                 ),
             )
         else:
-            cruds_memberships.create_user_membership(
+            await cruds_memberships.create_user_membership(
                 db=db,
                 user_membership=schemas_memberships.UserMembershipSimple(
                     id=uuid4(),

@@ -307,6 +307,7 @@ async def test_webhook_payment_callback(
         tag="Tests",
         default_allowed_groups_ids=[],
         payment_callback=callback,
+        factory=None,
     )
     mocker.patch(
         "app.core.payment.endpoints_payment.module_list",
@@ -348,6 +349,7 @@ async def test_webhook_payment_callback_fail(
         tag="Tests",
         default_allowed_groups_ids=[],
         payment_callback=callback,
+        factory=None,
     )
     mocker.patch(
         "app.core.payment.endpoints_payment.module_list",
