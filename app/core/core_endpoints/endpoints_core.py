@@ -202,7 +202,7 @@ async def get_module_visibility(
             schemas_core.ModuleVisibility(
                 root=module.root,
                 allowed_group_ids=allowed_group_ids,
-                allowed_account_types=allowed_account_types.count(""),
+                allowed_account_types=allowed_account_types,
             ),
         )
 
