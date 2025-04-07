@@ -12,6 +12,7 @@ from app.core.schools.schools_type import SchoolType
 from app.core.users import cruds_users
 from app.core.users.models_users import CoreUser
 from app.core.utils import security
+from app.core.utils.config import Settings
 from app.dependencies import get_settings
 from app.types.factory import Factory
 from app.types.floors_type import FloorsType
@@ -19,8 +20,15 @@ from app.types.floors_type import FloorsType
 NB_USERS = 100
 
 faker = Faker("fr_FR")
-settings = get_settings()
 hyperion_error_logger = logging.getLogger("hyperion.error")
+try:
+    settings: Settings | None = get_settings()
+except Exception:
+    settings = None
+    hyperion_error_logger.warning(
+        "Settings not available, using default values for factories. "
+        "This is expected if you are running this code outside of the app context. Such as in a test or a script.",
+    )
 
 
 class CoreUsersFactory(Factory):
@@ -45,9 +53,14 @@ class CoreUsersFactory(Factory):
         groups_type.GroupType.raid_admin,
         groups_type.GroupType.BDS,
     ]
-    if settings.USE_FACTORIES and settings.FACTORIES_DEMO_USERS_PASSWORD:
+    if settings and settings.USE_FACTORIES and settings.FACTORIES_DEMO_USERS_PASSWORD:
         demo_passwords = [
             security.get_password_hash(settings.FACTORIES_DEMO_USERS_PASSWORD)
+            for _ in range(len(demo_users_id))
+        ]
+    else:
+        demo_passwords = [
+            security.get_password_hash(faker.password(16, True, True, True, True))
             for _ in range(len(demo_users_id))
         ]
 
