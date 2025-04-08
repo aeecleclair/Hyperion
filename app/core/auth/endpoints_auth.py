@@ -50,6 +50,7 @@ core_module = CoreModule(
     root="auth",
     tag="Auth",
     router=router,
+    factory=None,
 )
 
 templates = Jinja2Templates(directory="assets/templates")

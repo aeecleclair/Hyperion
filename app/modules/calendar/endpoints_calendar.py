@@ -8,7 +8,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.users import models_users
 from app.dependencies import get_db, is_user_an_ecl_member, is_user_in
-from app.modules.calendar import cruds_calendar, models_calendar, schemas_calendar
+from app.modules.calendar import (
+    cruds_calendar,
+    factory_calendar,
+    models_calendar,
+    schemas_calendar,
+)
 from app.modules.calendar.types_calendar import Decision
 from app.types.module import Module
 from app.utils.tools import is_user_member_of_any_group
@@ -17,6 +22,7 @@ module = Module(
     root="event",
     tag="Calendar",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
+    factory=factory_calendar.factory,
 )
 
 ical_file_path = "data/ics/ae_calendar.ics"
