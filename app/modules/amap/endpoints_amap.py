@@ -493,8 +493,8 @@ async def add_order_to_delievery(
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error))
 
-    # finally:
-    #     locker_set(redis_client=redis_client, key=redis_key, lock=False)
+    finally:
+        locker_set(redis_client=redis_client, key=redis_key, lock=False)
 
 
 @module.router.patch(
@@ -613,8 +613,8 @@ async def edit_order_from_delivery(
         except ValueError as error:
             raise HTTPException(status_code=400, detail=str(error))
 
-        # finally:
-        #     locker_set(redis_client=redis_client, key=redis_key, lock=False)
+        finally:
+            locker_set(redis_client=redis_client, key=redis_key, lock=False)
 
 
 @module.router.delete(
