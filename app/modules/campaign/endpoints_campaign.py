@@ -19,6 +19,7 @@ from app.dependencies import (
 )
 from app.modules.campaign import cruds_campaign, models_campaign, schemas_campaign
 from app.modules.campaign.types_campaign import ListType, StatusType
+from app.modules.campaign.user_deleter_campaign import user_deleter
 from app.types import standard_responses
 from app.types.content_type import ContentType
 from app.types.module import Module
@@ -32,6 +33,7 @@ module = Module(
     root="vote",
     tag="Campaign",
     default_allowed_groups_ids=[GroupType.AE],
+    user_deleter=user_deleter,
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")

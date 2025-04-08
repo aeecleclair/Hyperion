@@ -17,6 +17,7 @@ from app.dependencies import (
     is_user_in,
 )
 from app.modules.loan import cruds_loan, models_loan, schemas_loan
+from app.modules.loan.user_deleter_loan import user_deleter
 from app.types.module import Module
 from app.types.scheduler import Scheduler
 from app.utils.communication.notifications import NotificationTool
@@ -34,6 +35,7 @@ module = Module(
     root="loan",
     tag="Loans",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
+    user_deleter=user_deleter,
 )
 
 

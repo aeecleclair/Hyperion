@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
 from app.core.memberships import cruds_memberships, schemas_memberships
+from app.core.memberships.user_deleter_memberships import user_deleter
 from app.core.memberships.utils_memberships import validate_user_membership
 from app.core.users import cruds_users, models_users, schemas_users
 from app.dependencies import (
@@ -25,6 +26,7 @@ core_module = CoreModule(
     root="memberships",
     tag="Memberships",
     router=router,
+    user_deleter=user_deleter,
 )
 
 

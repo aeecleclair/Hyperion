@@ -21,6 +21,7 @@ from app.dependencies import (
 )
 from app.modules.amap import cruds_amap, models_amap, schemas_amap
 from app.modules.amap.types_amap import DeliveryStatusType
+from app.modules.amap.user_deleter_amap import user_deleter
 from app.types.module import Module
 from app.utils.communication.notifications import NotificationTool
 from app.utils.redis import locker_get, locker_set
@@ -30,6 +31,7 @@ module = Module(
     root="amap",
     tag="AMAP",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
+    user_deleter=user_deleter,
 )
 
 hyperion_amap_logger = logging.getLogger("hyperion.amap")
