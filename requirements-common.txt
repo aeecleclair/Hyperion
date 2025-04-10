@@ -12,7 +12,7 @@ google-auth-oauthlib==1.2.1
 HelloAssoAPIWrapper==1.0.0
 icalendar==5.0.13
 jellyfish==1.0.4                    # String Matching
-Jinja2==3.1.5                       # template engine for html files
+Jinja2==3.1.6                       # template engine for html files
 pandas==2.2.2
 phonenumbers==8.13.43               # Used for phone number validation
 pydantic-settings==2.3.4
