@@ -13,7 +13,8 @@ class CoreAssociationMembership(Base):
 
     id: Mapped[PrimaryKey]
     name: Mapped[str] = mapped_column(unique=True)
-    group_id: Mapped[str] = mapped_column(ForeignKey("core_group.id"))
+    manager_group_id: Mapped[str] = mapped_column(ForeignKey("core_group.id"))
+    # Unused for now
 
 
 class CoreAssociationUserMembership(Base):

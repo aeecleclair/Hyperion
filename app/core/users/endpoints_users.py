@@ -301,9 +301,16 @@ async def create_user(
     # After adding the unconfirmed user to the database, we got an activation token that need to be send by email,
     # in order to make sure the email address is valid
 
+    account_type, school_id = await get_account_type_and_school_id_from_email(
+        email=email,
+        db=db,
+    )
+
     calypsso_activate_url = settings.CLIENT_URL + calypsso.get_activate_relative_url(
         activation_token=activation_token,
-        external=True,
+        external=(
+            account_type != AccountType.student
+        ),  # External users are not asked for ECL specific information
     )
 
     if settings.SMTP_ACTIVE:

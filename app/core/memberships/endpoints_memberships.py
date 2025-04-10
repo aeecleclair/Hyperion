@@ -13,20 +13,11 @@ from app.core.users import cruds_users, models_users, schemas_users
 from app.dependencies import (
     get_db,
     is_user,
-    is_user_an_ecl_member,
     is_user_in,
 )
 from app.types.module import CoreModule
 
 router = APIRouter(tags=["Memberships"])
-
-
-core_module = CoreModule(
-    root="memberships",
-    tag="Memberships",
-    router=router,
-)
-
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
@@ -44,7 +35,7 @@ core_module = CoreModule(
 )
 async def read_associations_memberships(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(is_user),
 ):
     """
     Return all memberships from database as a list of dictionaries
@@ -66,7 +57,7 @@ async def read_association_membership(
     minimalEndDate: date = Query(None),
     maximalEndDate: date = Query(None),
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     """
     Return membership with the given ID.
@@ -82,6 +73,14 @@ async def read_association_membership(
     )
     if db_association_membership is None:
         raise HTTPException(status_code=404, detail="Association Membership not found")
+
+    if db_association_membership.manager_group_id not in [
+        group.id for group in user.groups
+    ] and GroupType.admin not in [group.id for group in user.groups]:
+        raise HTTPException(
+            status_code=403,
+            detail="User is not allowed to access this membership",
+        )
 
     db_user_memberships = (
         await cruds_memberships.get_user_memberships_by_association_membership_id(
@@ -121,7 +120,7 @@ async def create_association_membership(
             detail=f"A membership with the name {membership.name} already exists",
         )
 
-    group = await cruds_groups.get_group_by_id(db, membership.group_id)
+    group = await cruds_groups.get_group_by_id(db, membership.manager_group_id)
     if group is None:
         raise HTTPException(
             status_code=404,
@@ -130,7 +129,7 @@ async def create_association_membership(
 
     db_association_membership = schemas_memberships.MembershipSimple(
         name=membership.name,
-        group_id=membership.group_id,
+        manager_group_id=membership.manager_group_id,
         id=uuid.uuid4(),
     )
 
@@ -141,10 +140,8 @@ async def create_association_membership(
     try:
         await db.commit()
     except Exception:
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to create membership",
-        )
+        await db.rollback()
+        raise
     return db_association_membership
 
 
@@ -248,8 +245,6 @@ async def read_user_memberships(
 ):
     """
     Return all memberships for a user.
-    minimalDate is an optional parameter to filter memberships by their end date.
-    format: YYYYMMDD
 
     **This endpoint is only usable by administrators**
     """
@@ -395,16 +390,14 @@ async def add_batch_membership(
         if not detail_user:
             unknown_users.append(detail)
             continue
-        stored_memberships = await cruds_memberships.get_user_memberships_by_user_id_and_association_membership_id(
+        stored_memberships = await cruds_memberships.get_user_memberships_by_user_id_start_end_and_association_membership_id(
             db=db,
             user_id=detail_user.id,
             association_membership_id=association_membership_id,
+            start_date=detail.start_date,
+            end_date=detail.end_date,
         )
-        if not any(
-            stored_membership.start_date == detail.start_date
-            and stored_membership.end_date == detail.end_date
-            for stored_membership in stored_memberships
-        ):
+        if len(stored_memberships) == 0:
             cruds_memberships.create_user_membership(
                 db=db,
                 user_membership=schemas_memberships.UserMembershipSimple(
@@ -465,10 +458,8 @@ async def update_user_membership(
     try:
         await db.commit()
     except Exception:
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to update user membership",
-        )
+        await db.rollback()
+        raise
 
 
 @router.delete(

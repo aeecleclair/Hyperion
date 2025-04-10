@@ -26,26 +26,25 @@ async def validate_user_membership(
             user_membership.association_membership_id,
         ),
     )
-    try:
-        index = [memberships.id for memberships in memberships].index(
-            user_membership.id,
-        )
-        memberships.pop(index)
-    except ValueError:
-        pass
-
     for membership in memberships:
-        if (
-            user_membership.start_date < membership.end_date < user_membership.end_date
-            or user_membership.start_date
-            < membership.start_date
-            < user_membership.end_date
-            or membership.start_date < user_membership.end_date < membership.end_date
-            or membership.start_date < user_membership.start_date < membership.end_date
-        ):
-            raise HTTPException(
-                status_code=400,
-                detail="The new membership period overlaps with an existing one.",
-            )
+        if user_membership.id != membership.id:
+            if (
+                user_membership.start_date
+                < membership.end_date
+                < user_membership.end_date
+                or user_membership.start_date
+                < membership.start_date
+                < user_membership.end_date
+                or membership.start_date
+                < user_membership.end_date
+                < membership.end_date
+                or membership.start_date
+                < user_membership.start_date
+                < membership.end_date
+            ):
+                raise HTTPException(
+                    status_code=400,
+                    detail="The new membership period overlaps with an existing one.",
+                )
 
     return user_membership

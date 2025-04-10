@@ -40,13 +40,13 @@ async def init_objects():
     aeecl_association_membership = models_memberships.CoreAssociationMembership(
         id=uuid.uuid4(),
         name="AEECL",
-        group_id=GroupType.BDE,
+        manager_group_id=GroupType.BDE,
     )
     await add_object_to_db(aeecl_association_membership)
     useecl_association_membership = models_memberships.CoreAssociationMembership(
         id=uuid.uuid4(),
         name="USEECL",
-        group_id=GroupType.BDS,
+        manager_group_id=GroupType.BDS,
     )
     await add_object_to_db(useecl_association_membership)
 
@@ -85,7 +85,7 @@ def test_create_association_membership_user(client: TestClient):
         "/memberships",
         json={
             "name": "Random Association",
-            "group_id": GroupType.AE,
+            "manager_group_id": GroupType.AE,
         },
         headers={"Authorization": f"Bearer {token_user}"},
     )
@@ -97,14 +97,14 @@ def test_create_association_membership_admin(client: TestClient):
         "/memberships",
         json={
             "name": "Random Association",
-            "group_id": GroupType.AE,
+            "manager_group_id": GroupType.AE,
         },
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 201
     membership_id = uuid.UUID(response.json()["id"])
     membership_name = response.json()["name"]
-    membership_group_id = response.json()["group_id"]
+    membership_group_id = response.json()["manager_group_id"]
 
     response = client.get(
         "/memberships",
@@ -113,7 +113,7 @@ def test_create_association_membership_admin(client: TestClient):
     assert response.status_code == 200
     assert str(membership_id) in [x["id"] for x in response.json()]
     assert membership_name in [x["name"] for x in response.json()]
-    assert membership_group_id in [x["group_id"] for x in response.json()]
+    assert membership_group_id in [x["manager_group_id"] for x in response.json()]
 
 
 def test_delete_association_membership_user(client: TestClient):
@@ -158,7 +158,7 @@ async def test_delete_association_membership_admin(client: TestClient):
     new_membership = models_memberships.CoreAssociationMembership(
         id=uuid.uuid4(),
         name="Random Association1",
-        group_id=GroupType.AE,
+        manager_group_id=GroupType.AE,
     )
     await add_object_to_db(new_membership)
 
@@ -181,7 +181,7 @@ def test_patch_association_membership_user(client: TestClient):
         f"/memberships/{aeecl_association_membership.id}",
         json={
             "name": "Random Association",
-            "group_id": GroupType.eclair.value,
+            "manager_group_id": GroupType.eclair.value,
         },
         headers={"Authorization": f"Bearer {token_user}"},
     )
@@ -193,8 +193,8 @@ def test_patch_association_membership_user(client: TestClient):
     )
     assert response.status_code == 200
     assert aeecl_association_membership.name in [x["name"] for x in response.json()]
-    assert aeecl_association_membership.group_id in [
-        x["group_id"] for x in response.json()
+    assert aeecl_association_membership.manager_group_id in [
+        x["manager_group_id"] for x in response.json()
     ]
 
 
@@ -202,7 +202,7 @@ async def test_patch_association_membership_admin(client: TestClient):
     new_membership = models_memberships.CoreAssociationMembership(
         id=uuid.uuid4(),
         name="Random Association2",
-        group_id=GroupType.AE,
+        manager_group_id=GroupType.AE,
     )
     await add_object_to_db(new_membership)
 
@@ -212,7 +212,7 @@ async def test_patch_association_membership_admin(client: TestClient):
         f"/memberships/{new_membership.id}",
         json={
             "name": new_name,
-            "group_id": new_group_id,
+            "manager_group_id": new_group_id,
         },
         headers={"Authorization": f"Bearer {token_admin}"},
     )
@@ -224,7 +224,7 @@ async def test_patch_association_membership_admin(client: TestClient):
     )
     assert response.status_code == 200
     assert new_name in [x["name"] for x in response.json()]
-    assert new_group_id in [x["group_id"] for x in response.json()]
+    assert new_group_id in [x["manager_group_id"] for x in response.json()]
 
 
 def test_get_memberships_by_user_id_user(client: TestClient):

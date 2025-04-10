@@ -43,7 +43,6 @@ from app.modules.cdr.utils_cdr import (
     is_user_in_a_seller_group,
     validate_payment,
 )
-from app.types.exceptions import MissingHelloAssoSlugError
 from app.types.module import Module
 from app.types.websocket import (
     HyperionWebsocketsRoom,
@@ -1324,7 +1323,7 @@ async def get_purchases_by_user_id(
                                 related_membership=schemas_memberships.MembershipSimple(
                                     id=product.related_membership.id,
                                     name=product.related_membership.name,
-                                    group_id=product.related_membership.group_id,
+                                    manager_group_id=product.related_membership.manager_group_id,
                                 )
                                 if product.related_membership
                                 else None,
@@ -1412,7 +1411,7 @@ async def get_purchases_by_user_id_by_seller_id(
                                 related_membership=schemas_memberships.MembershipSimple(
                                     id=product.related_membership.id,
                                     name=product.related_membership.name,
-                                    group_id=product.related_membership.group_id,
+                                    manager_group_id=product.related_membership.manager_group_id,
                                 )
                                 if product.related_membership
                                 else None,
