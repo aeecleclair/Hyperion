@@ -1736,7 +1736,7 @@ async def init_ha_transfer(
         checkout_name="Recharge MyECL Pay",
         # TODO use calypsso method
         # {settings.CLIENT_URL}
-        redirection_uri=f"https://8579-37-168-60-212.ngrok-free.app/calypsso/payment?url={transfer_info.redirect_url}",
+        redirection_uri=f"{settings.CLIENT_URL}calypsso/payment?url={transfer_info.redirect_url}",
         payer_user=user_schema,
         db=db,
     )
