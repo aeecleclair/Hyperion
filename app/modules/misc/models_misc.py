@@ -16,4 +16,5 @@ class Contacts(Base):
     phone: Mapped[str | None]
     location: Mapped[str | None]
 
+
 # <-- End of contacts PE5 -->

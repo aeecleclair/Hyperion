@@ -70,4 +70,6 @@ async def get_contact_by_id(
         ),
     )
     return result.scalars().one_or_none()
+
+
 # <-- End of Contacts for PE5 -->
