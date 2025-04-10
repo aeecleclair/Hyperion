@@ -101,12 +101,12 @@ async def edit_contact(
 async def delete_contact(
     contact_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.BDE)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.eclair)),
 ):
     """
     Delete a contact.
 
-    **This endpoint is only usable by members of the group BDE**
+    **This endpoint is only usable by members of the group eclair**
     """
 
     try:
