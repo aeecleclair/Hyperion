@@ -3,7 +3,6 @@ from uuid import UUID
 
 from pydantic import (
     BaseModel,
-    HttpUrl,
 )
 
 from app.core.memberships import schemas_memberships
@@ -107,7 +106,7 @@ class AdminTransferInfo(BaseModel):
 
 class TransferInfo(BaseModel):
     amount: int
-    redirect_url: HttpUrl
+    redirect_url: str
 
 
 class RefundInfo(BaseModel):
