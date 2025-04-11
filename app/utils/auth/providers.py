@@ -419,6 +419,7 @@ class SlashAuthClient(BaseAuthClient):
             "email": user.email,
         }
 
+
 class SafetyCardsAuthClient(BaseAuthClient):
     # When set to `None`, users from any group can use the auth client
     allowed_account_types: list[AccountType] | None = get_ecl_account_types()
