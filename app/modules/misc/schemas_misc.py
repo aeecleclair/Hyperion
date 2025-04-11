@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, field_validator
 from app.utils import validators
 
 
-# <-- Contacts for PE5 -->
+# <-- Contacts for PE5 SafetyCards -->
 class ContactBase(BaseModel):
     name: str
     email: str | None = None
@@ -31,4 +31,4 @@ class ContactEdit(BaseModel):
     _format_phone = field_validator("phone")(validators.phone_formatter)
 
 
-# <-- End of Contacts for PE5 -->
+# <-- End of Contacts for PE5 SafetyCards -->

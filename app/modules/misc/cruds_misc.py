@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.misc import models_misc, schemas_misc
 
 
-# <-- Contacts for PE5 -->
+# <-- Contacts for PE5 SafetyCards -->
 async def get_contacts(
     db: AsyncSession,
 ) -> Sequence[models_misc.Contacts]:
@@ -72,4 +72,4 @@ async def get_contact_by_id(
     return result.scalars().one_or_none()
 
 
-# <-- End of Contacts for PE5 -->
+# <-- End of Contacts for PE5 SafetyCards -->

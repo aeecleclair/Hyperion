@@ -13,7 +13,7 @@ from app.types.module import Module
 router = APIRouter()
 
 
-# <-- Contacts for PE5 -->
+# <-- Contacts for PE5 SafetyCards -->
 module = Module(
     root="contact",
     tag="Contact",
@@ -118,4 +118,4 @@ async def delete_contact(
         raise HTTPException(status_code=404, detail="The contact does not exist")
 
 
-# <-- End of Contacts for PE5 -->
+# <-- End of Contacts for PE5 SafetyCards -->
