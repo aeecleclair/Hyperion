@@ -5,7 +5,7 @@ from sqlalchemy.orm import Mapped
 from app.types.sqlalchemy import Base, PrimaryKey
 
 
-# <-- Contacts for PE5 -->
+# <-- Contacts for PE5 SafetyCards -->
 class Contacts(Base):
     __tablename__ = "misc_contacts"
 
@@ -17,4 +17,4 @@ class Contacts(Base):
     location: Mapped[str | None]
 
 
-# <-- End of contacts PE5 -->
+# <-- End of contacts PE5 SafetyCards -->

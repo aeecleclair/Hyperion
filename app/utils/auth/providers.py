@@ -418,3 +418,25 @@ class SlashAuthClient(BaseAuthClient):
             "name": user.full_name,
             "email": user.email,
         }
+
+class SafetyCardsAuthClient(BaseAuthClient):
+    # When set to `None`, users from any group can use the auth client
+    allowed_account_types: list[AccountType] | None = get_ecl_account_types()
+
+    def get_userinfo(self, user: models_users.CoreUser) -> dict[str, Any]:
+        """
+        See oidc specifications and `app.endpoints.auth.auth_get_userinfo` for more information:
+        https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
+
+        """
+        # Override this method with custom information adapted for the client
+        # WARNING: The sub (subject) Claim MUST always be returned in the UserInfo Response.
+        return {
+            "sub": user.id,
+            "name": get_display_name(
+                firstname=user.firstname,
+                name=user.name,
+                nickname=user.nickname,
+            ),
+            "email": user.email,
+        }
