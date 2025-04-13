@@ -1,12 +1,17 @@
+from typing import Literal
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.types.module_user_deleter import ModuleUserDeleter
 
 
 class MembershipsUserDeleter(ModuleUserDeleter):
-    def can_delete_user(self, user_id) -> bool:
+    async def can_delete_user(
+        self,
+        user_id: str,
+        db: AsyncSession,
+    ) -> Literal[True] | str:
         return True
 
-    def delete_user(self, user_id) -> None:
-        pass
-
-
-user_deleter = MembershipsUserDeleter()
+    async def delete_user(self, user_id: str, db: AsyncSession) -> None:
+        pass  # We keep the memberships for stats and history purposes

@@ -217,3 +217,39 @@ async def get_firebase_tokens_by_user_ids(
         ),
     )
     return list(result.scalars().all())
+
+
+async def delete_topic_membership_by_user_id(
+    user_id: str,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_notification.TopicMembership).where(
+            models_notification.TopicMembership.user_id == user_id,
+        ),
+    )
+    await db.commit()
+
+
+async def delete_message_by_firebase_device_token(
+    device_token: str,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_notification.Message).where(
+            models_notification.Message.firebase_device_token == device_token,
+        ),
+    )
+    await db.commit()
+
+
+async def delete_firebase_devices_by_user_id(
+    user_id: str,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_notification.FirebaseDevice).where(
+            models_notification.FirebaseDevice.user_id == user_id,
+        ),
+    )
+    await db.commit()

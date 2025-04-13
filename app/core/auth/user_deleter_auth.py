@@ -1,12 +1,25 @@
+from typing import Literal
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.auth import cruds_auth
 from app.types.module_user_deleter import ModuleUserDeleter
 
 
 class AuthUserDeleter(ModuleUserDeleter):
-    def can_delete_user(self, user_id) -> bool:
+    async def can_delete_user(
+        self,
+        user_id: str,
+        db: AsyncSession,
+    ) -> Literal[True] | str:
         return True
 
-    def delete_user(self, user_id) -> None:
-        pass
-
-
-user_deleter = AuthUserDeleter()
+    async def delete_user(self, user_id: str, db: AsyncSession) -> None:
+        await cruds_auth.delete_authorization_token_by_user_id(
+            db=db,
+            user_id=user_id,
+        )
+        await cruds_auth.delete_refresh_token_by_user_id(
+            db=db,
+            user_id=user_id,
+        )
