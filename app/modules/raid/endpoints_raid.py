@@ -22,7 +22,7 @@ from app.dependencies import (
 )
 from app.modules.raid import coredata_raid, cruds_raid, models_raid, schemas_raid
 from app.modules.raid.raid_type import DocumentType, DocumentValidation, Size
-from app.modules.raid.user_deleter_raid import user_deleter
+from app.modules.raid.user_deleter_raid import RaidUserDeleter
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.modules.raid.utils.utils_raid import (
     get_participant,
@@ -50,7 +50,7 @@ module = Module(
     tag="Raid",
     payment_callback=validate_payment,
     default_allowed_account_types=[AccountType.student, AccountType.staff],
-    user_deleter=user_deleter,
+    user_deleter=RaidUserDeleter(),
 )
 
 

@@ -10,7 +10,7 @@ from app.core.users import models_users
 from app.dependencies import get_db, is_user_an_ecl_member, is_user_in
 from app.modules.calendar import cruds_calendar, models_calendar, schemas_calendar
 from app.modules.calendar.types_calendar import Decision
-from app.modules.calendar.user_deleter_calendar import user_deleter
+from app.modules.calendar.user_deleter_calendar import CalendarUserDeleter
 from app.types.module import Module
 from app.utils.tools import is_user_member_of_any_group
 
@@ -18,7 +18,7 @@ module = Module(
     root="event",
     tag="Calendar",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
-    user_deleter=user_deleter,
+    user_deleter=CalendarUserDeleter(),
 )
 
 ical_file_path = "data/ics/ae_calendar.ics"

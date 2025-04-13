@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.core_module_list import core_module_list
 from app.core.payment import cruds_payment, models_payment, schemas_payment
-from app.core.payment.user_deleter_payment import user_deleter
+from app.core.payment.user_deleter_payment import PaymentUserDeleter
 from app.dependencies import get_db
 from app.modules.module_list import module_list
 from app.types.module import CoreModule
@@ -23,7 +23,7 @@ core_module = CoreModule(
     root="payment",
     tag="Payments",
     router=router,
-    user_deleter=user_deleter,
+    user_deleter=PaymentUserDeleter(),
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")

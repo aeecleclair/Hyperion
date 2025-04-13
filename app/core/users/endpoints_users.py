@@ -25,7 +25,7 @@ from app.core.groups.groups_type import AccountType, GroupType
 from app.core.schools.schools_type import SchoolType
 from app.core.users import cruds_users, models_users, schemas_users
 from app.core.users.tools_users import get_account_type_and_school_id_from_email
-from app.core.users.user_deleter_users import user_deleter
+from app.core.users.user_deleter_users import UsersUserDeleter
 from app.core.utils import security
 from app.core.utils.config import Settings
 from app.dependencies import (
@@ -54,7 +54,7 @@ core_module = CoreModule(
     root="users",
     tag="Users",
     router=router,
-    user_deleter=user_deleter,
+    user_deleter=UsersUserDeleter(),
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")

@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.schools import cruds_schools, models_schools, schemas_schools
 from app.core.schools.schools_type import SchoolType
-from app.core.schools.user_deleter_schools import user_deleter
+from app.core.schools.user_deleter_schools import SchoolsUserDeleter
 from app.core.users import cruds_users, schemas_users
 from app.dependencies import (
     get_db,
@@ -28,7 +28,7 @@ core_module = CoreModule(
     root="schools",
     tag="Schools",
     router=router,
-    user_deleter=user_deleter,
+    user_deleter=SchoolsUserDeleter(),
 )
 
 
