@@ -10,7 +10,9 @@ from app.core.notification import (
     schemas_notification,
 )
 from app.core.notification.notification_types import CustomTopic, Topic
-from app.core.notification.user_deleter_notification import user_deleter
+from app.core.notification.user_deleter_notification import (
+    NotificationUserDeleter,
+)
 from app.core.users import models_users
 from app.dependencies import (
     get_db,
@@ -30,7 +32,7 @@ core_module = CoreModule(
     root="notification",
     tag="Notifications",
     router=router,
-    user_deleter=user_deleter,
+    user_deleter=NotificationUserDeleter(),
 )
 
 

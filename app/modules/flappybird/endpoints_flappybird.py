@@ -12,14 +12,14 @@ from app.modules.flappybird import (
     models_flappybird,
     schemas_flappybird,
 )
-from app.modules.flappybird.user_deleter_flappybird import user_deleter
+from app.modules.flappybird.user_deleter_flappybird import FlappybirdUserDeleter
 from app.types.module import Module
 
 module = Module(
     root="flappybird",
     tag="Flappy Bird",
     default_allowed_account_types=[AccountType.student],
-    user_deleter=user_deleter,
+    user_deleter=FlappybirdUserDeleter(),
 )
 
 

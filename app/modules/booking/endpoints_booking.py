@@ -18,7 +18,7 @@ from app.dependencies import (
 )
 from app.modules.booking import cruds_booking, models_booking, schemas_booking
 from app.modules.booking.types_booking import Decision
-from app.modules.booking.user_deleter_booking import user_deleter
+from app.modules.booking.user_deleter_booking import BookingUserDeleter
 from app.types.module import Module
 from app.utils.communication.notifications import NotificationTool
 from app.utils.tools import is_group_id_valid, is_user_member_of_any_group
@@ -27,7 +27,7 @@ module = Module(
     root="booking",
     tag="Booking",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
-    user_deleter=user_deleter,
+    user_deleter=BookingUserDeleter(),
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
