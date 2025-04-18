@@ -1,10 +1,12 @@
 import base64
 import logging
+import urllib
 import uuid
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -1737,9 +1739,7 @@ async def init_ha_transfer(
         helloasso_slug=settings.HELLOASSO_MYECLPAY_SLUG,
         checkout_amount=transfer_info.amount,
         checkout_name="Recharge MyECL Pay",
-        # TODO use calypsso method
-        # {settings.CLIENT_URL}
-        redirection_uri=f"{settings.CLIENT_URL}calypsso/payment?url={transfer_info.redirect_url}",
+        redirection_uri=f"{settings.CLIENT_URL}myeclpay/transfer/redirect?url={transfer_info.redirect_url}",
         payer_user=user_schema,
         db=db,
     )
@@ -1765,6 +1765,50 @@ async def init_ha_transfer(
     return schemas_payment.PaymentUrl(
         url=checkout.payment_url,
     )
+
+
+@router.get(
+    "/myeclpay/transfer/redirect",
+    response_model=schemas_payment.PaymentUrl,
+    status_code=201,
+)
+async def redirect_from_ha_transfer(
+    url: str,
+    checkoutIntentId: str | None = None,
+    code: str | None = None,
+    orderId: str | None = None,
+    error: str | None = None,
+    settings: Settings = Depends(get_settings),
+):
+    """
+    HelloAsso checkout should be configured to redirect the user to:
+     - f"{settings.CLIENT_URL}myeclpay/transfer/redirect?url={redirect_url}"
+    Redirect the user to the provided redirect `url`. The parameters `checkoutIntentId`, `code`, `orderId` and `error` passed by HelloAsso will be added to the redirect URL.
+    The redirect `url` must be trusted by Hyperion in the dotenv.
+    """
+    if url not in settings.TRUSTED_PAYMENT_REDIRECT_URLS:
+        hyperion_error_logger.warning(
+            f"Tried to redirect to an untrusted URL: {url}",
+        )
+        raise HTTPException(
+            status_code=400,
+            detail="Redirect URL is not trusted by hyperion",
+        )
+
+    params = {
+        "checkoutIntentId": checkoutIntentId,
+        "code": code,
+        "orderId": orderId,
+        "error": error,
+    }
+
+    encoded_params = urllib.parse.urlencode(
+        {k: v for k, v in params.items() if v is not None},
+    )
+
+    parsed_url = urllib.parse.urlparse(url)._replace(query=encoded_params)
+
+    return RedirectResponse(parsed_url.geturl())
 
 
 @router.post(
