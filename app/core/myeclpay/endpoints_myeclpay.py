@@ -1767,7 +1767,7 @@ async def init_ha_transfer(
     )
 
 
-@router.get(
+@router.post(
     "/myeclpay/stores/{store_id}/scan/validate",
     status_code=200,
 )
