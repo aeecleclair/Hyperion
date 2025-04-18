@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import Literal
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,7 +15,7 @@ class ModuleUserDeleter(ABC):
         self,
         user_id: str,
         db: AsyncSession,
-    ) -> Literal[True] | str:
+    ) -> str:
         """
         Check if the user can be deleted.
         :param user_id: The ID of the user to check.
@@ -33,13 +32,13 @@ class ModuleUserDeleter(ABC):
 
 """
 from app.types.module_user_deleter import ModuleUserDeleter
-from typing import Literal
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class CoreUserDeleter(ModuleUserDeleter):
     async def can_delete_user(self, user_id: str, db: AsyncSession) -> Literal[True] | str:
-        return True
+        return ""
 
     async def delete_user(self, user_id: str, db: AsyncSession) -> None:
         pass

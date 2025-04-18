@@ -1,5 +1,3 @@
-from typing import Literal
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.types.module_user_deleter import ModuleUserDeleter
@@ -10,8 +8,8 @@ class GoogleAPIUserDeleter(ModuleUserDeleter):
         self,
         user_id: str,
         db: AsyncSession,
-    ) -> Literal[True] | str:
-        return True
+    ) -> str:
+        return ""
 
     async def delete_user(self, user_id: str, db: AsyncSession) -> None:
         pass

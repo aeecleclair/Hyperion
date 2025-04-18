@@ -1,5 +1,3 @@
-from typing import Literal
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import cruds_auth
@@ -11,8 +9,8 @@ class AuthUserDeleter(ModuleUserDeleter):
         self,
         user_id: str,
         db: AsyncSession,
-    ) -> Literal[True] | str:
-        return True
+    ) -> str:
+        return ""
 
     async def delete_user(self, user_id: str, db: AsyncSession) -> None:
         await cruds_auth.delete_authorization_token_by_user_id(

@@ -1,5 +1,3 @@
-from typing import Literal
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.notification import cruds_notification
@@ -11,8 +9,8 @@ class NotificationUserDeleter(ModuleUserDeleter):
         self,
         user_id: str,
         db: AsyncSession,
-    ) -> Literal[True] | str:
-        return True
+    ) -> str:
+        return ""
 
     async def delete_user(self, user_id: str, db: AsyncSession) -> None:
         devices = await cruds_notification.get_firebase_devices_by_user_id(
