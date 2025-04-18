@@ -43,6 +43,7 @@ from app.modules.cdr.utils_cdr import (
     is_user_in_a_seller_group,
     validate_payment,
 )
+from app.types.exceptions import MissingHelloAssoSlugError
 from app.types.module import Module
 from app.types.websocket import (
     HyperionWebsocketsRoom,
