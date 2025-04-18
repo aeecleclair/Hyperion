@@ -10,7 +10,10 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups.groups_type import GroupType
-from app.core.memberships import cruds_memberships, schemas_memberships
+from app.core.memberships import schemas_memberships
+from app.core.memberships.utils_memberships import (
+    has_user_active_membership_to_association_membership,
+)
 from app.core.myeclpay import cruds_myeclpay, schemas_myeclpay
 from app.core.myeclpay.models_myeclpay import Store, WalletDevice
 from app.core.myeclpay.types_myeclpay import (
@@ -541,7 +544,7 @@ async def get_user_stores(
                         association_membership=schemas_memberships.MembershipSimple(
                             id=store.structure.association_membership.id,
                             name=store.structure.association_membership.name,
-                            group_id=store.structure.association_membership.group_id,
+                            manager_group_id=store.structure.association_membership.manager_group_id,
                         )
                         if store.structure.association_membership is not None
                         else None,
@@ -1764,6 +1767,82 @@ async def init_ha_transfer(
     )
 
 
+@router.get(
+    "/myeclpay/stores/{store_id}/scan/validate",
+    status_code=200,
+)
+async def validate_can_scan_qrcode(
+    store_id: UUID,
+    scan_info: schemas_myeclpay.ScanInfo,
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(is_user_an_ecl_member),
+):
+    """
+    Validate if the user can scan a QR code for this store.
+
+    **The user must be authenticated to use this endpoint**
+    """
+    store = await cruds_myeclpay.get_store(
+        store_id=store_id,
+        db=db,
+    )
+    if store is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Store does not exist",
+        )
+
+    seller = await cruds_myeclpay.get_seller(
+        store_id=store_id,
+        user_id=user.id,
+        db=db,
+    )
+
+    if seller is None or not seller.can_bank:
+        raise HTTPException(
+            status_code=400,
+            detail="User does not have `can_bank` permission for this store",
+        )
+
+    debited_wallet_device = await cruds_myeclpay.get_wallet_device(
+        wallet_device_id=scan_info.key,
+        db=db,
+    )
+    if debited_wallet_device is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Wallet device does not exist",
+        )
+    if debited_wallet_device.status != WalletDeviceStatus.ACTIVE:
+        raise HTTPException(
+            status_code=400,
+            detail="Wallet device is not active",
+        )
+    debited_wallet = await cruds_myeclpay.get_wallet(
+        wallet_id=debited_wallet_device.wallet_id,
+        db=db,
+    )
+    if debited_wallet is None:
+        hyperion_error_logger.error(
+            f"MyECLPay: Could not find wallet associated with the debited wallet device {debited_wallet_device.id}, this should never happen",
+        )
+        raise HTTPException(
+            status_code=400,
+            detail="Could not find wallet associated with the debited wallet device",
+        )
+    if debited_wallet.user is not None:
+        if store.structure.association_membership_id:
+            # We check if the user is a member of the association
+            # and if the association membership is valid
+            await has_user_active_membership_to_association_membership(
+                user_id=debited_wallet.user.id,
+                association_membership_id=store.structure.association_membership_id,
+                db=db,
+            )
+
+    return {"success": True}
+
+
 @router.post(
     "/myeclpay/stores/{store_id}/scan",
     status_code=201,
@@ -1940,25 +2019,11 @@ async def store_scan_qrcode(
 
     if not scan_info.bypass_membership:
         if store.structure.association_membership_id is not None:
-            memberships = await cruds_memberships.get_user_memberships_by_user_id_and_association_membership_id(
+            await has_user_active_membership_to_association_membership(
                 user_id=debited_wallet.user.id,
                 association_membership_id=store.structure.association_membership_id,
                 db=db,
             )
-            today = datetime.now(UTC).date()
-            if not any(
-                membership.start_date <= today <= membership.end_date
-                for membership in memberships
-            ):
-                # We remove the QR Code from the list of used QR Code since we want to allow the seller to scan it again whith a bypass_membership flag if the transaction must be done without a membership
-                await cruds_myeclpay.delete_used_qrcode(
-                    qr_code_id=scan_info.id,
-                    db=db,
-                )
-                raise HTTPException(
-                    status_code=400,
-                    detail="User does not have the required membership",
-                )
 
     # We increment the receiving wallet balance
     await cruds_myeclpay.increment_wallet_balance(

@@ -119,7 +119,7 @@ async def get_structures(
             association_membership=schemas_memberships.MembershipSimple(
                 id=structure.association_membership.id,
                 name=structure.association_membership.name,
-                group_id=structure.association_membership.group_id,
+                manager_group_id=structure.association_membership.manager_group_id,
             )
             if structure.association_membership
             else None,
@@ -160,7 +160,7 @@ async def get_structure_by_id(
             association_membership=schemas_memberships.MembershipSimple(
                 id=structure.association_membership.id,
                 name=structure.association_membership.name,
-                group_id=structure.association_membership.group_id,
+                manager_group_id=structure.association_membership.manager_group_id,
             )
             if structure.association_membership
             else None,
@@ -400,7 +400,7 @@ async def get_wallets(
                     association_membership=schemas_memberships.MembershipSimple(
                         id=wallet.store.structure.association_membership.id,
                         name=wallet.store.structure.association_membership.name,
-                        group_id=wallet.store.structure.association_membership.group_id,
+                        manager_group_id=wallet.store.structure.association_membership.manager_group_id,
                     )
                     if wallet.store.structure.association_membership
                     else None,
