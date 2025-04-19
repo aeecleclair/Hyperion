@@ -179,7 +179,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("wallet_id", sa.Uuid(), nullable=False),
-        sa.Column("ed25519_public_key", sa.String(), nullable=False),
+        sa.Column("ed25519_public_key", sa.LargeBinary(), nullable=False),
         sa.Column("creation", TZDateTime(), nullable=False),
         sa.Column(
             "status",
