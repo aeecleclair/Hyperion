@@ -64,5 +64,5 @@ class TransferTotalDontMatchInCallbackError(Exception):
 class TransferAlreadyConfirmedInCallbackError(Exception):
     def __init__(self, transfer_id: UUID):
         super().__init__(
-            f"User transfer {transfer_id} amount does not match the paid amount",
+            f"User transfer {transfer_id} has already been confirmed",
         )
