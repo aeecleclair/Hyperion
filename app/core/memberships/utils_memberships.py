@@ -75,7 +75,7 @@ async def has_user_active_membership_to_association_membership(
         (
             membership
             for membership in membership
-            if membership.start_date <= datetime.now(UTC) <= membership.end_date
+            if membership.start_date <= datetime.now(UTC).date() <= membership.end_date
         ),
         None,
     )
