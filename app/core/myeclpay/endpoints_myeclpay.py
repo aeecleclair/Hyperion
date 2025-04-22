@@ -1086,9 +1086,6 @@ async def sign_tos(
     await db.commit()
 
     # TODO: add logs
-    # hyperion_security_logger.warning(
-    #     f"Create_user: an user with email {user_create.email} already exists ({request_id})",
-    # )
     if settings.SMTP_ACTIVE:
         account_exists_content = templates.get_template(
             "myeclpay_signed_tos_mail.html",
