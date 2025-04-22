@@ -2,6 +2,7 @@ import base64
 import logging
 from uuid import UUID
 
+from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -45,6 +46,11 @@ def verify_signature(
                 "utf-8",
             ),
         )
+    except InvalidSignature:
+        hyperion_security_logger.info(
+            f"MyECLPay: Invalid signature for QR Code with WalletDevice {wallet_device_id} ({request_id})",
+        )
+        return False
     except Exception as error:
         hyperion_security_logger.info(
             f"MyECLPay: Failed to verify signature for QR Code with WalletDevice {wallet_device_id}: {error} ({request_id})",

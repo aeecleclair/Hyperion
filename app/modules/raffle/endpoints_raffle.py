@@ -507,7 +507,7 @@ async def buy_ticket(
 
         display_name = user.full_name
         hyperion_raffle_logger.info(
-            f"Add_ticket_to_user: A pack of {pack_ticket.pack_size} tickets of type {pack_id} has been buyed by user {display_name}({user.id}) for an amount of {pack_ticket.price}€. ({request_id})",
+            f"Add_ticket_to_user: A pack of {pack_ticket.pack_size} tickets of type {pack_id} has been bought by user {display_name}({user.id}) for an amount of {pack_ticket.price}€. ({request_id})",
         )
 
         return tickets
