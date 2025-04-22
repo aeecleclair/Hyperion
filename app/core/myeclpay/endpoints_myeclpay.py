@@ -1812,7 +1812,7 @@ async def redirect_from_ha_transfer(
 
 
 @router.post(
-    "/myeclpay/stores/{store_id}/scan/validate",
+    "/myeclpay/stores/{store_id}/scan/check",
     status_code=200,
 )
 async def validate_can_scan_qrcode(
