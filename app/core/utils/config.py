@@ -115,7 +115,6 @@ class Settings(BaseSettings):
 
     CDR_PAYMENT_REDIRECTION_URL: str | None = None
     RAID_PAYMENT_REDIRECTION_URL: str | None = None
-    MYECLPAY_PAYMENT_REDIRECTION_URL: str | None = None
     MYECLPAY_MAXIMUM_WALLET_BALANCE: int = 1000
 
     # Drive configuration for the raid registering app
