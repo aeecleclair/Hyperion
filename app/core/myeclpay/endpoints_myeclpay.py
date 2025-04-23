@@ -2444,6 +2444,11 @@ async def get_data_for_integrity_check(
 
     **The header must contain the MYECLPAY_DATA_VERIFIER_ACCESS_TOKEN defined in the settings in the `X-Data-Verifier-Token` header**
     """
+    if settings.MYECLPAY_DATA_VERIFIER_ACCESS_TOKEN is None:
+        raise HTTPException(
+            status_code=301,
+            detail="MYECLPAY_DATA_VERIFIER_ACCESS_TOKEN is not set in the settings",
+        )
 
     if (
         request.headers.get("X-Data-Verifier-Token")
