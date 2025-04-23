@@ -40,13 +40,11 @@ def verify_signature(
     """
     try:
         loaded_public_key = ed25519.Ed25519PublicKey.from_public_bytes(public_key_bytes)
-        json_data = data.model_dump_json(exclude={"signature", "bypass_membership"})
-        json_data_bytes = (
-            json_data.encode("utf-8") if isinstance(json_data, str) else json_data
-        )
         loaded_public_key.verify(
             base64.decodebytes(signature.encode("utf-8")),
-            json_data_bytes,
+            data.model_dump_json(exclude={"signature", "bypass_membership"}).encode(
+                "utf-8",
+            ),
         )
     except InvalidSignature:
         hyperion_security_logger.info(
