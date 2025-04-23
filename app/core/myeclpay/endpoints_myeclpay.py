@@ -106,6 +106,12 @@ async def create_structure(
     """
     Create a new structure.
 
+    A structure contains:
+     - a name
+     - an association membership id
+     - a manager user id
+     - a list of stores
+
     **The user must be an admin to use this endpoint**
     """
     db_user = await cruds_users.get_user_by_id(
@@ -183,7 +189,7 @@ async def delete_structure(
     user: CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
-    Delete a structure.
+    Delete a structure. Only structures without stores can be deleted.
 
     **The user must be an admin to use this endpoint**
     """
@@ -213,7 +219,7 @@ async def delete_structure(
     "/myeclpay/structures/{structure_id}/init-manager-transfer",
     status_code=201,
 )
-async def init_update_structure_manager(
+async def init_transfer_structure_manager(
     structure_id: UUID,
     transfer_info: schemas_myeclpay.StructureTranfert,
     background_tasks: BackgroundTasks,
@@ -222,7 +228,8 @@ async def init_update_structure_manager(
     settings: Settings = Depends(get_settings),
 ):
     """
-    Initiate the update of a manager for an association
+    Initiate the transfer of a structure to a new manager. The current manager will receive an email with a link to confirm the transfer.
+    The link will only be valid for a limited time.
 
     **The user must be the manager for this structure**
     """
@@ -241,16 +248,13 @@ async def init_update_structure_manager(
             detail="User is not the manager for this structure",
         )
 
-    user_db = await cruds_users.get_user_by_id(
-        user_id=transfer_info.new_manager_user_id,
-        db=db,
-    )
-    if user_db is None:
+    if structure.manager_user_id != user.id:
         raise HTTPException(
-            status_code=404,
-            detail="User does not exist",
+            status_code=301,
+            detail="Only the manager of the structure can initiate the transfer",
         )
 
+    # If a previous transfer request exists, delete it
     await cruds_myeclpay.delete_structure_manager_transfer_by_structure(
         structure_id=structure_id,
         db=db,
@@ -277,7 +281,7 @@ async def init_update_structure_manager(
         )
         background_tasks.add_task(
             send_email,
-            recipient=user_db.email,
+            recipient=user.email,
             subject="MyECL - Confirm the structure manager transfer",
             content=migration_content,
             settings=settings,
@@ -292,7 +296,7 @@ async def init_update_structure_manager(
     "/myeclpay/structures/confirm-manager-transfer",
     status_code=200,
 )
-async def update_structure_manager(
+async def confirm_structure_manager_transfer(
     token: str,
     db: AsyncSession = Depends(get_db),
 ):
@@ -324,6 +328,7 @@ async def update_structure_manager(
         db=db,
     )
 
+    # We will add the new manager as a seller for all stores of the structure
     stores = await cruds_myeclpay.get_stores_by_structure_id(
         structure_id=request.structure_id,
         db=db,
