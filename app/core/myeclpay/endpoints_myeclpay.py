@@ -166,6 +166,16 @@ async def update_structure(
 
     **The user must be an admin to use this endpoint**
     """
+    structure = await cruds_myeclpay.get_structure_by_id(
+        structure_id=structure_id,
+        db=db,
+    )
+    if structure is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Structure does not exist",
+        )
+
     await cruds_myeclpay.update_structure(
         structure_id=structure_id,
         structure_update=structure_update,
