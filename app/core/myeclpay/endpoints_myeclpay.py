@@ -712,7 +712,7 @@ async def create_store_seller(
     """
     Create a store seller.
 
-    This seller will have autorized permissions among:
+    This seller will have authorized permissions among:
     - can_bank
     - can_see_history
     - can_cancel
@@ -739,6 +739,17 @@ async def create_store_seller(
         raise HTTPException(
             status_code=403,
             detail="User does not have the permission to manage sellers",
+        )
+
+    existing_seller = await cruds_myeclpay.get_seller(
+        user_id=seller.user_id,
+        store_id=store_id,
+        db=db,
+    )
+    if existing_seller is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="Seller already exists",
         )
 
     await cruds_myeclpay.create_seller(
@@ -815,10 +826,23 @@ async def update_store_seller(
     user: CoreUser = Depends(is_user()),
 ):
     """
-    Update a store seller.
+    Update a store seller permissions.
+    The structure manager cannot be updated as a seller.
 
     **The user must have the `can_manage_sellers` permission for this store**
     """
+
+    seller_admin = await cruds_myeclpay.get_seller(
+        user_id=user.id,
+        store_id=store_id,
+        db=db,
+    )
+    if seller_admin is None or not seller_admin.can_manage_sellers:
+        raise HTTPException(
+            status_code=403,
+            detail="User does not have the permission to manage sellers",
+        )
+
     store = await cruds_myeclpay.get_store(
         store_id=store_id,
         db=db,
@@ -841,19 +865,8 @@ async def update_store_seller(
 
     if structure.manager_user_id == seller_user_id:
         raise HTTPException(
-            status_code=403,
+            status_code=400,
             detail="User is the manager for this structure and cannot be updated as a seller",
-        )
-
-    seller_admin = await cruds_myeclpay.get_seller(
-        user_id=user.id,
-        store_id=store_id,
-        db=db,
-    )
-    if seller_admin is None or not seller_admin.can_manage_sellers:
-        raise HTTPException(
-            status_code=403,
-            detail="User does not have the permission to manage sellers",
         )
 
     seller = await cruds_myeclpay.get_seller(
@@ -894,9 +907,21 @@ async def delete_store_seller(
 ):
     """
     Delete a store seller.
+    The structure manager cannot be deleted as a seller.
 
     **The user must have the `can_manage_sellers` permission for this store**
     """
+    seller_admin = await cruds_myeclpay.get_seller(
+        user_id=user.id,
+        store_id=store_id,
+        db=db,
+    )
+    if seller_admin is None or not seller_admin.can_manage_sellers:
+        raise HTTPException(
+            status_code=403,
+            detail="User does not have the permission to manage sellers",
+        )
+
     store = await cruds_myeclpay.get_store(
         store_id=store_id,
         db=db,
@@ -918,19 +943,8 @@ async def delete_store_seller(
         )
     if structure.manager_user_id == seller_user_id:
         raise HTTPException(
-            status_code=403,
+            status_code=400,
             detail="User is the manager for this structure and cannot be deleted as a seller",
-        )
-
-    seller_admin = await cruds_myeclpay.get_seller(
-        user_id=user.id,
-        store_id=store_id,
-        db=db,
-    )
-    if seller_admin is None or not seller_admin.can_manage_sellers:
-        raise HTTPException(
-            status_code=403,
-            detail="User does not have the permission to manage sellers",
         )
 
     seller = await cruds_myeclpay.get_seller(
@@ -958,9 +972,13 @@ async def delete_store_seller(
     "/myeclpay/tos",
     status_code=200,
 )
-async def get_tos():
+async def get_tos(
+    user: CoreUser = Depends(is_user()),
+):
     """
     Get the latest TOS version and the TOS content.
+
+    **The user must be authenticated to use this endpoint**
     """
     return TOS_CONTENT
 
