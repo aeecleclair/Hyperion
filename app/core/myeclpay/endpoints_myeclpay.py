@@ -374,7 +374,7 @@ async def create_store(
     user: CoreUser = Depends(is_user()),
 ):
     """
-    Create a store
+    Create a store. The structure manager will be added as a seller for the store.
 
     **The user must be the manager for this structure**
     """
@@ -413,6 +413,7 @@ async def create_store(
         db=db,
     )
     await db.commit()
+
     # Add manager as an full right seller for the store
     await cruds_myeclpay.create_seller(
         user_id=user.id,
@@ -605,12 +606,7 @@ async def update_store(
         structure_id=store.structure_id,
         db=db,
     )
-    if structure is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Structure does not exist",
-        )
-    if structure.manager_user_id != user.id:
+    if structure is None or structure.manager_user_id != user.id:
         raise HTTPException(
             status_code=403,
             detail="User is not the manager for this structure",
@@ -635,7 +631,7 @@ async def delete_store(
     user: CoreUser = Depends(is_user()),
 ):
     """
-    Delete a store
+    Delete a store. Only stores without transactions can be deleted.
 
     **The user must be the manager for this store's structure**
     """
@@ -653,12 +649,7 @@ async def delete_store(
         structure_id=store.structure_id,
         db=db,
     )
-    if structure is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Structure does not exist",
-        )
-    if structure.manager_user_id != user.id:
+    if structure is None or structure.manager_user_id != user.id:
         raise HTTPException(
             status_code=403,
             detail="User is not the manager for this structure",
