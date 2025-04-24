@@ -248,17 +248,21 @@ async def init_transfer_structure_manager(
             detail="User is not the manager for this structure",
         )
 
-    if structure.manager_user_id != user.id:
-        raise HTTPException(
-            status_code=301,
-            detail="Only the manager of the structure can initiate the transfer",
-        )
-
     # If a previous transfer request exists, delete it
     await cruds_myeclpay.delete_structure_manager_transfer_by_structure(
         structure_id=structure_id,
         db=db,
     )
+
+    wanted_new_manager = await cruds_users.get_user_by_id(
+        user_id=transfer_info.new_manager_user_id,
+        db=db,
+    )
+    if wanted_new_manager is None:
+        raise HTTPException(
+            status_code=404,
+            detail="New manager user does not exist",
+        )
 
     confirmation_token = security.generate_token()
 
