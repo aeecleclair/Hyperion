@@ -1890,8 +1890,7 @@ async def validate_can_scan_qrcode(
                 association_membership_id=store.structure.association_membership_id,
                 db=db,
             )
-            hyperion_error_logger.info(result)
-            if result is not None:
+            if result is None:
                 return {"success": False}
 
     return {"success": True}
