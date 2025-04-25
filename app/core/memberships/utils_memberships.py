@@ -57,7 +57,7 @@ async def has_user_active_membership_to_association_membership(
     association_membership_id: UUID,
     user_id: str,
     db: AsyncSession,
-) -> schemas_memberships.UserMembershipSimple:
+) -> schemas_memberships.UserMembershipSimple | None:
     """
     Check if the user has an active membership to the association membership.
     :param membership_id: The ID of the membership to check.
@@ -80,8 +80,5 @@ async def has_user_active_membership_to_association_membership(
         None,
     )
     if not current_membership:
-        raise HTTPException(
-            status_code=400,
-            detail="The user does not have an active membership to the association membership.",
-        )
+        return None
     return current_membership

@@ -1885,11 +1885,13 @@ async def validate_can_scan_qrcode(
         if store.structure.association_membership_id:
             # We check if the user is a member of the association
             # and if the association membership is valid
-            await has_user_active_membership_to_association_membership(
+            result = await has_user_active_membership_to_association_membership(
                 user_id=debited_wallet.user.id,
                 association_membership_id=store.structure.association_membership_id,
                 db=db,
             )
+            if result is not None:
+                return {"success": False}
 
     return {"success": True}
 
