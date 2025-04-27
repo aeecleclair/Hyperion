@@ -241,16 +241,16 @@ async def run_factories(db: AsyncSession, settings: Settings) -> None:
     # We have to run the factories in a specific order to make sure the dependencies are met
     # For that reason, we will run the first factory that has no dependencies, after that we remove it from the list of the dependencies from the other factories
     # And we loop until there are no more factories to run and we use a boolean to avoid infinite loops with circular dependencies
-    action = True
-    while len(factories_list) > 0 and action:
-        action = False
+    no_factory_run_during_last_loop = False
+    while len(factories_list) > 0 and not no_factory_run_during_last_loop:
+        no_factory_run_during_last_loop = True
         for factory in factories_list:
             if factory.depends_on == []:
-                action = True
+                no_factory_run_during_last_loop = False
                 # Check if the factory should be run
                 if await factory.should_run(db):
                     hyperion_error_logger.info(
-                        f"Startup: Running factory {factory.name}",
+                        f"Startup: Running factory {factory.__class__.__name__}",
                     )
                     try:
                         await factory.run(db)
@@ -261,14 +261,14 @@ async def run_factories(db: AsyncSession, settings: Settings) -> None:
                         raise
                 else:
                     hyperion_error_logger.info(
-                        f"Startup: Factory {factory.name} is not necessary, skipping it",
+                        f"Startup: Factory {factory.__class__.__name__} is not necessary, skipping it",
                     )
                 for other_factory in factories_list:
                     if type(factory) in other_factory.depends_on:
                         other_factory.depends_on.remove(type(factory))
                 factories_list.remove(factory)
                 break
-        if not action:
+        if no_factory_run_during_last_loop:
             hyperion_error_logger.error(
                 "Factories are not correctly configured, some factories are not running.",
             )
@@ -418,7 +418,13 @@ async def init_lifespan(
             get_redis_client,
             get_redis_client,
         )(settings=settings)
-        if type(redis_client) is redis.Redis:
+        # If the redis client is not configured, we skip the initialization
+        # We don't want to run the factories with multiple workers if the redis client is not configured
+        if type(redis_client) is not redis.Redis:
+            hyperion_error_logger.info(
+                "Redis client not configured while multiple workers are used. Skipping data initialization.",
+            )
+        else:
             # We need to run the factories only once across all the workers
             # We use the redis client to check if the factories have already been run
             if redis_client.setnx("factories_run", "1"):
@@ -441,10 +447,6 @@ async def init_lifespan(
                         except GoogleAPIInvalidCredentialsError:
                             # We expect this error to be raised if the credentials were never set before
                             pass
-        else:
-            hyperion_error_logger.info(
-                "Redis client not configured while multiple workers are used. Skipping data initialization.",
-            )
     # There is only one worker
     # We need to run the factories and the google api credentials
     else:
@@ -557,8 +559,6 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         )
     else:
         hyperion_error_logger.info("Database initialization skipped")
-
-    # Run factories
 
     # Initialize Redis
     if not app.dependency_overrides.get(get_redis_client, get_redis_client)(

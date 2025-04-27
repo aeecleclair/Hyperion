@@ -7,10 +7,9 @@ from app.core.schools.models_schools import CoreSchool
 from app.types.factory import Factory
 
 
-class SchoolsFactory(Factory):
+class CoreSchoolsFactory(Factory):
     def __init__(self):
         super().__init__(
-            name="Schools",
             depends_on=[],
         )
 
@@ -26,6 +25,3 @@ class SchoolsFactory(Factory):
 
     async def should_run(self, db: AsyncSession):
         return len(await cruds_schools.get_schools(db)) == 2
-
-
-factory = SchoolsFactory()

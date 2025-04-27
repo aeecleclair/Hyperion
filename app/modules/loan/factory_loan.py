@@ -1,6 +1,8 @@
 import uuid
 from datetime import date
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.users.factory_users import CoreUsersFactory
 from app.modules.loan import cruds_loan, models_loan
 from app.types.factory import Factory
@@ -9,11 +11,10 @@ from app.types.factory import Factory
 class LoanFactory(Factory):
     def __init__(self):
         super().__init__(
-            name="Loan",
             depends_on=[CoreUsersFactory],
         )
 
-    async def run(self, db):
+    async def run(self, db: AsyncSession):
         loaner_id_1 = str(uuid.uuid4())
         group_manager_id_1 = str(uuid.uuid4())
         await cruds_loan.create_loaner(
@@ -108,9 +109,6 @@ class LoanFactory(Factory):
             ),
         )
 
-    async def should_run(self, db):
+    async def should_run(self, db: AsyncSession):
         campaigns = await cruds_loan.get_loaners(db=db)
         return len(campaigns) == 0
-
-
-factory = LoanFactory()

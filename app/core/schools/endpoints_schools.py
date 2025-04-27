@@ -14,10 +14,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.schools import (
     cruds_schools,
-    factory_schools,
     models_schools,
     schemas_schools,
 )
+from app.core.schools.factory_schools import CoreSchoolsFactory
 from app.core.schools.schools_type import SchoolType
 from app.core.users import cruds_users, schemas_users
 from app.dependencies import (
@@ -32,7 +32,7 @@ core_module = CoreModule(
     root="schools",
     tag="Schools",
     router=router,
-    factory=factory_schools.factory,
+    factory=CoreSchoolsFactory(),
 )
 
 
