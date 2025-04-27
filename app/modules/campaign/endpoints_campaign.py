@@ -19,10 +19,10 @@ from app.dependencies import (
 )
 from app.modules.campaign import (
     cruds_campaign,
-    factory_campaign,
     models_campaign,
     schemas_campaign,
 )
+from app.modules.campaign.factory_campaign import CampaignFactory
 from app.modules.campaign.types_campaign import ListType, StatusType
 from app.types import standard_responses
 from app.types.content_type import ContentType
@@ -37,7 +37,7 @@ module = Module(
     root="vote",
     tag="Campaign",
     default_allowed_groups_ids=[GroupType.AE],
-    factory=factory_campaign.factory,
+    factory=CampaignFactory(),
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")

@@ -18,7 +18,6 @@ class CoreGroupsFactory(Factory):
 
     def __init__(self):
         super().__init__(
-            name="Groups",
             depends_on=[CoreUsersFactory],
         )
 
@@ -55,6 +54,3 @@ class CoreGroupsFactory(Factory):
 
     async def should_run(self, db: AsyncSession):
         return len(await cruds_groups.get_groups(db=db)) == len(GroupType)
-
-
-factory = CoreGroupsFactory()

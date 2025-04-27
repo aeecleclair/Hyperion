@@ -14,7 +14,7 @@ from app.core.users.factory_users import CoreUsersFactory
 from app.types.factory import Factory
 
 
-class ModuleFactory(Factory):
+class CoreMembershipsFactory(Factory):
     memberships_ids = [
         uuid4(),
         uuid4(),
@@ -30,7 +30,6 @@ class ModuleFactory(Factory):
 
     def __init__(self):
         super().__init__(
-            name="Memberships",
             depends_on=[CoreUsersFactory],
         )
 
@@ -57,15 +56,15 @@ class ModuleFactory(Factory):
                         user_id=user_id,
                         association_membership_id=self.memberships_ids[i],
                         start_date=datetime.datetime(
-                            random.randint(2020, 2023),
-                            random.randint(1, 12),
-                            random.randint(1, 28),
+                            random.randint(2020, 2023),  # noqa: S311
+                            random.randint(1, 12),  # noqa: S311
+                            random.randint(1, 28),  # noqa: S311
                             tzinfo=datetime.UTC,
                         ),
                         end_date=datetime.datetime(
-                            random.randint(2025, 2027),
-                            random.randint(1, 12),
-                            random.randint(1, 28),
+                            random.randint(2025, 2027),  # noqa: S311
+                            random.randint(1, 12),  # noqa: S311
+                            random.randint(1, 28),  # noqa: S311
                             tzinfo=datetime.UTC,
                         ),
                     ),
@@ -90,6 +89,3 @@ class ModuleFactory(Factory):
             self.memberships_ids = [
                 membership.id for membership in registered_memberships
             ]
-
-
-factory = ModuleFactory()
