@@ -19,7 +19,8 @@ from app.dependencies import (
     is_user_a_member,
     is_user_in,
 )
-from app.modules.amap import cruds_amap, factory_amap, models_amap, schemas_amap
+from app.modules.amap import cruds_amap, models_amap, schemas_amap
+from app.modules.amap.factory_amap import AmapFactory
 from app.modules.amap.types_amap import DeliveryStatusType
 from app.types.module import Module
 from app.utils.communication.notifications import NotificationTool
@@ -30,7 +31,7 @@ module = Module(
     root="amap",
     tag="AMAP",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
-    factory=factory_amap.factory,
+    factory=AmapFactory(),
 )
 
 hyperion_amap_logger = logging.getLogger("hyperion.amap")

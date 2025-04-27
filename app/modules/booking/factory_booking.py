@@ -1,6 +1,8 @@
 import uuid
 from datetime import UTC, datetime, timedelta
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.groups.groups_type import GroupType
 from app.core.users.factory_users import CoreUsersFactory
 from app.modules.booking import (
@@ -15,11 +17,10 @@ from app.types.factory import Factory
 class BookingFactory(Factory):
     def __init__(self):
         super().__init__(
-            name="Booking",
             depends_on=[CoreUsersFactory],
         )
 
-    async def run(self, db):
+    async def run(self, db: AsyncSession):
         booking_manager_id = str(uuid.uuid4())
         room_id_1 = str(uuid.uuid4())
         await cruds_booking.create_manager(
@@ -60,8 +61,5 @@ class BookingFactory(Factory):
             ),
         )
 
-    async def should_run(self, db):
+    async def should_run(self, db: AsyncSession):
         return len(await cruds_booking.get_rooms(db=db)) == 0
-
-
-factory = BookingFactory()

@@ -1,6 +1,8 @@
 import uuid
 from datetime import UTC, datetime, timedelta
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.groups.groups_type import GroupType
 from app.modules.advert import cruds_advert, models_advert
 from app.types.factory import Factory
@@ -9,11 +11,10 @@ from app.types.factory import Factory
 class AdvertFactory(Factory):
     def __init__(self):
         super().__init__(
-            name="Advert",
             depends_on=[],
         )
 
-    async def run(self, db):
+    async def run(self, db: AsyncSession):
         advertiser = models_advert.Advertiser(
             id=str(uuid.uuid4()),
             name="Le BDE",
@@ -67,8 +68,5 @@ class AdvertFactory(Factory):
             ),
         )
 
-    async def should_run(self, db):
+    async def should_run(self, db: AsyncSession):
         return len(await cruds_advert.get_adverts(db=db)) == 0
-
-
-factory = AdvertFactory()

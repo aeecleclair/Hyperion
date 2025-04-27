@@ -14,7 +14,6 @@ faker = Faker("fr_FR")
 class RecommendationFactory(Factory):
     def __init__(self):
         super().__init__(
-            name="Recommendation",
             depends_on=[],
         )
 
@@ -58,6 +57,3 @@ class RecommendationFactory(Factory):
 
     async def should_run(self, db: AsyncSession):
         return len(await cruds_recommendation.get_recommendations(db=db)) == 0
-
-
-factory = RecommendationFactory()

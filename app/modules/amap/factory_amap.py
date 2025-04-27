@@ -1,6 +1,8 @@
 import uuid
 from datetime import UTC, datetime, timedelta
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.users.factory_users import CoreUsersFactory
 from app.modules.amap import cruds_amap, models_amap, schemas_amap
 from app.modules.amap.types_amap import DeliveryStatusType
@@ -10,11 +12,10 @@ from app.types.factory import Factory
 class AmapFactory(Factory):
     def __init__(self):
         super().__init__(
-            name="Amap",
             depends_on=[CoreUsersFactory],
         )
 
-    async def create_products(self, db):
+    async def create_products(self, db: AsyncSession):
         # Generates sample products
         products: dict[str, tuple[float, str]] = {
             "banane": (5.0, "Fruits"),
@@ -37,7 +38,7 @@ class AmapFactory(Factory):
                 ),
             )
 
-    async def create_delivery(self, db):
+    async def create_delivery(self, db: AsyncSession):
         products = await cruds_amap.get_products(db=db)
 
         await cruds_amap.create_delivery(
@@ -60,7 +61,7 @@ class AmapFactory(Factory):
             ),
         )
 
-    async def create_cash_of_user(self, db):
+    async def create_cash_of_user(self, db: AsyncSession):
         await cruds_amap.create_cash_of_user(
             db=db,
             cash=models_amap.Cash(
@@ -69,13 +70,10 @@ class AmapFactory(Factory):
             ),
         )
 
-    async def run(self, db):
+    async def run(self, db: AsyncSession):
         await self.create_products(db)
         await self.create_delivery(db)
         await self.create_cash_of_user(db)
 
-    async def should_run(self, db):
+    async def should_run(self, db: AsyncSession):
         return len(await cruds_amap.get_products(db=db)) == 0
-
-
-factory = AmapFactory()

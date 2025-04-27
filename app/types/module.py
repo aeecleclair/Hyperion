@@ -24,6 +24,8 @@ class CoreModule:
         """
         Initialize a new Module object.
         :param root: the root of the module, used by Titan
+        :param tag: the tag of the module, used by FastAPI
+        :param factory: a factory to use to create fake data for the module (development purpose)
         :param router: an optional custom APIRouter
         :param payment_callback: an optional method to call when a payment is notified by HelloAsso. A CheckoutPayment and the database will be provided during the call
         """
@@ -54,6 +56,8 @@ class Module(CoreModule):
         """
         Initialize a new Module object.
         :param root: the root of the module, used by Titan
+        :param tag: the tag of the module, used by FastAPI
+        :param factory: a factory to use to create fake data for the module (development purpose)
         :param default_allowed_groups_ids: list of groups that should be able to see the module by default
         :param default_allowed_account_types: list of account_types that should be able to see the module by default
         :param router: an optional custom APIRouter

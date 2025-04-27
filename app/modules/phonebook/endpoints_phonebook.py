@@ -15,10 +15,10 @@ from app.dependencies import (
 )
 from app.modules.phonebook import (
     cruds_phonebook,
-    factory_phonebook,
     models_phonebook,
     schemas_phonebook,
 )
+from app.modules.phonebook.factory_phonebook import PhonebookFactory
 from app.modules.phonebook.types_phonebook import RoleTags
 from app.types import standard_responses
 from app.types.content_type import ContentType
@@ -33,7 +33,7 @@ module = Module(
     root="phonebook",
     tag="Phonebook",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
-    factory=factory_phonebook.factory,
+    factory=PhonebookFactory(),
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")

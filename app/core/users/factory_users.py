@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from random import randint
 
 from faker import Faker
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups import cruds_groups, groups_type
 from app.core.groups.models_groups import CoreMembership
@@ -68,21 +69,20 @@ class CoreUsersFactory(Factory):
 
     def __init__(self):
         super().__init__(
-            name="Users",
             depends_on=[],
         )
 
-    async def create_core_users(self, db):
+    async def create_core_users(self, db: AsyncSession):
         password = [faker.password(16, True, True, True, True) for _ in range(NB_USERS)]
         firstname = [faker.first_name() for _ in range(NB_USERS)]
         name = [faker.last_name() for _ in range(NB_USERS)]
         nickname = [faker.user_name() for _ in range(NB_USERS)]
         phone = [faker.phone_number() for _ in range(NB_USERS)]
         promos = [
-            randint(datetime.now(tz=UTC).year - 5, datetime.now(tz=UTC).year)
+            randint(datetime.now(tz=UTC).year - 5, datetime.now(tz=UTC).year)  # noqa: S311
             for _ in range(NB_USERS)
         ]
-        floors = [random.choice(list(FloorsType)) for _ in range(NB_USERS)]
+        floors = [random.choice(list(FloorsType)) for _ in range(NB_USERS)]  # noqa: S311
         for i in range(NB_USERS):
             hyperion_error_logger.debug(
                 "Creating user %s/%s",
@@ -149,10 +149,10 @@ class CoreUsersFactory(Factory):
                 ),
             )
 
-    async def run(self, db):
+    async def run(self, db: AsyncSession):
         await self.create_core_users(db=db)
 
-    async def should_run(self, db):
+    async def should_run(self, db: AsyncSession):
         result = len(await cruds_users.get_users(db=db)) == 0
         if not result:
             registered_users = await cruds_users.get_users(db=db)
@@ -167,6 +167,3 @@ class CoreUsersFactory(Factory):
                 if user.nickname in self.demo_nicknames
             ]
         return result
-
-
-factory = CoreUsersFactory()

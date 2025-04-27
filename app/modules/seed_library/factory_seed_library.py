@@ -20,7 +20,6 @@ from app.utils import tools
 class SeedLibraryFactory(Factory):
     def __init__(self):
         super().__init__(
-            name="Seed Library",
             depends_on=[CoreUsersFactory],
         )
         self.species: list[SpeciesComplete] = []
@@ -148,6 +147,3 @@ class SeedLibraryFactory(Factory):
 
     async def should_run(self, db: AsyncSession):
         return len(await cruds_seed_library.get_all_species(db)) == 0
-
-
-factory = SeedLibraryFactory()

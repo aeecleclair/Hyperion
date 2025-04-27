@@ -1,6 +1,8 @@
 import random
 import uuid
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.users import cruds_users
 from app.core.users.factory_users import CoreUsersFactory
 from app.modules.phonebook import cruds_phonebook, models_phonebook
@@ -11,11 +13,10 @@ from app.types.factory import Factory
 class PhonebookFactory(Factory):
     def __init__(self):
         super().__init__(
-            name="Phonebook",
             depends_on=[CoreUsersFactory],
         )
 
-    async def create_association(self, db):
+    async def create_association(self, db: AsyncSession):
         association_id_1 = str(uuid.uuid4())
         await cruds_phonebook.create_association(
             association=models_phonebook.Association(
@@ -71,12 +72,9 @@ class PhonebookFactory(Factory):
                 db=db,
             )
 
-    async def run(self, db):
+    async def run(self, db: AsyncSession):
         await self.create_association(db)
 
-    async def should_run(self, db):
+    async def should_run(self, db: AsyncSession):
         assos = await cruds_phonebook.get_all_associations(db=db)
         return len(assos) == 0
-
-
-factory = PhonebookFactory()

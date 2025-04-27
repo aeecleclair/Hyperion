@@ -2,6 +2,8 @@ import random
 import uuid
 from datetime import UTC, datetime
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.modules.cinema import cruds_cinema, schemas_cinema
 from app.types.factory import Factory
 
@@ -9,12 +11,11 @@ from app.types.factory import Factory
 class CinemaFactory(Factory):
     def __init__(self):
         super().__init__(
-            name="Cinema",
             depends_on=[],
         )
 
-    async def create_films(self, db):
-        films = {
+    async def create_movies(self, db: AsyncSession):
+        movies = {
             "The Matrix": {
                 "overview": "Le premier film de la trilogie",
                 "genre": "Action",
@@ -42,11 +43,11 @@ class CinemaFactory(Factory):
             },
         }
 
-        for key, value in films.items():
+        for key, value in movies.items():
             await cruds_cinema.create_session(
                 session=schemas_cinema.CineSessionComplete(
                     start=datetime.now(UTC),
-                    duration=random.randint(90, 180),
+                    duration=random.randint(90, 180),  # noqa: S311
                     name=key,
                     overview=value["overview"],
                     genre=value["genre"],
@@ -56,12 +57,9 @@ class CinemaFactory(Factory):
                 db=db,
             )
 
-    async def run(self, db):
-        await self.create_films(db)
+    async def run(self, db: AsyncSession):
+        await self.create_movies(db)
 
-    async def should_run(self, db):
+    async def should_run(self, db: AsyncSession):
         films = await cruds_cinema.get_sessions(db=db)
         return len(films) == 0
-
-
-factory = CinemaFactory()
