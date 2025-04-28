@@ -127,7 +127,7 @@ class CoreUsersFactory(Factory):
             user = CoreUser(
                 id=self.demo_users_id[i],
                 password_hash=self.demo_passwords[i],
-                firstname="Demo" + str(i),
+                firstname="Demo " + str(i),
                 nickname=self.demo_nicknames[i],
                 name="Salut",
                 email="demo" + str(i) + "@etu.ec-lyon.fr",
