@@ -131,3 +131,8 @@ class UserWithEmailAlreadyExistError(Exception):
 class SchedulerNotStartedError(Exception):
     def __init__(self):
         super().__init__("Scheduler not started")
+
+
+class WaitUnlockMissingUnlockKey(Exception):
+    def __init__(self):
+        super().__init__("unlock_key can't be None if wait_unlock is True")

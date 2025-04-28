@@ -398,10 +398,22 @@ def init_db(
     )
 
 
+async def init_google_API(db: AsyncSession, settings: Settings) -> None:
+    # Init Google API credentials
+    google_api = GoogleAPI()
+    if google_api.is_google_api_configured(settings):
+        try:
+            await google_api.get_credentials(db, settings)
+        except GoogleAPIInvalidCredentialsError:
+            # We expect this error to be raised if the credentials were never set before
+            pass
+
+
 async def init_lifespan(
     app: FastAPI,
     settings: Settings,
     hyperion_error_logger: logging.Logger,
+    drop_db: bool,
 ) -> tuple[Scheduler, WebsocketConnectionManager]:
     # We need to run the factories and the google api credentials only once across all the workers
     # We use the parent process to get the workers
@@ -414,7 +426,7 @@ async def init_lifespan(
     # There is more than one worker
     # We use the redis client to check if the factories have already been run and the google api credentials have been set
     if len(workers) > 1:
-        redis_client = app.dependency_overrides.get(
+        redis_client: redis.Redis | bool | None = app.dependency_overrides.get(
             get_redis_client,
             get_redis_client,
         )(settings=settings)
@@ -425,31 +437,48 @@ async def init_lifespan(
                 "Redis client not configured while multiple workers are used. Skipping data initialization.",
             )
         else:
+            # We need to run the database initialization only once across all the workers
+            # Other workers have to wait for the db to be initialized
+            await initialization.use_lock_for_workers(
+                init_db,
+                [settings, hyperion_error_logger, drop_db],
+                "init_db",
+                redis_client,
+                hyperion_error_logger,
+                wait_unlock=True,
+                unlock_key="db_initialized",
+            )
             # We need to run the factories only once across all the workers
-            # We use the redis client to check if the factories have already been run
-            if redis_client.setnx("factories_run", "1"):
-                async for db in app.dependency_overrides.get(
-                    get_db,
-                    get_db,
-                )():
-                    await run_factories(db, settings)
-
-            if redis_client.setnx("google_api_credentials", "1"):
-                # Init Google API credentials
-                google_api = GoogleAPI()
-                if google_api.is_google_api_configured(settings):
-                    async for db in app.dependency_overrides.get(
-                        get_db,
-                        get_db,
-                    )():
-                        try:
-                            await google_api.get_credentials(db, settings)
-                        except GoogleAPIInvalidCredentialsError:
-                            # We expect this error to be raised if the credentials were never set before
-                            pass
+            async for db in app.dependency_overrides.get(
+                get_db,
+                get_db,
+            )():
+                await initialization.use_lock_for_workers(
+                    run_factories,
+                    [db, settings],
+                    "factories_run",
+                    redis_client,
+                    hyperion_error_logger,
+                )
+            async for db in app.dependency_overrides.get(
+                get_db,
+                get_db,
+            )():
+                await initialization.use_lock_for_workers(
+                    init_google_API,
+                    [db, settings],
+                    "factories_run",
+                    redis_client,
+                    hyperion_error_logger,
+                )
     # There is only one worker
     # We need to run the factories and the google api credentials
     else:
+        init_db(
+            settings=settings,
+            hyperion_error_logger=hyperion_error_logger,
+            drop_db=drop_db,
+        )
         hyperion_error_logger.info("Running factories")
         async for db in app.dependency_overrides.get(
             get_db,
@@ -525,6 +554,7 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
             app=app,
             settings=settings,
             hyperion_error_logger=hyperion_error_logger,
+            drop_db=drop_db,
         )
         yield
         hyperion_error_logger.info("Shutting down")
@@ -551,14 +581,14 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     calypsso = get_calypsso_app()
     app.mount("/calypsso", calypsso, "Calypsso")
 
-    if settings.HYPERION_INIT_DB:
-        init_db(
-            settings=settings,
-            hyperion_error_logger=hyperion_error_logger,
-            drop_db=drop_db,
-        )
-    else:
-        hyperion_error_logger.info("Database initialization skipped")
+    # if settings.HYPERION_INIT_DB:
+    #     init_db(
+    #         settings=settings,
+    #         hyperion_error_logger=hyperion_error_logger,
+    #         drop_db=drop_db,
+    #     )
+    # else:
+    #     hyperion_error_logger.info("Database initialization skipped")
 
     # Initialize Redis
     if not app.dependency_overrides.get(get_redis_client, get_redis_client)(
