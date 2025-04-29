@@ -35,7 +35,7 @@ core_module = CoreModule(
 )
 async def read_associations_memberships(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     """
     Return all memberships from database as a list of dictionaries
