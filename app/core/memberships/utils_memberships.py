@@ -53,7 +53,7 @@ async def validate_user_new_membership(
     return user_membership
 
 
-async def has_user_active_membership_to_association_membership(
+async def get_user_active_membership_to_association_membership(
     association_membership_id: UUID,
     user_id: str,
     db: AsyncSession,
@@ -64,21 +64,14 @@ async def has_user_active_membership_to_association_membership(
     :param user_id: The ID of the user to check.
     :param db: The database session.
     :return: The active membership if found.
-    :raises HTTPException: If the user does not have an active membership.
     """
-    membership = await cruds_memberships.get_user_memberships_by_user_id_and_association_membership_id(
+    memberships = await cruds_memberships.get_user_memberships_by_user_id_and_association_membership_id(
         db,
         user_id,
         association_membership_id,
     )
-    current_membership = next(
-        (
-            membership
-            for membership in membership
-            if membership.start_date <= datetime.now(UTC).date() <= membership.end_date
-        ),
-        None,
-    )
-    if not current_membership:
-        return None
-    return current_membership
+    for membership in memberships:
+        if membership.start_date <= datetime.now(UTC).date() <= membership.end_date:
+            return membership
+
+    return None

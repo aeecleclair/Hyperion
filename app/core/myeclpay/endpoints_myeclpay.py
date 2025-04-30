@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.groups.groups_type import GroupType
 from app.core.memberships import schemas_memberships
 from app.core.memberships.utils_memberships import (
-    has_user_active_membership_to_association_membership,
+    get_user_active_membership_to_association_membership,
 )
 from app.core.myeclpay import cruds_myeclpay, schemas_myeclpay
 from app.core.myeclpay.models_myeclpay import Store, WalletDevice
@@ -2102,13 +2102,22 @@ async def store_scan_qrcode(
             detail="Insufficient balance in the debited wallet",
         )
 
+    # If `bypass_membership` is not set, we check if the user is a member of the association
+    # and raise an error if not
     if not scan_info.bypass_membership:
         if store.structure.association_membership_id is not None:
-            await has_user_active_membership_to_association_membership(
-                user_id=debited_wallet.user.id,
-                association_membership_id=store.structure.association_membership_id,
-                db=db,
+            current_membership = (
+                await get_user_active_membership_to_association_membership(
+                    user_id=debited_wallet.user.id,
+                    association_membership_id=store.structure.association_membership_id,
+                    db=db,
+                )
             )
+            if current_membership is None:
+                raise HTTPException(
+                    status_code=400,
+                    detail="User is not a member of the association",
+                )
 
     # We increment the receiving wallet balance
     await cruds_myeclpay.increment_wallet_balance(
