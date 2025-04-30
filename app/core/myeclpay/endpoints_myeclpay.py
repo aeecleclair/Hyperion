@@ -53,6 +53,7 @@ from app.dependencies import (
     is_user_an_ecl_member,
     is_user_in,
 )
+from app.types import standard_responses
 from app.types.exceptions import MissingHelloAssoSlugError
 from app.types.module import CoreModule
 from app.utils.communication.notifications import NotificationTool
@@ -1845,6 +1846,7 @@ async def redirect_from_ha_transfer(
 
 @router.post(
     "/myeclpay/stores/{store_id}/scan/check",
+    response_model=standard_responses.Result,
     status_code=200,
 )
 async def validate_can_scan_qrcode(
@@ -1894,11 +1896,7 @@ async def validate_can_scan_qrcode(
             status_code=400,
             detail="Wallet device does not exist",
         )
-    if debited_wallet_device.status != WalletDeviceStatus.ACTIVE:
-        raise HTTPException(
-            status_code=400,
-            detail="Wallet device is not active",
-        )
+
     debited_wallet = await cruds_myeclpay.get_wallet(
         wallet_id=debited_wallet_device.wallet_id,
         db=db,
@@ -1911,19 +1909,27 @@ async def validate_can_scan_qrcode(
             status_code=400,
             detail="Could not find wallet associated with the debited wallet device",
         )
-    if debited_wallet.user is not None:
-        if store.structure.association_membership_id:
-            # We check if the user is a member of the association
-            # and if the association membership is valid
-            result = await has_user_active_membership_to_association_membership(
-                user_id=debited_wallet.user.id,
-                association_membership_id=store.structure.association_membership_id,
-                db=db,
-            )
-            if result is None:
-                return {"success": False}
+    if debited_wallet.user is None:
+        hyperion_error_logger.error(
+            f"MyECLPay: Debited wallet device {debited_wallet_device.id} does not contains a user, this should never happen",
+        )
+        raise HTTPException(
+            status_code=400,
+            detail="Wallet device does not contains a user",
+        )
 
-    return {"success": True}
+    if store.structure.association_membership_id:
+        # We check if the user is a member of the association
+        # and if the association membership is valid
+        result = await get_user_active_membership_to_association_membership(
+            user_id=debited_wallet.user.id,
+            association_membership_id=store.structure.association_membership_id,
+            db=db,
+        )
+        if result is None:
+            return standard_responses.Result(success=False)
+
+    return standard_responses.Result(success=True)
 
 
 @router.post(
