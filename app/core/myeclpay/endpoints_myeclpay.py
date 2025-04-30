@@ -523,7 +523,15 @@ async def get_store_history(
                 ),
             )
 
-    # TODO: even if this is forbidden, we should return transfer
+    # TODO: do we accept transfers to empty a store wallet?
+    transfers = await cruds_myeclpay.get_transfers_by_wallet_id(
+        wallet_id=store.wallet_id,
+        db=db,
+    )
+    if len(transfers) > 0:
+        hyperion_error_logger.error(
+            f"Store {store.id} should never have transfers",
+        )
 
     return history
 
