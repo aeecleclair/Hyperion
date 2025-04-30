@@ -976,6 +976,56 @@ async def delete_store_seller(
     await db.commit()
 
 
+@router.post(
+    "/myeclpay/users/me/register",
+    status_code=204,
+)
+async def register_user(
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(is_user()),
+):
+    """
+    Sign MyECL Pay TOS for the given user.
+
+    The user will need to accept the latest TOS version to be able to use MyECL Pay.
+
+    **The user must be authenticated to use this endpoint**
+    """
+
+    # Check if user is already registered
+    existing_user_payment = await cruds_myeclpay.get_user_payment(
+        user_id=user.id,
+        db=db,
+    )
+    if existing_user_payment is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="User is already registered for MyECL Pay",
+        )
+
+    # Create new wallet for user
+    wallet_id = uuid.uuid4()
+    await cruds_myeclpay.create_wallet(
+        wallet_id=wallet_id,
+        wallet_type=WalletType.USER,
+        balance=0,
+        db=db,
+    )
+
+    await db.commit()
+
+    # Create new payment user with wallet
+    await cruds_myeclpay.create_user_payment(
+        user_id=user.id,
+        wallet_id=wallet_id,
+        accepted_tos_signature=datetime.now(UTC),
+        accepted_tos_version=0,
+        db=db,
+    )
+
+    await db.commit()
+
+
 @router.get(
     "/myeclpay/tos",
     status_code=200,
@@ -1027,56 +1077,6 @@ async def get_user_tos(
 
 
 @router.post(
-    "/myeclpay/users/me/register",
-    status_code=204,
-)
-async def register_user(
-    db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user()),
-):
-    """
-    Sign MyECL Pay TOS for the given user.
-
-    The user will need to accept the latest TOS version to be able to use MyECL Pay.
-
-    **The user must be authenticated to use this endpoint**
-    """
-
-    # Check if user is already registered
-    existing_user_payment = await cruds_myeclpay.get_user_payment(
-        user_id=user.id,
-        db=db,
-    )
-    if existing_user_payment is not None:
-        raise HTTPException(
-            status_code=400,
-            detail="User is already registered for MyECL Pay",
-        )
-
-    # Create new wallet for user
-    wallet_id = uuid.uuid4()
-    await cruds_myeclpay.create_wallet(
-        wallet_id=wallet_id,
-        wallet_type=WalletType.USER,
-        balance=0,
-        db=db,
-    )
-
-    await db.commit()
-
-    # Create new payment user with wallet
-    await cruds_myeclpay.create_user_payment(
-        user_id=user.id,
-        wallet_id=wallet_id,
-        accepted_tos_signature=datetime.now(UTC),
-        accepted_tos_version=0,
-        db=db,
-    )
-
-    await db.commit()
-
-
-@router.post(
     "/myeclpay/users/me/tos",
     status_code=204,
 )
@@ -1097,7 +1097,7 @@ async def sign_tos(
     if signature.accepted_tos_version != LATEST_TOS:
         raise HTTPException(
             status_code=400,
-            detail=f"Only the latest TOS version {LATEST_TOS} is accepted",
+            detail=f"Only the latest TOS version {LATEST_TOS} can be accepted",
         )
 
     # Check if user is already registered
@@ -1126,7 +1126,6 @@ async def sign_tos(
         account_exists_content = templates.get_template(
             "myeclpay_signed_tos_mail.html",
         ).render()
-        # TODO: change template
         background_tasks.add_task(
             send_email,
             recipient=user.email,
@@ -1592,7 +1591,7 @@ async def add_transfer_by_admin(
     if transfer_info.transfer_type == TransferType.HELLO_ASSO:
         raise HTTPException(
             status_code=400,
-            detail="Admin cannot create a HelloAsso transfer",
+            detail="HelloAsso transfers can not be created manually",
         )
 
     if transfer_info.amount < 100:
@@ -1606,7 +1605,7 @@ async def add_transfer_by_admin(
             status_code=400,
             detail="Please provide a credited user id for this transfer type",
         )
-    # TODO: do not let all BDE do this
+    # TODO: IMPORTANT: do not let all BDE do this
     if GroupType.BDE not in [group.id for group in user.groups]:
         raise HTTPException(
             status_code=403,
@@ -1701,7 +1700,7 @@ async def init_ha_transfer(
     payment_tool: PaymentTool = Depends(get_payment_tool),
 ):
     """
-    Get payment url
+    Initiate HelloAsso transfer, return a payment url to complete the transaction on HelloAsso website.
     """
     if settings.HELLOASSO_MYECLPAY_SLUG is None:
         raise MissingHelloAssoSlugError("HELLOASSO_MYECLPAY_SLUG")
@@ -1855,7 +1854,12 @@ async def validate_can_scan_qrcode(
     user: CoreUser = Depends(is_user_an_ecl_member),
 ):
     """
-    Validate if the user can scan a QR code for this store.
+    Validate if a given QR Code can be scanned by the seller.
+
+    The QR Code should be valid, the seller should have the `can_bank` permission for this store,
+    and the debited wallet device should be active.
+
+    If the store structure has an association membership, the user should be a member of the association.
 
     **The user must be authenticated to use this endpoint**
     """
