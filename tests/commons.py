@@ -177,7 +177,7 @@ async def create_user_with_groups(
     async with TestingSessionLocal() as db:
         user_db = await cruds_users.get_user_by_id(db, user_id)
         await db.close()
-    return user_db  # type: ignore # (user_db can't be None)
+    return user_db  # type: ignore[return-value] # (user_db can't be None)
 
 
 def create_api_access_token(

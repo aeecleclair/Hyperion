@@ -7,7 +7,7 @@ from sqlalchemy import ForeignKey, and_, delete, not_, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from sqlalchemy_utils import get_referencing_foreign_keys  # type: ignore
+from sqlalchemy_utils import get_referencing_foreign_keys
 
 from app.core.groups import models_groups
 from app.core.groups.groups_type import AccountType

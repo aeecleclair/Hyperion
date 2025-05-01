@@ -194,8 +194,8 @@ class PDFWriter(FPDF):
             cell_fill_mode=TableCellFillMode.NONE,
             line_height=6,
             text_align="CENTER",
-            v_align=VAlign.M,  # type: ignore
-        ) as table:
+            v_align=VAlign.M,
+        ) as table:  # type: ignore[call-arg]
             for data_row in data:
                 row = table.row()
                 for datum in data_row:
@@ -341,8 +341,8 @@ class PDFWriter(FPDF):
             cell_fill_mode=TableCellFillMode.NONE,
             line_height=6,
             text_align="CENTER",
-            v_align=VAlign.M,  # type: ignore
-        ) as table:
+            v_align=VAlign.M,
+        ) as table:  # type: ignore[call-arg]
             for data_row in data:
                 row = table.row()
                 for datum in data_row:
@@ -409,9 +409,9 @@ class PDFWriter(FPDF):
             cell_fill_mode=TableCellFillMode.NONE,
             line_height=8,
             text_align=Align.J,
-            v_align=VAlign.M,  # type: ignore
+            v_align=VAlign.M,
             headings_style=headings_style,
-        ) as table:
+        ) as table:  # type: ignore[call-arg]
             row = table.row()
             row.cell(key)
             row.cell(label)
