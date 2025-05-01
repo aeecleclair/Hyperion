@@ -1976,7 +1976,10 @@ async def store_scan_qrcode(
         db=db,
     )
     if already_existing_used_qrcode is not None:
-        return {"error": "QR Code already used"}
+        raise HTTPException(
+            status_code=409,
+            detail="QR Code already used",
+        )
 
     # After scanning a QR Code, we want to add it to the list of already scanned QR Code
     # even if it fail to be banked
