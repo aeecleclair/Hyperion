@@ -26,10 +26,17 @@ class HistoryType(str, Enum):
 
 
 class TransactionStatus(str, Enum):
+    """
+    CONFIRMED: The transaction has been confirmed and is complete.
+    CANCELED: The transaction has been canceled. It is used for transfer requests, for which the user has 15 minutes to complete the HelloAsso checkout
+    REFUNDED: The transaction between to wallets has been partially or totally refunded.
+    PENDING: The transaction is pending and has not yet been completed. It is used for transfer requests, for which the user has 15 minutes to complete the HelloAsso checkout
+    """
+
     CONFIRMED = "confirmed"
     CANCELED = "canceled"
     REFUNDED = "refunded"
-    PENDING = "pending"  # used for transfer requests, for which the user has 15 minutes to complete the HelloAsso checkout
+    PENDING = "pending"
 
 
 class RequestStatus(str, Enum):
