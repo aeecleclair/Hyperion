@@ -2188,11 +2188,12 @@ async def refund_transaction(
     refund_info: schemas_myeclpay.RefundInfo,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user_an_ecl_member),
-    request_id: str = Depends(get_request_id),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
-    Refund a transaction
+    Refund a transaction. Only transactions made in the last 30 days can be refunded.
+
+    Currently transactions between users are forbidden and can thus not be refunded.
 
     **The user must either be the credited user or a seller with cancel permissions of the credited store of the transaction**
     """
