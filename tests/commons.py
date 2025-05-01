@@ -189,13 +189,11 @@ def create_api_access_token(
     """
 
     access_token_data = schemas_auth.TokenData(sub=user.id, scopes="API")
-    token = security.create_access_token(
+    return security.create_access_token(
         data=access_token_data,
         settings=settings,
         expires_delta=expires_delta,
     )
-
-    return token
 
 
 async def add_object_to_db(db_object: Base) -> None:

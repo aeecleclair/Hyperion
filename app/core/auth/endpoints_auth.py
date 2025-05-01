@@ -918,7 +918,7 @@ async def create_response_body(
     access_token = create_access_token(data=access_token_data, settings=settings)
 
     # We create an OAuth response, with oidc specific elements if required
-    response_body = schemas_auth.TokenResponse(
+    return schemas_auth.TokenResponse(
         access_token=access_token,
         expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # in seconds
         scope=granted_scopes,
@@ -926,7 +926,6 @@ async def create_response_body(
         id_token=id_token,
     )
 
-    return response_body
 
 
 @router.post(

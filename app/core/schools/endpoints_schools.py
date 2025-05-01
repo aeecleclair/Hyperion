@@ -42,8 +42,7 @@ async def read_schools(
     Return all schools from database as a list of dictionaries
     """
 
-    schools = await cruds_schools.get_schools(db)
-    return schools
+    return await cruds_schools.get_schools(db)
 
 
 @router.get(

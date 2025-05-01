@@ -78,8 +78,7 @@ async def read_users(
     """
     accountTypes = accountTypes if len(accountTypes) != 0 else list(AccountType)
 
-    users = await cruds_users.get_users(db, included_account_types=accountTypes)
-    return users
+    return await cruds_users.get_users(db, included_account_types=accountTypes)
 
 
 @router.get(
@@ -97,8 +96,7 @@ async def count_users(
     **This endpoint is only usable by administrators**
     """
 
-    count = await cruds_users.count_users(db)
-    return count
+    return await cruds_users.count_users(db)
 
 
 @router.get(

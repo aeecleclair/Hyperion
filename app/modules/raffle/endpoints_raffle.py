@@ -52,8 +52,7 @@ async def get_raffle(
     """
     Return all raffles
     """
-    raffles = await cruds_raffle.get_raffles(db)
-    return raffles
+    return await cruds_raffle.get_raffles(db)
 
 
 @module.router.post(
@@ -77,8 +76,7 @@ async def create_raffle(
     raffle.status = RaffleStatusType.creation
     db_raffle = models_raffle.Raffle(id=str(uuid.uuid4()), **raffle.model_dump())
 
-    result = await cruds_raffle.create_raffle(raffle=db_raffle, db=db)
-    return result
+    return await cruds_raffle.create_raffle(raffle=db_raffle, db=db)
 
 
 @module.router.patch(
@@ -166,8 +164,7 @@ async def get_raffles_by_group_id(
     """
     Return all raffles from a group
     """
-    raffle = await cruds_raffle.get_raffles_by_groupid(group_id, db)
-    return raffle
+    return await cruds_raffle.get_raffles_by_groupid(group_id, db)
 
 
 @module.router.get(
@@ -283,8 +280,7 @@ async def get_pack_tickets(
     """
     Return all tickets
     """
-    pack_tickets = await cruds_raffle.get_packtickets(db)
-    return pack_tickets
+    return await cruds_raffle.get_packtickets(db)
 
 
 @module.router.post(
@@ -317,8 +313,7 @@ async def create_packticket(
         **packticket.model_dump(),
     )
 
-    result = await cruds_raffle.create_packticket(packticket=db_packticket, db=db)
-    return result
+    return await cruds_raffle.create_packticket(packticket=db_packticket, db=db)
 
 
 @module.router.patch(
@@ -416,8 +411,7 @@ async def get_pack_tickets_by_raffle_id(
     """
     Return all pack_tickets associated to a raffle
     """
-    pack_tickets = await cruds_raffle.get_packtickets_by_raffleid(raffle_id, db)
-    return pack_tickets
+    return await cruds_raffle.get_packtickets_by_raffleid(raffle_id, db)
 
 
 @module.router.get(
@@ -434,8 +428,7 @@ async def get_tickets(
 
     **The user must be a member of the group admin to use this endpoint**
     """
-    tickets = await cruds_raffle.get_tickets(db)
-    return tickets
+    return await cruds_raffle.get_tickets(db)
 
 
 @module.router.post(
@@ -546,8 +539,7 @@ async def get_tickets_by_userid(
             detail="Users that are not member of the group admin can only access the endpoint for their own user_id.",
         )
 
-    tickets = await cruds_raffle.get_tickets_by_userid(user_id=user_id, db=db)
-    return tickets
+    return await cruds_raffle.get_tickets_by_userid(user_id=user_id, db=db)
 
 
 @module.router.get(
@@ -597,8 +589,7 @@ async def get_prizes(
     """
     Return all prizes
     """
-    prizes = await cruds_raffle.get_prizes(db)
-    return prizes
+    return await cruds_raffle.get_prizes(db)
 
 
 @module.router.post(
@@ -634,8 +625,7 @@ async def create_prize(
 
     db_prize = models_raffle.Prize(id=str(uuid.uuid4()), **prize.model_dump())
 
-    result = await cruds_raffle.create_prize(prize=db_prize, db=db)
-    return result
+    return await cruds_raffle.create_prize(prize=db_prize, db=db)
 
 
 @module.router.patch(
@@ -725,9 +715,7 @@ async def get_prizes_by_raffleid(
     Get prizes from a specific raffle.
     """
 
-    prizes = await cruds_raffle.get_prizes_by_raffleid(raffle_id=raffle_id, db=db)
-
-    return prizes
+    return await cruds_raffle.get_prizes_by_raffleid(raffle_id=raffle_id, db=db)
 
 
 @module.router.post(
@@ -822,8 +810,7 @@ async def get_users_cash(
 
     **The user must be a member of the group admin to use this endpoint
     """
-    cash = await cruds_raffle.get_users_cash(db)
-    return cash
+    return await cruds_raffle.get_users_cash(db)
 
 
 @module.router.get(

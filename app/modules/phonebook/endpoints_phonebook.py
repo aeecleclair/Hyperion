@@ -47,7 +47,7 @@ async def get_all_associations(
     Return all associations from database as a list of AssociationComplete schemas
     """
     associations = await cruds_phonebook.get_all_associations(db)
-    associations_complete = [
+    return [
         schemas_phonebook.AssociationComplete(
             id=association.id,
             name=association.name,
@@ -59,7 +59,6 @@ async def get_all_associations(
         )
         for association in associations
     ]
-    return associations_complete
 
 
 @module.router.get(

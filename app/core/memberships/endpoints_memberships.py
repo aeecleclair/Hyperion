@@ -41,8 +41,7 @@ async def read_associations_memberships(
     Return all memberships from database as a list of dictionaries
     """
 
-    memberships = await cruds_memberships.get_association_memberships(db)
-    return memberships
+    return await cruds_memberships.get_association_memberships(db)
 
 
 @router.get(
@@ -82,7 +81,7 @@ async def read_association_membership(
             detail="User is not allowed to access this membership",
         )
 
-    db_user_memberships = (
+    return (
         await cruds_memberships.get_user_memberships_by_association_membership_id(
             db=db,
             association_membership_id=association_membership_id,
@@ -93,7 +92,6 @@ async def read_association_membership(
         )
     )
 
-    return db_user_memberships
 
 
 @router.post(
@@ -256,11 +254,10 @@ async def read_user_memberships(
             detail="User is not allowed to access other users' memberships",
         )
 
-    memberships = await cruds_memberships.get_user_memberships_by_user_id(
+    return await cruds_memberships.get_user_memberships_by_user_id(
         db,
         user_id,
     )
-    return memberships
 
 
 @router.get(
@@ -280,12 +277,11 @@ async def read_user_association_membership_history(
     **This endpoint is only usable by administrators**
     """
 
-    memberships = await cruds_memberships.get_user_memberships_by_user_id_and_association_membership_id(
+    return await cruds_memberships.get_user_memberships_by_user_id_and_association_membership_id(
         db,
         user_id,
         association_membership_id,
     )
-    return memberships
 
 
 @router.post(
