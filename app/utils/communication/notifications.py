@@ -224,7 +224,6 @@ class NotificationManager:
         self,
         custom_topic: CustomTopic,
         message: Message,
-        db: AsyncSession,
     ) -> None:
         """
         Send a notification to a given topic.
@@ -399,7 +398,6 @@ class NotificationTool:
                 self.notification_manager.send_notification_to_topic,
                 custom_topic=custom_topic,
                 message=message,
-                db=self.db,
             )
 
     async def send_future_notification_to_topic_defer_to(
