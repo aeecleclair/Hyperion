@@ -220,11 +220,11 @@ class PDFWriter(FPDF):
         self.set_font("times", "", 12)
         data: list[list[str] | None] = [
             ["Allergie", security_file.allergy if security_file.allergy else "Aucune"],
-            ["Asthme", security_file.asthma and "Oui" or "Non"],
+            ["Asthme", (security_file.asthma and "Oui") or "Non"],
             (
                 [
                     "Service de réanimation",
-                    security_file.intensive_care_unit and "Oui" or "Non",
+                    (security_file.intensive_care_unit and "Oui") or "Non",
                 ]
                 if security_file.allergy
                 else None
@@ -358,7 +358,7 @@ class PDFWriter(FPDF):
         self.cell(
             w=0,
             h=12,
-            text=is_second and "Coéquipier" or "Capitaine",
+            text=(is_second and "Coéquipier") or "Capitaine",
             align="C",
             new_x=XPos.LMARGIN,
             new_y=YPos.NEXT,
