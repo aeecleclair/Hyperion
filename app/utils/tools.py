@@ -176,7 +176,7 @@ async def save_file_as_data(
     if file_size > max_file_size:
         raise HTTPException(
             status_code=413,
-            detail=f"File size is too big. Limit is {max_file_size/1024/1024} MB",
+            detail=f"File size is too big. Limit is {max_file_size / 1024 / 1024} MB",
         )
     # We go back to the beginning of the file to save it on the disk
     await upload_file.seek(0)
