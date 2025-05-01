@@ -9,6 +9,7 @@ target-version = "py311"
 # Enable Pyflakes (`F`), pycodestyle (`E`, `W`), isort (`I`), pep8-naming (`N`), flake8-bugbear (`B`)
 # T201: check for prints, C90: mccabe complexity
 select = [
+    "FAST",
     "F",
     "E",
     "W",
@@ -45,6 +46,7 @@ select = [
 ] # "B", "N" to add later
 # We may want to enable "ERA" to found commented-out code
 ignore = [
+    "FAST002", # We don't use annotated dependencies
     "E203",
     "E266",
     "E501",
