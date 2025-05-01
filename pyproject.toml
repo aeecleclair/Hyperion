@@ -27,6 +27,7 @@ select = [
     "T20",
     "PYI",
     "PT",
+    "RET",
     "Q",
     "SLF",
     "SIM",

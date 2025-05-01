@@ -506,5 +506,4 @@ async def execute_async_or_sync_method(
     """
     if iscoroutinefunction(job_function):
         return await job_function(**kwargs)
-    else:
-        return job_function(**kwargs)
+    return job_function(**kwargs)

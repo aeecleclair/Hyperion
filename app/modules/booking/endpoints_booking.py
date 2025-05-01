@@ -138,8 +138,7 @@ async def delete_manager(
             status_code=403,
             detail="There are still rooms linked to this manager",
         )
-    else:
-        await cruds_booking.delete_manager(manager_id=manager_id, db=db)
+    await cruds_booking.delete_manager(manager_id=manager_id, db=db)
 
 
 @module.router.get(

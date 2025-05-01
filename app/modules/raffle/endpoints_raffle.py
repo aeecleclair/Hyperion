@@ -546,9 +546,8 @@ async def get_tickets_by_userid(
             detail="Users that are not member of the group admin can only access the endpoint for their own user_id.",
         )
 
-    else:
-        tickets = await cruds_raffle.get_tickets_by_userid(user_id=user_id, db=db)
-        return tickets
+    tickets = await cruds_raffle.get_tickets_by_userid(user_id=user_id, db=db)
+    return tickets
 
 
 @module.router.get(
@@ -853,16 +852,14 @@ async def get_cash_by_id(
         cash = await cruds_raffle.get_cash_by_id(user_id=user_id, db=db)
         if cash is not None:
             return cash
-        else:
-            # We want to return a balance of 0 but we don't want to add it to the database
-            # An admin AMAP has indeed to add a cash to the user the first time
-            # TODO: this is a strange behaviour
-            return schemas_raffle.CashComplete(balance=0, user_id=user_id, user=user_db)
-    else:
-        raise HTTPException(
-            status_code=403,
-            detail="Users that are not member of the group admin can only access the endpoint for their own user_id.",
-        )
+        # We want to return a balance of 0 but we don't want to add it to the database
+        # An admin AMAP has indeed to add a cash to the user the first time
+        # TODO: this is a strange behaviour
+        return schemas_raffle.CashComplete(balance=0, user_id=user_id, user=user_db)
+    raise HTTPException(
+        status_code=403,
+        detail="Users that are not member of the group admin can only access the endpoint for their own user_id.",
+    )
 
 
 @module.router.post(

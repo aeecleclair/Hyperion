@@ -78,8 +78,7 @@ async def get_applicant_bookings(
             applicant_id=applicant_id,
         )
         return bookings
-    else:
-        raise HTTPException(status_code=403)
+    raise HTTPException(status_code=403)
 
 
 @module.router.get(
@@ -97,8 +96,7 @@ async def get_event_by_id(
     event = await cruds_calendar.get_event(db=db, event_id=event_id)
     if event is not None:
         return event
-    else:
-        raise HTTPException(status_code=404)
+    raise HTTPException(status_code=404)
 
 
 @module.router.get(
@@ -114,8 +112,7 @@ async def get_event_applicant(
     event = await cruds_calendar.get_event(db=db, event_id=event_id)
     if event is not None:
         return event.applicant
-    else:
-        raise HTTPException(status_code=404)
+    raise HTTPException(status_code=404)
 
 
 @module.router.post(
@@ -251,5 +248,4 @@ async def get_icalendar_file(db: AsyncSession = Depends(get_db)):
     if Path(ical_file_path).exists():
         return FileResponse(ical_file_path)
 
-    else:
-        raise HTTPException(status_code=404)
+    raise HTTPException(status_code=404)

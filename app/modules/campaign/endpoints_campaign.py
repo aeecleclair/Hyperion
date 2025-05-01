@@ -740,11 +740,10 @@ async def get_results(
                 ),
             )
         return results
-    else:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Results can only be acceded by admins in counting mode or by everyone in published mode. The current status is {status}",
-        )
+    raise HTTPException(
+        status_code=400,
+        detail=f"Results can only be acceded by admins in counting mode or by everyone in published mode. The current status is {status}",
+    )
 
 
 @module.router.get(
