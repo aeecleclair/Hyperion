@@ -118,7 +118,7 @@ class PDFWriter(FPDF):
 
     def clear_pdf(self):
         Path("data/raid/" + self.file_name).unlink()
-        self = PDFWriter()
+        self = PDFWriter()  # noqa: PLW0642
 
     def write_empty_participant(self):
         self.set_font("times", "B", 12)
