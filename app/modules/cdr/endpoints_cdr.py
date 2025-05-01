@@ -506,25 +506,14 @@ async def generate_and_send_results(
 )
 async def send_seller_results(
     seller_id: UUID,
-    # emails: schemas_cdr.ResultRequest,
-    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
-    # settings: Settings = Depends(get_settings),
 ):
     """
     Get a seller's results.
 
     **User must be CDR Admin to use this endpoint**
     """
-    # We don't use the emails parameter for now
-    # background_tasks.add_task(
-    #     generate_and_send_results,
-    #     seller_id=seller_id,
-    #     # emails=emails,
-    #     db=db,
-    #     # settings=settings,
-    # )
 
     path = await generate_and_send_results(seller_id=seller_id, db=db)
     return FileResponse(path)
