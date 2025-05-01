@@ -2165,8 +2165,6 @@ async def store_scan_qrcode(
         message=message,
     )
 
-    # TODO: check is the device is revoked or inactive
-
     return schemas_myeclpay.Transaction(
         id=transaction_id,
         debited_wallet_id=debited_wallet_device.wallet_id,
@@ -2194,6 +2192,8 @@ async def refund_transaction(
     Refund a transaction. Only transactions made in the last 30 days can be refunded.
 
     Currently transactions between users are forbidden and can thus not be refunded.
+
+    To cancel a transaction made in the last 30 seconds, the endpoint `/myeclpay/transactions/{transaction_id}/cancel` should be used.
 
     **The user must either be the credited user or a seller with cancel permissions of the credited store of the transaction**
     """
@@ -2360,7 +2360,6 @@ async def refund_transaction(
         )
 
 
-# TODO: do we need this endpoint since we can reimburse a transaction
 @router.post(
     "/myeclpay/transactions/{transaction_id}/cancel",
     status_code=204,
@@ -2373,7 +2372,10 @@ async def cancel_transaction(
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
-    Cancel a transaction
+    Cancel a transaction.
+    A transaction can be canceled in the first 30 seconds after it has been created.
+
+    To refund an older transaction, use the `/myeclpay/transactions/{transaction_id}/refund` endpoint.
 
     **The user must either be the credited user or the seller of the transaction**
     """
@@ -2386,6 +2388,12 @@ async def cancel_transaction(
         raise HTTPException(
             status_code=404,
             detail="Transaction does not exist",
+        )
+
+    if datetime.now(UTC) - transaction.creation > timedelta(seconds=30):
+        raise HTTPException(
+            status_code=400,
+            detail="Transaction is older than 30 seconds and can not be canceled",
         )
 
     canceller_wallet = await cruds_myeclpay.get_wallet(
@@ -2414,12 +2422,12 @@ async def cancel_transaction(
                 status_code=403,
                 detail="User does not have the permission to cancel this transaction",
             )
-        if datetime.now(UTC) - transaction.creation > timedelta(seconds=30):
-            if not seller.can_cancel:
-                raise HTTPException(
-                    status_code=403,
-                    detail="User does not have the permission to cancel this transaction",
-                )
+
+        if not seller.can_cancel:
+            raise HTTPException(
+                status_code=400,
+                detail="User does not have the permission to cancel this transaction",
+            )
 
     else:
         if canceller_wallet.user is None:
@@ -2433,10 +2441,10 @@ async def cancel_transaction(
                 detail="User is not allowed to cancel this transaction",
             )
 
-    if transaction.status == TransactionStatus.CANCELED:
+    if transaction.status != TransactionStatus.CONFIRMED:
         raise HTTPException(
             status_code=400,
-            detail="Transaction is already canceled",
+            detail="Only confirmed transactions can be canceled",
         )
 
     debited_wallet = await cruds_myeclpay.get_wallet(
@@ -2468,6 +2476,7 @@ async def cancel_transaction(
     )
 
     await db.commit()
+
     if debited_wallet.user is not None:
         message = Message(
             title="💳 Paiement annulé",
