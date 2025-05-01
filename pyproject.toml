@@ -10,6 +10,7 @@ target-version = "py311"
 # T201: check for prints, C90: mccabe complexity
 select = [
     "FAST",
+    "YTT",
     "F",
     "E",
     "W",
