@@ -2165,8 +2165,6 @@ async def store_scan_qrcode(
         message=message,
     )
 
-    # TODO: check is the device is revoked or inactive
-
     return schemas_myeclpay.Transaction(
         id=transaction_id,
         debited_wallet_id=debited_wallet_device.wallet_id,
@@ -2356,126 +2354,6 @@ async def refund_transaction(
         )
         await notification_tool.send_notification_to_user(
             user_id=wallet_previously_credited.user.id,
-            message=message,
-        )
-
-
-# TODO: do we need this endpoint since we can reimburse a transaction
-@router.post(
-    "/myeclpay/transactions/{transaction_id}/cancel",
-    status_code=204,
-)
-async def cancel_transaction(
-    transaction_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user_an_ecl_member),
-    request_id: str = Depends(get_request_id),
-    notification_tool: NotificationTool = Depends(get_notification_tool),
-):
-    """
-    Cancel a transaction
-
-    **The user must either be the credited user or the seller of the transaction**
-    """
-    transaction = await cruds_myeclpay.get_transaction(
-        transaction_id=transaction_id,
-        db=db,
-    )
-
-    if transaction is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Transaction does not exist",
-        )
-
-    canceller_wallet = await cruds_myeclpay.get_wallet(
-        wallet_id=transaction.credited_wallet_id,
-        db=db,
-    )
-    if canceller_wallet is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Credited wallet does not exist",
-        )
-
-    if canceller_wallet.type == WalletType.STORE:
-        if canceller_wallet.store is None:
-            raise HTTPException(
-                status_code=404,
-                detail="Store does not exist",
-            )
-        seller = await cruds_myeclpay.get_seller(
-            store_id=canceller_wallet.store.id,
-            user_id=user.id,
-            db=db,
-        )
-        if seller is None:
-            raise HTTPException(
-                status_code=403,
-                detail="User does not have the permission to cancel this transaction",
-            )
-        if datetime.now(UTC) - transaction.creation > timedelta(seconds=30):
-            if not seller.can_cancel:
-                raise HTTPException(
-                    status_code=403,
-                    detail="User does not have the permission to cancel this transaction",
-                )
-
-    else:
-        if canceller_wallet.user is None:
-            raise HTTPException(
-                status_code=404,
-                detail="User does not exist",
-            )
-        if canceller_wallet.user.id != user.id:
-            raise HTTPException(
-                status_code=403,
-                detail="User is not allowed to cancel this transaction",
-            )
-
-    if transaction.status == TransactionStatus.CANCELED:
-        raise HTTPException(
-            status_code=400,
-            detail="Transaction is already canceled",
-        )
-
-    debited_wallet = await cruds_myeclpay.get_wallet(
-        wallet_id=transaction.debited_wallet_id,
-        db=db,
-    )
-    if debited_wallet is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Debited wallet does not exist",
-        )
-
-    await cruds_myeclpay.update_transaction_status(
-        transaction_id=transaction_id,
-        status=TransactionStatus.CANCELED,
-        db=db,
-    )
-
-    await cruds_myeclpay.increment_wallet_balance(
-        wallet_id=transaction.debited_wallet_id,
-        amount=transaction.total,
-        db=db,
-    )
-
-    await cruds_myeclpay.increment_wallet_balance(
-        wallet_id=transaction.credited_wallet_id,
-        amount=-transaction.total,
-        db=db,
-    )
-
-    await db.commit()
-    if debited_wallet.user is not None:
-        message = Message(
-            title="💳 Paiement annulé",
-            content=f"La transaction de {transaction.total/100} € a été annulée",
-            action_module="MyECLPay",
-        )
-        await notification_tool.send_notification_to_user(
-            user_id=debited_wallet.user.id,
             message=message,
         )
 
