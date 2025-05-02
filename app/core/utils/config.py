@@ -1,4 +1,6 @@
+import tomllib
 from functools import cached_property
+from pathlib import Path
 from typing import Any
 
 import jwt
@@ -14,6 +16,11 @@ from app.types.exceptions import (
     InvalidRSAKeyInDotenvError,
 )
 from app.utils.auth import providers
+
+with Path("pyproject.toml").open("rb") as pyproject_binary:
+    pyproject = tomllib.load(pyproject_binary)
+    HYPERION_VERSION: str = pyproject["project"]["version"]
+    MINIMAL_TITAN_VERSION_CODE: int = pyproject["project"]["minimal-titan-version-code"]
 
 
 class Settings(BaseSettings):
@@ -186,14 +193,13 @@ class Settings(BaseSettings):
     # NOTE: AUTH_CLIENTS property should never be used in the code. To get an auth client, use `KNOWN_AUTH_CLIENTS`
     AUTH_CLIENTS: list[tuple[str, str | None, list[str], str]]
 
-    #################################
-    # Hardcoded Hyperion parameters #
-    #################################
+    #############################
+    # pyproject.toml parameters #
+    #############################
 
-    # Hyperion follows Semantic Versioning
-    # https://semver.org/
-    HYPERION_VERSION: str = "4.3.3"
-    MINIMAL_TITAN_VERSION_CODE: int = 139
+    # Version parameters
+    HYPERION_VERSION: str = HYPERION_VERSION
+    MINIMAL_TITAN_VERSION_CODE: int = MINIMAL_TITAN_VERSION_CODE
 
     ######################################
     # Automatically generated parameters #
