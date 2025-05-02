@@ -866,7 +866,7 @@ async def test_update_manager_seller(client: TestClient):
             "can_manage_sellers": False,
         },
     )
-    assert response.status_code == 403
+    assert response.status_code == 400
     assert (
         response.json()["detail"]
         == "User is the manager for this structure and cannot be updated as a seller"
@@ -928,7 +928,7 @@ async def test_delete_manager_seller(client: TestClient):
             "Authorization": f"Bearer {store_seller_can_manage_sellers_user_access_token}",
         },
     )
-    assert response.status_code == 403
+    assert response.status_code == 400
     assert (
         response.json()["detail"]
         == "User is the manager for this structure and cannot be deleted as a seller"
@@ -1471,7 +1471,7 @@ def ensure_qr_code_id_is_already_used(qr_code_id: str | UUID, client: TestClient
             "signature": "sign",
         },
     )
-    assert response.status_code == 400
+    assert response.status_code == 409
     assert response.json()["detail"] == "QR Code already used"
 
 
