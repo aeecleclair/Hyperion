@@ -1,6 +1,7 @@
 """File defining the Metadata. And the basic functions creating the database tables and calling the router"""
 
 import logging
+import os
 import uuid
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
@@ -10,6 +11,8 @@ from typing import TYPE_CHECKING, Literal
 import alembic.command as alembic_command
 import alembic.config as alembic_config
 import alembic.migration as alembic_migration
+import psutil
+import redis
 from calypsso import get_calypsso_app
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.encoders import jsonable_encoder
@@ -19,6 +22,7 @@ from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from app import api
@@ -37,17 +41,16 @@ from app.dependencies import (
     get_websocket_connection_manager,
     init_and_get_db_engine,
 )
-from app.modules.module_list import module_list
+from app.module import all_modules, module_list
 from app.types.exceptions import ContentHTTPException, GoogleAPIInvalidCredentialsError
+from app.types.scheduler import Scheduler
 from app.types.sqlalchemy import Base
+from app.types.websocket import WebsocketConnectionManager
 from app.utils import initialization
 from app.utils.redis import limiter
 
 if TYPE_CHECKING:
-    import redis
-
-    from app.types.scheduler import Scheduler
-    from app.types.websocket import WebsocketConnectionManager
+    from app.types.factory import Factory
 
 # NOTE: We can not get loggers at the top of this file like we do in other files
 # as the loggers are not yet initialized
@@ -218,6 +221,63 @@ def initialize_schools(
                     )
 
 
+async def run_factories(db: AsyncSession, settings: Settings) -> None:
+    """Run the factories to create default data in the database"""
+    hyperion_error_logger = logging.getLogger("hyperion.error")
+    if not settings.USE_FACTORIES:
+        return
+
+    hyperion_error_logger.info("Startup: Factories enabled")
+    # Importing the core_factory at the beginning of the factories.
+    factories_list: list[Factory] = []
+    for module in all_modules:
+        if module.factory:
+            factories_list.append(module.factory)
+            hyperion_error_logger.info(
+                f"Module {module.root} declares a factory {module.factory.__class__.__name__} with dependencies {module.factory.depends_on}",
+            )
+        else:
+            hyperion_error_logger.warning(
+                f"Module {module.root} does not declare a factory. It won't provide any base data.",
+            )
+
+    # We have to run the factories in a specific order to make sure the dependencies are met
+    # For that reason, we will run the first factory that has no dependencies, after that we remove it from the list of the dependencies from the other factories
+    # And we loop until there are no more factories to run and we use a boolean to avoid infinite loops with circular dependencies
+    no_factory_run_during_last_loop = False
+    ran_factories: list[type[Factory]] = []
+    while len(factories_list) > 0 and not no_factory_run_during_last_loop:
+        no_factory_run_during_last_loop = True
+        for factory in factories_list:
+            if all(depend in ran_factories for depend in factory.depends_on):
+                no_factory_run_during_last_loop = False
+                # Check if the factory should be run
+                if await factory.should_run(db):
+                    hyperion_error_logger.info(
+                        f"Startup: Running factory {factory.__class__.__name__}",
+                    )
+                    try:
+                        await factory.run(db)
+                    except Exception as error:
+                        hyperion_error_logger.fatal(
+                            f"Startup: Could not run factories: {error}",
+                        )
+                        raise
+                else:
+                    hyperion_error_logger.info(
+                        f"Startup: Factory {factory.__class__.__name__} is not necessary, skipping it",
+                    )
+                ran_factories.append(factory.__class__)
+                factories_list.remove(factory)
+                break
+        if no_factory_run_during_last_loop:
+            hyperion_error_logger.error(
+                "Factories are not correctly configured, some factories are not running.",
+            )
+            break
+    hyperion_error_logger.info("Startup: Factories have been run")
+
+
 def initialize_module_visibility(
     sync_engine: Engine,
     hyperion_error_logger: logging.Logger,
@@ -340,6 +400,127 @@ def init_db(
     )
 
 
+async def init_google_API(db: AsyncSession, settings: Settings) -> None:
+    # Init Google API credentials
+    google_api = GoogleAPI()
+    if google_api.is_google_api_configured(settings):
+        try:
+            await google_api.get_credentials(db, settings)
+        except GoogleAPIInvalidCredentialsError:
+            # We expect this error to be raised if the credentials were never set before
+            pass
+
+
+async def init_lifespan(
+    app: FastAPI,
+    settings: Settings,
+    hyperion_error_logger: logging.Logger,
+    drop_db: bool,
+) -> tuple[Scheduler, WebsocketConnectionManager]:
+    hyperion_error_logger.info("Startup: Initializing application")
+    hyperion_error_logger.info(settings)
+    # We need to run the factories and the google api credentials only once across all the workers
+    # We use the parent process to get the workers
+    parent_pid = os.getppid()  # PID du parent (FastAPI master process)
+    parent_process = psutil.Process(parent_pid)
+    workers = [
+        p for p in parent_process.children() if p.status() != psutil.STATUS_ZOMBIE
+    ]
+
+    # There is more than one worker
+    # We use the redis client to check if the factories have already been run and the google api credentials have been set
+    if len(workers) > 1:
+        redis_client: redis.Redis | bool | None = app.dependency_overrides.get(
+            get_redis_client,
+            get_redis_client,
+        )(settings=settings)
+        # If the redis client is not configured, we skip the initialization
+        # We don't want to run the factories with multiple workers if the redis client is not configured
+        if type(redis_client) is not redis.Redis:
+            hyperion_error_logger.info(
+                "Redis client not configured while multiple workers are used. Skipping data initialization.",
+            )
+        else:
+            # We need to run the database initialization only once across all the workers
+            # Other workers have to wait for the db to be initialized
+            await initialization.use_lock_for_workers(
+                init_db,
+                [settings, hyperion_error_logger, drop_db],
+                "init_db",
+                redis_client,
+                hyperion_error_logger,
+                wait_unlock=True,
+                unlock_key="db_initialized",
+            )
+            # We need to run the factories only once across all the workers
+            async for db in app.dependency_overrides.get(
+                get_db,
+                get_db,
+            )():
+                await initialization.use_lock_for_workers(
+                    run_factories,
+                    [db, settings],
+                    "factories_run",
+                    redis_client,
+                    hyperion_error_logger,
+                )
+            async for db in app.dependency_overrides.get(
+                get_db,
+                get_db,
+            )():
+                await initialization.use_lock_for_workers(
+                    init_google_API,
+                    [db, settings],
+                    "factories_run",
+                    redis_client,
+                    hyperion_error_logger,
+                )
+    # There is only one worker
+    # We need to run the factories and the google api credentials
+    else:
+        init_db(
+            settings=settings,
+            hyperion_error_logger=hyperion_error_logger,
+            drop_db=drop_db,
+        )
+        hyperion_error_logger.info("Running factories")
+        async for db in app.dependency_overrides.get(
+            get_db,
+            get_db,
+        )():
+            await run_factories(db, settings)
+        google_api = GoogleAPI()
+        if google_api.is_google_api_configured(settings):
+            async for db in app.dependency_overrides.get(
+                get_db,
+                get_db,
+            )():
+                try:
+                    await google_api.get_credentials(db, settings)
+                except GoogleAPIInvalidCredentialsError:
+                    # We expect this error to be raised if the credentials were never set before
+                    pass
+
+    ws_manager: WebsocketConnectionManager = app.dependency_overrides.get(
+        get_websocket_connection_manager,
+        get_websocket_connection_manager,
+    )(settings=settings)
+
+    arq_scheduler: Scheduler = app.dependency_overrides.get(
+        get_scheduler,
+        get_scheduler,
+    )(settings=settings)
+
+    await ws_manager.connect_broadcaster()
+    await arq_scheduler.start(
+        redis_host=settings.REDIS_HOST,
+        redis_port=settings.REDIS_PORT,
+        redis_password=settings.REDIS_PASSWORD,
+        _dependency_overrides=app.dependency_overrides,
+    )
+    return arq_scheduler, ws_manager
+
+
 # We wrap the application in a function to be able to pass the settings and drop_db parameters
 # The drop_db parameter is used to drop the database tables before creating them again
 def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
@@ -373,37 +554,12 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     # https://fastapi.tiangolo.com/advanced/events/
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator:
-        # Init Google API credentials
-        google_api = GoogleAPI()
-        if google_api.is_google_api_configured(settings):
-            async for db in app.dependency_overrides.get(
-                get_db,
-                get_db,
-            )():
-                try:
-                    await google_api.get_credentials(db, settings)
-                except GoogleAPIInvalidCredentialsError:
-                    # We expect this error to be raised if the credentials were never set before
-                    pass
-
-        ws_manager: WebsocketConnectionManager = app.dependency_overrides.get(
-            get_websocket_connection_manager,
-            get_websocket_connection_manager,
-        )(settings=settings)
-
-        arq_scheduler: Scheduler = app.dependency_overrides.get(
-            get_scheduler,
-            get_scheduler,
-        )(settings=settings)
-
-        await ws_manager.connect_broadcaster()
-        await arq_scheduler.start(
-            redis_host=settings.REDIS_HOST,
-            redis_port=settings.REDIS_PORT,
-            redis_password=settings.REDIS_PASSWORD,
-            _dependency_overrides=app.dependency_overrides,
+        arq_scheduler, ws_manager = await init_lifespan(
+            app=app,
+            settings=settings,
+            hyperion_error_logger=hyperion_error_logger,
+            drop_db=drop_db,
         )
-
         yield
         hyperion_error_logger.info("Shutting down")
         await arq_scheduler.close()
@@ -429,14 +585,14 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     calypsso = get_calypsso_app()
     app.mount("/calypsso", calypsso, "Calypsso")
 
-    if settings.HYPERION_INIT_DB:
-        init_db(
-            settings=settings,
-            hyperion_error_logger=hyperion_error_logger,
-            drop_db=drop_db,
-        )
-    else:
-        hyperion_error_logger.info("Database initialization skipped")
+    # if settings.HYPERION_INIT_DB:
+    #     init_db(
+    #         settings=settings,
+    #         hyperion_error_logger=hyperion_error_logger,
+    #         drop_db=drop_db,
+    #     )
+    # else:
+    #     hyperion_error_logger.info("Database initialization skipped")
 
     # Initialize Redis
     if not app.dependency_overrides.get(get_redis_client, get_redis_client)(

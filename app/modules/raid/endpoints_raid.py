@@ -49,6 +49,7 @@ module = Module(
     tag="Raid",
     payment_callback=validate_payment,
     default_allowed_account_types=[AccountType.student, AccountType.staff],
+    factory=None,
 )
 
 
