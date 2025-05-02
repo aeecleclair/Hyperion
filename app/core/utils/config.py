@@ -1,4 +1,6 @@
+import tomllib
 from functools import cached_property
+from pathlib import Path
 from typing import Any
 
 import jwt
@@ -14,6 +16,11 @@ from app.types.exceptions import (
     InvalidRSAKeyInDotenvError,
 )
 from app.utils.auth import providers
+
+with Path("pyproject.toml").open("rb") as pyproject_binary:
+    pyproject = tomllib.load(pyproject_binary)
+    HYPERION_VERSION: str = pyproject["project"]["version"]
+    MINIMAL_TITAN_VERSION_CODE: int = pyproject["project"]["minimal-titan-version-code"]
 
 
 class Settings(BaseSettings):
@@ -199,16 +206,15 @@ class Settings(BaseSettings):
     # If this token is not set, the service will not be able to access the data and no integrity check will be performed
     MYECLPAY_DATA_VERIFIER_ACCESS_TOKEN: str | None = None
 
-    #################################
-    # Hardcoded Hyperion parameters #
-    #################################
-
-    # Hyperion follows Semantic Versioning
-    # https://semver.org/
-    HYPERION_VERSION: str = "4.4.1"
-    MINIMAL_TITAN_VERSION_CODE: int = 139
-
     # Maximum wallet balance for MyECLPay in cents, we will prevent user from adding more money to their wallet if it will make their balance exceed this value
+
+    #############################
+    # pyproject.toml parameters #
+    #############################
+
+    # Version parameters
+    HYPERION_VERSION: str = HYPERION_VERSION
+    MINIMAL_TITAN_VERSION_CODE: int = MINIMAL_TITAN_VERSION_CODE
 
     ######################################
     # Automatically generated parameters #
