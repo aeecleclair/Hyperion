@@ -307,3 +307,56 @@ class WebsocketConnectionManager:
                 connection=websocket,
             )
             raise
+
+
+class OfflineWebsocketConnectionManager(WebsocketConnectionManager):
+    def __init__(self, settings: Settings):
+        pass
+
+    async def connect_broadcaster(self):
+        """
+        Do nothing
+        """
+
+    async def disconnect_broadcaster(self):
+        """
+        Do nothing
+        """
+
+    async def add_connection_to_room(
+        self,
+        room_id: HyperionWebsocketsRoom,
+        ws_connection: WebSocket,
+    ) -> None:
+        """
+        Do nothing
+        """
+
+    async def remove_connection_from_room(
+        self,
+        connection: WebSocket,
+        room_id: HyperionWebsocketsRoom,
+    ):
+        """
+        Do nothing
+        """
+
+    async def send_message_to_room(
+        self,
+        message: WSMessageModel,
+        room_id: HyperionWebsocketsRoom,
+    ):
+        """
+        Do nothing
+        """
+
+    async def manage_websocket(
+        self,
+        websocket: WebSocket,
+        settings: Settings,
+        room: HyperionWebsocketsRoom,
+        db: AsyncSession,
+    ):
+        """
+        Do nothing
+        """

@@ -2,7 +2,6 @@ import logging
 import uuid
 from collections.abc import AsyncGenerator, Callable
 from datetime import timedelta
-from functools import lru_cache
 
 import redis
 from fastapi import Depends, HTTPException
@@ -25,6 +24,10 @@ from app.types.exceptions import RedisConnectionError
 from app.types.floors_type import FloorsType
 from app.types.scheduler import OfflineScheduler, Scheduler
 from app.types.sqlalchemy import Base
+from app.types.websocket import (
+    OfflineWebsocketConnectionManager,
+    WebsocketConnectionManager,
+)
 from app.utils.redis import connect, disconnect
 from app.utils.tools import (
     get_random_string,
@@ -39,10 +42,15 @@ class FailedToAddObjectToDB(Exception):
 @lru_cache
 def override_get_settings() -> Settings:
     """Override the get_settings function to use the testing session"""
-    return Settings(_env_file=".env.test", _env_file_encoding="utf-8")
+
+    def override_get_settings() -> Settings:
+        settings = Settings(_env_file=".env.test", _env_file_encoding="utf-8", **params)
+        return settings
+
+    return override_get_settings
 
 
-settings = override_get_settings()
+settings = override_get_settings()()
 
 
 # Connect to the test's database
@@ -129,6 +137,16 @@ def override_get_scheduler(
 ) -> Scheduler:  # As we don't want the limiter to be activated, except during the designed test, we add an "activate"/"deactivate" option
     """Override the get_redis_client function to use the testing session"""
     return OfflineScheduler()
+
+
+def override_get_websocket_connection_manager(
+    settings: Settings = Depends(get_settings),
+) -> WebsocketConnectionManager:
+    """
+    Override the get_websocket_connection_manager function to use the testing session
+    """
+
+    return OfflineWebsocketConnectionManager(settings=settings)
 
 
 async def create_user_with_groups(
