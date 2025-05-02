@@ -233,6 +233,9 @@ async def run_factories(db: AsyncSession, settings: Settings) -> None:
     for module in all_modules:
         if module.factory:
             factories_list.append(module.factory)
+            hyperion_error_logger.info(
+                f"Module {module.root} declares a factory {module.factory.__class__.__name__} with dependencies {module.factory.depends_on}",
+            )
         else:
             hyperion_error_logger.warning(
                 f"Module {module.root} does not declare a factory. It won't provide any base data.",
@@ -242,10 +245,11 @@ async def run_factories(db: AsyncSession, settings: Settings) -> None:
     # For that reason, we will run the first factory that has no dependencies, after that we remove it from the list of the dependencies from the other factories
     # And we loop until there are no more factories to run and we use a boolean to avoid infinite loops with circular dependencies
     no_factory_run_during_last_loop = False
+    ran_factories: list[type[Factory]] = []
     while len(factories_list) > 0 and not no_factory_run_during_last_loop:
         no_factory_run_during_last_loop = True
         for factory in factories_list:
-            if factory.depends_on == []:
+            if all(depend in ran_factories for depend in factory.depends_on):
                 no_factory_run_during_last_loop = False
                 # Check if the factory should be run
                 if await factory.should_run(db):
@@ -263,9 +267,7 @@ async def run_factories(db: AsyncSession, settings: Settings) -> None:
                     hyperion_error_logger.info(
                         f"Startup: Factory {factory.__class__.__name__} is not necessary, skipping it",
                     )
-                for other_factory in factories_list:
-                    if type(factory) in other_factory.depends_on:
-                        other_factory.depends_on.remove(type(factory))
+                ran_factories.append(factory.__class__)
                 factories_list.remove(factory)
                 break
         if no_factory_run_during_last_loop:
@@ -415,6 +417,8 @@ async def init_lifespan(
     hyperion_error_logger: logging.Logger,
     drop_db: bool,
 ) -> tuple[Scheduler, WebsocketConnectionManager]:
+    hyperion_error_logger.info("Startup: Initializing application")
+    hyperion_error_logger.info(settings)
     # We need to run the factories and the google api credentials only once across all the workers
     # We use the parent process to get the workers
     parent_pid = os.getppid()  # PID du parent (FastAPI master process)

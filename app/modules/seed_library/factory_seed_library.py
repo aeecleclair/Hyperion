@@ -18,59 +18,67 @@ from app.utils import tools
 
 
 class SeedLibraryFactory(Factory):
+    species_ids = [
+        uuid4(),
+        uuid4(),
+        uuid4(),
+        uuid4(),
+        uuid4(),
+    ]
+    species_names = [
+        "Tomato",
+        "Potato",
+        "Lavender",
+        "Rose",
+        "Thyme",
+    ]
+    species_prefixes = [
+        "TOM",
+        "POT",
+        "LAV",
+        "ROS",
+        "THY",
+    ]
+    species_types = [
+        SpeciesType.vegetables,
+        SpeciesType.vegetables,
+        SpeciesType.ornamental,
+        SpeciesType.ornamental,
+        SpeciesType.aromatic,
+    ]
+    species_start_seasons = [
+        date(2023, 1, 1),
+        date(2023, 7, 1),
+        date(2023, 5, 1),
+        date(2023, 3, 1),
+        date(2023, 11, 1),
+    ]
+    species_end_seasons = [
+        date(2023, 6, 1),
+        date(2023, 8, 1),
+        date(2023, 8, 1),
+        date(2023, 7, 1),
+        date(2023, 2, 1),
+    ]
+    species_time_maturations = [
+        30,
+        60,
+        90,
+        120,
+        150,
+    ]
+
     def __init__(self):
         super().__init__(
             depends_on=[CoreUsersFactory],
         )
-        self.species: list[SpeciesComplete] = []
 
     async def create_species(
         self,
         db: AsyncSession,
     ):
-        species_names = [
-            "Tomato",
-            "Potato",
-            "Lavender",
-            "Rose",
-            "Thyme",
-        ]
-        prefixes = [
-            "TOM",
-            "POT",
-            "LAV",
-            "ROS",
-            "THY",
-        ]
-        species_types = [
-            SpeciesType.vegetables,
-            SpeciesType.vegetables,
-            SpeciesType.ornamental,
-            SpeciesType.ornamental,
-            SpeciesType.aromatic,
-        ]
-        start_seasons = [
-            date(2023, 1, 1),
-            date(2023, 7, 1),
-            date(2023, 5, 1),
-            date(2023, 3, 1),
-            date(2023, 11, 1),
-        ]
-        end_seasons = [
-            date(2023, 6, 1),
-            date(2023, 8, 1),
-            date(2023, 8, 1),
-            date(2023, 7, 1),
-            date(2023, 2, 1),
-        ]
-        time_maturations = [
-            30,
-            60,
-            90,
-            120,
-            150,
-        ]
         for (
+            species_id,
             name,
             prefix,
             species_type,
@@ -79,17 +87,18 @@ class SeedLibraryFactory(Factory):
             time_maturation,
             i,
         ) in zip(
-            species_names,
-            prefixes,
-            species_types,
-            start_seasons,
-            end_seasons,
-            time_maturations,
-            range(len(species_names)),
+            self.species_ids,
+            self.species_names,
+            self.species_prefixes,
+            self.species_types,
+            self.species_start_seasons,
+            self.species_end_seasons,
+            self.species_time_maturations,
+            range(len(self.species_names)),
             strict=True,
         ):
             species = SpeciesComplete(
-                id=uuid4(),
+                id=species_id,
                 prefix=prefix,
                 name=name,
                 species_type=species_type,
@@ -104,31 +113,30 @@ class SeedLibraryFactory(Factory):
                 db=db,
                 species=species,
             )
-            self.species.append(species)
 
     async def create_plants(
         self,
         db: AsyncSession,
     ):
         states = list(PlantState)
-        for species in self.species:
-            for i in range(3):
+        for i in range(len(self.species_ids)):
+            for j in range(3):
                 await cruds_seed_library.create_plant(
                     db=db,
                     plant=PlantComplete(
                         id=uuid4(),
-                        reference=f"{species.prefix}-{i}",
-                        state=states[i],
-                        species_id=species.id,
-                        propagation_method=random.choice(
+                        reference=f"{self.species_prefixes[i]}-{j}",
+                        state=states[j],
+                        species_id=self.species_ids[i],
+                        propagation_method=random.choice(  # noqa: S311
                             list(PropagationMethod),
                         ),
                         borrower_id=CoreUsersFactory.demo_users_id[0]
-                        if i != 0
+                        if j != 0
                         else None,
                         borrowing_date=datetime.now(tz=UTC).date() - timedelta(days=30),
                         planting_date=datetime.now(tz=UTC).date()
-                        - timedelta(days=random.randint(1, 30)),
+                        - timedelta(days=random.randint(1, 30)),  # noqa: S311
                     ),
                 )
 
