@@ -2,7 +2,7 @@ from datetime import UTC, datetime, timedelta
 from io import BytesIO
 from logging import Logger
 
-import boto3  # type: ignore[import-untyped]
+import boto3
 import botocore
 import botocore.exceptions
 
@@ -49,7 +49,7 @@ class S3Access:
         ):
             raise InvalidS3BucketNameError(self.bucket_name)
 
-    def write_secure_log(self, message: str, filename: str) -> str:
+    def write_secure_log(self, message: str, filename: str):
         """Écrit un log dans un objet S3 immuable"""
         if filename.find("/") != -1:
             raise InvalidS3FileNameError(filename)
@@ -62,25 +62,24 @@ class S3Access:
                 self.failure_logger.warning(
                     f"POST Filename: {filename}, Message: {message}",
                 )
-            return filename
-        result = self.s3.upload_fileobj(
-            file_object,
-            self.bucket_name,
-            filename,
-            extra_args={
-                "ObjectLockMode": "COMPLIANCE",
-                "ObjectLockRetainUntilDate": datetime.now(UTC)
-                + timedelta(days=self.retention),
-            }
-            if self.retention > 0
-            else {},
-        )
-        if result is None:
-            return filename
-        if self.failure_logger:
-            self.failure_logger.warning(f"Filename: {filename}, Message: {message}")
-            self.failure_logger.info(f"Filename: {filename}, Result: {result}")
-        return filename
+            return
+        try:
+            self.s3.upload_fileobj(
+                file_object,
+                self.bucket_name,
+                filename,
+                ExtraArgs={
+                    "ObjectLockMode": "COMPLIANCE",
+                    "ObjectLockRetainUntilDate": datetime.now(UTC)
+                    + timedelta(days=self.retention),
+                }
+                if self.retention > 0
+                else {},
+            )
+        except botocore.exceptions.ClientError as e:
+            if self.failure_logger:
+                self.failure_logger.warning(f"Filename: {filename}, Message: {message}")
+                self.failure_logger.info(f"Filename: {filename}, Error: {e}")
 
     def get_log_with_name(self, name: str) -> str:
         """Récupère les logs avec un nom donné"""
