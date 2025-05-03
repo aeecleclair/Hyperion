@@ -32,6 +32,10 @@ from app.core.myeclpay.utils_myeclpay import (
     MAX_TRANSACTION_TOTAL,
     QRCODE_EXPIRATION,
     TOS_CONTENT,
+    format_cancel_log,
+    format_refund_log,
+    format_transaction_log,
+    format_transfer_log,
     is_user_latest_tos_signed,
     validate_transfer_callback,
     verify_signature,
@@ -45,6 +49,7 @@ from app.core.utils import security
 from app.core.utils.config import Settings
 from app.dependencies import (
     get_db,
+    get_myeclpay_logger,
     get_notification_tool,
     get_payment_tool,
     get_request_id,
@@ -56,6 +61,7 @@ from app.dependencies import (
 from app.types import standard_responses
 from app.types.exceptions import MissingHelloAssoSlugError
 from app.types.module import CoreModule
+from app.types.s3_access import S3Access
 from app.utils.communication.notifications import NotificationTool
 from app.utils.mail.mailworker import send_email
 
@@ -1588,6 +1594,7 @@ async def add_transfer_by_admin(
     user: CoreUser = Depends(is_user()),
     settings: Settings = Depends(get_settings),
     notification_tool: NotificationTool = Depends(get_notification_tool),
+    myeclpay_s3_logger: S3Access = Depends(get_myeclpay_logger),
 ):
     if transfer_info.transfer_type == TransferType.HELLO_ASSO:
         raise HTTPException(
@@ -1652,20 +1659,18 @@ async def add_transfer_by_admin(
             status_code=403,
             detail="Wallet balance would exceed the maximum allowed balance",
         )
-
-    await cruds_myeclpay.create_transfer(
-        db=db,
-        transfer=schemas_myeclpay.Transfer(
-            id=uuid.uuid4(),
-            type=transfer_info.transfer_type,
-            approver_user_id=user.id,
-            total=transfer_info.amount,
-            transfer_identifier="",  # TODO: require to provide an identifier
-            wallet_id=user_payment.wallet_id,
-            creation=datetime.now(UTC),
-            confirmed=True,
-        ),
+    creation_date = datetime.now(UTC)
+    transfer = schemas_myeclpay.Transfer(
+        id=uuid.uuid4(),
+        type=transfer_info.transfer_type,
+        approver_user_id=user.id,
+        total=transfer_info.amount,
+        transfer_identifier="",  # TODO: require to provide an identifier
+        wallet_id=user_payment.wallet_id,
+        creation=creation_date,
+        confirmed=True,
     )
+    await cruds_myeclpay.create_transfer(transfer, db)
     await cruds_myeclpay.increment_wallet_balance(
         wallet_id=user_payment.wallet_id,
         amount=transfer_info.amount,
@@ -1676,6 +1681,10 @@ async def add_transfer_by_admin(
     except Exception:
         await db.rollback()
         raise
+    myeclpay_s3_logger.write_secure_log(
+        format_transfer_log(transfer),
+        creation_date.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+    )
 
     message = Message(
         title="💳 Paiement - transfert",
@@ -1943,6 +1952,7 @@ async def store_scan_qrcode(
     user: CoreUser = Depends(is_user_an_ecl_member),
     request_id: str = Depends(get_request_id),
     notification_tool: NotificationTool = Depends(get_notification_tool),
+    myeclpay_s3_logger: S3Access = Depends(get_myeclpay_logger),
 ):
     """
     Scan and bank a QR code for this store.
@@ -2136,24 +2146,31 @@ async def store_scan_qrcode(
         db=db,
     )
     transaction_id = uuid.uuid4()
-    # We create a transaction
-    await cruds_myeclpay.create_transaction(
-        transaction_id=transaction_id,
+    creation_date = datetime.now(UTC)
+    transaction = schemas_myeclpay.Transaction(
+        id=transaction_id,
         debited_wallet_id=debited_wallet_device.wallet_id,
-        debited_wallet_device_id=debited_wallet_device.id,
         credited_wallet_id=store.wallet_id,
         transaction_type=TransactionType.DIRECT,
         seller_user_id=user.id,
         total=scan_info.tot,
-        creation=datetime.now(UTC),
+        creation=creation_date,
         status=TransactionStatus.CONFIRMED,
+    )
+    # We create a transaction
+    await cruds_myeclpay.create_transaction(
+        transaction=transaction,
+        debited_wallet_device_id=debited_wallet_device.id,
         store_note=None,
         db=db,
     )
 
     await db.commit()
 
-    # TODO: log the transaction
+    myeclpay_s3_logger.write_secure_log(
+        format_transaction_log(transaction),
+        creation_date.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+    )
 
     message = Message(
         title=f"💳 Paiement - {store.name}",
@@ -2165,16 +2182,7 @@ async def store_scan_qrcode(
         message=message,
     )
 
-    return schemas_myeclpay.Transaction(
-        id=transaction_id,
-        debited_wallet_id=debited_wallet_device.wallet_id,
-        credited_wallet_id=store.wallet_id,
-        transaction_type=TransactionType.DIRECT,
-        seller_user_id=user.id,
-        total=scan_info.tot,
-        creation=datetime.now(UTC),
-        status=TransactionStatus.CONFIRMED,
-    )
+    return transaction
 
 
 @router.post(
@@ -2187,6 +2195,7 @@ async def refund_transaction(
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user_an_ecl_member),
     notification_tool: NotificationTool = Depends(get_notification_tool),
+    myeclpay_s3_logger: S3Access = Depends(get_myeclpay_logger),
 ):
     """
     Refund a transaction. Only transactions made in the last 30 days can be refunded.
@@ -2303,18 +2312,21 @@ async def refund_transaction(
         db=db,
     )
 
+    creation_date = datetime.now(UTC)
+    refund = schemas_myeclpay.RefundBase(
+        id=uuid.uuid4(),
+        transaction_id=transaction_id,
+        total=refund_amount,
+        seller_user_id=user.id
+        if wallet_previously_credited.type == WalletType.STORE
+        else None,
+        credited_wallet_id=wallet_previously_debited.id,
+        debited_wallet_id=wallet_previously_credited.id,
+        creation=creation_date,
+    )
+
     await cruds_myeclpay.create_refund(
-        refund=schemas_myeclpay.RefundBase(
-            id=uuid.uuid4(),
-            transaction_id=transaction_id,
-            total=refund_amount,
-            seller_user_id=user.id
-            if wallet_previously_credited.type == WalletType.STORE
-            else None,
-            credited_wallet_id=wallet_previously_debited.id,
-            debited_wallet_id=wallet_previously_credited.id,
-            creation=datetime.now(UTC),
-        ),
+        refund=refund,
         db=db,
     )
 
@@ -2332,6 +2344,11 @@ async def refund_transaction(
     )
 
     await db.commit()
+
+    myeclpay_s3_logger.write_secure_log(
+        format_refund_log(refund),
+        creation_date.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+    )
 
     if wallet_previously_debited.user is not None:
         message = Message(
@@ -2370,6 +2387,7 @@ async def cancel_transaction(
     user: CoreUser = Depends(is_user_an_ecl_member),
     request_id: str = Depends(get_request_id),
     notification_tool: NotificationTool = Depends(get_notification_tool),
+    myeclpay_s3_logger: S3Access = Depends(get_myeclpay_logger),
 ):
     """
     Cancel a transaction.
@@ -2476,6 +2494,11 @@ async def cancel_transaction(
     )
 
     await db.commit()
+
+    myeclpay_s3_logger.write_secure_log(
+        format_cancel_log(transaction_id),
+        datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+    )
 
     if debited_wallet.user is not None:
         message = Message(
