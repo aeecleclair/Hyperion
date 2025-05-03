@@ -160,5 +160,5 @@ class InvalidS3AccessError(Exception):
 class InvalidS3FileNameError(Exception):
     def __init__(self, filename: str):
         super().__init__(
-            f"Invalid S3 file name: {filename} - it should not contain '/'"
+            f"Invalid S3 file name: {filename} - it should not contain '/'",
         )
