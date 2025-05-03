@@ -6,7 +6,7 @@ from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.myeclpay import cruds_myeclpay, schemas_myeclpay
+from app.core.myeclpay import cruds_myeclpay, models_myeclpay, schemas_myeclpay
 from app.core.myeclpay.models_myeclpay import UserPayment
 from app.core.myeclpay.schemas_myeclpay import (
     QRCodeContentData,
@@ -137,7 +137,7 @@ async def validate_transfer_callback(
 
 
 def format_transfer_log(
-    transfer: schemas_myeclpay.Transfer,
+    transfer: schemas_myeclpay.Transfer | models_myeclpay.Transfer,
 ):
     return f"{ActionType.TRANSFER.name} {transfer.id} {transfer.type.name} {transfer.total} {transfer.wallet_id}"
 
