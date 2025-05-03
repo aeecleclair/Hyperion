@@ -86,6 +86,15 @@ class Settings(BaseSettings):
     REDIS_LIMIT: int
     REDIS_WINDOW: int
 
+    ####################
+    # S3 configuration #
+    ####################
+    # S3 configuration is needed to use the S3 storage for MyECLPay logs
+
+    S3_BUCKET_NAME: str | None = None
+    S3_ACCESS_KEY_ID: str | None = None
+    S3_SECRET_ACCESS_KEY: str | None = None
+
     ##############
     # Google API #
     ##############

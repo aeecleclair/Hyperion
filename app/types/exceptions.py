@@ -138,3 +138,13 @@ class MissingHelloAssoSlugError(Exception):
         super().__init__(
             f"HelloAsso slug {slug_type} is missing in dotenv",
         )
+
+
+class InvalidS3BucketNameError(Exception):
+    def __init__(self, bucket_name: str):
+        super().__init__(f"Invalid S3 bucket name: {bucket_name}")
+
+
+class InvalidS3AccessError(Exception):
+    def __init__(self, error: str):
+        super().__init__(f"Invalid S3 configuration: {error}")
