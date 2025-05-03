@@ -163,6 +163,15 @@ class LogConfig:
                     "backupCount": 50,
                     "level": "INFO",
                 },
+                "file_myeclpay": {
+                    # file_myeclpay is there to log all operations related to MyECLPay that failed to be logged in the S3 bucket
+                    "formatter": "default",
+                    "class": "logging.handlers.RotatingFileHandler",
+                    "filename": "logs/myeclpay.log",
+                    "maxBytes": 1024 * 1024 * 10,  # ~ 10 MB
+                    "backupCount": 100,
+                    "level": "INFO",
+                },
                 "file_amap": {
                     # file_amap should receive informations about amap operation, every operation involving a cash modification.
                     "formatter": "default",
@@ -216,6 +225,14 @@ class LogConfig:
                 "hyperion.error": {
                     "handlers": [
                         "file_errors",
+                        "matrix_errors",
+                        "console",
+                    ],
+                    "level": MINIMUM_LOG_LEVEL,
+                },
+                "hyperion.myeclpay": {
+                    "handlers": [
+                        "file_myeclpay",
                         "matrix_errors",
                         "console",
                     ],
