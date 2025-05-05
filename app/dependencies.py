@@ -73,7 +73,7 @@ async def get_request_id(request: Request) -> str:
     """
     # `request_id` is a string injected in the state by our middleware
     # We force Mypy to consider it as a str instead of Any
-    return cast(str, request.state.request_id)
+    return cast("str", request.state.request_id)
 
 
 

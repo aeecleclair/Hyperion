@@ -37,7 +37,7 @@ def maximize_image(
     max_width: float,
     max_height: float,
 ) -> Image.Image:
-    image = cast(Image.Image, Image.open(image_path))
+    image = cast("Image.Image", Image.open(image_path))
     width, height = image.size
     if width > height:
         image = image.rotate(270, expand=True)
