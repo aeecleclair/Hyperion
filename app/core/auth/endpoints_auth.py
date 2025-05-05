@@ -927,7 +927,6 @@ async def create_response_body(
     )
 
 
-
 @router.post(
     "/auth/introspect",
     response_model=schemas_auth.IntrospectTokenResponse,

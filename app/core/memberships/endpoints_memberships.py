@@ -81,17 +81,14 @@ async def read_association_membership(
             detail="User is not allowed to access this membership",
         )
 
-    return (
-        await cruds_memberships.get_user_memberships_by_association_membership_id(
-            db=db,
-            association_membership_id=association_membership_id,
-            minimal_start_date=minimalStartDate,
-            maximal_start_date=maximalStartDate,
-            minimal_end_date=minimalEndDate,
-            maximal_end_date=maximalEndDate,
-        )
+    return await cruds_memberships.get_user_memberships_by_association_membership_id(
+        db=db,
+        association_membership_id=association_membership_id,
+        minimal_start_date=minimalStartDate,
+        maximal_start_date=maximalStartDate,
+        minimal_end_date=minimalEndDate,
+        maximal_end_date=maximalEndDate,
     )
-
 
 
 @router.post(

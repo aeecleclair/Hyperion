@@ -70,7 +70,6 @@ async def get_current_user_flappybird_personal_best(
     )
 
 
-
 @module.router.post(
     "/flappybird/scores",
     response_model=schemas_flappybird.FlappyBirdScoreBase,

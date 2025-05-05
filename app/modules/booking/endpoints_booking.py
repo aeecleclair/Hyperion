@@ -222,7 +222,6 @@ async def get_confirmed_bookings(
     return await cruds_booking.get_confirmed_bookings(db=db)
 
 
-
 @module.router.get(
     "/booking/bookings/users/me",
     response_model=list[schemas_booking.BookingReturn],

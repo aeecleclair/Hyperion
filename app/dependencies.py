@@ -76,7 +76,6 @@ async def get_request_id(request: Request) -> str:
     return cast("str", request.state.request_id)
 
 
-
 def init_and_get_db_engine(settings: Settings) -> AsyncEngine:
     """
     Return the (asynchronous) database engine, if the engine doesn't exit yet it will create one based on the settings

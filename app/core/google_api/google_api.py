@@ -62,7 +62,6 @@ class GoogleAPI:
             redirect_uri=settings.CLIENT_URL + "google-api/oauth2callback",
         )
 
-
     async def _start_authentication(
         self,
         db: AsyncSession,
