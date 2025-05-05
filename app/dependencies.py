@@ -263,9 +263,9 @@ def get_myeclpay_logger(
     if myeclpay_s3_logger is None:
         myeclpay_s3_logger = S3Access(
             settings=settings,
+            failure_logger=myeclpay_logger,
             folder="myeclpay/",
             retention=10 * 365,  # 10 years
-            failure_logger=myeclpay_logger,
         )
 
     return myeclpay_s3_logger

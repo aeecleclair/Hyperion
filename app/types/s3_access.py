@@ -20,19 +20,18 @@ class S3Access:
     def __init__(
         self,
         settings: Settings,
+        failure_logger: Logger,
         folder: str = "logs/",
         retention: int = -1,
-        failure_logger: Logger | None = None,
     ) -> None:
         self.bucket_name = settings.S3_BUCKET_NAME or "default-bucket-name"
         self.folder = folder
         self.retention = retention
         self.failure_logger = failure_logger
         if settings.S3_ACCESS_KEY_ID is None or settings.S3_SECRET_ACCESS_KEY is None:
-            if self.failure_logger:
-                self.failure_logger.critical(
-                    "S3_ACCESS_KEY_ID or S3_SECRET_ACCESS_KEY is not set. Working with logger only.",
-                )
+            self.failure_logger.critical(
+                "S3_ACCESS_KEY_ID or S3_SECRET_ACCESS_KEY is not set. Working with logger only.",
+            )
             self.s3 = None
             return
         self.s3 = boto3.client(
@@ -58,10 +57,9 @@ class S3Access:
         file_object = BytesIO(message.encode("utf-8"))
 
         if self.s3 is None:
-            if self.failure_logger:
-                self.failure_logger.warning(
-                    f"POST Filename: {filename}, Message: {message}",
-                )
+            self.failure_logger.warning(
+                f"POST Filename: {filename}, Message: {message}",
+            )
             return
         try:
             self.s3.upload_fileobj(
@@ -77,9 +75,8 @@ class S3Access:
                 else {},
             )
         except botocore.exceptions.ClientError as e:
-            if self.failure_logger:
-                self.failure_logger.warning(f"Filename: {filename}, Message: {message}")
-                self.failure_logger.info(f"Filename: {filename}, Error: {e}")
+            self.failure_logger.warning(f"Filename: {filename}, Message: {message}")
+            self.failure_logger.info(f"Filename: {filename}, Error: {e}")
 
     def get_log_with_name(self, name: str) -> str:
         """Récupère les logs avec un nom donné"""
@@ -88,8 +85,7 @@ class S3Access:
         name = f"{self.folder}{name}"
         file_object = BytesIO()
         if self.s3 is None:
-            if self.failure_logger:
-                self.failure_logger.warning(f"GET Filename: {name}")
+            self.failure_logger.warning(f"GET Filename: {name}")
             return name
         self.s3.download_fileobj(self.bucket_name, name, file_object)
         return file_object.getvalue().decode("utf-8")
@@ -100,8 +96,7 @@ class S3Access:
             raise InvalidS3FileNameError(prefix)
         prefix = f"{self.folder}{prefix}"
         if self.s3 is None:
-            if self.failure_logger:
-                self.failure_logger.warning(f"LIST Prefix: {prefix}")
+            self.failure_logger.warning(f"LIST Prefix: {prefix}")
             return {"Contents": []}
         objects = self.s3.list_objects_v2(Prefix=prefix, Bucket=self.bucket_name)
 
