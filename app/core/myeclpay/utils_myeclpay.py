@@ -6,13 +6,13 @@ from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.myeclpay import cruds_myeclpay, models_myeclpay, schemas_myeclpay
+from app.core.myeclpay import cruds_myeclpay
+from app.core.myeclpay.integrity_myeclpay import format_transfer_log
 from app.core.myeclpay.models_myeclpay import UserPayment
 from app.core.myeclpay.schemas_myeclpay import (
     QRCodeContentData,
 )
 from app.core.myeclpay.types_myeclpay import (
-    ActionType,
     TransferAlreadyConfirmedInCallbackError,
     TransferNotFoundByCallbackError,
     TransferTotalDontMatchInCallbackError,
@@ -119,44 +119,3 @@ async def validate_transfer_callback(
         format_transfer_log(transfer),
         transfer.creation.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
     )
-
-
-#########################################################################################
-#########################################################################################
-#### /!\ Warning /!\ /!\ Warning /!\ /!\ Warning /!\ /!\ Warning /!\ /!\ Warning /!\ ####
-####                                                                                 ####
-####     Following functions are used to format MyECLPay actions for S3 storage.     ####
-####                   Modifying them will break the verification                    ####
-####                   of MyECLPay's integrity via S3 validation.                    ####
-####                                                                                 ####
-####       Please do not modify them without understanding the consequences.         ####
-####                                                                                 ####
-#### /!\ Warning /!\ /!\ Warning /!\ /!\ Warning /!\ /!\ Warning /!\ /!\ Warning /!\ ####
-#########################################################################################
-#########################################################################################
-
-
-def format_transfer_log(
-    transfer: schemas_myeclpay.Transfer | models_myeclpay.Transfer,
-):
-    return f"{ActionType.TRANSFER.name} {transfer.id} {transfer.type.name} {transfer.total} {transfer.wallet_id}"
-
-
-def format_transaction_log(
-    transaction: schemas_myeclpay.Transaction,
-):
-    return f"{ActionType.TRANSACTION.name} {transaction.id} {transaction.debited_wallet_id} {transaction.credited_wallet_id} {transaction.total}"
-
-
-def format_refund_log(
-    refund: schemas_myeclpay.RefundBase,
-):
-    return (
-        f"{ActionType.REFUND.name} {refund.id} {refund.transaction_id} {refund.total}"
-    )
-
-
-def format_cancel_log(
-    transaction_id: UUID,
-):
-    return f"{ActionType.CANCEL.name} {transaction_id}"
