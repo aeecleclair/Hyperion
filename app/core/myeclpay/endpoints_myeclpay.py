@@ -17,6 +17,12 @@ from app.core.memberships.utils_memberships import (
     get_user_active_membership_to_association_membership,
 )
 from app.core.myeclpay import cruds_myeclpay, schemas_myeclpay
+from app.core.myeclpay.integrity_myeclpay import (
+    format_cancel_log,
+    format_refund_log,
+    format_transaction_log,
+    format_transfer_log,
+)
 from app.core.myeclpay.models_myeclpay import Store, WalletDevice
 from app.core.myeclpay.types_myeclpay import (
     HistoryType,
@@ -32,10 +38,6 @@ from app.core.myeclpay.utils_myeclpay import (
     MAX_TRANSACTION_TOTAL,
     QRCODE_EXPIRATION,
     TOS_CONTENT,
-    format_cancel_log,
-    format_refund_log,
-    format_transaction_log,
-    format_transfer_log,
     is_user_latest_tos_signed,
     validate_transfer_callback,
     verify_signature,
