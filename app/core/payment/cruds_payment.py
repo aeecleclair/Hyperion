@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.payment import models_payment
+from app.core.payment import models_payment, schemas_payment
 
 
 async def create_checkout(
@@ -21,6 +21,36 @@ async def create_checkout(
         raise
     else:
         return checkout
+
+
+async def get_checkouts(
+    module: str,
+    db: AsyncSession,
+) -> list[schemas_payment.CheckoutComplete]:
+    result = await db.execute(
+        select(models_payment.Checkout)
+        .options(selectinload(models_payment.Checkout.payments))
+        .where(
+            models_payment.Checkout.module == module,
+        ),
+    )
+    return [
+        schemas_payment.CheckoutComplete(
+            id=checkout.id,
+            module=checkout.module,
+            name=checkout.name,
+            amount=checkout.amount,
+            payments=[
+                schemas_payment.CheckoutPayment(
+                    id=payment.id,
+                    checkout_id=payment.checkout_id,
+                    paid_amount=payment.paid_amount,
+                )
+                for payment in checkout.payments
+            ],
+        )
+        for checkout in result.scalars().all()
+    ]
 
 
 async def get_checkout_by_id(

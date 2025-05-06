@@ -110,7 +110,12 @@ class Settings(BaseSettings):
     HELLOASSO_CLIENT_ID: str | None = None
     HELLOASSO_CLIENT_SECRET: str | None = None
 
+    HELLOASSO_SLUG: str | None = None
+    HELLOASSO_MYECLPAY_SLUG: str | None = None
+
     CDR_PAYMENT_REDIRECTION_URL: str | None = None
+    RAID_PAYMENT_REDIRECTION_URL: str | None = None
+    MYECLPAY_MAXIMUM_WALLET_BALANCE: int = 1000
 
     # Drive configuration for the raid registering app
     RAID_DRIVE_REFRESH_TOKEN: str | None = None
@@ -118,7 +123,9 @@ class Settings(BaseSettings):
     RAID_DRIVE_CLIENT_ID: str | None = None
     RAID_DRIVE_CLIENT_SECRET: str | None = None
 
-    RAID_PAYMENT_REDIRECTION_URL: str | None = None
+    # Trusted urls is a list of redirect payment url that can be trusted by Hyperion.
+    # These urls will be used to validate the redirect url provided by the front
+    TRUSTED_PAYMENT_REDIRECT_URLS: list[str] = []
 
     ############################
     # PostgreSQL configuration #
@@ -155,6 +162,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 14  # 14 days
     AUTHORIZATION_CODE_EXPIRE_MINUTES: int = 7
+    MYECLPAY_MANAGER_TRANSFER_TOKEN_EXPIRES_MINUTES: int = 20
 
     ###############################################
     # Authorization using OAuth or Openid connect #
@@ -186,6 +194,11 @@ class Settings(BaseSettings):
     # NOTE: AUTH_CLIENTS property should never be used in the code. To get an auth client, use `KNOWN_AUTH_CLIENTS`
     AUTH_CLIENTS: list[tuple[str, str | None, list[str], str]]
 
+    # MyECLPay requires an external service to recurrently check for transactions and state integrity, this service needs an access to all the data related to the transactions and the users involved
+    # This service will use a special token to access the data
+    # If this token is not set, the service will not be able to access the data and no integrity check will be performed
+    MYECLPAY_DATA_VERIFIER_ACCESS_TOKEN: str | None = None
+
     #################################
     # Hardcoded Hyperion parameters #
     #################################
@@ -194,6 +207,8 @@ class Settings(BaseSettings):
     # https://semver.org/
     HYPERION_VERSION: str = "4.3.3"
     MINIMAL_TITAN_VERSION_CODE: int = 139
+
+    # Maximum wallet balance for MyECLPay in cents, we will prevent user from adding more money to their wallet if it will make their balance exceed this value
 
     ######################################
     # Automatically generated parameters #
@@ -238,10 +253,6 @@ class Settings(BaseSettings):
             },
         )
         return {"keys": [jwk]}
-
-    # Tokens validity
-    USER_ACTIVATION_TOKEN_EXPIRES_HOURS: int = 24
-    PASSWORD_RESET_TOKEN_EXPIRES_HOURS: int = 12
 
     # This property parse AUTH_CLIENTS to create a dictionary of auth clients:
     # {"client_id": AuthClientClassInstance}
