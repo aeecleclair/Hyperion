@@ -205,7 +205,7 @@ class Settings(BaseSettings):
 
     # Hyperion follows Semantic Versioning
     # https://semver.org/
-    HYPERION_VERSION: str = "4.3.3"
+    HYPERION_VERSION: str = "4.4.0"
     MINIMAL_TITAN_VERSION_CODE: int = 139
 
     # Maximum wallet balance for MyECLPay in cents, we will prevent user from adding more money to their wallet if it will make their balance exceed this value
