@@ -28,7 +28,6 @@ from app.core.users import models_users
 from app.core.utils import security
 from app.core.utils.config import Settings, construct_prod_settings
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
-from app.types.s3_access import S3Access
 from app.types.scheduler import OfflineScheduler, Scheduler
 from app.types.scopes_type import ScopeType
 from app.types.websocket import WebsocketConnectionManager
@@ -43,7 +42,6 @@ from app.utils.tools import (
 # We could maybe use hyperion.security
 hyperion_access_logger = logging.getLogger("hyperion.access")
 hyperion_error_logger = logging.getLogger("hyperion.error")
-myeclpay_logger = logging.getLogger("hyperion.myeclpay")
 
 redis_client: redis.Redis | bool | None = (
     None  # Create a global variable for the redis client, so that it can be instancied in the startup event
@@ -67,8 +65,6 @@ notification_manager: NotificationManager | None = None
 drive_file_manage: DriveFileManager | None = None
 
 payment_tool: PaymentTool | None = None
-
-myeclpay_s3_logger: S3Access | None = None
 
 
 async def get_request_id(request: Request) -> str:
@@ -250,25 +246,6 @@ def get_payment_tool(
         payment_tool = PaymentTool(settings=settings)
 
     return payment_tool
-
-
-def get_myeclpay_logger(
-    settings: Settings = Depends(get_settings),
-) -> S3Access:
-    """
-    Dependency that returns the S3 access for MyECLPay.
-    """
-    global myeclpay_s3_logger
-
-    if myeclpay_s3_logger is None:
-        myeclpay_s3_logger = S3Access(
-            settings=settings,
-            failure_logger=myeclpay_logger,
-            folder="myeclpay/",
-            retention=10 * 365,  # 10 years
-        )
-
-    return myeclpay_s3_logger
 
 
 def get_token_data(
