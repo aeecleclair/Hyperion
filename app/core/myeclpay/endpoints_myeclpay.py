@@ -51,7 +51,6 @@ from app.core.utils import security
 from app.core.utils.config import Settings
 from app.dependencies import (
     get_db,
-    get_myeclpay_logger,
     get_notification_tool,
     get_payment_tool,
     get_request_id,
@@ -63,7 +62,6 @@ from app.dependencies import (
 from app.types import standard_responses
 from app.types.exceptions import MissingHelloAssoSlugError
 from app.types.module import CoreModule
-from app.types.s3_access import S3Access
 from app.utils.communication.notifications import NotificationTool
 from app.utils.mail.mailworker import send_email
 
@@ -81,6 +79,7 @@ templates = Jinja2Templates(directory="assets/templates")
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 hyperion_security_logger = logging.getLogger("hyperion.security")
+hyperion_myeclpay_logger = logging.getLogger("hyperion.myeclpay")
 
 
 @router.get(
@@ -1618,7 +1617,6 @@ async def add_transfer_by_admin(
     user: CoreUser = Depends(is_user()),
     settings: Settings = Depends(get_settings),
     notification_tool: NotificationTool = Depends(get_notification_tool),
-    myeclpay_s3_logger: S3Access = Depends(get_myeclpay_logger),
 ):
     if transfer_info.transfer_type == TransferType.HELLO_ASSO:
         raise HTTPException(
@@ -1705,10 +1703,7 @@ async def add_transfer_by_admin(
     except Exception:
         await db.rollback()
         raise
-    myeclpay_s3_logger.write_secure_log(
-        format_transfer_log(transfer),
-        creation_date.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-    )
+    hyperion_myeclpay_logger.info(format_transfer_log(transfer))
 
     message = Message(
         title="💳 Paiement - transfert",
@@ -1976,7 +1971,6 @@ async def store_scan_qrcode(
     user: CoreUser = Depends(is_user_an_ecl_member),
     request_id: str = Depends(get_request_id),
     notification_tool: NotificationTool = Depends(get_notification_tool),
-    myeclpay_s3_logger: S3Access = Depends(get_myeclpay_logger),
 ):
     """
     Scan and bank a QR code for this store.
@@ -2191,10 +2185,7 @@ async def store_scan_qrcode(
 
     await db.commit()
 
-    myeclpay_s3_logger.write_secure_log(
-        format_transaction_log(transaction),
-        creation_date.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-    )
+    hyperion_myeclpay_logger.info(format_transaction_log(transaction))
 
     message = Message(
         title=f"💳 Paiement - {store.name}",
@@ -2219,7 +2210,6 @@ async def refund_transaction(
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user_an_ecl_member),
     notification_tool: NotificationTool = Depends(get_notification_tool),
-    myeclpay_s3_logger: S3Access = Depends(get_myeclpay_logger),
 ):
     """
     Refund a transaction. Only transactions made in the last 30 days can be refunded.
@@ -2369,10 +2359,7 @@ async def refund_transaction(
 
     await db.commit()
 
-    myeclpay_s3_logger.write_secure_log(
-        format_refund_log(refund),
-        creation_date.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-    )
+    hyperion_myeclpay_logger.info(format_refund_log(refund))
 
     if wallet_previously_debited.user is not None:
         message = Message(
@@ -2411,7 +2398,6 @@ async def cancel_transaction(
     user: CoreUser = Depends(is_user_an_ecl_member),
     request_id: str = Depends(get_request_id),
     notification_tool: NotificationTool = Depends(get_notification_tool),
-    myeclpay_s3_logger: S3Access = Depends(get_myeclpay_logger),
 ):
     """
     Cancel a transaction.
@@ -2519,10 +2505,7 @@ async def cancel_transaction(
 
     await db.commit()
 
-    myeclpay_s3_logger.write_secure_log(
-        format_cancel_log(transaction_id),
-        datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-    )
+    hyperion_myeclpay_logger.info(format_cancel_log(transaction_id))
 
     if debited_wallet.user is not None:
         message = Message(
