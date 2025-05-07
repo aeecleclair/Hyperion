@@ -74,6 +74,7 @@ class LogConfig:
 
     LOG_FORMAT: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     MATRIX_LOG_FORMAT: str = "%(asctime)s - %(name)s - <code>%(levelname)s</code> - <font color ='green'>%(message)s</font>"
+    MYECLPAY_LOG_FORMAT: str = "%(message)s"  # Do not change at any cost
 
     # Logging config
     # See https://docs.python.org/3/library/logging.config.html#logging-config-dictschema
@@ -97,6 +98,9 @@ class LogConfig:
                 "matrix": {
                     "format": self.MATRIX_LOG_FORMAT,
                     "datefmt": "%d-%b-%y %H:%M:%S",
+                },
+                "myeclpay": {
+                    "format": self.MYECLPAY_LOG_FORMAT,
                 },
             },
             "handlers": {
@@ -131,6 +135,16 @@ class LogConfig:
                         settings.MATRIX_TOKEN and settings.MATRIX_LOG_AMAP_ROOM_ID
                     ),
                     "level": "INFO",
+                },
+                "myeclpay_s3": {
+                    "formatter": "myeclpay",
+                    "class": "app.utils.loggers_tools.s3_handler.S3LogHandler",
+                    "failure_logger": "hyperion.myeclpay.fallback",
+                    "s3_bucket_name": settings.S3_BUCKET_NAME,
+                    "s3_access_key_id": settings.S3_ACCESS_KEY_ID,
+                    "s3_secret_access_key": settings.S3_SECRET_ACCESS_KEY,
+                    "folder": "myeclpay/",
+                    "retention": 365 * 10,
                 },
                 # There is a handler per log file #
                 # They are based on RotatingFileHandler to logs in multiple 1024 bytes files
@@ -168,9 +182,9 @@ class LogConfig:
                     "formatter": "default",
                     "class": "logging.handlers.RotatingFileHandler",
                     "filename": "logs/myeclpay.log",
-                    "maxBytes": 1024 * 1024 * 10,  # ~ 10 MB
+                    "maxBytes": 1024 * 1024 * 40,  # ~ 40 MB
                     "backupCount": 100,
-                    "level": "INFO",
+                    "level": "DEBUG",
                 },
                 "file_amap": {
                     # file_amap should receive informations about amap operation, every operation involving a cash modification.
@@ -230,13 +244,20 @@ class LogConfig:
                     ],
                     "level": MINIMUM_LOG_LEVEL,
                 },
-                "hyperion.myeclpay": {
+                "hyperion.myeclpay.fallback": {
                     "handlers": [
                         "file_myeclpay",
                         "matrix_errors",
                         "console",
                     ],
-                    "level": MINIMUM_LOG_LEVEL,
+                    "level": "DEBUG",
+                    "propagate": False,
+                },
+                "hyperion.myeclpay": {
+                    "handlers": [
+                        "myeclpay_s3",
+                    ],
+                    "level": "DEBUG",
                 },
                 "hyperion.amap": {
                     "handlers": [

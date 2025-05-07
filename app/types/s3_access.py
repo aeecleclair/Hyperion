@@ -1,3 +1,4 @@
+import logging
 from datetime import UTC, datetime, timedelta
 from io import BytesIO
 from logging import Logger
@@ -6,7 +7,6 @@ import boto3
 import botocore
 import botocore.exceptions
 
-from app.core.utils.config import Settings
 from app.types.exceptions import (
     InvalidS3AccessError,
     InvalidS3BucketNameError,
@@ -19,30 +19,38 @@ class S3Access:
 
     def __init__(
         self,
-        settings: Settings,
-        failure_logger: Logger,
-        folder: str = "logs/",
+        failure_logger: str,
+        folder: str,
+        s3_bucket_name: str | None = None,
+        s3_access_key_id: str | None = None,
+        s3_secret_access_key: str | None = None,
         retention: int = -1,
     ) -> None:
-        self.bucket_name = settings.S3_BUCKET_NAME or "default-bucket-name"
+        self.bucket_name = s3_bucket_name or "default-bucket-name"
         self.folder = folder
         self.retention = retention
-        self.failure_logger = failure_logger
-        if settings.S3_ACCESS_KEY_ID is None or settings.S3_SECRET_ACCESS_KEY is None:
+        self.failure_logger = logging.getLogger(failure_logger)
+        if s3_access_key_id is None or s3_secret_access_key is None:
             self.failure_logger.critical(
-                "S3_ACCESS_KEY_ID or S3_SECRET_ACCESS_KEY is not set. Working with logger only.",
+                "S3_ACCESS_KEY_ID or S3_SECRET_ACCESS_KEY is not set. Working with fallback logger only.",
             )
             self.s3 = None
             return
         self.s3 = boto3.client(
             "s3",
-            aws_access_key_id=settings.S3_ACCESS_KEY_ID,
-            aws_secret_access_key=settings.S3_SECRET_ACCESS_KEY,
+            aws_access_key_id=s3_access_key_id,
+            aws_secret_access_key=s3_secret_access_key,
         )
         try:
             response = self.s3.list_buckets()
         except botocore.exceptions.ClientError as e:
             raise InvalidS3AccessError(str(e)) from e
+        except botocore.exceptions.EndpointConnectionError:
+            self.failure_logger.critical(
+                "S3 is not accessible, defaulting to fallback logger",
+            )
+            self.s3 = None
+            return
         if not any(
             bucket["Name"] == self.bucket_name for bucket in response["Buckets"]
         ):

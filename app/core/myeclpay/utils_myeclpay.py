@@ -18,10 +18,9 @@ from app.core.myeclpay.types_myeclpay import (
     TransferTotalDontMatchInCallbackError,
 )
 from app.core.payment import schemas_payment
-from app.dependencies import get_myeclpay_logger, get_settings
 
 hyperion_security_logger = logging.getLogger("hyperion.security")
-
+hyperion_myeclpay_logger = logging.getLogger("hyperion.myeclpay")
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 LATEST_TOS = 1
@@ -114,8 +113,4 @@ async def validate_transfer_callback(
     except Exception:
         await db.rollback()
         raise
-    myeclpay_s3_logger = get_myeclpay_logger(get_settings())
-    myeclpay_s3_logger.write_secure_log(
-        format_transfer_log(transfer),
-        transfer.creation.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-    )
+    hyperion_myeclpay_logger.info(format_transfer_log(transfer))
