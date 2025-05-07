@@ -36,7 +36,7 @@ class PackTicket(Base):
         primary_key=True,
         index=True,
     )
-    price: Mapped[float]
+    price: Mapped[int]
     pack_size: Mapped[int]
     raffle_id: Mapped[str] = mapped_column(
         ForeignKey("raffle.id"),
@@ -93,6 +93,6 @@ class Cash(Base):
         ForeignKey("core_user.id"),
         primary_key=True,
     )
-    balance: Mapped[float]
+    balance: Mapped[int]
 
     user: Mapped[CoreUser] = relationship("CoreUser", init=False)
