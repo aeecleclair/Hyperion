@@ -1,7 +1,6 @@
 import logging
 from datetime import UTC, datetime, timedelta
 from io import BytesIO
-from logging import Logger
 
 import boto3
 import botocore
