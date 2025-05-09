@@ -375,6 +375,8 @@ class Settings(BaseSettings):
         By calling them in this validator, we force their initialization during the instantiation of the class.
         This allow them to raise error on Hyperion startup if they are not correctly configured instead of creating an error on runtime.
         """
+        self.HYPERION_VERSION  # noqa
+        self.MINIMAL_TITAN_VERSION_CODE  # noqa
         self.KNOWN_AUTH_CLIENTS  # noqa
         self.RSA_PRIVATE_KEY  # noqa
         self.RSA_PUBLIC_KEY  # noqa
