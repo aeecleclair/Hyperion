@@ -332,10 +332,7 @@ async def get_sellers_by_user_id(
 async def update_seller(
     seller_user_id: str,
     store_id: UUID,
-    can_bank: bool,
-    can_see_history: bool,
-    can_cancel: bool,
-    can_manage_sellers: bool,
+    seller_update: schemas_myeclpay.SellerUpdate,
     db: AsyncSession,
 ) -> None:
     await db.execute(
@@ -345,10 +342,7 @@ async def update_seller(
             models_myeclpay.Seller.store_id == store_id,
         )
         .values(
-            can_bank=can_bank,
-            can_see_history=can_see_history,
-            can_cancel=can_cancel,
-            can_manage_sellers=can_manage_sellers,
+            **seller_update.model_dump(exclude_none=True),
         ),
     )
 
