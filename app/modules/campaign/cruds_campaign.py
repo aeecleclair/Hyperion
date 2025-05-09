@@ -200,8 +200,7 @@ async def get_lists(db: AsyncSession) -> Sequence[models_campaign.Lists]:
         )
         .order_by(models_campaign.Lists.type),
     )
-    lists = result.scalars().all()
-    return lists
+    return result.scalars().all()
 
 
 async def get_list_by_id(

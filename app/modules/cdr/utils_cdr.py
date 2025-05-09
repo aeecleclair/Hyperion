@@ -185,13 +185,13 @@ def construct_dataframe_from_users_purchases(
         ]
         columns.extend(
             [
-                f"{i+j}. {product.name_fr} : {variant.name_fr}"
+                f"{i + j}. {product.name_fr} : {variant.name_fr}"
                 for j, variant in enumerate(product_variants)
             ],
         )
         variant_to_column.update(
             {
-                variant.id: f"{i+j}. {product.name_fr} : {variant.name_fr}"
+                variant.id: f"{i + j}. {product.name_fr} : {variant.name_fr}"
                 for j, variant in enumerate(product_variants)
             },
         )
@@ -199,13 +199,13 @@ def construct_dataframe_from_users_purchases(
         fields = data_fields.get(product.id, [])
         columns.extend(
             [
-                f"{i+j}. {product.name_fr} : {field.name}"
+                f"{i + j}. {product.name_fr} : {field.name}"
                 for j, field in enumerate(fields)
             ],
         )
         field_to_column.update(
             {
-                field.id: f"{i+j}. {product.name_fr} : {field.name}"
+                field.id: f"{i + j}. {product.name_fr} : {field.name}"
                 for j, field in enumerate(fields)
             },
         )

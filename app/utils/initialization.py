@@ -26,8 +26,7 @@ def get_sync_db_engine(settings: Settings) -> Engine:
     else:
         SQLALCHEMY_DATABASE_URL = f"postgresql+psycopg://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}/{settings.POSTGRES_DB}"
 
-    engine = create_engine(SQLALCHEMY_DATABASE_URL, echo=settings.DATABASE_DEBUG)
-    return engine
+    return create_engine(SQLALCHEMY_DATABASE_URL, echo=settings.DATABASE_DEBUG)
 
 
 def get_all_module_group_visibility_membership_sync(

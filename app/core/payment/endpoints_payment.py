@@ -43,7 +43,7 @@ async def webhook(
         validated_content = type_adapter.validate_python(
             await request.json(),
         )
-        content = cast(NotificationResultContent, validated_content)
+        content = cast("NotificationResultContent", validated_content)
         if content.metadata:
             checkout_metadata = (
                 schemas_payment.HelloAssoCheckoutMetadata.model_validate(

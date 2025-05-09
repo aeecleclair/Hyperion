@@ -45,8 +45,7 @@ async def read_groups(
     Return all groups from database as a list of dictionaries
     """
 
-    groups = await cruds_groups.get_groups(db)
-    return groups
+    return await cruds_groups.get_groups(db)
 
 
 @router.get(

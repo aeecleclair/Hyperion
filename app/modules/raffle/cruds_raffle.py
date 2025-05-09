@@ -302,10 +302,7 @@ async def get_tickets_by_raffleid(
         .scalars()
         .all()
     )
-    filtered_results = [
-        result for result in results if result.pack_ticket.raffle_id == raffle_id
-    ]
-    return filtered_results
+    return [result for result in results if result.pack_ticket.raffle_id == raffle_id]
 
 
 async def get_ticket_by_id(

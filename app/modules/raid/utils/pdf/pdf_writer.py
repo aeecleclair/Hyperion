@@ -37,7 +37,7 @@ def maximize_image(
     max_width: float,
     max_height: float,
 ) -> Image.Image:
-    image = cast(Image.Image, Image.open(image_path))
+    image = cast("Image.Image", Image.open(image_path))
     width, height = image.size
     if width > height:
         image = image.rotate(270, expand=True)
@@ -118,7 +118,7 @@ class PDFWriter(FPDF):
 
     def clear_pdf(self):
         Path("data/raid/" + self.file_name).unlink()
-        self = PDFWriter()
+        self = PDFWriter()  # noqa: PLW0642
 
     def write_empty_participant(self):
         self.set_font("times", "B", 12)
@@ -194,8 +194,8 @@ class PDFWriter(FPDF):
             cell_fill_mode=TableCellFillMode.NONE,
             line_height=6,
             text_align="CENTER",
-            v_align=VAlign.M,  # type: ignore
-        ) as table:
+            v_align=VAlign.M,
+        ) as table:  # type: ignore[call-arg]
             for data_row in data:
                 row = table.row()
                 for datum in data_row:
@@ -220,11 +220,11 @@ class PDFWriter(FPDF):
         self.set_font("times", "", 12)
         data: list[list[str] | None] = [
             ["Allergie", security_file.allergy if security_file.allergy else "Aucune"],
-            ["Asthme", security_file.asthma and "Oui" or "Non"],
+            ["Asthme", (security_file.asthma and "Oui") or "Non"],
             (
                 [
                     "Service de réanimation",
-                    security_file.intensive_care_unit and "Oui" or "Non",
+                    (security_file.intensive_care_unit and "Oui") or "Non",
                 ]
                 if security_file.allergy
                 else None
@@ -341,8 +341,8 @@ class PDFWriter(FPDF):
             cell_fill_mode=TableCellFillMode.NONE,
             line_height=6,
             text_align="CENTER",
-            v_align=VAlign.M,  # type: ignore
-        ) as table:
+            v_align=VAlign.M,
+        ) as table:  # type: ignore[call-arg]
             for data_row in data:
                 row = table.row()
                 for datum in data_row:
@@ -358,7 +358,7 @@ class PDFWriter(FPDF):
         self.cell(
             w=0,
             h=12,
-            text=is_second and "Coéquipier" or "Capitaine",
+            text=(is_second and "Coéquipier") or "Capitaine",
             align="C",
             new_x=XPos.LMARGIN,
             new_y=YPos.NEXT,
@@ -409,9 +409,9 @@ class PDFWriter(FPDF):
             cell_fill_mode=TableCellFillMode.NONE,
             line_height=8,
             text_align=Align.J,
-            v_align=VAlign.M,  # type: ignore
+            v_align=VAlign.M,
             headings_style=headings_style,
-        ) as table:
+        ) as table:  # type: ignore[call-arg]
             row = table.row()
             row.cell(key)
             row.cell(label)
