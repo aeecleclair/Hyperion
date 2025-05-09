@@ -536,6 +536,30 @@ async def get_store_history(
             f"Store {store.id} should never have transfers",
         )
 
+    # We add refunds
+    refunds = await cruds_myeclpay.get_refunds_by_wallet_id(
+        wallet_id=store.wallet_id,
+        db=db,
+    )
+    for refund in refunds:
+        if refund.debited_wallet_id == store.wallet_id:
+            transaction_type = HistoryType.REFUND_DEBITED
+            other_wallet_info = refund.credited_wallet
+        else:
+            transaction_type = HistoryType.REFUND_CREDITED
+            other_wallet_info = refund.debited_wallet
+
+        history.append(
+            schemas_myeclpay.History(
+                id=refund.id,
+                type=transaction_type,
+                other_wallet_name=other_wallet_info.owner_name or "Unknown",
+                total=refund.total,
+                creation=refund.creation,
+                status=TransactionStatus.CONFIRMED,
+            ),
+        )
+
     return history
 
 
@@ -1553,10 +1577,10 @@ async def get_user_wallet_history(
     )
     for refund in refunds:
         if refund.debited_wallet_id == user_payment.wallet_id:
-            transaction_type = HistoryType.GIVEN
+            transaction_type = HistoryType.REFUND_DEBITED
             other_wallet_info = refund.credited_wallet
         else:
-            transaction_type = HistoryType.RECEIVED
+            transaction_type = HistoryType.REFUND_CREDITED
             other_wallet_info = refund.debited_wallet
 
         history.append(
