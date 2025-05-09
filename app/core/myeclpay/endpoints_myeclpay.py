@@ -368,10 +368,12 @@ async def confirm_structure_manager_transfer(
             await cruds_myeclpay.update_seller(
                 seller_user_id=request.user_id,
                 store_id=store.id,
-                can_bank=True,
-                can_see_history=True,
-                can_cancel=True,
-                can_manage_sellers=True,
+                seller_update=schemas_myeclpay.SellerUpdate(
+                    can_bank=True,
+                    can_see_history=True,
+                    can_cancel=True,
+                    can_manage_sellers=True,
+                ),
                 db=db,
             )
     await db.commit()
@@ -893,11 +895,7 @@ async def update_store_seller(
     await cruds_myeclpay.update_seller(
         seller_user_id=seller_user_id,
         store_id=store_id,
-        can_bank=seller_update.can_bank or seller.can_bank,
-        can_see_history=seller_update.can_see_history or seller.can_see_history,
-        can_cancel=seller_update.can_cancel or seller.can_cancel,
-        can_manage_sellers=seller_update.can_manage_sellers
-        or seller.can_manage_sellers,
+        seller_update=seller_update,
         db=db,
     )
 
