@@ -17,11 +17,6 @@ from app.types.exceptions import (
 )
 from app.utils.auth import providers
 
-with Path("pyproject.toml").open("rb") as pyproject_binary:
-    pyproject = tomllib.load(pyproject_binary)
-    HYPERION_VERSION: str = pyproject["project"]["version"]
-    MINIMAL_TITAN_VERSION_CODE: int = pyproject["project"]["minimal-titan-version-code"]
-
 
 class Settings(BaseSettings):
     """
@@ -212,9 +207,19 @@ class Settings(BaseSettings):
     # pyproject.toml parameters #
     #############################
 
-    # Version parameters
-    HYPERION_VERSION: str = HYPERION_VERSION
-    MINIMAL_TITAN_VERSION_CODE: int = MINIMAL_TITAN_VERSION_CODE
+    @computed_field  # type: ignore[misc]
+    @cached_property
+    def HYPERION_VERSION(cls) -> str:
+        with Path("pyproject.toml").open("rb") as pyproject_binary:
+            pyproject = tomllib.load(pyproject_binary)
+        return pyproject["project"]["version"]
+
+    @computed_field  # type: ignore[misc]
+    @cached_property
+    def MINIMAL_TITAN_VERSION_CODE(cls) -> str:
+        with Path("pyproject.toml").open("rb") as pyproject_binary:
+            pyproject = tomllib.load(pyproject_binary)
+        return pyproject["project"]["minimal-titan-version-code"]
 
     ######################################
     # Automatically generated parameters #
