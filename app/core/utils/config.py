@@ -1,4 +1,6 @@
+import tomllib
 from functools import cached_property
+from pathlib import Path
 from typing import Any
 
 import jwt
@@ -199,14 +201,23 @@ class Settings(BaseSettings):
     # If this token is not set, the service will not be able to access the data and no integrity check will be performed
     MYECLPAY_DATA_VERIFIER_ACCESS_TOKEN: str | None = None
 
-    #################################
-    # Hardcoded Hyperion parameters #
-    #################################
+    #############################
+    # pyproject.toml parameters #
+    #############################
 
-    # Hyperion follows Semantic Versioning
-    # https://semver.org/
-    HYPERION_VERSION: str = "4.4.0"
-    MINIMAL_TITAN_VERSION_CODE: int = 139
+    @computed_field  # type: ignore[misc]
+    @cached_property
+    def HYPERION_VERSION(cls) -> str:
+        with Path("pyproject.toml").open("rb") as pyproject_binary:
+            pyproject = tomllib.load(pyproject_binary)
+        return pyproject["project"]["version"]
+
+    @computed_field  # type: ignore[misc]
+    @cached_property
+    def MINIMAL_TITAN_VERSION_CODE(cls) -> str:
+        with Path("pyproject.toml").open("rb") as pyproject_binary:
+            pyproject = tomllib.load(pyproject_binary)
+        return pyproject["project"]["minimal-titan-version-code"]
 
     # Maximum wallet balance for MyECLPay in cents, we will prevent user from adding more money to their wallet if it will make their balance exceed this value
 
@@ -364,6 +375,8 @@ class Settings(BaseSettings):
         By calling them in this validator, we force their initialization during the instantiation of the class.
         This allow them to raise error on Hyperion startup if they are not correctly configured instead of creating an error on runtime.
         """
+        self.HYPERION_VERSION  # noqa
+        self.MINIMAL_TITAN_VERSION_CODE  # noqa
         self.KNOWN_AUTH_CLIENTS  # noqa
         self.RSA_PRIVATE_KEY  # noqa
         self.RSA_PUBLIC_KEY  # noqa
