@@ -2274,7 +2274,7 @@ async def refund_transaction(
                 status_code=400,
                 detail="Please provide an amount for the refund if it is not a complete refund",
             )
-        if refund_info.amount >= transaction.total:
+        if refund_info.amount > transaction.total:
             raise HTTPException(
                 status_code=400,
                 detail="Refund amount is greater than the transaction total",
