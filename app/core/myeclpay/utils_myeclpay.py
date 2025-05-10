@@ -7,6 +7,7 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.myeclpay import cruds_myeclpay
+from app.core.myeclpay.integrity_myeclpay import format_transfer_log
 from app.core.myeclpay.models_myeclpay import UserPayment
 from app.core.myeclpay.schemas_myeclpay import (
     QRCodeContentData,
@@ -19,7 +20,7 @@ from app.core.myeclpay.types_myeclpay import (
 from app.core.payment import schemas_payment
 
 hyperion_security_logger = logging.getLogger("hyperion.security")
-
+hyperion_myeclpay_logger = logging.getLogger("hyperion.myeclpay")
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 LATEST_TOS = 1
@@ -112,3 +113,4 @@ async def validate_transfer_callback(
     except Exception:
         await db.rollback()
         raise
+    hyperion_myeclpay_logger.info(format_transfer_log(transfer))
