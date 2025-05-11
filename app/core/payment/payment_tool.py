@@ -38,6 +38,8 @@ redirect_uri = "https://your-app.com/callback"
 
 class PaymentTool:
     hello_asso: ApiClient | None
+    paiements_api: PaiementsApi | None
+    checkout_api: CheckoutApi | None
 
     def __init__(self, settings: Settings):
         if (
@@ -55,6 +57,8 @@ class PaymentTool:
                 retries=3,
             )
             self.hello_asso = ApiClient(configuration=config)
+            self.paiements_api = PaiementsApi(api_client=self.hello_asso)
+            self.checkout_api = CheckoutApi(api_client=self.hello_asso)
         else:
             hyperion_error_logger.warning(
                 "HelloAsso API credentials are not set, payment won't be available",
@@ -102,10 +106,8 @@ class PaymentTool:
         This method use HelloAsso API. It may raise exceptions if HA checkout initialization fails.
         Exceptions can be imported from `helloasso_api_wrapper.exceptions`
         """
-        if not self.hello_asso:
+        if not self.hello_asso or not self.paiements_api or not self.checkout_api:
             raise PaymentToolCredentialsNotSetException
-
-        api_instance = CheckoutApi(api_client=self.hello_asso)
 
         # We want to ensure that any error is logged, even if modules tries to try/except this method
         # Thus we catch any exception and log it, then reraise it
@@ -141,11 +143,9 @@ class PaymentTool:
             # then try without the payer infos
             response: HelloAssoApiV5ModelsCartsInitCheckoutResponse
             try:
-                response = (
-                    api_instance.organizations_organization_slug_checkout_intents_post(
-                        helloasso_slug,
-                        init_checkout_body,
-                    )
+                response = self.checkout_api.organizations_organization_slug_checkout_intents_post(
+                    helloasso_slug,
+                    init_checkout_body,
                 )
             except Exception:
                 # We know that HelloAsso may refuse some payer infos, like using the firstname "test"
@@ -156,11 +156,9 @@ class PaymentTool:
                 )
 
                 init_checkout_body.payer = None
-                response = (
-                    api_instance.organizations_organization_slug_checkout_intents_post(
-                        helloasso_slug,
-                        init_checkout_body,
-                    )
+                response = self.checkout_api.organizations_organization_slug_checkout_intents_post(
+                    helloasso_slug,
+                    init_checkout_body,
                 )
 
             if response.id is None:
@@ -219,13 +217,11 @@ class PaymentTool:
         """
         Refund a payment
         """
-        if not self.hello_asso:
+        if not self.hello_asso or not self.paiements_api or not self.checkout_api:
             raise PaymentToolCredentialsNotSetException
 
-        api_instance = PaiementsApi(api_client=self.hello_asso)
-
         try:
-            api_instance.payments_payment_id_refund_post(
+            self.paiements_api.payments_payment_id_refund_post(
                 payment_id=hello_asso_payment_id,
                 send_refund_mail=True,
                 amount=amount,
