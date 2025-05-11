@@ -443,17 +443,17 @@ async def test_payment_tool_init_checkout(
     settings.HELLOASSO_CLIENT_ID = "clientid"
     settings.HELLOASSO_CLIENT_SECRET = "secret"
 
-    # We mock the whole HelloAssoAPIWrapper to avoid making real API calls
+    # We mock the whole CheckoutAPI to avoid making real API calls
     # and prevent the class initialization from failing to authenticate
     mocker.patch(
-        "app.core.payment.payment_tool.HelloAssoAPIWrapper",
+        "app.core.payment.payment_tool.CheckoutApi",
     )
 
     redirect_url = "https://example.com"
 
     payment_tool = PaymentTool(settings=settings)
 
-    # We mock the HelloAssoAPIWrapper `init_a_checkout` method to return a mocked response
+    # We mock the init checkout method to return a mocked response
     mocker.patch.object(
         payment_tool.checkout_api,
         "init_a_corganizations_organization_slug_checkout_intents_postheckout",
@@ -499,7 +499,7 @@ async def test_payment_tool_init_checkout_with_one_failure(
     # We mock the whole HelloAssoAPIWrapper to avoid making real API calls
     # and prevent the class initialization from failing to authenticate
     mocker.patch(
-        "app.core.payment.payment_tool.HelloAssoAPIWrapper",
+        "app.core.payment.payment_tool.CheckoutApi",
     )
 
     redirect_url = "https://example.com"
@@ -521,7 +521,7 @@ async def test_payment_tool_init_checkout_with_one_failure(
             redirect_url=redirect_url,
         )
 
-    # We mock the HelloAssoAPIWrapper `init_a_checkout` method to return a mocked response
+    # We mock the init checkout method to return a mocked response
     mocker.patch.object(
         payment_tool.checkout_api,
         "init_a_corganizations_organization_slug_checkout_intents_postheckout",
@@ -566,11 +566,11 @@ async def test_payment_tool_init_checkout_fail(
     # We mock the whole HelloAssoAPIWrapper to avoid making real API calls
     # and prevent the class initialization from failing to authenticate
     mocker.patch(
-        "app.core.payment.payment_tool.HelloAssoAPIWrapper",
+        "app.core.payment.payment_tool.CheckoutApi",
     )
     payment_tool = PaymentTool(settings=settings)
 
-    # We mock the HelloAssoAPIWrapper `init_a_checkout` to raise an error
+    # We mock the init checkout method to raise an error
     mocker.patch.object(
         payment_tool.checkout_api,
         "init_a_corganizations_organization_slug_checkout_intents_postheckout",
