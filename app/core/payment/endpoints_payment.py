@@ -3,15 +3,15 @@ import uuid
 from typing import cast
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from helloasso_api_wrapper.models.api_notifications import (
-    ApiNotificationType,
-    NotificationResultContent,
-)
 from pydantic import TypeAdapter, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.core_module_list import core_module_list
 from app.core.payment import cruds_payment, models_payment, schemas_payment
+from app.core.payment.types_payment import (
+    ApiNotificationType,
+    NotificationResultContent,
+)
 from app.dependencies import get_db
 from app.modules.module_list import module_list
 from app.types.module import CoreModule

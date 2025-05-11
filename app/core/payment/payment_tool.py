@@ -1,12 +1,17 @@
 import logging
 import uuid
+from typing import TYPE_CHECKING
 
-from helloasso_api_wrapper import HelloAssoAPIWrapper
-from helloasso_api_wrapper.exceptions import ApiV5BadRequest
-from helloasso_api_wrapper.models.carts import (
-    CheckoutPayer,
-    InitCheckoutBody,
-    InitCheckoutResponse,
+from authlib.integrations.requests_client import OAuth2Session
+from helloasso_python.api.checkout_api import CheckoutApi
+from helloasso_python.api.paiements_api import PaiementsApi
+from helloasso_python.api_client import ApiClient
+from helloasso_python.configuration import Configuration
+from helloasso_python.models.hello_asso_api_v5_models_carts_checkout_payer import (
+    HelloAssoApiV5ModelsCartsCheckoutPayer,
+)
+from helloasso_python.models.hello_asso_api_v5_models_carts_init_checkout_body import (
+    HelloAssoApiV5ModelsCartsInitCheckoutBody,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,13 +19,25 @@ from app.core.payment import cruds_payment, models_payment, schemas_payment
 from app.core.users import schemas_users
 from app.core.utils import security
 from app.core.utils.config import Settings
-from app.types.exceptions import PaymentToolCredentialsNotSetException
+from app.types.exceptions import (
+    MissingHelloAssoCheckoutIdError,
+    PaymentToolCredentialsNotSetException,
+)
+
+if TYPE_CHECKING:
+    from helloasso_python.models.hello_asso_api_v5_models_carts_init_checkout_response import (
+        HelloAssoApiV5ModelsCartsInitCheckoutResponse,
+    )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
+authorize_url = "https://auth.helloasso.com/authorize"
+token_url = "https://api.helloasso.com/oauth2/token"  # noqa: S105
+redirect_uri = "https://your-app.com/callback"
+
 
 class PaymentTool:
-    hello_asso: HelloAssoAPIWrapper | None
+    hello_asso: ApiClient | None
 
     def __init__(self, settings: Settings):
         if (
@@ -28,17 +45,24 @@ class PaymentTool:
             and settings.HELLOASSO_CLIENT_ID
             and settings.HELLOASSO_CLIENT_SECRET
         ):
-            self.hello_asso = HelloAssoAPIWrapper(
-                api_base=settings.HELLOASSO_API_BASE,
-                client_id=settings.HELLOASSO_CLIENT_ID,
-                client_secret=settings.HELLOASSO_CLIENT_SECRET,
-                timeout=60,
+            self.auth_client = OAuth2Session(
+                settings.HELLOASSO_CLIENT_ID,
+                settings.HELLOASSO_CLIENT_SECRET,
             )
+            config = Configuration(
+                host=settings.HELLOASSO_API_BASE,
+                access_token=self.get_access_token()["access_token"],
+                retries=3,
+            )
+            self.hello_asso = ApiClient(configuration=config)
         else:
             hyperion_error_logger.warning(
                 "HelloAsso API credentials are not set, payment won't be available",
             )
             self.hello_asso = None
+
+    def get_access_token(self):
+        return self.auth_client.fetch_token(token_url, grant_type="client_credentials")
 
     def is_payment_available(self) -> bool:
         """
@@ -81,12 +105,14 @@ class PaymentTool:
         if not self.hello_asso:
             raise PaymentToolCredentialsNotSetException
 
+        api_instance = CheckoutApi(api_client=self.hello_asso)
+
         # We want to ensure that any error is logged, even if modules tries to try/except this method
         # Thus we catch any exception and log it, then reraise it
         try:
-            payer: CheckoutPayer | None = None
+            payer: HelloAssoApiV5ModelsCartsCheckoutPayer | None = None
             if payer_user:
-                payer = CheckoutPayer(
+                payer = HelloAssoApiV5ModelsCartsCheckoutPayer(
                     firstName=payer_user.firstname,
                     lastName=payer_user.name,
                     email=payer_user.email,
@@ -96,14 +122,14 @@ class PaymentTool:
             checkout_model_id = uuid.uuid4()
             secret = security.generate_token(nbytes=12)
 
-            init_checkout_body = InitCheckoutBody(
-                totalAmount=checkout_amount,
-                initialAmount=checkout_amount,
-                itemName=checkout_name,
-                backUrl=redirection_uri,
-                errorUrl=redirection_uri,
-                returnUrl=redirection_uri,
-                containsDonation=False,
+            init_checkout_body = HelloAssoApiV5ModelsCartsInitCheckoutBody(
+                total_amount=checkout_amount,
+                initial_amount=checkout_amount,
+                item_name=checkout_name,
+                back_url=redirection_uri,
+                error_url=redirection_uri,
+                return_url=redirection_uri,
+                contains_donation=False,
                 payer=payer,
                 metadata=schemas_payment.HelloAssoCheckoutMetadata(
                     secret=secret,
@@ -113,13 +139,15 @@ class PaymentTool:
 
             # TODO: if payment fail, we can retry
             # then try without the payer infos
-            response: InitCheckoutResponse
+            response: HelloAssoApiV5ModelsCartsInitCheckoutResponse
             try:
-                response = self.hello_asso.checkout_intents_management.init_a_checkout(
-                    helloasso_slug,
-                    init_checkout_body,
+                response = (
+                    api_instance.organizations_organization_slug_checkout_intents_post(
+                        helloasso_slug,
+                        init_checkout_body,
+                    )
                 )
-            except ApiV5BadRequest:
+            except Exception:
                 # We know that HelloAsso may refuse some payer infos, like using the firstname "test"
                 # Even when prefilling the payer infos,the user will be able to edit them on the payment page,
                 # so we can safely retry without the payer infos
@@ -128,10 +156,18 @@ class PaymentTool:
                 )
 
                 init_checkout_body.payer = None
-                response = self.hello_asso.checkout_intents_management.init_a_checkout(
-                    helloasso_slug,
-                    init_checkout_body,
+                response = (
+                    api_instance.organizations_organization_slug_checkout_intents_post(
+                        helloasso_slug,
+                        init_checkout_body,
+                    )
                 )
+
+            if response.id is None:
+                hyperion_error_logger.error(
+                    f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name}. No checkout id returned",
+                )
+                raise MissingHelloAssoCheckoutIdError()  # noqa: TRY301
 
             checkout_model = models_payment.Checkout(
                 id=checkout_model_id,
@@ -146,7 +182,7 @@ class PaymentTool:
 
             return schemas_payment.Checkout(
                 id=checkout_model_id,
-                payment_url=response.redirectUrl,
+                payment_url=response.redirect_url,
             )
         except Exception:
             hyperion_error_logger.exception(
@@ -172,3 +208,30 @@ class PaymentTool:
             for payment in checkout_dict["payments"]
         ]
         return schemas_payment.CheckoutComplete(**checkout_dict)
+
+    async def refund_payment(
+        self,
+        checkout_id: uuid.UUID,
+        hello_asso_payment_id: int,
+        amount: int,
+        db: AsyncSession,
+    ) -> None:
+        """
+        Refund a payment
+        """
+        if not self.hello_asso:
+            raise PaymentToolCredentialsNotSetException
+
+        api_instance = PaiementsApi(api_client=self.hello_asso)
+
+        try:
+            api_instance.payments_payment_id_refund_post(
+                payment_id=hello_asso_payment_id,
+                send_refund_mail=True,
+                amount=amount,
+            )
+        except Exception:
+            hyperion_error_logger.exception(
+                f"Payment: failed to refund payment {hello_asso_payment_id} for checkout {checkout_id}",
+            )
+            raise
