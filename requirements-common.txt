@@ -2,6 +2,7 @@ aiofiles==24.1.0                    # Asynchronous file manipulation
 alembic==1.13.2                     # database migrations
 arq==0.26.1                         # Scheduler 
 asyncpg==0.29.0                     # PostgreSQL adapter for asynchronous operations
+authlib==1.5.2
 bcrypt==4.1.3                       # password hashing
 broadcaster==0.3.1                  # Working with websockets with multiple workers.
 calypsso==1.3.0
@@ -9,7 +10,7 @@ fastapi[standard]==0.115.6
 firebase-admin==6.5.0               # Firebase is used for push notification
 fpdf2==2.7.8
 google-auth-oauthlib==1.2.1
-HelloAssoAPIWrapper==1.0.0
+helloasso-python==1.0.5
 icalendar==5.0.13
 jellyfish==1.0.4                    # String Matching
 Jinja2==3.1.6                       # template engine for html files

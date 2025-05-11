@@ -138,3 +138,10 @@ class MissingHelloAssoSlugError(Exception):
         super().__init__(
             f"HelloAsso slug {slug_type} is missing in dotenv",
         )
+
+
+class MissingHelloAssoCheckoutIdError(Exception):
+    def __init__(self):
+        super().__init__(
+            "HelloAsso checkout id is missing in response",
+        )
