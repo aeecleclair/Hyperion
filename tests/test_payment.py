@@ -4,10 +4,11 @@ from typing import TYPE_CHECKING
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
-from helloasso_api_wrapper.exceptions import ApiV5BadRequest
-from helloasso_api_wrapper.models.carts import (
-    InitCheckoutBody,
-    InitCheckoutResponse,
+from helloasso_python.models.hello_asso_api_v5_models_carts_init_checkout_body import (
+    HelloAssoApiV5ModelsCartsInitCheckoutBody,
+)
+from helloasso_python.models.hello_asso_api_v5_models_carts_init_checkout_response import (
+    HelloAssoApiV5ModelsCartsInitCheckoutResponse,
 )
 from pytest_mock import MockerFixture
 from requests import Response
@@ -454,9 +455,12 @@ async def test_payment_tool_init_checkout(
 
     # We mock the HelloAssoAPIWrapper `init_a_checkout` method to return a mocked response
     mocker.patch.object(
-        payment_tool.hello_asso.checkout_intents_management,  # type: ignore # we know that payment_tool.hello_asso is not null as we patched settings to enable payment
-        "init_a_checkout",
-        return_value=InitCheckoutResponse(id=7, redirectUrl=redirect_url),
+        payment_tool.checkout_api,
+        "init_a_corganizations_organization_slug_checkout_intents_postheckout",
+        return_value=HelloAssoApiV5ModelsCartsInitCheckoutResponse(
+            id=7,
+            redirect_url=redirect_url,
+        ),
     )
 
     async with TestingSessionLocal() as db:
@@ -506,18 +510,21 @@ async def test_payment_tool_init_checkout_with_one_failure(
     # init_checkout is called with a payer, and return a mocked response the second time
     def init_a_checkout_side_effect(
         helloasso_slug: str,
-        init_checkout_body: InitCheckoutBody,
+        init_checkout_body: HelloAssoApiV5ModelsCartsInitCheckoutBody,
     ):
         if init_checkout_body.payer is not None:
             r = Response()
             r.status_code = 400
-            raise ApiV5BadRequest(r)
-        return InitCheckoutResponse(id=7, redirectUrl=redirect_url)
+            raise Exception  # noqa: TRY002
+        return HelloAssoApiV5ModelsCartsInitCheckoutResponse(
+            id=7,
+            redirect_url=redirect_url,
+        )
 
     # We mock the HelloAssoAPIWrapper `init_a_checkout` method to return a mocked response
     mocker.patch.object(
-        payment_tool.hello_asso.checkout_intents_management,  # type: ignore # we know that payment_tool.hello_asso is not null as we patched settings to enable payment
-        "init_a_checkout",
+        payment_tool.checkout_api,
+        "init_a_corganizations_organization_slug_checkout_intents_postheckout",
         side_effect=init_a_checkout_side_effect,
     )
 
@@ -565,8 +572,8 @@ async def test_payment_tool_init_checkout_fail(
 
     # We mock the HelloAssoAPIWrapper `init_a_checkout` to raise an error
     mocker.patch.object(
-        payment_tool.hello_asso.checkout_intents_management,  # type: ignore # we know that payment_tool.hello_asso is not null as we patched settings to enable payment
-        "init_a_checkout",
+        payment_tool.checkout_api,
+        "init_a_corganizations_organization_slug_checkout_intents_postheckout",
         side_effect=ValueError("Mocked Exception"),
     )
 
