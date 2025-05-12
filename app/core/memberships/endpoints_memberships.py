@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import GroupType
 from app.core.memberships import cruds_memberships, schemas_memberships
-from app.core.memberships.utils_memberships import validate_user_membership
+from app.core.memberships.utils_memberships import validate_user_new_membership
 from app.core.users import cruds_users, models_users, schemas_users
 from app.dependencies import (
     get_db,
@@ -321,7 +321,7 @@ async def create_user_membership(
         start_date=user_membership.start_date,
         end_date=user_membership.end_date,
     )
-    await validate_user_membership(db_user_membership, db)
+    await validate_user_new_membership(db_user_membership, db)
 
     cruds_memberships.create_user_membership(db=db, user_membership=db_user_membership)
     try:
@@ -440,7 +440,7 @@ async def update_user_membership(
         end_date=user_membership.end_date or db_user_membership.end_date,
     )
 
-    await validate_user_membership(new_membership, db)
+    await validate_user_new_membership(new_membership, db)
 
     await cruds_memberships.update_user_membership(
         db=db,

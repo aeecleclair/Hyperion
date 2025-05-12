@@ -12,7 +12,7 @@ from app.core.groups.groups_type import (
 from app.core.users import models_users
 from app.types.floors_type import FloorsType
 from app.types.scopes_type import ScopeType
-from app.utils.tools import get_display_name, is_user_member_of_any_group
+from app.utils.tools import is_user_member_of_any_group
 
 
 class BaseAuthClient:
@@ -142,11 +142,7 @@ class NextcloudAuthClient(BaseAuthClient):
 
         return {
             "sub": user.id,
-            "name": get_display_name(
-                firstname=user.firstname,
-                name=user.name,
-                nickname=user.nickname,
-            ),
+            "name": user.full_name,
             # TODO: should we use group ids instead of names? It would be less human readable but would guarantee uniqueness. Question: are group names unique?
             # We may want to filter which groups are provided as they won't always all be useful
             "groups": [group.name for group in user.groups] + [user.account_type.value],
@@ -178,11 +174,7 @@ class PiwigoAuthClient(BaseAuthClient):
         # A modified Piwigo oidc plugin allows managing groups from the oidc provider
         return {
             "sub": user.id,
-            "name": get_display_name(
-                firstname=user.firstname,
-                name=user.name,
-                nickname=user.nickname,
-            ),
+            "name": user.full_name,
             "groups": [group.name for group in user.groups] + [user.account_type.value],
             "email": user.email,
         }
@@ -217,11 +209,7 @@ class WikijsAuthClient(BaseAuthClient):
     def get_userinfo(cls, user: models_users.CoreUser):
         return {
             "sub": user.id,
-            "name": get_display_name(
-                firstname=user.firstname,
-                name=user.name,
-                nickname=user.nickname,
-            ),
+            "name": user.full_name,
             "email": user.email,
             "groups": [group.name for group in user.groups] + [user.account_type.value],
         }
@@ -254,11 +242,7 @@ class SynapseAuthClient(BaseAuthClient):
             # "picture": f"https://hyperion.myecl.fr/users/{user.id}/profile-picture",
             # Matrix does not support special characters in username
             "username": username,
-            "displayname": get_display_name(
-                firstname=user.firstname,
-                name=user.name,
-                nickname=user.nickname,
-            ),
+            "displayname": user.full_name,
             "email": user.email,
         }
 
@@ -306,11 +290,7 @@ class OpenProjectAuthClient(BaseAuthClient):
     def get_userinfo(cls, user: models_users.CoreUser):
         return {
             "sub": user.id,
-            "name": get_display_name(
-                firstname=user.firstname,
-                name=user.name,
-                nickname=user.nickname,
-            ),
+            "name": user.full_name,
             "given_name": user.firstname,
             "family_name": user.name,
             "picture": f"https://hyperion.myecl.fr/users/{user.id}/profile-picture",
@@ -332,11 +312,7 @@ class RalllyAuthClient(BaseAuthClient):
     def get_userinfo(cls, user: models_users.CoreUser):
         return {
             "sub": user.id,
-            "name": get_display_name(
-                firstname=user.firstname,
-                name=user.name,
-                nickname=user.nickname,
-            ),
+            "name": user.full_name,
             "email": user.email,
         }
 
@@ -358,11 +334,7 @@ class DocumensoAuthClient(BaseAuthClient):
     def get_userinfo(cls, user: models_users.CoreUser):
         return {
             "sub": user.id,
-            "name": get_display_name(
-                firstname=user.firstname,
-                name=user.name,
-                nickname=user.nickname,
-            ),
+            "name": user.full_name,
             "email": user.email,
         }
 
@@ -423,11 +395,7 @@ class PlankaAuthClient(BaseAuthClient):
     def get_userinfo(cls, user: models_users.CoreUser):
         return {
             "sub": user.id,
-            "name": get_display_name(
-                firstname=user.firstname,
-                name=user.name,
-                nickname=user.nickname,
-            ),
+            "name": user.full_name,
             "groups": [group.name for group in user.groups] + [user.account_type.value],
             "email": user.email,
         }
@@ -447,10 +415,6 @@ class SlashAuthClient(BaseAuthClient):
         # WARNING: The sub (subject) Claim MUST always be returned in the UserInfo Response.
         return {
             "sub": user.id,
-            "name": get_display_name(
-                firstname=user.firstname,
-                name=user.name,
-                nickname=user.nickname,
-            ),
+            "name": user.full_name,
             "email": user.email,
         }

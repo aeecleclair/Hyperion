@@ -1,0 +1,27 @@
+{% extends "base_mail.html" %}
+
+{% block title %}MyECL - activate your device{% endblock %}
+
+{% block french_message %}
+<h1>Confirmation de votre nouvel accès à MyECLPay</h1>
+<p>
+    Pour confirmer votre nouvel accès à MyECLPay, vous pouvez utiliser ce
+    <a href="{{ activation_link }}">lien unique</a>.
+
+    <br><br>
+
+    Si vous n'avez pas demandé cet accès, changez immédiatement votre mot de passe, votre compte a pu être compromis.
+</p>
+{% endblock %}
+
+{% block english_message %}
+<h1>Confirm your new MyECLPay access</h1>
+<p>
+    To confirm your new access to MyECLPay, you can use this
+    <a href="{{ activation_link }}">unique link</a>.
+
+    <br><br>
+
+    If you did not request this access, change your password immediately, your account may have been compromised.
+</p>
+{% endblock %}

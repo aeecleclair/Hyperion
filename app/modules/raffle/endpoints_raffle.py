@@ -24,7 +24,6 @@ from app.types.content_type import ContentType
 from app.types.module import Module
 from app.utils.redis import locker_get, locker_set
 from app.utils.tools import (
-    get_display_name,
     get_file_from_data,
     is_user_member_of_any_group,
     save_file_as_data,
@@ -499,13 +498,9 @@ async def buy_ticket(
             amount=new_amount,
         )
 
-        display_name = get_display_name(
-            firstname=user.firstname,
-            name=user.name,
-            nickname=user.nickname,
-        )
+        display_name = user.full_name
         hyperion_raffle_logger.info(
-            f"Add_ticket_to_user: A pack of {pack_ticket.pack_size} tickets of type {pack_id} has been buyed by user {display_name}({user.id}) for an amount of {pack_ticket.price}€. ({request_id})",
+            f"Add_ticket_to_user: A pack of {pack_ticket.pack_size} tickets of type {pack_id} has been bought by user {display_name}({user.id}) for an amount of {pack_ticket.price}€. ({request_id})",
         )
 
         return tickets

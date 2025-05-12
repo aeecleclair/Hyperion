@@ -4,7 +4,7 @@ arq==0.26.1                         # Scheduler
 asyncpg==0.29.0                     # PostgreSQL adapter for asynchronous operations
 bcrypt==4.1.3                       # password hashing
 broadcaster==0.3.1                  # Working with websockets with multiple workers.
-calypsso==1.2.0
+calypsso==1.3.0
 fastapi[standard]==0.115.6
 firebase-admin==6.5.0               # Firebase is used for push notification
 fpdf2==2.7.8
@@ -12,7 +12,7 @@ google-auth-oauthlib==1.2.1
 HelloAssoAPIWrapper==1.0.0
 icalendar==5.0.13
 jellyfish==1.0.4                    # String Matching
-Jinja2==3.1.5                       # template engine for html files
+Jinja2==3.1.6                       # template engine for html files
 pandas==2.2.2
 phonenumbers==8.13.43               # Used for phone number validation
 pydantic-settings==2.3.4
