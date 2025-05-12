@@ -87,11 +87,9 @@ async def get_structures(
     """
     Get all structures.
     """
-    structures = await cruds_myeclpay.get_structures(
+    return await cruds_myeclpay.get_structures(
         db=db,
     )
-
-    return structures
 
 
 @router.post(
@@ -817,12 +815,10 @@ async def get_store_sellers(
             detail="User does not have the permission to manage sellers",
         )
 
-    sellers = await cruds_myeclpay.get_sellers_by_store_id(
+    return await cruds_myeclpay.get_sellers_by_store_id(
         store_id=store_id,
         db=db,
     )
-
-    return sellers
 
 
 @router.patch(
@@ -1159,12 +1155,10 @@ async def get_user_devices(
             detail="User is not registered for MyECL Pay",
         )
 
-    wallet_devices = await cruds_myeclpay.get_wallet_devices_by_wallet_id(
+    return await cruds_myeclpay.get_wallet_devices_by_wallet_id(
         wallet_id=user_payment.wallet_id,
         db=db,
     )
-
-    return wallet_devices
 
 
 @router.get(
@@ -1677,7 +1671,7 @@ async def add_transfer_by_admin(
 
     message = Message(
         title="💳 Paiement - transfert",
-        content=f"Votre compte a été crédité de {transfer_info.amount/100} €",
+        content=f"Votre compte a été crédité de {transfer_info.amount / 100} €",
         action_module="MyECLPay",
     )
     await notification_tool.send_notification_to_user(
@@ -2155,7 +2149,7 @@ async def store_scan_qrcode(
 
     message = Message(
         title=f"💳 Paiement - {store.name}",
-        content=f"Une transaction de {scan_info.tot/100} € a été effectuée",
+        content=f"Une transaction de {scan_info.tot / 100} € a été effectuée",
         action_module="MyECLPay",
     )
     await notification_tool.send_notification_to_user(
@@ -2334,7 +2328,7 @@ async def refund_transaction(
     if wallet_previously_debited.user is not None:
         message = Message(
             title="💳 Remboursement",
-            content=f"La transaction pour {wallet_previously_credited_name} ({transaction.total/100} €) a été remboursée de {refund_amount/100} €",
+            content=f"La transaction pour {wallet_previously_credited_name} ({transaction.total / 100} €) a été remboursée de {refund_amount / 100} €",
             action_module="MyECLPay",
         )
         await notification_tool.send_notification_to_user(
@@ -2349,7 +2343,7 @@ async def refund_transaction(
             wallet_previously_debited_name = wallet_previously_debited.store.name
         message = Message(
             title="💳 Remboursement",
-            content=f"Vous avez remboursé la transaction de {wallet_previously_debited_name} ({transaction.total/100} €) de {refund_amount/100} €",
+            content=f"Vous avez remboursé la transaction de {wallet_previously_debited_name} ({transaction.total / 100} €) de {refund_amount / 100} €",
             action_module="MyECLPay",
         )
         await notification_tool.send_notification_to_user(
@@ -2478,7 +2472,7 @@ async def cancel_transaction(
     if debited_wallet.user is not None:
         message = Message(
             title="💳 Paiement annulé",
-            content=f"La transaction de {transaction.total/100} € a été annulée",
+            content=f"La transaction de {transaction.total / 100} € a été annulée",
             action_module="MyECLPay",
         )
         await notification_tool.send_notification_to_user(
