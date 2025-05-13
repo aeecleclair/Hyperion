@@ -101,7 +101,8 @@ class S3Access:
 
     def list_object(self, prefix: str):
         """Liste les objets S3 avec un préfixe donné"""
-        if prefix.find("/") != -1:
+        # If there is a "/" in the filename the s3 while consider it as a folder
+        if "/" in prefix:
             raise InvalidS3FileNameError(prefix)
         prefix = f"{self.folder}{prefix}"
         if self.s3 is None:
