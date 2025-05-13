@@ -15,5 +15,4 @@ types-Authlib==1.5.0.20250416
 types-fpdf2==2.7.9.20240519
 types-redis==4.6.0.20240425
 types-requests==2.32.0.20240622
-types-requests-oauthlib==2.0.0.20250306
 google-auth-stubs==0.3.0
