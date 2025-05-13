@@ -23,6 +23,8 @@ class HistoryType(str, Enum):
     TRANSFER = "transfer"
     RECEIVED = "received"
     GIVEN = "given"
+    REFUND_CREDITED = "refund_credited"
+    REFUND_DEBITED = "refund_debited"
 
 
 class TransactionStatus(str, Enum):
