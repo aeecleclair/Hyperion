@@ -57,7 +57,8 @@ class S3Access:
 
     def write_secure_log(self, message: str, filename: str):
         """Écrit un log dans un objet S3 immuable"""
-        if filename.find("/") != -1:
+        # If there is a "/" in the filename the s3 while consider it as a folder
+        if "/" in filename:
             raise InvalidS3FileNameError(filename)
         filename = f"{self.folder}{filename}"
 
