@@ -88,7 +88,8 @@ class S3Access:
 
     def get_log_with_name(self, name: str) -> str:
         """Récupère les logs avec un nom donné"""
-        if name.find("/") != -1:
+        # If there is a "/" in the filename the s3 while consider it as a folder
+        if "/" in name:
             raise InvalidS3FileNameError(name)
         name = f"{self.folder}{name}"
         file_object = BytesIO()
