@@ -3,7 +3,6 @@ import smtplib
 import ssl
 from email.message import EmailMessage
 from typing import TYPE_CHECKING
-from uuid import UUID
 
 if TYPE_CHECKING:
     from app.core.utils.config import Settings
@@ -16,11 +15,6 @@ def send_email(
     subject: str,
     content: str,
     settings: "Settings",
-    file_directory: str | None = None,
-    file_uuid: UUID | None = None,
-    file_name: str | None = None,
-    main_type: str | None = None,
-    sub_type: str | None = None,
 ):
     """
     Send a html email using **starttls**.

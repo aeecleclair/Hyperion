@@ -16,9 +16,9 @@ def date_to_string(date: date) -> str:
 def get_difficulty_label(difficulty: Difficulty | None) -> str:
     if difficulty == Difficulty.discovery:
         return "Découverte"
-    elif difficulty == Difficulty.sports:
+    if difficulty == Difficulty.sports:
         return "Sportif"
-    elif difficulty == Difficulty.expert:
+    if difficulty == Difficulty.expert:
         return "Expert"
     return "Non défini"
 
@@ -55,9 +55,9 @@ def get_situation_label(situation: str | None) -> str:
 def get_document_label(document_type: DocumentType) -> str:
     if document_type == DocumentType.idCard:
         return "Carte d'identité"
-    elif document_type == DocumentType.medicalCertificate:
+    if document_type == DocumentType.medicalCertificate:
         return "Certificat médical"
-    elif document_type == DocumentType.studentCard:
+    if document_type == DocumentType.studentCard:
         return "Carte étudiante"
     return "Règlement du raid"
 
@@ -65,8 +65,8 @@ def get_document_label(document_type: DocumentType) -> str:
 def get_document_validation_label(validation_label: DocumentValidation) -> str:
     if validation_label == DocumentValidation.accepted:
         return "Validé"
-    elif validation_label == DocumentValidation.pending:
+    if validation_label == DocumentValidation.pending:
         return "En attente"
-    elif validation_label == DocumentValidation.refused:
+    if validation_label == DocumentValidation.refused:
         return "Refusé"
     return "Validation temporaire"

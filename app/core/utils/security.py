@@ -113,12 +113,11 @@ def create_access_token(
     iat = datetime.now(UTC)
     expire_on = datetime.now(UTC) + expires_delta
     to_encode.update({"exp": expire_on, "iat": iat})
-    encoded_jwt = jwt.encode(
+    return jwt.encode(
         to_encode,
         settings.ACCESS_TOKEN_SECRET_KEY,
         algorithm=jwt_algorithm,
     )
-    return encoded_jwt
 
 
 def create_access_token_RS256(
@@ -143,7 +142,7 @@ def create_access_token_RS256(
     expire_on = datetime.now(UTC) + expires_delta
     to_encode.update({"exp": expire_on, "iat": iat})
 
-    encoded_jwt = jwt.encode(
+    return jwt.encode(
         to_encode,
         settings.RSA_PRIVATE_KEY,
         algorithm=jws_algorithm,
@@ -151,4 +150,3 @@ def create_access_token_RS256(
             "kid": "RSA-JWK-1",
         },  # The kid allows to identify the key to use to decode the JWT, and should be the same as the kid in the JWK Set.
     )
-    return encoded_jwt

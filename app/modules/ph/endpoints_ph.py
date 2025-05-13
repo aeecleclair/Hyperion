@@ -72,11 +72,10 @@ async def get_papers(
     """
     Return all editions until now, sorted from the latest to the oldest
     """
-    result = await cruds_ph.get_papers(
+    return await cruds_ph.get_papers(
         db=db,
         end_date=datetime.now(tz=UTC).date(),
     )  # Return papers from the latest to the oldest until now
-    return result
 
 
 @module.router.get(
@@ -91,10 +90,9 @@ async def get_papers_admin(
     """
     Return all editions, sorted from the latest to the oldest
     """
-    result = await cruds_ph.get_papers(
+    return await cruds_ph.get_papers(
         db=db,
     )  # Return all papers from the latest to the oldest
-    return result
 
 
 @module.router.post(

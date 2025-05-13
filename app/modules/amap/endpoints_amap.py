@@ -50,8 +50,7 @@ async def get_products(
 
     **The user must be a member of the group AMAP to use this endpoint**
     """
-    products = await cruds_amap.get_products(db)
-    return products
+    return await cruds_amap.get_products(db)
 
 
 @module.router.post(
@@ -71,8 +70,7 @@ async def create_product(
     """
     db_product = models_amap.Product(id=str(uuid.uuid4()), **product.__dict__)
 
-    result = await cruds_amap.create_product(product=db_product, db=db)
-    return result
+    return await cruds_amap.create_product(product=db_product, db=db)
 
 
 @module.router.get(
@@ -196,8 +194,7 @@ async def create_delivery(
             detail="There is already a delivery planned that day.",
         )
 
-    result = await cruds_amap.create_delivery(delivery=db_delivery, db=db)
-    return result
+    return await cruds_amap.create_delivery(delivery=db_delivery, db=db)
 
 
 @module.router.delete(
@@ -805,8 +802,7 @@ async def get_users_cash(
 
     **The user must be a member of the group AMAP to use this endpoint**
     """
-    cash = await cruds_amap.get_users_cash(db)
-    return cash
+    return await cruds_amap.get_users_cash(db)
 
 
 @module.router.get(

@@ -454,7 +454,7 @@ async def test_payment_tool_init_checkout(
 
     # We mock the HelloAssoAPIWrapper `init_a_checkout` method to return a mocked response
     mocker.patch.object(
-        payment_tool.hello_asso.checkout_intents_management,  # type: ignore # we know that payment_tool.hello_asso is not null as we patched settings to enable payment
+        payment_tool.hello_asso.checkout_intents_management,  # type: ignore[union-attr] # we know that payment_tool.hello_asso is not null as we patched settings to enable payment
         "init_a_checkout",
         return_value=InitCheckoutResponse(id=7, redirectUrl=redirect_url),
     )
@@ -516,7 +516,7 @@ async def test_payment_tool_init_checkout_with_one_failure(
 
     # We mock the HelloAssoAPIWrapper `init_a_checkout` method to return a mocked response
     mocker.patch.object(
-        payment_tool.hello_asso.checkout_intents_management,  # type: ignore # we know that payment_tool.hello_asso is not null as we patched settings to enable payment
+        payment_tool.hello_asso.checkout_intents_management,  # type: ignore[union-attr] # we know that payment_tool.hello_asso is not null as we patched settings to enable payment
         "init_a_checkout",
         side_effect=init_a_checkout_side_effect,
     )
@@ -565,7 +565,7 @@ async def test_payment_tool_init_checkout_fail(
 
     # We mock the HelloAssoAPIWrapper `init_a_checkout` to raise an error
     mocker.patch.object(
-        payment_tool.hello_asso.checkout_intents_management,  # type: ignore # we know that payment_tool.hello_asso is not null as we patched settings to enable payment
+        payment_tool.hello_asso.checkout_intents_management,  # type: ignore[union-attr] # we know that payment_tool.hello_asso is not null as we patched settings to enable payment
         "init_a_checkout",
         side_effect=ValueError("Mocked Exception"),
     )

@@ -74,13 +74,13 @@ def have_revision_pretest_and_test(revision: str) -> bool:
     return revision in test_upgrade_dict and revision in pre_test_upgrade_dict
 
 
-@pytest.fixture()
+@pytest.fixture
 def alembic_config() -> Config:
     """Override this fixture to configure the exact alembic context setup required."""
     return Config()
 
 
-@pytest.fixture()
+@pytest.fixture
 def alembic_engine(alembic_connection: Connection) -> Connection:
     """
     Override this fixture to provide pytest-alembic powered tests with a database handle.
@@ -94,7 +94,7 @@ def alembic_engine(alembic_connection: Connection) -> Connection:
     return alembic_connection
 
 
-@pytest.fixture()
+@pytest.fixture
 def alembic_connection() -> Generator[Connection, None, None]:
     """
     The fixture yields a SQLAlchemy connection object. This fixture should be run before each tests, to ensure that the database is empty.
@@ -117,7 +117,7 @@ def alembic_connection() -> Generator[Connection, None, None]:
 
 
 @pytest.fixture(scope="module")
-def init_migration_scripts() -> None:  # noqa: PT004
+def init_migration_scripts() -> None:
     """
     We import all migration scripts in the migration/versions directory to extract the pre_test_upgrade and test_upgrade functions.
     """

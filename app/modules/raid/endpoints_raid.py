@@ -75,8 +75,7 @@ async def get_participant_by_id(
             detail="You can not get data of another user",
         )
 
-    participant = await get_participant(participant_id, db)
-    return participant
+    return await get_participant(participant_id, db)
 
 
 @module.router.post(

@@ -198,8 +198,7 @@ async def read_adverts(
             advertisers=advertisers,
             db=db,
         )
-    else:
-        return await cruds_advert.get_adverts(db=db)
+    return await cruds_advert.get_adverts(db=db)
 
 
 @module.router.get(

@@ -32,8 +32,7 @@ async def get_events(
     user: models_users.CoreUser = Depends(is_user_in(GroupType.BDE)),
 ):
     """Get all events from the database."""
-    events = await cruds_calendar.get_all_events(db=db)
-    return events
+    return await cruds_calendar.get_all_events(db=db)
 
 
 @module.router.get(
@@ -50,8 +49,7 @@ async def get_confirmed_events(
 
     **Usable by every member**
     """
-    events = await cruds_calendar.get_confirmed_events(db=db)
-    return events
+    return await cruds_calendar.get_confirmed_events(db=db)
 
 
 @module.router.get(
@@ -73,13 +71,11 @@ async def get_applicant_bookings(
         user,
         [GroupType.BDE],
     ):
-        bookings = await cruds_calendar.get_applicant_events(
+        return await cruds_calendar.get_applicant_events(
             db=db,
             applicant_id=applicant_id,
         )
-        return bookings
-    else:
-        raise HTTPException(status_code=403)
+    raise HTTPException(status_code=403)
 
 
 @module.router.get(
@@ -97,8 +93,7 @@ async def get_event_by_id(
     event = await cruds_calendar.get_event(db=db, event_id=event_id)
     if event is not None:
         return event
-    else:
-        raise HTTPException(status_code=404)
+    raise HTTPException(status_code=404)
 
 
 @module.router.get(
@@ -114,8 +109,7 @@ async def get_event_applicant(
     event = await cruds_calendar.get_event(db=db, event_id=event_id)
     if event is not None:
         return event.applicant
-    else:
-        raise HTTPException(status_code=404)
+    raise HTTPException(status_code=404)
 
 
 @module.router.post(
@@ -251,5 +245,4 @@ async def get_icalendar_file(db: AsyncSession = Depends(get_db)):
     if Path(ical_file_path).exists():
         return FileResponse(ical_file_path)
 
-    else:
-        raise HTTPException(status_code=404)
+    raise HTTPException(status_code=404)

@@ -251,26 +251,22 @@ async def add_module_visibility(
             root=module_visibility.root,
             allowed_group_id=module_visibility.allowed_group_id,
         )
-        try:
-            return await cruds_core.create_module_group_visibility(
-                module_visibility=module_group_visibility_db,
-                db=db,
-            )
-        except ValueError as error:
-            raise HTTPException(status_code=400, detail=str(error))
+
+        await cruds_core.create_module_group_visibility(
+            module_visibility=module_group_visibility_db,
+            db=db,
+        )
 
     if module_visibility.allowed_account_type is not None:
         module_account_visibility_db = models_core.ModuleAccountTypeVisibility(
             root=module_visibility.root,
             allowed_account_type=module_visibility.allowed_account_type,
         )
-        try:
-            return await cruds_core.create_module_account_type_visibility(
-                module_visibility=module_account_visibility_db,
-                db=db,
-            )
-        except ValueError as error:
-            raise HTTPException(status_code=400, detail=str(error))
+
+        await cruds_core.create_module_account_type_visibility(
+            module_visibility=module_account_visibility_db,
+            db=db,
+        )
 
 
 @router.delete("/module-visibility/{root}/groups/{group_id}", status_code=204)
