@@ -43,7 +43,7 @@ class S3Access:
         try:
             response = self.s3.list_buckets()
         except botocore.exceptions.ClientError as e:
-            raise InvalidS3AccessError(str(e)) from e
+            raise InvalidS3AccessError() from e
         except botocore.exceptions.EndpointConnectionError:
             self.failure_logger.critical(
                 "S3 is not accessible, defaulting to fallback logger",
