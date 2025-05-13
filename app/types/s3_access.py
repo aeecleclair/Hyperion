@@ -25,7 +25,7 @@ class S3Access:
         s3_secret_access_key: str | None = None,
         retention: int = -1,
     ) -> None:
-        self.bucket_name = s3_bucket_name or "default-bucket-name"
+        self.bucket_name = s3_bucket_name
         self.folder = folder
         self.retention = retention
         self.failure_logger = logging.getLogger(failure_logger)
