@@ -56,7 +56,7 @@ class S3Access:
             raise InvalidS3BucketNameError(self.bucket_name)
 
     def write_secure_log(self, message: str, filename: str):
-        """Écrit un log dans un objet S3 immuable"""
+        """Write in an immuable S3 bucket"""
         # If there is a "/" in the filename the s3 while consider it as a folder
         if "/" in filename:
             raise InvalidS3FileNameError(filename)
