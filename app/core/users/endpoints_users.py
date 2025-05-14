@@ -20,6 +20,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import cruds_auth
 from app.core.groups import cruds_groups, models_groups
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.schools.schools_type import SchoolType
@@ -576,6 +577,14 @@ async def reset_password(
         email=recover_request.email,
     )
 
+    # Revoke existing auth refresh tokens
+    # to force the user to reauthenticate on all services and devices
+    # when their token expire
+    await cruds_auth.revoke_refresh_token_by_user_id(
+        db=db,
+        user_id=recover_request.user_id,
+    )
+
     return standard_responses.Result()
 
 
@@ -751,6 +760,14 @@ async def change_password(
         db=db,
         user_id=user.id,
         new_password_hash=new_password_hash,
+    )
+
+    # Revoke existing auth refresh tokens
+    # to force the user to reauthenticate on all services and devices
+    # when their token expire
+    await cruds_auth.revoke_refresh_token_by_user_id(
+        db=db,
+        user_id=user.id,
     )
 
     return standard_responses.Result()
