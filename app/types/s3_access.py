@@ -25,16 +25,21 @@ class S3Access:
         s3_secret_access_key: str | None = None,
         retention: int = -1,
     ) -> None:
-        self.bucket_name = s3_bucket_name
+        """ """
         self.folder = folder
         self.retention = retention
         self.failure_logger = logging.getLogger(failure_logger)
-        if s3_access_key_id is None or s3_secret_access_key is None:
+        if (
+            s3_access_key_id is None
+            or s3_secret_access_key is None
+            or s3_bucket_name is None
+        ):
             self.failure_logger.critical(
-                "S3_ACCESS_KEY_ID or S3_SECRET_ACCESS_KEY is not set. Working with fallback logger only.",
+                "S3_ACCESS_KEY_ID or S3_SECRET_ACCESS_KEY or S3_MYECLPAY_LOGS_BUCKET_NAME is not set. Working with fallback logger only.",
             )
             self.s3 = None
             return
+        self.bucket_name = s3_bucket_name
         self.s3 = boto3.client(
             "s3",
             aws_access_key_id=s3_access_key_id,
@@ -74,6 +79,7 @@ class S3Access:
                 file_object,
                 self.bucket_name,
                 filename,
+                # "COMPLIANCE" mode forbids anyone to delete or modify the created object, including its owner
                 ExtraArgs={
                     "ObjectLockMode": "COMPLIANCE",
                     "ObjectLockRetainUntilDate": datetime.now(UTC)
@@ -87,7 +93,7 @@ class S3Access:
             self.failure_logger.info(f"Filename: {filename}, Error: {e}")
 
     def get_log_with_name(self, name: str) -> str:
-        """Récupère les logs avec un nom donné"""
+        """Get logs corresponding to a given filename"""
         # If there is a "/" in the filename the s3 while consider it as a folder
         if "/" in name:
             raise InvalidS3FileNameError(name)
@@ -100,7 +106,7 @@ class S3Access:
         return file_object.getvalue().decode("utf-8")
 
     def list_object(self, prefix: str):
-        """Liste les objets S3 avec un préfixe donné"""
+        """List s3 objects with a given prefix"""
         # If there is a "/" in the filename the s3 while consider it as a folder
         if "/" in prefix:
             raise InvalidS3FileNameError(prefix)
@@ -113,7 +119,7 @@ class S3Access:
         return objects
 
     def get_log_content_for_prefix(self, prefix: str) -> list[str]:
-        """Liste les fichiers de logs dans le bucket S3"""
+        """List all logs with a given prefix"""
         objects = self.list_object(prefix)
         if "Contents" not in objects or not objects["Contents"]:
             return []

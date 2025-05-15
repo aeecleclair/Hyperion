@@ -153,8 +153,8 @@ class InvalidS3BucketNameError(Exception):
 
 
 class InvalidS3AccessError(Exception):
-    def __init__(self, error: str):
-        super().__init__(f"Invalid S3 configuration: {error}")
+    def __init__(self):
+        super().__init__("Invalid S3 configuration")
 
 
 class InvalidS3FileNameError(Exception):
