@@ -1,5 +1,6 @@
 import logging
 import uuid
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from authlib.integrations.requests_client import OAuth2Session
@@ -31,15 +32,15 @@ if TYPE_CHECKING:
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
-authorize_url = "https://auth.helloasso.com/authorize"
-token_url = "https://api.helloasso.com/oauth2/token"  # noqa: S105
-redirect_uri = "https://your-app.com/callback"
-
 
 class PaymentTool:
-    hello_asso: ApiClient | None
-    paiements_api: PaiementsApi | None
-    checkout_api: CheckoutApi | None
+    _access_token: str | None = None
+    _refresh_token: str | None = None
+    _access_token_expiry: int | None = None
+
+    _auth_client: OAuth2Session | None = None
+
+    _hello_asso_api_base: str | None = None
 
     def __init__(self, settings: Settings):
         if (
@@ -47,26 +48,66 @@ class PaymentTool:
             and settings.HELLOASSO_CLIENT_ID
             and settings.HELLOASSO_CLIENT_SECRET
         ):
-            self.auth_client = OAuth2Session(
+            self._hello_asso_api_base = settings.HELLOASSO_API_BASE
+            self._auth_client = OAuth2Session(
                 settings.HELLOASSO_CLIENT_ID,
                 settings.HELLOASSO_CLIENT_SECRET,
+                token_endpoint=settings.HELLOASSO_API_BASE + "/oauth2/token",
             )
-            config = Configuration(
-                host=settings.HELLOASSO_API_BASE,
-                access_token=self.get_access_token()["access_token"],
-                retries=3,
-            )
-            self.hello_asso = ApiClient(configuration=config)
-            self.paiements_api = PaiementsApi(api_client=self.hello_asso)
-            self.checkout_api = CheckoutApi(api_client=self.hello_asso)
         else:
             hyperion_error_logger.warning(
                 "HelloAsso API credentials are not set, payment won't be available",
             )
-            self.hello_asso = None
 
-    def get_access_token(self):
-        return self.auth_client.fetch_token(token_url, grant_type="client_credentials")
+    def get_access_token(self) -> str:
+        if (
+            not self._auth_client
+            or not self._access_token_expiry
+            or not self._refresh_token
+        ):
+            raise PaymentToolCredentialsNotSetException
+        # If the access token is not set, we get one
+        if self._access_token is None:
+            try:
+                tokens = self._auth_client.fetch_token(grant_type="client_credentials")
+            except Exception:
+                hyperion_error_logger.exception(
+                    "Payment: failed to get HelloAsso access token",
+                )
+                raise
+            self._access_token = tokens["access_token"]
+            self._refresh_token = tokens["refresh_token"]
+            self._access_token_expiry = tokens["expires_at"]
+        # If we have a token but it's expired, we need to refresh it
+        elif self._access_token_expiry < datetime.now(UTC).timestamp():
+            # Token is expired, we need to refresh it
+            try:
+                tokens = self._auth_client.refresh_token(
+                    refresh_token=self._refresh_token,
+                )
+            except Exception:
+                hyperion_error_logger.exception(
+                    "Payment: failed to refresh HelloAsso access token, getting a new one",
+                )
+                self._access_token = None
+                self._refresh_token = None
+                self._access_token_expiry = None
+                return self.get_access_token()
+
+        return self._access_token
+
+    def get_hello_asso_configuration(self) -> Configuration:
+        """
+        Get a valid access token and construct an HelloAsso API configuration object
+        """
+        access_token = self.get_access_token()
+        if self._hello_asso_api_base is None:
+            raise PaymentToolCredentialsNotSetException
+        return Configuration(
+            host=self._hello_asso_api_base,
+            access_token=access_token,
+            retries=3,
+        )
 
     def is_payment_available(self) -> bool:
         """
@@ -75,7 +116,13 @@ class PaymentTool:
         You should always call this method before trying to init a checkout
         If payment is not available, you usually should raise an HTTP Exception explaining that payment is disabled because the API credentials are not configured in settings.
         """
-        return self.hello_asso is not None
+        return (
+            self._auth_client is None
+            or self._hello_asso_api_base is None
+            or self._access_token is None
+            or self._access_token_expiry is None
+            or self._refresh_token is None
+        )
 
     async def init_checkout(
         self,
@@ -104,10 +151,9 @@ class PaymentTool:
             payment_url: you need to redirect the user to this payment page
 
         This method use HelloAsso API. It may raise exceptions if HA checkout initialization fails.
-        Exceptions can be imported from `helloasso_api_wrapper.exceptions`
+        Exceptions can be imported from `helloasso_python` package.
         """
-        if not self.hello_asso or not self.paiements_api or not self.checkout_api:
-            raise PaymentToolCredentialsNotSetException
+        configuration = self.get_hello_asso_configuration()
 
         # We want to ensure that any error is logged, even if modules tries to try/except this method
         # Thus we catch any exception and log it, then reraise it
@@ -142,24 +188,26 @@ class PaymentTool:
             # TODO: if payment fail, we can retry
             # then try without the payer infos
             response: HelloAssoApiV5ModelsCartsInitCheckoutResponse
-            try:
-                response = self.checkout_api.organizations_organization_slug_checkout_intents_post(
-                    helloasso_slug,
-                    init_checkout_body,
-                )
-            except Exception:
-                # We know that HelloAsso may refuse some payer infos, like using the firstname "test"
-                # Even when prefilling the payer infos,the user will be able to edit them on the payment page,
-                # so we can safely retry without the payer infos
-                hyperion_error_logger.exception(
-                    f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name}. Retrying without payer infos",
-                )
+            with ApiClient(configuration) as api_client:
+                checkout_api = CheckoutApi(api_client)
+                try:
+                    response = checkout_api.organizations_organization_slug_checkout_intents_post(
+                        helloasso_slug,
+                        init_checkout_body,
+                    )
+                except Exception:
+                    # We know that HelloAsso may refuse some payer infos, like using the firstname "test"
+                    # Even when prefilling the payer infos,the user will be able to edit them on the payment page,
+                    # so we can safely retry without the payer infos
+                    hyperion_error_logger.exception(
+                        f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name}. Retrying without payer infos",
+                    )
 
-                init_checkout_body.payer = None
-                response = self.checkout_api.organizations_organization_slug_checkout_intents_post(
-                    helloasso_slug,
-                    init_checkout_body,
-                )
+                    init_checkout_body.payer = None
+                    response = checkout_api.organizations_organization_slug_checkout_intents_post(
+                        helloasso_slug,
+                        init_checkout_body,
+                    )
 
             if response.id is None:
                 hyperion_error_logger.error(
@@ -212,22 +260,22 @@ class PaymentTool:
         checkout_id: uuid.UUID,
         hello_asso_payment_id: int,
         amount: int,
-        db: AsyncSession,
     ) -> None:
         """
         Refund a payment
         """
-        if not self.hello_asso or not self.paiements_api or not self.checkout_api:
-            raise PaymentToolCredentialsNotSetException
+        configuration = self.get_hello_asso_configuration()
 
-        try:
-            self.paiements_api.payments_payment_id_refund_post(
-                payment_id=hello_asso_payment_id,
-                send_refund_mail=True,
-                amount=amount,
-            )
-        except Exception:
-            hyperion_error_logger.exception(
-                f"Payment: failed to refund payment {hello_asso_payment_id} for checkout {checkout_id}",
-            )
-            raise
+        with ApiClient(configuration) as api_client:
+            paiements_api = PaiementsApi(api_client)
+            try:
+                paiements_api.payments_payment_id_refund_post(
+                    payment_id=hello_asso_payment_id,
+                    send_refund_mail=True,
+                    amount=amount,
+                )
+            except Exception:
+                hyperion_error_logger.exception(
+                    f"Payment: failed to refund payment {hello_asso_payment_id} for checkout {checkout_id}",
+                )
+                raise
