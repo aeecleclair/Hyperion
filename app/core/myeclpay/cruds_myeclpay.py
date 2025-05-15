@@ -10,7 +10,6 @@ from app.core.memberships import schemas_memberships
 from app.core.myeclpay import models_myeclpay, schemas_myeclpay
 from app.core.myeclpay.types_myeclpay import (
     TransactionStatus,
-    TransactionType,
     WalletDeviceStatus,
     WalletType,
 )
@@ -555,31 +554,24 @@ async def get_user_payment(
 
 
 async def create_transaction(
-    transaction_id: UUID,
-    debited_wallet_id: UUID,
+    transaction: schemas_myeclpay.Transaction,
     debited_wallet_device_id: UUID,
-    credited_wallet_id: UUID,
-    transaction_type: TransactionType,
-    seller_user_id: str | None,
-    total: int,
-    creation: datetime,
-    status: TransactionStatus,
     store_note: str | None,
     db: AsyncSession,
 ) -> None:
-    transaction = models_myeclpay.Transaction(
-        id=transaction_id,
-        debited_wallet_id=debited_wallet_id,
+    transaction_db = models_myeclpay.Transaction(
+        id=transaction.id,
+        debited_wallet_id=transaction.debited_wallet_id,
         debited_wallet_device_id=debited_wallet_device_id,
-        credited_wallet_id=credited_wallet_id,
-        transaction_type=transaction_type,
-        seller_user_id=seller_user_id,
-        total=total,
-        creation=creation,
-        status=status,
+        credited_wallet_id=transaction.credited_wallet_id,
+        transaction_type=transaction.transaction_type,
+        seller_user_id=transaction.seller_user_id,
+        total=transaction.total,
+        creation=transaction.creation,
+        status=transaction.status,
         store_note=store_note,
     )
-    db.add(transaction)
+    db.add(transaction_db)
 
 
 async def update_transaction_status(
