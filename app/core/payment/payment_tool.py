@@ -52,7 +52,9 @@ class PaymentTool:
             self._auth_client = OAuth2Session(
                 settings.HELLOASSO_CLIENT_ID,
                 settings.HELLOASSO_CLIENT_SECRET,
-                token_endpoint=settings.HELLOASSO_API_BASE + "/oauth2/token",
+                token_endpoint="https://"
+                + settings.HELLOASSO_API_BASE
+                + "/oauth2/token",
             )
         else:
             hyperion_error_logger.warning(
@@ -60,11 +62,7 @@ class PaymentTool:
             )
 
     def get_access_token(self) -> str:
-        if (
-            not self._auth_client
-            or not self._access_token_expiry
-            or not self._refresh_token
-        ):
+        if not self._auth_client:
             raise PaymentToolCredentialsNotSetException
         # If the access token is not set, we get one
         if self._access_token is None:
@@ -104,7 +102,7 @@ class PaymentTool:
         if self._hello_asso_api_base is None:
             raise PaymentToolCredentialsNotSetException
         return Configuration(
-            host=self._hello_asso_api_base,
+            host=self._hello_asso_api_base + "/v5",
             access_token=access_token,
             retries=3,
         )
