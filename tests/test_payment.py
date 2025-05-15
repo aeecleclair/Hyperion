@@ -15,7 +15,7 @@ from requests import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.payment import cruds_payment, models_payment, schemas_payment
-from app.core.payment.payment_tool import CheckoutApi, PaymentTool
+from app.core.payment.payment_tool import PaymentTool
 from app.core.schools import schemas_schools
 from app.core.users import schemas_users
 from app.dependencies import get_payment_tool
