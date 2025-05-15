@@ -117,11 +117,11 @@ class PaymentTool:
         If payment is not available, you usually should raise an HTTP Exception explaining that payment is disabled because the API credentials are not configured in settings.
         """
         return (
-            self._auth_client is None
-            or self._hello_asso_api_base is None
-            or self._access_token is None
-            or self._access_token_expiry is None
-            or self._refresh_token is None
+            self._auth_client is not None
+            and self._hello_asso_api_base is not None
+            and self._access_token is not None
+            and self._access_token_expiry is not None
+            and self._refresh_token is not None
         )
 
     async def init_checkout(
