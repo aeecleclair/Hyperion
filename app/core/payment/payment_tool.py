@@ -104,7 +104,7 @@ class PaymentTool:
         if self._hello_asso_api_base is None:
             raise PaymentToolCredentialsNotSetException
         return Configuration(
-            host=self._hello_asso_api_base + "/v5",
+            host="https://" + self._hello_asso_api_base + "/v5",
             access_token=access_token,
             retries=3,
         )
