@@ -1,29 +1,29 @@
-import uuid
-from datetime import UTC, datetime
+import json
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.users import models_users
 from app.dependencies import get_db, is_user_a_member, is_user_in
-from app.modules.misc import cruds_misc, models_misc, schemas_misc
+from app.modules.misc import core_data_misc, schemas_misc
 from app.types.module import Module
+from app.utils import tools
 
 router = APIRouter()
 
 
-# <-- Contacts for PE5 SafetyCards -->
+# <-- Contacts for PE5 SafetyCards 2025 -->
 module = Module(
-    root="contact",
+    root="contacts_safety_cards",
     tag="Contact",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
 )
 
 
 @module.router.get(
-    "/contact/contacts",
-    response_model=list[schemas_misc.Contact],
+    "/contacts_safety_cards/contacts",
+    response_model=list[schemas_misc.ContactBase],
     status_code=200,
 )
 async def get_contacts(
@@ -37,16 +37,22 @@ async def get_contacts(
     This the main purpose of this endpoint, because contacts (phone numbers, emails) should not be leaked in the prevention website
     """
 
-    return await cruds_misc.get_contacts(db=db)
+    contacts_from_core_data = await tools.get_core_data(
+        core_data_misc.ContactSafetyCards,
+        db,
+    )
+
+    serialized_json_contacts = contacts_from_core_data.contacts
+
+    return json.loads(serialized_json_contacts)
 
 
-@module.router.post(
-    "/contact/contacts",
-    response_model=schemas_misc.Contact,
+@module.router.put(
+    "/contacts_safety_cards/contacts",
     status_code=201,
 )
-async def create_contact(
-    contact: schemas_misc.ContactBase,
+async def set_contacts(
+    contacts: list[schemas_misc.ContactBase],
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_in(GroupType.eclair)),
 ):
@@ -56,66 +62,10 @@ async def create_contact(
     **This endpoint is only usable by members of the group eclair**
     """
 
-    contact_db = models_misc.Contacts(
-        id=uuid.uuid4(),
-        creation=datetime.now(UTC),
-        **contact.model_dump(),
+    contacts_serialized_json = json.dumps(contacts)
+
+    await tools.set_core_data(
+        core_data_misc.ContactSafetyCards(contacts=contacts_serialized_json),
+        db,
     )
-
-    return await cruds_misc.create_contact(
-        contact=contact_db,
-        db=db,
-    )
-
-
-@module.router.patch(
-    "/contact/contacts/{contact_id}",
-    status_code=204,
-)
-async def edit_contact(
-    contact_id: uuid.UUID,
-    contact: schemas_misc.ContactEdit,
-    db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.eclair)),
-):
-    """
-    Edit a contact.
-
-    **This endpoint is only usable by members of the group eclair**
-    """
-
-    try:
-        await cruds_misc.update_contact(
-            contact_id=contact_id,
-            contact=contact,
-            db=db,
-        )
-    except ValueError:
-        raise HTTPException(status_code=404, detail="The contact does not exist")
-
-
-@module.router.delete(
-    "/contact/contacts/{contact_id}",
-    status_code=204,
-)
-async def delete_contact(
-    contact_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.eclair)),
-):
-    """
-    Delete a contact.
-
-    **This endpoint is only usable by members of the group eclair**
-    """
-
-    try:
-        await cruds_misc.delete_contact(
-            db=db,
-            contact_id=contact_id,
-        )
-    except ValueError:
-        raise HTTPException(status_code=404, detail="The contact does not exist")
-
-
-# <-- End of Contacts for PE5 SafetyCards -->
+# <-- End of Contacts for PE5 SafetyCards 2025 -->
