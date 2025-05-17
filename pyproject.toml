@@ -1,3 +1,19 @@
+[project]
+name = "hyperion"
+description = "Back-end of MyECL, the app of the students of École Centrale de Lyon, made by ÉCLAIR"
+readme = "README.md"
+authors = [{ name = "AEECL ECLAIR" }]
+
+# Hyperion follows Semantic Versioning
+# https://semver.org/
+version = "4.4.1"
+minimal-titan-version-code = 139
+requires-python = ">= 3.11, < 3.13"
+
+license = "MIT"
+license-files = ["LICENSE", "assets/privacy.txt", "assets/terms-and-conditions.txt"]
+
+
 [tool.ruff]
 # By default ruff also respect gitignore files
 # Same as Black.
