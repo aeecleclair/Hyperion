@@ -145,3 +145,20 @@ class MissingHelloAssoCheckoutIdError(Exception):
         super().__init__(
             "HelloAsso checkout id is missing in response",
         )
+
+
+class InvalidS3BucketNameError(Exception):
+    def __init__(self, bucket_name: str):
+        super().__init__(f"Invalid S3 bucket name: {bucket_name}")
+
+
+class InvalidS3AccessError(Exception):
+    def __init__(self):
+        super().__init__("Invalid S3 configuration")
+
+
+class InvalidS3FileNameError(Exception):
+    def __init__(self, filename: str):
+        super().__init__(
+            f"Invalid S3 file name: {filename} - it should not contain '/'",
+        )

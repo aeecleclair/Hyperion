@@ -54,6 +54,13 @@ class TransferType(str, Enum):
     BANK_TRANSFER = "bank_transfer"
 
 
+class ActionType(str, Enum):
+    TRANSFER = "transfer"
+    REFUND = "refund"
+    CANCEL = "cancel"
+    TRANSACTION = "transaction"
+
+
 class UnexpectedError(Exception):
     pass
 
