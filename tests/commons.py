@@ -178,7 +178,7 @@ async def create_user_with_groups(
     async with TestingSessionLocal() as db:
         user_db = await cruds_users.get_user_by_id(db, user_id)
         await db.close()
-    return user_db  # type: ignore # (user_db can't be None)
+    return user_db  # type: ignore[return-value] # (user_db can't be None)
 
 
 def create_api_access_token(
@@ -190,13 +190,11 @@ def create_api_access_token(
     """
 
     access_token_data = schemas_auth.TokenData(sub=user.id, scopes="API")
-    token = security.create_access_token(
+    return security.create_access_token(
         data=access_token_data,
         settings=settings,
         expires_delta=expires_delta,
     )
-
-    return token
 
 
 async def add_object_to_db(db_object: Base) -> None:

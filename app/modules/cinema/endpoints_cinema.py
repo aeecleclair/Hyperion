@@ -109,8 +109,7 @@ async def get_sessions(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_a_member),
 ):
-    result = await cruds_cinema.get_sessions(db=db)
-    return result
+    return await cruds_cinema.get_sessions(db=db)
 
 
 @module.router.post(

@@ -26,8 +26,7 @@ class CustomTopic:
     def to_str(self) -> str:
         if self.topic_identifier:
             return f"{self.topic.value}_{self.topic_identifier}"
-        else:
-            return self.topic.value
+        return self.topic.value
 
     @classmethod
     def from_str(cls, topic_str: str):

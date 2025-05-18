@@ -138,8 +138,7 @@ async def delete_manager(
             status_code=403,
             detail="There are still rooms linked to this manager",
         )
-    else:
-        await cruds_booking.delete_manager(manager_id=manager_id, db=db)
+    await cruds_booking.delete_manager(manager_id=manager_id, db=db)
 
 
 @module.router.get(
@@ -220,9 +219,7 @@ async def get_confirmed_bookings(
     **The user must be authenticated to use this endpoint**
     """
 
-    bookings = await cruds_booking.get_confirmed_bookings(db=db)
-
-    return bookings
+    return await cruds_booking.get_confirmed_bookings(db=db)
 
 
 @module.router.get(
@@ -239,8 +236,7 @@ async def get_applicant_bookings(
 
     **Only usable by the user**
     """
-    bookings = await cruds_booking.get_applicant_bookings(db=db, applicant_id=user.id)
-    return bookings
+    return await cruds_booking.get_applicant_bookings(db=db, applicant_id=user.id)
 
 
 @module.router.post(

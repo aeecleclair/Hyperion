@@ -56,13 +56,11 @@ class GoogleAPI:
                 # "redirect_uris": [""],
             },
         }
-        flow = Flow.from_client_config(
+        return Flow.from_client_config(
             client_config,
             GoogleAPI.SCOPES,
             redirect_uri=settings.CLIENT_URL + "google-api/oauth2callback",
         )
-
-        return flow
 
     async def _start_authentication(
         self,

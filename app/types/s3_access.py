@@ -114,9 +114,7 @@ class S3Access:
         if self.s3 is None:
             self.failure_logger.warning(f"LIST Prefix: {prefix}")
             return {"Contents": []}
-        objects = self.s3.list_objects_v2(Prefix=prefix, Bucket=self.bucket_name)
-
-        return objects
+        return self.s3.list_objects_v2(Prefix=prefix, Bucket=self.bucket_name)
 
     def get_log_content_for_prefix(self, prefix: str) -> list[str]:
         """List all logs with a given prefix"""

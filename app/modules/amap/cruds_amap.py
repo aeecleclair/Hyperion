@@ -478,8 +478,7 @@ async def get_information(
         ),
     )
 
-    information = result.scalars().first()
-    return information
+    return result.scalars().first()
 
 
 async def add_information(

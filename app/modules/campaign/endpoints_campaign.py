@@ -60,8 +60,7 @@ async def get_sections(
             detail="Access forbidden : you are not a poll member",
         )
 
-    sections = await cruds_campaign.get_sections(db)
-    return sections
+    return await cruds_campaign.get_sections(db)
 
 
 @module.router.post(
@@ -148,8 +147,7 @@ async def get_lists(
             detail="Access forbidden : you are not a poll member",
         )
 
-    lists = await cruds_campaign.get_lists(db=db)
-    return lists
+    return await cruds_campaign.get_lists(db=db)
 
 
 @module.router.post(
@@ -349,8 +347,7 @@ async def get_voters(
     """
     Return the voters (groups allowed to vote) for the current campaign.
     """
-    voters = await cruds_campaign.get_voters(db=db)
-    return voters
+    return await cruds_campaign.get_voters(db=db)
 
 
 @module.router.post(
@@ -688,8 +685,7 @@ async def get_sections_already_voted(
         )
 
     has_voted = await cruds_campaign.get_has_voted(db=db, user_id=user.id)
-    sections_ids = [section.section_id for section in has_voted]
-    return sections_ids
+    return [section.section_id for section in has_voted]
 
 
 @module.router.get(
@@ -740,11 +736,10 @@ async def get_results(
                 ),
             )
         return results
-    else:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Results can only be acceded by admins in counting mode or by everyone in published mode. The current status is {status}",
-        )
+    raise HTTPException(
+        status_code=400,
+        detail=f"Results can only be acceded by admins in counting mode or by everyone in published mode. The current status is {status}",
+    )
 
 
 @module.router.get(

@@ -9,7 +9,7 @@ pytest-asyncio==0.23.8
 pytest-cov==5.0.0
 pytest-mock==3.14.0
 pytest==8.3.2
-ruff==0.5.7
+ruff==0.11.8
 types-aiofiles==24.1.0.20240626
 types-Authlib==1.5.0.20250416
 types-fpdf2==2.7.9.20240519
