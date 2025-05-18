@@ -3,15 +3,17 @@ import uuid
 from typing import cast
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from helloasso_api_wrapper.models.api_notifications import (
-    ApiNotificationType,
-    NotificationResultContent,
+from helloasso_python.models.hello_asso_api_v5_models_api_notifications_api_notification_type import (
+    HelloAssoApiV5ModelsApiNotificationsApiNotificationType,
 )
 from pydantic import TypeAdapter, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.core_module_list import core_module_list
 from app.core.payment import cruds_payment, models_payment, schemas_payment
+from app.core.payment.types_payment import (
+    NotificationResultContent,
+)
 from app.dependencies import get_db
 from app.modules.module_list import module_list
 from app.types.module import CoreModule
@@ -60,9 +62,15 @@ async def webhook(
             status_code=400,
             detail="Could not validate the webhook body",
         )
-    if content.eventType == ApiNotificationType.Order:
+    if (
+        content.eventType
+        == HelloAssoApiV5ModelsApiNotificationsApiNotificationType.ORDER
+    ):
         pass
-    if content.eventType == ApiNotificationType.Payment:
+    if (
+        content.eventType
+        == HelloAssoApiV5ModelsApiNotificationsApiNotificationType.PAYMENT
+    ):
         # We may receive the webhook multiple times, we only want to save a CheckoutPayment
         # in the database the first time
         existing_checkout_payment_model = (
