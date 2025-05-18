@@ -5,6 +5,7 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 from uuid import UUID, uuid4
 
+import calypsso
 from fastapi import (
     BackgroundTasks,
     Depends,
@@ -23,6 +24,7 @@ from app.core.users.cruds_users import get_user_by_id, get_users
 from app.core.utils.config import Settings
 from app.dependencies import (
     get_db,
+    get_mail_templates,
     get_payment_tool,
     get_settings,
     get_unsafe_db,
@@ -232,6 +234,7 @@ async def update_cdr_user(
         is_user_in(GroupType.admin_cdr),
     ),
     ws_manager: WebsocketConnectionManager = Depends(get_websocket_connection_manager),
+    mail_templates: calypsso.MailTemplates = Depends(get_mail_templates),
     settings: Settings = Depends(get_settings),
 ):
     """
@@ -277,6 +280,7 @@ async def update_cdr_user(
                 # We make the user non external with this migration
                 make_user_external=False,
                 db=db,
+                mail_templates=mail_templates,
                 settings=settings,
             )
 

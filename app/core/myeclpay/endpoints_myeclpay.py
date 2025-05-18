@@ -5,6 +5,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
+import calypsso
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -45,6 +46,7 @@ from app.core.utils import security
 from app.core.utils.config import Settings
 from app.dependencies import (
     get_db,
+    get_mail_templates,
     get_notification_tool,
     get_payment_tool,
     get_request_id,
@@ -236,6 +238,7 @@ async def init_transfer_structure_manager(
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user()),
+    mail_templates: calypsso.MailTemplates = Depends(get_mail_templates),
     settings: Settings = Depends(get_settings),
 ):
     """
@@ -287,18 +290,15 @@ async def init_transfer_structure_manager(
     )
 
     if settings.SMTP_ACTIVE:
-        migration_content = templates.get_template(
-            "structure_manager_transfer.html",
-        ).render(
-            {
-                "transfer_link": f"{settings.CLIENT_URL}myeclpay/structures/manager/confirm-transfer?token={confirmation_token}",
-            },
+        mail = mail_templates.get_mail_myeclpay_structure_transfer(
+            confirmation_url=f"{settings.CLIENT_URL}myeclpay/structures/manager/confirm-transfer?token={confirmation_token}",
         )
+
         background_tasks.add_task(
             send_email,
             recipient=user.email,
             subject="MyECL - Confirm the structure manager transfer",
-            content=migration_content,
+            content=mail,
             settings=settings,
         )
     else:
@@ -1108,6 +1108,7 @@ async def sign_tos(
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user()),
+    mail_templates: calypsso.MailTemplates = Depends(get_mail_templates),
     settings: Settings = Depends(get_settings),
 ):
     """
@@ -1146,14 +1147,15 @@ async def sign_tos(
 
     # TODO: add logs
     if settings.SMTP_ACTIVE:
-        account_exists_content = templates.get_template(
-            "myeclpay_signed_tos_mail.html",
-        ).render()
+        mail = mail_templates.get_mail_myeclpay_tos_signed(
+            tos_version=signature.accepted_tos_version,
+        )
+
         background_tasks.add_task(
             send_email,
             recipient=user.email,
             subject="MyECL - You signed the Terms of Service for MyECLPay",
-            content=account_exists_content,
+            content=mail,
             settings=settings,
         )
 
@@ -1286,6 +1288,7 @@ async def create_user_devices(
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user()),
+    mail_templates: calypsso.MailTemplates = Depends(get_mail_templates),
     settings: Settings = Depends(get_settings),
 ):
     """
@@ -1327,18 +1330,15 @@ async def create_user_devices(
     await db.commit()
 
     if settings.SMTP_ACTIVE:
-        account_exists_content = templates.get_template(
-            "activate_myeclpay_device_mail.html",
-        ).render(
-            {
-                "activation_link": f"{settings.CLIENT_URL}myeclpay/devices/activate?token={activation_token}",
-            },
+        mail = mail_templates.get_mail_myeclpay_device_activation(
+            activation_url=f"{settings.CLIENT_URL}myeclpay/devices/activate?token={activation_token}",
         )
+
         background_tasks.add_task(
             send_email,
             recipient=user.email,
             subject="MyECL - activate your device",
-            content=account_exists_content,
+            content=mail,
             settings=settings,
         )
     else:

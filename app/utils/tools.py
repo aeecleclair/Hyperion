@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeVar
 
 import aiofiles
+import calypsso
 import fitz
 from fastapi import HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -444,6 +445,7 @@ async def create_and_send_email_migration(
     old_email: str,
     make_user_external: bool,
     db: AsyncSession,
+    mail_templates: calypsso.MailTemplates,
     settings: "Settings",
 ) -> None:
     """
@@ -470,15 +472,13 @@ async def create_and_send_email_migration(
     )
 
     if settings.SMTP_ACTIVE:
-        migration_content = templates.get_template("migration_mail.html").render(
-            {
-                "migration_link": f"{settings.CLIENT_URL}users/migrate-mail-confirm?token={confirmation_token}",
-            },
+        mail = mail_templates.get_mail_mail_migration_confirm(
+            confirmation_url=f"{settings.CLIENT_URL}users/migrate-mail-confirm?token={confirmation_token}",
         )
         send_email(
             recipient=new_email,
             subject="MyECL - Confirm your new email address",
-            content=migration_content,
+            content=mail,
             settings=settings,
         )
     else:
