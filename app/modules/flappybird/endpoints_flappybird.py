@@ -4,9 +4,10 @@ from datetime import UTC, datetime
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.groups.groups_type import AccountType, GroupType
+from app.core.groups.groups_type import AccountType
+from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import models_users
-from app.dependencies import get_db, is_user_a_member, is_user_in
+from app.dependencies import get_db, is_user_a_member, is_user_allowed_to
 from app.modules.flappybird import (
     cruds_flappybird,
     models_flappybird,
@@ -14,10 +15,16 @@ from app.modules.flappybird import (
 )
 from app.types.module import Module
 
+
+class FlappyBirdPermissions(ModulePermissions):
+    manage_flappybird = "manage_flappybird"
+
+
 module = Module(
     root="flappybird",
     tag="Flappy Bird",
     default_allowed_account_types=[AccountType.student],
+    permissions=FlappyBirdPermissions,
 )
 
 
@@ -133,6 +140,8 @@ async def create_flappybird_score(
 async def remove_flappybird_score(
     targeted_user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([FlappyBirdPermissions.manage_flappybird]),
+    ),
 ):
     await cruds_flappybird.delete_flappybird_best_score(db=db, user_id=targeted_user_id)

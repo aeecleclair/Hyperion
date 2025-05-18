@@ -2,13 +2,17 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 
 from app.core.core_endpoints import models_core
+from app.core.groups import models_groups
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.users import models_users
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
+    create_groups_with_permissions,
     create_user_with_groups,
 )
+
+group: models_groups.CoreGroup
 
 simple_user: models_users.CoreUser
 admin_user: models_users.CoreUser
@@ -20,11 +24,17 @@ group_id = "random id"
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
+    global group
+    group = await create_groups_with_permissions(
+        [],
+        "random group",
+    )
+
     global admin_user
     admin_user = await create_user_with_groups([GroupType.admin])
     global token_admin
     token_admin = create_api_access_token(admin_user)
-    user_simple = await create_user_with_groups([GroupType.AE])
+    user_simple = await create_user_with_groups([group.id])
     global token_simple
     token_simple = create_api_access_token(user_simple)
     module_visibility = models_core.ModuleGroupVisibility(
@@ -55,7 +65,7 @@ def test_add_group_module_visibility(client: TestClient) -> None:
         "/module-visibility/",
         json={
             "root": "root",
-            "allowed_group_id": GroupType.AE.value,
+            "allowed_group_id": group.id,
         },
         headers={"Authorization": f"Bearer {token_admin}"},
     )

@@ -37,6 +37,7 @@ from app.dependencies import (
     get_websocket_connection_manager,
     init_and_get_db_engine,
 )
+from app.module import permissions_list
 from app.modules.module_list import module_list
 from app.types.exceptions import ContentHTTPException, GoogleAPIInvalidCredentialsError
 from app.types.sqlalchemy import Base
@@ -229,7 +230,6 @@ def initialize_module_visibility(
             coredata_core.ModuleVisibilityAwareness,
             db,
         )
-
         new_modules = [
             module
             for module in module_list
@@ -338,6 +338,8 @@ def init_db(
         sync_engine=sync_engine,
         hyperion_error_logger=hyperion_error_logger,
     )
+    with Session(sync_engine) as db:
+        initialization.clean_permissions_sync(db, permissions_list)
 
 
 # We wrap the application in a function to be able to pass the settings and drop_db parameters
