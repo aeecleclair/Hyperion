@@ -6,7 +6,7 @@ from app.utils.tools import delete_file_from_data
 
 
 class UsersUserDeleter(ModuleUserDeleter):
-    async def can_delete_user(
+    async def has_reason_not_to_delete_user(
         self,
         user_id: str,
         db: AsyncSession,

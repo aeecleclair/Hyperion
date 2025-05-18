@@ -11,7 +11,7 @@ class ModuleUserDeleter(ABC):
     """
 
     @abstractmethod
-    async def can_delete_user(
+    async def has_reason_not_to_delete_user(
         self,
         user_id: str,
         db: AsyncSession,
