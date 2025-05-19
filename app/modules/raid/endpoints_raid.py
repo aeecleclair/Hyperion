@@ -418,10 +418,37 @@ async def delete_team(
 async def delete_all_teams(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_admin)),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Delete all teams
     """
+    # First get all teams to access their file IDs
+    teams = await cruds_raid.get_all_teams(db)
+    # Delete files associated with each team from Google Drive
+    async with DriveGoogleAPI(db, settings) as google_api:
+        for team in teams:
+            # Delete team PDF
+            if team.file_id:
+                google_api.delete_file(team.file_id)
+            # Delete captain's security file if exists
+            if (
+                team.captain
+                and team.captain.security_file
+                and team.captain.security_file.file_id
+            ):
+                google_api.delete_file(team.captain.security_file.file_id)
+            # Delete second member's security file if exists
+            if (
+                team.second
+                and team.second.security_file
+                and team.second.security_file.file_id
+            ):
+                google_api.delete_file(team.second.security_file.file_id)
+            # Delete team invite tokens
+            await cruds_raid.delete_team_invite_tokens(team.id, db)
+
+    # Delete all teams from the database
     await cruds_raid.delete_all_teams(db)
 
 
