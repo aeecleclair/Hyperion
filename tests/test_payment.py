@@ -305,9 +305,10 @@ async def test_webhook_payment_callback(
         tag="Tests",
         default_allowed_groups_ids=[],
         payment_callback=callback,
+        factory=None,
     )
     mocker.patch(
-        "app.core.payment.endpoints_payment.module_list",
+        "app.core.payment.endpoints_payment.all_modules",
         [test_module],
     )
 
@@ -346,9 +347,10 @@ async def test_webhook_payment_callback_fail(
         tag="Tests",
         default_allowed_groups_ids=[],
         payment_callback=callback,
+        factory=None,
     )
     mocker.patch(
-        "app.core.payment.endpoints_payment.module_list",
+        "app.core.payment.endpoints_payment.all_modules",
         [test_module],
     )
 
@@ -382,7 +384,7 @@ async def test_webhook_payment_callback_fail(
 
 
 def test_payment_tool_unavailable():
-    settings = override_get_settings()
+    settings = override_get_settings()()
 
     payment_tool = PaymentTool(settings)
 
@@ -390,7 +392,7 @@ def test_payment_tool_unavailable():
 
 
 async def test_payment_tool_get_checkout():
-    settings = override_get_settings()
+    settings = override_get_settings()()
 
     payment_tool = PaymentTool(settings)
 
@@ -414,7 +416,7 @@ async def test_payment_tool_get_checkout():
 async def test_payment_tool_init_checkout_with_unavailable_payment(
     mocker: MockerFixture,
 ):
-    settings = override_get_settings()
+    settings = override_get_settings()()
 
     payment_tool = PaymentTool(settings)
 
@@ -622,7 +624,7 @@ async def test_get_payment_tool(
         "app.dependencies.PaymentTool",
     )
 
-    settings: Settings = override_get_settings()
+    settings: Settings = override_get_settings()()
 
     # payment_tool should be initialized here
     get_payment_tool(settings)

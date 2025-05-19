@@ -18,6 +18,7 @@ module = Module(
     root="flappybird",
     tag="Flappy Bird",
     default_allowed_account_types=[AccountType.student],
+    factory=None,
 )
 
 

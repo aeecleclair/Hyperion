@@ -1,5 +1,9 @@
-from typing import TypeVar
+import asyncio
+import logging
+from collections.abc import Callable, Coroutine
+from typing import Any, TypeVar
 
+import redis
 from pydantic import ValidationError
 from sqlalchemy import Connection, MetaData, delete, select
 from sqlalchemy.engine import Engine, create_engine
@@ -11,7 +15,10 @@ from app.core.groups import models_groups
 from app.core.schools import models_schools
 from app.core.utils.config import Settings
 from app.types import core_data
-from app.types.exceptions import CoreDataNotFoundError
+from app.types.exceptions import (
+    CoreDataNotFoundError,
+    WaitUnlockMissingUnlockKey,
+)
 from app.types.sqlalchemy import Base
 
 # These utils are used at startup to run database initializations & migrations
@@ -269,3 +276,41 @@ def drop_db_sync(conn: Connection):
     my_metadata: MetaData = MetaData(schema=Base.metadata.schema)
     my_metadata.reflect(bind=conn, resolve_fks=False)
     my_metadata.drop_all(bind=conn)
+
+
+async def use_lock_for_workers(
+    func: Callable[..., Coroutine[Any, Any, Any]] | Callable[..., Any],
+    params: list[Any],
+    key: str,
+    redis_client: redis.Redis,
+    logger: logging.Logger,
+    wait_unlock: bool = False,
+    unlock_key: str | None = None,
+):
+    if not wait_unlock:
+        if redis_client.setnx(key, "1"):
+            logger.info(f"Running {func.__name__}")
+            result = func(*params)
+            if isinstance(result, Coroutine):
+                result = await result
+            redis_client.expire(key, 20)
+            return result
+        return
+
+    elif not unlock_key:
+        raise WaitUnlockMissingUnlockKey()
+
+    while redis_client.get(unlock_key) is None:
+        if redis_client.setnx(key, "1"):
+            logger.info(f"Running {func.__name__}")
+            result = func(*params)
+            if isinstance(result, Coroutine):
+                result = await result
+            redis_client.set(unlock_key, "1")
+            redis_client.expire(unlock_key, 20)
+            redis_client.expire(key, 20)
+            return result
+
+        else:
+            logger.info(f"Waiting for {func.__name__} to finish")
+            await asyncio.sleep(1)

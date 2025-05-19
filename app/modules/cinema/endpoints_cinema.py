@@ -22,6 +22,7 @@ from app.dependencies import (
     is_user_in,
 )
 from app.modules.cinema import cruds_cinema, schemas_cinema
+from app.modules.cinema.factory_cinema import CinemaFactory
 from app.types import standard_responses
 from app.types.content_type import ContentType
 from app.types.module import Module
@@ -38,6 +39,7 @@ module = Module(
     root="cinema",
     tag="Cinema",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
+    factory=CinemaFactory(),
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")

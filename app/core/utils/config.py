@@ -149,6 +149,10 @@ class Settings(BaseSettings):
     POSTGRES_DB: str = ""
     POSTGRES_TZ: str = ""
     DATABASE_DEBUG: bool = False  # If True, the database will log all queries
+    USE_FACTORIES: bool = (
+        False  # If True, the database will be populated with fake data
+    )
+    FACTORIES_DEMO_USERS_PASSWORD: str | None = None
 
     #####################
     # Hyperion settings #
@@ -362,6 +366,18 @@ class Settings(BaseSettings):
         if not self.RSA_PRIVATE_PEM_STRING:
             raise DotenvMissingVariableError(
                 "RSA_PRIVATE_PEM_STRING",
+            )
+
+        return self
+
+    @model_validator(mode="after")
+    def check_factories_demo_password(self) -> "Settings":
+        """
+        Check that the factories demo passwords are set if USE_FACTORIES is True
+        """
+        if self.USE_FACTORIES and not self.FACTORIES_DEMO_USERS_PASSWORD:
+            raise DotenvMissingVariableError(
+                "FACTORIES_DEMO_USERS_PASSWORDS",
             )
 
         return self
