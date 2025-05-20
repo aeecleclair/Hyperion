@@ -1,8 +1,12 @@
 import logging
+from typing import TYPE_CHECKING
 
 from app.core.core_module_list import core_module_list
 from app.modules.module_list import module_list
-from app.types.module import CoreModule
+
+if TYPE_CHECKING:
+    from app.core.permissions.type_permissions import ModulePermissions
+    from app.types.module import CoreModule
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
@@ -19,17 +23,17 @@ class DuplicatePermissionsError(Exception):
         )
 
 
-all_module_list: list[CoreModule] = []
-permissions_list: list[str] = []
-full_name_permissions_list: list[str] = []
-
+all_module_list: list["CoreModule"] = []
 all_module_list.extend(module_list)
 all_module_list.extend(core_module_list)
 
+
+permissions_list: list["ModulePermissions"] = []
+full_name_permissions_list: list[str] = []
 for module in all_module_list:
     if module.permissions:
         permissions_list.extend(
-            module.permissions.__members__.keys(),
+            module.permissions.__members__.values(),
         )
         full_name_permissions_list.extend(
             [

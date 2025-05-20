@@ -93,7 +93,7 @@ def test_create_permission(client: TestClient) -> None:
 
 
 async def test_delete_permission(client: TestClient) -> None:
-    permission = models_permissions.CorePermission(
+    permission = models_permissions.CorePermissionGroup(
         permission_name=BookingPermissions.manage_rooms,
         group_id=group3.id,
     )
