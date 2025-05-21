@@ -85,6 +85,9 @@ class PaymentTool:
                 tokens = self._auth_client.refresh_token(
                     refresh_token=self._refresh_token,
                 )
+                self._access_token = tokens["access_token"]
+                self._refresh_token = tokens["refresh_token"]
+                self._access_token_expiry = tokens["expires_at"]
             except Exception:
                 hyperion_error_logger.exception(
                     "Payment: failed to refresh HelloAsso access token, getting a new one",
