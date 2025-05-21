@@ -77,8 +77,9 @@ class PaymentTool:
             self._refresh_token = tokens["refresh_token"]
             self._access_token_expiry = tokens["expires_at"]
         # If we have a token but it's expired, we need to refresh it
+        # We refresh the token if it's expired or if it's about to expire in less than 3 minutes
         elif self._access_token_expiry is None or self._access_token_expiry < int(
-            datetime.now(UTC).timestamp(),
+            datetime.now(UTC).timestamp() - 3 * 60,
         ):
             # Token is expired, we need to refresh it
             try:
