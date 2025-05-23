@@ -75,6 +75,13 @@ class Transaction(Base):
         foreign_keys=[credited_wallet_id],
     )
 
+    refund: Mapped["Refund" | None] = relationship(
+        init=False,
+        back_populates="transaction",
+        uselist=False,  # We expect only one refund per transaction
+        lazy="joined",
+    )
+
 
 class Refund(Base):
     __tablename__ = "myeclpay_refund"
@@ -87,7 +94,11 @@ class Refund(Base):
     creation: Mapped[datetime]
     seller_user_id: Mapped[str | None] = mapped_column(ForeignKey("core_user.id"))
 
-    transaction: Mapped[Transaction] = relationship(init=False, lazy="joined")
+    transaction: Mapped[Transaction] = relationship(
+        init=False,
+        back_populates="refund",
+        lazy="joined",
+    )
     debited_wallet: Mapped[Wallet] = relationship(
         init=False,
         foreign_keys=[debited_wallet_id],

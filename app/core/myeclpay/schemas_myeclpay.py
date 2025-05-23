@@ -114,6 +114,11 @@ class RefundInfo(BaseModel):
     amount: int | None = None
 
 
+class HistoryRefund(BaseModel):
+    total: int
+    creation: datetime
+
+
 class History(BaseModel):
     id: UUID
     type: HistoryType
@@ -121,6 +126,7 @@ class History(BaseModel):
     total: int
     creation: datetime
     status: TransactionStatus
+    refund: HistoryRefund | None = None
 
 
 class QRCodeContentData(BaseModel):
@@ -177,7 +183,7 @@ class WalletDeviceCreation(WalletDeviceBase):
     ed25519_public_key: bytes
 
 
-class Transaction(BaseModel):
+class TransactionBase(BaseModel):
     id: UUID
     debited_wallet_id: UUID
     credited_wallet_id: UUID
@@ -190,6 +196,10 @@ class Transaction(BaseModel):
     total: int  # Stored in cents
     creation: datetime
     status: TransactionStatus
+
+
+class Transaction(TransactionBase):
+    refund: "RefundBase" | None = None
 
 
 class Transfer(BaseModel):
@@ -217,6 +227,6 @@ class RefundBase(BaseModel):
 
 
 class Refund(RefundBase):
-    transaction: Transaction
+    transaction: TransactionBase
     credited_wallet: WalletInfo
     debited_wallet: WalletInfo

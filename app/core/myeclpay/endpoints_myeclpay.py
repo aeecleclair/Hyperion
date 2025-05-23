@@ -504,6 +504,13 @@ async def get_store_history(
     )
     history = []
     for transaction in transactions:
+        history_refund: schemas_myeclpay.HistoryRefund | None = None
+        if transaction.refund is not None:
+            history_refund = schemas_myeclpay.HistoryRefund(
+                total=transaction.refund.total,
+                creation=transaction.refund.creation,
+            )
+
         if transaction.debited_wallet_id == store.wallet_id:
             history.append(
                 schemas_myeclpay.History(
@@ -515,6 +522,7 @@ async def get_store_history(
                     other_wallet_name=transaction.credited_wallet.user.full_name
                     if transaction.credited_wallet.user is not None
                     else "",
+                    refund=history_refund,
                 ),
             )
         else:
@@ -528,6 +536,7 @@ async def get_store_history(
                     other_wallet_name=transaction.debited_wallet.user.full_name
                     if transaction.debited_wallet.user is not None
                     else "",
+                    refund=history_refund,
                 ),
             )
 
@@ -1535,6 +1544,12 @@ async def get_user_wallet_history(
         else:
             raise UnexpectedError("Transaction has no credited or debited wallet")  # noqa: TRY003
 
+        history_refund: schemas_myeclpay.HistoryRefund | None = None
+        if transaction.refund is not None:
+            history_refund = schemas_myeclpay.HistoryRefund(
+                total=transaction.refund.total,
+                creation=transaction.refund.creation,
+            )
         history.append(
             schemas_myeclpay.History(
                 id=transaction.id,
@@ -1543,6 +1558,7 @@ async def get_user_wallet_history(
                 total=transaction.total,
                 creation=transaction.creation,
                 status=transaction.status,
+                refund=history_refund,
             ),
         )
 
