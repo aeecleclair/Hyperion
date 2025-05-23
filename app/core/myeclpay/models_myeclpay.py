@@ -75,7 +75,7 @@ class Transaction(Base):
         foreign_keys=[credited_wallet_id],
     )
 
-    refund: Mapped["Refund" | None] = relationship(
+    refund: Mapped["Refund | None"] = relationship(
         init=False,
         back_populates="transaction",
         uselist=False,  # We expect only one refund per transaction

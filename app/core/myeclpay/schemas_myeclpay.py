@@ -199,7 +199,7 @@ class TransactionBase(BaseModel):
 
 
 class Transaction(TransactionBase):
-    refund: "RefundBase" | None = None
+    refund: "RefundBase | None" = None
 
 
 class Transfer(BaseModel):
