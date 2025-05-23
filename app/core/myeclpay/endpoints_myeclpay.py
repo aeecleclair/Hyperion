@@ -154,7 +154,7 @@ async def create_structure(
         await db.rollback()
         raise
 
-    return structure_db
+    return await cruds_myeclpay.get_structure_by_id(structure_db.id, db)
 
 
 @router.patch(

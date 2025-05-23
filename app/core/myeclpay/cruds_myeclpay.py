@@ -38,7 +38,7 @@ async def update_structure(
     await db.execute(
         update(models_myeclpay.Structure)
         .where(models_myeclpay.Structure.id == structure_id)
-        .values(**structure_update.model_dump(exclude_none=True)),
+        .values(**structure_update.model_dump(exclude_unset=True)),
     )
 
 
