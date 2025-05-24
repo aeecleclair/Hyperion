@@ -221,14 +221,14 @@ class Settings(BaseSettings):
     def HYPERION_VERSION(cls) -> str:
         with Path("pyproject.toml").open("rb") as pyproject_binary:
             pyproject = tomllib.load(pyproject_binary)
-        return pyproject["project"]["version"]
+        return str(pyproject["project"]["version"])
 
     @computed_field  # type: ignore[misc]
     @cached_property
     def MINIMAL_TITAN_VERSION_CODE(cls) -> str:
         with Path("pyproject.toml").open("rb") as pyproject_binary:
             pyproject = tomllib.load(pyproject_binary)
-        return pyproject["project"]["minimal-titan-version-code"]
+        return str(pyproject["project"]["minimal-titan-version-code"])
 
     ######################################
     # Automatically generated parameters #
