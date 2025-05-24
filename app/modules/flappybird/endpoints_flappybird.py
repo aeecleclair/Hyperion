@@ -26,7 +26,10 @@ module = Module(
     response_model=list[schemas_flappybird.FlappyBirdScoreInDB],
     status_code=200,
 )
-async def get_flappybird_score(db: AsyncSession = Depends(get_db)):
+async def get_flappybird_score(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user_a_member),
+):
     """Return the leaderboard"""
     return await cruds_flappybird.get_flappybird_score_leaderboard(db=db)
 
