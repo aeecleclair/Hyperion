@@ -220,3 +220,7 @@ class Refund(RefundBase):
     transaction: Transaction
     credited_wallet: WalletInfo
     debited_wallet: WalletInfo
+
+
+class IntegrityCheckHeaders(BaseModel):
+    x_data_verifier_token: str
