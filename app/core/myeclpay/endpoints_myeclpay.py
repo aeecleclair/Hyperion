@@ -5,7 +5,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.exc import IntegrityError
@@ -81,6 +81,11 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 hyperion_security_logger = logging.getLogger("hyperion.security")
 hyperion_myeclpay_logger = logging.getLogger("hyperion.myeclpay")
 
+MYECLPAY_STRUCTURE_S3_SUBFOLDER = "structures"
+MYECLPAY_STORES_S3_SUBFOLDER = "stores"
+MYECLPAY_USERS_S3_SUBFOLDER = "users"
+MYECLPAY_LOGS_S3_SUBFOLDER = "logs"
+
 
 @router.get(
     "/myeclpay/structures",
@@ -154,6 +159,14 @@ async def create_structure(
         await db.rollback()
         raise
 
+    hyperion_myeclpay_logger.info(
+        structure_db.name,
+        extra={
+            "s3_subfolder": MYECLPAY_STRUCTURE_S3_SUBFOLDER,
+            "s3_filename": str(structure_db.id),
+        },
+    )
+
     return await cruds_myeclpay.get_structure_by_id(structure_db.id, db)
 
 
@@ -193,6 +206,14 @@ async def update_structure(
     except IntegrityError:
         await db.rollback()
         raise
+
+    hyperion_myeclpay_logger.info(
+        structure.name,
+        extra={
+            "s3_subfolder": MYECLPAY_STRUCTURE_S3_SUBFOLDER,
+            "s3_filename": str(structure.id),
+        },
+    )
 
 
 @router.delete(
@@ -453,6 +474,14 @@ async def create_store(
         await db.rollback()
         raise
 
+    hyperion_myeclpay_logger.info(
+        f"store.name: {store_db.name}, structure_id: {store_db.structure_id}",
+        extra={
+            "s3_subfolder": MYECLPAY_STORES_S3_SUBFOLDER,
+            "s3_filename": str(store_db.id),
+        },
+    )
+
     return schemas_myeclpay.Store(
         id=store_db.id,
         name=store_db.name,
@@ -673,6 +702,14 @@ async def update_store(
     )
 
     await db.commit()
+
+    hyperion_myeclpay_logger.info(
+        f"store.name: {store.name}, structure_id: {store.structure_id}",
+        extra={
+            "s3_subfolder": MYECLPAY_STORES_S3_SUBFOLDER,
+            "s3_filename": str(store.id),
+        },
+    )
 
 
 @router.delete(
@@ -1050,6 +1087,14 @@ async def register_user(
     )
 
     await db.commit()
+
+    hyperion_myeclpay_logger.info(
+        wallet_id,
+        extra={
+            "s3_subfolder": MYECLPAY_USERS_S3_SUBFOLDER,
+            "s3_filename": str(user.id),
+        },
+    )
 
 
 @router.get(
@@ -1697,7 +1742,10 @@ async def add_transfer_by_admin(
     except Exception:
         await db.rollback()
         raise
-    hyperion_myeclpay_logger.info(format_transfer_log(transfer))
+    hyperion_myeclpay_logger.info(
+        format_transfer_log(transfer),
+        extra={"subfolder": MYECLPAY_LOGS_S3_SUBFOLDER},
+    )
 
     message = Message(
         title="💳 Paiement - transfert",
@@ -2179,7 +2227,10 @@ async def store_scan_qrcode(
 
     await db.commit()
 
-    hyperion_myeclpay_logger.info(format_transaction_log(transaction))
+    hyperion_myeclpay_logger.info(
+        format_transaction_log(transaction),
+        extra={"subfolder": MYECLPAY_LOGS_S3_SUBFOLDER},
+    )
 
     message = Message(
         title=f"💳 Paiement - {store.name}",
@@ -2353,7 +2404,10 @@ async def refund_transaction(
 
     await db.commit()
 
-    hyperion_myeclpay_logger.info(format_refund_log(refund))
+    hyperion_myeclpay_logger.info(
+        format_refund_log(refund),
+        extra={"subfolder": MYECLPAY_LOGS_S3_SUBFOLDER},
+    )
 
     if wallet_previously_debited.user is not None:
         message = Message(
@@ -2499,7 +2553,10 @@ async def cancel_transaction(
 
     await db.commit()
 
-    hyperion_myeclpay_logger.info(format_cancel_log(transaction_id))
+    hyperion_myeclpay_logger.info(
+        format_cancel_log(transaction_id),
+        extra={"subfolder": MYECLPAY_LOGS_S3_SUBFOLDER},
+    )
 
     if debited_wallet.user is not None:
         message = Message(
@@ -2525,14 +2582,14 @@ async def cancel_transaction(
     ],
 )
 async def get_data_for_integrity_check(
-    request: Request,
+    headers: schemas_myeclpay.IntegrityCheckHeaders = Header(),
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ):
     """
     Check the integrity of the MyECL Pay database.
 
-    **The header must contain the MYECLPAY_DATA_VERIFIER_ACCESS_TOKEN defined in the settings in the `X-Data-Verifier-Token` header**
+    **The header must contain the MYECLPAY_DATA_VERIFIER_ACCESS_TOKEN defined in the settings in the `x-data-verifier-token` field**
     """
     if settings.MYECLPAY_DATA_VERIFIER_ACCESS_TOKEN is None:
         raise HTTPException(
@@ -2540,12 +2597,9 @@ async def get_data_for_integrity_check(
             detail="MYECLPAY_DATA_VERIFIER_ACCESS_TOKEN is not set in the settings",
         )
 
-    if (
-        request.headers.get("X-Data-Verifier-Token")
-        != settings.MYECLPAY_DATA_VERIFIER_ACCESS_TOKEN
-    ):
+    if headers.x_data_verifier_token != settings.MYECLPAY_DATA_VERIFIER_ACCESS_TOKEN:
         hyperion_security_logger.warning(
-            f"A request to /myeclpay/integrity-check has been made with an invalid token, request_content: {request}",
+            f"A request to /myeclpay/integrity-check has been made with an invalid token, request_content: {headers}",
         )
         raise HTTPException(
             status_code=403,
