@@ -140,10 +140,20 @@ class LogConfig:
                     "formatter": "myeclpay",
                     "class": "app.utils.loggers_tools.s3_handler.S3LogHandler",
                     "failure_logger": "hyperion.myeclpay.fallback",
-                    "s3_bucket_name": settings.S3_MYECLPAY_LOGS_BUCKET_NAME,
+                    "s3_bucket_name": settings.S3_BUCKET_NAME,
                     "s3_access_key_id": settings.S3_ACCESS_KEY_ID,
                     "s3_secret_access_key": settings.S3_SECRET_ACCESS_KEY,
                     "folder": "myeclpay/",
+                    "retention": 365 * 10,
+                },
+                "s3": {
+                    "formatter": "myeclpay",
+                    "class": "app.utils.loggers_tools.s3_handler.S3LogHandler",
+                    "failure_logger": "hyperion.s3.fallback",
+                    "s3_bucket_name": settings.S3_BUCKET_NAME,
+                    "s3_access_key_id": settings.S3_ACCESS_KEY_ID,
+                    "s3_secret_access_key": settings.S3_SECRET_ACCESS_KEY,
+                    "folder": "",
                     "retention": 365 * 10,
                 },
                 # There is a handler per log file #
@@ -182,6 +192,15 @@ class LogConfig:
                     "formatter": "default",
                     "class": "logging.handlers.RotatingFileHandler",
                     "filename": "logs/myeclpay.log",
+                    "maxBytes": 1024 * 1024 * 40,  # ~ 40 MB
+                    "backupCount": 100,
+                    "level": "DEBUG",
+                },
+                "file_s3": {
+                    # file_myeclpay is there to log all operations related to MyECLPay that failed to be logged in the S3 bucket
+                    "formatter": "default",
+                    "class": "logging.handlers.RotatingFileHandler",
+                    "filename": "logs/s3.log",
                     "maxBytes": 1024 * 1024 * 40,  # ~ 40 MB
                     "backupCount": 100,
                     "level": "DEBUG",
@@ -256,6 +275,21 @@ class LogConfig:
                 "hyperion.myeclpay": {
                     "handlers": [
                         "myeclpay_s3",
+                    ],
+                    "level": "DEBUG",
+                },
+                "hyperion.s3.fallback": {
+                    "handlers": [
+                        "file_s3",
+                        "matrix_errors",
+                        "console",
+                    ],
+                    "level": "DEBUG",
+                    "propagate": False,
+                },
+                "hyperion.s3": {
+                    "handlers": [
+                        "s3",
                     ],
                     "level": "DEBUG",
                 },
