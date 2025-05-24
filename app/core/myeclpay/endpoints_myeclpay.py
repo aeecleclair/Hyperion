@@ -17,6 +17,12 @@ from app.core.memberships.utils_memberships import (
     get_user_active_membership_to_association_membership,
 )
 from app.core.myeclpay import cruds_myeclpay, schemas_myeclpay
+from app.core.myeclpay.integrity_myeclpay import (
+    format_cancel_log,
+    format_refund_log,
+    format_transaction_log,
+    format_transfer_log,
+)
 from app.core.myeclpay.models_myeclpay import Store, WalletDevice
 from app.core.myeclpay.types_myeclpay import (
     HistoryType,
@@ -73,6 +79,7 @@ templates = Jinja2Templates(directory="assets/templates")
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 hyperion_security_logger = logging.getLogger("hyperion.security")
+hyperion_myeclpay_logger = logging.getLogger("hyperion.myeclpay")
 
 
 @router.get(
@@ -87,11 +94,9 @@ async def get_structures(
     """
     Get all structures.
     """
-    structures = await cruds_myeclpay.get_structures(
+    return await cruds_myeclpay.get_structures(
         db=db,
     )
-
-    return structures
 
 
 @router.post(
@@ -149,7 +154,7 @@ async def create_structure(
         await db.rollback()
         raise
 
-    return structure_db
+    return await cruds_myeclpay.get_structure_by_id(structure_db.id, db)
 
 
 @router.patch(
@@ -841,12 +846,10 @@ async def get_store_sellers(
             detail="User does not have the permission to manage sellers",
         )
 
-    sellers = await cruds_myeclpay.get_sellers_by_store_id(
+    return await cruds_myeclpay.get_sellers_by_store_id(
         store_id=store_id,
         db=db,
     )
-
-    return sellers
 
 
 @router.patch(
@@ -1183,12 +1186,10 @@ async def get_user_devices(
             detail="User is not registered for MyECL Pay",
         )
 
-    wallet_devices = await cruds_myeclpay.get_wallet_devices_by_wallet_id(
+    return await cruds_myeclpay.get_wallet_devices_by_wallet_id(
         wallet_id=user_payment.wallet_id,
         db=db,
     )
-
-    return wallet_devices
 
 
 @router.get(
@@ -1674,20 +1675,18 @@ async def add_transfer_by_admin(
             status_code=403,
             detail="Wallet balance would exceed the maximum allowed balance",
         )
-
-    await cruds_myeclpay.create_transfer(
-        db=db,
-        transfer=schemas_myeclpay.Transfer(
-            id=uuid.uuid4(),
-            type=transfer_info.transfer_type,
-            approver_user_id=user.id,
-            total=transfer_info.amount,
-            transfer_identifier="",  # TODO: require to provide an identifier
-            wallet_id=user_payment.wallet_id,
-            creation=datetime.now(UTC),
-            confirmed=True,
-        ),
+    creation_date = datetime.now(UTC)
+    transfer = schemas_myeclpay.Transfer(
+        id=uuid.uuid4(),
+        type=transfer_info.transfer_type,
+        approver_user_id=user.id,
+        total=transfer_info.amount,
+        transfer_identifier="",  # TODO: require to provide an identifier
+        wallet_id=user_payment.wallet_id,
+        creation=creation_date,
+        confirmed=True,
     )
+    await cruds_myeclpay.create_transfer(transfer, db)
     await cruds_myeclpay.increment_wallet_balance(
         wallet_id=user_payment.wallet_id,
         amount=transfer_info.amount,
@@ -1698,10 +1697,11 @@ async def add_transfer_by_admin(
     except Exception:
         await db.rollback()
         raise
+    hyperion_myeclpay_logger.info(format_transfer_log(transfer))
 
     message = Message(
         title="💳 Paiement - transfert",
-        content=f"Votre compte a été crédité de {transfer_info.amount/100} €",
+        content=f"Votre compte a été crédité de {transfer_info.amount / 100} €",
         action_module="MyECLPay",
     )
     await notification_tool.send_notification_to_user(
@@ -2158,28 +2158,32 @@ async def store_scan_qrcode(
         db=db,
     )
     transaction_id = uuid.uuid4()
-    # We create a transaction
-    await cruds_myeclpay.create_transaction(
-        transaction_id=transaction_id,
+    creation_date = datetime.now(UTC)
+    transaction = schemas_myeclpay.Transaction(
+        id=transaction_id,
         debited_wallet_id=debited_wallet_device.wallet_id,
-        debited_wallet_device_id=debited_wallet_device.id,
         credited_wallet_id=store.wallet_id,
         transaction_type=TransactionType.DIRECT,
         seller_user_id=user.id,
         total=scan_info.tot,
-        creation=datetime.now(UTC),
+        creation=creation_date,
         status=TransactionStatus.CONFIRMED,
+    )
+    # We create a transaction
+    await cruds_myeclpay.create_transaction(
+        transaction=transaction,
+        debited_wallet_device_id=debited_wallet_device.id,
         store_note=None,
         db=db,
     )
 
     await db.commit()
 
-    # TODO: log the transaction
+    hyperion_myeclpay_logger.info(format_transaction_log(transaction))
 
     message = Message(
         title=f"💳 Paiement - {store.name}",
-        content=f"Une transaction de {scan_info.tot/100} € a été effectuée",
+        content=f"Une transaction de {scan_info.tot / 100} € a été effectuée",
         action_module="MyECLPay",
     )
     await notification_tool.send_notification_to_user(
@@ -2187,16 +2191,7 @@ async def store_scan_qrcode(
         message=message,
     )
 
-    return schemas_myeclpay.Transaction(
-        id=transaction_id,
-        debited_wallet_id=debited_wallet_device.wallet_id,
-        credited_wallet_id=store.wallet_id,
-        transaction_type=TransactionType.DIRECT,
-        seller_user_id=user.id,
-        total=scan_info.tot,
-        creation=datetime.now(UTC),
-        status=TransactionStatus.CONFIRMED,
-    )
+    return transaction
 
 
 @router.post(
@@ -2325,18 +2320,21 @@ async def refund_transaction(
         db=db,
     )
 
+    creation_date = datetime.now(UTC)
+    refund = schemas_myeclpay.RefundBase(
+        id=uuid.uuid4(),
+        transaction_id=transaction_id,
+        total=refund_amount,
+        seller_user_id=user.id
+        if wallet_previously_credited.type == WalletType.STORE
+        else None,
+        credited_wallet_id=wallet_previously_debited.id,
+        debited_wallet_id=wallet_previously_credited.id,
+        creation=creation_date,
+    )
+
     await cruds_myeclpay.create_refund(
-        refund=schemas_myeclpay.RefundBase(
-            id=uuid.uuid4(),
-            transaction_id=transaction_id,
-            total=refund_amount,
-            seller_user_id=user.id
-            if wallet_previously_credited.type == WalletType.STORE
-            else None,
-            credited_wallet_id=wallet_previously_debited.id,
-            debited_wallet_id=wallet_previously_credited.id,
-            creation=datetime.now(UTC),
-        ),
+        refund=refund,
         db=db,
     )
 
@@ -2355,10 +2353,12 @@ async def refund_transaction(
 
     await db.commit()
 
+    hyperion_myeclpay_logger.info(format_refund_log(refund))
+
     if wallet_previously_debited.user is not None:
         message = Message(
             title="💳 Remboursement",
-            content=f"La transaction pour {wallet_previously_credited_name} ({transaction.total/100} €) a été remboursée de {refund_amount/100} €",
+            content=f"La transaction pour {wallet_previously_credited_name} ({transaction.total / 100} €) a été remboursée de {refund_amount / 100} €",
             action_module="MyECLPay",
         )
         await notification_tool.send_notification_to_user(
@@ -2373,7 +2373,7 @@ async def refund_transaction(
             wallet_previously_debited_name = wallet_previously_debited.store.name
         message = Message(
             title="💳 Remboursement",
-            content=f"Vous avez remboursé la transaction de {wallet_previously_debited_name} ({transaction.total/100} €) de {refund_amount/100} €",
+            content=f"Vous avez remboursé la transaction de {wallet_previously_debited_name} ({transaction.total / 100} €) de {refund_amount / 100} €",
             action_module="MyECLPay",
         )
         await notification_tool.send_notification_to_user(
@@ -2499,10 +2499,12 @@ async def cancel_transaction(
 
     await db.commit()
 
+    hyperion_myeclpay_logger.info(format_cancel_log(transaction_id))
+
     if debited_wallet.user is not None:
         message = Message(
             title="💳 Paiement annulé",
-            content=f"La transaction de {transaction.total/100} € a été annulée",
+            content=f"La transaction de {transaction.total / 100} € a été annulée",
             action_module="MyECLPay",
         )
         await notification_tool.send_notification_to_user(

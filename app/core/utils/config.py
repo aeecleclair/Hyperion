@@ -88,6 +88,15 @@ class Settings(BaseSettings):
     REDIS_LIMIT: int
     REDIS_WINDOW: int
 
+    ####################
+    # S3 configuration #
+    ####################
+    # S3 configuration is needed to use the S3 storage for MyECLPay logs
+
+    S3_MYECLPAY_LOGS_BUCKET_NAME: str | None = None
+    S3_ACCESS_KEY_ID: str | None = None
+    S3_SECRET_ACCESS_KEY: str | None = None
+
     ##############
     # Google API #
     ##############
@@ -375,12 +384,12 @@ class Settings(BaseSettings):
         By calling them in this validator, we force their initialization during the instantiation of the class.
         This allow them to raise error on Hyperion startup if they are not correctly configured instead of creating an error on runtime.
         """
-        self.HYPERION_VERSION  # noqa
-        self.MINIMAL_TITAN_VERSION_CODE  # noqa
-        self.KNOWN_AUTH_CLIENTS  # noqa
-        self.RSA_PRIVATE_KEY  # noqa
-        self.RSA_PUBLIC_KEY  # noqa
-        self.RSA_PUBLIC_JWK  # noqa
+        self.HYPERION_VERSION  # noqa: B018
+        self.MINIMAL_TITAN_VERSION_CODE  # noqa: B018
+        self.KNOWN_AUTH_CLIENTS  # noqa: B018
+        self.RSA_PRIVATE_KEY  # noqa: B018
+        self.RSA_PUBLIC_KEY  # noqa: B018
+        self.RSA_PUBLIC_JWK  # noqa: B018
 
         return self
 

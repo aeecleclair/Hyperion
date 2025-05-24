@@ -180,7 +180,7 @@ async def save_team_info(
         pdf_writer.clear_pdf()
     except Exception:
         hyperion_error_logger.exception("Error while creating pdf")
-        return None
+        return
 
 
 async def post_update_actions(
@@ -209,7 +209,7 @@ async def post_update_actions(
             )
     except Exception:
         hyperion_error_logger.exception("Error while creating pdf")
-        return None
+        return
 
 
 async def save_security_file(
@@ -232,7 +232,7 @@ async def save_security_file(
             hyperion_error_logger.error(
                 "RAID: The security file should have been created",
             )
-            return None
+            return
 
         async with DriveGoogleAPI(db, settings) as google_api:
             if participant.security_file.file_id:
@@ -258,7 +258,7 @@ async def save_security_file(
         Path(file_path).unlink()
     except Exception:
         hyperion_error_logger.exception("Error while creating pdf")
-        return None
+        return
 
 
 async def get_participant(

@@ -681,7 +681,7 @@ async def test_get_payment_url_participant_already_paid(client: TestClient, mock
 ## Test for pdf writer
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_team():
     return Mock(
         spec=Team,
@@ -720,12 +720,12 @@ def mock_team():
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_security_file():
     return Mock(spec=SecurityFile, allergy="None", asthma=False)
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_participant():
     return Mock(
         spec=Participant,
@@ -758,7 +758,7 @@ def mock_participant():
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_document():
     return Mock(
         spec=Document,

@@ -4,10 +4,11 @@ from typing import TYPE_CHECKING
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
-from helloasso_api_wrapper.exceptions import ApiV5BadRequest
-from helloasso_api_wrapper.models.carts import (
-    InitCheckoutBody,
-    InitCheckoutResponse,
+from helloasso_python.models.hello_asso_api_v5_models_carts_init_checkout_body import (
+    HelloAssoApiV5ModelsCartsInitCheckoutBody,
+)
+from helloasso_python.models.hello_asso_api_v5_models_carts_init_checkout_response import (
+    HelloAssoApiV5ModelsCartsInitCheckoutResponse,
 )
 from pytest_mock import MockerFixture
 from requests import Response
@@ -442,21 +443,27 @@ async def test_payment_tool_init_checkout(
     settings.HELLOASSO_CLIENT_ID = "clientid"
     settings.HELLOASSO_CLIENT_SECRET = "secret"
 
-    # We mock the whole HelloAssoAPIWrapper to avoid making real API calls
-    # and prevent the class initialization from failing to authenticate
-    mocker.patch(
-        "app.core.payment.payment_tool.HelloAssoAPIWrapper",
-    )
-
     redirect_url = "https://example.com"
 
     payment_tool = PaymentTool(settings=settings)
 
-    # We mock the HelloAssoAPIWrapper `init_a_checkout` method to return a mocked response
     mocker.patch.object(
-        payment_tool.hello_asso.checkout_intents_management,  # type: ignore # we know that payment_tool.hello_asso is not null as we patched settings to enable payment
-        "init_a_checkout",
-        return_value=InitCheckoutResponse(id=7, redirectUrl=redirect_url),
+        payment_tool,
+        "get_access_token",
+        return_value="access_token",
+    )
+
+    # We mock the whole CheckoutAPI to avoid making real API calls
+    # and prevent the class initialization from failing to authenticate
+    # We mock the init checkout method to return a mocked response
+    mock_checkout_api = mocker.MagicMock()
+    mock_checkout_api.organizations_organization_slug_checkout_intents_post.return_value = HelloAssoApiV5ModelsCartsInitCheckoutResponse(
+        id=7,
+        redirect_url=redirect_url,
+    )
+    mocker.patch(
+        "app.core.payment.payment_tool.CheckoutApi",
+        return_value=mock_checkout_api,
     )
 
     async with TestingSessionLocal() as db:
@@ -492,12 +499,6 @@ async def test_payment_tool_init_checkout_with_one_failure(
     settings.HELLOASSO_CLIENT_ID = "clientid"
     settings.HELLOASSO_CLIENT_SECRET = "secret"
 
-    # We mock the whole HelloAssoAPIWrapper to avoid making real API calls
-    # and prevent the class initialization from failing to authenticate
-    mocker.patch(
-        "app.core.payment.payment_tool.HelloAssoAPIWrapper",
-    )
-
     redirect_url = "https://example.com"
 
     payment_tool = PaymentTool(settings=settings)
@@ -506,19 +507,31 @@ async def test_payment_tool_init_checkout_with_one_failure(
     # init_checkout is called with a payer, and return a mocked response the second time
     def init_a_checkout_side_effect(
         helloasso_slug: str,
-        init_checkout_body: InitCheckoutBody,
+        init_checkout_body: HelloAssoApiV5ModelsCartsInitCheckoutBody,
     ):
         if init_checkout_body.payer is not None:
             r = Response()
             r.status_code = 400
-            raise ApiV5BadRequest(r)
-        return InitCheckoutResponse(id=7, redirectUrl=redirect_url)
+            raise Exception  # noqa: TRY002
+        return HelloAssoApiV5ModelsCartsInitCheckoutResponse(
+            id=7,
+            redirect_url=redirect_url,
+        )
 
-    # We mock the HelloAssoAPIWrapper `init_a_checkout` method to return a mocked response
     mocker.patch.object(
-        payment_tool.hello_asso.checkout_intents_management,  # type: ignore # we know that payment_tool.hello_asso is not null as we patched settings to enable payment
-        "init_a_checkout",
-        side_effect=init_a_checkout_side_effect,
+        payment_tool,
+        "get_access_token",
+        return_value="access_token",
+    )
+
+    # We mock the whole HelloAssoAPIWrapper to avoid making real API calls
+    # and prevent the class initialization from failing to authenticate
+    # We mock the init checkout method to return a mocked response
+    mock_checkout_api = mocker.MagicMock()
+    mock_checkout_api.organizations_organization_slug_checkout_intents_post.side_effect = init_a_checkout_side_effect
+    mocker.patch(
+        "app.core.payment.payment_tool.CheckoutApi",
+        return_value=mock_checkout_api,
     )
 
     async with TestingSessionLocal() as db:
@@ -556,18 +569,25 @@ async def test_payment_tool_init_checkout_fail(
     settings.HELLOASSO_CLIENT_ID = "clientid"
     settings.HELLOASSO_CLIENT_SECRET = "secret"
 
-    # We mock the whole HelloAssoAPIWrapper to avoid making real API calls
-    # and prevent the class initialization from failing to authenticate
-    mocker.patch(
-        "app.core.payment.payment_tool.HelloAssoAPIWrapper",
-    )
     payment_tool = PaymentTool(settings=settings)
 
-    # We mock the HelloAssoAPIWrapper `init_a_checkout` to raise an error
     mocker.patch.object(
-        payment_tool.hello_asso.checkout_intents_management,  # type: ignore # we know that payment_tool.hello_asso is not null as we patched settings to enable payment
-        "init_a_checkout",
-        side_effect=ValueError("Mocked Exception"),
+        payment_tool,
+        "get_access_token",
+        return_value="access_token",
+    )
+
+    # We mock the whole HelloAssoAPIWrapper to avoid making real API calls
+    # and prevent the class initialization from failing to authenticate
+    # We mock the init checkout method to raise an error
+    mock_checkout_api = mocker.MagicMock()
+    mock_checkout_api.organizations_organization_slug_checkout_intents_post.side_effect = ValueError(
+        "Mocked Exception",
+    )
+
+    mocker.patch(
+        "app.core.payment.payment_tool.CheckoutApi",
+        return_value=mock_checkout_api,
     )
 
     with pytest.raises(ValueError, match="Mocked Exception"):
@@ -582,7 +602,7 @@ async def test_payment_tool_init_checkout_fail(
                 payer_user=user_schema,
             )
 
-    mocked_hyperion_security_logger.assert_called_once()
+    mocked_hyperion_security_logger.assert_called()
 
 
 # Test dependency #

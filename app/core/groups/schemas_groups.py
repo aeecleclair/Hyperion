@@ -70,6 +70,6 @@ class CoreMembershipDelete(BaseModel):
 
 
 # Importing here to avoid circular imports
-from app.core.users.schemas_users import CoreUserSimple  # noqa: E402, TCH001
+from app.core.users.schemas_users import CoreUserSimple  # noqa: E402, TC001
 
 CoreGroup.model_rebuild()
