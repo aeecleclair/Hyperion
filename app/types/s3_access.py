@@ -94,7 +94,11 @@ class S3Access:
         if subfolder != "" and not re.match(AUTHORIZED_FOLDER_STRING, subfolder):
             raise InvalidS3FolderError(subfolder)
 
-        filename = f"{self.folder}/{subfolder}/{filename}"
+        filename = (
+            f"{self.folder}/{subfolder}/{filename}"
+            if self.folder != ""
+            else f"{subfolder}/{filename}"
+        )
 
         file_object = BytesIO(message.encode("utf-8"))
 
@@ -144,7 +148,13 @@ class S3Access:
             raise InvalidS3FileNameError(filename)
         if subfolder != "" and not re.match(AUTHORIZED_FOLDER_STRING, subfolder):
             raise InvalidS3FolderError(subfolder)
-        filename = f"{self.folder}/{subfolder}/{filename}"
+
+        filename = (
+            f"{self.folder}/{subfolder}/{filename}"
+            if self.folder != ""
+            else f"{subfolder}/{filename}"
+        )
+
         file_object = BytesIO()
         if self.s3 is None:
             self.failure_logger.warning(f"GET Filename: {filename}")
@@ -176,7 +186,12 @@ class S3Access:
         if subfolder != "" and not re.match(AUTHORIZED_FOLDER_STRING, subfolder):
             raise InvalidS3FolderError(subfolder)
 
-        prefix = f"{self.folder}/{subfolder}/{prefix}"
+        prefix = (
+            f"{self.folder}/{subfolder}/{prefix}"
+            if self.folder != ""
+            else f"{subfolder}/{prefix}"
+        )
+
         if self.s3 is None:
             self.failure_logger.warning(f"LIST Prefix: {prefix}")
             return {"Contents": []}
