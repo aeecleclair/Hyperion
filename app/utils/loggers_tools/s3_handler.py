@@ -27,10 +27,16 @@ class S3LogHandler(StreamHandler):
             s3_secret_access_key,
             retention,
         )
-        StreamHandler.__init__(self)
+        super().__init__(self)
 
     @override
     def emit(self, record):
+        filename = getattr(record, "s3_filename", None)
+        subfolder = str(getattr(record, "s3_subfolder", ""))
+
+        if filename is None:
+            now = datetime.now(UTC)
+            filename = now.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+
         msg = self.format(record)
-        now = datetime.now(UTC)
-        self.s3_access.write_secure_log(msg, now.strftime("%Y-%m-%dT%H:%M:%S.%fZ"))
+        self.s3_access.write_file(msg, filename, subfolder)
