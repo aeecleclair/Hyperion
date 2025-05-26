@@ -42,7 +42,7 @@ from app.core.myeclpay.utils_myeclpay import (
     verify_signature,
 )
 from app.core.notification.schemas_notification import Message
-from app.core.payment import cruds_payment, schemas_payment
+from app.core.payment import schemas_payment
 from app.core.payment.payment_tool import PaymentTool
 from app.core.users import cruds_users, schemas_users
 from app.core.users.models_users import CoreUser
@@ -2486,13 +2486,13 @@ async def cancel_transaction(
     response_model=tuple[
         list[schemas_myeclpay.Wallet],
         list[schemas_myeclpay.Transaction],
-        list[schemas_payment.CheckoutComplete],
         list[schemas_myeclpay.Transfer],
-        list[schemas_myeclpay.Refund],
+        list[schemas_myeclpay.RefundBase],
     ],
 )
 async def get_data_for_integrity_check(
     headers: schemas_myeclpay.IntegrityCheckHeaders = Header(),
+    lastChecked: datetime | None = None,
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ):
@@ -2521,16 +2521,15 @@ async def get_data_for_integrity_check(
     )
     transactions = await cruds_myeclpay.get_transactions(
         db=db,
-    )
-    checkouts = await cruds_payment.get_checkouts(
-        module="MyECLPay",
-        db=db,
+        last_checked=lastChecked,
     )
     transfers = await cruds_myeclpay.get_transfers(
         db=db,
+        last_checked=lastChecked,
     )
     refunds = await cruds_myeclpay.get_refunds(
         db=db,
+        last_checked=lastChecked,
     )
 
-    return wallets, transactions, checkouts, transfers, refunds
+    return wallets, transactions, transfers, refunds

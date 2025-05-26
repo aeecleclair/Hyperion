@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,6 +20,7 @@ async def create_checkout(
 async def get_checkouts(
     module: str,
     db: AsyncSession,
+    last_checked: datetime | None = None,
 ) -> list[schemas_payment.CheckoutComplete]:
     result = await db.execute(
         select(models_payment.Checkout)

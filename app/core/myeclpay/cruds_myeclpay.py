@@ -393,46 +393,8 @@ async def get_wallets(
             id=wallet.id,
             type=wallet.type,
             balance=wallet.balance,
-            store=schemas_myeclpay.Store(
-                id=wallet.store.id,
-                name=wallet.store.name,
-                structure_id=wallet.store.structure_id,
-                structure=schemas_myeclpay.Structure(
-                    id=wallet.store.structure.id,
-                    name=wallet.store.structure.name,
-                    association_membership_id=wallet.store.structure.association_membership_id,
-                    association_membership=schemas_memberships.MembershipSimple(
-                        id=wallet.store.structure.association_membership.id,
-                        name=wallet.store.structure.association_membership.name,
-                        manager_group_id=wallet.store.structure.association_membership.manager_group_id,
-                    )
-                    if wallet.store.structure.association_membership
-                    else None,
-                    manager_user_id=wallet.store.structure.manager_user_id,
-                    manager_user=schemas_users.CoreUserSimple(
-                        id=wallet.store.structure.manager_user.id,
-                        firstname=wallet.store.structure.manager_user.firstname,
-                        name=wallet.store.structure.manager_user.name,
-                        nickname=wallet.store.structure.manager_user.nickname,
-                        account_type=wallet.store.structure.manager_user.account_type,
-                        school_id=wallet.store.structure.manager_user.school_id,
-                    ),
-                ),
-                wallet_id=wallet.id,
-            )
-            if wallet.store
-            else None,
-            user=schemas_users.CoreUser(
-                id=wallet.user.id,
-                firstname=wallet.user.firstname,
-                name=wallet.user.name,
-                nickname=wallet.user.nickname,
-                account_type=wallet.user.account_type,
-                school_id=wallet.user.school_id,
-                email=wallet.user.email,
-            )
-            if wallet.user
-            else None,
+            store=None,
+            user=None,
         )
         for wallet in result.scalars().all()
     ]
@@ -651,8 +613,15 @@ async def get_transaction(
 
 async def get_transactions(
     db: AsyncSession,
+    last_checked: datetime | None = None,
 ) -> Sequence[schemas_myeclpay.Transaction]:
-    result = await db.execute(select(models_myeclpay.Transaction))
+    result = await db.execute(
+        select(models_myeclpay.Transaction).where(
+            models_myeclpay.Transaction.creation >= last_checked
+            if last_checked
+            else and_(True),
+        ),
+    )
     return [
         schemas_myeclpay.Transaction(
             id=transaction.id,
@@ -698,8 +667,15 @@ async def get_transactions_by_wallet_id(
 
 async def get_transfers(
     db: AsyncSession,
+    last_checked: datetime | None = None,
 ) -> Sequence[schemas_myeclpay.Transfer]:
-    result = await db.execute(select(models_myeclpay.Transfer))
+    result = await db.execute(
+        select(models_myeclpay.Transfer).where(
+            models_myeclpay.Transfer.creation >= last_checked
+            if last_checked
+            else and_(True),
+        ),
+    )
     return [
         schemas_myeclpay.Transfer(
             id=transfer.id,
@@ -780,10 +756,17 @@ async def get_transfer_by_transfer_identifier(
 
 async def get_refunds(
     db: AsyncSession,
-) -> Sequence[schemas_myeclpay.Refund]:
-    result = await db.execute(select(models_myeclpay.Refund))
+    last_checked: datetime | None = None,
+) -> Sequence[schemas_myeclpay.RefundBase]:
+    result = await db.execute(
+        select(models_myeclpay.Refund).where(
+            models_myeclpay.Refund.creation >= last_checked
+            if last_checked
+            else and_(True),
+        ),
+    )
     return [
-        schemas_myeclpay.Refund(
+        schemas_myeclpay.RefundBase(
             id=refund.id,
             transaction_id=refund.transaction_id,
             credited_wallet_id=refund.credited_wallet_id,
@@ -791,34 +774,6 @@ async def get_refunds(
             total=refund.total,
             creation=refund.creation,
             seller_user_id=refund.seller_user_id,
-            transaction=schemas_myeclpay.Transaction(
-                id=refund.transaction.id,
-                debited_wallet_id=refund.transaction.debited_wallet_id,
-                credited_wallet_id=refund.transaction.credited_wallet_id,
-                transaction_type=refund.transaction.transaction_type,
-                seller_user_id=refund.transaction.seller_user_id,
-                total=refund.transaction.total,
-                creation=refund.transaction.creation,
-                status=refund.transaction.status,
-            ),
-            debited_wallet=schemas_myeclpay.WalletInfo(
-                id=refund.debited_wallet.id,
-                type=refund.debited_wallet.type,
-                owner_name=refund.debited_wallet.store.name
-                if refund.debited_wallet.store
-                else refund.debited_wallet.user.full_name
-                if refund.debited_wallet.user
-                else None,
-            ),
-            credited_wallet=schemas_myeclpay.WalletInfo(
-                id=refund.credited_wallet.id,
-                type=refund.credited_wallet.type,
-                owner_name=refund.credited_wallet.store.name
-                if refund.credited_wallet.store
-                else refund.credited_wallet.user.full_name
-                if refund.credited_wallet.user
-                else None,
-            ),
         )
         for refund in result.scalars().all()
     ]
