@@ -294,9 +294,11 @@ async def init_transfer_structure_manager(
         db=db,
     )
 
+    confirmation_url = f"{settings.CLIENT_URL}myeclpay/structures/confirm-transfer?token={confirmation_token}"
+
     if settings.SMTP_ACTIVE:
         mail = mail_templates.get_mail_myeclpay_structure_transfer(
-            confirmation_url=f"{settings.CLIENT_URL}myeclpay/structures/manager/confirm-transfer?token={confirmation_token}",
+            confirmation_url=confirmation_url,
         )
 
         background_tasks.add_task(
@@ -308,7 +310,7 @@ async def init_transfer_structure_manager(
         )
     else:
         hyperion_security_logger.info(
-            f"You can confirm the transfer by clicking the following link: {settings.CLIENT_URL}myeclpay/structures/manager/confirm-transfer?token={confirmation_token}",
+            f"You can confirm the transfer by clicking the following link: {confirmation_url}",
         )
 
 
