@@ -613,7 +613,7 @@ async def migrate_mail(
             mail = mail_templates.get_mail_mail_migration_already_exist()
             send_email(
                 recipient=mail_migration.new_email,
-                subject="MyECL - Confirm your new email adresse",
+                subject="MyECL - Confirm your new email address",
                 content=mail,
                 settings=settings,
             )
