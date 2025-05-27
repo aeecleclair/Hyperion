@@ -219,7 +219,7 @@ async def get_store_by_name(
     store_name: str,
     db: AsyncSession,
 ) -> models_myeclpay.Store | None:
-    result = db.execute(
+    result = await db.execute(
         select(models_myeclpay.Store).where(
             models_myeclpay.Store.name == store_name,
         ),
