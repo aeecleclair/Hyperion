@@ -115,6 +115,7 @@ class Settings(BaseSettings):
     # To be able to use payment features using HelloAsso, you need to set a client id, secret for their API
     # HelloAsso provide a sandbox to be able to realize tests
     # HELLOASSO_API_BASE should have the format: `api.helloasso-sandbox.com`
+    # HelloAsso only allow 20 simultaneous active access token. Note that each Hyperion worker will need its own access token.
     HELLOASSO_API_BASE: str | None = None
     HELLOASSO_CLIENT_ID: str | None = None
     HELLOASSO_CLIENT_SECRET: str | None = None
