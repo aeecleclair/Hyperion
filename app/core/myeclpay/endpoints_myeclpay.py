@@ -419,7 +419,6 @@ async def create_store(
 
     existing_store_with_name = await cruds_myeclpay.get_store_by_name(
         name=store.name,
-        structure_id=structure_id,
         db=db,
     )
     if existing_store_with_name is not None:
