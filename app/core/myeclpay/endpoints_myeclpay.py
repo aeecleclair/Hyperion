@@ -1169,7 +1169,11 @@ async def sign_tos(
     if settings.SMTP_ACTIVE:
         account_exists_content = templates.get_template(
             "myeclpay_signed_tos_mail.html",
-        ).render()
+        ).render(
+            {
+                "tos_link": f"{settings.CLIENT_URL}myeclpay/tos",
+            },
+        )
         background_tasks.add_task(
             send_email,
             recipient=user.email,
