@@ -38,7 +38,6 @@ from app.core.myeclpay.utils_myeclpay import (
     LATEST_TOS,
     MAX_TRANSACTION_TOTAL,
     QRCODE_EXPIRATION,
-    TOS_CONTENT,
     is_user_latest_tos_signed,
     validate_transfer_callback,
     verify_signature,
