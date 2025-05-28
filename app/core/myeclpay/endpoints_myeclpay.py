@@ -65,7 +65,7 @@ from app.types.module import CoreModule
 from app.utils.communication.notifications import NotificationTool
 from app.utils.mail.mailworker import send_email
 
-router = APIRouter(tags=["Groups"])
+router = APIRouter(tags=["MyECLPay"])
 
 core_module = CoreModule(
     root="myeclpay",
