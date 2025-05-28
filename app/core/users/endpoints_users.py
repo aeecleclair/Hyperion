@@ -15,7 +15,7 @@ from fastapi import (
     Query,
     UploadFile,
 )
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -346,6 +346,7 @@ async def activate_user(
     user: schemas_users.CoreUserActivateRequest,
     db: AsyncSession = Depends(get_db),
     request_id: str = Depends(get_request_id),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Activate the previously created account.
@@ -364,7 +365,12 @@ async def activate_user(
 
     # We need to make sure the unconfirmed user is still valid
     if unconfirmed_user.expire_on < datetime.now(UTC):
-        raise HTTPException(status_code=400, detail="Expired activation token")
+        return RedirectResponse(
+            url=settings.CLIENT_URL
+            + calypsso.get_message_relative_url(
+                message_type=calypsso.TypeMessage.token_expired,
+            ),
+        )
 
     # An account with the same email may exist if:
     # - the user called two times the user creation endpoints and got two activation token
@@ -547,6 +553,7 @@ async def recover_user(
 async def reset_password(
     reset_password_request: schemas_users.ResetPasswordRequest,
     db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Reset the user password, using a **reset_token** provided by `/users/recover` endpoint.
@@ -560,7 +567,12 @@ async def reset_password(
 
     # We need to make sure the unconfirmed user is still valid
     if recover_request.expire_on < datetime.now(UTC):
-        raise HTTPException(status_code=400, detail="Expired reset token")
+        return RedirectResponse(
+            url=settings.CLIENT_URL
+            + calypsso.get_message_relative_url(
+                message_type=calypsso.TypeMessage.token_expired,
+            ),
+        )
 
     new_password_hash = security.get_password_hash(reset_password_request.new_password)
     await cruds_users.update_user_password_by_id(
