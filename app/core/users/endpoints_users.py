@@ -862,6 +862,7 @@ async def merge_users(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
     settings: Settings = Depends(get_settings),
+    mail_templates: calypsso.MailTemplates = Depends(get_mail_templates),
 ):
     """
     Fusion two users into one. The first user will be deleted and its data will be transferred to the second user.
@@ -888,12 +889,17 @@ async def merge_users(
         user_kept_id=user_kept.id,
         user_deleted_id=user_deleted.id,
     )
+
+    mail = mail_templates.get_mail_account_merged(
+        deleted_mail=user_deleted.email,
+        kept_mail=user_kept.email,
+    )
+
     background_tasks.add_task(
         send_email,
         recipient=[user_kept.email, user_deleted.email],
-        subject="MyECL - Fusion de compte",
-        # TODO
-        content=f"Le compte {user_deleted.email} a été fusionné avec le compte {user_kept.email}. Tout le contenu du compte {user_deleted.email} a été transféré sur le compte {user_kept.email}.\nMerci de vous connecter avec le compte {user_kept.email} pour accéder à vos données.",
+        subject="MyECL - Accounts merged",
+        content=mail,
         settings=settings,
     )
     hyperion_security_logger.info(
