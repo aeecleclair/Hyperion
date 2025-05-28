@@ -1056,13 +1056,9 @@ async def register_user(
     "/myeclpay/tos",
     status_code=200,
 )
-async def get_tos(
-    user: CoreUser = Depends(is_user()),
-):
+async def get_tos():
     """
-    Get the latest TOS version and the TOS content.
-
-    **The user must be authenticated to use this endpoint**
+    Get the latest TOS content.
     """
     return TOS_CONTENT
 
