@@ -3,10 +3,11 @@ import logging
 import urllib
 import uuid
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -1075,17 +1076,14 @@ async def register_user(
 
 @router.get(
     "/myeclpay/tos",
+    response_class=FileResponse,
     status_code=200,
 )
-async def get_tos(
-    user: CoreUser = Depends(is_user()),
-):
+async def get_tos():
     """
-    Get the latest TOS version and the TOS content.
-
-    **The user must be authenticated to use this endpoint**
+    Serve publicly MyECLPay latest TOS
     """
-    return TOS_CONTENT
+    return FileResponse("assets/myeclpay-terms-of-service.txt")
 
 
 @router.get(
@@ -1117,7 +1115,7 @@ async def get_user_tos(
     return schemas_myeclpay.TOSSignatureResponse(
         accepted_tos_version=existing_user_payment.accepted_tos_version,
         latest_tos_version=LATEST_TOS,
-        tos_content=TOS_CONTENT,
+        tos_content=Path("assets/myeclpay-terms-of-service.txt").read_text(),
         max_transaction_total=MAX_TRANSACTION_TOTAL,
         max_wallet_balance=settings.MYECLPAY_MAXIMUM_WALLET_BALANCE,
     )
