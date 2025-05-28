@@ -935,6 +935,13 @@ async def test_delete_manager_seller(client: TestClient):
     )
 
 
+async def test_get_tos(client: TestClient):
+    response = client.get(
+        "/myeclpay/tos",
+    )
+    assert response.status_code == 200
+
+
 async def test_get_tos_for_unregistered_user(client: TestClient):
     response = client.get(
         "/myeclpay/users/me/tos",
@@ -944,7 +951,7 @@ async def test_get_tos_for_unregistered_user(client: TestClient):
     assert response.json()["detail"] == "User is not registered for MyECL Pay"
 
 
-async def test_get_tos(client: TestClient):
+async def test_get_user_tos(client: TestClient):
     response = client.get(
         "/myeclpay/users/me/tos",
         headers={"Authorization": f"Bearer {ecl_user_access_token}"},
