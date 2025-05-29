@@ -3,6 +3,7 @@ import logging
 import urllib
 import uuid
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from uuid import UUID
 
 import calypsso
@@ -38,7 +39,6 @@ from app.core.myeclpay.utils_myeclpay import (
     LATEST_TOS,
     MAX_TRANSACTION_TOTAL,
     QRCODE_EXPIRATION,
-    TOS_CONTENT,
     is_user_latest_tos_signed,
     validate_transfer_callback,
     verify_signature,
@@ -67,7 +67,7 @@ from app.types.module import CoreModule
 from app.utils.communication.notifications import NotificationTool
 from app.utils.mail.mailworker import send_email
 
-router = APIRouter(tags=["Groups"])
+router = APIRouter(tags=["MyECLPay"])
 
 core_module = CoreModule(
     root="myeclpay",
@@ -408,6 +408,8 @@ async def create_store(
     """
     Create a store. The structure manager will be added as a seller for the store.
 
+    Stores name should be unique, as an user need to be able to identify a store by its name.
+
     **The user must be the manager for this structure**
     """
     structure = await cruds_myeclpay.get_structure_by_id(
@@ -423,6 +425,16 @@ async def create_store(
         raise HTTPException(
             status_code=403,
             detail="User is not the manager for this structure",
+        )
+
+    existing_store_with_name = await cruds_myeclpay.get_store_by_name(
+        name=store.name,
+        db=db,
+    )
+    if existing_store_with_name is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="Store with this name already exists in this structure",
         )
 
     # Create new wallet for store
@@ -514,6 +526,13 @@ async def get_store_history(
     )
     history = []
     for transaction in transactions:
+        history_refund: schemas_myeclpay.HistoryRefund | None = None
+        if transaction.refund is not None:
+            history_refund = schemas_myeclpay.HistoryRefund(
+                total=transaction.refund.total,
+                creation=transaction.refund.creation,
+            )
+
         if transaction.debited_wallet_id == store.wallet_id:
             history.append(
                 schemas_myeclpay.History(
@@ -525,6 +544,7 @@ async def get_store_history(
                     other_wallet_name=transaction.credited_wallet.user.full_name
                     if transaction.credited_wallet.user is not None
                     else "",
+                    refund=history_refund,
                 ),
             )
         else:
@@ -538,6 +558,7 @@ async def get_store_history(
                     other_wallet_name=transaction.debited_wallet.user.full_name
                     if transaction.debited_wallet.user is not None
                     else "",
+                    refund=history_refund,
                 ),
             )
 
@@ -1064,13 +1085,14 @@ async def register_user(
 
 @router.get(
     "/myeclpay/tos",
+    response_model=str,
     status_code=200,
 )
-async def get_tos():
+async def get_tos(user: CoreUser = Depends(is_user())):
     """
-    Get the latest TOS content.
+    Get MyECLPay latest TOS as a string
     """
-    return TOS_CONTENT
+    return Path("assets/myeclpay-terms-of-service.txt").read_text()
 
 
 @router.get(
@@ -1102,7 +1124,7 @@ async def get_user_tos(
     return schemas_myeclpay.TOSSignatureResponse(
         accepted_tos_version=existing_user_payment.accepted_tos_version,
         latest_tos_version=LATEST_TOS,
-        tos_content=TOS_CONTENT,
+        tos_content=Path("assets/myeclpay-terms-of-service.txt").read_text(),
         max_transaction_total=MAX_TRANSACTION_TOTAL,
         max_wallet_balance=settings.MYECLPAY_MAXIMUM_WALLET_BALANCE,
     )
@@ -1158,7 +1180,7 @@ async def sign_tos(
     if settings.SMTP_ACTIVE:
         mail = mail_templates.get_mail_myeclpay_tos_signed(
             tos_version=signature.accepted_tos_version,
-            tos_url=f"{settings.CLIENT_URL}myeclpay/tos",
+            tos_url=f"{settings.CLIENT_URL}myeclpay-terms-of-service",
         )
 
         background_tasks.add_task(
@@ -1550,6 +1572,12 @@ async def get_user_wallet_history(
         else:
             raise UnexpectedError("Transaction has no credited or debited wallet")  # noqa: TRY003
 
+        history_refund: schemas_myeclpay.HistoryRefund | None = None
+        if transaction.refund is not None:
+            history_refund = schemas_myeclpay.HistoryRefund(
+                total=transaction.refund.total,
+                creation=transaction.refund.creation,
+            )
         history.append(
             schemas_myeclpay.History(
                 id=transaction.id,
@@ -1558,6 +1586,7 @@ async def get_user_wallet_history(
                 total=transaction.total,
                 creation=transaction.creation,
                 status=transaction.status,
+                refund=history_refund,
             ),
         )
 

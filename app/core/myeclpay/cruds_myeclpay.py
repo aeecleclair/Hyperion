@@ -215,6 +215,18 @@ async def get_stores(
     return result.scalars().all()
 
 
+async def get_store_by_name(
+    name: str,
+    db: AsyncSession,
+) -> models_myeclpay.Store | None:
+    result = await db.execute(
+        select(models_myeclpay.Store).where(
+            models_myeclpay.Store.name == name,
+        ),
+    )
+    return result.scalars().first()
+
+
 async def get_stores_by_structure_id(
     db: AsyncSession,
     structure_id: UUID,
