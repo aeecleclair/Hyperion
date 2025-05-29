@@ -3,6 +3,7 @@ import logging
 import urllib
 import uuid
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from uuid import UUID
 
 import calypsso
@@ -38,7 +39,6 @@ from app.core.myeclpay.utils_myeclpay import (
     LATEST_TOS,
     MAX_TRANSACTION_TOTAL,
     QRCODE_EXPIRATION,
-    TOS_CONTENT,
     is_user_latest_tos_signed,
     validate_transfer_callback,
     verify_signature,
@@ -67,7 +67,7 @@ from app.types.module import CoreModule
 from app.utils.communication.notifications import NotificationTool
 from app.utils.mail.mailworker import send_email
 
-router = APIRouter(tags=["Groups"])
+router = APIRouter(tags=["MyECLPay"])
 
 core_module = CoreModule(
     root="myeclpay",
@@ -1077,17 +1077,14 @@ async def register_user(
 
 @router.get(
     "/myeclpay/tos",
+    response_model=str,
     status_code=200,
 )
-async def get_tos(
-    user: CoreUser = Depends(is_user()),
-):
+async def get_tos(user: CoreUser = Depends(is_user())):
     """
-    Get the latest TOS version and the TOS content.
-
-    **The user must be authenticated to use this endpoint**
+    Get MyECLPay latest TOS as a string
     """
-    return TOS_CONTENT
+    return Path("assets/myeclpay-terms-of-service.txt").read_text()
 
 
 @router.get(
@@ -1119,7 +1116,7 @@ async def get_user_tos(
     return schemas_myeclpay.TOSSignatureResponse(
         accepted_tos_version=existing_user_payment.accepted_tos_version,
         latest_tos_version=LATEST_TOS,
-        tos_content=TOS_CONTENT,
+        tos_content=Path("assets/myeclpay-terms-of-service.txt").read_text(),
         max_transaction_total=MAX_TRANSACTION_TOTAL,
         max_wallet_balance=settings.MYECLPAY_MAXIMUM_WALLET_BALANCE,
     )
@@ -1175,6 +1172,7 @@ async def sign_tos(
     if settings.SMTP_ACTIVE:
         mail = mail_templates.get_mail_myeclpay_tos_signed(
             tos_version=signature.accepted_tos_version,
+            tos_url=f"{settings.CLIENT_URL}myeclpay-terms-of-service",
         )
 
         background_tasks.add_task(

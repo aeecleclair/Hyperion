@@ -77,13 +77,25 @@ async def read_terms_and_conditions():
 
 
 @router.get(
+    "/myeclpay-terms-of-service",
+    response_class=FileResponse,
+    status_code=200,
+)
+async def read_myeclpay_tos():
+    """
+    Return MyECLPay latest ToS
+    """
+    return FileResponse("assets/myeclpay-terms-of-service.txt")
+
+
+@router.get(
     "/support",
     response_class=FileResponse,
     status_code=200,
 )
 async def read_support():
     """
-    Return Hyperion terms and conditions pages
+    Return Hyperion support
     """
 
     return FileResponse("assets/support.txt")
