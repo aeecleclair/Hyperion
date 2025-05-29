@@ -1,5 +1,6 @@
 import base64
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from uuid import UUID, uuid4
 
 import pytest_asyncio
@@ -935,6 +936,14 @@ async def test_delete_manager_seller(client: TestClient):
     )
 
 
+async def test_get_tos(client: TestClient):
+    response = client.get(
+        "/myeclpay/tos",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+    )
+    assert response.json() == Path("assets/myeclpay-terms-of-service.txt").read_text()
+
+
 async def test_get_tos_for_unregistered_user(client: TestClient):
     response = client.get(
         "/myeclpay/users/me/tos",
@@ -944,7 +953,7 @@ async def test_get_tos_for_unregistered_user(client: TestClient):
     assert response.json()["detail"] == "User is not registered for MyECL Pay"
 
 
-async def test_get_tos(client: TestClient):
+async def test_get_user_tos(client: TestClient):
     response = client.get(
         "/myeclpay/users/me/tos",
         headers={"Authorization": f"Bearer {ecl_user_access_token}"},
