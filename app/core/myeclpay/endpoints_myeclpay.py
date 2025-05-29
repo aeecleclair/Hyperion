@@ -1171,7 +1171,7 @@ async def sign_tos(
             "myeclpay_signed_tos_mail.html",
         ).render(
             {
-                "tos_link": f"{settings.CLIENT_URL}myeclpay/tos",
+                "tos_link": f"{settings.CLIENT_URL}myeclpay-terms-of-service",
             },
         )
         background_tasks.add_task(
