@@ -400,6 +400,8 @@ async def create_store(
     """
     Create a store. The structure manager will be added as a seller for the store.
 
+    Stores name should be unique, as an user need to be able to identify a store by its name.
+
     **The user must be the manager for this structure**
     """
     structure = await cruds_myeclpay.get_structure_by_id(
@@ -415,6 +417,16 @@ async def create_store(
         raise HTTPException(
             status_code=403,
             detail="User is not the manager for this structure",
+        )
+
+    existing_store_with_name = await cruds_myeclpay.get_store_by_name(
+        name=store.name,
+        db=db,
+    )
+    if existing_store_with_name is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="Store with this name already exists in this structure",
         )
 
     # Create new wallet for store
@@ -506,6 +518,13 @@ async def get_store_history(
     )
     history = []
     for transaction in transactions:
+        history_refund: schemas_myeclpay.HistoryRefund | None = None
+        if transaction.refund is not None:
+            history_refund = schemas_myeclpay.HistoryRefund(
+                total=transaction.refund.total,
+                creation=transaction.refund.creation,
+            )
+
         if transaction.debited_wallet_id == store.wallet_id:
             history.append(
                 schemas_myeclpay.History(
@@ -517,6 +536,7 @@ async def get_store_history(
                     other_wallet_name=transaction.credited_wallet.user.full_name
                     if transaction.credited_wallet.user is not None
                     else "",
+                    refund=history_refund,
                 ),
             )
         else:
@@ -530,6 +550,7 @@ async def get_store_history(
                     other_wallet_name=transaction.debited_wallet.user.full_name
                     if transaction.debited_wallet.user is not None
                     else "",
+                    refund=history_refund,
                 ),
             )
 
@@ -1537,6 +1558,12 @@ async def get_user_wallet_history(
         else:
             raise UnexpectedError("Transaction has no credited or debited wallet")  # noqa: TRY003
 
+        history_refund: schemas_myeclpay.HistoryRefund | None = None
+        if transaction.refund is not None:
+            history_refund = schemas_myeclpay.HistoryRefund(
+                total=transaction.refund.total,
+                creation=transaction.refund.creation,
+            )
         history.append(
             schemas_myeclpay.History(
                 id=transaction.id,
@@ -1545,6 +1572,7 @@ async def get_user_wallet_history(
                 total=transaction.total,
                 creation=transaction.creation,
                 status=transaction.status,
+                refund=history_refund,
             ),
         )
 
