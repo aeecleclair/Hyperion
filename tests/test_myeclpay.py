@@ -1157,9 +1157,13 @@ async def test_create_and_activate_user_device(
     response = client.get(
         f"/myeclpay/devices/activate?token={UNIQUE_TOKEN}",
         headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+        follow_redirects=False,
     )
-    assert response.status_code == 200
-    assert response.json() == "Wallet device activated"
+    assert response.status_code == 302
+    assert response.next_request is not None
+    assert str(response.next_request.url).endswith(
+        "calypsso/message?type=myeclpay_wallet_device_activation_success",
+    )
 
 
 async def test_activate_non_existing_device(
@@ -1179,9 +1183,13 @@ async def test_activate_already_activated_device(
     response = client.get(
         "/myeclpay/devices/activate?token=activation_token_ecl_user_wallet_device",
         headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+        follow_redirects=False,
     )
-    assert response.status_code == 400
-    assert response.json()["detail"] == "Wallet device is already activated or revoked"
+    assert response.status_code == 302
+    assert response.next_request is not None
+    assert str(response.next_request.url).endswith(
+        "calypsso/message?type=myeclpay_wallet_device_already_activated_or_revoked",
+    )
 
 
 async def test_revoke_user_device_unregistered_user(
