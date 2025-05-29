@@ -256,7 +256,9 @@ async def authorize_validation(
         )
         return RedirectResponse(
             settings.CLIENT_URL
-            + calypsso.get_error_relative_url(message="Invalid client_id"),
+            + calypsso.get_message_relative_url(
+                message_type=calypsso.TypeMessage.invalid_client_id,
+            ),
             status_code=status.HTTP_302_FOUND,
         )
 
@@ -278,7 +280,9 @@ async def authorize_validation(
         )
         return RedirectResponse(
             settings.CLIENT_URL
-            + calypsso.get_error_relative_url(message="Mismatching redirect_uri"),
+            + calypsso.get_message_relative_url(
+                message_type=calypsso.TypeMessage.mismatching_redirect_uri,
+            ),
             status_code=status.HTTP_302_FOUND,
         )
     else:
@@ -324,8 +328,8 @@ async def authorize_validation(
             )
             return RedirectResponse(
                 settings.CLIENT_URL
-                + calypsso.get_error_relative_url(
-                    message="User is not member of an allowed group",
+                + calypsso.get_message_relative_url(
+                    message_type=calypsso.TypeMessage.user_not_member_of_allowed_group,
                 ),
                 status_code=status.HTTP_302_FOUND,
             )
@@ -336,8 +340,8 @@ async def authorize_validation(
             )
             return RedirectResponse(
                 settings.CLIENT_URL
-                + calypsso.get_error_relative_url(
-                    message="User account type is not allowed",
+                + calypsso.get_message_relative_url(
+                    message_type=calypsso.TypeMessage.user_account_type_not_allowed,
                 ),
                 status_code=status.HTTP_302_FOUND,
             )
