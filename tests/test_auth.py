@@ -389,7 +389,7 @@ def test_authorization_code_flow_with_invalid_client_id(client: TestClient) -> N
     assert response.status_code == 302
     assert response.next_request is not None
     assert str(response.next_request.url).endswith(
-        "calypsso/error?message=Invalid+client_id",
+        "calypsso/message?type=invalid_client_id",
     )
 
 
@@ -414,7 +414,7 @@ def test_authorization_code_flow_with_invalid_redirect_uri(client: TestClient) -
     assert response.status_code == 302
     assert response.next_request is not None
     assert str(response.next_request.url).endswith(
-        "calypsso/error?message=Mismatching+redirect_uri",
+        "calypsso/message?type=mismatching_redirect_uri",
     )
 
 
@@ -519,7 +519,7 @@ def test_authorization_code_flow_with_auth_client_restricting_allowed_groups_and
 
     assert response.next_request is not None
     assert str(response.next_request.url).endswith(
-        "calypsso/error?message=User+is+not+member+of+an+allowed+group",
+        "calypsso/message?type=user_not_member_of_allowed_group",
     )
 
 
@@ -546,7 +546,7 @@ def test_authorization_code_flow_with_auth_client_restricting_external_users_and
 
     assert response.next_request is not None
     assert str(response.next_request.url).endswith(
-        "calypsso/error?message=User+account+type+is+not+allowed",
+        "calypsso/message?type=user_account_type_not_allowed",
     )
 
 
