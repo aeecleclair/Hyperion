@@ -7,7 +7,7 @@ from pathlib import Path
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -1075,14 +1075,14 @@ async def register_user(
 
 @router.get(
     "/myeclpay/tos",
-    response_class=FileResponse,
+    response_model=str,
     status_code=200,
 )
 async def get_tos():
     """
-    Serve publicly MyECLPay latest TOS
+    Serve publicly MyECLPay latest TOS as a string
     """
-    return FileResponse("assets/myeclpay-terms-of-service.txt")
+    return Path("assets/myeclpay-terms-of-service.txt").read_text()
 
 
 @router.get(
