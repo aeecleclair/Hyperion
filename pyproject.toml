@@ -169,9 +169,11 @@ concurrency = [
 
 
 [tool.coverage.report]
-# Regexes for lines to exclude from consideration
+exclude_also = [
+    'if settings.SMTP_ACTIVE:',
+    'except Exception:\n\s*await db.rollback()\n\s*raise',
+] # Regexes for lines to exclude from consideration
 # See https://coverage.readthedocs.io/en/latest/excluding.html#excluding for more info
-exclude_also = []
 
 skip_covered = true
 show_missing = true
