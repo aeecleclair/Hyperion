@@ -939,6 +939,7 @@ async def test_delete_manager_seller(client: TestClient):
 async def test_get_tos(client: TestClient):
     response = client.get(
         "/myeclpay/tos",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
     )
     assert response.json() == Path("assets/myeclpay-terms-of-service.txt").read_text()
 
