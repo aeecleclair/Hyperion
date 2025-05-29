@@ -1078,9 +1078,9 @@ async def register_user(
     response_model=str,
     status_code=200,
 )
-async def get_tos():
+async def get_tos(user: CoreUser = Depends(is_user())):
     """
-    Serve publicly MyECLPay latest TOS as a string
+    Get MyECLPay latest TOS as a string
     """
     return Path("assets/myeclpay-terms-of-service.txt").read_text()
 
