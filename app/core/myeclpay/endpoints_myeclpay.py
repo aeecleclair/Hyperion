@@ -321,6 +321,7 @@ async def init_transfer_structure_manager(
 async def confirm_structure_manager_transfer(
     token: str,
     db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Update a manager for an association
@@ -384,6 +385,13 @@ async def confirm_structure_manager_transfer(
                 db=db,
             )
     await db.commit()
+
+    return RedirectResponse(
+        url=settings.CLIENT_URL
+        + calypsso.get_message_relative_url(
+            message_type=calypsso.TypeMessage.myeclpay_structure_transfer_success,
+        ),
+    )
 
 
 @router.post(
@@ -1379,6 +1387,7 @@ async def activate_user_device(
     token: str,
     db: AsyncSession = Depends(get_db),
     notification_tool: NotificationTool = Depends(get_notification_tool),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Activate a wallet device
@@ -1396,9 +1405,11 @@ async def activate_user_device(
         )
 
     if wallet_device.status != WalletDeviceStatus.INACTIVE:
-        raise HTTPException(
-            status_code=400,
-            detail="Wallet device is already activated or revoked",
+        return RedirectResponse(
+            url=settings.CLIENT_URL
+            + calypsso.get_message_relative_url(
+                message_type=calypsso.TypeMessage.myeclpay_wallet_device_already_activated_or_revoked,
+            ),
         )
 
     await cruds_myeclpay.update_wallet_device_status(
@@ -1437,7 +1448,12 @@ async def activate_user_device(
     else:
         raise UnexpectedError(f"Activated wallet device {wallet_device.id} has no user")  # noqa: TRY003
 
-    return "Wallet device activated"
+    return RedirectResponse(
+        url=settings.CLIENT_URL
+        + calypsso.get_message_relative_url(
+            message_type=calypsso.TypeMessage.myeclpay_wallet_device_activation_success,
+        ),
+    )
 
 
 @router.post(
