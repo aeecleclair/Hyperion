@@ -30,6 +30,7 @@ from app.core.utils import security
 from app.core.utils.config import Settings
 from app.dependencies import (
     get_db,
+    get_mail_templates,
     get_request_id,
     get_settings,
     is_user,
@@ -177,6 +178,7 @@ async def create_user_by_user(
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
     request_id: str = Depends(get_request_id),
+    mail_templates: calypsso.MailTemplates = Depends(get_mail_templates),
 ):
     """
     Start the user account creation process. The user will be sent an email with a link to activate his account.
@@ -196,14 +198,12 @@ async def create_user_by_user(
         )
         # We will send to the email a message explaining they already have an account and can reset their password if they want.
         if settings.SMTP_ACTIVE:
-            account_exists_content = templates.get_template(
-                "account_exists_mail.html",
-            ).render()
+            mail = mail_templates.get_mail_account_exist()
             background_tasks.add_task(
                 send_email,
                 recipient=user_create.email,
                 subject="MyECL - your account already exists",
-                content=account_exists_content,
+                content=mail,
                 settings=settings,
             )
 
@@ -218,6 +218,7 @@ async def create_user_by_user(
         db=db,
         settings=settings,
         request_id=request_id,
+        mail_templates=mail_templates,
     )
 
     return standard_responses.Result(success=True)
@@ -234,6 +235,7 @@ async def batch_create_users(
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
     request_id: str = Depends(get_request_id),
+    mail_templates: calypsso.MailTemplates = Depends(get_mail_templates),
     user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
@@ -257,6 +259,7 @@ async def batch_create_users(
                 db=db,
                 settings=settings,
                 request_id=request_id,
+                mail_templates=mail_templates,
             )
         except Exception as error:
             failed[user_create.email] = str(error)
@@ -270,6 +273,7 @@ async def create_user(
     db: AsyncSession,
     settings: Settings,
     request_id: str,
+    mail_templates: calypsso.MailTemplates,
 ) -> None:
     """
     User creation process. This function is used by both `/users/create` and `/users/admin/create` endpoints
@@ -313,14 +317,15 @@ async def create_user(
     )
 
     if settings.SMTP_ACTIVE:
-        activation_content = templates.get_template("activation_mail.html").render(
-            {"calypsso_activate_url": calypsso_activate_url},
+        mail = mail_templates.get_mail_account_activation(
+            calypsso_activate_url,
         )
+
         background_tasks.add_task(
             send_email,
             recipient=email,
             subject="MyECL - confirm your email",
-            content=activation_content,
+            content=mail,
             settings=settings,
         )
         hyperion_security_logger.info(
@@ -459,6 +464,7 @@ async def recover_user(
     # We use embed for email parameter: https://fastapi.tiangolo.com/tutorial/body-multiple-params/#embed-a-single-body-parameter
     email: str = Body(..., embed=True),
     db: AsyncSession = Depends(get_db),
+    mail_templates: calypsso.MailTemplates = Depends(get_mail_templates),
     settings: Settings = Depends(get_settings),
 ):
     """
@@ -478,17 +484,13 @@ async def recover_user(
                 )
             )
 
-            reset_content = templates.get_template(
-                "reset_mail_does_not_exist.html",
-            ).render(
-                {
-                    "calypsso_register_url": calypsso_register_url,
-                },
+            mail = mail_templates.get_mail_reset_password_account_does_not_exist(
+                register_url=calypsso_register_url,
             )
             send_email(
                 recipient=email,
                 subject="MyECL - reset your password",
-                content=reset_content,
+                content=mail,
                 settings=settings,
             )
         else:
@@ -520,15 +522,13 @@ async def recover_user(
         )
 
         if settings.SMTP_ACTIVE:
-            reset_content = templates.get_template("reset_mail.html").render(
-                {
-                    "calypsso_reset_url": calypsso_reset_url,
-                },
+            mail = mail_templates.get_mail_reset_password(
+                confirmation_url=calypsso_reset_url,
             )
             send_email(
                 recipient=db_user.email,
                 subject="MyECL - reset your password",
-                content=reset_content,
+                content=mail,
                 settings=settings,
             )
         else:
@@ -594,6 +594,7 @@ async def migrate_mail(
     mail_migration: schemas_users.MailMigrationRequest,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
+    mail_templates: calypsso.MailTemplates = Depends(get_mail_templates),
     settings: Settings = Depends(get_settings),
 ):
     """
@@ -609,13 +610,11 @@ async def migrate_mail(
             f"Email migration: There is already an account with the email {mail_migration.new_email}",
         )
         if settings.SMTP_ACTIVE:
-            migration_content = templates.get_template(
-                "migration_mail_already_used.html",
-            ).render({})
+            mail = mail_templates.get_mail_mail_migration_already_exist()
             send_email(
                 recipient=mail_migration.new_email,
-                subject="MyECL - Confirm your new email adresse",
-                content=migration_content,
+                subject="MyECL - Confirm your new email address",
+                content=mail,
                 settings=settings,
             )
         return
@@ -636,6 +635,7 @@ async def migrate_mail(
         new_email=mail_migration.new_email,
         old_email=user.email,
         db=db,
+        mail_templates=mail_templates,
         settings=settings,
         make_user_external=False,
     )
@@ -862,6 +862,7 @@ async def merge_users(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
     settings: Settings = Depends(get_settings),
+    mail_templates: calypsso.MailTemplates = Depends(get_mail_templates),
 ):
     """
     Fusion two users into one. The first user will be deleted and its data will be transferred to the second user.
@@ -888,11 +889,17 @@ async def merge_users(
         user_kept_id=user_kept.id,
         user_deleted_id=user_deleted.id,
     )
+
+    mail = mail_templates.get_mail_account_merged(
+        deleted_mail=user_deleted.email,
+        kept_mail=user_kept.email,
+    )
+
     background_tasks.add_task(
         send_email,
         recipient=[user_kept.email, user_deleted.email],
-        subject="MyECL - Fusion de compte",
-        content=f"Le compte {user_deleted.email} a été fusionné avec le compte {user_kept.email}. Tout le contenu du compte {user_deleted.email} a été transféré sur le compte {user_kept.email}.\nMerci de vous connecter avec le compte {user_kept.email} pour accéder à vos données.",
+        subject="MyECL - Accounts merged",
+        content=mail,
         settings=settings,
     )
     hyperion_security_logger.info(
