@@ -234,3 +234,12 @@ class Refund(RefundBase):
 
 class IntegrityCheckHeaders(BaseModel):
     x_data_verifier_token: str
+
+
+class MyECLPayData(BaseModel):
+    """Schema for Hyperion data"""
+
+    wallets: list[Wallet]
+    transactions: list[Transaction]
+    transfers: list[Transfer]
+    refunds: list[RefundBase]

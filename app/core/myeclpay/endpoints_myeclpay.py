@@ -2532,4 +2532,9 @@ async def get_data_for_integrity_check(
         last_checked=lastChecked,
     )
 
-    return wallets, transactions, transfers, refunds
+    return schemas_myeclpay.MyECLPayData(
+        wallets=wallets,
+        transactions=transactions,
+        transfers=transfers,
+        refunds=refunds,
+    )
