@@ -13,14 +13,8 @@ async def create_checkout(
     checkout: models_payment.Checkout,
 ) -> models_payment.Checkout:
     db.add(checkout)
-    try:
-        await db.commit()
 
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return checkout
+    return checkout
 
 
 async def get_checkouts(

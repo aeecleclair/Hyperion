@@ -68,7 +68,6 @@ async def init_structure_manager_transfer(
             confirmation_token=confirmation_token,
         ),
     )
-    await db.commit()
 
 
 async def get_structure_manager_transfer_by_secret(
@@ -196,7 +195,6 @@ async def update_store(
         .where(models_myeclpay.Store.id == store_id)
         .values(**store_update.model_dump(exclude_none=True)),
     )
-    await db.commit()
 
 
 async def delete_store(
