@@ -5,7 +5,7 @@ from datetime import timedelta
 from functools import lru_cache
 
 import redis
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 from sqlalchemy import NullPool
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -69,8 +69,14 @@ async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
     async with TestingSessionLocal() as db:
         try:
             yield db
-        finally:
-            await db.close()
+        except HTTPException:
+            await db.commit()
+            raise
+        except Exception:
+            await db.rollback()
+            raise
+        else:
+            await db.commit()
 
 
 async def override_get_unsafe_db() -> AsyncGenerator[AsyncSession, None]:
