@@ -150,11 +150,6 @@ async def create_structure(
         structure=structure_db,
         db=db,
     )
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
 
     return await cruds_myeclpay.get_structure_by_id(structure_db.id, db)
 
@@ -190,12 +185,6 @@ async def update_structure(
         db=db,
     )
 
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-
 
 @router.delete(
     "/myeclpay/structures/{structure_id}",
@@ -225,12 +214,6 @@ async def delete_structure(
         structure_id=structure_id,
         db=db,
     )
-
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
 
 
 @router.post(
@@ -384,7 +367,6 @@ async def confirm_structure_manager_transfer(
                 ),
                 db=db,
             )
-    await db.commit()
 
     return RedirectResponse(
         url=settings.CLIENT_URL
@@ -456,7 +438,7 @@ async def create_store(
         store=store_db,
         db=db,
     )
-    await db.commit()
+    await db.flush()
 
     # Add manager as an full right seller for the store
     await cruds_myeclpay.create_seller(
@@ -468,12 +450,6 @@ async def create_store(
         can_manage_sellers=True,
         db=db,
     )
-
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
 
     return schemas_myeclpay.Store(
         id=store_db.id,
@@ -723,8 +699,6 @@ async def update_store(
         db=db,
     )
 
-    await db.commit()
-
 
 @router.delete(
     "/myeclpay/stores/{store_id}",
@@ -785,8 +759,6 @@ async def delete_store(
         store_id=store_id,
         db=db,
     )
-
-    await db.commit()
 
 
 @router.post(
@@ -853,7 +825,6 @@ async def create_store_seller(
         db=db,
     )
 
-    await db.commit()
     return await cruds_myeclpay.get_seller(
         user_id=seller.user_id,
         store_id=store_id,
@@ -977,8 +948,6 @@ async def update_store_seller(
         db=db,
     )
 
-    await db.commit()
-
 
 @router.delete(
     "/myeclpay/stores/{store_id}/sellers/{seller_user_id}",
@@ -1050,8 +1019,6 @@ async def delete_store_seller(
         db=db,
     )
 
-    await db.commit()
-
 
 @router.post(
     "/myeclpay/users/me/register",
@@ -1089,7 +1056,7 @@ async def register_user(
         db=db,
     )
 
-    await db.commit()
+    await db.flush()
 
     # Create new payment user with wallet
     await cruds_myeclpay.create_user_payment(
@@ -1099,8 +1066,6 @@ async def register_user(
         accepted_tos_version=0,
         db=db,
     )
-
-    await db.commit()
 
 
 @router.get(
@@ -1193,8 +1158,6 @@ async def sign_tos(
         accepted_tos_version=signature.accepted_tos_version,
         db=db,
     )
-
-    await db.commit()
 
     # TODO: add logs
     if settings.SMTP_ACTIVE:
@@ -1377,8 +1340,6 @@ async def create_user_devices(
         db=db,
     )
 
-    await db.commit()
-
     if settings.SMTP_ACTIVE:
         mail = mail_templates.get_mail_myeclpay_device_activation(
             activation_url=f"{settings.CLIENT_URL}myeclpay/devices/activate?token={activation_token}",
@@ -1437,8 +1398,6 @@ async def activate_user_device(
         status=WalletDeviceStatus.ACTIVE,
         db=db,
     )
-
-    await db.commit()
 
     wallet = await cruds_myeclpay.get_wallet(
         wallet_id=wallet_device.wallet_id,
@@ -1524,8 +1483,6 @@ async def revoke_user_devices(
         status=WalletDeviceStatus.REVOKED,
         db=db,
     )
-
-    await db.commit()
 
     hyperion_error_logger.info(
         f"Wallet device {wallet_device.id} ({wallet_device.name}) revoked by user {user_payment.user_id}",
@@ -1774,11 +1731,7 @@ async def add_transfer_by_admin(
         amount=transfer_info.amount,
         db=db,
     )
-    try:
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+
     hyperion_myeclpay_logger.info(format_transfer_log(transfer))
 
     message = Message(
@@ -1894,11 +1847,7 @@ async def init_ha_transfer(
             confirmed=False,
         ),
     )
-    try:
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+
     return schemas_payment.PaymentUrl(
         url=checkout.payment_url,
     )
@@ -2091,189 +2040,189 @@ async def store_scan_qrcode(
         qr_code_id=scan_info.id,
         db=db,
     )
-    await db.commit()
 
-    store = await cruds_myeclpay.get_store(
-        store_id=store_id,
-        db=db,
-    )
-    if store is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Store does not exist",
+    await db.flush()
+
+    # We start a SAVEPOINT to ensure that even if the following code fails due to a database exception,
+    # after roleback the `used_qrcode` will still be created and committed in db.
+    async with db.begin_nested():
+        store = await cruds_myeclpay.get_store(
+            store_id=store_id,
+            db=db,
+        )
+        if store is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Store does not exist",
+            )
+
+        seller = await cruds_myeclpay.get_seller(
+            store_id=store_id,
+            user_id=user.id,
+            db=db,
         )
 
-    seller = await cruds_myeclpay.get_seller(
-        store_id=store_id,
-        user_id=user.id,
-        db=db,
-    )
+        if seller is None or not seller.can_bank:
+            raise HTTPException(
+                status_code=400,
+                detail="User does not have `can_bank` permission for this store",
+            )
 
-    if seller is None or not seller.can_bank:
-        raise HTTPException(
-            status_code=400,
-            detail="User does not have `can_bank` permission for this store",
+        # We verify the signature
+        debited_wallet_device = await cruds_myeclpay.get_wallet_device(
+            wallet_device_id=scan_info.key,
+            db=db,
         )
 
-    # We verify the signature
-    debited_wallet_device = await cruds_myeclpay.get_wallet_device(
-        wallet_device_id=scan_info.key,
-        db=db,
-    )
+        if debited_wallet_device is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Wallet device does not exist",
+            )
 
-    if debited_wallet_device is None:
-        raise HTTPException(
-            status_code=400,
-            detail="Wallet device does not exist",
-        )
+        if debited_wallet_device.status != WalletDeviceStatus.ACTIVE:
+            raise HTTPException(
+                status_code=400,
+                detail="Wallet device is not active",
+            )
 
-    if debited_wallet_device.status != WalletDeviceStatus.ACTIVE:
-        raise HTTPException(
-            status_code=400,
-            detail="Wallet device is not active",
-        )
+        if not verify_signature(
+            public_key_bytes=debited_wallet_device.ed25519_public_key,
+            signature=scan_info.signature,
+            data=scan_info,
+            wallet_device_id=scan_info.key,
+            request_id=request_id,
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid signature",
+            )
 
-    if not verify_signature(
-        public_key_bytes=debited_wallet_device.ed25519_public_key,
-        signature=scan_info.signature,
-        data=scan_info,
-        wallet_device_id=scan_info.key,
-        request_id=request_id,
-    ):
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid signature",
-        )
+        if not scan_info.store:
+            raise HTTPException(
+                status_code=400,
+                detail="QR Code is not intended to be scanned for a store",
+            )
 
-    if not scan_info.store:
-        raise HTTPException(
-            status_code=400,
-            detail="QR Code is not intended to be scanned for a store",
-        )
+        # We verify the content respect some rules
+        if scan_info.tot <= 0:
+            raise HTTPException(
+                status_code=400,
+                detail="Total must be greater than 0",
+            )
 
-    # We verify the content respect some rules
-    if scan_info.tot <= 0:
-        raise HTTPException(
-            status_code=400,
-            detail="Total must be greater than 0",
-        )
+        if scan_info.tot > MAX_TRANSACTION_TOTAL:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Total can not exceed {MAX_TRANSACTION_TOTAL}",
+            )
 
-    if scan_info.tot > MAX_TRANSACTION_TOTAL:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Total can not exceed {MAX_TRANSACTION_TOTAL}",
-        )
+        if scan_info.iat < datetime.now(UTC) - timedelta(
+            minutes=QRCODE_EXPIRATION,
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="QR Code is expired",
+            )
 
-    if scan_info.iat < datetime.now(UTC) - timedelta(
-        minutes=QRCODE_EXPIRATION,
-    ):
-        raise HTTPException(
-            status_code=400,
-            detail="QR Code is expired",
+        # We verify that the debited walled contains enough money
+        debited_wallet = await cruds_myeclpay.get_wallet(
+            wallet_id=debited_wallet_device.wallet_id,
+            db=db,
         )
+        if debited_wallet is None:
+            hyperion_error_logger.error(
+                f"MyECLPay: Could not find wallet associated with the debited wallet device {debited_wallet_device.id}, this should never happen",
+            )
+            raise HTTPException(
+                status_code=400,
+                detail="Could not find wallet associated with the debited wallet device",
+            )
+        if debited_wallet.user is None or debited_wallet.store is not None:
+            raise HTTPException(
+                status_code=400,
+                detail="Stores are not allowed to make transaction by QR code",
+            )
 
-    # We verify that the debited walled contains enough money
-    debited_wallet = await cruds_myeclpay.get_wallet(
-        wallet_id=debited_wallet_device.wallet_id,
-        db=db,
-    )
-    if debited_wallet is None:
-        hyperion_error_logger.error(
-            f"MyECLPay: Could not find wallet associated with the debited wallet device {debited_wallet_device.id}, this should never happen",
+        debited_user_payment = await cruds_myeclpay.get_user_payment(
+            debited_wallet.user.id,
+            db=db,
         )
-        raise HTTPException(
-            status_code=400,
-            detail="Could not find wallet associated with the debited wallet device",
-        )
-    if debited_wallet.user is None or debited_wallet.store is not None:
-        raise HTTPException(
-            status_code=400,
-            detail="Stores are not allowed to make transaction by QR code",
-        )
+        if debited_user_payment is None or not is_user_latest_tos_signed(
+            debited_user_payment,
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="Debited user has not signed the latest TOS",
+            )
 
-    debited_user_payment = await cruds_myeclpay.get_user_payment(
-        debited_wallet.user.id,
-        db=db,
-    )
-    if debited_user_payment is None or not is_user_latest_tos_signed(
-        debited_user_payment,
-    ):
-        raise HTTPException(
-            status_code=400,
-            detail="Debited user has not signed the latest TOS",
-        )
+        if debited_wallet.balance < scan_info.tot:
+            raise HTTPException(
+                status_code=400,
+                detail="Insufficient balance in the debited wallet",
+            )
 
-    if debited_wallet.balance < scan_info.tot:
-        raise HTTPException(
-            status_code=400,
-            detail="Insufficient balance in the debited wallet",
-        )
-
-    # If `bypass_membership` is not set, we check if the user is a member of the association
-    # and raise an error if not
-    if not scan_info.bypass_membership:
-        if store.structure.association_membership_id is not None:
-            current_membership = (
-                await get_user_active_membership_to_association_membership(
+        # If `bypass_membership` is not set, we check if the user is a member of the association
+        # and raise an error if not
+        if not scan_info.bypass_membership:
+            if store.structure.association_membership_id is not None:
+                current_membership = await get_user_active_membership_to_association_membership(
                     user_id=debited_wallet.user.id,
                     association_membership_id=store.structure.association_membership_id,
                     db=db,
                 )
-            )
-            if current_membership is None:
-                raise HTTPException(
-                    status_code=400,
-                    detail="User is not a member of the association",
-                )
+                if current_membership is None:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="User is not a member of the association",
+                    )
 
-    # We increment the receiving wallet balance
-    await cruds_myeclpay.increment_wallet_balance(
-        wallet_id=store.wallet_id,
-        amount=scan_info.tot,
-        db=db,
-    )
+        # We increment the receiving wallet balance
+        await cruds_myeclpay.increment_wallet_balance(
+            wallet_id=store.wallet_id,
+            amount=scan_info.tot,
+            db=db,
+        )
 
-    # We decrement the debited wallet balance
-    await cruds_myeclpay.increment_wallet_balance(
-        wallet_id=debited_wallet.id,
-        amount=-scan_info.tot,
-        db=db,
-    )
-    transaction_id = uuid.uuid4()
-    creation_date = datetime.now(UTC)
-    transaction = schemas_myeclpay.Transaction(
-        id=transaction_id,
-        debited_wallet_id=debited_wallet_device.wallet_id,
-        credited_wallet_id=store.wallet_id,
-        transaction_type=TransactionType.DIRECT,
-        seller_user_id=user.id,
-        total=scan_info.tot,
-        creation=creation_date,
-        status=TransactionStatus.CONFIRMED,
-    )
-    # We create a transaction
-    await cruds_myeclpay.create_transaction(
-        transaction=transaction,
-        debited_wallet_device_id=debited_wallet_device.id,
-        store_note=None,
-        db=db,
-    )
+        # We decrement the debited wallet balance
+        await cruds_myeclpay.increment_wallet_balance(
+            wallet_id=debited_wallet.id,
+            amount=-scan_info.tot,
+            db=db,
+        )
+        transaction_id = uuid.uuid4()
+        creation_date = datetime.now(UTC)
+        transaction = schemas_myeclpay.Transaction(
+            id=transaction_id,
+            debited_wallet_id=debited_wallet_device.wallet_id,
+            credited_wallet_id=store.wallet_id,
+            transaction_type=TransactionType.DIRECT,
+            seller_user_id=user.id,
+            total=scan_info.tot,
+            creation=creation_date,
+            status=TransactionStatus.CONFIRMED,
+        )
+        # We create a transaction
+        await cruds_myeclpay.create_transaction(
+            transaction=transaction,
+            debited_wallet_device_id=debited_wallet_device.id,
+            store_note=None,
+            db=db,
+        )
 
-    await db.commit()
+        hyperion_myeclpay_logger.info(format_transaction_log(transaction))
 
-    hyperion_myeclpay_logger.info(format_transaction_log(transaction))
+        message = Message(
+            title=f"💳 Paiement - {store.name}",
+            content=f"Une transaction de {scan_info.tot / 100} € a été effectuée",
+            action_module="MyECLPay",
+        )
+        await notification_tool.send_notification_to_user(
+            user_id=debited_wallet.user.id,
+            message=message,
+        )
 
-    message = Message(
-        title=f"💳 Paiement - {store.name}",
-        content=f"Une transaction de {scan_info.tot / 100} € a été effectuée",
-        action_module="MyECLPay",
-    )
-    await notification_tool.send_notification_to_user(
-        user_id=debited_wallet.user.id,
-        message=message,
-    )
-
-    return transaction
+        return transaction
 
 
 @router.post(
@@ -2433,8 +2382,6 @@ async def refund_transaction(
         db=db,
     )
 
-    await db.commit()
-
     hyperion_myeclpay_logger.info(format_refund_log(refund))
 
     if wallet_previously_debited.user is not None:
@@ -2578,8 +2525,6 @@ async def cancel_transaction(
         amount=-transaction.total,
         db=db,
     )
-
-    await db.commit()
 
     hyperion_myeclpay_logger.info(format_cancel_log(transaction_id))
 
