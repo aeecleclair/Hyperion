@@ -105,7 +105,26 @@ def init_and_get_db_engine(settings: Settings) -> AsyncEngine:
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
-    Return a database session
+    Return a database session that will be automatically committed and closed after usage.
+
+    If an HTTPException is raised during the request, we consider that the error was expected and managed by the endpoint. We commit the session.
+    If an other exception is raised, we rollback the session to avoid.
+
+    Cruds and endpoints should never call `db.commit()` or `db.rollback()` directly.
+    After adding an object to the session, calling `await db.flush()` will integrate the changes in the transaction without committing them.
+
+    If an endpoint needs to add objects to the sessions that should be committed even in case of an unexpected error,
+    it should start a SAVEPOINT after adding the object.
+
+    ```python
+    # Add here the object that should always be committed, even in case of an unexpected error
+    await db.add(object)
+    await db.flush()
+
+    # Start a SAVEPOINT. If the code in the following context manager raises an exception, the changes will be rolled back to this point.
+    async with db.begin_nested():
+        # Add objects that may be rolled back in case of an error here
+    ```
     """
     if SessionLocal is None:
         hyperion_error_logger.error("Database engine is not initialized")
@@ -116,8 +135,14 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with SessionLocal() as db:
         try:
             yield db
-        finally:
-            await db.close()
+        except HTTPException:
+            await db.commit()
+            raise
+        except Exception:
+            await db.rollback()
+            raise
+        else:
+            await db.commit()
 
 
 async def get_unsafe_db() -> AsyncGenerator[AsyncSession, None]:
