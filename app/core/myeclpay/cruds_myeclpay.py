@@ -442,6 +442,7 @@ async def get_wallet(
     wallet_id: UUID,
     db: AsyncSession,
 ) -> models_myeclpay.Wallet | None:
+    # We lock the wallet `for update` to prevent race conditions
     request = (
         select(models_myeclpay.Wallet)
         .where(
@@ -518,6 +519,7 @@ async def increment_wallet_balance(
     Append `amount` to the wallet balance.
     """
     # Prevent a race condition by locking the wallet row
+    # as we don't want the balance to be modified between the select and the update.
     request = (
         select(models_myeclpay.Wallet)
         .where(models_myeclpay.Wallet.id == wallet_id)
