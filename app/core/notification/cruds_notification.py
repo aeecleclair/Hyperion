@@ -2,7 +2,6 @@ from collections.abc import Sequence
 from datetime import date
 
 from sqlalchemy import delete, select, update
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.notification import models_notification

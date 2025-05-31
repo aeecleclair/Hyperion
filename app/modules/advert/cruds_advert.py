@@ -1,7 +1,6 @@
 from collections.abc import Sequence
 
 from sqlalchemy import delete, or_, select, update
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.advert import models_advert, schemas_advert

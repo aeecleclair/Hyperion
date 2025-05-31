@@ -6,7 +6,6 @@ from collections.abc import Sequence
 
 from fastapi import HTTPException
 from sqlalchemy import delete, select, update
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
