@@ -143,6 +143,8 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             raise
         else:
             await db.commit()
+        finally:
+            await db.close()
 
 
 async def get_unsafe_db() -> AsyncGenerator[AsyncSession, None]:
