@@ -4,10 +4,11 @@ from uuid import UUID
 
 from sqlalchemy import and_, delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import noload, selectinload
 
 from app.core.memberships import schemas_memberships
 from app.core.myeclpay import models_myeclpay, schemas_myeclpay
+from app.core.myeclpay.exceptions_myeclpay import WalletNotFoundOnUpdateError
 from app.core.myeclpay.types_myeclpay import (
     TransactionStatus,
     WalletDeviceStatus,
@@ -516,11 +517,22 @@ async def increment_wallet_balance(
     """
     Append `amount` to the wallet balance.
     """
-    await db.execute(
-        update(models_myeclpay.Wallet)
+    # Prevent a race condition by locking the wallet row
+    request = (
+        select(models_myeclpay.Wallet)
         .where(models_myeclpay.Wallet.id == wallet_id)
-        .values(balance=models_myeclpay.Wallet.balance + amount),
+        .options(
+            noload(models_myeclpay.Wallet.store),
+            noload(models_myeclpay.Wallet.user),
+        )
+        .with_for_update()
     )
+    result = await db.execute(request)
+    wallet = result.scalars().first()
+
+    if wallet is None:
+        raise WalletNotFoundOnUpdateError(wallet_id=wallet_id)
+    wallet.balance += amount
 
 
 async def create_user_payment(
