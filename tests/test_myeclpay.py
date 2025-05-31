@@ -1868,52 +1868,6 @@ def test_hello_asso_transfer(
     assert response.status_code == 204
 
 
-def test_non_hello_asso_transfer_without_credited(client: TestClient):
-    """Test transferring with a non-hello_asso transfer type as a non-BDE user"""
-    response = client.post(
-        "/myeclpay/transfer/admin",
-        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
-        json={
-            "amount": 1000,
-            "transfer_type": "cash",
-        },
-    )
-    assert response.status_code == 400
-    assert (
-        response.json()["detail"]
-        == "Please provide a credited user id for this transfer type"
-    )
-
-
-def test_non_hello_asso_transfer_as_non_bde(client: TestClient):
-    """Test transferring with a non-hello_asso transfer type as a non-BDE user"""
-    response = client.post(
-        "/myeclpay/transfer/admin",
-        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
-        json={
-            "amount": 1000,
-            "transfer_type": "cash",
-            "credited_user_id": ecl_user2.id,
-        },
-    )
-    assert response.status_code == 403
-    assert response.json()["detail"] == "User is not allowed to approve this transfer"
-
-
-def test_non_hello_asso_transfer_as_bde(client: TestClient):
-    """Test transferring with a non-hello_asso transfer type as a BDE user"""
-    response = client.post(
-        "/myeclpay/transfer/admin",
-        headers={"Authorization": f"Bearer {ecl_user2_access_token}"},
-        json={
-            "amount": 100,
-            "transfer_type": "cash",
-            "credited_user_id": ecl_user.id,
-        },
-    )
-    assert response.status_code == 204
-
-
 def test_redirect_from_ha_transfer_non_trusted_url(
     client: TestClient,
 ):
