@@ -182,13 +182,16 @@ async def create_user_with_groups(
                     ),
                 )
             await db.commit()
-            user_db = await cruds_users.get_user_by_id(db, user_id)
         except Exception as error:
             await db.rollback()
             raise FailedToAddObjectToDB from error
         finally:
             await db.close()
-    return user_db  # type: ignore[return-value] # (user_db can't be None)
+
+    async with TestingSessionLocal() as db:
+        user_db = await cruds_users.get_user_by_id(db, user_id)
+
+        return user_db  # type: ignore[return-value] # (user_db can't be None)
 
 
 def create_api_access_token(
