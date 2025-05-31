@@ -75,6 +75,8 @@ store_seller_no_permission_user_access_token: str
 store_seller_can_bank_user_access_token: str
 store_seller_can_cancel_user_access_token: str
 store_seller_can_manage_sellers_user_access_token: str
+store_seller_can_see_history_user_access_token: str
+
 
 unregistered_ecl_user_access_token: str
 
@@ -408,6 +410,23 @@ async def init_objects() -> None:
     )
     await add_object_to_db(store_seller_can_manage_sellers)
 
+    global store_seller_can_see_history_user_access_token
+    store_seller_can_see_history_user = await create_user_with_groups(
+        groups=[],
+    )
+    store_seller_can_see_history_seller = models_myeclpay.Seller(
+        user_id=store_seller_can_see_history_user.id,
+        store_id=store.id,
+        can_bank=False,
+        can_see_history=True,
+        can_cancel=False,
+        can_manage_sellers=False,
+    )
+    await add_object_to_db(store_seller_can_see_history_seller)
+    store_seller_can_see_history_user_access_token = create_api_access_token(
+        store_seller_can_see_history_user,
+    )
+
     global unregistered_ecl_user_access_token
     unregistered_ecl_user = await create_user_with_groups(
         groups=[],
@@ -460,6 +479,18 @@ async def test_patch_structure_as_admin(client: TestClient):
     assert response.status_code == 204
 
 
+async def test_patch_non_existing_structure(client: TestClient):
+    response = client.patch(
+        f"/myeclpay/structures/{uuid4()}",
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+        json={
+            "name": "Test Structure Updated",
+        },
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Structure does not exist"
+
+
 async def test_delete_structure_as_lambda(client: TestClient):
     response = client.delete(
         f"/myeclpay/structures/{structure.id}",
@@ -489,6 +520,18 @@ async def test_delete_structure_as_admin(client: TestClient):
         headers={"Authorization": f"Bearer {admin_user_token}"},
     )
     assert response.status_code == 204
+
+
+async def test_transfer_non_existing_structure_manager(client: TestClient):
+    response = client.post(
+        f"/myeclpay/structures/{uuid4()}/init-manager-transfer",
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+        json={
+            "new_manager_user_id": ecl_user2.id,
+        },
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Structure does not exist"
 
 
 async def test_transfer_structure_manager_as_admin(client: TestClient):
@@ -527,6 +570,20 @@ async def test_transfer_structure_manager_with_wrong_token(client: TestClient):
     assert response.json()["detail"] == "Request has expired"
 
 
+async def test_transfer_structure_manager_as_manager_but_invalid_new_manager_id(
+    client: TestClient,
+):
+    response = client.post(
+        f"/myeclpay/structures/{structure.id}/init-manager-transfer",
+        headers={"Authorization": f"Bearer {structure_manager_user_token}"},
+        json={
+            "new_manager_user_id": str(uuid4()),
+        },
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "New manager user does not exist"
+
+
 async def test_transfer_structure_manager_as_manager(
     client: TestClient,
     mocker: MockerFixture,
@@ -550,6 +607,28 @@ async def test_transfer_structure_manager_as_manager(
         structure_id=new_structure.id,
     )
     await add_object_to_db(new_store)
+    new_wallet2 = models_myeclpay.Wallet(
+        id=uuid4(),
+        type=WalletType.STORE,
+        balance=5000,
+    )
+    await add_object_to_db(new_wallet2)
+    new_store2_where_new_manager_already_seller = models_myeclpay.Store(
+        id=uuid4(),
+        wallet_id=new_wallet2.id,
+        name="Test Store Structure 2 Where New Manager Already Seller",
+        structure_id=new_structure.id,
+    )
+    await add_object_to_db(new_store2_where_new_manager_already_seller)
+    seller = models_myeclpay.Seller(
+        user_id=ecl_user2.id,
+        store_id=new_store2_where_new_manager_already_seller.id,
+        can_bank=True,
+        can_see_history=False,
+        can_cancel=False,
+        can_manage_sellers=False,
+    )
+    await add_object_to_db(seller)
 
     await add_object_to_db(new_structure)
     mocker.patch(
@@ -571,12 +650,36 @@ async def test_transfer_structure_manager_as_manager(
     )
     assert response.status_code == 200
 
-    stores = client.get(
+    result = client.get(
         "/myeclpay/users/me/stores",
         headers={"Authorization": f"Bearer {ecl_user2_access_token}"},
     )
-    stores_ids = [store["id"] for store in stores.json()]
-    assert str(new_store.id) in stores_ids
+    stores = result.json()
+    assert len(stores) == 2
+    assert str(new_store.id) in [store["id"] for store in stores]
+    assert str(new_store2_where_new_manager_already_seller.id) in [
+        store["id"] for store in stores
+    ]
+    store1 = next(store for store in stores if store["id"] == str(new_store.id))
+    store2 = next(
+        store
+        for store in stores
+        if store["id"] == str(new_store2_where_new_manager_already_seller.id)
+    )
+    assert store1["can_manage_sellers"] is True
+    assert store2["can_manage_sellers"] is True
+
+
+async def test_create_store_for_non_existing_structure(client: TestClient):
+    response = client.post(
+        f"/myeclpay/structures/{uuid4()}/stores",
+        headers={"Authorization": f"Bearer {structure_manager_user_token}"},
+        json={
+            "name": "test_create_store Test Store",
+        },
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Structure does not exist"
 
 
 async def test_create_store(client: TestClient):
@@ -596,6 +699,95 @@ async def test_create_store(client: TestClient):
     )
     stores_ids = [store["id"] for store in stores.json()]
     assert response.json()["id"] in stores_ids
+
+
+async def test_create_store_when_user_not_manager_of_structure(client: TestClient):
+    response = client.post(
+        f"/myeclpay/structures/{structure.id}/stores",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+        json={
+            "name": "test_create_store Test Store",
+        },
+    )
+    assert response.status_code == 403
+    assert response.json()["detail"] == "User is not the manager for this structure"
+
+
+async def test_create_store_with_name_already_exist(client: TestClient):
+    response = client.post(
+        f"/myeclpay/structures/{structure.id}/stores",
+        headers={"Authorization": f"Bearer {structure_manager_user_token}"},
+        json={
+            "name": "Test Store",
+        },
+    )
+    assert response.status_code == 400
+    assert (
+        response.json()["detail"]
+        == "Store with this name already exists in this structure"
+    )
+
+
+async def test_get_store_history_for_non_existing_store(client: TestClient):
+    response = client.get(
+        f"/myeclpay/stores/{uuid4()}/history",
+        headers={"Authorization": f"Bearer {ecl_user2_access_token}"},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Store does not exist"
+
+
+async def test_get_store_history_when_not_seller_can_see_history(client: TestClient):
+    response = client.get(
+        f"/myeclpay/stores/{store.id}/history",
+        headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
+    )
+
+    assert response.status_code == 403
+    assert (
+        response.json()["detail"] == "User is not authorized to see the store history"
+    )
+
+
+async def test_get_store_history(client: TestClient):
+    response = client.get(
+        f"/myeclpay/stores/{store.id}/history",
+        headers={
+            "Authorization": f"Bearer {store_seller_can_see_history_user_access_token}",
+        },
+    )
+
+    assert response.status_code == 200
+    history_list = response.json()
+    assert len(history_list) == 2
+
+    history = {transaction["id"]: transaction for transaction in history_list}
+    assert str(transaction_from_store_to_ecl_user.id) in history
+    assert history[str(transaction_from_store_to_ecl_user.id)]["total"] == 700
+    assert str(transaction_from_ecl_user_to_store.id) in history
+    assert history[str(transaction_from_ecl_user_to_store.id)]["total"] == 500
+
+
+async def test_get_store_history_with_date(client: TestClient):
+    response = client.get(
+        f"/myeclpay/stores/{store.id}/history",
+        params={
+            "start_date": "2025-05-18",
+            "end_date": "2025-05-19",
+        },
+        headers={
+            "Authorization": f"Bearer {store_seller_can_see_history_user_access_token}",
+        },
+    )
+
+    assert response.status_code == 200
+    history_list = response.json()
+    assert len(history_list) == 1
+
+    history = {transaction["id"]: transaction for transaction in history_list}
+    assert str(transaction_from_store_to_ecl_user.id) in history
+    assert history[str(transaction_from_store_to_ecl_user.id)]["total"] == 700
 
 
 async def test_get_stores_as_lambda(client: TestClient):
@@ -625,6 +817,20 @@ async def test_get_stores_as_manager(client: TestClient):
     assert len(response.json()) > 1
 
 
+async def test_update_store_non_existing(client: TestClient):
+    response = client.patch(
+        f"/myeclpay/stores/{uuid4()}",
+        headers={
+            "Authorization": f"Bearer {store_seller_can_bank_user_access_token}",
+        },
+        json={
+            "name": "new name",
+        },
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Store does not exist"
+
+
 async def test_update_store_non_store_admin(client: TestClient):
     response = client.patch(
         f"/myeclpay/stores/{store.id}",
@@ -637,6 +843,76 @@ async def test_update_store_non_store_admin(client: TestClient):
     )
     assert response.status_code == 403
     assert response.json()["detail"] == "User is not the manager for this structure"
+
+
+async def test_delete_store_does_not_exist(client: TestClient):
+    response = client.delete(
+        f"/myeclpay/stores/{uuid4()}",
+        headers={
+            "Authorization": f"Bearer {structure_manager_user_token}",
+        },
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Store does not exist"
+
+
+async def test_delete_store_by_non_manager(client: TestClient):
+    response = client.delete(
+        f"/myeclpay/stores/{store.id}",
+        headers={
+            "Authorization": f"Bearer {ecl_user2_access_token}",
+        },
+    )
+    assert response.status_code == 403
+    assert response.json()["detail"] == "User is not the manager for this structure"
+
+
+async def test_delete_store_with_history(client: TestClient):
+    response = client.delete(
+        f"/myeclpay/stores/{store.id}",
+        headers={
+            "Authorization": f"Bearer {structure_manager_user_token}",
+        },
+    )
+    assert response.status_code == 400
+    assert (
+        response.json()["detail"]
+        == "Store has items in history and cannot be deleted anymore"
+    )
+
+
+async def test_delete_store(client: TestClient):
+    store_id = uuid4()
+    new_wallet = models_myeclpay.Wallet(
+        id=store_id,
+        type=WalletType.STORE,
+        balance=5000,
+    )
+    await add_object_to_db(new_wallet)
+    new_store = models_myeclpay.Store(
+        id=store_id,
+        wallet_id=new_wallet.id,
+        name="Test Store to Delete",
+        structure_id=structure.id,
+    )
+    await add_object_to_db(new_store)
+    sellet = models_myeclpay.Seller(
+        user_id=structure_manager_user.id,
+        store_id=new_store.id,
+        can_bank=True,
+        can_see_history=True,
+        can_cancel=True,
+        can_manage_sellers=True,
+    )
+    await add_object_to_db(sellet)
+
+    response = client.delete(
+        f"/myeclpay/stores/{store_id}",
+        headers={
+            "Authorization": f"Bearer {structure_manager_user_token}",
+        },
+    )
+    assert response.status_code == 204
 
 
 async def test_update_store(client: TestClient):
@@ -672,6 +948,22 @@ async def test_get_user_stores(client: TestClient):
     # We want to make sure the user have at least a store
     # to be sure that the method was correctly tested
     assert len(response.json()) > 0
+
+
+async def test_add_seller_for_non_existing_store(client: TestClient):
+    response = client.post(
+        f"/myeclpay/stores/{uuid4()}/sellers",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+        json={
+            "user_id": ecl_user2.id,
+            "can_bank": True,
+            "can_see_history": True,
+            "can_cancel": True,
+            "can_manage_sellers": True,
+        },
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Store does not exist"
 
 
 async def test_add_seller_as_lambda(client: TestClient):
@@ -737,6 +1029,46 @@ async def test_add_seller_as_seller_without_permission(client: TestClient):
     )
 
 
+async def test_add_already_existing_seller(client: TestClient):
+    user = await create_user_with_groups(
+        groups=[],
+    )
+    seller = models_myeclpay.Seller(
+        user_id=user.id,
+        store_id=store.id,
+        can_bank=True,
+        can_see_history=True,
+        can_cancel=True,
+        can_manage_sellers=False,
+    )
+    await add_object_to_db(seller)
+
+    response = client.post(
+        f"/myeclpay/stores/{store.id}/sellers",
+        headers={
+            "Authorization": f"Bearer {store_seller_can_manage_sellers_user_access_token}",
+        },
+        json={
+            "user_id": user.id,
+            "can_bank": True,
+            "can_see_history": True,
+            "can_cancel": True,
+            "can_manage_sellers": True,
+        },
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Seller already exists"
+
+
+async def test_get_sellers_for_non_existing_store(client: TestClient):
+    response = client.get(
+        f"/myeclpay/stores/{uuid4()}/sellers",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Store does not exist"
+
+
 async def test_get_sellers_as_lambda(client: TestClient):
     response = client.get(
         f"/myeclpay/stores/{store.id}/sellers",
@@ -772,6 +1104,21 @@ async def test_get_sellers_as_seller_without_permission(client: TestClient):
         response.json()["detail"]
         == "User does not have the permission to manage sellers"
     )
+
+
+async def test_update_seller_of_non_existing_store(client: TestClient):
+    response = client.patch(
+        f"/myeclpay/stores/{uuid4()}/sellers/{store_seller_can_bank_user.id}",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+        json={
+            "can_bank": False,
+            "can_see_history": True,
+            "can_cancel": False,
+            "can_manage_sellers": False,
+        },
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Store does not exist"
 
 
 async def test_update_seller_as_lambda(client: TestClient):
@@ -810,6 +1157,33 @@ async def test_update_seller_as_seller_without_permission(client: TestClient):
         response.json()["detail"]
         == "User does not have the permission to manage sellers"
     )
+
+
+async def test_update_non_existing_seller(client: TestClient):
+    user = await create_user_with_groups(
+        groups=[],
+    )
+    seller = models_myeclpay.Seller(
+        user_id=user.id,
+        store_id=store.id,
+        can_bank=False,
+        can_see_history=False,
+        can_cancel=False,
+        can_manage_sellers=False,
+    )
+    await add_object_to_db(seller)
+    response = client.patch(
+        f"/myeclpay/stores/{store.id}/sellers/{uuid4()}",
+        headers={
+            "Authorization": f"Bearer {store_seller_can_manage_sellers_user_access_token}",
+        },
+        json={
+            "can_bank": True,
+            "can_see_history": True,
+        },
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Seller does not exist"
 
 
 async def test_update_seller_as_seller_with_permission(client: TestClient):
@@ -874,6 +1248,15 @@ async def test_update_manager_seller(client: TestClient):
     )
 
 
+async def test_delete_seller_of_non_existing_store(client: TestClient):
+    response = client.delete(
+        f"/myeclpay/stores/{uuid4()}/sellers/{store_seller_can_bank_user.id}",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Store does not exist"
+
+
 async def test_delete_seller_as_lambda(client: TestClient):
     response = client.delete(
         f"/myeclpay/stores/{store.id}/sellers/{store_seller_can_bank_user.id}",
@@ -898,6 +1281,17 @@ async def test_delete_seller_as_seller_without_permission(client: TestClient):
         response.json()["detail"]
         == "User does not have the permission to manage sellers"
     )
+
+
+async def test_delete_non_existing_seller(client: TestClient):
+    response = client.delete(
+        f"/myeclpay/stores/{store.id}/sellers/{uuid4()}",
+        headers={
+            "Authorization": f"Bearer {store_seller_can_manage_sellers_user_access_token}",
+        },
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Seller does not exist"
 
 
 async def test_delete_seller_as_seller_with_permission(client: TestClient):
@@ -1518,6 +1912,28 @@ def test_non_hello_asso_transfer_as_bde(client: TestClient):
         },
     )
     assert response.status_code == 204
+
+
+def test_redirect_from_ha_transfer_non_trusted_url(
+    client: TestClient,
+):
+    response = client.get(
+        "/myeclpay/transfer/redirect?url=http://localhost:3000/nottrusted",
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Redirect URL is not trusted by hyperion"
+
+
+def test_redirect_from_ha_transfer_trusted_url(
+    client: TestClient,
+):
+    response = client.get(
+        "/myeclpay/transfer/redirect?url=http://localhost:3000/payment_callback",
+        follow_redirects=False,
+    )
+    assert response.status_code == 307
+    assert response.next_request is not None
+    assert str(response.next_request.url) == "http://localhost:3000/payment_callback"
 
 
 def ensure_qr_code_id_is_already_used(qr_code_id: str | UUID, client: TestClient):

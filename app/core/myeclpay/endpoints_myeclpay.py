@@ -737,10 +737,18 @@ async def delete_store(
         wallet_id=store.wallet_id,
         db=db,
     )
-    if transactions:
+    transfers = await cruds_myeclpay.get_transfers_by_wallet_id(
+        wallet_id=store.wallet_id,
+        db=db,
+    )
+    refunds = await cruds_myeclpay.get_refunds_by_wallet_id(
+        wallet_id=store.wallet_id,
+        db=db,
+    )
+    if len(transactions) > 0 or len(transfers) > 0 or len(refunds) > 0:
         raise HTTPException(
             status_code=400,
-            detail="Store has transactions and cannot be deleted anymore",
+            detail="Store has items in history and cannot be deleted anymore",
         )
 
     sellers = await cruds_myeclpay.get_sellers_by_store_id(
@@ -916,13 +924,7 @@ async def update_store_seller(
         structure_id=store.structure_id,
         db=db,
     )
-    if structure is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Structure does not exist",
-        )
-
-    if structure.manager_user_id == seller_user_id:
+    if structure is None or structure.manager_user_id == seller_user_id:
         raise HTTPException(
             status_code=400,
             detail="User is the manager for this structure and cannot be updated as a seller",
@@ -989,12 +991,7 @@ async def delete_store_seller(
         structure_id=store.structure_id,
         db=db,
     )
-    if structure is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Structure does not exist",
-        )
-    if structure.manager_user_id == seller_user_id:
+    if structure is None or structure.manager_user_id == seller_user_id:
         raise HTTPException(
             status_code=400,
             detail="User is the manager for this structure and cannot be deleted as a seller",
