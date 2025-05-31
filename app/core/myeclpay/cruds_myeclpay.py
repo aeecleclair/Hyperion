@@ -1,8 +1,8 @@
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import date, datetime
 from uuid import UUID
 
-from sqlalchemy import delete, or_, select, update
+from sqlalchemy import and_, delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -651,6 +651,8 @@ async def get_transactions(
 async def get_transactions_by_wallet_id(
     wallet_id: UUID,
     db: AsyncSession,
+    start_datetime: datetime | None = None,
+    end_datetime: datetime | None = None,
 ) -> Sequence[models_myeclpay.Transaction]:
     result = await db.execute(
         select(models_myeclpay.Transaction)
@@ -659,6 +661,12 @@ async def get_transactions_by_wallet_id(
                 models_myeclpay.Transaction.debited_wallet_id == wallet_id,
                 models_myeclpay.Transaction.credited_wallet_id == wallet_id,
             ),
+            models_myeclpay.Transaction.creation >= start_datetime
+            if start_datetime
+            else and_(True),
+            models_myeclpay.Transaction.creation <= end_datetime
+            if end_datetime
+            else and_(True),
         )
         .options(
             selectinload(models_myeclpay.Transaction.debited_wallet),
@@ -718,10 +726,21 @@ async def confirm_transfer(
 async def get_transfers_by_wallet_id(
     wallet_id: UUID,
     db: AsyncSession,
+    start_datetime: datetime | None = None,
+    end_datetime: datetime | None = None,
 ) -> Sequence[models_myeclpay.Transfer]:
     result = await db.execute(
-        select(models_myeclpay.Transfer).where(
+        select(models_myeclpay.Transfer)
+        .where(
             models_myeclpay.Transfer.wallet_id == wallet_id,
+        )
+        .where(
+            models_myeclpay.Transfer.creation >= start_datetime
+            if start_datetime
+            else and_(True),
+            models_myeclpay.Transfer.creation <= end_datetime
+            if end_datetime
+            else and_(True),
         ),
     )
     return result.scalars().all()
@@ -867,6 +886,8 @@ async def get_refund_by_transaction_id(
 async def get_refunds_by_wallet_id(
     wallet_id: UUID,
     db: AsyncSession,
+    start_datetime: datetime | None = None,
+    end_datetime: datetime | None = None,
 ) -> Sequence[schemas_myeclpay.Refund]:
     result = (
         (
@@ -876,6 +897,12 @@ async def get_refunds_by_wallet_id(
                         models_myeclpay.Refund.debited_wallet_id == wallet_id,
                         models_myeclpay.Refund.credited_wallet_id == wallet_id,
                     ),
+                    models_myeclpay.Refund.creation >= start_datetime
+                    if start_datetime
+                    else and_(True),
+                    models_myeclpay.Refund.creation <= end_datetime
+                    if end_datetime
+                    else and_(True),
                 ),
             )
         )
