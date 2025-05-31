@@ -30,6 +30,10 @@ from app.utils.tools import (
 )
 
 
+class FailedToAddObjectToDB(Exception):
+    """Exception raised when an object cannot be added to the database."""
+
+
 @lru_cache
 def override_get_settings() -> Settings:
     """Override the get_settings function to use the testing session"""
@@ -77,6 +81,8 @@ async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
             raise
         else:
             await db.commit()
+        finally:
+            await db.close()
 
 
 async def override_get_unsafe_db() -> AsyncGenerator[AsyncSession, None]:
@@ -175,15 +181,13 @@ async def create_user_with_groups(
                         description=None,
                     ),
                 )
-
-        except IntegrityError:
+            await db.commit()
+            user_db = await cruds_users.get_user_by_id(db, user_id)
+        except Exception as error:
             await db.rollback()
-            raise
+            raise FailedToAddObjectToDB from error
         finally:
             await db.close()
-    async with TestingSessionLocal() as db:
-        user_db = await cruds_users.get_user_by_id(db, user_id)
-        await db.close()
     return user_db  # type: ignore[return-value] # (user_db can't be None)
 
 
@@ -211,9 +215,9 @@ async def add_object_to_db(db_object: Base) -> None:
         try:
             db.add(db_object)
             await db.commit()
-        except IntegrityError:
+        except Exception as error:
             await db.rollback()
-            raise
+            raise FailedToAddObjectToDB from error
         finally:
             await db.close()
 
