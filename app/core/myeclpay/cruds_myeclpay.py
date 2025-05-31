@@ -441,11 +441,15 @@ async def get_wallet(
     wallet_id: UUID,
     db: AsyncSession,
 ) -> models_myeclpay.Wallet | None:
-    result = await db.execute(
-        select(models_myeclpay.Wallet).where(
+    request = (
+        select(models_myeclpay.Wallet)
+        .where(
             models_myeclpay.Wallet.id == wallet_id,
-        ),
+        )
+        .with_for_update(of=models_myeclpay.Wallet)
     )
+
+    result = await db.execute(request)
     return result.scalars().first()
 
 
