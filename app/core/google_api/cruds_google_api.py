@@ -10,11 +10,7 @@ async def create_oauth_flow_state(
     db: AsyncSession,
 ) -> None:
     db.add(oauth_flow_state)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
+    await db.flush()
 
 
 async def get_oauth_flow_state_by_state(

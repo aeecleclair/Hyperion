@@ -159,13 +159,8 @@ async def create_unconfirmed_user(
     """
 
     db.add(user_unconfirmed)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return user_unconfirmed  # TODO Is this useful ?
+    await db.flush()
+    return user_unconfirmed  # TODO Is this useful ?
 
 
 async def get_unconfirmed_user_by_activation_token(
@@ -188,7 +183,7 @@ async def delete_unconfirmed_user_by_email(db: AsyncSession, email: str):
             models_users.CoreUserUnconfirmed.email == email,
         ),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def create_user(
@@ -196,13 +191,8 @@ async def create_user(
     user: models_users.CoreUser,
 ) -> models_users.CoreUser:
     db.add(user)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return user
+    await db.flush()
+    return user
 
 
 async def delete_user(db: AsyncSession, user_id: str):
@@ -211,7 +201,7 @@ async def delete_user(db: AsyncSession, user_id: str):
     await db.execute(
         delete(models_users.CoreUser).where(models_users.CoreUser.id == user_id),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def create_user_recover_request(
@@ -219,13 +209,8 @@ async def create_user_recover_request(
     recover_request: models_users.CoreUserRecoverRequest,
 ) -> models_users.CoreUserRecoverRequest:
     db.add(recover_request)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return recover_request
+    await db.flush()
+    return recover_request
 
 
 async def get_recover_request_by_reset_token(
@@ -245,13 +230,8 @@ async def create_email_migration_code(
     db: AsyncSession,
 ) -> models_users.CoreUserEmailMigrationCode:
     db.add(migration_object)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return migration_object
+    await db.flush()
+    return migration_object
 
 
 async def get_email_migration_code_by_token(
@@ -277,7 +257,7 @@ async def delete_email_migration_code_by_token(
             == confirmation_token,
         ),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def delete_recover_request_by_email(db: AsyncSession, email: str):
@@ -288,7 +268,7 @@ async def delete_recover_request_by_email(db: AsyncSession, email: str):
             models_users.CoreUserRecoverRequest.email == email,
         ),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def update_user_password_by_id(
@@ -301,7 +281,7 @@ async def update_user_password_by_id(
         .where(models_users.CoreUser.id == user_id)
         .values(password_hash=new_password_hash),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def remove_users_from_school(

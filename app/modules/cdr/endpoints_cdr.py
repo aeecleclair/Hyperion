@@ -283,20 +283,16 @@ async def update_cdr_user(
                 settings=settings,
             )
 
-    try:
-        if user_update.floor or user_update.nickname:
-            await cruds_users.update_user(
-                db=db,
-                user_id=user_id,
-                user_update=schemas_users.CoreUserUpdate(
-                    nickname=user_update.nickname,
-                    floor=user_update.floor,
-                ),
-            )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+    if user_update.floor or user_update.nickname:
+        await cruds_users.update_user(
+            db=db,
+            user_id=user_id,
+            user_update=schemas_users.CoreUserUpdate(
+                nickname=user_update.nickname,
+                floor=user_update.floor,
+            ),
+        )
+    await db.flush()
 
     user_db = await get_user_by_id(db, user_id)
     if not user_db:
@@ -595,13 +591,10 @@ async def create_seller(
         group_id=seller.group_id,
         order=seller.order,
     )
-    try:
-        cruds_cdr.create_seller(db, db_seller)
-        await db.commit()
-        return await cruds_cdr.get_seller_by_id(db=db, seller_id=db_seller.id)
-    except Exception:
-        await db.rollback()
-        raise
+
+    cruds_cdr.create_seller(db, db_seller)
+    await db.flush()
+    return await cruds_cdr.get_seller_by_id(db=db, seller_id=db_seller.id)
 
 
 @module.router.patch(
@@ -627,16 +620,11 @@ async def update_seller(
             detail="You must specify at least one field to update",
         )
 
-    try:
-        await cruds_cdr.update_seller(
-            seller_id=seller_id,
-            seller=seller,
-            db=db,
-        )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+    await cruds_cdr.update_seller(
+        seller_id=seller_id,
+        seller=seller,
+        db=db,
+    )
 
 
 @module.router.delete(
@@ -662,15 +650,11 @@ async def delete_seller(
             status_code=403,
             detail="Please delete all this seller products and documents first.",
         )
-    try:
-        await cruds_cdr.delete_seller(
-            seller_id=seller_id,
-            db=db,
-        )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+
+    await cruds_cdr.delete_seller(
+        seller_id=seller_id,
+        db=db,
+    )
 
 
 @module.router.get(
@@ -749,40 +733,37 @@ async def create_product(
         if product.related_membership
         else None,
     )
-    try:
-        cruds_cdr.create_product(db, db_product)
-        for constraint_id in product.product_constraints:
-            cruds_cdr.create_product_constraint(
-                db,
-                models_cdr.ProductConstraint(
-                    product_id=db_product.id,
-                    product_constraint_id=constraint_id,
-                ),
-            )
-        for constraint_id in product.document_constraints:
-            cruds_cdr.create_document_constraint(
-                db,
-                models_cdr.DocumentConstraint(
-                    product_id=db_product.id,
-                    document_id=constraint_id,
-                ),
-            )
-        for ticket in product.tickets:
-            cruds_cdr.create_ticket_generator(
-                db,
-                models_cdr.TicketGenerator(
-                    id=uuid4(),
-                    product_id=db_product.id,
-                    name=ticket.name,
-                    max_use=ticket.max_use,
-                    expiration=ticket.expiration,
-                ),
-            )
-        await db.commit()
-        return await cruds_cdr.get_product_by_id(db, db_product.id)
-    except Exception:
-        await db.rollback()
-        raise
+
+    cruds_cdr.create_product(db, db_product)
+    for constraint_id in product.product_constraints:
+        cruds_cdr.create_product_constraint(
+            db,
+            models_cdr.ProductConstraint(
+                product_id=db_product.id,
+                product_constraint_id=constraint_id,
+            ),
+        )
+    for constraint_id in product.document_constraints:
+        cruds_cdr.create_document_constraint(
+            db,
+            models_cdr.DocumentConstraint(
+                product_id=db_product.id,
+                document_id=constraint_id,
+            ),
+        )
+    for ticket in product.tickets:
+        cruds_cdr.create_ticket_generator(
+            db,
+            models_cdr.TicketGenerator(
+                id=uuid4(),
+                product_id=db_product.id,
+                name=ticket.name,
+                max_use=ticket.max_use,
+                expiration=ticket.expiration,
+            ),
+        )
+    await db.flush()
+    return await cruds_cdr.get_product_by_id(db, db_product.id)
 
 
 @module.router.patch(
@@ -831,36 +812,32 @@ async def update_product(
             status_code=403,
             detail="This product can't be edited now. Please try creating a new product.",
         )
-    try:
-        await cruds_cdr.update_product(
-            product_id=product_id,
-            product=product,
-            db=db,
-        )
-        if product.product_constraints is not None:
-            await cruds_cdr.delete_product_constraints(db=db, product_id=product_id)
-            for constraint_id in product.product_constraints:
-                cruds_cdr.create_product_constraint(
-                    db,
-                    models_cdr.ProductConstraint(
-                        product_id=product_id,
-                        product_constraint_id=constraint_id,
-                    ),
-                )
-        if product.document_constraints is not None:
-            await cruds_cdr.delete_document_constraints(db=db, product_id=product_id)
-            for constraint_id in product.document_constraints:
-                cruds_cdr.create_document_constraint(
-                    db,
-                    models_cdr.DocumentConstraint(
-                        product_id=product_id,
-                        document_id=constraint_id,
-                    ),
-                )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+
+    await cruds_cdr.update_product(
+        product_id=product_id,
+        product=product,
+        db=db,
+    )
+    if product.product_constraints is not None:
+        await cruds_cdr.delete_product_constraints(db=db, product_id=product_id)
+        for constraint_id in product.product_constraints:
+            cruds_cdr.create_product_constraint(
+                db,
+                models_cdr.ProductConstraint(
+                    product_id=product_id,
+                    product_constraint_id=constraint_id,
+                ),
+            )
+    if product.document_constraints is not None:
+        await cruds_cdr.delete_document_constraints(db=db, product_id=product_id)
+        for constraint_id in product.document_constraints:
+            cruds_cdr.create_document_constraint(
+                db,
+                models_cdr.DocumentConstraint(
+                    product_id=product_id,
+                    document_id=constraint_id,
+                ),
+            )
 
 
 @module.router.delete(
@@ -905,15 +882,11 @@ async def delete_product(
             status_code=403,
             detail="You can't delete this product because some variants are related to it.",
         )
-    try:
-        await cruds_cdr.delete_product(
-            product_id=product_id,
-            db=db,
-        )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+
+    await cruds_cdr.delete_product(
+        product_id=product_id,
+        db=db,
+    )
 
 
 @module.router.post(
@@ -979,25 +952,22 @@ async def create_product_variant(
             status_code=403,
             detail="This product has no related membership. You can't specify a membership duration.",
         )
-    try:
-        cruds_cdr.create_product_variant(db, db_product_variant)
-        await db.commit()
-        for c in product_variant.allowed_curriculum:
-            cruds_cdr.create_allowed_curriculum(
-                db,
-                models_cdr.AllowedCurriculum(
-                    product_variant_id=db_product_variant.id,
-                    curriculum_id=c,
-                ),
-            )
-        await db.commit()
-        return await cruds_cdr.get_product_variant_by_id(
-            db=db,
-            variant_id=db_product_variant.id,
+
+    cruds_cdr.create_product_variant(db, db_product_variant)
+    await db.flush()
+    for c in product_variant.allowed_curriculum:
+        cruds_cdr.create_allowed_curriculum(
+            db,
+            models_cdr.AllowedCurriculum(
+                product_variant_id=db_product_variant.id,
+                curriculum_id=c,
+            ),
         )
-    except Exception:
-        await db.rollback()
-        raise
+    await db.flush()
+    return await cruds_cdr.get_product_variant_by_id(
+        db=db,
+        variant_id=db_product_variant.id,
+    )
 
 
 @module.router.patch(
@@ -1061,26 +1031,22 @@ async def update_product_variant(
             status_code=403,
             detail="This product has no related membership. You can't specify a membership duration.",
         )
-    try:
-        await cruds_cdr.update_product_variant(
-            variant_id=variant_id,
-            product_variant=product_variant,
-            db=db,
-        )
-        if product_variant.allowed_curriculum is not None:
-            await cruds_cdr.delete_allowed_curriculums(db=db, variant_id=variant_id)
-            for c in product_variant.allowed_curriculum:
-                cruds_cdr.create_allowed_curriculum(
-                    db,
-                    models_cdr.AllowedCurriculum(
-                        product_variant_id=variant_id,
-                        curriculum_id=c,
-                    ),
-                )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+
+    await cruds_cdr.update_product_variant(
+        variant_id=variant_id,
+        product_variant=product_variant,
+        db=db,
+    )
+    if product_variant.allowed_curriculum is not None:
+        await cruds_cdr.delete_allowed_curriculums(db=db, variant_id=variant_id)
+        for c in product_variant.allowed_curriculum:
+            cruds_cdr.create_allowed_curriculum(
+                db,
+                models_cdr.AllowedCurriculum(
+                    product_variant_id=variant_id,
+                    curriculum_id=c,
+                ),
+            )
 
 
 @module.router.delete(
@@ -1121,15 +1087,11 @@ async def delete_product_variant(
             status_code=403,
             detail="You can't delete a product once CDR has started.",
         )
-    try:
-        await cruds_cdr.delete_product_variant(
-            variant_id=variant_id,
-            db=db,
-        )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+
+    await cruds_cdr.delete_product_variant(
+        variant_id=variant_id,
+        db=db,
+    )
 
 
 @module.router.get(
@@ -1211,14 +1173,10 @@ async def create_document(
         seller_id=seller_id,
         name=document.name,
     )
-    try:
-        cruds_cdr.create_document(db, db_document)
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
-    else:
-        return db_document
+
+    cruds_cdr.create_document(db, db_document)
+
+    return db_document
 
 
 @module.router.delete(
@@ -1246,15 +1204,11 @@ async def delete_document(
             status_code=403,
             detail="You can't delete a document that is a constraint for a product.",
         )
-    try:
-        await cruds_cdr.delete_document(
-            document_id=document_id,
-            db=db,
-        )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+
+    await cruds_cdr.delete_document(
+        document_id=document_id,
+        db=db,
+    )
 
 
 @module.router.get(
@@ -1486,30 +1440,20 @@ async def create_purchase(
         timestamp=datetime.now(UTC),
     )
     if existing_db_purchase:
-        try:
-            await cruds_cdr.update_purchase(
-                db=db,
-                user_id=user_id,
-                product_variant_id=product_variant_id,
-                purchase=purchase,
-            )
-            cruds_cdr.create_action(db, db_action)
-            await db.commit()
-        except Exception:
-            await db.rollback()
-            raise
-        else:
-            return db_purchase
-
-    try:
-        cruds_cdr.create_purchase(db, db_purchase)
+        await cruds_cdr.update_purchase(
+            db=db,
+            user_id=user_id,
+            product_variant_id=product_variant_id,
+            purchase=purchase,
+        )
         cruds_cdr.create_action(db, db_action)
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
-    else:
+        await db.flush()
         return db_purchase
+
+    cruds_cdr.create_purchase(db, db_purchase)
+    cruds_cdr.create_action(db, db_action)
+    await db.flush()
+    return db_purchase
 
 
 async def remove_existing_membership(
@@ -1716,13 +1660,8 @@ async def mark_purchase_as_validated(
         product_variant_id=product_variant_id,
         validated=validated,
     )
-    try:
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
-    else:
-        return db_purchase
+    await db.flush()
+    return db_purchase
 
 
 @module.router.delete(
@@ -1825,18 +1764,14 @@ async def delete_purchase(
         action=str(db_purchase.__dict__),
         timestamp=datetime.now(UTC),
     )
-    try:
-        await cruds_cdr.delete_purchase(
-            user_id=user_id,
-            product_variant_id=product_variant_id,
-            db=db,
-            product_id=product.id,
-        )
-        cruds_cdr.create_action(db, db_action)
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+
+    await cruds_cdr.delete_purchase(
+        user_id=user_id,
+        product_variant_id=product_variant_id,
+        db=db,
+        product_id=product.id,
+    )
+    cruds_cdr.create_action(db, db_action)
 
 
 @module.router.get(
@@ -1951,14 +1886,10 @@ async def create_signature(
         signature_type=signature.signature_type,
         numeric_signature_id=signature.numeric_signature_id,
     )
-    try:
-        cruds_cdr.create_signature(db, db_signature)
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
-    else:
-        return db_signature
+
+    cruds_cdr.create_signature(db, db_signature)
+    await db.flush()
+    return db_signature
 
 
 @module.router.delete(
@@ -1986,16 +1917,12 @@ async def delete_signature(
             status_code=404,
             detail="Invalid signature",
         )
-    try:
-        await cruds_cdr.delete_signature(
-            user_id=user_id,
-            document_id=document_id,
-            db=db,
-        )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+
+    await cruds_cdr.delete_signature(
+        user_id=user_id,
+        document_id=document_id,
+        db=db,
+    )
 
 
 @module.router.get(
@@ -2040,14 +1967,10 @@ async def create_curriculum(
         id=uuid4(),
         name=curriculum.name,
     )
-    try:
-        cruds_cdr.create_curriculum(db, db_curriculum)
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
-    else:
-        return db_curriculum
+
+    cruds_cdr.create_curriculum(db, db_curriculum)
+    await db.flush()
+    return db_curriculum
 
 
 @module.router.delete(
@@ -2073,15 +1996,11 @@ async def delete_curriculum(
             status_code=404,
             detail="Invalid curriculum_id",
         )
-    try:
-        await cruds_cdr.delete_curriculum(
-            curriculum_id=curriculum_id,
-            db=db,
-        )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+
+    await cruds_cdr.delete_curriculum(
+        curriculum_id=curriculum_id,
+        db=db,
+    )
 
 
 @module.router.post(
@@ -2131,29 +2050,24 @@ async def create_curriculum_membership(
                 status_code=403,
                 detail="You can't edit this curriculum if user has purchases.",
             )
-        try:
-            await cruds_cdr.delete_curriculum_membership(
-                db=db,
-                user_id=user_id,
-                curriculum_id=curriculum.curriculum_id,
-            )
-            await db.commit()
-        except Exception:
-            await db.rollback()
-            raise
+
+        await cruds_cdr.delete_curriculum_membership(
+            db=db,
+            user_id=user_id,
+            curriculum_id=curriculum.curriculum_id,
+        )
+        await db.flush()
+
     curriculum_membership = models_cdr.CurriculumMembership(
         user_id=user_id,
         curriculum_id=curriculum_id,
     )
-    try:
-        cruds_cdr.create_curriculum_membership(
-            db=db,
-            curriculum_membership=curriculum_membership,
-        )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+
+    cruds_cdr.create_curriculum_membership(
+        db=db,
+        curriculum_membership=curriculum_membership,
+    )
+    await db.flush()
 
     cdr_status = await get_core_data(schemas_cdr.Status, db)
     if cdr_status.status == CdrStatus.onsite:
@@ -2224,16 +2138,13 @@ async def update_curriculum_membership(
             status_code=404,
             detail="Invalid curriculum_id",
         )
-    try:
-        await cruds_cdr.update_curriculum_membership(
-            db=db,
-            user_id=user_id,
-            curriculum_id=curriculum_id,
-        )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+
+    await cruds_cdr.update_curriculum_membership(
+        db=db,
+        user_id=user_id,
+        curriculum_id=curriculum_id,
+    )
+    await db.flush()
 
     cdr_status = await get_core_data(schemas_cdr.Status, db)
     if cdr_status.status == CdrStatus.onsite:
@@ -2304,16 +2215,13 @@ async def delete_curriculum_membership(
             status_code=404,
             detail="User not found.",
         )
-    try:
-        await cruds_cdr.delete_curriculum_membership(
-            db=db,
-            user_id=user_id,
-            curriculum_id=curriculum_id,
-        )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+
+    await cruds_cdr.delete_curriculum_membership(
+        db=db,
+        user_id=user_id,
+        curriculum_id=curriculum_id,
+    )
+    await db.flush()
 
     cdr_status = await get_core_data(schemas_cdr.Status, db)
     if cdr_status.status == CdrStatus.onsite:
@@ -2404,15 +2312,11 @@ async def create_payment(
         action=str(db_payment.__dict__),
         timestamp=datetime.now(UTC),
     )
-    try:
-        cruds_cdr.create_payment(db, db_payment)
-        cruds_cdr.create_action(db, db_action)
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
-    else:
-        return db_payment
+
+    cruds_cdr.create_payment(db, db_payment)
+    cruds_cdr.create_action(db, db_action)
+    await db.flush()
+    return db_payment
 
 
 @module.router.delete(
@@ -2452,16 +2356,12 @@ async def delete_payment(
         action=str(db_payment.__dict__),
         timestamp=datetime.now(UTC),
     )
-    try:
-        await cruds_cdr.delete_payment(
-            payment_id=payment_id,
-            db=db,
-        )
-        cruds_cdr.create_action(db, db_action)
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+
+    await cruds_cdr.delete_payment(
+        payment_id=payment_id,
+        db=db,
+    )
+    cruds_cdr.create_action(db, db_action)
 
 
 @module.router.post(
@@ -2536,11 +2436,7 @@ async def get_payment_url(
             checkout_id=checkout.id,
         ),
     )
-    try:
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+
     return schemas_cdr.PaymentUrl(
         url=checkout.payment_url,
     )
@@ -2763,19 +2659,15 @@ async def scan_ticket(
             status_code=403,
             detail="This ticket has expired.",
         )
-    try:
-        await cruds_cdr.scan_ticket(
-            db=db,
-            ticket_id=ticket.id,
-            scan=ticket.scan_left - 1,
-            tags=ticket.tags + "," + ticket_data.tag
-            if ticket.tags != ""
-            else ticket_data.tag,
-        )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+
+    await cruds_cdr.scan_ticket(
+        db=db,
+        ticket_id=ticket.id,
+        scan=ticket.scan_left - 1,
+        tags=ticket.tags + "," + ticket_data.tag
+        if ticket.tags != ""
+        else ticket_data.tag,
+    )
 
 
 @module.router.get(
@@ -2920,12 +2812,8 @@ async def generate_ticket_for_product(
             expiration=ticketgen.expiration,
         )
         cruds_cdr.create_ticket(db=db, ticket=ticket)
-    try:
-        await db.commit()
-        return await cruds_cdr.get_product_by_id(db=db, product_id=product_id)
-    except Exception:
-        await db.rollback()
-        raise
+    await db.flush()
+    return await cruds_cdr.get_product_by_id(db=db, product_id=product_id)
 
 
 @module.router.delete(
@@ -2967,11 +2855,6 @@ async def delete_ticket_generator_for_product(
         db=db,
         ticket_generator_id=ticket_generator_id,
     )
-    try:
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
 
 
 @module.router.get(
@@ -3017,14 +2900,10 @@ async def create_custom_data_field(
         product_id=product_id,
         name=custom_data_field.name,
     )
-    try:
-        cruds_cdr.create_customdata_field(db, db_data)
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
-    else:
-        return db_data
+
+    cruds_cdr.create_customdata_field(db, db_data)
+    await db.flush()
+    return db_data
 
 
 @module.router.delete(
@@ -3055,15 +2934,11 @@ async def delete_customdata_field(
             status_code=403,
             detail="Field does not belong to this product.",
         )
-    try:
-        await cruds_cdr.delete_customdata_field(
-            field_id=field_id,
-            db=db,
-        )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+
+    await cruds_cdr.delete_customdata_field(
+        field_id=field_id,
+        db=db,
+    )
 
 
 @module.router.get(
@@ -3131,14 +3006,11 @@ async def create_custom_data(
         field_id=field_id,
         value=custom_data.value,
     )
-    try:
-        cruds_cdr.create_customdata(db, db_data)
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
-    else:
-        return await cruds_cdr.get_customdata(db=db, field_id=field_id, user_id=user_id)
+
+    cruds_cdr.create_customdata(db, db_data)
+    await db.flush()
+
+    return await cruds_cdr.get_customdata(db=db, field_id=field_id, user_id=user_id)
 
 
 @module.router.patch(
@@ -3171,17 +3043,13 @@ async def update_custom_data(
             status_code=403,
             detail="Field does not belong to this product.",
         )
-    try:
-        await cruds_cdr.update_customdata(
-            db,
-            field_id=field_id,
-            user_id=user_id,
-            value=custom_data.value,
-        )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+
+    await cruds_cdr.update_customdata(
+        db,
+        field_id=field_id,
+        user_id=user_id,
+        value=custom_data.value,
+    )
 
 
 @module.router.delete(
@@ -3213,16 +3081,12 @@ async def delete_customdata(
             status_code=403,
             detail="Field does not belong to this product.",
         )
-    try:
-        await cruds_cdr.delete_customdata(
-            field_id=field_id,
-            user_id=user_id,
-            db=db,
-        )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+
+    await cruds_cdr.delete_customdata(
+        field_id=field_id,
+        user_id=user_id,
+        db=db,
+    )
 
 
 @module.router.websocket("/cdr/users/ws")

@@ -87,11 +87,7 @@ async def create_module_group_visibility(
     """Create a new module visibility in database and return it"""
 
     db.add(module_visibility)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
+    await db.flush()
 
 
 async def create_module_account_type_visibility(
@@ -101,11 +97,7 @@ async def create_module_account_type_visibility(
     """Create a new module visibility in database and return it"""
 
     db.add(module_visibility)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
+    await db.flush()
 
 
 async def delete_module_group_visibility(
@@ -119,7 +111,7 @@ async def delete_module_group_visibility(
             models_core.ModuleGroupVisibility.allowed_group_id == allowed_group_id,
         ),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def delete_module_account_type_visibility(
@@ -134,7 +126,7 @@ async def delete_module_account_type_visibility(
             == allowed_account_type,
         ),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def get_core_data_crud(
@@ -164,13 +156,8 @@ async def add_core_data_crud(
     To manipulate core data, prefer using the `get_core_data` and `set_core_data` utils.
     """
     db.add(core_data)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return core_data
+    await db.flush()
+    return core_data
 
 
 async def delete_core_data_crud(
@@ -182,4 +169,4 @@ async def delete_core_data_crud(
             models_core.CoreData.schema == schema,
         ),
     )
-    await db.commit()
+    await db.flush()

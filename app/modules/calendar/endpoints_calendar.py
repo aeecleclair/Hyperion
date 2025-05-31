@@ -132,10 +132,8 @@ async def add_event(
         applicant_id=user.id,
         **event.model_dump(),
     )
-    try:
-        return await cruds_calendar.add_event(event=db_event, db=db)
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+
+    return await cruds_calendar.add_event(event=db_event, db=db)
 
 
 @module.router.patch(
@@ -164,10 +162,7 @@ async def edit_bookings_id(
             detail="You are not allowed to edit this event",
         )
 
-    try:
-        await cruds_calendar.edit_event(event_id=event_id, event=event_edit, db=db)
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+    await cruds_calendar.edit_event(event_id=event_id, event=event_edit, db=db)
 
 
 @module.router.patch(

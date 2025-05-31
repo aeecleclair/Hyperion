@@ -113,44 +113,38 @@ async def create_paper(
         id=uuid.uuid4(),
         **paper.model_dump(),
     )
-    try:
-        paper_db = models_ph.Paper(
-            id=paper_complete.id,
-            name=paper_complete.name,
-            release_date=paper_complete.release_date,
+
+    paper_db = models_ph.Paper(
+        id=paper_complete.id,
+        name=paper_complete.name,
+        release_date=paper_complete.release_date,
+    )
+
+    now = datetime.now(UTC)
+
+    # We only want to send a notification if the paper was released less than a month ago.
+    if paper_db.release_date >= now.date() - timedelta(days=30):
+        message = Message(
+            title=f"📗 PH - {paper_db.name}",
+            content="Un nouveau journal est disponible! 🎉",
+            action_module="ph",
         )
-
-        now = datetime.now(UTC)
-
-        # We only want to send a notification if the paper was released less than a month ago.
-        if paper_db.release_date >= now.date() - timedelta(days=30):
-            message = Message(
-                title=f"📗 PH - {paper_db.name}",
-                content="Un nouveau journal est disponible! 🎉",
-                action_module="ph",
+        if paper_db.release_date == now.date():
+            await notification_tool.send_notification_to_topic(
+                custom_topic=CustomTopic(topic=Topic.ph),
+                message=message,
             )
-            if paper_db.release_date == now.date():
-                await notification_tool.send_notification_to_topic(
-                    custom_topic=CustomTopic(topic=Topic.ph),
-                    message=message,
-                )
-            else:
-                delivery_time = time(11, 00, 00, tzinfo=UTC)
-                release_date = datetime.combine(paper_db.release_date, delivery_time)
-                await notification_tool.send_notification_to_topic(
-                    custom_topic=CustomTopic(topic=Topic.ph),
-                    message=message,
-                    scheduler=scheduler,
-                    defer_date=release_date,
-                    job_id=f"ph_{paper_db.id}",
-                )
-        return await cruds_ph.create_paper(paper=paper_db, db=db)
-
-    except ValueError as error:
-        raise HTTPException(
-            status_code=400,
-            detail=str(error),
-        )
+        else:
+            delivery_time = time(11, 00, 00, tzinfo=UTC)
+            release_date = datetime.combine(paper_db.release_date, delivery_time)
+            await notification_tool.send_notification_to_topic(
+                custom_topic=CustomTopic(topic=Topic.ph),
+                message=message,
+                scheduler=scheduler,
+                defer_date=release_date,
+                job_id=f"ph_{paper_db.id}",
+            )
+    return await cruds_ph.create_paper(paper=paper_db, db=db)
 
 
 @module.router.post(

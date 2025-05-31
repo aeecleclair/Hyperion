@@ -85,4 +85,4 @@ async def update_school(
         .where(models_schools.CoreSchool.id == school_id)
         .values(**school_update.model_dump(exclude_none=True)),
     )
-    await db.commit()
+    await db.flush()

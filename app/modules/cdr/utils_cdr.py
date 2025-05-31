@@ -56,13 +56,10 @@ async def validate_payment(
         action=str(checkout_payment.__dict__),
         timestamp=datetime.now(UTC),
     )
-    try:
-        cruds_cdr.create_payment(db=db, payment=db_payment)
-        cruds_cdr.create_action(db=db, action=db_action)
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+
+    cruds_cdr.create_payment(db=db, payment=db_payment)
+    cruds_cdr.create_action(db=db, action=db_action)
+    await db.flush()
 
 
 async def is_user_in_a_seller_group(

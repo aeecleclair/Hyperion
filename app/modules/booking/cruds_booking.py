@@ -22,13 +22,8 @@ async def create_manager(
     manager: models_booking.Manager,
 ) -> models_booking.Manager:
     db.add(manager)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return manager
+    await db.flush()
+    return manager
 
 
 async def update_manager(
@@ -41,11 +36,7 @@ async def update_manager(
         .where(models_booking.Manager.id == manager_id)
         .values(**manager_update.model_dump(exclude_none=True)),
     )
-    try:
-        await db.commit()
-    except IntegrityError as error:
-        await db.rollback()
-        raise ValueError(error)
+    await db.flush()
 
 
 async def delete_manager(
@@ -55,11 +46,7 @@ async def delete_manager(
     await db.execute(
         delete(models_booking.Manager).where(models_booking.Manager.id == manager_id),
     )
-    try:
-        await db.commit()
-    except IntegrityError as error:
-        await db.rollback()
-        raise ValueError(error)
+    await db.flush()
 
 
 async def get_manager_by_id(
@@ -212,11 +199,7 @@ async def get_booking_by_id(
 async def create_booking(db: AsyncSession, booking: schemas_booking.BookingComplete):
     db_booking = models_booking.Booking(**booking.model_dump())
     db.add(db_booking)
-    try:
-        await db.commit()
-    except IntegrityError as error:
-        await db.rollback()
-        raise ValueError(error)
+    await db.flush()
 
 
 async def edit_booking(
@@ -229,11 +212,7 @@ async def edit_booking(
         .where(models_booking.Booking.id == booking_id)
         .values(**booking.model_dump(exclude_none=True)),
     )
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise ValueError()
+    await db.flush()
 
 
 async def confirm_booking(db: AsyncSession, decision: Decision, booking_id: str):
@@ -242,22 +221,14 @@ async def confirm_booking(db: AsyncSession, decision: Decision, booking_id: str)
         .where(models_booking.Booking.id == booking_id)
         .values(decision=decision),
     )
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise ValueError()
+    await db.flush()
 
 
 async def delete_booking(db: AsyncSession, booking_id: str):
     await db.execute(
         delete(models_booking.Booking).where(models_booking.Booking.id == booking_id),
     )
-    try:
-        await db.commit()
-    except IntegrityError as error:
-        await db.rollback()
-        raise ValueError(error)
+    await db.flush()
 
 
 async def get_room_by_id(db: AsyncSession, room_id: str) -> models_booking.Room:
@@ -276,13 +247,8 @@ async def get_rooms(db: AsyncSession) -> Sequence[models_booking.Room]:
 
 async def create_room(db: AsyncSession, room: models_booking.Room):
     db.add(room)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return room
+    await db.flush()
+    return room
 
 
 async def edit_room(db: AsyncSession, room_id: str, room: schemas_booking.RoomBase):
@@ -291,11 +257,7 @@ async def edit_room(db: AsyncSession, room_id: str, room: schemas_booking.RoomBa
         .where(models_booking.Room.id == room_id)
         .values(name=room.name, manager_id=room.manager_id),
     )
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise ValueError()
+    await db.flush()
 
 
 async def delete_room(db: AsyncSession, room_id: str):
@@ -305,8 +267,4 @@ async def delete_room(db: AsyncSession, room_id: str):
     await db.execute(
         delete(models_booking.Room).where(models_booking.Room.id == room_id),
     )
-    try:
-        await db.commit()
-    except IntegrityError as error:
-        await db.rollback()
-        raise ValueError(error)
+    await db.flush()

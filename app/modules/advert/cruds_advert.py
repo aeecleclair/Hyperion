@@ -41,11 +41,7 @@ async def create_advertiser(
     db: AsyncSession,
 ) -> models_advert.Advertiser:
     db.add(db_advertiser)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise ValueError()
+    await db.flush()
     return db_advertiser
 
 
@@ -59,11 +55,7 @@ async def update_advertiser(
         .where(models_advert.Advertiser.id == advertiser_id)
         .values(**advertiser_update.model_dump(exclude_none=True)),
     )
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise ValueError()
+    await db.flush()
 
 
 async def delete_advertiser(advertiser_id: str, db: AsyncSession):
@@ -72,11 +64,7 @@ async def delete_advertiser(advertiser_id: str, db: AsyncSession):
             models_advert.Advertiser.id == advertiser_id,
         ),
     )
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise ValueError()
+    await db.flush()
 
 
 async def get_adverts(db: AsyncSession) -> Sequence[models_advert.Advert]:
@@ -118,11 +106,7 @@ async def create_advert(
     db: AsyncSession,
 ) -> models_advert.Advert:
     db.add(db_advert)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise ValueError()
+    await db.flush()
     return db_advert
 
 
@@ -136,19 +120,11 @@ async def update_advert(
         .where(models_advert.Advert.id == advert_id)
         .values(**advert_update.model_dump(exclude_none=True)),
     )
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise ValueError()
+    await db.flush()
 
 
 async def delete_advert(advert_id: str, db: AsyncSession):
     await db.execute(
         delete(models_advert.Advert).where(models_advert.Advert.id == advert_id),
     )
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise ValueError()
+    await db.flush()

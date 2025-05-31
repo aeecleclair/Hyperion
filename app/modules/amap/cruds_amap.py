@@ -29,13 +29,8 @@ async def create_product(
     """Create a new product in database and return it"""
 
     db.add(product)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return product
+    await db.flush()
+    return product
 
 
 async def get_product_by_id(
@@ -58,7 +53,7 @@ async def edit_product(
         .where(models_amap.Product.id == product_id)
         .values(**product_update.model_dump(exclude_none=True)),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def is_product_used(
@@ -91,7 +86,7 @@ async def delete_product(
     await db.execute(
         delete(models_amap.Product).where(models_amap.Product.id == product_id),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def get_deliveries(
@@ -140,11 +135,7 @@ async def create_delivery(
 ) -> models_amap.Delivery | None:
     """Create a new delivery in database and return it"""
     db.add(models_amap.Delivery(**delivery.model_dump(exclude={"products_ids"})))
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
+    await db.flush()
 
     for product_id in delivery.products_ids:
         db.add(
@@ -153,15 +144,8 @@ async def create_delivery(
                 delivery_id=delivery.id,
             ),
         )
-    try:
-        await db.commit()
-        return await get_delivery_by_id(db=db, delivery_id=delivery.id)
-    except IntegrityError:
-        await db.rollback()
-        hyperion_error_logger.exception(
-            "An error as occurred while creating the delivery",
-        )
-        raise
+    await db.flush()
+    return await get_delivery_by_id(db=db, delivery_id=delivery.id)
 
 
 async def delete_delivery(db: AsyncSession, delivery_id: str):
@@ -171,11 +155,11 @@ async def delete_delivery(db: AsyncSession, delivery_id: str):
             models_amap.AmapDeliveryContent.delivery_id == delivery_id,
         ),
     )
-    await db.commit()
+    await db.flush()
     await db.execute(
         delete(models_amap.Delivery).where(models_amap.Delivery.id == delivery_id),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def add_product_to_delivery(
@@ -191,11 +175,7 @@ async def add_product_to_delivery(
                 delivery_id=delivery_id,
             ),
         )
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
+    await db.flush()
 
 
 async def remove_product_from_delivery(
@@ -211,7 +191,7 @@ async def remove_product_from_delivery(
         ),
     )
 
-    await db.commit()
+    await db.flush()
 
 
 async def edit_delivery(
@@ -224,7 +204,7 @@ async def edit_delivery(
         .where(models_amap.Delivery.id == delivery_id)
         .values(**delivery.model_dump(exclude_none=True)),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def get_order_by_id(db: AsyncSession, order_id: str) -> models_amap.Order | None:
@@ -275,20 +255,17 @@ async def add_order_to_delivery(
             **order.model_dump(exclude={"products_ids", "products_quantity"}),
         ),
     )
-    try:
-        await db.commit()
-        for i in range(len(order.products_ids)):
-            db.add(
-                models_amap.AmapOrderContent(
-                    order_id=order.order_id,
-                    product_id=order.products_ids[i],
-                    quantity=order.products_quantity[i],
-                ),
-            )
-            await db.commit()
-    except IntegrityError as err:
-        await db.rollback()
-        raise ValueError(err)
+    await db.flush()
+
+    for i in range(len(order.products_ids)):
+        db.add(
+            models_amap.AmapOrderContent(
+                order_id=order.order_id,
+                product_id=order.products_ids[i],
+                quantity=order.products_quantity[i],
+            ),
+        )
+    await db.flush()
 
 
 async def edit_order_without_products(
@@ -301,11 +278,7 @@ async def edit_order_without_products(
         .where(models_amap.Order.order_id == order_id)
         .values(**order.model_dump(exclude_none=True)),
     )
-    try:
-        await db.commit()
-    except IntegrityError as err:
-        await db.rollback()
-        raise ValueError(err)
+    await db.flush()
 
 
 async def edit_order_with_products(db: AsyncSession, order: schemas_amap.OrderComplete):
@@ -314,7 +287,7 @@ async def edit_order_with_products(db: AsyncSession, order: schemas_amap.OrderCo
             models_amap.AmapOrderContent.order_id == order.order_id,
         ),
     )
-    await db.commit()
+    await db.flush()
     for i in range(len(order.products_ids)):
         db.add(
             models_amap.AmapOrderContent(
@@ -323,7 +296,7 @@ async def edit_order_with_products(db: AsyncSession, order: schemas_amap.OrderCo
                 quantity=order.products_quantity[i],
             ),
         )
-        await db.commit()
+    await db.flush()
     await db.execute(
         update(models_amap.Order)
         .where(models_amap.Order.order_id == order.order_id)
@@ -336,7 +309,7 @@ async def edit_order_with_products(db: AsyncSession, order: schemas_amap.OrderCo
             ordering_date=order.ordering_date,
         ),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def remove_order(db: AsyncSession, order_id: str):
@@ -345,11 +318,11 @@ async def remove_order(db: AsyncSession, order_id: str):
             models_amap.AmapOrderContent.order_id == order_id,
         ),
     )
-    await db.commit()
+    await db.flush()
     await db.execute(
         delete(models_amap.Order).where(models_amap.Order.order_id == order_id),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def get_users_cash(db: AsyncSession) -> Sequence[models_amap.Cash]:
@@ -373,13 +346,8 @@ async def create_cash_of_user(
     cash: models_amap.Cash,
 ) -> models_amap.Cash:
     db.add(cash)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return cash
+    await db.flush()
+    return cash
 
 
 async def add_cash(db: AsyncSession, user_id: str, amount: float):
@@ -393,11 +361,7 @@ async def add_cash(db: AsyncSession, user_id: str, amount: float):
             .where(models_amap.Cash.user_id == user_id)
             .values(user_id=balance.user_id, balance=balance.balance + amount),
         )
-        try:
-            await db.commit()
-        except IntegrityError:
-            await db.rollback()
-            raise
+        await db.flush()
 
 
 async def remove_cash(db: AsyncSession, user_id: str, amount: float):
@@ -411,11 +375,7 @@ async def remove_cash(db: AsyncSession, user_id: str, amount: float):
             .where(models_amap.Cash.user_id == user_id)
             .values(user_id=balance.user_id, balance=balance.balance - amount),
         )
-        try:
-            await db.commit()
-        except IntegrityError:
-            await db.rollback()
-            raise
+        await db.flush()
 
 
 async def get_orders_of_user(
@@ -439,7 +399,7 @@ async def open_ordering_of_delivery(db: AsyncSession, delivery_id: str):
         .where(models_amap.Delivery.id == delivery_id)
         .values(status=DeliveryStatusType.orderable),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def lock_delivery(db: AsyncSession, delivery_id: str):
@@ -448,7 +408,7 @@ async def lock_delivery(db: AsyncSession, delivery_id: str):
         .where(models_amap.Delivery.id == delivery_id)
         .values(status=DeliveryStatusType.locked),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def mark_delivery_as_delivered(db: AsyncSession, delivery_id: str):
@@ -457,7 +417,7 @@ async def mark_delivery_as_delivered(db: AsyncSession, delivery_id: str):
         .where(models_amap.Delivery.id == delivery_id)
         .values(status=DeliveryStatusType.delivered),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def mark_delivery_as_archived(db: AsyncSession, delivery_id: str):
@@ -466,7 +426,7 @@ async def mark_delivery_as_archived(db: AsyncSession, delivery_id: str):
         .where(models_amap.Delivery.id == delivery_id)
         .values(status=DeliveryStatusType.archived),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def get_information(
@@ -486,11 +446,7 @@ async def add_information(
     db: AsyncSession,
 ) -> None:
     db.add(information)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
+    await db.flush()
 
 
 async def edit_information(
@@ -502,4 +458,4 @@ async def edit_information(
         .where(models_amap.AmapInformation.unique_id == "information")
         .values(**information_update.model_dump(exclude_none=True)),
     )
-    await db.commit()
+    await db.flush()
