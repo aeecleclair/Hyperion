@@ -899,6 +899,16 @@ async def update_store_seller(
     **The user must have the `can_manage_sellers` permission for this store**
     """
 
+    store = await cruds_myeclpay.get_store(
+        store_id=store_id,
+        db=db,
+    )
+    if store is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Store does not exist",
+        )
+
     seller_admin = await cruds_myeclpay.get_seller(
         user_id=user.id,
         store_id=store_id,
@@ -908,16 +918,6 @@ async def update_store_seller(
         raise HTTPException(
             status_code=403,
             detail="User does not have the permission to manage sellers",
-        )
-
-    store = await cruds_myeclpay.get_store(
-        store_id=store_id,
-        db=db,
-    )
-    if store is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Store does not exist",
         )
 
     structure = await cruds_myeclpay.get_structure_by_id(
@@ -966,6 +966,16 @@ async def delete_store_seller(
 
     **The user must have the `can_manage_sellers` permission for this store**
     """
+    store = await cruds_myeclpay.get_store(
+        store_id=store_id,
+        db=db,
+    )
+    if store is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Store does not exist",
+        )
+
     seller_admin = await cruds_myeclpay.get_seller(
         user_id=user.id,
         store_id=store_id,
@@ -975,16 +985,6 @@ async def delete_store_seller(
         raise HTTPException(
             status_code=403,
             detail="User does not have the permission to manage sellers",
-        )
-
-    store = await cruds_myeclpay.get_store(
-        store_id=store_id,
-        db=db,
-    )
-    if store is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Store does not exist",
         )
 
     structure = await cruds_myeclpay.get_structure_by_id(
