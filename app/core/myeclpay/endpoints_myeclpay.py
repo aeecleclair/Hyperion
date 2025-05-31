@@ -2,7 +2,7 @@ import base64
 import logging
 import urllib
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from uuid import UUID
 
@@ -491,6 +491,8 @@ async def create_store(
 )
 async def get_store_history(
     store_id: UUID,
+    start_date: date | None = None,
+    end_date: date | None = None,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user()),
 ):
@@ -520,11 +522,25 @@ async def get_store_history(
             detail="User is not authorized to see the store history",
         )
 
+    history = []
+
+    start_datetime = (
+        datetime.combine(start_date, datetime.min.time(), tzinfo=UTC)
+        if start_date
+        else None
+    )
+    end_datetime = (
+        datetime.combine(end_date, datetime.max.time(), tzinfo=UTC)
+        if end_date
+        else None
+    )
+
     transactions = await cruds_myeclpay.get_transactions_by_wallet_id(
         wallet_id=store.wallet_id,
         db=db,
+        start_datetime=start_datetime,
+        end_datetime=end_datetime,
     )
-    history = []
     for transaction in transactions:
         history_refund: schemas_myeclpay.HistoryRefund | None = None
         if transaction.refund is not None:
@@ -566,6 +582,8 @@ async def get_store_history(
     transfers = await cruds_myeclpay.get_transfers_by_wallet_id(
         wallet_id=store.wallet_id,
         db=db,
+        start_datetime=start_datetime,
+        end_datetime=end_datetime,
     )
     if len(transfers) > 0:
         hyperion_error_logger.error(
@@ -576,6 +594,8 @@ async def get_store_history(
     refunds = await cruds_myeclpay.get_refunds_by_wallet_id(
         wallet_id=store.wallet_id,
         db=db,
+        start_datetime=start_datetime,
+        end_datetime=end_datetime,
     )
     for refund in refunds:
         if refund.debited_wallet_id == store.wallet_id:
@@ -1529,6 +1549,8 @@ async def revoke_user_devices(
 async def get_user_wallet_history(
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user()),
+    start_date: date | None = None,
+    end_date: date | None = None,
 ):
     """
     Get all transactions for the current user's wallet.
@@ -1546,12 +1568,25 @@ async def get_user_wallet_history(
             detail="User is not registered for MyECL Pay",
         )
 
+    start_datetime = (
+        datetime.combine(start_date, datetime.min.time(), tzinfo=UTC)
+        if start_date
+        else None
+    )
+    end_datetime = (
+        datetime.combine(end_date, datetime.max.time(), tzinfo=UTC)
+        if end_date
+        else None
+    )
+
     history: list[schemas_myeclpay.History] = []
 
     # First we get all received and send transactions
     transactions = await cruds_myeclpay.get_transactions_by_wallet_id(
         wallet_id=user_payment.wallet_id,
         db=db,
+        start_datetime=start_datetime,
+        end_datetime=end_datetime,
     )
 
     for transaction in transactions:
@@ -1594,6 +1629,8 @@ async def get_user_wallet_history(
     transfers = await cruds_myeclpay.get_transfers_by_wallet_id(
         wallet_id=user_payment.wallet_id,
         db=db,
+        start_datetime=start_datetime,
+        end_datetime=end_datetime,
     )
 
     for transfer in transfers:
@@ -1619,6 +1656,8 @@ async def get_user_wallet_history(
     refunds = await cruds_myeclpay.get_refunds_by_wallet_id(
         wallet_id=user_payment.wallet_id,
         db=db,
+        start_datetime=start_datetime,
+        end_datetime=end_datetime,
     )
     for refund in refunds:
         if refund.debited_wallet_id == user_payment.wallet_id:
@@ -1640,7 +1679,6 @@ async def get_user_wallet_history(
         )
 
     return history
-    # TODO: limite by datetime
 
 
 # TODO: do we keep this endpoint?
