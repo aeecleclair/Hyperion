@@ -17,7 +17,6 @@ from fastapi import (
 )
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import cruds_auth
@@ -704,27 +703,18 @@ async def migrate_mail_confirm(
         email=migration_object.new_email,
         db=db,
     )
-    try:
-        await cruds_users.update_user(
-            db=db,
-            user_id=migration_object.user_id,
-            user_update=schemas_users.CoreUserUpdateAdmin(
-                email=migration_object.new_email,
-                account_type=account,
-                school_id=new_school_id,
-            ),
-        )
-        await db.commit()
 
-    except Exception as error:
-        await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
-    except IntegrityError:
-        await db.rollback()
-        raise HTTPException(
-            status_code=400,
-            detail="Email migration failed due to database integrity error",
-        )
+    await cruds_users.update_user(
+        db=db,
+        user_id=migration_object.user_id,
+        user_update=schemas_users.CoreUserUpdateAdmin(
+            email=migration_object.new_email,
+            account_type=account,
+            school_id=new_school_id,
+        ),
+    )
+
+    await db.flush()
 
     await cruds_users.delete_email_migration_code_by_token(
         confirmation_token=token,
@@ -854,14 +844,6 @@ async def update_current_user(
     """
 
     await cruds_users.update_user(db=db, user_id=user.id, user_update=user_update)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise HTTPException(
-            status_code=400,
-            detail="Update failed due to database integrity error",
-        )
 
 
 @router.post(
@@ -939,14 +921,6 @@ async def update_user(
         raise HTTPException(status_code=404, detail="User not found")
 
     await cruds_users.update_user(db=db, user_id=user_id, user_update=user_update)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise HTTPException(
-            status_code=400,
-            detail="Update failed due to database integrity error",
-        )
 
 
 @router.post(

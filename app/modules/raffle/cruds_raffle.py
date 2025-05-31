@@ -6,7 +6,6 @@ from collections.abc import Sequence
 
 from fastapi import HTTPException
 from sqlalchemy import delete, select, update
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
@@ -32,13 +31,8 @@ async def create_raffle(
     """Create a new raffle in database and return it"""
 
     db.add(raffle)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return raffle
+    await db.flush()
+    return raffle
 
 
 async def get_raffles_by_groupid(
@@ -71,7 +65,7 @@ async def edit_raffle(
         .where(models_raffle.Raffle.id == raffle_id)
         .values(**raffle_update.model_dump(exclude_none=True)),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def delete_raffle(
@@ -83,7 +77,7 @@ async def delete_raffle(
     await db.execute(
         delete(models_raffle.Raffle).where(models_raffle.Raffle.id == raffle_id),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def get_prizes(db: AsyncSession) -> Sequence[models_raffle.Prize]:
@@ -102,13 +96,8 @@ async def create_prize(
     """Create a new prize in databasend return it"""
 
     db.add(prize)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return prize
+    await db.flush()
+    return prize
 
 
 async def get_prizes_by_raffleid(
@@ -143,7 +132,7 @@ async def edit_prize(
         .where(models_raffle.Prize.id == prize_id)
         .values(**prize_update.model_dump(exclude_none=True)),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def delete_prize(
@@ -155,7 +144,7 @@ async def delete_prize(
     await db.execute(
         delete(models_raffle.Prize).where(models_raffle.Prize.id == prize_id),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def delete_prizes_by_raffleid(db: AsyncSession, raffle_id: str):
@@ -166,7 +155,7 @@ async def delete_prizes_by_raffleid(db: AsyncSession, raffle_id: str):
             models_raffle.Prize.id.in_([prize.id for prize in prizes_to_delete]),
         ),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def get_packtickets(db: AsyncSession) -> Sequence[models_raffle.PackTicket]:
@@ -187,13 +176,8 @@ async def create_packticket(
     """Create a new Packticket in databasend return it"""
 
     db.add(packticket)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return packticket
+    await db.flush()
+    return packticket
 
 
 async def get_packtickets_by_raffleid(
@@ -230,7 +214,7 @@ async def edit_packticket(
         .where(models_raffle.PackTicket.id == packticket_id)
         .values(**packticket_update.model_dump(exclude_none=True)),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def delete_packticket(
@@ -244,7 +228,7 @@ async def delete_packticket(
             models_raffle.PackTicket.id == packticket_id,
         ),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def delete_packtickets_by_raffleid(db: AsyncSession, raffle_id: str):
@@ -258,7 +242,7 @@ async def delete_packtickets_by_raffleid(db: AsyncSession, raffle_id: str):
             models_raffle.PackTicket.id.in_([p.id for p in packtickets_to_delete]),
         ),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def get_tickets(db: AsyncSession) -> Sequence[models_raffle.Ticket]:
@@ -274,13 +258,8 @@ async def create_ticket(
 ) -> Sequence[models_raffle.Ticket]:
     """Create a new ticket in databasend return it"""
     db.add_all(tickets)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return tickets
+    await db.flush()
+    return tickets
 
 
 async def get_tickets_by_raffleid(
@@ -342,7 +321,7 @@ async def delete_ticket(
     await db.execute(
         delete(models_raffle.Ticket).where(models_raffle.Ticket.id == ticket_id),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def delete_tickets_by_raffleid(db: AsyncSession, raffle_id: str):
@@ -353,7 +332,7 @@ async def delete_tickets_by_raffleid(db: AsyncSession, raffle_id: str):
             models_raffle.Ticket.id.in_([t.id for t in tickets_to_delete]),
         ),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def get_users_cash(db: AsyncSession) -> Sequence[models_raffle.Cash]:
@@ -377,13 +356,8 @@ async def create_cash_of_user(
     cash: models_raffle.Cash,
 ) -> models_raffle.Cash:
     db.add(cash)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return cash
+    await db.flush()
+    return cash
 
 
 async def edit_cash(db: AsyncSession, user_id: str, amount: float):
@@ -392,11 +366,7 @@ async def edit_cash(db: AsyncSession, user_id: str, amount: float):
         .where(models_raffle.Cash.user_id == user_id)
         .values(user_id=user_id, balance=amount),
     )
-    try:
-        await db.commit()
-    except IntegrityError as err:
-        await db.rollback()
-        raise ValueError(err)
+    await db.flush()
 
 
 async def draw_winner_by_prize_raffle(
@@ -422,22 +392,14 @@ async def draw_winner_by_prize_raffle(
         .where(models_raffle.Ticket.id.in_([w.id for w in winners]))
         .values(winning_prize=prize_id),
     )
-    try:
-        await db.commit()
-    except IntegrityError as error:
-        await db.rollback()
-        raise ValueError("Error during edition of the winning tickets") from error  # noqa: TRY003
+    await db.flush()
 
     await db.execute(
         update(models_raffle.Prize)
         .where(models_raffle.Prize.id == prize_id)
         .values(quantity=prize.quantity - len(winners)),
     )
-    try:
-        await db.commit()
-    except IntegrityError as error:
-        await db.rollback()
-        raise ValueError("Error during edition of the prize") from error  # noqa: TRY003
+    await db.flush()
 
     return winners
 
@@ -455,4 +417,4 @@ async def change_raffle_status(
         .where(models_raffle.Raffle.id == raffle_id)
         .values(status=status),
     )
-    await db.commit()
+    await db.flush()

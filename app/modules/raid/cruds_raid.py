@@ -2,7 +2,6 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 
 from sqlalchemy import delete, func, or_, select, update
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -15,13 +14,8 @@ async def create_participant(
     db: AsyncSession,
 ) -> models_raid.Participant:
     db.add(participant)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return participant
+    await db.flush()
+    return participant
 
 
 async def get_all_participants(
@@ -51,7 +45,7 @@ async def update_participant(
     if is_minor:
         query = query.values(is_minor=is_minor)
     await db.execute(query)
-    await db.commit()
+    await db.flush()
 
 
 async def update_participant_minority(
@@ -64,7 +58,7 @@ async def update_participant_minority(
         .where(models_raid.Participant.id == participant_id)
         .values(is_minor=is_minor),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def is_user_a_participant(
@@ -144,11 +138,7 @@ async def create_team(
     db: AsyncSession,
 ) -> None:
     db.add(team)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
+    await db.flush()
 
 
 async def update_team(
@@ -161,7 +151,7 @@ async def update_team(
         .where(models_raid.Team.id == team_id)
         .values(**team.model_dump(exclude_none=True)),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def update_team_captain_id(
@@ -174,7 +164,7 @@ async def update_team_captain_id(
         .where(models_raid.Team.id == team_id)
         .values(captain_id=captain_id),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def update_team_second_id(
@@ -187,7 +177,7 @@ async def update_team_second_id(
         .where(models_raid.Team.id == team_id)
         .values(second_id=second_id),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def delete_participant(
@@ -199,7 +189,7 @@ async def delete_participant(
             models_raid.Participant.id == participant_id,
         ),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def delete_team_invite_tokens(
@@ -211,7 +201,7 @@ async def delete_team_invite_tokens(
             models_raid.InviteToken.team_id == team_id,
         ),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def delete_team(
@@ -219,14 +209,14 @@ async def delete_team(
     db: AsyncSession,
 ) -> None:
     await db.execute(delete(models_raid.Team).where(models_raid.Team.id == team_id))
-    await db.commit()
+    await db.flush()
 
 
 async def delete_all_teams(
     db: AsyncSession,
 ) -> None:
     await db.execute(delete(models_raid.Team))
-    await db.commit()
+    await db.flush()
 
 
 async def add_security_file(
@@ -234,14 +224,8 @@ async def add_security_file(
     db: AsyncSession,
 ) -> models_raid.SecurityFile:
     db.add(security_file)
-    try:
-        await db.commit()
-
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return security_file
+    await db.flush()
+    return security_file
 
 
 async def delete_security_file(
@@ -253,7 +237,7 @@ async def delete_security_file(
             models_raid.SecurityFile.id == security_file_id,
         ),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def update_security_file(
@@ -266,7 +250,7 @@ async def update_security_file(
         .where(models_raid.SecurityFile.id == security_file_id)
         .values(**security_file.model_dump(exclude_none=True)),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def update_security_file_id(
@@ -279,7 +263,7 @@ async def update_security_file_id(
         .where(models_raid.SecurityFile.id == security_file_id)
         .values(file_id=file_id),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def assign_security_file(
@@ -292,7 +276,7 @@ async def assign_security_file(
         .where(models_raid.Participant.id == participant_id)
         .values(security_file_id=security_file_id),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def create_document(
@@ -300,14 +284,8 @@ async def create_document(
     db: AsyncSession,
 ) -> models_raid.Document:
     db.add(document)
-    try:
-        await db.commit()
-
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return document
+    await db.flush()
+    return document
 
 
 async def assign_document(
@@ -321,7 +299,7 @@ async def assign_document(
         .where(models_raid.Participant.id == participant_id)
         .values({document_key: document_id}),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def update_document_validation(
@@ -334,7 +312,7 @@ async def update_document_validation(
         .where(models_raid.Document.id == document_id)
         .values(validation=validation),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def get_document_by_id(
@@ -369,13 +347,8 @@ async def upload_document(
     db: AsyncSession,
 ) -> models_raid.Document:
     db.add(document)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return document
+    await db.flush()
+    return document
 
 
 async def update_document(
@@ -388,7 +361,7 @@ async def update_document(
         .where(models_raid.Document.id == document_id)
         .values(**document.model_dump(exclude_none=True)),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def mark_document_as_newly_updated(
@@ -401,7 +374,7 @@ async def mark_document_as_newly_updated(
         .values(uploaded_at=datetime.now(tz=UTC).date(), validation="pending"),
     )
 
-    await db.commit()
+    await db.flush()
 
 
 async def confirm_payment(
@@ -413,7 +386,7 @@ async def confirm_payment(
         .where(models_raid.Participant.id == participant_id)
         .values(payment=True),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def confirm_t_shirt_payment(
@@ -425,7 +398,7 @@ async def confirm_t_shirt_payment(
         .where(models_raid.Participant.id == participant_id)
         .values(t_shirt_payment=True),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def validate_attestation_on_honour(
@@ -437,7 +410,7 @@ async def validate_attestation_on_honour(
         .where(models_raid.Participant.id == participant_id)
         .values(attestation_on_honour=True),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def get_participant_by_id(
@@ -478,13 +451,9 @@ async def create_invite_token(
     db: AsyncSession,
 ) -> models_raid.InviteToken:
     db.add(invite)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return invite
+    await db.flush()
+
+    return invite
 
 
 async def get_invite_token_by_team_id(
@@ -516,7 +485,7 @@ async def delete_invite_token(
     await db.execute(
         delete(models_raid.InviteToken).where(models_raid.InviteToken.id == token_id),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def are_user_in_the_same_team(
@@ -558,7 +527,7 @@ async def update_team_file_id(
         .where(models_raid.Team.id == team_id)
         .values(file_id=file_id),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def get_number_of_team_by_difficulty(
@@ -576,13 +545,8 @@ async def create_participant_checkout(
     db: AsyncSession,
 ) -> models_raid.ParticipantCheckout:
     db.add(checkout)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return checkout
+    await db.flush()
+    return checkout
 
 
 async def get_participant_checkout_by_checkout_id(

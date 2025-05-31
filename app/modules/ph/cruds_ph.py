@@ -3,7 +3,6 @@ from collections.abc import Sequence
 from datetime import date
 
 from sqlalchemy import delete, select, update
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.ph import models_ph, schemas_ph
@@ -39,13 +38,8 @@ async def create_paper(
     """Create a new paper in database and return it"""
 
     db.add(paper)
-    try:
-        await db.commit()
-    except IntegrityError as error:
-        await db.rollback()
-        raise ValueError(error)
-    else:
-        return paper
+    await db.flush()
+    return paper
 
 
 async def update_paper(
@@ -58,7 +52,7 @@ async def update_paper(
         .where(models_ph.Paper.id == paper_id)
         .values(**paper_update.model_dump(exclude_none=True)),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def delete_paper(
@@ -68,4 +62,4 @@ async def delete_paper(
     await db.execute(
         delete(models_ph.Paper).where(models_ph.Paper.id == paper_id),
     )
-    await db.commit()
+    await db.flush()

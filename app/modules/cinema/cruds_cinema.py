@@ -2,7 +2,6 @@ from collections.abc import Sequence
 from datetime import datetime
 
 from sqlalchemy import delete, select, update
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.cinema import models_cinema, schemas_cinema
@@ -45,10 +44,7 @@ async def create_session(
 ) -> models_cinema.Session:
     db_session = models_cinema.Session(**session.model_dump())
     db.add(db_session)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
+    await db.flush()
     return db_session
 
 
@@ -62,11 +58,11 @@ async def update_session(
         .where(models_cinema.Session.id == session_id)
         .values(**session_update.model_dump(exclude_none=True)),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def delete_session(session_id: str, db: AsyncSession):
     await db.execute(
         delete(models_cinema.Session).where(models_cinema.Session.id == session_id),
     )
-    await db.commit()
+    await db.flush()

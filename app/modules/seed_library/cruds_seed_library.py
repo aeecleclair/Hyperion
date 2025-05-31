@@ -3,7 +3,6 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 
 from sqlalchemy import delete, func, select, update
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.seed_library import (
@@ -38,11 +37,7 @@ async def create_species(
         time_maturation=species.time_maturation,
     )
     db.add(species_db)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
+    await db.flush()
     return species_db
 
 
@@ -58,11 +53,7 @@ async def update_species(
         .where(models_seed_library.Species.id == species_id)
         .values(**species_edit.model_dump(exclude_none=True)),
     )
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
+    await db.flush()
 
 
 async def delete_species(species_id: uuid.UUID, db: AsyncSession):
@@ -78,11 +69,7 @@ async def delete_species(species_id: uuid.UUID, db: AsyncSession):
             models_seed_library.Species.id == species_id,
         ),
     )
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
+    await db.flush()
 
 
 async def get_all_species(
@@ -170,11 +157,7 @@ async def create_plant(
         borrowing_date=plant.borrowing_date,
     )
     db.add(plant_db)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
+    await db.flush()
     return plant_db
 
 
@@ -190,11 +173,7 @@ async def update_plant(
         .where(models_seed_library.Plant.id == plant_id)
         .values(**plant_edit.model_dump(exclude_none=True)),
     )
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
+    await db.flush()
 
 
 async def delete_plant(plant_id: uuid.UUID, db: AsyncSession):
@@ -205,11 +184,7 @@ async def delete_plant(plant_id: uuid.UUID, db: AsyncSession):
             models_seed_library.Plant.id == plant_id,
         ),
     )
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
+    await db.flush()
 
 
 async def get_plants_by_user_id(
@@ -342,11 +317,7 @@ async def borrow_plant(
             state=PlantState.retrieved,
         ),
     )
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
+    await db.flush()
 
 
 async def count_plants_created_today(

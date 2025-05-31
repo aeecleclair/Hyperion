@@ -4,7 +4,6 @@ from datetime import UTC, datetime
 import aiofiles
 from icalendar import Calendar, Event, vRecur
 from sqlalchemy import delete, select, update
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -64,13 +63,8 @@ async def add_event(
     """Add an event to the database."""
 
     db.add(event)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return event
+    await db.flush()
+    return event
 
 
 async def edit_event(
@@ -83,11 +77,7 @@ async def edit_event(
         .where(models_calendar.Event.id == event_id)
         .values(**event.model_dump(exclude_none=True)),
     )
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise ValueError()
+    await db.flush()
 
 
 async def delete_event(db: AsyncSession, event_id: str) -> None:
@@ -95,16 +85,8 @@ async def delete_event(db: AsyncSession, event_id: str) -> None:
     await db.execute(
         delete(models_calendar.Event).where(models_calendar.Event.id == event_id),
     )
-    try:
-        await db.commit()
-        try:
-            await create_icalendar_file(db)
-        except Exception as error:
-            await db.rollback()
-            raise ValueError(error)
-    except IntegrityError:
-        await db.rollback()
-        raise ValueError()
+    await db.flush()
+    await create_icalendar_file(db)
 
 
 async def confirm_event(db: AsyncSession, decision: Decision, event_id: str):
@@ -113,17 +95,9 @@ async def confirm_event(db: AsyncSession, decision: Decision, event_id: str):
         .where(models_calendar.Event.id == event_id)
         .values(decision=decision),
     )
-    try:
-        await db.commit()
-        if decision == Decision.approved:
-            try:
-                await create_icalendar_file(db)
-            except Exception as error:
-                await db.rollback()
-                raise ValueError(error)
-    except IntegrityError as error:
-        await db.rollback()
-        raise ValueError(error)
+    await db.flush()
+    if decision == Decision.approved:
+        await create_icalendar_file(db)
 
 
 async def create_icalendar_file(db: AsyncSession) -> None:

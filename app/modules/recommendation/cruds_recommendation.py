@@ -19,7 +19,7 @@ async def create_recommendation(
     db: AsyncSession,
 ) -> models_recommendation.Recommendation:
     db.add(recommendation)
-    await db.commit()
+    await db.flush()
     return recommendation
 
 
@@ -37,7 +37,7 @@ async def update_recommendation(
         .values(**recommendation.model_dump(exclude_none=True)),
     )
     if result.rowcount == 1:
-        await db.commit()
+        await db.flush()
     else:
         await db.rollback()
         raise ValueError
@@ -53,7 +53,7 @@ async def delete_recommendation(
         ),
     )
     if result.rowcount == 1:
-        await db.commit()
+        await db.flush()
     else:
         await db.rollback()
         raise ValueError

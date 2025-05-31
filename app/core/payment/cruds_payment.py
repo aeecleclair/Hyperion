@@ -1,7 +1,6 @@
 import uuid
 
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -13,14 +12,8 @@ async def create_checkout(
     checkout: models_payment.Checkout,
 ) -> models_payment.Checkout:
     db.add(checkout)
-    try:
-        await db.commit()
 
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return checkout
+    return checkout
 
 
 async def get_checkouts(
@@ -84,13 +77,8 @@ async def create_checkout_payment(
     checkout_payment: models_payment.CheckoutPayment,
 ) -> models_payment.CheckoutPayment:
     db.add(checkout_payment)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return checkout_payment
+    await db.flush()
+    return checkout_payment
 
 
 async def get_checkout_payment_by_hello_asso_payment_id(
