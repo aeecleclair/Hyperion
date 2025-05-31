@@ -279,14 +279,11 @@ async def add_product_to_delivery(
             detail=f"You can't add a product if the delivery is not in creation mode. The current mode is {delivery.status}.",
         )
 
-    try:
-        await cruds_amap.add_product_to_delivery(
-            delivery_id=delivery_id,
-            products_ids=products_ids,
-            db=db,
-        )
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+    await cruds_amap.add_product_to_delivery(
+        delivery_id=delivery_id,
+        products_ids=products_ids,
+        db=db,
+    )
 
 
 @module.router.delete(
@@ -488,9 +485,6 @@ async def add_order_to_delievery(
         )
         return schemas_amap.OrderReturn(productsdetail=productsret, **orderret.__dict__)
 
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
-
     finally:
         locker_set(redis_client=redis_client, key=redis_key, lock=False)
 
@@ -540,14 +534,11 @@ async def edit_order_from_delivery(
         )
 
     if order.products_ids is None:
-        try:
-            await cruds_amap.edit_order_without_products(
-                order=order,
-                db=db,
-                order_id=order_id,
-            )
-        except ValueError as error:
-            raise HTTPException(status_code=400, detail=str(error))
+        await cruds_amap.edit_order_without_products(
+            order=order,
+            db=db,
+            order_id=order_id,
+        )
 
     else:
         if order.products_quantity is None or len(order.products_quantity) != len(
@@ -608,9 +599,6 @@ async def edit_order_from_delivery(
             hyperion_amap_logger.info(
                 f"Edit_order: Order {order_id} has been edited for user {db_order.user_id}. Amount was {previous_amount}€, is now {amount}€. ({request_id})",
             )
-
-        except ValueError as error:
-            raise HTTPException(status_code=400, detail=str(error))
 
         finally:
             locker_set(redis_client=redis_client, key=redis_key, lock=False)
@@ -683,9 +671,6 @@ async def remove_order(
             f"Delete_order: Order {order_id} by {order.user_id} was deleted. {amount}€ were refunded. ({request_id})",
         )
         return Response(status_code=204)
-
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
 
     finally:
         locker_set(redis_client=redis_client, key=redis_key, lock=False)
@@ -1024,16 +1009,11 @@ async def edit_information(
             link="",
             description="",
         )
-        try:
-            await cruds_amap.add_information(empty_information, db)
-        except ValueError as error:
-            raise HTTPException(status_code=400, detail=str(error))
+
+        await cruds_amap.add_information(empty_information, db)
 
     else:
-        try:
-            await cruds_amap.edit_information(
-                information_update=edit_information,
-                db=db,
-            )
-        except ValueError as error:
-            raise HTTPException(status_code=400, detail=str(error))
+        await cruds_amap.edit_information(
+            information_update=edit_information,
+            db=db,
+        )

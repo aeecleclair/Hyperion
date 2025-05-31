@@ -29,13 +29,8 @@ async def create_authorization_token(
     """Create a new group in database and return it"""
 
     db.add(db_authorization_code)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return db_authorization_code
+    await db.flush()
+    return db_authorization_code
 
 
 async def delete_authorization_token_by_token(
@@ -49,7 +44,7 @@ async def delete_authorization_token_by_token(
             models_auth.AuthorizationCode.code == code,
         ),
     )
-    await db.commit()
+    await db.flush()
     return None
 
 
@@ -71,13 +66,8 @@ async def create_refresh_token(
     """Create a new refresh token in database and return it"""
 
     db.add(db_refresh_token)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return db_refresh_token
+    await db.flush()
+    return db_refresh_token
 
 
 async def revoke_refresh_token_by_token(
@@ -94,7 +84,7 @@ async def revoke_refresh_token_by_token(
         )
         .values(revoked_on=datetime.now(UTC)),
     )
-    await db.commit()
+    await db.flush()
     return None
 
 
@@ -114,7 +104,7 @@ async def revoke_refresh_token_by_client_and_user_id(
         )
         .values(revoked_on=datetime.now(UTC)),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def revoke_refresh_token_by_user_id(
@@ -131,4 +121,4 @@ async def revoke_refresh_token_by_user_id(
         )
         .values(revoked_on=datetime.now(UTC)),
     )
-    await db.commit()
+    await db.flush()

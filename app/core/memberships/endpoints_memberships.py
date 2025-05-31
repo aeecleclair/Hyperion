@@ -132,11 +132,7 @@ async def create_association_membership(
         db=db,
         membership=db_association_membership,
     )
-    try:
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+    await db.flush()
     return db_association_membership
 
 
@@ -170,13 +166,7 @@ async def update_association_membership(
         membership=membership,
     )
 
-    try:
-        await db.commit()
-    except Exception:
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to update membership",
-        )
+    await db.flush()
 
 
 @router.delete(
@@ -218,14 +208,6 @@ async def delete_association_membership(
         db=db,
         membership_id=association_membership_id,
     )
-
-    try:
-        await db.commit()
-    except Exception:
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to delete membership",
-        )
 
 
 @router.get(
@@ -324,13 +306,9 @@ async def create_user_membership(
     await validate_user_new_membership(db_user_membership, db)
 
     cruds_memberships.create_user_membership(db=db, user_membership=db_user_membership)
-    try:
-        await db.commit()
-    except Exception:
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to create user membership",
-        )
+
+    await db.flush()
+
     return schemas_memberships.UserMembershipComplete(
         **db_user_membership.__dict__,
         user=schemas_users.CoreUserSimple(
@@ -401,11 +379,7 @@ async def add_batch_membership(
                     end_date=detail.end_date,
                 ),
             )
-    try:
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+    await db.flush()
     return unknown_users
 
 
@@ -448,11 +422,7 @@ async def update_user_membership(
         user_membership_edit=user_membership,
     )
 
-    try:
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+    await db.flush()
 
 
 @router.delete(
@@ -481,11 +451,3 @@ async def delete_user_membership(
         db=db,
         user_membership_id=membership_id,
     )
-
-    try:
-        await db.commit()
-    except Exception:
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to delete user membership",
-        )

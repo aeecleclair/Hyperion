@@ -54,13 +54,8 @@ async def create_group(
     """Create a new group in database and return it"""
 
     db.add(group)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return group
+    await db.flush()
+    return group
 
 
 async def delete_group(db: AsyncSession, group_id: str):
@@ -69,7 +64,7 @@ async def delete_group(db: AsyncSession, group_id: str):
     await db.execute(
         delete(models_groups.CoreGroup).where(models_groups.CoreGroup.id == group_id),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def create_membership(
@@ -79,12 +74,8 @@ async def create_membership(
     """Add a user to a group using a membership"""
 
     db.add(membership)
-    try:
-        await db.commit()
-        return await get_group_by_id(db, membership.group_id)
-    except IntegrityError:
-        await db.rollback()
-        raise
+    await db.flush()
+    return await get_group_by_id(db, membership.group_id)
 
 
 async def delete_membership_by_group_id(
@@ -96,7 +87,7 @@ async def delete_membership_by_group_id(
             models_groups.CoreMembership.group_id == group_id,
         ),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def delete_membership_by_group_and_user_id(
@@ -110,7 +101,7 @@ async def delete_membership_by_group_and_user_id(
             models_groups.CoreMembership.user_id == user_id,
         ),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def update_group(
@@ -123,4 +114,4 @@ async def update_group(
         .where(models_groups.CoreGroup.id == group_id)
         .values(**group_update.model_dump(exclude_none=True)),
     )
-    await db.commit()
+    await db.flush()

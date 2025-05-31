@@ -90,33 +90,28 @@ async def create_school(
             detail=f"A school with the name {school.name} already exist",
         )
 
-    try:
-        db_school = models_schools.CoreSchool(
-            id=uuid.uuid4(),
-            name=school.name,
-            email_regex=school.email_regex,
-        )
-        await cruds_schools.create_school(school=db_school, db=db)
-        users = await cruds_users.get_users(
-            db=db,
-            schools_ids=[SchoolType.no_school.value],
-        )
-        for db_user in users:
-            if re.match(db_school.email_regex, db_user.email):
-                await cruds_users.update_user(
-                    db,
-                    db_user.id,
-                    schemas_users.CoreUserUpdateAdmin(
-                        school_id=db_school.id,
-                        account_type=AccountType.other_school_student,
-                    ),
-                )
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return db_school
+    db_school = models_schools.CoreSchool(
+        id=uuid.uuid4(),
+        name=school.name,
+        email_regex=school.email_regex,
+    )
+    await cruds_schools.create_school(school=db_school, db=db)
+    users = await cruds_users.get_users(
+        db=db,
+        schools_ids=[SchoolType.no_school.value],
+    )
+    for db_user in users:
+        if re.match(db_school.email_regex, db_user.email):
+            await cruds_users.update_user(
+                db,
+                db_user.id,
+                schemas_users.CoreUserUpdateAdmin(
+                    school_id=db_school.id,
+                    account_type=AccountType.other_school_student,
+                ),
+            )
+    await db.flush()
+    return db_school
 
 
 @router.patch(
@@ -161,11 +156,7 @@ async def update_school(
         and school_update.email_regex != school.email_regex
     ):
         await cruds_users.remove_users_from_school(db, school_id=school_id)
-        try:
-            await db.commit()
-        except IntegrityError:
-            await db.rollback()
-            raise
+        await db.flush()
         users = await cruds_users.get_users(
             db,
             schools_ids=[SchoolType.no_school.value],
@@ -180,11 +171,6 @@ async def update_school(
                         account_type=AccountType.other_school_student,
                     ),
                 )
-        try:
-            await db.commit()
-        except IntegrityError:
-            await db.rollback()
-            raise
 
 
 @router.delete(
@@ -218,8 +204,3 @@ async def delete_school(
     await cruds_users.remove_users_from_school(db=db, school_id=school_id)
 
     await cruds_schools.delete_school(db=db, school_id=school_id)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise

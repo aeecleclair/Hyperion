@@ -78,13 +78,8 @@ async def create_checkout_payment(
     checkout_payment: models_payment.CheckoutPayment,
 ) -> models_payment.CheckoutPayment:
     db.add(checkout_payment)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return checkout_payment
+    await db.flush()
+    return checkout_payment
 
 
 async def get_checkout_payment_by_hello_asso_payment_id(
