@@ -4,7 +4,6 @@ from collections.abc import Sequence
 from uuid import UUID
 
 from sqlalchemy import ForeignKey, and_, delete, not_, or_, select, update
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy_utils import get_referencing_foreign_keys

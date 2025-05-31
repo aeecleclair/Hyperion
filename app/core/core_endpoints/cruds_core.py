@@ -1,7 +1,6 @@
 from collections.abc import Sequence
 
 from sqlalchemy import delete, select
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.core_endpoints import models_core

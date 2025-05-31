@@ -7,7 +7,6 @@ from functools import lru_cache
 import redis
 from fastapi import Depends, HTTPException
 from sqlalchemy import NullPool
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.auth import schemas_auth
@@ -189,9 +188,7 @@ async def create_user_with_groups(
             await db.close()
 
     async with TestingSessionLocal() as db:
-        user_db = await cruds_users.get_user_by_id(db, user_id)
-
-        return user_db  # type: ignore[return-value] # (user_db can't be None)
+        return await cruds_users.get_user_by_id(db, user_id)
 
 
 def create_api_access_token(
