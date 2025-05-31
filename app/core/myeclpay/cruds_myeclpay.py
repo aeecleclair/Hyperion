@@ -616,12 +616,16 @@ async def get_transaction(
     transaction_id: UUID,
     db: AsyncSession,
 ) -> schemas_myeclpay.Transaction | None:
+    # We lock the transaction `for update` to prevent
+    # race conditions
     result = (
         (
             await db.execute(
-                select(models_myeclpay.Transaction).where(
+                select(models_myeclpay.Transaction)
+                .where(
                     models_myeclpay.Transaction.id == transaction_id,
-                ),
+                )
+                .with_for_update(of=models_myeclpay.Transaction),
             )
         )
         .scalars()
