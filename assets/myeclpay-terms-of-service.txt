@@ -1,5 +1,30 @@
 Version 1
 
-**Terms and Conditions**
+# CGU MyECLPay
 
-Content...
+## Objet des CGU
+Les présentes Conditions Générales d’Utilisation (CGU) ont pour objet de définir les modalités et conditions d’utilisation de la solution de paiement dématérialisée MyECLPay, éditée par l’association AEECL, destinée aux élèves et étudiants d'École Centrale Lyon.
+
+## Présentation de MyECLPay
+MyECLPay est une solution de paiement virtuel et dématérialisé utilisable au sein de l'École Centrale Lyon exclusivement, avec les associations participantes. Elle repose sur une monnaie virtuelle appelée <nom de la devise>, qui n’a aucune valeur légale et ne constitue pas une monnaie électronique au sens du Code monétaire et financier. Un (1) euro correspond à un (1) <nom de la devise>.
+
+## Fonctionnement du portefeuille virtuel
+Lors de son inscription, l’utilisateur se voit attribuer un portefeuille numérique personnel plafonné. Il s’engage à ne pas tenter de dépasser ce plafond par quelque moyen que ce soit. En validant son inscription, l’utilisateur reconnaît renoncer expressément à son droit de rétractation, conformément à l’article L221-28 du Code de la Consommation.
+La monnaie virtuelle ne peut pas être convertie en euros ou en toute autre devise à cours légal. Elle est non remboursable, non réversible, et ne peut pas être cédée ou transférée à d’autres utilisateurs. Un portefeuille ne peut jamais être en solde négatif.
+
+## Recharge du portefeuille via HelloAsso
+L’utilisateur peut recharger son portefeuille par carte bancaire via la plateforme HelloAsso. Les fonds seront versés directement sur le compte bancaire de l’association AEECL, et un équivalent en est crédité sur le portefeuille numérique de l’utilisateur.
+HelloAsso est une plateforme française de paiement pour les associations, fonctionnant sur un modèle solidaire, garantissant que 100 % de votre paiement sera versé à l’association choisie.
+Elle se finance uniquement par des 'contribution volontaire' et par défaut, HelloAsso proposera à l’utilisateur de faire une 'contribution volontaire', qui peut librement refuser sans que cela empêche la transaction. Si vous choisissez de faire cette contribution, celle-ci soutiendra l’aide qu’HelloAsso apporte aux associations et seul HelloAsso en bénéficiera.
+
+## Utilisation des fonds et paiements
+Le paiement avec MyECLPay est uniquement possible auprès des associations partenaires. L’utilisateur doit préalablement activer son appareil par un lien unique reçu par email. Chaque paiement est validé par une vérification biométrique effectuée localement par l’appareil de l’utilisateur.
+
+## Sécurité, responsabilité et données personnelles
+L’utilisateur est responsable de la sécurité de son appareil et de son accès à MyECLPay. Toute utilisation frauduleuse, perte ou vol doit être signalée sans délai. Le compte pourra alors être suspendu temporairement. Il est interdit de prêter ou partager son compte.
+MyECLPay respecte le Règlement Général sur la Protection des Données (RGPD). Les données collectées sont strictement nécessaires au fonctionnement du service : identifiants, email, historique de transactions, identifiant de l’appareil. Aucune donnée bancaire n’est collectée ni conservée par MyECLPay.
+MyECLPay fait partie de la plateforme MyECL, en utilisant le service, l’utilisateur reconnait et accepte les conditions générales d’utilisations et la politique de confidentialité de MyECL
+
+## Modifications des CGU
+L'AEECL se réserve le droit de modifier les présentes CGU à tout moment. L’utilisation du service après notification est conditionné par l’acceptation des nouvelles CGU.
+Pour toute question, demande d’assistance ou réclamation, l’utilisateur peut contacter : eclair@myecl.fr.
