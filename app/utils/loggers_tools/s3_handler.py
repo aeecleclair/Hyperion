@@ -1,6 +1,7 @@
 import logging
 from datetime import UTC, datetime
 from logging import StreamHandler
+from uuid import uuid4
 
 from typing_extensions import override
 
@@ -36,7 +37,7 @@ class S3LogHandler(StreamHandler):
 
         if filename is None:
             now = datetime.now(UTC)
-            filename = now.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+            filename = now.strftime("%Y-%m-%dT%H:%M:%S.%fZ") + str(uuid4())[8:]
 
         msg = self.format(record)
         self.s3_access.write_file(msg, filename, subfolder)

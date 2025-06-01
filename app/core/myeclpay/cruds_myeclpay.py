@@ -2,7 +2,7 @@ from collections.abc import Sequence
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import and_, delete, or_, select, update
+from sqlalchemy import and_, delete, func, or_, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import noload, selectinload
 
@@ -613,12 +613,20 @@ async def get_transaction(
 
 async def get_transactions(
     db: AsyncSession,
-    last_checked: datetime | None = None,
+    start_date: datetime | None = None,
+    end_date: datetime | None = None,
+    exclude_canceled: bool = False,
 ) -> Sequence[schemas_myeclpay.Transaction]:
     result = await db.execute(
         select(models_myeclpay.Transaction).where(
-            models_myeclpay.Transaction.creation >= last_checked
-            if last_checked
+            models_myeclpay.Transaction.creation >= start_date
+            if start_date
+            else and_(True),
+            models_myeclpay.Transaction.creation <= end_date
+            if end_date
+            else and_(True),
+            models_myeclpay.Transaction.status != TransactionStatus.CANCELED
+            if exclude_canceled
             else and_(True),
         ),
     )
@@ -969,3 +977,13 @@ async def delete_used_qrcode(
             models_myeclpay.UsedQRCode.qr_code_id == qr_code_id,
         ),
     )
+
+
+async def start_isolation_mode(
+    db: AsyncSession,
+) -> datetime:
+    await db.execute(text("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ"))
+    now = (await db.execute(select(func.now()))).scalar()
+    if now is None:
+        raise ValueError
+    return now

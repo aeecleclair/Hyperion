@@ -7,7 +7,7 @@ from pathlib import Path
 from uuid import UUID
 
 import calypsso
-from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Query
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -2483,21 +2483,21 @@ async def cancel_transaction(
 @router.get(
     "/myeclpay/integrity-check",
     status_code=200,
-    response_model=tuple[
-        list[schemas_myeclpay.Wallet],
-        list[schemas_myeclpay.Transaction],
-        list[schemas_myeclpay.Transfer],
-        list[schemas_myeclpay.RefundBase],
-    ],
+    response_model=schemas_myeclpay.IntegrityCheckData,
 )
 async def get_data_for_integrity_check(
     headers: schemas_myeclpay.IntegrityCheckHeaders = Header(),
-    lastChecked: datetime | None = None,
+    query_params: schemas_myeclpay.IntegrityCheckQuery = Query(),
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ):
     """
-    Check the integrity of the MyECL Pay database.
+    Send all the MyECL Pay data for integrity check.
+    Data includes:
+    - Wallets deducted of the last 30 seconds transactions
+    - Transactions with at least 30 seconds delay
+    - Transfers
+    - Refunds
 
     **The header must contain the MYECLPAY_DATA_VERIFIER_ACCESS_TOKEN defined in the settings in the `x-data-verifier-token` field**
     """
@@ -2516,23 +2516,58 @@ async def get_data_for_integrity_check(
             detail="Access denied",
         )
 
+    now = await cruds_myeclpay.start_isolation_mode(db)
+    # We use a 30 seconds delay to avoid unstable transactions
+    # as they can be canceled during the 30 seconds after their creation
+    security_now = now - timedelta(seconds=30)
+
     wallets = await cruds_myeclpay.get_wallets(
         db=db,
     )
+    to_substract_transactions = await cruds_myeclpay.get_transactions(
+        db=db,
+        start_date=security_now,
+        exclude_canceled=True,
+    )
+    # We substract the transactions that are not older than 30 seconds
+    for transaction in to_substract_transactions:
+        debited_wallet = next(
+            (w for w in wallets if w.id == transaction.debited_wallet_id),
+            None,
+        )
+        credited_wallet = next(
+            (w for w in wallets if w.id == transaction.credited_wallet_id),
+            None,
+        )
+        if debited_wallet is not None:
+            debited_wallet.balance += transaction.total
+        if credited_wallet is not None:
+            credited_wallet.balance -= transaction.total
+
+    if query_params.isInitialisation:
+        return schemas_myeclpay.IntegrityCheckData(
+            date=security_now,
+            wallets=wallets,
+            transactions=[],
+            transfers=[],
+            refunds=[],
+        )
     transactions = await cruds_myeclpay.get_transactions(
         db=db,
-        last_checked=lastChecked,
+        start_date=query_params.lastChecked,
+        end_date=security_now,
     )
     transfers = await cruds_myeclpay.get_transfers(
         db=db,
-        last_checked=lastChecked,
+        last_checked=query_params.lastChecked,
     )
     refunds = await cruds_myeclpay.get_refunds(
         db=db,
-        last_checked=lastChecked,
+        last_checked=query_params.lastChecked,
     )
 
-    return schemas_myeclpay.MyECLPayData(
+    return schemas_myeclpay.IntegrityCheckData(
+        date=security_now,
         wallets=wallets,
         transactions=transactions,
         transfers=transfers,

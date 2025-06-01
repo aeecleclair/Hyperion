@@ -236,9 +236,15 @@ class IntegrityCheckHeaders(BaseModel):
     x_data_verifier_token: str
 
 
-class MyECLPayData(BaseModel):
+class IntegrityCheckQuery(BaseModel):
+    lastChecked: datetime | None = None
+    isInitialisation: bool = False
+
+
+class IntegrityCheckData(BaseModel):
     """Schema for Hyperion data"""
 
+    date: datetime
     wallets: list[Wallet]
     transactions: list[Transaction]
     transfers: list[Transfer]
