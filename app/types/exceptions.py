@@ -76,6 +76,11 @@ class FileNameIsNotAnUUIDError(Exception):
         super().__init__("The filename is not a valid UUID")
 
 
+class FileDoesNotExistError(Exception):
+    def __init__(self):
+        super().__init__("The file does not exist")
+
+
 class RedisConnectionError(Exception):
     def __init__(self):
         super().__init__("Connection to Redis failed")
