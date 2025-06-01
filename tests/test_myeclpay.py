@@ -997,7 +997,7 @@ async def test_sign_tos_for_unregistered_user(client: TestClient):
     response = client.post(
         "/myeclpay/users/me/tos",
         headers={"Authorization": f"Bearer {unregistered_ecl_user_access_token}"},
-        json={"accepted_tos_version": 1},
+        json={"accepted_tos_version": LATEST_TOS},
     )
     assert response.status_code == 400
     assert response.json()["detail"] == "User is not registered for MyECL Pay"
