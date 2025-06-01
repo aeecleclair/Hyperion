@@ -1,19 +1,15 @@
 import io
 import logging
-import pathlib
 from pathlib import Path
 from typing import cast
 
-import fitz
 from fastapi.templating import Jinja2Templates
 from fpdf import FPDF, Align, XPos, YPos
 from fpdf.enums import TableCellFillMode, VAlign
 from fpdf.fonts import FontFace
-from jinja2 import Environment, FileSystemLoader, select_autoescape
 from PIL import Image
 from pypdf import PdfReader, PdfWriter
 
-from app.modules.raid import coredata_raid
 from app.modules.raid.models_raid import Document, Participant, SecurityFile, Team
 from app.modules.raid.utils.pdf.conversion_utils import (
     date_to_string,
@@ -419,53 +415,3 @@ class PDFWriter(FPDF):
             row = table.row()
             row.cell(key)
             row.cell(label)
-
-
-class HTMLPDFWriter:
-    def __init__(self):
-        self.html = ""
-
-    def write_participant_security_file(
-        self,
-        participant: Participant,
-        information: coredata_raid.RaidInformation,
-        team_number: int | None,
-    ):
-        environment = Environment(
-            loader=FileSystemLoader("assets/templates"),
-            autoescape=select_autoescape(["html"]),
-        )
-        results_template = environment.get_template("template.html")
-
-        context = {
-            **participant.__dict__,
-            "information": {
-                "president": information.president.__dict__
-                if information.president
-                else None,
-                "rescue": information.rescue.__dict__ if information.rescue else None,
-                "security_responsible": information.security_responsible.__dict__
-                if information.security_responsible
-                else None,
-                "volunteer_responsible": information.volunteer_responsible.__dict__
-                if information.volunteer_responsible
-                else None,
-            },
-            "team_number": team_number,
-        }
-        html_content = results_template.render(context)
-        csspath = pathlib.Path("assets/templates/style.css")
-        css_content = csspath.read_bytes().decode()
-        story = fitz.Story(html=html_content, user_css=css_content, em=10)
-        writer = fitz.DocumentWriter("data/raid/" + participant.id + ".pdf")
-        mediabox = fitz.paper_rect("a4")
-        where = mediabox + (36, 36, -36, -36)  # noqa: RUF005
-
-        more = True
-        while more:
-            page = writer.begin_page(mediabox)
-            more, _ = story.place(where)
-            story.draw(page)
-            writer.end_page()
-        writer.close()
-        return "data/raid/" + participant.id + ".pdf"
