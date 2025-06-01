@@ -1,5 +1,6 @@
 import base64
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from uuid import UUID, uuid4
 
 import pytest_asyncio
@@ -266,7 +267,7 @@ async def init_objects() -> None:
         transaction_type=TransactionType.DIRECT,
         seller_user_id=ecl_user2.id,
         total=500,  # 5€
-        creation=datetime.now(UTC),
+        creation=datetime(2025, 5, 20, 12, 0, 0, tzinfo=UTC),
         status=TransactionStatus.CONFIRMED,
         store_note="transaction_from_ecl_user_to_store",
     )
@@ -281,7 +282,7 @@ async def init_objects() -> None:
         transaction_type=TransactionType.DIRECT,
         seller_user_id=ecl_user2.id,
         total=600,
-        creation=datetime.now(UTC),
+        creation=datetime(2025, 5, 19, 12, 0, 0, tzinfo=UTC),
         status=TransactionStatus.CONFIRMED,
         store_note="transaction_from_ecl_user_to_ecl_user2",
     )
@@ -296,7 +297,7 @@ async def init_objects() -> None:
         transaction_type=TransactionType.DIRECT,
         seller_user_id=ecl_user2.id,
         total=700,
-        creation=datetime.now(UTC),
+        creation=datetime(2025, 5, 18, 12, 0, 0, tzinfo=UTC),
         status=TransactionStatus.CONFIRMED,
         store_note="transaction_from_store_to_ecl_user",
     )
@@ -311,7 +312,7 @@ async def init_objects() -> None:
         transaction_type=TransactionType.DIRECT,
         seller_user_id=ecl_user2.id,
         total=800,
-        creation=datetime.now(UTC),
+        creation=datetime(2025, 5, 17, 12, 0, 0, tzinfo=UTC),
         status=TransactionStatus.CONFIRMED,
         store_note="transaction_from_ecl_user2_to_ecl_user",
     )
@@ -935,6 +936,14 @@ async def test_delete_manager_seller(client: TestClient):
     )
 
 
+async def test_get_tos(client: TestClient):
+    response = client.get(
+        "/myeclpay/tos",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+    )
+    assert response.json() == Path("assets/myeclpay-terms-of-service.txt").read_text()
+
+
 async def test_get_tos_for_unregistered_user(client: TestClient):
     response = client.get(
         "/myeclpay/users/me/tos",
@@ -944,7 +953,7 @@ async def test_get_tos_for_unregistered_user(client: TestClient):
     assert response.json()["detail"] == "User is not registered for MyECL Pay"
 
 
-async def test_get_tos(client: TestClient):
+async def test_get_user_tos(client: TestClient):
     response = client.get(
         "/myeclpay/users/me/tos",
         headers={"Authorization": f"Bearer {ecl_user_access_token}"},
@@ -988,7 +997,7 @@ async def test_sign_tos_for_unregistered_user(client: TestClient):
     response = client.post(
         "/myeclpay/users/me/tos",
         headers={"Authorization": f"Bearer {unregistered_ecl_user_access_token}"},
-        json={"accepted_tos_version": 1},
+        json={"accepted_tos_version": LATEST_TOS},
     )
     assert response.status_code == 400
     assert response.json()["detail"] == "User is not registered for MyECL Pay"
@@ -1148,9 +1157,13 @@ async def test_create_and_activate_user_device(
     response = client.get(
         f"/myeclpay/devices/activate?token={UNIQUE_TOKEN}",
         headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+        follow_redirects=False,
     )
-    assert response.status_code == 200
-    assert response.json() == "Wallet device activated"
+    assert response.status_code == 307
+    assert response.next_request is not None
+    assert str(response.next_request.url).endswith(
+        "calypsso/message?type=myeclpay_wallet_device_activation_success",
+    )
 
 
 async def test_activate_non_existing_device(
@@ -1170,9 +1183,13 @@ async def test_activate_already_activated_device(
     response = client.get(
         "/myeclpay/devices/activate?token=activation_token_ecl_user_wallet_device",
         headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+        follow_redirects=False,
     )
-    assert response.status_code == 400
-    assert response.json()["detail"] == "Wallet device is already activated or revoked"
+    assert response.status_code == 307
+    assert response.next_request is not None
+    assert str(response.next_request.url).endswith(
+        "calypsso/message?type=myeclpay_wallet_device_already_activated_or_revoked",
+    )
 
 
 async def test_revoke_user_device_unregistered_user(
@@ -1315,6 +1332,51 @@ def test_get_transactions_success(client: TestClient):
     assert transactions_dict[transaction_from_ecl_user2_to_ecl_user.id]["total"] == 800
     assert (
         transactions_dict[transaction_from_ecl_user2_to_ecl_user.id]["status"]
+        == "confirmed"
+    )
+
+
+def test_get_transactions_success_with_date(client: TestClient):
+    """Test successfully getting user transactions"""
+    response = client.get(
+        "/myeclpay/users/me/wallet/history",
+        params={
+            "start_date": "2025-05-18",
+            "end_date": "2025-05-19",
+        },
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+    )
+    assert response.status_code == 200
+
+    transactions = response.json()
+    assert len(transactions) == 2
+    transactions_dict = {UUID(t["id"]): t for t in transactions}
+
+    assert (
+        transactions_dict[transaction_from_ecl_user_to_ecl_user2.id][
+            "other_wallet_name"
+        ]
+        == "firstname ECL User 2 (nickname)"
+    )
+    assert (
+        transactions_dict[transaction_from_ecl_user_to_ecl_user2.id]["type"] == "given"
+    )
+    assert transactions_dict[transaction_from_ecl_user_to_ecl_user2.id]["total"] == 600
+    assert (
+        transactions_dict[transaction_from_ecl_user_to_ecl_user2.id]["status"]
+        == "confirmed"
+    )
+
+    assert (
+        transactions_dict[transaction_from_store_to_ecl_user.id]["other_wallet_name"]
+        == "Test Store"
+    )
+    assert (
+        transactions_dict[transaction_from_store_to_ecl_user.id]["type"] == "received"
+    )
+    assert transactions_dict[transaction_from_store_to_ecl_user.id]["total"] == 700
+    assert (
+        transactions_dict[transaction_from_store_to_ecl_user.id]["status"]
         == "confirmed"
     )
 

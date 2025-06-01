@@ -12,6 +12,7 @@ from collections.abc import AsyncGenerator, Callable, Coroutine
 from functools import lru_cache
 from typing import Any, cast
 
+import calypsso
 import redis
 from fastapi import BackgroundTasks, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import (
@@ -65,6 +66,8 @@ notification_manager: NotificationManager | None = None
 drive_file_manage: DriveFileManager | None = None
 
 payment_tool: PaymentTool | None = None
+
+mail_templates: calypsso.MailTemplates | None = None
 
 
 async def get_request_id(request: Request) -> str:
@@ -244,6 +247,26 @@ def get_payment_tool(
         payment_tool = PaymentTool(settings=settings)
 
     return payment_tool
+
+
+def get_mail_templates(
+    settings: Settings = Depends(get_settings),
+) -> calypsso.MailTemplates:
+    """
+    Dependency that returns the mail templates manager.
+    """
+    global mail_templates
+
+    if mail_templates is None:
+        mail_templates = calypsso.MailTemplates(
+            product_name="MyECL",
+            payment_product_name="MyECLPay",
+            entity_name="ÉCLAIR",
+            entity_site_url="https://myecl.fr/",
+            api_base_url=settings.CLIENT_URL,
+        )
+
+    return mail_templates
 
 
 def get_token_data(

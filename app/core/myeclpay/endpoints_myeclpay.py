@@ -2,9 +2,11 @@ import base64
 import logging
 import urllib
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
+from pathlib import Path
 from uuid import UUID
 
+import calypsso
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -37,7 +39,6 @@ from app.core.myeclpay.utils_myeclpay import (
     LATEST_TOS,
     MAX_TRANSACTION_TOTAL,
     QRCODE_EXPIRATION,
-    TOS_CONTENT,
     is_user_latest_tos_signed,
     validate_transfer_callback,
     verify_signature,
@@ -51,6 +52,7 @@ from app.core.utils import security
 from app.core.utils.config import Settings
 from app.dependencies import (
     get_db,
+    get_mail_templates,
     get_notification_tool,
     get_payment_tool,
     get_request_id,
@@ -65,7 +67,7 @@ from app.types.module import CoreModule
 from app.utils.communication.notifications import NotificationTool
 from app.utils.mail.mailworker import send_email
 
-router = APIRouter(tags=["Groups"])
+router = APIRouter(tags=["MyECLPay"])
 
 core_module = CoreModule(
     root="myeclpay",
@@ -241,6 +243,7 @@ async def init_transfer_structure_manager(
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user()),
+    mail_templates: calypsso.MailTemplates = Depends(get_mail_templates),
     settings: Settings = Depends(get_settings),
 ):
     """
@@ -291,24 +294,23 @@ async def init_transfer_structure_manager(
         db=db,
     )
 
+    confirmation_url = f"{settings.CLIENT_URL}myeclpay/structures/confirm-transfer?token={confirmation_token}"
+
     if settings.SMTP_ACTIVE:
-        migration_content = templates.get_template(
-            "structure_manager_transfer.html",
-        ).render(
-            {
-                "transfer_link": f"{settings.CLIENT_URL}myeclpay/structures/manager/confirm-transfer?token={confirmation_token}",
-            },
+        mail = mail_templates.get_mail_myeclpay_structure_transfer(
+            confirmation_url=confirmation_url,
         )
+
         background_tasks.add_task(
             send_email,
             recipient=user.email,
             subject="MyECL - Confirm the structure manager transfer",
-            content=migration_content,
+            content=mail,
             settings=settings,
         )
     else:
         hyperion_security_logger.info(
-            f"You can confirm the transfer by clicking the following link: {settings.CLIENT_URL}myeclpay/structures/manager/confirm-transfer?token={confirmation_token}",
+            f"You can confirm the transfer by clicking the following link: {confirmation_url}",
         )
 
 
@@ -319,6 +321,7 @@ async def init_transfer_structure_manager(
 async def confirm_structure_manager_transfer(
     token: str,
     db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Update a manager for an association
@@ -383,6 +386,13 @@ async def confirm_structure_manager_transfer(
             )
     await db.commit()
 
+    return RedirectResponse(
+        url=settings.CLIENT_URL
+        + calypsso.get_message_relative_url(
+            message_type=calypsso.TypeMessage.myeclpay_structure_transfer_success,
+        ),
+    )
+
 
 @router.post(
     "/myeclpay/structures/{structure_id}/stores",
@@ -397,6 +407,8 @@ async def create_store(
 ):
     """
     Create a store. The structure manager will be added as a seller for the store.
+
+    Stores name should be unique, as an user need to be able to identify a store by its name.
 
     **The user must be the manager for this structure**
     """
@@ -413,6 +425,16 @@ async def create_store(
         raise HTTPException(
             status_code=403,
             detail="User is not the manager for this structure",
+        )
+
+    existing_store_with_name = await cruds_myeclpay.get_store_by_name(
+        name=store.name,
+        db=db,
+    )
+    if existing_store_with_name is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="Store with this name already exists in this structure",
         )
 
     # Create new wallet for store
@@ -469,6 +491,8 @@ async def create_store(
 )
 async def get_store_history(
     store_id: UUID,
+    start_date: date | None = None,
+    end_date: date | None = None,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user()),
 ):
@@ -498,12 +522,33 @@ async def get_store_history(
             detail="User is not authorized to see the store history",
         )
 
+    history = []
+
+    start_datetime = (
+        datetime.combine(start_date, datetime.min.time(), tzinfo=UTC)
+        if start_date
+        else None
+    )
+    end_datetime = (
+        datetime.combine(end_date, datetime.max.time(), tzinfo=UTC)
+        if end_date
+        else None
+    )
+
     transactions = await cruds_myeclpay.get_transactions_by_wallet_id(
         wallet_id=store.wallet_id,
         db=db,
+        start_datetime=start_datetime,
+        end_datetime=end_datetime,
     )
-    history = []
     for transaction in transactions:
+        history_refund: schemas_myeclpay.HistoryRefund | None = None
+        if transaction.refund is not None:
+            history_refund = schemas_myeclpay.HistoryRefund(
+                total=transaction.refund.total,
+                creation=transaction.refund.creation,
+            )
+
         if transaction.debited_wallet_id == store.wallet_id:
             history.append(
                 schemas_myeclpay.History(
@@ -515,6 +560,7 @@ async def get_store_history(
                     other_wallet_name=transaction.credited_wallet.user.full_name
                     if transaction.credited_wallet.user is not None
                     else "",
+                    refund=history_refund,
                 ),
             )
         else:
@@ -528,6 +574,7 @@ async def get_store_history(
                     other_wallet_name=transaction.debited_wallet.user.full_name
                     if transaction.debited_wallet.user is not None
                     else "",
+                    refund=history_refund,
                 ),
             )
 
@@ -535,6 +582,8 @@ async def get_store_history(
     transfers = await cruds_myeclpay.get_transfers_by_wallet_id(
         wallet_id=store.wallet_id,
         db=db,
+        start_datetime=start_datetime,
+        end_datetime=end_datetime,
     )
     if len(transfers) > 0:
         hyperion_error_logger.error(
@@ -545,6 +594,8 @@ async def get_store_history(
     refunds = await cruds_myeclpay.get_refunds_by_wallet_id(
         wallet_id=store.wallet_id,
         db=db,
+        start_datetime=start_datetime,
+        end_datetime=end_datetime,
     )
     for refund in refunds:
         if refund.debited_wallet_id == store.wallet_id:
@@ -1054,17 +1105,14 @@ async def register_user(
 
 @router.get(
     "/myeclpay/tos",
+    response_model=str,
     status_code=200,
 )
-async def get_tos(
-    user: CoreUser = Depends(is_user()),
-):
+async def get_tos(user: CoreUser = Depends(is_user())):
     """
-    Get the latest TOS version and the TOS content.
-
-    **The user must be authenticated to use this endpoint**
+    Get MyECLPay latest TOS as a string
     """
-    return TOS_CONTENT
+    return Path("assets/myeclpay-terms-of-service.txt").read_text()
 
 
 @router.get(
@@ -1096,7 +1144,7 @@ async def get_user_tos(
     return schemas_myeclpay.TOSSignatureResponse(
         accepted_tos_version=existing_user_payment.accepted_tos_version,
         latest_tos_version=LATEST_TOS,
-        tos_content=TOS_CONTENT,
+        tos_content=Path("assets/myeclpay-terms-of-service.txt").read_text(),
         max_transaction_total=MAX_TRANSACTION_TOTAL,
         max_wallet_balance=settings.MYECLPAY_MAXIMUM_WALLET_BALANCE,
     )
@@ -1111,6 +1159,7 @@ async def sign_tos(
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user()),
+    mail_templates: calypsso.MailTemplates = Depends(get_mail_templates),
     settings: Settings = Depends(get_settings),
 ):
     """
@@ -1149,14 +1198,16 @@ async def sign_tos(
 
     # TODO: add logs
     if settings.SMTP_ACTIVE:
-        account_exists_content = templates.get_template(
-            "myeclpay_signed_tos_mail.html",
-        ).render()
+        mail = mail_templates.get_mail_myeclpay_tos_signed(
+            tos_version=signature.accepted_tos_version,
+            tos_url=f"{settings.CLIENT_URL}myeclpay-terms-of-service",
+        )
+
         background_tasks.add_task(
             send_email,
             recipient=user.email,
             subject="MyECL - You signed the Terms of Service for MyECLPay",
-            content=account_exists_content,
+            content=mail,
             settings=settings,
         )
 
@@ -1287,6 +1338,7 @@ async def create_user_devices(
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user()),
+    mail_templates: calypsso.MailTemplates = Depends(get_mail_templates),
     settings: Settings = Depends(get_settings),
 ):
     """
@@ -1328,18 +1380,15 @@ async def create_user_devices(
     await db.commit()
 
     if settings.SMTP_ACTIVE:
-        account_exists_content = templates.get_template(
-            "activate_myeclpay_device_mail.html",
-        ).render(
-            {
-                "activation_link": f"{settings.CLIENT_URL}myeclpay/devices/activate?token={activation_token}",
-            },
+        mail = mail_templates.get_mail_myeclpay_device_activation(
+            activation_url=f"{settings.CLIENT_URL}myeclpay/devices/activate?token={activation_token}",
         )
+
         background_tasks.add_task(
             send_email,
             recipient=user.email,
             subject="MyECL - activate your device",
-            content=account_exists_content,
+            content=mail,
             settings=settings,
         )
     else:
@@ -1358,6 +1407,7 @@ async def activate_user_device(
     token: str,
     db: AsyncSession = Depends(get_db),
     notification_tool: NotificationTool = Depends(get_notification_tool),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Activate a wallet device
@@ -1375,9 +1425,11 @@ async def activate_user_device(
         )
 
     if wallet_device.status != WalletDeviceStatus.INACTIVE:
-        raise HTTPException(
-            status_code=400,
-            detail="Wallet device is already activated or revoked",
+        return RedirectResponse(
+            url=settings.CLIENT_URL
+            + calypsso.get_message_relative_url(
+                message_type=calypsso.TypeMessage.myeclpay_wallet_device_already_activated_or_revoked,
+            ),
         )
 
     await cruds_myeclpay.update_wallet_device_status(
@@ -1416,7 +1468,12 @@ async def activate_user_device(
     else:
         raise UnexpectedError(f"Activated wallet device {wallet_device.id} has no user")  # noqa: TRY003
 
-    return "Wallet device activated"
+    return RedirectResponse(
+        url=settings.CLIENT_URL
+        + calypsso.get_message_relative_url(
+            message_type=calypsso.TypeMessage.myeclpay_wallet_device_activation_success,
+        ),
+    )
 
 
 @router.post(
@@ -1492,6 +1549,8 @@ async def revoke_user_devices(
 async def get_user_wallet_history(
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user()),
+    start_date: date | None = None,
+    end_date: date | None = None,
 ):
     """
     Get all transactions for the current user's wallet.
@@ -1509,12 +1568,25 @@ async def get_user_wallet_history(
             detail="User is not registered for MyECL Pay",
         )
 
+    start_datetime = (
+        datetime.combine(start_date, datetime.min.time(), tzinfo=UTC)
+        if start_date
+        else None
+    )
+    end_datetime = (
+        datetime.combine(end_date, datetime.max.time(), tzinfo=UTC)
+        if end_date
+        else None
+    )
+
     history: list[schemas_myeclpay.History] = []
 
     # First we get all received and send transactions
     transactions = await cruds_myeclpay.get_transactions_by_wallet_id(
         wallet_id=user_payment.wallet_id,
         db=db,
+        start_datetime=start_datetime,
+        end_datetime=end_datetime,
     )
 
     for transaction in transactions:
@@ -1535,6 +1607,12 @@ async def get_user_wallet_history(
         else:
             raise UnexpectedError("Transaction has no credited or debited wallet")  # noqa: TRY003
 
+        history_refund: schemas_myeclpay.HistoryRefund | None = None
+        if transaction.refund is not None:
+            history_refund = schemas_myeclpay.HistoryRefund(
+                total=transaction.refund.total,
+                creation=transaction.refund.creation,
+            )
         history.append(
             schemas_myeclpay.History(
                 id=transaction.id,
@@ -1543,6 +1621,7 @@ async def get_user_wallet_history(
                 total=transaction.total,
                 creation=transaction.creation,
                 status=transaction.status,
+                refund=history_refund,
             ),
         )
 
@@ -1550,6 +1629,8 @@ async def get_user_wallet_history(
     transfers = await cruds_myeclpay.get_transfers_by_wallet_id(
         wallet_id=user_payment.wallet_id,
         db=db,
+        start_datetime=start_datetime,
+        end_datetime=end_datetime,
     )
 
     for transfer in transfers:
@@ -1575,6 +1656,8 @@ async def get_user_wallet_history(
     refunds = await cruds_myeclpay.get_refunds_by_wallet_id(
         wallet_id=user_payment.wallet_id,
         db=db,
+        start_datetime=start_datetime,
+        end_datetime=end_datetime,
     )
     for refund in refunds:
         if refund.debited_wallet_id == user_payment.wallet_id:
@@ -1596,7 +1679,6 @@ async def get_user_wallet_history(
         )
 
     return history
-    # TODO: limite by datetime
 
 
 # TODO: do we keep this endpoint?
