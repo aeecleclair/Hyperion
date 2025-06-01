@@ -23,7 +23,7 @@ hyperion_security_logger = logging.getLogger("hyperion.security")
 hyperion_myeclpay_logger = logging.getLogger("hyperion.myeclpay")
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
-LATEST_TOS = 1
+LATEST_TOS = 2
 MAX_TRANSACTION_TOTAL = 2000
 QRCODE_EXPIRATION = 5  # minutes
 
